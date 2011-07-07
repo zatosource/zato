@@ -17,19 +17,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-
-from gevent import spawn
-
-import gevent.monkey
-gevent.monkey.patch_all()
-#gevent.monkey.patch_httplib()
-
 # stdlib
-import logging, urllib2, ssl
+import logging
 
-# gevent_zeromq
-from gevent_zeromq import zmq
+# ZeroMQ
+import zmq
 
 # Zato
 from zato.common.util import TRACE1
@@ -74,26 +66,14 @@ class Broker(object):
         keep_running = True
 
         while keep_running:
-            #socks = dict(poller.poll())
-            #if socks.get(self.conf_sock_to_brok) == zmq.POLLIN:
+            socks = dict(poller.poll())
 
-            message = self.conf_sock_to_brok.recv()
+            if socks.get(self.conf_sock_to_brok) == zmq.POLLIN:
 
-            print(22, message)
+                message = self.conf_sock_to_brok.recv()
+                print(22, message)
 
-            cert = ssl.get_server_certificate(('duckduckgo.com', 443))
-            print(cert)
-
-            #req = urllib2.Request('http://example.com')
-            #opener = urllib2.build_opener()
-            #resp = opener.open(req)
-
-            #response = resp.read()
-            #resp.close()
-
-            '''
                 logger.log(TRACE1, 'Got a config message [{0}]'.format(message))
-
                 self.conf_sock_from_brok.send(CONFIG_MESSAGE_PREFIX + ':' + message)
 
             elif socks.get(self.controller_socket) == zmq.POLLIN:
@@ -102,9 +82,8 @@ class Broker(object):
                 logger.log(TRACE1, 'Got a controller message [{0}]'.format(message))
 
                 keep_running = False
-                '''
 
 if __name__ == '__main__':
-    b = Broker(conf_sock_to_brok_address, conf_sock_from_brok_address,
+    broker = Broker(conf_sock_to_brok_address, conf_sock_from_brok_address,
                controller_sock_addr)
-    spawn(b.run).join()
+    broker.run()
