@@ -1,0 +1,8 @@
+zato_odb:
+    db_name: !!python/unicode 'zato1'
+    engine: !!python/unicode 'postgresql'
+    extra: {}
+    host: !!python/unicode 'localhost'
+    password: !!python/unicode '88b2b6e27ebff912881ef121d6930ab74305d43d8266942368f7f2241c3ade04ea0a76352cf63e4a953552893e113313c50c45197407a0fc41c85c4b0ecbf5c5207ce707e3fecce4d34eb233a623f404b3fc84248d835fa3fd1f8df72bf6847b2372ecc568470d72cfa92eaf2ed2367d38c32020209afb95f5912d005257208cb37bdd023093a4b7c52b61717ed9e91f722f0ade2240ccf9bd6294d2e897803034e8e3d7744346968232345abd3cf30ab8a6561a59e777c45379e71538a98cd8fe31de693aceeb6d82c651e6ce1141205bede0dd0e7ad7aa31f01d35b38b6bbed4ffb93f7842c409c69ef3bf5c7fbb6b155a016cc573ae86cdc067b23b192c4e'
+    pool_size: 4
+    user: !!python/unicode 'zato1'

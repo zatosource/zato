@@ -1,0 +1,189 @@
+
+h2.zato {
+    font-size:150%;
+    padding:10px;
+    xpadding-top:0px;
+    margin-bottom:20px;
+    color: #333b74;
+    border-bottom:1px dotted #767676
+}
+
+#console-header {
+    background-color:#454555
+}
+
+#console-header h1{
+    font-size:150%;
+    padding:6px;
+    color:#f0e0f0;
+    font-weight:600
+}
+
+/*
+    Overridden YUI styles.
+*/
+
+.yui-dt table {
+    width: 100%;
+    font-size:11px;
+}
+
+tr.yui-dt-odd td {
+    background-color:#d3d3d3 !important;
+    border-bottom:1px solid #b6b6b6
+}
+
+tr.yui-dt-even td {
+    border-bottom:1px solid #b6b6b6
+}
+
+
+.yui-dt table a, a.common {
+    color: #333377;
+    font-family: arial,helvetica,clean,sans-serif;
+    font-style:italic
+}
+
+.yui-dt table a:hover, a.common:hover {
+    background-color: #e0e030;
+    color:#000033;
+    text-decoration:underline
+}
+
+th.yui-dt-hidden, tr.yui-dt-odd .yui-dt-hidden, tr.yui-dt-even .yui-dt-hidden {
+    display:none;
+}
+
+#hd {
+    padding:0px;
+    margin:0px;
+    margin-bottom:6px;
+    border-top: 6px solid #c0c0f0;
+    border-bottom: 6px solid #7070a0;
+}
+
+html {
+    background-color:#d6d6c0;
+}
+
+.form-data{
+    width:100%
+}
+
+.form-data td {
+    border:none;
+    border-bottom:1px solid #999999;
+    border-top:1px solid #999999;
+    padding:4px;
+    padding-right:12px;
+    background-color:#e0e0e0;
+}
+
+#footer {
+    border-top:1px solid #999999;
+    border-bottom:1px solid #999999;
+    margin:5px 5px 0px 0px;
+    padding:5px;
+    background-color:#e0e0e0;
+    text-align:right
+}
+
+.user-message {
+    padding:6px;
+    border-style:dotted;
+    color:#333333;
+    text-align:left;
+}
+
+.user-message-success {
+    border-color:#333333;
+    border-width:1px;
+    background-color:#bbdd55;
+}
+
+.user-message-failure {
+    border-color:red;
+    border-width:2px;
+    background-color:#eeee33;
+}
+
+.error-message {
+    background-color:#ffccbb;
+    padding:6px;
+    margin-bottom:12px;
+    border:1px dotted #999999;
+    font-weight:600;
+    color:#993333
+}
+
+.validation-advice {
+    color:#cc0000
+}
+
+.options-button {
+    cursor: pointer;
+}
+
+a.community {
+    color: #225522 !important
+}
+
+div.item-details {
+    background-color:#f0f0f0;
+    padding:10px;
+}
+
+div.item-details-header {
+    background-color:#e0e0e0;
+    padding:10px;
+    border-bottom: 1px solid #999999;
+}
+
+div.item-details-body {
+    padding:10px;
+    line-height:1.3em
+    border-bottom: 1px solid #999999;
+}
+
+div.item-details-body strong{
+    color:#333377
+}
+
+table.standalone-form-data td {
+    border:1px solid #999999
+}
+
+/* For showing the state of servers as seen from the LB's perspective.
+*/
+.server-state {
+    font-weight:600;
+    padding:3px;
+    display:inline-block;
+}
+
+.server-state.all-down {
+    background-color: #ffe90a;
+    border:2px solid red;
+    text-transform: uppercase;
+}
+
+.server-state.some-down {
+    background-color: #ffe90a;
+    border:1px solid red;
+}
+
+.server-state.some-maint{
+    font-weight:500;
+    background-color: #8faf5d;
+    border:1px solid #666666;
+    color:#ffffff
+}
+
+.server-state.all-up:before {
+    content: url(/static/gfx/weather_sun.png);
+    vertical-align:top;
+}
+
+.server-state.all-up {
+    font-weight:normal;
+}

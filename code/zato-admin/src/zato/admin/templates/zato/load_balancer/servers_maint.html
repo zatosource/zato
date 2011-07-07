@@ -1,0 +1,12 @@
+{% if servers_state.MAINT.http_plain %}
+        <table style="width:100%;margin-top:4px">
+            <tr>
+                <td style="background-color:#c0c0dd;width:20%">MAINT plain HTTP</td>
+                <td>
+                    {% for server in servers_state.MAINT.http_plain %}
+                        {{ server }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </td>
+            </tr>
+        </table>
+    {% endif %}

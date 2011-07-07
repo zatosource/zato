@@ -1,0 +1,134 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/menu/menu-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} Scheduler JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/channel/soap.js"></script>
+
+    </script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">SOAP channels</h1>
+
+{% if not zato_clusters %}
+    <p>
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    </p>
+{% else %}
+
+    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+
+    {% if not cluster_id %}
+        Choose a cluster to manage SOAP channels.
+        <br/><br/>
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_cluster_form.cluster }}
+        <input type="submit" value="Show channels" />
+    </form>
+
+
+    {% if cluster_id %}
+
+        <br/>
+
+        <input type="hidden" id="cluster_server_id" value="{{ cluster_id }}" />
+
+        {% if services %}
+            <a id="copy_selected" name="copy_selected" href="#">Copy selected</a>
+            <a id="paste_config" name="paste_config" href="#">Paste config</a>
+        {% endif %}
+
+
+        <br/><br/>
+
+        <script type="text/javascript">
+        YAHOO.util.Event.addListener(window, "load", function() {
+            YAHOO.example.EnhanceFromMarkup = function() {
+                data_column_defs = [
+                    {key:"channel_selection", label:"", sortable:false},
+                    {key:"channel_data", label:"Channel", sortable:true},
+                ];
+
+                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
+                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
+                data_ds.responseSchema = {
+                    fields: [{key:"channel_selection"},
+                            {key:"channel_data"},
+                    ]
+                };
+
+                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
+                        {sortedBy:{key:"channel_data",dir:"desc"}}
+                );
+
+                return {
+                    oDS: data_ds,
+                    oDT: data_dt
+                };
+            }();
+
+        });
+        </script>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+
+                    <tr>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for service in services %}
+
+                    <tr>
+                        <td>
+                            <input type="checkbox" />
+                        </td>
+                        <td>
+                                <a href="/zato/service/details/{{ server_id }}/{{ service.name }}/" class="common">{{ service.name }}</a>
+                            <br/>
+                            <span style="font-size:11px;">
+                                SOAP: 1.1,
+                                URL path: /soap/adapter/crm,
+                                security:
+                                <a href="#" style="color:#282828;text-decoration:none">CRM-WS-SECURITY (user: crmuser1)</a></span>
+                        </td>
+                    </tr>
+                {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+
+    {% endif %} {% comment %}server_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_servers{% endcomment %}
+
+{% endblock %}

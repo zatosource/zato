@@ -1,0 +1,16 @@
+                    {% if cluster.all_down %}
+                        <br/>
+                        <span class="server-state all-down">All servers are down</span>
+                    {% endif %}
+
+                    {% if cluster.some_down %}
+                        <br/>
+                        <span class="server-state some-down">Some servers are DOWN</span>
+                    {% endif %}
+
+                    {% if cluster.some_maint %}
+                        {% if not cluster.some_down %}
+                            <br/>
+                        {% endif %}
+                        <span class="server-state some-maint">Some servers are in MAINT</span>
+                    {% endif %}
