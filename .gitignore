@@ -6,6 +6,7 @@ code/downloads/*
 code/include/*
 code/lib/*
 code/parts/*
+code/sec-wall-trunk-src/*
 *.pyc
 *.pyo
 *.egg-info*
