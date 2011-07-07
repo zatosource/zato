@@ -1,0 +1,24 @@
+
+- First run ./install.sh - this will use zc.buildout to set up everything on
+  Python side
+  
+- Install PostgreSQL using
+
+  - $ sudo apt-get install postgresql (Ubuntu and friends)
+  - zzZzzzZz (Mac)
+  
+- As a user postgres, do:
+
+  - $ createuser --no-superuser --no-createdb --no-createrole zato1
+  - $ createdb --owner=zato1 zato1
+  - $ psql --dbname zato1 --command="ALTER ROLE zato1 WITH PASSWORD 'zato1'"
+  
+- Back to the normal user, do:
+
+  - $ sudo service postgresql start
+  
+- Setting up a new environment using the 'zato quickstart' command
+
+  - $ mkdir ~/tmp/zato1
+  - $ cd ~/tmp/zato1
+  - $ ~/projects/zato/code/bin/zato quickstart postgresql localhost 5432 zato1 zato1 localhost 5672 zato1

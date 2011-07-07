@@ -1,0 +1,336 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+
+    {% comment %} Validation framework {% endcomment %}
+    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
+    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+
+    {% comment %} Scriptaculous effects {% endcomment %}
+    <script type="text/javascript" src="/static/js/effects.js"></script>
+
+    {% comment %} Build a list of engines' friendly names {% endcomment %}
+    <script type="text/javascript">
+
+        var engine_friendly_name = new Hash();
+
+        {% for name, friendly_name in engine_friendly_name%}
+            engine_friendly_name.set('{{ name }}', '{{ friendly_name }}');
+        {% endfor %}
+
+    </script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} Clusters JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/cluster.js"></script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">Clusters</h1>
+
+
+    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+
+            <a href="javascript:cluster_create()" class="common">Create a new cluster</a>
+        <br/>
+
+        <div id="create-cluster" class="yui-pe-content">
+            <div class="hd">Create a new cluster</div>
+            <div class="bd">
+                <form action="{% url cluster-create %}" method="post" id="create-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td colspan="5">{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Description</td>
+                            <td colspan="5">{{ create_form.description }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">ODB type</td>
+                            <td>{{ create_form.odb_engine }}</td>
+                            <td style="vertical-align:middle">ODB host</td>
+                            <td>{{ create_form.odb_host }}</td>
+                            <td style="vertical-align:middle">ODB port</td>
+                            <td>{{ create_form.odb_port }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">ODB user</td>
+                            <td>{{ create_form.odb_user }}</td>
+                            <td style="vertical-align:middle">ODB name</td>
+                            <td>{{ create_form.odb_db_name }}</td>
+                            <td style="vertical-align:middle">ODB schema (optional)</td>
+                            <td>{{ create_form.odb_schema }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
+                            <td>{{ create_form.amqp_host }}</td>
+                            <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
+                            <td>{{ create_form.amqp_port }}</td>
+                            <td style="vertical-align:middle">RabbitMQ user</td>
+                            <td>{{ create_form.amqp_user }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">LB host</td>
+                            <td>{{ create_form.lb_host }}</td>
+                            <td style="vertical-align:middle">LB agent port</td>
+                            <td>{{ create_form.lb_agent_port }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-cluster" class="yui-pe-content">
+            <div class="hd">Edit cluster</div>
+            <div class="bd">
+                <form action="{% url cluster-edit %}" method="post" id="edit-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td colspan="5">{{ edit_form.name }}<input type="hidden" name="cluster_id" id="id_edit-cluster_id" /> </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Description</td>
+                            <td colspan="5">{{ edit_form.description }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">ODB type</td>
+                            <td>{{ edit_form.odb_engine }}</td>
+                            <td style="vertical-align:middle">ODB host</td>
+                            <td>{{ edit_form.odb_host }}</td>
+                            <td style="vertical-align:middle">ODB port</td>
+                            <td>{{ edit_form.odb_port }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">ODB user</td>
+                            <td>{{ edit_form.odb_user }}</td>
+                            <td style="vertical-align:middle">ODB name</td>
+                            <td>{{ edit_form.odb_db_name }}</td>
+                            <td style="vertical-align:middle">ODB schema (optional)</td>
+                            <td>{{ edit_form.odb_schema }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
+                            <td>{{ edit_form.amqp_host }}</td>
+                            <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
+                            <td>{{ edit_form.amqp_port }}</td>
+                            <td style="vertical-align:middle">RabbitMQ user</td>
+                            <td>{{ edit_form.amqp_user }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle; width:12%">LB host</td>
+                            <td>{{ edit_form.lb_host }}</td>
+                            <td style="vertical-align:middle">LB agent port</td>
+                            <td>{{ edit_form.lb_agent_port }}</td>
+                            <td colspan="2"></td>
+                        </tr>
+
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        <div id="delete-cluster" class="yui-pe-content">
+            <div class="hd">Delete cluster</div>
+            <div class="bd">
+                <form action="{% url cluster-delete %}" method="post" id="delete-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td>
+                            Are you sure you want to delete the cluster
+                            <span id="delete-name" style="font-weight:bolder"></span>?
+                            <br/>
+
+                            Note that only the cluster will be deleted, all the related objects -
+                            such as servers or load-balancer configuration -
+                            will be left intact.
+                            <br/><br/>
+
+                            Type YES (all uppercase) to delete the cluster:
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                {{ delete_form.answer }}
+                                {{ delete_form.cluster_id }}
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+        YAHOO.util.Event.addListener(window, "load", function() {
+            YAHOO.example.EnhanceFromMarkup = function() {
+                data_column_defs = [
+                    {key:"cluster_id", label:"cluster_id", hidden:true},
+                    {key:"cluster", label:"Cluster", sortable:true},
+                    {key:"servers", label:"Servers", sortable:false},
+                    {key:"addresses", label:"Addresses", sortable:true},
+                    {key:"edit_manage", label:"", sortable:false},
+                ];
+
+                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
+                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
+                data_ds.responseSchema = {
+                    fields: [{key:"cluster_id"},
+                            {key:"cluster"},
+                            {key:"servers"},
+                            {key:"addresses"},
+                            {key:"edit_manage"},
+                    ]
+                };
+
+                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
+                        {sortedBy:{key:"cluster",dir:"desc"}}
+                );
+
+                return {
+                    oDS: data_ds,
+                    oDT: data_dt
+                };
+            }();
+        });
+        </script>
+
+
+    <br/>
+    <div id="markup">
+        <table id="data-table">
+            <thead>
+
+                <tr>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for cluster in clusters %}
+
+                <tr>
+                    <td>{{ cluster.id }}</td>
+                    <td><a href="javascript:cluster_manage('{{ cluster.id }}')">{{ cluster.name }}</a>
+
+                    {% if cluster.description %}
+                        <br/>
+                        <span style="font-size:80%"><pre>{{ cluster.description }}</pre></span>
+                    {% endif %}
+
+                    {% include "zato/cluster/servers_state.html" %}
+
+                    </td>
+                    <td></td>
+                    <td>
+                    <span style="font-size:90%">
+
+                    HTTP:
+                    {% if cluster.lb_config %}
+                        <a href="http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}">
+                        http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}
+                        </a>
+                    {% else %}
+                        Could not fetch config
+                    {% endif %}
+
+                    <br/>
+                    HTTPS:
+                    <a href="https://{{ cluster.sec_server_host}}:{{ cluster.sec_server_port}}">
+                    https://{{ cluster.sec_server_host}}:{{ cluster.sec_server_port}}
+                    </a>
+
+
+                    <br/>
+                    LB XML-RPC agent:
+                        <a href="https://{{ cluster.lb_host }}:{{ cluster.lb_agent_port }}/RPC2">
+                        https://{{ cluster.lb_host }}:{{ cluster.lb_agent_port }}/RPC2
+                        </a>
+
+                    <br/>
+                    LB stats:
+                    {% if cluster.lb_config %}
+                        {% if cluster.lb_config.defaults.stats_uri %}
+                            <a href="http://{{ cluster.lb_host }}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.defaults.stats_uri }}">
+                            http://{{ cluster.lb_host }}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.defaults.stats_uri }}
+                            </a>
+                        {% else %}
+                            URL not configured
+                        {% endif %}
+                    {% else %}
+                        Could not fetch config
+                    {% endif %}
+
+                    <br/>
+                    LB HTTP health-check:
+                    {% if cluster.lb_config %}
+                        <a href="http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.frontend.front_http_plain.monitor_uri }}">
+                        http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.frontend.front_http_plain.monitor_uri }}
+                        </a>
+                    {% else %}
+                        Could not fetch config
+                    {% endif %}
+
+                    </td>
+                    <td>
+                        <a href="javascript:cluster_edit('{{ cluster.id }}')">Edit cluster</a>
+
+                        {% if cluster.lb_config %}
+                            <br/>
+                            <a href="{% url lb-manage cluster.id %}">Manage load balancer</a>
+                        {% endif %}
+
+                        <br/>
+                        <a href="javascript:cluster_add_remove_servers('{{ cluster.id }}')">Add/remove servers</a>
+
+                        <br/>
+                        <a href="javascript:cluster_delete('{{ cluster.id }}')">Delete cluster</a>
+                    </td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+
+
+{% endblock %}

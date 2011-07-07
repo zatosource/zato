@@ -1,0 +1,215 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <link type="text/css" rel="stylesheet" href="/static/yui/build/datatable/assets/skins/sam/datatable.css">
+    
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+    
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    
+    <script type="text/javascript" src="/static/js/servers.js"></script>
+    
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">Zato servers</h1>
+
+{% if success_message %}
+    <div class="success-message">{{ success_message }}</div>
+{% endif %}
+
+{% if edit_form.name.errors or edit_form.address.errors %}
+
+    <div class="error-message">
+
+        {% if edit_form.name.errors %}
+            <span class="form-error">{{ edit_form.name.errors.as_text }}</span>
+            <br/>
+        {% endif %}
+        
+        {% if edit_form.address.errors %}
+            <span class="form-error">{{ edit_form.address.errors.as_text }}</span>
+            <br/>
+        {% endif %}
+    
+    </div>
+    
+{% endif %}
+
+{% if not zato_servers %}
+    <p>
+    There aren't any Zato servers registered with this ZatoAdmin instance. Use
+    the form below to register your first Zato server. Each ZatoAdmin is
+    capable of managing multiple Zato servers.
+    <br/><br/>
+    </p>
+{% else %}
+
+<div id="edit-server" class="yui-pe-content">
+	<div class="hd">Edit server</div>
+	<div class="bd">
+        <form action="." method="post">
+            <table class="edit-data" border="0">
+            
+            <tr>
+                <td style="vertical-align:middle">Name</td>
+                <td>
+                    {{ edit_form.name }}
+                    <span class="hint">e.g. ESB-dev</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="vertical-align:middle">Address</td>
+                <td>
+                    {{ edit_form.address }}
+                    <span class="hint">e.g. 127.0.0.1:17080</span>
+                    
+                    <input type="hidden" name="is_edit" value="1" />
+                    
+                    {{ edit_form.server_id }}
+                    
+                </td>
+            </tr>
+            </table>
+        </form>
+	</div>
+</div>
+
+<div id="markup">
+    <table id="table-servers">
+        <thead>
+
+            <tr>
+                <th>Name</th>
+                <th>Address</th>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for zato_server in zato_servers %}
+            <tr>
+                <td id="server_name_{{ zato_server.id }}" style="width:25%">{{ zato_server.name }}</td>
+                <td id="server_address_{{ zato_server.id }}" style="width:25%">{{ zato_server.address }}</td>
+                <td style="width:20%"><a href="{% url server-status zato_server.id %}">Show status</a></td>
+                <td style="width:20%"><a href="javascript:ping_server({{ zato_server.id }})">Ping server</a>&nbsp;<span id="ping_server_{{ zato_server.id }}"></span></td>
+                <td style="width:15%"><a href="javascript:edit_server('{{ zato_server.id }}', '{{ zato_server.name }}', '{{ zato_server.address }}')">Edit</a></td>
+                <td style="width:15%"><a href="{% url server-unregister zato_server.id %}">Unregister</a></td>
+            </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+
+
+<script type="text/javascript">
+YAHOO.util.Event.addListener(window, "load", function() {
+    YAHOO.example.EnhanceFromMarkup = function() {
+        var zato_servers_column_defs = [
+            {key:"name",label:"Name",sortable:true},
+            {key:"address",label:"Address", sortable:true},
+            {key:"status",label:"&nbsp;"},
+            {key:"ping",label:"&nbsp;"},
+            {key:"edit",label:"&nbsp;"},
+            {key:"unregister",label:"&nbsp;"},
+        ];
+
+        var zato_servers_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("table-servers"));
+        zato_servers_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
+        zato_servers_ds.responseSchema = {
+            fields: [{key:"name"},
+                    {key:"address"},
+                    {key:"status"},
+                    {key:"ping"},
+                    {key:"edit"},
+                    {key:"unregister"},
+            ]
+        };
+
+        var zato_servers_dt = new YAHOO.widget.DataTable("markup", zato_servers_column_defs, zato_servers_ds,
+                {sortedBy:{key:"name",dir:"desc"}}
+        );
+        
+        return {
+            oDS: zato_servers_ds,
+            oDT: zato_servers_dt
+        };
+    }();
+});
+</script>
+
+{% endif %}
+
+{% if zato_servers %}
+
+<br/>
+
+<h2>Register a new server.</h2>
+<p>Use the form below to register a new Zato server with this ZatoAdmin instance.
+<br/><br/>
+</p>
+{% endif %}
+
+<form action="." method="post">
+
+<table class="edit-data" border="0">
+
+<tr>
+    <td style="vertical-align:middle">Name</td>
+    <td>
+        {% if form.name.errors %}
+            <span class="form-error">{{ form.name.errors.as_text }}</span>
+            <br/>
+        {% endif %}
+        {{ form.name }}
+        <span class="hint">e.g. ESB-dev</span>
+    </td>
+</tr>
+<tr>
+    <td style="vertical-align:middle">Address</td>
+    <td>
+        {% if form.address.errors %}
+            <span class="form-error">{{ form.address.errors.as_text }}</span>
+            <br/>
+        {% endif %}
+        {{ form.address }}
+        <span class="hint">e.g. 127.0.0.1:17080</span>
+    </td>
+</tr>
+
+<tr>
+    <td>&nbsp;</td>
+    <td>
+        <input type="button" value="Ping server" onclick="javascript:ping_server_by_address()" /> <span class="hint">Checks the server's availability</span>
+        <span id="ping_server_by_address_result"></span>
+    </td>
+</tr>
+
+<tr>
+    <td>&nbsp;</td>
+    <td><input type="submit" value="Register server" /> <span class="hint">Registers the server with this ZatoAdmin instance</span></td>
+</tr>
+    
+</table>
+    
+</form>
+
+{% endblock %}

@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+"""
+Copyright (C) 2010 Dariusz Suchojad <dsuch at gefira.pl>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+haproxy_command = "haproxy"
+host = "localhost"
+port = 20151
+keyfile = "./lba-priv-key.pem"
+certfile = "./lba-cert.pem"
+ca_certs = "./ca-chain.pem"
+work_dir = "."
+verify_fields = {"commonName": "My Client", "organizationName":"My Company",
+                 "stateOrProvinceName":"My State"}
+
+# ##############################################################################
+
+import logging, ssl, os
+from zato.agent.load_balancer.server import LoadBalancerAgent
+
+# TODO: Have it use proper logging config.
+logging.basicConfig(level=logging.INFO)
+
+LoadBalancerAgent(os.path.abspath(work_dir), haproxy_command, host, port, keyfile, certfile, ca_certs,
+                  cert_reqs=ssl.CERT_REQUIRED, verify_fields=verify_fields).serve_forever()

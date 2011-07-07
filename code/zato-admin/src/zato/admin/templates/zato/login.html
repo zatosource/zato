@@ -1,0 +1,79 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/login.js"></script>
+
+    </script>
+
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">Hello, please enter your username and password</h1>
+
+<div class="item-details">
+
+    <div class="item-details-body">
+
+        <div class="yui-pe-content">
+            <div class="bd">
+                <form method="post" action="{% url django.contrib.auth.views.login %}">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="width:7%">
+                                Username
+                            </td>
+                            <td>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                    {{ form.username.errors.as_text }}
+                                {% else %}
+                                    {% if form.errors %}
+                                    Your username and password didn't match. Please try again.
+                                    {% endif %}
+                                {% endif %}
+
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Password
+                            </td>
+                            <td>
+                                {{ form.password }}
+                                {% if form.password.errors %}
+                                    {{ form.password.errors.as_text }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:left">
+                                <button id="login" type="submit">Log in</button>
+                                <input type="hidden" name="next" value="{{ next }}" />
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,458 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+
+    <link rel="stylesheet" type="text/css" href="/static/css/calendar_date_select/blue.css">
+
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/menu/menu-min.js"></script>
+
+
+    {% comment %} Prototype JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
+    <script type="text/javascript" src="/static/js/prototype/prototype-base-extensions.js"></script>
+    <script type="text/javascript" src="/static/js/prototype/prototype-date-extensions.js"></script>
+
+    {% comment %} DateTime picker {% endcomment %}
+    <script type="text/javascript" src="/static/js/calendar_date_select/calendar_date_select.js"></script>
+    <script type="text/javascript" src="/static/js/calendar_date_select/format_iso_date.js"></script>
+
+    {% comment %} Validation framework {% endcomment %}
+    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+
+    {% comment %} Scriptaculous effects {% endcomment %}
+    <script type="text/javascript" src="/static/js/effects.js"></script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} Scheduler JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/scheduler.js"></script>
+
+    {% comment %} Build a list of job types' friendly names {% endcomment %}
+    <script type="text/javascript">
+        var friendly_names = new Hash();
+
+        {% for name, friendly_name in friendly_names%}
+            friendly_names.set('{{ name }}', '{{ friendly_name }}');
+        {% endfor %}
+    </script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">Schedulers</h1>
+
+{% if not zato_servers %}
+    <p>
+    There aren't any Zato servers registered with this ZatoAdmin instance.
+    <a href="{% url servers %}" class="common">Click here</a> to register a new server first.
+    <br/><br/>
+    </p>
+{% else %}
+
+    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+
+    {% if not server_id %}
+        Choose a server to manage the jobs.
+        <br/><br/>
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_server_form.server }}
+        <input type="submit" value="Show jobs" />
+    </form>
+
+    {% if server_id %}
+
+        <input type="hidden" id="current_server_id" value="{{ server_id }}" />
+
+        <br/>
+        <a id="create-link" href="#" class="common">Right-click to create a new job</a>
+        <br/><br/>
+
+        <script type="text/javascript">
+        YAHOO.util.Event.addListener(window, "load", function() {
+            YAHOO.example.EnhanceFromMarkup = function() {
+                data_column_defs = [
+                    {key:"job_name", label:"Name", sortable:true},
+                    {key:"job_type", label:"Type", sortable:true},
+                    {key:"definition", label:"Definition", sortable:false},
+                    {key:"service", label:"Service", sortable:true},
+                    {key:"edit", label:"", sortable:false},
+                    {key:"execute", label:"", sortable:false},
+                    {key:"delete", label:"", sortable:false},
+                    {key:"job_type_raw", hidden:true},
+                    {key:"date_time_raw", hidden:true},
+                    {key:"start_date_raw", hidden:true},
+                    {key:"weeks", hidden:true},
+                    {key:"days", hidden:true},
+                    {key:"hours", hidden:true},
+                    {key:"minutes", hidden:true},
+                    {key:"seconds", hidden:true},
+                    {key:"repeat", hidden:true},
+                    {key:"extra", hidden:true},
+                    {key:"server_id", hidden:true},
+                ];
+
+                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
+                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
+                data_ds.responseSchema = {
+                    fields: [{key:"job_name"},
+                            {key:"job_type"},
+                            {key:"definition"},
+                            {key:"service"},
+                            {key:"edit"},
+                            {key:"execute"},
+                            {key:"delete"},
+                            {key:"job_type_raw"},
+                            {key:"date_time_raw"},
+                            {key:"start_date_raw"},
+                            {key:"weeks"},
+                            {key:"days"},
+                            {key:"hours"},
+                            {key:"minutes"},
+                            {key:"seconds"},
+                            {key:"repeat"},
+                            {key:"extra"},
+                            {key:"server_id"},
+                    ]
+                };
+
+                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
+                        {sortedBy:{key:"job_name",dir:"desc"}}
+                );
+
+                return {
+                    oDS: data_ds,
+                    oDT: data_dt
+                };
+            }();
+
+            data_dt.subscribe("cellClickEvent", on_cell_click_event);
+
+        });
+        </script>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+
+                    <tr>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th> <!-- Hidden job_type_raw --></th> <!-- TODO: Are these hidden cells still needed? -->
+                        <th> <!-- Hidden date_time_raw --></th>
+                        <th> <!-- Hidden start_date_raw --></th>
+                        <th> <!-- Hidden weeks --></th>
+                        <th> <!-- Hidden days --></th>
+                        <th> <!-- Hidden hours --></th>
+                        <th> <!-- Hidden minutes --></th>
+                        <th> <!-- Hidden seconds --></th>
+                        <th> <!-- Hidden repeat --></th>
+                        <th> <!-- Hidden extra --></th>
+                        <th> <!-- Hidden server_id --></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for job in jobs %}
+
+                    <tr>
+                        <td>{{ job.job_name }}</td>
+                        <td>{{ job.job_type_friendly }}</td>
+                        <td>{{ job.definition }}</td>
+                        <td>{{ job.service }}</td>
+                        <td><a href="#">Edit</a>
+                        </td>
+                        <td><a href="#">Execute</a>
+                        </td>
+                        <td><a href="#">Delete</a>
+                        </td>
+                        <td>{{ job.job_type }}</td>
+                        <td>{{ job.date_time_raw }}</td>
+                        <td>{{ job.start_date_raw }}</td>
+                        <td>{{ job.weeks }}</td>
+                        <td>{{ job.days }}</td>
+                        <td>{{ job.hours }}</td>
+                        <td>{{ job.minutes }}</td>
+                        <td>{{ job.seconds }}</td>
+                        <td>{{ job.repeat }}</td>
+                        <td>{{ job.extra }}</td>
+                        <td>{{ server_id }}</td>
+                    </tr>
+                {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+        <div id="create-one_time" class="yui-pe-content">
+            <div class="hd">Create a one-time job</div>
+            <div class="bd">
+                <form action=".?server={{ server_id }}" method="post" id="create-form-one_time">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_one_time_form.job_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Date &amp; time<br/>
+                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                            </td>
+                            <td>
+                                <input id="id_create-one-time-date_time" class="required"
+                                    name="create-one-time-date_time" type="text" />
+                                    <img alt="Calendar"
+                                        onclick="javascript:show_create_one_time_date_time_picker();"
+                                        src="/static/gfx/calendar_date_select/calendar.gif"
+                                        style="border:0px; cursor:pointer;" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_one_time_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ create_one_time_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    {{ create_one_time_form.original_job_name }}
+                    <input type="hidden" name="zato_action" value="create" />
+                    <input type="hidden" name="job_type" value="one_time" />
+
+                </form>
+            </div>
+        </div>
+
+        <div id="create-interval_based" class="yui-pe-content">
+            <div class="hd">Create an interval-based job</div>
+            <div class="bd">
+                <form action=".?server={{ server_id }}" method="post" id="create-form-interval_based">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_interval_based_form.job_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Weeks</td>
+                            <td>{{ create_interval_based_form.weeks }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Days</td>
+                            <td>{{ create_interval_based_form.days }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Hours</td>
+                            <td>{{ create_interval_based_form.hours }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Minutes</td>
+                            <td>{{ create_interval_based_form.minutes }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Seconds</td>
+                            <td>{{ create_interval_based_form.seconds }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                            </td>
+                            <td>
+                                <input id="id_create-interval-based-start_date"
+                                    name="create-interval-based-start_date" type="text" />
+                                    <img alt="Calendar"
+                                        onclick="javascript:show_create_interval_based_date_time_picker();"
+                                        src="/static/gfx/calendar_date_select/calendar.gif"
+                                        style="border:0px; cursor:pointer;" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Number of repeats</td>
+                            <td>{{ create_interval_based_form.repeat }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_interval_based_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ create_interval_based_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    {{ create_interval_based_form.original_job_name }}
+                    <input type="hidden" name="zato_action" value="create" />
+                    <input type="hidden" name="job_type" value="interval_based" />
+
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-one_time" class="yui-pe-content">
+            <div class="hd">Edit a one-time job</div>
+            <div class="bd">
+                <form action=".?server={{ server_id }}" method="post" id="edit-form-one_time">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_one_time_form.job_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Date &amp; time<br/>
+                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                            </td>
+                            <td>
+                                <input id="id_edit-one-time-date_time" class="required"
+                                    name="edit-one-time-date_time" type="text" />
+                                    <img alt="Calendar"
+                                        onclick="javascript:show_edit_one_time_date_time_picker();"
+                                        src="/static/gfx/calendar_date_select/calendar.gif"
+                                        style="border:0px; cursor:pointer;" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_one_time_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ edit_one_time_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    {{ edit_one_time_form.original_job_name }}
+                    <input type="hidden" name="zato_action" value="edit" />
+                    <input type="hidden" name="job_type" value="one_time" />
+
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-interval_based" class="yui-pe-content">
+            <div class="hd">Edit an interval-based job</div>
+            <div class="bd">
+                <form action=".?server={{ server_id }}" method="post" id="edit-form-interval_based">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_interval_based_form.job_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Weeks</td>
+                            <td>{{ edit_interval_based_form.weeks }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Days</td>
+                            <td>{{ edit_interval_based_form.days }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Hours</td>
+                            <td>{{ edit_interval_based_form.hours }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Minutes</td>
+                            <td>{{ edit_interval_based_form.minutes }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Seconds</td>
+                            <td>{{ edit_interval_based_form.seconds }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                            </td>
+                            <td>
+                                <input id="id_edit-interval-based-start_date"
+                                    name="edit-interval-based-start_date" type="text" />
+                                    <img alt="Calendar"
+                                        onclick="javascript:show_edit_interval_based_date_time_picker();"
+                                        src="/static/gfx/calendar_date_select/calendar.gif"
+                                        style="border:0px; cursor:pointer;" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Number of repeats</td>
+                            <td>{{ edit_interval_based_form.repeat }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_interval_based_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ edit_interval_based_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    {{ edit_interval_based_form.original_job_name }}
+                    <input type="hidden" name="zato_action" value="edit" />
+                    <input type="hidden" name="job_type" value="interval_based" />
+
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}server_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_servers{% endcomment %}
+
+{% endblock %}

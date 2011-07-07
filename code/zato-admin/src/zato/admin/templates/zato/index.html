@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <title>ZatoAdmin</title>
+
+    {% comment %} YUI {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/yui/build/base/base.css">
+    <link rel="stylesheet" type="text/css" href="/static/yui/build/fonts/fonts.css">
+    <link rel="stylesheet" type="text/css" href="/static/yui/build/reset/reset.css">
+    <link rel="stylesheet" type="text/css" href="/static/yui/build/grids/grids.css">
+    <link rel="stylesheet" type="text/css" href="/static/yui/build/assets/skins/sam/skin.css">
+
+    {% block extra_css %}{% endblock %}
+
+    {% comment %} Our CSS must come last {% endcomment %}
+    <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+
+    <script type="text/javascript" src="/static/yui/build/yahoo-dom-event/yahoo-dom-event.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container_core-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/menu/menu-min.js"></script>
+
+    {% block extra_js %}{% endblock %}
+
+
+        <style type="text/css">
+            #zato_nav_menu {
+                position: static;
+            }
+
+            /*
+                For IE 6: trigger "haslayout" for the anchor elements in the root Menu by
+                setting the "zoom" property to 1.  This ensures that the selected state of
+                MenuItems doesn't get dropped when the user mouses off of the text node of
+                the anchor element that represents a MenuItem's text label.
+            */
+            #zato_nav_menu .yuimenuitemlabel {
+                _zoom: 1;
+                cursor:pointer;
+            }
+
+            #zato_nav_menu .yuimenu .yuimenuitemlabel {
+                _zoom: normal;
+            }
+        </style>
+
+        <script type="text/javascript">
+
+            /*
+                 Initialize and render the Menu when its elements are ready
+                 to be scripted.
+            */
+            YAHOO.util.Event.onContentReady("zato_nav_menu", function () {
+
+                /*
+                     Instantiate a Menu:  The first argument passed to the
+                     constructor is the id of the element in the page
+                     representing the Menu; the second is an object literal
+                     of configuration properties.
+                */
+                var zato_menu = new YAHOO.widget.Menu("zato_nav_menu", {
+                    position: "static", hidedelay: 750, lazyload: true});
+
+                /*
+                     Call the "render" method with no arguments since the
+                     markup for this Menu instance already exists in the page.
+                */
+                zato_menu.render();
+            });
+
+        </script>
+
+
+</head>
+<body class="yui-skin-sam">
+
+    <div id="doc3" class="yui-t1">
+        <div id="hd">
+            <div id="console-header"><a id="logo-link" href="/"><h1>ZatoAdmin</h1></a></div>
+        </div>
+        <div id="bd">
+            <div id="yui-main">
+                <div class="yui-b">{% block content %}{% endblock %}</div>
+            </div>
+            <div class="yui-b">
+
+             <div id="zato_nav_menu" class="yuimenu">
+                    <div class="bd">
+                        <ul class="first-of-type">
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url cluster %}">Clusters</a>
+                            </li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url servers %}">Servers</a>
+                            </li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url service %}">Services</a>
+                            </li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Security</a>
+                                <div class="yuimenu">
+                                    <div class="bd">
+                                        <ul>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">HTTP Basic Auth</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">SSL/TLS</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url security-wss %}">WS-Security</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Channels</a>
+                                <div class="yuimenu">
+                                    <div class="bd">
+                                        <ul>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">AMQP</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">JMS</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Plain HTTP</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url channel-soap %}">SOAP</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">ZeroMQ</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Connection pools</a>
+                                <div class="yuimenu">
+                                    <div class="bd">
+                                        <ul>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">AMQP</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">FTP</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">JMS</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Plain HTTP</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">REST</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">SOAP</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url pool-sql %}">SQL</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">ZeroMQ</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url scheduler %}">Schedulers</a>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Dictionaries</a>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Run-time data</a>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Monitoring</a>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Statistics</a>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Clipboard</a>
+                                <div class="yuimenu">
+                                    <div class="bd">
+                                        <ul>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Copy selected</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Paste from clipboard</a></li>
+                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Show clipboard</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">My account</a>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Documentation online</a></li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Suggest a feature</a></li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Community</a></li>
+                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Get involved</a></li>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+
+
+        </div>
+        <div id="footer"><p>ZatoAdmin</p></div>
+    </div>
+
+</body>
+</html>

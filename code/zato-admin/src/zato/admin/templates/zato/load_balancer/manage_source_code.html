@@ -1,0 +1,82 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/load_balancer.js"></script>
+
+    </script>
+
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">Load balancer : Config source code view</h1>
+
+{% if messages %}
+    {% for message in messages %}
+    <div id="user-message-div" class="user-message user-message-{{ message.tags }}"><pre id="user-message">{{ message }}</pre></div>
+    {% endfor %}
+<br/>
+{% endif %}
+
+<a href="{% url lb-manage cluster.id %}" class="common">Config GUI view</a>
+
+{% if haproxy_alive.status %}
+    <a href="{% url lb-remote-command cluster.id %}" class="common">Remote commands</a>
+    {% if cluster.stats_uri %}
+        <a href="http://{{ cluster.lb_host }}:{{ cluster.stats_port }}{{ cluster.stats_uri }}" class="common">Statistics</a>
+    {% endif %}
+{% endif %}
+
+<br/><br/>
+
+<div class="item-details">
+
+    <div class="item-details-header">
+        Cluster {{ cluster.name }}
+    </div>
+    <div class="item-details-body">
+
+        <div class="yui-pe-content">
+            <div class="bd">
+                <form action="{% url lb-manage-source-code-validate-save cluster.id %}" method="post">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td>
+                                {{ form.source_code }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align:right">
+
+        <button id="validate" name="validate" type="submit">Validate config</button>
+        <button id="validate_save" name="validate_save" type="submit">Validate and save</button>
+
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,327 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+
+    {% comment %} Validation framework {% endcomment %}
+    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
+    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+
+    {% comment %} Scriptaculous effects {% endcomment %}
+    <script type="text/javascript" src="/static/js/effects.js"></script>
+
+    {% comment %} Build a list of engines' friendly names {% endcomment %}
+    <script type="text/javascript">
+
+        var engine_friendly_name = new Hash();
+
+        {% for name, friendly_name in engine_friendly_name%}
+            engine_friendly_name.set('{{ name }}', '{{ friendly_name }}');
+        {% endfor %}
+
+    </script>
+
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} SQL connection pools related JS-code {% endcomment %}
+    <script type="text/javascript" src="/static/js/pool/sql.js"></script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">SQL connection pools</h1>
+
+{% if not zato_servers %}
+    <p>
+    There aren't any Zato servers registered with this ZatoAdmin instance.
+    <a href="{% url servers %}" class="common">Click here</a> to register a new server first.
+    <br/><br/>
+    </p>
+{% else %}
+
+    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+
+    {% if not server_id %}
+        Choose a server to manage the SQL connection pools.
+        <br/><br/>
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_server_form.server }}
+        <input type="submit" value="Show SQL connection pools" />
+    </form>
+
+    {% if server_id %}
+
+        <br/>
+            <a href="javascript:sql_create('{{ server_id }}')" class="common">Create a new SQL connection pool</a>
+        <br/>
+
+        <div id="create-sql" class="yui-pe-content">
+            <div class="hd">Create a new SQL connection pool</div>
+            <div class="bd">
+                <form action=".?server={{ server_id }}" method="post" id="create-form">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_form.pool_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">DB type</td>
+                            <td>{{ create_form.engine }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Host</td>
+                            <td>{{ create_form.host }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">DB name</td>
+                            <td>{{ create_form.db_name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">User</td>
+                            <td>{{ create_form.user }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool size</td>
+                            <td>{{ create_form.pool_size }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Extra parameters</td>
+                            <td>{{ create_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    {{ create_form.server_id }}
+                    {{ create_form.temp_id }}
+                    <input type="hidden" name="zato_action" value="create" />
+
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+        YAHOO.util.Event.addListener(window, "load", function() {
+            YAHOO.example.EnhanceFromMarkup = function() {
+                data_column_defs = [
+                    {key:"pool_name", label:"Name", sortable:true},
+                    {key:"engine", label:"DB type", sortable:true},
+                    {key:"host", label:"Host", sortable:true},
+                    {key:"db_name", label:"DB name", sortable:true},
+                    {key:"user", label:"User", sortable:true},
+                    {key:"pool_size", label:"Pool size", sortable:true},
+                    {key:"extra", label:"Extra parameters", sortable:true},
+                    {key:"edit", label:"&nbsp;"},
+                    {key:"change_password", label:"&nbsp;"},
+                    {key:"ping", label:"&nbsp;"},
+                    {key:"delete", label:"&nbsp;"},
+                ];
+
+                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
+                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
+                data_ds.responseSchema = {
+                    fields: [{key:"pool_name"},
+                            {key:"engine"},
+                            {key:"host"},
+                            {key:"db_name"},
+                            {key:"user"},
+                            {key:"pool_size"},
+                            {key:"extra"},
+                            {key:"edit"},
+                            {key:"change_password"},
+                            {key:"ping"},
+                            {key:"delete"},
+                    ]
+                };
+
+                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
+                        {sortedBy:{key:"pool_name",dir:"desc"}}
+                );
+
+                return {
+                    oDS: data_ds,
+                    oDT: data_dt
+                };
+            }();
+        });
+        </script>
+
+        <div id="change-password-sql" class="yui-pe-content">
+            <div class="hd">Change password</div>
+            <div class="bd">
+                <form action=".?server={{ server_id }}" method="post" id="change-password-form">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">SQL connection pool name</td>
+                            <td><span id="change_password_pool_name"/></td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Repeat password</td>
+                            <td>{{ change_password_form.password2 }}</td>
+                        </tr>
+
+                    </table>
+
+                    <input type="hidden" name="config_pub_key" id="config_pub_key" value="{{ config_pub_key }}" />
+                    <input type="hidden" name="pool_name" id="hidden_change_password_pool_name" />
+                    <input type="hidden" name="zato_action" value="change_password" />
+
+                </form>
+            </div>
+        </div>
+
+    <div id="delete-container"></div>
+
+    <div id="edit-sql" class="yui-pe-content">
+        <div class="hd">Edit SQL connection pool</div>
+        <div class="bd">
+            <form action=".?server={{ server_id }}" method="post" id="edit-form">
+                <table class="form-data" border="0">
+
+                    <tr>
+                        <td style="vertical-align:middle">Name</td>
+                        <td>{{ edit_form.pool_name }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">DB type</td>
+                        <td>{{ edit_form.engine }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">Host</td>
+                        <td>{{ edit_form.host }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">DB name</td>
+                        <td>{{ edit_form.db_name }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">User</td>
+                        <td>{{ edit_form.user }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">Pool size</td>
+                        <td>{{ edit_form.pool_size }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">Extra parameters</td>
+                        <td>{{ edit_form.extra }}</td>
+                    </tr>
+
+                </table>
+
+                {{ edit_form.temp_id }}
+                {{ edit_form.original_pool_name }}
+
+                <input type="hidden" name="zato_action" value="edit" />
+
+            </form>
+        </div>
+    </div>
+
+    <br/>
+    <div id="markup">
+        <table id="data-table">
+            <thead>
+
+                <tr>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                </tr>
+            </thead>
+
+            <tbody>
+            {% for pool in pools %}
+
+                <tr>
+                    <td>
+
+                        {% comment %}
+                            Storing the properties of a conection pool in this place
+                            simplifies the Javascript manipulations later on;
+                            mostly because Javascript links need not to be updated.
+                        {% endcomment %}
+                        <form style="display:none">
+                            <input type="hidden" id="hidden_original_pool_name_{{ pool.temp_id }}" value="{{ pool.original_pool_name }}" />
+                            <input type="hidden" id="hidden_pool_name_{{ pool.temp_id }}" value="{{ pool.pool_name }}" />
+                            <input type="hidden" id="hidden_engine_{{ pool.temp_id }}" value="{{ pool.engine }}" />
+                            <input type="hidden" id="hidden_host_{{ pool.temp_id }}" value="{{ pool.host }}" />
+                            <input type="hidden" id="hidden_db_name_{{ pool.temp_id }}" value="{{ pool.db_name }}" />
+                            <input type="hidden" id="hidden_user_{{ pool.temp_id }}" value="{{ pool.user }}" />
+                            <input type="hidden" id="hidden_pool_size_{{ pool.temp_id }}" value="{{ pool.pool_size }}" />
+                            <input type="hidden" id="hidden_extra_{{ pool.temp_id }}" value="{{ pool.extra }}" />
+                        </form>
+
+                        <span id="pool_name_{{ pool.temp_id }}">{{ pool.pool_name }}</span>
+                    </td>
+                    <td><span id="engine_{{ pool.temp_id }}">{{ pool.engine_friendly }}</span></td>
+                    <td><span id="host_{{ pool.temp_id }}">{{ pool.host }}</span></td>
+                    <td><span id="db_name_{{ pool.temp_id }}">{{ pool.db_name }}</span></td>
+                    <td><span id="user_{{ pool.temp_id }}">{{ pool.user }}</span></td>
+                    <td><span id="pool_size_{{ pool.temp_id }}">{{ pool.pool_size }}</span></td>
+                    <td><span id="extra_{{ pool.temp_id }}"><pre>{{ pool.extra }}</pre></span></td>
+                    <td><a href="javascript:sql_edit('{{ pool.temp_id }}')">Edit</a></td>
+                    <td><a href="javascript:sql_change_password('{{ pool.temp_id }}')">Change password</a></td>
+                    <td><a href="javascript:sql_ping('{{ pool.temp_id }}', '{{ server_id }}')">Ping</a></td>
+                    <td><a href="javascript:sql_delete('{{ pool.temp_id }}', '{{ server_id }}')">Delete</a></td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+
+    {% endif %} {% comment %}server_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_servers{% endcomment %}
+
+{% endblock %}
