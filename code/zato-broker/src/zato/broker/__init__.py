@@ -17,73 +17,47 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# stdlib
-import logging
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Monkey patch before importing anything else.
+
+from gevent import monkey
+monkey.patch_all()
 
 # ZeroMQ
 import zmq
 
-# Zato
-from zato.common.util import TRACE1
+# gevent
+from gevent import spawn
 
-logger = logging.getLogger(__name__)
-
-CONFIG_MESSAGE_PREFIX = 'ZATO_CONFIG'
+# gevent_zeromq
+from gevent_zeromq import zmq
 
 # Default addresses
-conf_sock_to_brok_address = 'tcp://*:5100'
-conf_sock_from_brok_address = 'tcp://*:5101'
+to_brok_address = 'tcp://*:5100'
+from_brok_address = 'tcp://*:5101'
 
-controller_sock_addr = 'tcp://*:5102'
-
-class Broker(object):
-    def __init__(self, conf_sock_to_brok_address, conf_sock_from_brok_address,
-                 controller_sock_addr):
-        self.conf_sock_to_brok_address = conf_sock_to_brok_address
-        self.conf_sock_from_brok_address = conf_sock_from_brok_address
-        self.controller_sock_addr = controller_sock_addr
+class BaseBroker(object):
+    def __init__(self, to_brok_address=to_brok_address, from_brok_address=from_brok_address):
+        self.to_brok_address = to_brok_address
+        self.from_brok_address = from_brok_address
         self.context = zmq.Context()
-
+        self.keep_running = True
+        
+    def pre_run(self):
+        
+        self.to_broker_sock = self.context.socket(zmq.PULL)
+        self.to_broker_sock.bind(self.to_brok_address)
+        
+        self.from_broker_sock = self.context.socket(zmq.PUSH)
+        self.from_broker_sock.bind(self.from_brok_address)
+        
     def run(self):
-
-        # PULL - for receiving updates to the configuration of Zato servers.
-        self.conf_sock_to_brok = self.context.socket(zmq.PULL)
-        self.conf_sock_to_brok.bind(self.conf_sock_to_brok_address)
-
-        # PUB - for sending out updates to the configuration of Zato servers.
-        self.conf_sock_from_brok = self.context.socket(zmq.PUB)
-        self.conf_sock_from_brok.bind(self.conf_sock_from_brok_address)
-
-        # PULL - for receiving requests of updating our own configuration.
-        self.controller_socket = self.context.socket(zmq.PULL)
-        self.controller_socket.bind(self.controller_sock_addr)
-
-        poller = zmq.Poller()
-        poller.register(self.conf_sock_to_brok)
-        poller.register(self.conf_sock_from_brok)
-        poller.register(self.controller_socket)
-
-        keep_running = True
-
-        while keep_running:
-            socks = dict(poller.poll())
-
-            if socks.get(self.conf_sock_to_brok) == zmq.POLLIN:
-
-                message = self.conf_sock_to_brok.recv()
-                print(22, message)
-
-                logger.log(TRACE1, 'Got a config message [{0}]'.format(message))
-                self.conf_sock_from_brok.send(CONFIG_MESSAGE_PREFIX + ':' + message)
-
-            elif socks.get(self.controller_socket) == zmq.POLLIN:
-
-                message = self.controller_socket.recv()
-                logger.log(TRACE1, 'Got a controller message [{0}]'.format(message))
-
-                keep_running = False
-
-if __name__ == '__main__':
-    broker = Broker(conf_sock_to_brok_address, conf_sock_from_brok_address,
-               controller_sock_addr)
-    broker.run()
+        self.pre_run()
+        
+        while self.keep_running:
+            msg = self.to_broker_sock.recv()
+            spawn(self.on_message, msg)
+        
+    def on_message(self, msg):
+        raise NotImplementedError()
