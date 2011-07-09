@@ -21,14 +21,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from base64 import b64encode
 from binascii import hexlify, unhexlify
 from cStringIO import StringIO
+from hashlib import sha1
 from itertools import ifilter
 from pprint import pprint as _pprint
+from socket import gethostname, getfqdn
 from string import Template
 
 # M2Crypto
-from M2Crypto import RSA, BIO
+from M2Crypto import BIO, EVP, RSA
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
@@ -39,6 +42,10 @@ TRACE1 = 6
 logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template("<$class_name at $mem_loc$attrs>")
+
+def current_host():
+    return gethostname() + '/' + getfqdn()
+    
 
 def pprint(obj):
     """ Pretty-print an object into a string buffer.
@@ -72,7 +79,6 @@ def encrypt(data, pub_key, padding=RSA.pkcs1_padding, hexlified=True):
     hexlified - should the encrypted data be hex-encoded before being returned,
                 defaults to True
     """
-
     logger.debug("Using pub_key=[%s]" % pub_key)
 
     bio = BIO.MemoryBuffer(pub_key)
@@ -86,6 +92,16 @@ def encrypt(data, pub_key, padding=RSA.pkcs1_padding, hexlified=True):
 
     return encrypted
 
+def sign(data, priv_key_path):
+    """ Signs the data using a private key from the given path and returns
+    the BASE64-encoded signature.
+    """
+    logger.debug('Using priv_key_path=[{0}]'.format(priv_key_path))
+    
+    key = RSA.load_key(priv_key_path)
+    sig = key.sign(sha1(data).digest())
+    
+    return b64encode(sig)
 
 # Based on
 # http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored

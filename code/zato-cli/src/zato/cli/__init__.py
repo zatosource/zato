@@ -45,9 +45,8 @@ _opts_odb_port = "ODB database port"
 _opts_odb_user = "ODB database user"
 _opts_odb_schema = "ODB database schema"
 _opts_odb_dbname = "ODB database name"
-_opts_rabbitmq_host = "RabbitMQ host"
-_opts_rabbitmq_port = "RabbitMQ port"
-_opts_rabbitmq_user = "RabbitMQ user"
+_opts_zeromq_host = "ZeroMQ host"
+_opts_zeromq_port = "ZeroMQ port"
 
 supported_db_types = ("oracle", "postgresql", "sqlserver", "mysql")
 
@@ -72,11 +71,9 @@ common_odb_opts = [
         dict(name="--odb-password", help="ODB database password"),
 ]
 
-rabbit_mq_opts = [
-    dict(name="rabbitmq_host", help=_opts_rabbitmq_host),
-    dict(name="rabbitmq_port", help=_opts_rabbitmq_port),
-    dict(name="rabbitmq_user", help=_opts_rabbitmq_user),
-    dict(name="--rabbitmq-password", help="RabbitMQ password"),
+zeromq_opts = [
+    dict(name="zeromq_host", help=_opts_zeromq_host),
+    dict(name="zeromq_port", help=_opts_zeromq_port),
 ]
 
 common_ca_create_opts = [
