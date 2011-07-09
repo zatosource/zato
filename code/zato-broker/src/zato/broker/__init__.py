@@ -34,29 +34,39 @@ from gevent import spawn
 from gevent_zeromq import zmq
 
 # Default addresses
-to_brok_address = 'tcp://*:5100'
-from_brok_address = 'tcp://*:5101'
+to_brok_address_pull = 'tcp://*:5100'
+from_brok_address_push = 'tcp://*:5101'
+from_brok_address_dealer = 'tcp://*:5102'
+
+class Addresses(object):
+    def __init__(self, pull=to_brok_address_pull, push=from_brok_address_push, 
+                 dealer=from_brok_address_dealer):
+        self.pull = pull
+        self.push = push
+        self.dealer = dealer
 
 class BaseBroker(object):
-    def __init__(self, to_brok_address=to_brok_address, from_brok_address=from_brok_address):
-        self.to_brok_address = to_brok_address
-        self.from_brok_address = from_brok_address
+    def __init__(self, addresses):
+        self.addresses = addresses
         self.context = zmq.Context()
         self.keep_running = True
         
     def pre_run(self):
         
-        self.to_broker_sock = self.context.socket(zmq.PULL)
-        self.to_broker_sock.bind(self.to_brok_address)
+        self.to_broker_sock_pull = self.context.socket(zmq.PULL)
+        self.to_broker_sock_pull.bind(self.addresses.pull)
         
-        self.from_broker_sock = self.context.socket(zmq.PUSH)
-        self.from_broker_sock.bind(self.from_brok_address)
+        self.from_broker_sock_push = self.context.socket(zmq.PUSH)
+        self.from_broker_sock_push.bind(self.addresses.push)
+        
+        self.from_broker_sock_dealer = self.context.socket(zmq.XREQ)
+        self.from_broker_sock_dealer.bind(self.addresses.dealer)
         
     def run(self):
         self.pre_run()
         
         while self.keep_running:
-            msg = self.to_broker_sock.recv()
+            msg = self.to_broker_sock_pull.recv()
             spawn(self.on_message, msg)
         
     def on_message(self, msg):

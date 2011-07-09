@@ -24,7 +24,7 @@ from logging import getLogger
 from urllib2 import build_opener, Request
 
 # Zato
-from zato.broker import BaseBroker
+from zato.broker import BaseBroker, Addresses
 from zato.common.util import TRACE1
 
 logger = getLogger(__name__)
@@ -36,5 +36,5 @@ class Broker(BaseBroker):
         logger.log(TRACE1, 'Got message [{0}]'.format(msg))
 
 if __name__ == '__main__':
-    broker = Broker()
+    broker = Broker(Addresses())
     broker.run()
