@@ -37,7 +37,7 @@ from zato.admin.web.server_model import WSSUsernameTokenDefinition
 from zato.admin.web.forms.security.wss import WSSUsernameTokenDefinitionForm
 from zato.admin.web.views import meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
-from zato.common.soap import invoke_admin_service
+from zato.admin.web import invoke_admin_service
 from zato.common.odb.model import Cluster
 from zato.common.util import TRACE1, to_form
 
@@ -72,8 +72,7 @@ def index(req):
         zato_message = Element("{%s}zato_message" % zato_namespace)
 
         _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
-                "zato:security.wss.get-list", etree.tostring(zato_message),
-                ssl_key_file=ssl_key_file, ssl_cert_file=ssl_cert_file, ssl_ca_certs=ssl_ca_certs)
+                "zato:security.wss.get-list", zato_message, req.session)
 
         if zato_path("data.definition_list.definition").get_from(zato_message) is not None:
             for definition_elem in zato_message.data.definition_list.definition:
