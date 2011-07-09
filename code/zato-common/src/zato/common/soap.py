@@ -44,22 +44,23 @@ class SOAPPool(object):
         self._pool = urllib3.connection_from_url(self.url, **kwargs)
 
     def __str__(self):
-        return "%s object at %s, url=[%s]" % (self.__class__.__name__, hex(id(self)), self.url)
+        return '<{0} object at {1}, url=[{2}]>'.format(self.__class__.__name__, hex(id(self)), self.url)
 
-    def invoke(self, script_path, soap_action, soap_body):
-        headers = {"content-type": "text/xml", "SOAPAction": soap_action}
+    def invoke(self, script_path, soap_action, soap_body, headers={}):
+        msg_headers = {'content-type': 'text/xml', 'SOAPAction': soap_action}
+        msg_headers.update(**headers)
         payload = soap_doc.safe_substitute(body=soap_body)
 
-        msg = "About to invoke a service. url=[%s], script_path=[%s], headers=[%s], soap_body=[%s]" % (self.url, script_path, headers, soap_body)
+        msg = 'About to invoke a service. url=[{0}] script_path=[{1}] msg_headers=[{2}] soap_body=[{3}]'.format(
+            self.url, script_path, msg_headers, soap_body)
         logger.debug(msg)
 
-        response = self._pool.urlopen("POST", script_path, payload, headers).data
-        logger.debug("Received a response [%s]" % response)
+        response = self._pool.urlopen('POST', script_path, payload, headers).data
+        logger.debug('Received a response [{0}]'.format(response))
 
         return response
 
-def invoke_admin_service(cluster, soap_action, soap_body="", needs_config_key=False,
-                         ssl_key_file=None, ssl_cert_file=None, ssl_ca_certs=None):
+def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_config_key=False):
     """ Invokes a Zato server's administrative SOAP service. Returns an lxml's objectified
     response if no errors have been encountered. Raises a ZatoException if the response
     doesn't pass the formal validation.
@@ -73,8 +74,8 @@ def invoke_admin_service(cluster, soap_action, soap_body="", needs_config_key=Fa
     """
     url = 'https://{0}:{1}'.format(cluster.sec_server_host, cluster.sec_server_port)
     logger.log(TRACE1, "About to invoke admin service url=[{0}]".format(url))
-    pool = SOAPPool(url, key_file=ssl_key_file, cert_file=ssl_cert_file, ca_certs=ssl_ca_certs)
-    soap_response = pool.invoke("/soap", soap_action, soap_body)
+    pool = SOAPPool(url)
+    soap_response = pool.invoke("/zato/soap", soap_action, soap_body, headers)
 
 
     print('soap_response=[{0}]'.format(soap_response))
