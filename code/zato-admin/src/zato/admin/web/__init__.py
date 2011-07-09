@@ -25,7 +25,10 @@ from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs
 from zato.common.soap import invoke_admin_service as _invoke_admin_service
 
 
-def invoke_admin_service(cluster, service, zato_message):
-    return _invoke_admin_service(cluster,
-        service, etree.tostring(zato_message),
-        ssl_key_file=ssl_key_file, ssl_cert_file=ssl_cert_file, ssl_ca_certs=ssl_ca_certs)
+def invoke_admin_service(cluster, service, zato_message, session):
+    """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
+    Django session-related information to the request headers.
+    """
+    headers = {'session_type':'zato-admin/django', 'session_key': session.session_key}
+    return _invoke_admin_service(cluster, service, etree.tostring(zato_message),
+                                 headers)
