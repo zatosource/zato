@@ -22,9 +22,33 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.server.pool.sql import ODBConnectionPool
 
+ZATO_ODB_POOL_NAME = 'ZATO_ODB'
+
 class ODBManager(object):
     """ Manages connections to the server's Operational Database.
     """
-    def __init__(self, well_known_data=None, crypto_manager=None):
+    def __init__(self, well_known_data=None, odb_data=None, odb_config=None,
+                 crypto_manager=None, pool=None):
         self.well_known_data = well_known_data
+        self.odb_data = odb_data
+        self.odb_config = odb_data
         self.crypto_manager = crypto_manager
+        self.pool = pool
+        
+    def connect(self):
+        if not self.pool:
+            if not self.odb_config:
+                odb_data = dict(self.odb_data.items())
+                
+                if not odb_data['extra']:
+                    odb_data['extra'] = {}
+                    
+                odb_data['pool_size'] = int(odb_data['pool_size'])
+                    
+                self.odb_config = {ZATO_ODB_POOL_NAME: odb_data}
+                
+            self.pool = ODBConnectionPool(self.odb_config, True, self.crypto_manager)
+            self.pool.init()
+            self.pool.get(ZATO_ODB_POOL_NAME)
+            
+        self.pool.ping({'pool_name': ZATO_ODB_POOL_NAME})

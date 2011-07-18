@@ -56,7 +56,7 @@ ca_certs_location=ca-chain.pem
 [odb]
 db_name={odb_db_name}
 engine={odb_engine}
-extra={{}}
+extra=
 host={odb_host}
 password={odb_password}
 pool_size={odb_pool_size}

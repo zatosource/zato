@@ -115,7 +115,7 @@ class ParallelServer(object):
         socket = ZMQPush(name, self.zmq_context)
         self.zmq_sockets[name] = socket
         
-        print(333, self.odb_manager)
+        self.odb_manager.connect()
         
     def on_inproc_message_handler(self, msg):
         """ Handler for incoming 'inproc' ZMQ messages.

@@ -30,7 +30,7 @@ from sqlalchemy.sql import text
 logger = logging.getLogger(__name__)
 
 # TODO: Handle extra parameters.
-engine_def = "{engine}://{user}:{password}@{host}/{db_name}"
+engine_def = '{engine}://{user}:{password}@{host}/{db_name}'
 
 # Queries to use in pinging the databases.
 ping_queries = {
