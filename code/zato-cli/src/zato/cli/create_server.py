@@ -43,17 +43,7 @@ class CustomContext(PythonConfig):
     #     return 9876
 """
 
-odb_yml_template = """zato_odb:
-    db_name: '{db_name}'
-    engine: '{engine}'
-    extra: {{}}
-    host: '{host}'
-    password: '{password}'
-    pool_size: {pool_size}
-    user: '{user}'
-"""
-
-server_conf_contents = """[bind]
+server_conf_template = """[bind]
 host=localhost
 starting_port=17010
 
@@ -62,6 +52,15 @@ priv_key_location=zs-priv-key.pem
 pub_key_location=zs-pub-key.pem
 cert_location=zs-cert.pem
 ca_certs_location=ca-chain.pem
+
+[odb]
+db_name={odb_db_name}
+engine={odb_engine}
+extra={{}}
+host={odb_host}
+password={odb_password}
+pool_size={odb_pool_size}
+user={odb_user}
 
 [scheduler]
 job_list_location=job-list.yml
@@ -124,16 +123,11 @@ default_odb_pool_size = 4
 
 directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs')
 files = {ZATO_SERVER_DIR: '',
-         'config/repo/job-list.yml':'job_list: {}',
-         'config/repo/service-store-data.yml':'services: {}',
-         'config/repo/soap-channel-data.yml':'channels: {}',
-         'config/repo/odb.yml':'',
          'config/repo/custom-config.yml': '',
          'config/repo/custom-config.xml':'',
          'config/repo/custom_config.py': custom_config_contents,
          'config/repo/__init__.py': '',
          'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
-         'config/repo/server.conf':server_conf_contents
 }
 
 priv_key_location = './config/repo/config-priv.pem'
@@ -189,15 +183,17 @@ class CreateServer(ZatoCommand):
         print('')
         print('Logging configuration stored in {logging_conf_loc}'.format(logging_conf_loc=logging_conf_loc))
 
-        odb_yml_loc = os.path.join(self.target_dir, 'config/repo/odb.yml')
-        odb_yml = open(odb_yml_loc, 'w')
-        odb_yml.write(odb_yml_template.format(db_name=args.odb_dbname,
-                            engine=args.odb_type,
-                        host=args.odb_host,
-                        password=encrypt(args.odb_password, pub_key),
-                        pool_size=default_odb_pool_size, user=args.odb_user))
-        odb_yml.close()
-        print('ODB configuration stored in {odb_yml_loc}'.format(odb_yml_loc=odb_yml_loc))
+        server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
+        server_conf = open(server_conf_loc, 'w')
+        server_conf.write(server_conf_template.format(odb_db_name=args.odb_dbname,
+                            odb_engine=args.odb_type,
+                        odb_host=args.odb_host,
+                        odb_password=encrypt(args.odb_password, pub_key),
+                        odb_pool_size=default_odb_pool_size, 
+                        odb_user=args.odb_user))
+        server_conf.close()
+        
+        print('Core configuration stored in {server_conf_loc}'.format(server_conf_loc=server_conf_loc))
 
         msg = """\nSuccessfully created a new server.
 You can now start it with the 'zato start {path}' command.

@@ -19,8 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Zato
+from zato.server.pool.sql import ODBConnectionPool
+
 class ODBManager(object):
     """ Manages connections to the server's Operational Database.
     """
-    def __init__(self):
-        pass
+    def __init__(self, well_known_data=None, crypto_manager=None):
+        self.well_known_data = well_known_data
+        self.crypto_manager = crypto_manager
