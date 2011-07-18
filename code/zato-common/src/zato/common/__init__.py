@@ -104,6 +104,10 @@ ZATO_WARNING = "ZATO_WARNING"
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 
+# Names of components as they're used by ZeroMQ sockets.
+ZATO_PARALLEL_SERVER = '/zato/parallel'
+ZATO_SINGLETON_SERVER = '/zato/singleton'
+
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):
         self.path = path

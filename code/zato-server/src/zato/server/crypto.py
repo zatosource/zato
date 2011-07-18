@@ -28,16 +28,25 @@ from binascii import hexlify, unhexlify
 # M2Crypto
 from M2Crypto import RSA, BIO
 
+# Zato
+from zato.common.util import decrypt, encrypt, sign
+
 class CryptoManager(object):
     """ Responsible for management of the server's crypto material.
     """
-    def __init__(self, priv_key_location=None, pub_key_location=None):
-        super(CryptoManager, self).__init__()
+    def __init__(self, priv_key_location=None, pub_key_location=None, 
+                 priv_key=None, pub_key=None):
+        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
+        
         self.priv_key_location = priv_key_location
         self.pub_key_location = pub_key_location
-        self.priv_key = None
-        self.pub_key = None
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
+        
+        self.priv_key = priv_key
+        self.pub_key = pub_key
+
+    def load_keys(self):
+        self.priv_key = RSA.load_key(self.priv_key_location)
+        self.pub_key = RSA.load_pub_key(self.pub_key_location)
 
     def decrypt(self, data, padding=RSA.pkcs1_padding, hexlified=True):
         """ Decrypts data using the private config key. Padding used defaults
@@ -59,3 +68,6 @@ class CryptoManager(object):
             encrypted = hexlify(encrypted)
 
         return encrypted
+    
+    def sign(self, data):
+        return sign(data, self.priv_key)

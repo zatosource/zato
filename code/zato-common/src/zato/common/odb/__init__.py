@@ -59,7 +59,7 @@ def create_pool(crypto_manager, engine_params):
     return session
 
 # Taken from http://www.siafoo.net/snippet/85
-# TODO: Add license
+# TODO: Add license (http://www.opensource.org/licenses/bsd-license.php)
 def drop_all(engine):
     """ Drops all tables and sequences (but not VIEWS) from a Postgres database
     """

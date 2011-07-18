@@ -90,7 +90,7 @@ class _EngineInfo(object):
         self.url = url
         self.params = params
 
-class _SQLConnectionPool(InitializingObject):
+class _BaseSQLConnectionPool(InitializingObject):
     """ A base type for classes that deal with SQL connection pools.
     """
     def __init__(self, pool_list, create_sa_engines):
@@ -116,7 +116,7 @@ class _SQLConnectionPool(InitializingObject):
         # SQL Alchemy engines or merely for storing their configuration.
         self.create_sa_engines = create_sa_engines
 
-        super(_SQLConnectionPool, self).__init__()
+        super(_BaseSQLConnectionPool, self).__init__()
 
     @synchronized()
     def after_properties_set(self):
@@ -137,45 +137,13 @@ class _SQLConnectionPool(InitializingObject):
             self.logger.error(format_exc())
         finally:
             self.is_get_allowed.set()
-
-class SQLConnectionPool(_SQLConnectionPool, DisposableObject):
-    """ The actual container for SQLAlchemy's SQL engines, acting as a connection
-    pool itself to its clients, each call to .get(pool_name) returns a connection from
-    the connection pool managed by SQLAlchemy. The engines are created on IoC
-    container startup and disposed of when the IoC container is shutting down.
-    It's also possible to create, modify and delete engines while the server
-    is running. Updates are synchronized, only one thread at a time will be
-    permitted to create, edit or delete an SQL connection pool and during that
-    time no other threads will be allowed to neither change connection pools
-    nor to fetch the connections.
-    """
-
-    # TODO: I don't know where to write it down but here it is.. SQLAlchemy
-    # allows one to use connection listeners such as here
-    # http://elixir.ematia.de/trac/wiki/FAQ#HowdoIexecuteSQLstatementsatapplicationinitialization
-    # and Zato should also support it somehow (for instance, by allowing the user
-    # to specify an SQL snippet to execute in the listener).
-
-    def __init__(self, pool_list={}, config_repo_manager=None, crypto_manager=None,
-                 create_sa_engines=False, log_name=None):
-
-        self.log_name = log_name
-
-        _SQLConnectionPool.__init__(self, pool_list, create_sa_engines)
-        super(DisposableObject, self).__init__()
-
-        self.config_repo_manager = config_repo_manager
-        self.crypto_manager = crypto_manager
-
-        self.logger = logging.getLogger("%s.%s[%s]" % (__name__, self.__class__.__name__,
-                                                       self.log_name))
-
+            
     def get(self, pool_name, timeout=None):
         """ Returns a connection from the pool of a given name. The calling thread
         will block if the pool manager performs any updates to the underlying
         configuration. The timeout parameter, specified as a float, indicates
         how many seconds to wait before giving up and raising a ZatoException.
-        Timeout default to None and means the call to .get will block indefinetely.
+        Timeout defaults to None and means the call to .get will block indefinetely.
         Note: in Python < 2.7 the timeout is always ignored and None is used
         instead (that's because it can't be used to tell the reason for
         threading.Event.wait to return, see http://bugs.python.org/issue1674032).
@@ -205,6 +173,41 @@ class SQLConnectionPool(_SQLConnectionPool, DisposableObject):
                   "e=[%s]." % (pool_name, format_exc())
             self.logger.error(msg)
             raise ZatoException(msg)
+
+class ODBConnectionPool(_BaseSQLConnectionPool, DisposableObject):
+    pass
+        
+class SQLConnectionPool(_BaseSQLConnectionPool, DisposableObject):
+    """ The actual container for SQLAlchemy's SQL engines, acting as a connection
+    pool itself to its clients, each call to .get(pool_name) returns a connection from
+    the connection pool managed by SQLAlchemy. The engines are created on IoC
+    container startup and disposed of when the IoC container is shutting down.
+    It's also possible to create, modify and delete engines while the server
+    is running. Updates are synchronized, only one thread at a time will be
+    permitted to create, edit or delete an SQL connection pool and during that
+    time no other threads will be allowed to neither change connection pools
+    nor to fetch the connections.
+    """
+
+    # TODO: I don't know where to write it down but here it is.. SQLAlchemy
+    # allows one to use connection listeners such as here
+    # http://elixir.ematia.de/trac/wiki/FAQ#HowdoIexecuteSQLstatementsatapplicationinitialization
+    # and Zato should also support it somehow (for instance, by allowing the user
+    # to specify an SQL snippet to execute in the listener).
+
+    def __init__(self, pool_list={}, config_repo_manager=None, crypto_manager=None,
+                 create_sa_engines=False, log_name=None):
+
+        self.log_name = log_name
+
+        _BaseSQLConnectionPool.__init__(self, pool_list, create_sa_engines)
+        super(DisposableObject, self).__init__()
+
+        self.config_repo_manager = config_repo_manager
+        self.crypto_manager = crypto_manager
+
+        self.logger = logging.getLogger("%s.%s[%s]" % (__name__, self.__class__.__name__,
+                                                       self.log_name))
 
     @synchronized()
     def _on_config_CREATE_SQL_CONNECTION_POOL(self, params):
