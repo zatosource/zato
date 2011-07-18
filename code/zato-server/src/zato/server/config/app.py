@@ -254,7 +254,7 @@ class ZatoContext(PythonConfig):
         crypto_manager = self.crypto_manager()
         create_sa_engines = True
         pool = SQLConnectionPool(pool_list, config_repo_manager, crypto_manager,
-                                 create_sa_engines, "SQL_POOL")
+                                 create_sa_engines)
 
         return pool
 

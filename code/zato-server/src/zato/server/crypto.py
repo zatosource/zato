@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os
+from base64 import b64encode, b64decode
 from uuid import uuid4
 from getpass import getpass
 from binascii import hexlify, unhexlify
@@ -54,11 +55,11 @@ class CryptoManager(object):
         should be hex-decoded before being decrypted.
         """
         if hexlified:
-            data = unhexlify(data)
+            data = b64decode(data)
 
-        return self.priv_key.private_decrypt(data, padding).replace("\x00", "")
+        return self.priv_key.private_decrypt(data, padding).replace('\x00', '')
 
-    def encrypt(self, data, padding=RSA.pkcs1_padding, hexlified=True):
+    def encrypt(self, data, padding=RSA.pkcs1_padding, base64=True):
         """ Encrypts data using the public config key. Padding used defaults
         to PKCS#1. hexlified defaults to True and indicates whether the data
         should be hex-encoded after being encrypted.

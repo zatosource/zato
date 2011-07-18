@@ -39,8 +39,9 @@ from springpython.util import synchronized
 from springpython.context import InitializingObject, DisposableObject
 
 # Zato
-from zato.common.util import pprint, TRACE1
 from zato.common import ZatoException
+from zato.common.odb import engine_def, ping_queries
+from zato.common.util import pprint, TRACE1
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +50,11 @@ def _get_engines(pool_list, crypto_manager, create_sa_engines):
     type, either plain _EngineInfo objects or the actual SQLAlchemy engines.
     """
     engines = {}
-
+    
     for pool_name in pool_list:
         try:
             password = pool_list[pool_name]["password"]
-
+            
             # It's possible the pool had been defined but no password
             # has been set yet.
             if password:
@@ -65,7 +66,7 @@ def _get_engines(pool_list, crypto_manager, create_sa_engines):
             engine_params_no_password = dict(engine_params.items())
             engine_params_no_password["password"] = "***"
 
-            engine_url = engine_def.substitute(engine_params)
+            engine_url = engine_def.format(**engine_params)
 
             if create_sa_engines:
                 engine = create_engine(engine_url, pool_size=engine_params["pool_size"], **engine_params["extra"])
@@ -80,6 +81,7 @@ def _get_engines(pool_list, crypto_manager, create_sa_engines):
 
         except Exception, e:
             logger.error(format_exc())
+            raise
 
     return engines
 
@@ -90,10 +92,12 @@ class _EngineInfo(object):
         self.url = url
         self.params = params
 
-class _BaseSQLConnectionPool(InitializingObject):
+class _BaseSQLConnectionPool(object):
     """ A base type for classes that deal with SQL connection pools.
     """
     def __init__(self, pool_list, create_sa_engines, crypto_manager):
+
+        self.logger = logging.getLogger('{0}.{1}'.format(__name__, self.__class__.__name__))
 
         # Indicates whether it's safe to check out the connection from a pool.
         # The flag is set when there are any modifications to the pool being
@@ -120,8 +124,7 @@ class _BaseSQLConnectionPool(InitializingObject):
 
         super(_BaseSQLConnectionPool, self).__init__()
 
-    @synchronized()
-    def after_properties_set(self):
+    def init(self):
         """ Called by Spring Python when the IoC container is starting.
         """
 
@@ -171,10 +174,27 @@ class _BaseSQLConnectionPool(InitializingObject):
         try:
             return self.engines[pool_name]
         except Exception, e:
-            msg = "An error has occured while fetching the pool [%s], " \
-                  "e=[%s]." % (pool_name, format_exc())
+            msg = 'An error has occured while fetching the pool [{0}], ' \
+                  'e=[{1}].'.format(pool_name, format_exc())
             self.logger.error(msg)
             raise ZatoException(msg)
+        
+    def ping(self, params):
+        """ Pings the SQL database and returns the response time, in milliseconds.
+        """
+        pool_name = params["pool_name"]
+        engine = self.engines[pool_name]
+        query = ping_queries[self.pool_list[pool_name]["engine"]]
+
+        self.logger.debug("About to ping the SQL connection pool [%s], query=[%s]" % (pool_name, query))
+
+        start_time = time()
+        engine.connect().execute(query)
+        response_time = time() - start_time
+
+        self.logger.debug("Ping OK, pool_name=[%s], response_time=[%s]" % (pool_name, response_time))
+
+        return response_time
 
 class ODBConnectionPool(_BaseSQLConnectionPool, DisposableObject):
     pass
@@ -198,13 +218,13 @@ class SQLConnectionPool(_BaseSQLConnectionPool, DisposableObject):
     # to specify an SQL snippet to execute in the listener).
 
     def __init__(self, pool_list={}, config_repo_manager=None, crypto_manager=None,
-                 create_sa_engines=False, log_name=None):
+                 create_sa_engines=False):
 
         _BaseSQLConnectionPool.__init__(self, pool_list, create_sa_engines, crypto_manager)
         super(DisposableObject, self).__init__()
 
         self.config_repo_manager = config_repo_manager
-        self.logger = logging.getLogger("%s.%s[%s]" % (__name__, self.__class__.__name__, log_name))
+        
 
     @synchronized()
     def _on_config_CREATE_SQL_CONNECTION_POOL(self, params):
@@ -463,23 +483,6 @@ class SQLConnectionPool(_BaseSQLConnectionPool, DisposableObject):
             raise ZatoException(msg)
         finally:
             self.is_get_allowed.set()
-
-    def ping(self, params):
-        """ Pings the SQL database and returns the response time, in milliseconds.
-        """
-        pool_name = params["pool_name"]
-        engine = self.engines[pool_name]
-        query = ping_queries[self.pool_list[pool_name]["engine"]]
-
-        self.logger.debug("About to ping the SQL connection pool [%s], query=[%s]" % (pool_name, query))
-
-        start_time = time()
-        engine.connect().execute(query)
-        response_time = time() - start_time
-
-        self.logger.debug("Ping OK, pool_name=[%s], response_time=[%s]" % (pool_name, response_time))
-
-        return response_time
 
     @synchronized()
     def destroy(self):

@@ -94,6 +94,7 @@ def run(host, port, base_dir, start_singleton):
     parallel_server = app_context.get_object('parallel_server')
     parallel_server.crypto_manager = crypto_manager
     parallel_server.odb_manager.crypto_manager = crypto_manager
+    parallel_server.odb_manager.odb_data = config['odb']
     parallel_server.host = host
     parallel_server.port = port
     
