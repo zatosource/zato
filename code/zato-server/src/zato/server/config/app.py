@@ -30,7 +30,7 @@ from springpython.config import Object, PythonConfig
 from springpython.context import scope
 
 # Zato
-#from zato.server.amqp import Client
+from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.channel.soap import SOAPMessageHandler, SOAPChannelStore
@@ -178,7 +178,7 @@ class ZatoContext(PythonConfig):
     
     @Object
     def odb_manager(self):
-        return ODBManager()
+        return ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
 
     # #######################################################
     # Servers

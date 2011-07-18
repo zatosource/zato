@@ -93,7 +93,7 @@ class _EngineInfo(object):
 class _BaseSQLConnectionPool(InitializingObject):
     """ A base type for classes that deal with SQL connection pools.
     """
-    def __init__(self, pool_list, create_sa_engines):
+    def __init__(self, pool_list, create_sa_engines, crypto_manager):
 
         # Indicates whether it's safe to check out the connection from a pool.
         # The flag is set when there are any modifications to the pool being
@@ -115,6 +115,8 @@ class _BaseSQLConnectionPool(InitializingObject):
         # Should that SQL connection pool be used for actually storing the
         # SQL Alchemy engines or merely for storing their configuration.
         self.create_sa_engines = create_sa_engines
+        
+        self.crypto_manager = crypto_manager
 
         super(_BaseSQLConnectionPool, self).__init__()
 
@@ -198,16 +200,11 @@ class SQLConnectionPool(_BaseSQLConnectionPool, DisposableObject):
     def __init__(self, pool_list={}, config_repo_manager=None, crypto_manager=None,
                  create_sa_engines=False, log_name=None):
 
-        self.log_name = log_name
-
-        _BaseSQLConnectionPool.__init__(self, pool_list, create_sa_engines)
+        _BaseSQLConnectionPool.__init__(self, pool_list, create_sa_engines, crypto_manager)
         super(DisposableObject, self).__init__()
 
         self.config_repo_manager = config_repo_manager
-        self.crypto_manager = crypto_manager
-
-        self.logger = logging.getLogger("%s.%s[%s]" % (__name__, self.__class__.__name__,
-                                                       self.log_name))
+        self.logger = logging.getLogger("%s.%s[%s]" % (__name__, self.__class__.__name__, log_name))
 
     @synchronized()
     def _on_config_CREATE_SQL_CONNECTION_POOL(self, params):
