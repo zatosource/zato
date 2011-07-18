@@ -30,6 +30,9 @@ from string import Template
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# M2Crypto
+from M2Crypto import RSA
+
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts, zeromq_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
@@ -161,7 +164,8 @@ class Quickstart(ZatoCommand):
                               'localhost', 20151, 
                               'localhost', 15100)
 
-            well_known_data_signed = sign(ZATO_CRYPTO_WELL_KNOWN_DATA, priv_key_path)
+            well_known_data_signed = sign(ZATO_CRYPTO_WELL_KNOWN_DATA, 
+                                          RSA.load_key(priv_key_path))
             
             server = Server(None, 
                             'ZatoQuickstartServer-(cluster-#{next_id})'.format(next_id=next_id), 

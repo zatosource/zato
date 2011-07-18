@@ -31,7 +31,7 @@ from springpython.config import YamlConfig, XMLConfig
 from springpython.context import ApplicationContext
 
 # Zato
-from zato.common.util import TRACE1
+from zato.common.util import absolutize_path, TRACE1
 from zato.server.config.app import ZatoContext
 
 def _get_ioc_config(location, config_class):
@@ -73,11 +73,39 @@ def run(host, port, base_dir, start_singleton):
     app_context = ApplicationContext(app_ctx_list)
 
     crypto_manager = app_context.get_object('crypto_manager')
-    crypto_manager.priv_key_location = config['crypto']['priv_key_location']
-    crypto_manager.pub_key_location = config['crypto']['pub_key_location']
-    crypto_manager.cert_location = config['crypto']['cert_location']
-    crypto_manager.ca_certs_location = config['crypto']['ca_certs_location']
+    
+    priv_key_location = config['crypto']['priv_key_location']
+    pub_key_location = config['crypto']['pub_key_location']
+    cert_location = config['crypto']['cert_location']
+    ca_certs_location = config['crypto']['ca_certs_location']
+    
+    priv_key_location = absolutize_path(repo_location, priv_key_location)
+    pub_key_location = absolutize_path(repo_location, pub_key_location)
+    cert_location = absolutize_path(repo_location, cert_location)
+    ca_certs_location = absolutize_path(repo_location, ca_certs_location)
+    
+    crypto_manager.priv_key_location = priv_key_location
+    crypto_manager.pub_key_location = pub_key_location
+    crypto_manager.cert_location = cert_location
+    crypto_manager.ca_certs_location = ca_certs_location
+    
+    crypto_manager.load_keys()
+    
+    parallel_server = app_context.get_object('parallel_server')
+    parallel_server.crypto_manager = crypto_manager
+    parallel_server.host = host
+    parallel_server.port = port
+    
+    parallel_server.after_init()
 
+    if start_singleton:
+        singleton_server = app_context.get_object('singleton_server')
+        parallel_server.singleton_server = singleton_server
+
+    print('OK..')
+    parallel_server.run_forever()
+
+    '''
     job_list_location = os.path.join(repo_location, config['scheduler']['job_list_location'])
     service_store_config_location = os.path.join(repo_location, config['services']['service_store_config_location'])
 
@@ -104,15 +132,7 @@ def run(host, port, base_dir, start_singleton):
     pickup = app_context.get_object('pickup')
     pickup.pickup_dir = pickup_dir
 
-    parallel_server = app_context.get_object('parallel_server')
-    parallel_server.host = host
-    parallel_server.port = port
-
-    if start_singleton:
-        singleton_server = app_context.get_object('singleton_server')
-        parallel_server.singleton_server = singleton_server
-
-    parallel_server.run_forever()
+    '''
 
 if __name__ == '__main__':
     host, port, base_dir = sys.argv[1:4]

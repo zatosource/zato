@@ -44,13 +44,13 @@ class CustomContext(PythonConfig):
 """
 
 odb_yml_template = """zato_odb:
-    db_name: !!python/unicode '{db_name}'
-    engine: !!python/unicode '{engine}'
+    db_name: '{db_name}'
+    engine: '{engine}'
     extra: {{}}
-    host: !!python/unicode '{host}'
-    password: !!python/unicode '{password}'
+    host: '{host}'
+    password: '{password}'
     pool_size: {pool_size}
-    user: !!python/unicode '{user}'
+    user: '{user}'
 """
 
 server_conf_contents = """[bind]

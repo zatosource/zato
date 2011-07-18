@@ -26,12 +26,18 @@ import asyncore, json, logging, multiprocessing, ssl, time
 from zope.server.http.httpserver import HTTPServer
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
+# ZeroMQ
+import zmq
+from zmq.eventloop import ioloop
+
 # Spring Python
 from springpython.util import synchronized
 
 # Zato
-from zato.common import ZATO_CONFIG_REQUEST, ZATO_OK
-from zato.common.util import TRACE1
+from zato.common import ZATO_CONFIG_REQUEST, ZATO_PARALLEL_SERVER, \
+     ZATO_SINGLETON_SERVER, ZATO_OK
+from zato.common.util import TRACE1, zmq_inproc_pull_name, zmq_inproc_push_name, \
+     ZMQPullThread, ZMQPush
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
 
@@ -51,10 +57,10 @@ class ZatoHTTPServer(HTTPServer):
             # Collect necessary request data.
             request_body = task.request_data.getBodyStream().getvalue()
             headers = task.request_data.headers
-            #time.sleep(0.1)
+            time.sleep(0.2)
             #print(headers.get('X_ZATO_PEERCERT'))
 
-            print(33, headers)
+            #print(33, headers)
 
             # Fetch the response.
             response = '<?xml version="1.0" encoding="utf-8"?><axx />' #self.soap_dispatcher.handle(request_body, headers)
@@ -71,15 +77,53 @@ class ZatoHTTPServer(HTTPServer):
 
 
 class ParallelServer(object):
-    def __init__(self, host=None, port=None):
+    def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
+                 odb_manager=None):
         self.host = host
         self.port = port
+        self.zmq_context = zmq_context or zmq.Context()
+        self.crypto_manager = crypto_manager
+        self.odb_manager = odb_manager
+        
+        self.inproc_pull_name_parallel = zmq_inproc_pull_name(ZATO_PARALLEL_SERVER)
+        self.inproc_pull_name_singular = zmq_inproc_pull_name(ZATO_SINGLETON_SERVER)
+        
+        self.inproc_push_name_parallel = zmq_inproc_push_name(ZATO_PARALLEL_SERVER)
+        self.inproc_push_name_singular = zmq_inproc_push_name(ZATO_SINGLETON_SERVER)
 
         self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
-
+        
+    def after_init(self):
+        
+        self.zmq_sockets = {}
+        
+        name = self.inproc_pull_name_parallel
+        socket = ZMQPullThread(name, self.zmq_context, self.on_inproc_message_handler)
+        socket.start()
+        self.zmq_sockets[name] = socket
+        
+        name = self.inproc_pull_name_singular
+        socket = ZMQPullThread(name, self.zmq_context, self.on_inproc_message_handler)
+        socket.start()
+        self.zmq_sockets[name] = socket
+        
+        name = self.inproc_push_name_parallel
+        socket = ZMQPush(name, self.zmq_context)
+        self.zmq_sockets[name] = socket
+        
+        name = self.inproc_push_name_singular
+        socket = ZMQPush(name, self.zmq_context)
+        self.zmq_sockets[name] = socket
+        
+        print(333, self.odb_manager)
+        
+    def on_inproc_message_handler(self, msg):
+        """ Handler for incoming 'inproc' ZMQ messages.
+        """
+        
     def run_forever(self):
         task_dispatcher = ThreadedTaskDispatcher()
-        task_dispatcher.setThreadCount(90)
+        task_dispatcher.setThreadCount(20)
 
         self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
 
@@ -91,8 +135,13 @@ class ParallelServer(object):
 
         except KeyboardInterrupt:
             self.logger.info("Shutting down.")
+            
+            # ZeroMQ
+            #self.pull_socket.close()
+            self.zmq_context.term()
+            
+            # Zope
             task_dispatcher.shutdown()
-
 
     def send_config_request(self, command, data=None, timeout=None):
         """ Sends a synchronous IPC request to the SingletonServer.

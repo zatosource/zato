@@ -35,6 +35,7 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.channel.soap import SOAPMessageHandler, SOAPChannelStore
 from zato.server.crypto import CryptoManager
+from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.pool.sql import SQLConnectionPool, SQLConnectionPool
 from zato.server.repo import RepoManager
@@ -171,6 +172,13 @@ class ZatoContext(PythonConfig):
         #store.definitions = self.wss_username_password_definition_list()
 
         return store
+    
+    # #######################################################
+    # ODB (Operational Database)
+    
+    @Object
+    def odb_manager(self):
+        return ODBManager()
 
     # #######################################################
     # Servers
@@ -179,15 +187,15 @@ class ZatoContext(PythonConfig):
     def parallel_server(self):
 
         server = ParallelServer()
+        server.odb_manager = self.odb_manager()
 
         # Regular objects.
-        server.crypto_manager = self.crypto_manager()
-        server.sql_pool = self.sql_pool()
-        server.odb_pool_config = self.odb_pool_config()
-        server.service_store = self.service_store()
+        #server.sql_pool = self.sql_pool()
+        #server.odb_pool_config = self.odb_pool_config()
+        #server.service_store = self.service_store()
         #server.soap_channel_store = self.soap_channel_store()
-        server.wss_nonce_cache = self.wss_nonce_cache()
-        server.wss_store = self.wss_username_password_store()
+        #server.wss_nonce_cache = self.wss_nonce_cache()
+        #server.wss_store = self.wss_username_password_store()
 
         return server
 
