@@ -38,8 +38,12 @@ from M2Crypto import BIO, EVP, RSA
 # ZeroMQ
 import zmq
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
+from zato.common import ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER
 
 logger = logging.getLogger(__name__)
 
@@ -48,23 +52,77 @@ logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template("<$class_name at $mem_loc$attrs>")
 
-def zmq_inproc_pull_name(component):
-    """ Invokes _zmq_inproc_name and adds a suffix indicating it's a name
-    of a PULL socket
-    """
-    return _zmq_inproc_name(component) + '/pull'
+################################################################################
 
-def zmq_inproc_push_name(component):
-    """ Invokes _zmq_inproc_name and adds a suffix indicating it's a name
-    of a PUSH socket
-    """
-    return _zmq_inproc_name(component) + '/pull'
-    
-def _zmq_inproc_name(component):
+def zmq_inproc_name(component):
     """ Returns a name suitable for passing around between ZeroMQ 'inproc'
     sockets.
     """
-    return 'inproc://{0}'.format(component)
+    return 'inproc://zato/{0}'.format(component)
+
+class ZMQPull(object):
+    
+    def __init__(self, name, zmq_context, on_message_handler, keep_running=True):
+        self.name = name
+        self.on_message_handler = on_message_handler
+        self.keep_running = keep_running
+        self.socket_type = zmq.PULL
+        
+        self.socket = zmq_context.socket(self.socket_type)
+        self.socket.bind(name)
+
+    def start(self):
+        Thread(args=(self.socket,), target=self.listen).start()
+        
+    def stop(self, socket=None):
+        self.keep_running = False
+        if socket:
+            socket.close()
+    
+    def listen(self, socket):
+        logger.debug('Starting [{0}]/[{1}]'.format(self.__class__.__name__, self.name))
+        
+        while self.keep_running:
+            try:
+                msg = socket.recv()
+            except zmq.ZMQError, e:
+                msg = 'Caught ZMQError [{0}], quitting.'.format(e.strerror)
+                logger.warn(msg)
+                self.stop(socket)
+            else:
+                if msg == 'ZATO;STOP':
+                    self.stop(socket)
+                else:
+                    self.on_message_handler(msg)
+                
+class ZMQPush(object):
+    def __init__(self, name, zmq_context):
+        self.name = name
+        self.zmq_context = zmq_context
+        self.socket_type = zmq.PUSH 
+        
+        self.socket = self.zmq_context.socket(self.socket_type)
+        self.socket.connect(self.name)
+        
+    def send(self, msg):
+        try:
+            self.socket.send(msg)
+        except zmq.ZMQError, e:
+            msg = 'Caught ZMQError [{0}], continuing anyway.'.format(e.strerror)
+            logger.warn(msg)
+        
+    def stop(self):
+        msg = 'Stopping [{0}/{1}]'.format(self.name, self.socket_type)
+        logger.info(msg)
+        self.socket.close()
+        
+zmq_names = Bunch()
+zmq_names.inproc = Bunch()
+
+zmq_names.inproc.singleton_to_parallel = zmq_inproc_name('singleton-to-parallel')
+zmq_names.inproc.parallel_to_singleton = zmq_inproc_name('parallel-to-singleton')
+
+################################################################################
 
 def absolutize_path(base, path):
     """ Turns a path into an absolute path if it's relative to the base
@@ -232,35 +290,3 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
     agent_uri = "https://{host}:{port}/RPC2".format(host=lb_host, port=lb_agent_port)
     return LoadBalancerAgentClient(agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file,
                                          timeout=timeout)
-
-class ZMQPullThread(Thread):
-    def __init__(self, zmq_name, zmq_context, on_message_handler):
-        
-        # Initialize the thread first.
-        Thread.__init__(self)
-        
-        self.zmq_name = zmq_name
-        self.zmq_context = zmq_context
-        self.keep_running = True
-        self.on_message_handler = on_message_handler
-    
-    def run(self):
-        logger.debug('Starting [{0}]/[{1}]'.format(self.__class__.__name__, self.zmq_name))
-        
-        socket = self.zmq_context.socket(zmq.PULL)
-        socket.bind(self.zmq_name)
-        
-        while self.keep_running:
-            msg = socket.recv(0.005)
-            
-            if msg == 'ZATO;STOP':
-                socket.close()
-            else:
-                self.on_message_handler(msg)
-                
-class ZMQPush(object):
-    def __init__(self, zmq_name, zmq_context):
-        
-        self.zmq_name = zmq_name
-        self.zmq_context = zmq_context
-        self.socket = self.zmq_context.socket(zmq.PUSH)

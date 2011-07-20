@@ -108,6 +108,9 @@ ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 ZATO_PARALLEL_SERVER = '/zato/parallel'
 ZATO_SINGLETON_SERVER = '/zato/singleton'
 
+# Status of a server's join request
+ZATO_JOIN_REQUEST_ACCEPTED = 'ACCEPTED'
+
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):
         self.path = path

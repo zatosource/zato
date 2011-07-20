@@ -19,8 +19,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import logging
+
+# SQLAlchemy
+from sqlalchemy.orm import sessionmaker
+
 # Zato
+from zato.common.odb.model import Server
 from zato.server.pool.sql import ODBConnectionPool
+
+logger = logging.getLogger(__name__)
 
 ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 
@@ -35,7 +44,7 @@ class ODBManager(object):
         self.crypto_manager = crypto_manager
         self.pool = pool
         
-    def connect(self):
+    def fetch_server(self):
         if not self.pool:
             if not self.odb_config:
                 odb_data = dict(self.odb_data.items())
@@ -52,3 +61,14 @@ class ODBManager(object):
             self.pool.get(ZATO_ODB_POOL_NAME)
             
         self.pool.ping({'pool_name': ZATO_ODB_POOL_NAME})
+        engine = self.pool.get(ZATO_ODB_POOL_NAME)
+        
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        try:
+            return session.query(Server).filter(Server.odb_token == self.odb_data['token']).one()
+        except Exception, e:
+            msg = 'Could not find the server in the ODB'
+            logger.error(msg)
+            raise

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
+import os, uuid
 
 # Zato
 from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents
@@ -61,6 +61,7 @@ host={odb_host}
 password={odb_password}
 pool_size={odb_pool_size}
 user={odb_user}
+token={odb_token}
 
 [scheduler]
 job_list_location=job-list.yml
@@ -142,6 +143,7 @@ class CreateServer(ZatoCommand):
         super(CreateServer, self).__init__()
         self.target_dir = os.path.abspath(target_dir)
         self.dirs_prepared = False
+        self.odb_token = uuid.uuid4().hex
 
     description = 'Creates a new Zato server.'
 
@@ -190,7 +192,8 @@ class CreateServer(ZatoCommand):
                         odb_host=args.odb_host,
                         odb_password=encrypt(args.odb_password, pub_key),
                         odb_pool_size=default_odb_pool_size, 
-                        odb_user=args.odb_user))
+                        odb_user=args.odb_user,
+                        odb_token=self.odb_token))
         server_conf.close()
         
         print('Core configuration stored in {server_conf_loc}'.format(server_conf_loc=server_conf_loc))

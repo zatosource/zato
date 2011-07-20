@@ -170,7 +170,7 @@ class Quickstart(ZatoCommand):
             server = Server(None, 
                             'ZatoQuickstartServer-(cluster-#{next_id})'.format(next_id=next_id), 
                             cluster,
-                            well_known_data_signed,
+                            cs.odb_token,
                             'ACCEPTED',
                             datetime.now(),
                             'zato-quickstart/' + current_host())

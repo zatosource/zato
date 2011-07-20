@@ -145,6 +145,9 @@ class IPCNotifier(Thread):
 class BaseServer(object):
     """ A base class upon which singleton and parallel servers are created.
     """
+    
+    def __init__(self, parallel_server=None):
+        self.parallel_server = parallel_server
 
     def _create_ipc_notifiers(self):
         # Will pick up messages from server's IPC queues.

@@ -133,17 +133,17 @@ class Server(Base):
     last_join_mod_date = Column(DateTime(timezone=True), nullable=True)
     last_join_mod_by = Column(String(200), nullable=True)
     
-    well_known_data_signed = Column(String(4000), nullable=False)
+    odb_token = Column(String(32), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('servers', order_by=id))
 
-    def __init__(self, id=None, name=None, cluster=None, well_known_data_signed=None,
+    def __init__(self, id=None, name=None, cluster=None, odb_token=None,
                  last_join_status=None, last_join_mod_date=None, last_join_mod_by=None):
         self.id = id
         self.name = name
         self.cluster = cluster
-        self.well_known_data_signed = well_known_data_signed
+        self.odb_token = odb_token
         self.last_join_status = last_join_status
         self.last_join_mod_date = last_join_mod_date
         self.last_join_mod_by = last_join_mod_by
