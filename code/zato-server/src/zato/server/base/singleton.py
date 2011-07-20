@@ -27,25 +27,36 @@ from traceback import format_exc
 # lxml
 from lxml import etree
 
+# ZeroMQ
+import zmq
+
 # Spring Python
 from springpython.util import synchronized
 
 # Zato
-from zato.common.util import TRACE1
-from zato.server.base import BaseServer, IPCNotifier, ipc_message_from_string, IPCMessage
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
      ZATO_ERROR, ZATO_OK, ZatoException
+from zato.common.util import TRACE1, zmq_names, ZMQPull, ZMQPush
 
-class SingletonServer(BaseServer):
+class SingletonServer(object):
     """ A server of which one instance only may be running in a Zato container.
     Holds and processes data which can't be made parallel, such as scheduler,
     hot-deployment or on-disk configuration management.
     """
+    
+    def __init__(self, parallel_server=None, zmq_context=None):
+        self.parallel_server = parallel_server
+        self.zmq_context = zmq_context or zmq.Context()
+    
+    def on_inproc_message_handler(self, msg):
+        print('Singleton handler', msg)
 
     def run(self, *ignored_args, **ignored_kwargs):
-        self.logger = logging.getLogger("%s.%s:%s" % (__name__, self.__class__.__name__, hex(id(self))))
-        self.logger.log(TRACE1, "self_req_q=[%s] self_partner_resp_qs=[%s]" % (self.request_queue, self.partner_response_queues))
-
+        self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, self.__class__.__name__, hex(id(self))))
+        
+        print('SINGLETON')
+        
+        '''
         # Will pick up messages from server's IPC queue.
         self._create_ipc_notifiers()
 
@@ -58,6 +69,8 @@ class SingletonServer(BaseServer):
         # Start the pickup monitor.
         self.logger.debug("Pickup notifier starting.")
         self.pickup.watch()
+        
+        '''
 
     def stopped(self, component):
         """ Handler for Circuits 'stop' event.

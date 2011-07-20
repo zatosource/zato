@@ -98,11 +98,15 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.host = host
     parallel_server.port = port
     
-    parallel_server.after_init()
-
     if start_singleton:
         singleton_server = app_context.get_object('singleton_server')
         parallel_server.singleton_server = singleton_server
+        
+        # Wow, this line looks weird. What it does is simply assign a parallel
+        # server instance to the singleton server.
+        parallel_server.singleton_server.parallel_server = parallel_server
+        
+    parallel_server.after_init()
 
     print('OK..')
     parallel_server.run_forever()
@@ -139,5 +143,7 @@ def run(host, port, base_dir, start_singleton):
 if __name__ == '__main__':
     host, port, base_dir = sys.argv[1:4]
     start_singleton = True if len(sys.argv) >= 5 else False
+    
+    print(333, start_singleton)
 
     run(host, int(port), base_dir, start_singleton)

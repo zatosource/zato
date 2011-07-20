@@ -20,7 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, json, logging, multiprocessing, ssl, time
+import asyncore, json, logging, time
+from threading import Thread
 
 # Zope
 from zope.server.http.httpserver import HTTPServer
@@ -28,16 +29,14 @@ from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # ZeroMQ
 import zmq
-from zmq.eventloop import ioloop
 
 # Spring Python
 from springpython.util import synchronized
 
 # Zato
-from zato.common import ZATO_CONFIG_REQUEST, ZATO_PARALLEL_SERVER, \
-     ZATO_SINGLETON_SERVER, ZATO_OK
-from zato.common.util import TRACE1, zmq_inproc_pull_name, zmq_inproc_push_name, \
-     ZMQPullThread, ZMQPush
+from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
+     ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_OK
+from zato.common.util import TRACE1, zmq_names, ZMQPull, ZMQPush
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
 
@@ -78,44 +77,80 @@ class ZatoHTTPServer(HTTPServer):
 
 class ParallelServer(object):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb_manager=None):
+                 odb_manager=None, singleton_server=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
         self.odb_manager = odb_manager
+        self.singleton_server = singleton_server
         
-        self.inproc_pull_name_parallel = zmq_inproc_pull_name(ZATO_PARALLEL_SERVER)
-        self.inproc_pull_name_singular = zmq_inproc_pull_name(ZATO_SINGLETON_SERVER)
+        self.zmq_items = {}
         
-        self.inproc_push_name_parallel = zmq_inproc_push_name(ZATO_PARALLEL_SERVER)
-        self.inproc_push_name_singular = zmq_inproc_push_name(ZATO_SINGLETON_SERVER)
-
         self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
+        
+    def _after_init_common(self, server):
+
+        # All of the ZeroMQ sockets need to be created in the main thread.
+        
+        if self.singleton_server:
+
+            # Singleton -> Parallel (pull)
+            name = zmq_names.inproc.singleton_to_parallel
+            pull_sing_to_para = ZMQPull(name, self.zmq_context, self.on_inproc_message_handler)
+            pull_sing_to_para.start()
+            self.zmq_items[name] = pull_sing_to_para
+            
+            # Parallel -> Singleton (pull)
+            name = zmq_names.inproc.parallel_to_singleton
+            pull_para_to_sing = ZMQPull(name, self.zmq_context, self.singleton_server.on_inproc_message_handler)
+            pull_para_to_sing.start()
+            self.zmq_items[name] = pull_para_to_sing
+            
+            # So that the .bind call in ZMQPull's above has enough time.
+            # TODO: Make it a configurable option.
+            time.sleep(0.05)
+            
+            # Parallel (push) -> Singleton
+            name = zmq_names.inproc.parallel_to_singleton
+            push_para_to_sing = ZMQPush(name, self.zmq_context)
+            self.zmq_items[name] = push_para_to_sing
+            
+            # Singleton (push) -> Parallel
+            name = zmq_names.inproc.singleton_to_parallel
+            push_sing_to_para = ZMQPush(name, self.zmq_context)
+            self.zmq_items[name] = push_sing_to_para
+            
+            Thread(target=self.singleton_server.run).start()
+    
+    def _after_init_accepted(self, server):
+        pass
+    
+    def _after_init_non_accepted(self, server):
+        pass    
         
     def after_init(self):
         
-        self.zmq_sockets = {}
+        # First try grabbing the basic server's data from the ODB. No point
+        # in doing anything else if we can't get past this point.
+        server = self.odb_manager.fetch_server()
         
-        name = self.inproc_pull_name_parallel
-        socket = ZMQPullThread(name, self.zmq_context, self.on_inproc_message_handler)
-        socket.start()
-        self.zmq_sockets[name] = socket
+        if not server:
+            raise Exception('Server does not exist in the ODB')
         
-        name = self.inproc_pull_name_singular
-        socket = ZMQPullThread(name, self.zmq_context, self.on_inproc_message_handler)
-        socket.start()
-        self.zmq_sockets[name] = socket
+        self._after_init_common(server)
         
-        name = self.inproc_push_name_parallel
-        socket = ZMQPush(name, self.zmq_context)
-        self.zmq_sockets[name] = socket
+        # A server which hasn't been approved in the cluster still needs to fetch
+        # all the config data but it won't start any MQ/AMQP/ZMQ/etc. listeners
+        # except for a ZMQ config subscriber that will listen for an incoming approval.
         
-        name = self.inproc_push_name_singular
-        socket = ZMQPush(name, self.zmq_context)
-        self.zmq_sockets[name] = socket
-        
-        self.odb_manager.connect()
+        if server.last_join_status == ZATO_JOIN_REQUEST_ACCEPTED:
+            self._after_init_accepted(server)
+        else:
+            msg = 'Server has not been accepted, last_join_status=[{0}]'
+            self.logger.warn(msg.format(server.last_join_status))
+            
+            self._after_init_non_accepted(server)
         
     def on_inproc_message_handler(self, msg):
         """ Handler for incoming 'inproc' ZMQ messages.
@@ -137,7 +172,9 @@ class ParallelServer(object):
             self.logger.info("Shutting down.")
             
             # ZeroMQ
-            #self.pull_socket.close()
+            for zmq_item in self.zmq_items.values():
+                zmq_item.stop()
+                
             self.zmq_context.term()
             
             # Zope
