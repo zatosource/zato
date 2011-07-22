@@ -196,20 +196,17 @@ class ChannelURLDefinition(Base):
 
     id = Column(Integer,  Sequence('channel_url_def_id_seq'), primary_key=True)
     url_pattern = Column(String(400), nullable=False)
-    channel_type = Enum('soap', 'plain-http')
+    url_type = Column(String(45), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=id))
     
-    #sec_defs = relationship('SecurityDefinition', secondary=channel_url_security, backref='sec_defs')
-    
-
-    def __init__(self, id=None, url_pattern=None, channel_type=None, is_internal=None,
+    def __init__(self, id=None, url_pattern=None, url_type=None, is_internal=None,
                  cluster=None):
         self.id = id
         self.url_pattern = url_pattern
-        self.channel_type = channel_type
+        self.url_type = url_type
         self.is_internal = is_internal
         self.cluster = cluster
 

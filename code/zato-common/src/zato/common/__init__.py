@@ -111,6 +111,10 @@ ZATO_SINGLETON_SERVER = '/zato/singleton'
 # Status of a server's join request
 ZATO_JOIN_REQUEST_ACCEPTED = 'ACCEPTED'
 
+# All URL type Zato understands.
+ZATO_URL_TYPE_SOAP = 'soap'
+ZATO_URL_TYPE_PLAIN_HTTP = 'plain_http'
+
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):
         self.path = path

@@ -85,14 +85,17 @@ class ODBManager(object):
         
         result = {}
         
-        sec_def_q = self.session.query(SecurityDefinition.id, SecurityDefinition.security_def_type, ChannelURLDefinition.url_pattern).\
+        sec_def_q = self.session.query(SecurityDefinition.id, 
+                            SecurityDefinition.security_def_type, 
+                            ChannelURLDefinition.url_pattern,
+                            ChannelURLDefinition.url_type).\
                filter(SecurityDefinition.id==ChannelURLSecurity.security_def_id).\
                filter(ChannelURLSecurity.channel_url_def_id==ChannelURLDefinition.id).\
                filter(ChannelURLDefinition.cluster_id==Cluster.id).\
                filter(Cluster.id==server.cluster_id).\
                all()
         
-        for sec_def_id, sec_def_type, url_pattern in sec_def_q:
+        for sec_def_id, sec_def_type, url_pattern, url_type in sec_def_q:
             
             # Will raise KeyError if the DB gets somehow misconfigured.
             db_class = sec_type_db_class[sec_def_type]
@@ -101,6 +104,7 @@ class ODBManager(object):
                     filter(db_class.security_def_id==sec_def_id).\
                     one()
             
-            result[url_pattern] = {'sec_def':sec_def, 'sec_def_type':sec_def_type}
+            result[url_pattern] = {'sec_def':sec_def, 'sec_def_type':sec_def_type,
+                                   'url_type':url_type}
             
         return result
