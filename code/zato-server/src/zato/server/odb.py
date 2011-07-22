@@ -99,7 +99,7 @@ class ODBManager(object):
             
             sec_def = self.session.query(db_class).\
                     filter(db_class.security_def_id==sec_def_id).\
-                    all()
+                    one()
             
             result[url_pattern] = {'sec_def':sec_def, 'sec_def_type':sec_def_type}
             

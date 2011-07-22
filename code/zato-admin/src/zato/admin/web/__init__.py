@@ -21,14 +21,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from lxml import etree
 
 # Zato
-from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs
+from zato.admin.settings import TECH_ACCOUNT_NAME, TECH_ACCOUNT_PASSWORD
 from zato.common.soap import invoke_admin_service as _invoke_admin_service
 
 
-def invoke_admin_service(cluster, service, zato_message, session):
+def invoke_admin_service(cluster, service, zato_message):
     """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
     Django session-related information to the request headers.
     """
-    headers = {'session_type':'zato-admin/django', 'session_key': session.session_key}
+    headers = {'x-zato-session-type':'zato-admin/tech-account', 
+               'x-zato-user': TECH_ACCOUNT_NAME,
+               'x-zato-password': TECH_ACCOUNT_PASSWORD
+               }
     return _invoke_admin_service(cluster, service, etree.tostring(zato_message),
                                  headers)

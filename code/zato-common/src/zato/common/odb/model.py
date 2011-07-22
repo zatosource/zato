@@ -281,13 +281,14 @@ class TechnicalAccount(Base):
                 backref=backref('tech_account', order_by=id, uselist=False))
     
     def __init__(self, id=None, name=None, password=None, salt=None, 
-                 is_active=None, security_def=None):
+                 is_active=None, security_def=None, expected_password=None):
         self.id = id
         self.name = name
         self.password = password
         self.salt = salt
         self.is_active = is_active
         self.security_def = security_def
+        self.expected_password = expected_password
     
 ################################################################################
 

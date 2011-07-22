@@ -20,7 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, json, logging, time
+import asyncore, httplib, json, logging, time
+from hashlib import sha256
 from threading import Thread
 
 # Zope
@@ -40,13 +41,75 @@ from zato.common.util import TRACE1, zmq_names, ZMQPull, ZMQPush
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
 
+class HTTPException(Exception):
+    """ Raised when the underlying error condition can be easily expressed
+    as one of the HTTP status codes.
+    """
+    def __init__(self, status, reason):
+        self.status = status
+        self.reason = reason
 
-class ZatoHTTPServer(HTTPServer):
-    def __init__(self, host, port, task_dispatcher):
+class ZatoHTTPListener(HTTPServer):
+    def __init__(self, server, task_dispatcher):
+        self.logger = logging.getLogger("%s.%s" % (__name__, 
+                                                   self.__class__.__name__))
+        self.server = server
+        super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
+                                               task_dispatcher)
 
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
-        super(ZatoHTTPServer, self).__init__(host, port, task_dispatcher)
+    def _handle_security_tech_account(self, sec_def, request_data, body, headers):
+        """ Handles the 'tech-account' security config type.
+        """
+        zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
+        
+        for header in zato_headers:
+            if not headers.get(header, None):
+                msg = "The header [{0}] doesn't exist or is empty, URI=[{1}]".\
+                    format(header, request_data.uri)
+                self.logger.error(msg)
+                raise HTTPException(httplib.FORBIDDEN, msg)
 
+        # Note that both checks below a different message to the client than
+        # what goes into logs. It's to conceal from bad-behaving users what really went
+        # wrong (that of course assumes they can't access the logs).
+
+        msg_template = 'The {0} is incorrect, URI=[{1}], X_ZATO_USER=[{2}]'
+
+        if headers['X_ZATO_USER'] != sec_def.name:
+            self.logger.error(msg_template.format('username', request_data.uri, 
+                              headers['X_ZATO_USER']))
+            raise HTTPException(httplib.FORBIDDEN, msg_template.\
+                    format('username or password', request_data.uri, 
+                           headers['X_ZATO_USER']))
+        
+        incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
+        
+        if incoming_password != sec_def.password:
+            self.logger.error(msg_template.format('password', request_data.uri, 
+                              headers['X_ZATO_USER']))
+            raise HTTPException(httplib.FORBIDDEN, msg_template.\
+                    format('username or password', request_data.uri, 
+                           headers['X_ZATO_USER']))
+        
+        
+    def handle_security(self, request_data, body, headers):
+        """ Handles all security-related aspects of an incoming HTTP message
+        handling. Calls other concrete security methods as appropriate.
+        """
+        
+        if request_data.uri in self.server.url_security:
+            sec_def_data = self.server.url_security[request_data.uri]
+            sec_def, sec_def_type = sec_def_data['sec_def'], sec_def_data['sec_def_type']
+            
+            handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
+            getattr(self, handler_name)(sec_def, request_data, body, headers)
+            
+        else:
+            msg = ("The URL [{0}] doesn't exist or has no security "
+                  "configuration assigned").format(request_data.uri)
+            self.logger.error(msg)
+            raise HTTPException(httplib.NOT_FOUND, msg)
+        
     def executeRequest(self, task):
 
         # Currently, we always return text/xml.
@@ -54,23 +117,25 @@ class ZatoHTTPServer(HTTPServer):
 
         try:
             # Collect necessary request data.
-            request_body = task.request_data.getBodyStream().getvalue()
+            body = task.request_data.getBodyStream().getvalue()
             headers = task.request_data.headers
-            time.sleep(0.2)
-            #print(headers.get('X_ZATO_PEERCERT'))
-
-            #print(33, headers)
+            
+            self.handle_security(task.request_data, body, headers)
 
             # Fetch the response.
             response = '<?xml version="1.0" encoding="utf-8"?><axx />' #self.soap_dispatcher.handle(request_body, headers)
 
+        except HTTPException, e:
+            task.setResponseStatus(e.status, e.reason)
+            response = e.reason
+            
         # Any exception at this point must be our fault.
         except Exception:
             tb = get_last_traceback(e)
             self.logger.error("Exception caught [%s]" % tb)
             response = server_soap_error(tb)
-
-        # Return HTTP response.
+            
+        # Return the HTTP response.
         task.response_headers["Content-Length"] = str(len(response))
         task.write(response)
 
@@ -97,7 +162,7 @@ class ParallelServer(object):
         # Security configuration of HTTP URLs.
         self.url_security = self.odb_manager.get_url_security(server)
         self.logger.log(logging.DEBUG, 'url_security=[{0}]'.format(self.url_security))
-
+        
         # All of the ZeroMQ sockets need to be created in the main thread.
         
         if self.singleton_server:
@@ -169,7 +234,7 @@ class ParallelServer(object):
 
         self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
 
-        ZatoHTTPServer(self.host, self.port, task_dispatcher)
+        ZatoHTTPListener(self, task_dispatcher)
 
         try:
             while True:

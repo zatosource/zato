@@ -72,7 +72,7 @@ def index(req):
         zato_message = Element("{%s}zato_message" % zato_namespace)
 
         _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
-                "zato:security.wss.get-list", zato_message, req.session)
+                "zato:security.wss.get-list", zato_message)
 
         if zato_path("data.definition_list.definition").get_from(zato_message) is not None:
             for definition_elem in zato_message.data.definition_list.definition:
