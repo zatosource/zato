@@ -24,7 +24,9 @@ import argparse, os, shutil, sys, textwrap, traceback
 from copy import deepcopy
 from datetime import datetime
 from getpass import getpass
+from hashlib import sha256
 from string import Template
+from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy import create_engine
@@ -41,7 +43,7 @@ from zato.cli import ZatoCommand, common_odb_opts, zeromq_opts, create_odb, \
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.odb import engine_def, ping_queries
 from zato.common.odb.model import *
-from zato.common.util import current_host, sign
+from zato.common.util import current_host, security_def_type
 from zato.server import main
 from zato.server.crypto import CryptoManager
 from zato.server.repo import RepoManager
@@ -128,8 +130,13 @@ class Quickstart(ZatoCommand):
             cs.execute(args)
 
             # Create the web admin now.
+
+            tech_account_name = 'techadmin1'
+            tech_account_password_clear = uuid4().hex
+            
             os.mkdir(zato_admin_dir)
-            create_zato_admin.CreateZatoAdmin(zato_admin_dir).execute(args)
+            create_zato_admin.CreateZatoAdmin(zato_admin_dir,
+                tech_account_name, tech_account_password_clear).execute(args)
 
             # .. copy the web admin's material over to its directory
             
@@ -156,6 +163,9 @@ class Quickstart(ZatoCommand):
                 _, id = top_id_cluster.name.split("#")
                 next_id = int(id) + 1
 
+            #
+            # Cluster
+            #
             cluster = Cluster(None, 'ZatoQuickstartCluster-#{next_id}'.format(next_id=next_id),
                               'An automatically generated quickstart cluster',
                               args.odb_type, args.odb_host, args.odb_port, args.odb_user,
@@ -163,10 +173,10 @@ class Quickstart(ZatoCommand):
                               args.zeromq_port, 
                               'localhost', 20151, 
                               'localhost', 15100)
-
-            well_known_data_signed = sign(ZATO_CRYPTO_WELL_KNOWN_DATA, 
-                                          RSA.load_key(priv_key_path))
             
+            #
+            # Server
+            #
             server = Server(None, 
                             'ZatoQuickstartServer-(cluster-#{next_id})'.format(next_id=next_id), 
                             cluster,
@@ -176,8 +186,31 @@ class Quickstart(ZatoCommand):
                             'zato-quickstart/' + current_host())
             session.add(server)
 
+            #
+            # ChannelURLDefinition & SecurityDef
+            #
             zato_soap = ChannelURLDefinition(None, '/zato/soap', 'soap', True, cluster)
+            sec_def = SecurityDefinition(None, security_def_type.tech_account)
+            
+            zato_soap.sec_defs.append(sec_def)
+            
+            session.add(sec_def)
             session.add(zato_soap)
+            
+            #
+            # TechnicalAccount
+            #
+            salt = uuid4().hex
+            password = sha256(tech_account_password_clear+ ':' + salt).hexdigest()
+            tech_account = TechnicalAccount(None, tech_account_name, 
+                                password, salt, True, sec_def)
+            session.add(tech_account)
+            
+            #
+            # ChannelURLSecurity
+            #
+            #channel_url_sec = ChannelURLSecurity(zato_soap, sec_def)
+            #session.add(channel_url_sec)
             
             session.commit()
 

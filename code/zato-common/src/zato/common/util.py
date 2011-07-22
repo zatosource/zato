@@ -54,6 +54,14 @@ _repr_template = Template("<$class_name at $mem_loc$attrs>")
 
 ################################################################################
 
+security_def_type = Bunch()
+security_def_type.basic_auth = 'basic-auth'
+security_def_type.client_cert = 'client-cert'
+security_def_type.tech_account = 'tech-account'
+security_def_type.wss_username_password = 'wss-username-password'
+
+################################################################################
+
 def zmq_inproc_name(component):
     """ Returns a name suitable for passing around between ZeroMQ 'inproc'
     sockets.

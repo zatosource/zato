@@ -44,7 +44,10 @@ config_template = """{{
   "LANGUAGE_CODE": "en-us",
 
   "SITE_ID": {SITE_ID},
-  "SECRET_KEY": "{SECRET_KEY}"
+  "SECRET_KEY": "{SECRET_KEY}",
+  
+  "TECH_ACCOUNT_NAME": {TECH_ACCOUNT_NAME},
+  "TECH_ACCOUNT_PASSWORD": "{TECH_ACCOUNT_PASSWORD}",
 }}
 """
 
@@ -52,9 +55,11 @@ class CreateZatoAdmin(ZatoCommand):
     command_name = 'create zato-admin'
     needs_empty_dir = True
 
-    def __init__(self, target_dir):
+    def __init__(self, target_dir, tech_account_name, tech_account_password):
         super(CreateZatoAdmin, self).__init__()
         self.target_dir = target_dir
+        self.tech_account_name = tech_account_name
+        self.tech_account_password = tech_account_password
 
     description = 'Creates a Zato Admin instance.'
 
@@ -72,6 +77,8 @@ class CreateZatoAdmin(ZatoCommand):
             'DATABASE_PORT': args.odb_port,
             'SITE_ID': uuid.uuid4().int,
             'SECRET_KEY': uuid.uuid4().hex,
+            'TECH_ACCOUNT_NAME':self.tech_account_name,
+            'TECH_ACCOUNT_PASSWORD':self.tech_account_password,
         }
 
         os.mkdir(os.path.join(self.target_dir, "logs"))
