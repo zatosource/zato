@@ -149,13 +149,25 @@ class Server(Base):
     
 ################################################################################
 
-# An association table for the many-to-many mapping bettween channel URL
-# definitions and security definitions.
-
-channel_url_security = Table('channel_url_security', Base.metadata,
-        Column('channel_url_def_id', Integer, ForeignKey('channel_url_def.id')),
-        Column('security_def_id', Integer, ForeignKey('security_def.id'))
-        )
+class ChannelURLSecurity(Base):
+    """ An association table for the many-to-many mapping bettween channel URL
+        definitions and security definitions.
+    """
+    __tablename__ = 'channel_url_security'
+    
+    id = Column(Integer, primary_key=True)
+    
+    channel_url_def_id = Column(Integer, ForeignKey('channel_url_def.id'))
+    channel_url_def = relationship('ChannelURLDefinition', 
+                        backref=backref('channel_url_security', uselist=False))
+    
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=False)
+    security_def = relationship('SecurityDefinition', 
+                    backref=backref('channel_url_security_defs', order_by=id))
+    
+    def __init__(self, channel_url_def, security_def):
+        self.channel_url_def = channel_url_def
+        self.security_def = security_def
     
 ################################################################################
 
@@ -190,7 +202,7 @@ class ChannelURLDefinition(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=id))
     
-    sec_defs = relationship('SecurityDefinition', secondary=channel_url_security, backref='sec_defs')
+    #sec_defs = relationship('SecurityDefinition', secondary=channel_url_security, backref='sec_defs')
     
 
     def __init__(self, id=None, url_pattern=None, channel_type=None, is_internal=None,

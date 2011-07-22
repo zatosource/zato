@@ -187,15 +187,22 @@ class Quickstart(ZatoCommand):
             session.add(server)
 
             #
-            # ChannelURLDefinition & SecurityDef
+            # ChannelURLDefinition
             #
             zato_soap = ChannelURLDefinition(None, '/zato/soap', 'soap', True, cluster)
-            sec_def = SecurityDefinition(None, security_def_type.tech_account)
-            
-            zato_soap.sec_defs.append(sec_def)
-            
-            session.add(sec_def)
             session.add(zato_soap)
+
+            #
+            # SecurityDef
+            #
+            sec_def = SecurityDefinition(None, security_def_type.tech_account)
+            session.add(sec_def)
+            
+            #
+            # ChannelURLSecurity
+            #
+            chan_url_sec = ChannelURLSecurity(zato_soap, sec_def)
+            session.add(chan_url_sec)
             
             #
             # TechnicalAccount
