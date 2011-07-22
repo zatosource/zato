@@ -69,15 +69,19 @@ def _get_engines(pool_list, crypto_manager, create_sa_engines):
             engine_url = engine_def.format(**engine_params)
 
             if create_sa_engines:
-                engine = create_engine(engine_url, pool_size=engine_params["pool_size"], **engine_params["extra"])
+                engine = create_engine(engine_url, 
+                            pool_size=engine_params["pool_size"], echo=True,
+                            **engine_params["extra"])
             else:
-                create_engine(engine_url, pool_size=engine_params["pool_size"], **engine_params["extra"])
+                create_engine(engine_url, pool_size=engine_params["pool_size"], 
+                              **engine_params["extra"])
                 engine = _EngineInfo(engine_url, engine_params)
 
             engines[pool_name] = engine
             logger.debug("SQL connection pool [%s] definition successfully "
-                              "read, params=[%s], create_sa_engines=[%s]" % (pool_name,
-                                engine_params_no_password, create_sa_engines))
+                              "read, params=[%s], create_sa_engines=[%s]" % (
+                                  pool_name, engine_params_no_password, 
+                                  create_sa_engines))
 
         except Exception, e:
             logger.error(format_exc())

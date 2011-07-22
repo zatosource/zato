@@ -237,8 +237,10 @@ class WSSDefinition(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wss_defs', order_by=id))
     
-    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=False)
-    security_def = relationship(SecurityDefinition, backref=backref('wss_defs', order_by=id))
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
+                             nullable=False)
+    security_def = relationship(SecurityDefinition, backref=backref('wss_def', 
+                                                    order_by=id, uselist=False))
 
     def __init__(self, id=None, name=None, username=None, password=None,
                  password_type=None, reject_empty_nonce_ts=None, 
@@ -273,8 +275,10 @@ class TechnicalAccount(Base):
     salt = Column(String(32), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     
-    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
-    security_def = relationship(SecurityDefinition, backref=backref('tech_accounts', order_by=id))
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
+                             nullable=True)
+    security_def = relationship(SecurityDefinition, 
+                backref=backref('tech_account', order_by=id, uselist=False))
     
     def __init__(self, id=None, name=None, password=None, salt=None, 
                  is_active=None, security_def=None):
@@ -284,9 +288,6 @@ class TechnicalAccount(Base):
         self.salt = salt
         self.is_active = is_active
         self.security_def = security_def
-    
-    def __repr__(self):
-        return make_repr(self)
     
 ################################################################################
 
