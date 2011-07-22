@@ -23,10 +23,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # SQLAlchemy
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import joinedload, sessionmaker
 
 # Zato
-from zato.common.odb.model import Server
+from zato.common.odb.model import ChannelURLDefinition, ChannelURLSecurity, \
+     Cluster, SecurityDefinition, Server, TechnicalAccount
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -64,11 +65,42 @@ class ODBManager(object):
         engine = self.pool.get(ZATO_ODB_POOL_NAME)
         
         Session = sessionmaker(bind=engine)
-        session = Session()
+        self.session = Session()
         
         try:
-            return session.query(Server).filter(Server.odb_token == self.odb_data['token']).one()
+            return self.session.query(Server).filter(Server.odb_token == self.odb_data['token']).one()
         except Exception, e:
             msg = 'Could not find the server in the ODB'
             logger.error(msg)
             raise
+        
+    def get_url_security(self, server):
+        """ Returns the security configuration of HTTP URLs.
+        """
+        
+        # What DB class to fetch depending on the string value of the security type.
+        sec_type_db_class = {
+            'tech-account': TechnicalAccount
+            }
+        
+        result = {}
+        
+        sec_def_q = self.session.query(SecurityDefinition.id, SecurityDefinition.security_def_type, ChannelURLDefinition.url_pattern).\
+               filter(SecurityDefinition.id==ChannelURLSecurity.security_def_id).\
+               filter(ChannelURLSecurity.channel_url_def_id==ChannelURLDefinition.id).\
+               filter(ChannelURLDefinition.cluster_id==Cluster.id).\
+               filter(Cluster.id==server.cluster_id).\
+               all()
+        
+        for sec_def_id, sec_def_type, url_pattern in sec_def_q:
+            
+            # Will raise KeyError if the DB gets somehow misconfigured.
+            db_class = sec_type_db_class[sec_def_type]
+            
+            sec_def = self.session.query(db_class).\
+                    filter(db_class.security_def_id==sec_def_id).\
+                    all()
+            
+            result[url_pattern] = {'sec_def':sec_def, 'sec_def_type':sec_def_type}
+            
+        return result

@@ -90,6 +90,13 @@ class ParallelServer(object):
         self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
         
     def _after_init_common(self, server):
+        """ Initializes parts of the server that don't depend on whether the
+        server's been allowed to join the cluster or not.
+        """
+        
+        # Security configuration of HTTP URLs.
+        self.url_security = self.odb_manager.get_url_security(server)
+        self.logger.log(logging.DEBUG, 'url_security=[{0}]'.format(self.url_security))
 
         # All of the ZeroMQ sockets need to be created in the main thread.
         
