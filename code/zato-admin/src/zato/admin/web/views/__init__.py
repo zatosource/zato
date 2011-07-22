@@ -57,15 +57,15 @@ def meth_allowed(*meths):
     return inner_meth_allowed
 
 def set_servers_state(cluster, client):
-    """ Assignes 3 flags to the cluster indicating whether load-balancer sees
-    its servers as being DOWN or in the MAINT mode.
+    """ Assignes 3 flags to the cluster indicating whether load-balancer
+    believes the servers are DOWN or in the MAINT mode.
     """
     servers_state = client.get_servers_state()
 
     up = []
     down = []
     maint = []
-
+    
     # Note: currently we support only the 'http_plain' access_type.
     for access_type in("http_plain",):
         up.extend(servers_state["UP"][access_type])
