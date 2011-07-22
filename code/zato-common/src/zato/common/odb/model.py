@@ -31,10 +31,6 @@ from sqlalchemy.orm import relationship, backref
 # Zato
 from zato.common.util import make_repr, object_attrs
 
-__all__ = ['Base', 'Cluster', 'Server', 'WSSDefinition', 'WSSDefinitionPassword',
-           'SQLConnectionPool', 'ZatoInstallState', 'ChannelURLSecurity', 
-           'SecurityDefinition', 'ChannelURLDefinition']
-
 Base = declarative_base()
 
 ################################################################################
@@ -153,6 +149,16 @@ class Server(Base):
     
 ################################################################################
 
+# An association table for the many-to-many mapping bettween channel URL
+# definitions and security definitions.
+
+channel_url_security = Table('channel_url_security', Base.metadata,
+        Column('channel_url_def_id', Integer, ForeignKey('channel_url_def.id')),
+        Column('security_def_id', Integer, ForeignKey('security_def.id'))
+        )
+    
+################################################################################
+
 class SecurityDefinition(Base):
     """ A security definition
     """
@@ -183,6 +189,9 @@ class ChannelURLDefinition(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=id))
+    
+    sec_defs = relationship('SecurityDefinition', secondary=channel_url_security, backref='sec_defs')
+    
 
     def __init__(self, id=None, url_pattern=None, channel_type=None, is_internal=None,
                  cluster=None):
@@ -196,27 +205,6 @@ class ChannelURLDefinition(Base):
         return make_repr(self)
 
 ################################################################################
-    
-class ChannelURLSecurity(Base):
-    """ An association table for the many-to-many mapping bettween channel URL
-    definitions and security definitions.
-    """
-    __tablename__ = 'channel_url_security'
-    __table_args__ = (UniqueConstraint('channel_url_def_id', 'security_def_id'), {})
-    
-    id = Column(Integer,  Sequence('channel_url_sec_id_seq'), primary_key=True)
-    channel_url_def_id = Column(Integer, nullable=False)
-    security_def_id = Column(Integer, nullable=False)
-    
-    def __init__(self, id=None, channel_url_def_id=None, security_def_id=None):
-        self.id = id
-        self.channel_url_def_id = channel_url_def_id
-        self.security_def_id = security_def_id
-    
-    def __repr__(self):
-        return make_repr(self)
-    
-################################################################################
 
 class WSSDefinition(Base):
     """ A WS-Security definition.
@@ -227,6 +215,8 @@ class WSSDefinition(Base):
     id = Column(Integer,  Sequence('wss_def_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     username = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    password_type = Column(String(45), nullable=False)
     reject_empty_nonce_ts = Column(Boolean(), nullable=False)
     reject_stale_username = Column(Boolean(), nullable=False)
     expiry_limit = Column(Integer(), nullable=False)
@@ -239,12 +229,14 @@ class WSSDefinition(Base):
     security_def = relationship(SecurityDefinition, backref=backref('wss_defs', order_by=id))
 
     def __init__(self, id=None, name=None, username=None, password=None,
-                 reject_empty_nonce_ts=None, reject_stale_username=None,
-                 expiry_limit=None, nonce_freshness=None, cluster=None):
+                 password_type=None, reject_empty_nonce_ts=None, 
+                 reject_stale_username=None, expiry_limit=None, 
+                 nonce_freshness=None, cluster=None):
         self.id = id
         self.name = name
         self.username = username
         self.password = password
+        self.password_type = password_type
         self.reject_empty_nonce_ts = reject_empty_nonce_ts
         self.reject_stale_username = reject_stale_username
         self.expiry_limit = expiry_limit
@@ -254,34 +246,36 @@ class WSSDefinition(Base):
     def __repr__(self):
         return make_repr(self)
 
-class WSSDefinitionPassword(Base):
-    """ A WS-Security definition's passwords.
+################################################################################
+
+class TechnicalAccount(Base):
+    """ Stores information about technical accounts, used for instance by Zato
+    itself for securing access to its API.
     """
-    __tablename__ = 'wss_def_passwd'
-
-    id = Column(Integer,  Sequence('wss_def_passwd_id_seq'), primary_key=True)
-    password = Column(LargeBinary(200000), server_default='not-set-yet', nullable=False)
-    server_key_hash = Column(LargeBinary(200000), server_default='not-set-yet', nullable=False)
-
-    server_id = Column(Integer, ForeignKey('server.id'), nullable=False)
-    server = relationship(Server, backref=backref('wss_def_passwords', order_by=id))
-
-    wss_def_id = Column(Integer, ForeignKey('wss_def.id'), nullable=False)
-    wss_def = relationship(WSSDefinition, backref=backref('wss_def_passwords', order_by=id))
-
-    def __init__(self, id=None, password=None, server_key_hash=None, server_id=None,
-                 server=None, wss_def_id=None, wss_def=None):
+    __tablename__ = 'tech_account'
+    __table_args__ = (UniqueConstraint('name'), {})
+    
+    id = Column(Integer,  Sequence('tech_account_id_seq'), primary_key=True)
+    name = Column(String(45), nullable=False)
+    password = Column(String(64), nullable=False)
+    salt = Column(String(32), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
+    security_def = relationship(SecurityDefinition, backref=backref('tech_accounts', order_by=id))
+    
+    def __init__(self, id=None, name=None, password=None, salt=None, 
+                 is_active=None, security_def=None):
         self.id = id
+        self.name = name
         self.password = password
-        self.server_key_hash = server_key_hash
-        self.server_id = server_id
-        self.server = server
-        self.wss_def_id = wss_def_id
-        self.wss_def = wss_def
-
+        self.salt = salt
+        self.is_active = is_active
+        self.security_def = security_def
+    
     def __repr__(self):
         return make_repr(self)
-
+    
 ################################################################################
 
 class SQLConnectionPool(Base):

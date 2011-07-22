@@ -52,20 +52,17 @@ class SingletonServer(object):
         print('Singleton handler', msg)
 
     def run(self, *ignored_args, **ignored_kwargs):
-        self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, self.__class__.__name__, hex(id(self))))
+        self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, 
+                                        self.__class__.__name__, hex(id(self))))
+
+        # Initialize scheduler.
+        self.logger.debug('Scheduler initializing.')
+        #self.scheduler.init(self)
         
         print('SINGLETON')
         
+        
         '''
-        # Will pick up messages from server's IPC queue.
-        self._create_ipc_notifiers()
-
-        self._config_responses = {}
-
-        # Initialize scheduler.
-        self.logger.debug("Scheduler initializing.")
-        self.scheduler.init(self)
-
         # Start the pickup monitor.
         self.logger.debug("Pickup notifier starting.")
         self.pickup.watch()
