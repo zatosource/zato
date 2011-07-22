@@ -77,6 +77,7 @@ def set_servers_state(cluster, client):
         if not(up or maint) and down:
             cluster.all_down = True
         else:
+            cluster.all_down = False
             if down:
                 cluster.some_down = True
             if maint:

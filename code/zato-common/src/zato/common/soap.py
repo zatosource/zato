@@ -73,9 +73,9 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
                        and 'needs_config_key' is True.
     """
     url = 'https://{0}:{1}'.format(cluster.sec_server_host, cluster.sec_server_port)
-    logger.log(TRACE1, "About to invoke admin service url=[{0}]".format(url))
+    logger.log(TRACE1, 'About to invoke admin service url=[{0}]'.format(url))
     pool = SOAPPool(url)
-    soap_response = pool.invoke("/zato/soap", soap_action, soap_body, headers)
+    soap_response = pool.invoke('/zato/soap', soap_action, soap_body, headers)
 
 
     print('soap_response=[{0}]'.format(soap_response))

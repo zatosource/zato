@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, httplib, json, logging, time
 from hashlib import sha256
 from threading import Thread
+from traceback import format_exc
 
 # Zope
 from zope.server.http.httpserver import HTTPServer
@@ -36,10 +37,22 @@ from springpython.util import synchronized
 
 # Zato
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
-     ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_OK
+     ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP
 from zato.common.util import TRACE1, zmq_names, ZMQPull, ZMQPush
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
+from zato.server.channel.soap import server_soap_error
+
+def wrap_error_message(url_type, msg):
+    """ Wraps an error message in a transport-specific envelope.
+    """
+    if url_type == ZATO_URL_TYPE_SOAP:
+        return server_soap_error(msg)
+    
+    # Let's return the message as-is if we don't have any specific envelope
+    # to use.
+    return msg
+        
 
 class HTTPException(Exception):
     """ Raised when the underlying error condition can be easily expressed
@@ -64,8 +77,9 @@ class ZatoHTTPListener(HTTPServer):
         
         for header in zato_headers:
             if not headers.get(header, None):
-                msg = "The header [{0}] doesn't exist or is empty, URI=[{1}]".\
-                    format(header, request_data.uri)
+                msg = ("The header [{0}] doesn't exist or is empty, URI=[{1}, "
+                      "headers=[{2}]]").\
+                        format(header, request_data.uri, headers)
                 self.logger.error(msg)
                 raise HTTPException(httplib.FORBIDDEN, msg)
 
@@ -92,51 +106,63 @@ class ZatoHTTPListener(HTTPServer):
                            headers['X_ZATO_USER']))
         
         
-    def handle_security(self, request_data, body, headers):
+    def handle_security(self, url_data, request_data, body, headers):
         """ Handles all security-related aspects of an incoming HTTP message
         handling. Calls other concrete security methods as appropriate.
         """
+        sec_def, sec_def_type = url_data['sec_def'], url_data['sec_def_type']
         
-        if request_data.uri in self.server.url_security:
-            sec_def_data = self.server.url_security[request_data.uri]
-            sec_def, sec_def_type = sec_def_data['sec_def'], sec_def_data['sec_def_type']
+        handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
+        getattr(self, handler_name)(sec_def, request_data, body, headers)
             
-            handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-            getattr(self, handler_name)(sec_def, request_data, body, headers)
-            
-        else:
-            msg = ("The URL [{0}] doesn't exist or has no security "
-                  "configuration assigned").format(request_data.uri)
-            self.logger.error(msg)
-            raise HTTPException(httplib.NOT_FOUND, msg)
-        
     def executeRequest(self, task):
-
-        # Currently, we always return text/xml.
-        task.response_headers["Content-Type"] = "text/xml"
+        """ Handles incoming HTTP requests. Each request is being handled by one
+        of the threads created in ParallelServer.run_forever method.
+        """
+        
+        # Initially, we have no clue about the type of the URL being accessed,
+        # later on, if we don't stumble upon an exception, we may learn that
+        # it is for instance, a SOAP URL.
+        url_type = None
 
         try:
             # Collect necessary request data.
             body = task.request_data.getBodyStream().getvalue()
             headers = task.request_data.headers
             
-            self.handle_security(task.request_data, body, headers)
+            if task.request_data.uri in self.server.url_security:
+                url_data = self.server.url_security[task.request_data.uri]
+                url_type = url_data['url_type']
+                
+                self.handle_security(url_data, task.request_data, body, headers)
+            else:
+                msg = ("The URL [{0}] doesn't exist or has no security "
+                      "configuration assigned").format(task.request_data.uri)
+                self.logger.error(msg)
+                raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
             response = '<?xml version="1.0" encoding="utf-8"?><axx />' #self.soap_dispatcher.handle(request_body, headers)
 
         except HTTPException, e:
             task.setResponseStatus(e.status, e.reason)
-            response = e.reason
+            response = wrap_error_message(url_type, e.reason)
             
         # Any exception at this point must be our fault.
-        except Exception:
-            tb = get_last_traceback(e)
-            self.logger.error("Exception caught [%s]" % tb)
-            response = server_soap_error(tb)
+        except Exception, e:
+            tb = format_exc(e)
+            self.logger.error('Exception caught [{0}]'.format(tb))
+            response = wrap_error_message(url_type, tb)
+
+        if url_type == ZATO_URL_TYPE_SOAP:
+            content_type = 'text/xml'
+        else:
+            content_type = 'text/plain'
+            
+        task.response_headers['Content-Type'] = content_type
             
         # Return the HTTP response.
-        task.response_headers["Content-Length"] = str(len(response))
+        task.response_headers['Content-Length'] = str(len(response))
         task.write(response)
 
 
