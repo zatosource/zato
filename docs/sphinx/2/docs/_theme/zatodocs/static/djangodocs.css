@@ -1,5 +1,8 @@
 /*** setup ***/
-html { background:#16151d;}
+html { background:#16151d;
+     overflow: -moz-scrollbars-vertical;
+     overflow: scroll;
+}
 body { font:12px/1.5 Verdana,sans-serif; background:#16151d; color: white;}
 #custom-doc { width:76.54em;*width:74.69em;min-width:995px; max-width:100em; margin:auto; text-align:left; padding-top:16px; margin-top:0;} 
 #hd { padding: 4px 0 12px 0; }

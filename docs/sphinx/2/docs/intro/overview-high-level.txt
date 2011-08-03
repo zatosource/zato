@@ -1,0 +1,86 @@
+====================
+High-level overview
+====================
+
+
+The three-layer architecture
+============================
+
+In the classical three-layer architecture of fronted, middleware and backend
+processes, Zato is best placed at the middle and the far backend of your IT
+infrastructure.
+
+Zato is best suited for business integration - such as implementing an Enterprise
+Service Bus (ESB), or for core services - such as billing, customer management,
+purchase processing, supporting marketing campaings, core banking and many
+similar activities that form a backbone of an enterprise.
+
+.. image:: _images/three-layer-arch.png
+   :alt: 
+
+
+Zato can serve as either an ESB or an application server and a successful implementation
+of a Zato environment allows for:
+
+* aiding in introducing and optimizing complex business processes
+* creating software solutions in less time
+* connecting dispersed applications
+* enabling the communication between systems with incompatible interfaces
+* unifying access methods to independent applications
+* introducing a common security model across different parts of the IT infrastructure
+
+Message processing
+==================
+
+Consituting its very core, the Zato's excellect message processing capabilities allow you
+to:
+
+* create reusable services
+* transform messages between different formats
+* orchestrate the services of multiple autonomous systems
+* send and receive messages across many transports available, using either 
+  synchronous or asynchronous methods
+* log, audit and monitor messages flowing through using an advanced
+  search engine
+* validate the messages for accordance with business rules
+* enrich the messages from different sources
+* queue the messages if applications involved in integration scenarios run at
+  different processing speeds
+* implement services in less time using Python, a very high-level programming language
+  that promotes the ease of use and development speed
+
+Transports
+==========
+
+Various transports that Zato can access allow one for reaching out to any application,
+regardless of its origin and programming language used. The transports include:
+
+* the ubiquitous HTTP(S) protocol
+* FTP(S)
+* ActiveMQ
+* WebSphere MQ
+* ZeroMQ
+* JMS
+* Solr
+* REST
+* SOAP
+
+Web admin
+=========
+
+Zato has a slick and powerful web admin application for administrator to manage
+the environments. Web admin allow one to perform routine, planned as well as 
+ad hoc activities, such as deploying services, configuring security, access channels,
+browsing the messages and more.
+
+.. image:: _images/webadmin1.jpg
+   :alt: 
+
+Zato, the open-source project
+=============================
+
+Zato is licensed under a commercial-friendly ZZZ license and is not only 
+software but also an open-source project promoting open collaboration through 
+peer production and unrestricted exchange of ideas between developers
+and users. *Everyone* is strongly encouraged to take part in the project and 
+help build better world through nicer, faster, easier and more reliable software!

@@ -29,7 +29,8 @@ Introduction
 ============
 
     * **Basic concepts:**
-      :doc:`High-level overview <intro/overview>`
+      :doc:`High-level overview <intro/overview-high-level>` | 
+      :doc:`Technical overview <intro/overview-tech>`
 
     * **Tutorial:**
       :doc:`Installing<intro/tutorial01>` |
