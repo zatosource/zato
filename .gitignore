@@ -7,7 +7,8 @@ code/include/*
 code/lib/*
 code/parts/*
 code/sec-wall-trunk-src/*
-docs/sphinx/build/*
+docs/sphinx/1/build/*
+docs/sphinx/2/docs/_build/
 *.pyc
 *.pyo
 *.egg-info*
