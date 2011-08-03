@@ -1,0 +1,35 @@
+====================
+High-level overview
+====================
+
+
+The three-layer architecture
+============================
+
+In the classical three-layer architecture of fronted, middleware and backend
+processes, Zato is best placed at the middle and the far backend of your IT
+infrastructure.
+
+Although you can use Django without a database, it comes with an
+object-relational mapper in which you describe your database layout in Python
+code.
+
+The :doc:`data-model syntax </topics/db/models>` offers many rich ways of
+representing your models -- so far, it's been solving two years' worth of
+database-schema problems. Here's a quick example, which might be saved in
+the file ``mysite/news/models.py``::
+
+    class Reporter(models.Model):
+        full_name = models.CharField(max_length=70)
+
+        def __unicode__(self):
+            return self.full_name
+
+    class Article(models.Model):
+        pub_date = models.DateTimeField()
+        headline = models.CharField(max_length=200)
+        content = models.TextField()
+        reporter = models.ForeignKey(Reporter)
+
+        def __unicode__(self):
+            return self.headline

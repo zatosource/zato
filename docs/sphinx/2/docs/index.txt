@@ -1,0 +1,55 @@
+
+.. _index:
+
+====================
+Zato library
+====================
+
+.. rubric:: The library contains the documentation for Zato 1.0
+
+Getting help
+============
+
+Need assistance? We're here to help!
+
+* `Contact the authors`_ directly if you need commercial support,
+
+* `Post a question`_ in our mailing list,
+
+* Ask a question in the `#zato IRC channel`_ on Freenode network,
+
+* Report bugs with Zato in our `ticket tracker`_.
+
+.. _Contact the authors: ZZZ
+.. _Post a question: ZZZ
+.. _#zato IRC channel: irc://irc.freenode.net/zato
+.. _ticket tracker: ZZZ
+
+Introduction
+============
+
+    * **Basic concepts:**
+      :doc:`High-level overview <intro/overview>`
+
+    * **Tutorial:**
+      :doc:`Installing<intro/tutorial01>` |
+      :doc:`Creating the first cluster<intro/tutorial04>` |
+      :doc:`Writing a Zato service<intro/tutorial04>` |
+      :doc:`Introducing the admin panel<intro/tutorial04>` |
+      :doc:`Invoking the newly created service<intro/tutorial04>`
+
+Programming guide
+==============================
+
+Programming reference
+=================================
+
+Administration guide
+==============================
+
+Security
+==============================
+
+      
+The Zato open-source project
+==============================

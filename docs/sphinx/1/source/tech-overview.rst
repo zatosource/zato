@@ -2,6 +2,10 @@
 Technical overview
 ==================
 
+Zato clusters
+-------------
+
+
 Each Zato environment is comprised of one or more Zato clusters that allow for
 the messages passing through to be handled in a secure and reliable way.
 
