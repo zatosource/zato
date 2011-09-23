@@ -130,13 +130,12 @@ def get_by_id(req, tech_account_id, cluster_id):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         
         _, zato_message, soap_response = invoke_admin_service(cluster,
-        'zato:security.tech-account.get-by-id', zato_message)
+                        'zato:security.tech-account.get-by-id', zato_message)
         
     except Exception, e:
-        msg = "Could not fetch a technical account, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not fetch the technical account, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
     else:
         tech_account = TechnicalAccount()
         tech_account_elem = zato_message.data.tech_account
@@ -149,4 +148,31 @@ def get_by_id(req, tech_account_id, cluster_id):
     
 @meth_allowed('POST')
 def edit(req):
-    pass
+    
+    prefix = 'edit-'
+
+    cluster_id = req.POST.get('cluster_id')
+    tech_account_id = req.POST.get('tech_account_id')
+    name = req.POST.get(prefix + 'name')
+    is_active = req.POST.get(prefix + 'is_active')
+    is_active = True if is_active else False
+    
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.cluster_id = cluster_id
+        zato_message.data.tech_account_id = tech_account_id
+        zato_message.data.name = name
+        zato_message.data.is_active = is_active
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster,
+                        'zato:security.tech-account.edit', zato_message)
+    
+    except Exception, e:
+        msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return HttpResponse()

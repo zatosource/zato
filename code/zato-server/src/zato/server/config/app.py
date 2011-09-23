@@ -130,8 +130,9 @@ class ZatoContext(PythonConfig):
             
             # Technical accounts
             "zato:security.tech-account.get-list":"zato.server.service.internal.security.tech_account.GetDefinitionList",
-            "zato:security.tech-account.create":"zato.server.service.internal.security.tech_account.CreateTechnicalAccount",
             "zato:security.tech-account.get-by-id":"zato.server.service.internal.security.tech_account.GetByID",
+            "zato:security.tech-account.create":"zato.server.service.internal.security.tech_account.Create",
+            "zato:security.tech-account.edit":"zato.server.service.internal.security.tech_account.Edit",
 
             # WS-Security
             "zato:security.wss.get-list":"zato.server.service.internal.security.wss.GetDefinitionList",
