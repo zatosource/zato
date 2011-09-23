@@ -394,7 +394,7 @@ function cluster_edit(cluster_id) {
     }
     edit_cleanup();
 
-    // Get cluster's details from DB.
+    // Get the cluster's details from DB.
 
     var on_get_cluster_success = function(o) {
         var json = YAHOO.lang.JSON.parse(o.responseText);

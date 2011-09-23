@@ -79,6 +79,9 @@ urlpatterns = patterns("",
     # Security.
     url(r"^zato/security/tech-account/$", tech_account.index, name="security-tech-account"),
     url(r"^zato/security/tech-account/create/$", tech_account.create, name="security-tech-account-create"),
+    url(r"^zato/security/tech-account/edit/$", tech_account.edit, name="security-tech-account-edit"),
+    url(r"^zato/security/tech-account/get/by-id/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$", tech_account.get_by_id, name="security-tech-account-get-by-id"),
+    
     url(r"^zato/security/wss/$", wss.index, name="security-wss"),
     url(r"^zato/security/wss/details/(?P<server_id>\d*)/(?P<def_id>\d)/edit/$", wss.edit, name="security-wss-details-edit"),
     url(r"^zato/security/wss/details/(?P<server_id>\d*)/(?P<def_id>\d*)/$", wss.details, name="security-wss-details"),

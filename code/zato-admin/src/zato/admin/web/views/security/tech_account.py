@@ -37,7 +37,8 @@ from validate import is_boolean
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.forms.security.tech_account import CreateTechnicalAccountForm
+from zato.admin.web.forms.security.tech_account import \
+     CreateTechnicalAccountForm, EditTechnicalAccountForm
 from zato.admin.web.views import meth_allowed
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
@@ -53,6 +54,7 @@ def index(req):
     accounts = []
     
     create_form = CreateTechnicalAccountForm()
+    edit_form = EditTechnicalAccountForm(prefix='edit')
 
     if cluster_id and req.method == 'GET':
         
@@ -81,7 +83,8 @@ def index(req):
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,
         'accounts':accounts,
-        'create_form':create_form
+        'create_form':create_form,
+        'edit_form':edit_form
         }
     
     # TODO: Should really be done by a decorator.
@@ -114,4 +117,36 @@ def create(req):
         return HttpResponseServerError(msg)
     else:
         # 200 OK
-        return HttpResponse()
+        return HttpResponse(str(zato_message.data.tech_account.id))
+
+@meth_allowed('GET')
+def get_by_id(req, tech_account_id, cluster_id):
+    
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.tech_account_id = tech_account_id
+        
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster,
+        'zato:security.tech-account.get-by-id', zato_message)
+        
+    except Exception, e:
+        msg = "Could not fetch a technical account, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    
+    else:
+        tech_account = TechnicalAccount()
+        tech_account_elem = zato_message.data.tech_account
+        
+        tech_account.id = tech_account_elem.id.text
+        tech_account.name = tech_account_elem.name.text
+        tech_account.is_active = is_boolean(tech_account_elem.is_active.text)
+
+        return HttpResponse(tech_account.to_json(), mimetype='application/javascript')
+    
+@meth_allowed('POST')
+def edit(req):
+    pass
