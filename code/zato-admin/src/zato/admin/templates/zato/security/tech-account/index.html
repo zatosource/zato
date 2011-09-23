@@ -13,6 +13,7 @@
     <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
@@ -25,6 +26,9 @@
 
     {% comment %} Scriptaculous effects {% endcomment %}
     <script type="text/javascript" src="/static/js/effects.js"></script>
+
+    {% comment %} String formatting {% endcomment %}
+    <script type="text/javascript" src="/static/js/stringformat.js"></script>
     
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -75,7 +79,27 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Is active</td>
-                            <td>{{ create_form.is_active }} <input type="hidden" name="cluster_id" value="{{ cluster_id }}" /></td>
+                            <td>{{ create_form.is_active }} <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" /></td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+        
+        <div id="edit-tech-account" class="yui-pe-content">
+            <div class="hd">Edit the technical account</div>
+            <div class="bd">
+                <form action="{% url security-tech-account-edit %}" method="post" id="edit-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ edit_form.is_active }} 
+                                <input type="hidden" id="id_edit-tech_account_id" name="cluster_id" value="" />
+                            </td>
                         </tr>
                     </table>
                 </form>
@@ -150,15 +174,15 @@
                         </td>
                         
                         <td>    
-                            <a href="javascript:tech_account_edit('{{ account.id }}', '{{ account.name }}', '{{ cluster_id }}')">Edit</a>
+                            <a href="javascript:tech_account_edit('{{ account.id }}')">Edit</a>
                         </td>
                         
                         <td>    
-                            <a href="javascript:tech_account_change_password('{{ account.id }}', '{{ account.name }}', '{{ cluster_id }}')">Change password</a>
+                            <a href="javascript:tech_account_change_password('{{ account.id }}')">Change password</a>
                         </td>
                         
                         <td>    
-                            <a href="javascript:tech_account_delete('{{ account.id }}', '{{ account.name }}', '{{ cluster_id }}')">Delete</a>
+                            <a href="javascript:tech_account_delete('{{ account.id }}')">Delete</a>
                         </td>
                         
                     </tr>

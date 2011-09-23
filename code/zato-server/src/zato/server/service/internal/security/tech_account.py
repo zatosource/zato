@@ -85,10 +85,15 @@ class CreateTechnicalAccount(AdminService):
         if existing_one:
             raise Exception('Technical account [{0}] already exists on this cluster'.format(name))
         
+        tech_account_elem = Element('tech_account')
+        
         try:
             tech_account = TechnicalAccount(None, name, password, salt, params['is_active'], cluster=cluster)
             self.server.odb.add(tech_account)
             self.server.odb.commit()
+            
+            tech_account_elem.id = tech_account.id
+            
         except Exception, e:
             msg = "Could not create a technical account, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
@@ -96,4 +101,26 @@ class CreateTechnicalAccount(AdminService):
             
             raise 
         
-        return ZATO_OK, ''
+        return ZATO_OK, etree.tostring(tech_account_elem)
+    
+class GetByID(AdminService):
+    """ Returns a technical account of a given ID.
+    """
+    def handle(self, *args, **kwargs):
+        
+        payload = kwargs.get('payload')
+        request_params = ['tech_account_id']
+        params = _get_params(payload, request_params, 'data.')
+        
+        tech_account = self.server.odb.query(TechnicalAccount.id, 
+                                             TechnicalAccount.name, 
+                                             TechnicalAccount.is_active).\
+            filter(TechnicalAccount.id==params['tech_account_id']).one()
+        
+        tech_account_elem = Element('tech_account')
+        tech_account_elem.id = tech_account.id;
+        tech_account_elem.name = tech_account.name;
+        tech_account_elem.is_active = tech_account.is_active;
+        
+        return ZATO_OK, etree.tostring(tech_account_elem)
+    

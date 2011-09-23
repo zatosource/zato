@@ -32,3 +32,8 @@ class CreateTechnicalAccountForm(forms.Form):
 
     def __repr__(self):
         return make_repr(self)
+    
+class EditTechnicalAccountForm(CreateTechnicalAccountForm):
+    pass
+
+    

@@ -291,6 +291,9 @@ class TechnicalAccount(Base):
         self.security_def = security_def
         self.expected_password = expected_password
         self.cluster = cluster
+        
+    def to_json(self):
+        return to_json(self)
 
 ################################################################################
 
