@@ -47,6 +47,15 @@ class ODBManager(object):
         
     def query(self, *args, **kwargs):
         return self.session.query(*args, **kwargs)
+    
+    def add(self, *args, **kwargs):
+        return self.session.add(*args, **kwargs)
+    
+    def commit(self, *args, **kwargs):
+        return self.session.commit(*args, **kwargs)
+    
+    def rollback(self, *args, **kwargs):
+        return self.session.rollback(*args, **kwargs)
         
     def fetch_server(self):
         if not self.pool:

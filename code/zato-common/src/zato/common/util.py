@@ -24,7 +24,7 @@ import logging
 from base64 import b64encode
 from binascii import hexlify, unhexlify
 from cStringIO import StringIO
-from hashlib import sha1
+from hashlib import sha1, sha256
 from itertools import ifilter
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint
@@ -298,3 +298,6 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
     agent_uri = "https://{host}:{port}/RPC2".format(host=lb_host, port=lb_agent_port)
     return LoadBalancerAgentClient(agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file,
                                          timeout=timeout)
+
+def tech_account_password(password_clear, salt):
+    return sha256(password_clear+ ':' + salt).hexdigest()
