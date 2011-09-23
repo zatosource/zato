@@ -150,10 +150,10 @@ function setup_edit_dialog() {
         // Hide the dialog and confirm the changes have been saved.
         edit_dialog.hide();
 
-        update_user_message(true, "Succesfully updateed the technical account");
+        update_user_message(true, "Succesfully updated the technical account");
 
         // Cleanup after work.
-        create_cleanup();
+        edit_cleanup();
 
     };
 
@@ -213,6 +213,7 @@ function tech_account_edit(tech_account_id) {
 
         $("id_edit-tech_account_id").value = json[0].pk;
         $("id_edit-name").value = tech_account.name;
+        $("id_edit-cluster_id").value = $("cluster_id").value;
 
         var checkbox_value = tech_account.is_active ? 'on': '';
         $("id_edit-is_active").setValue(checkbox_value);
