@@ -60,20 +60,46 @@ class Quickstart(ZatoCommand):
 
     opts = deepcopy(common_odb_opts) + deepcopy(zeromq_opts)
     description = "Quickly sets up a working Zato environment."
+    
+    def get_next_id(self, session, class_, like_attr, like_value, order_by, split_by):
+        
+        next_id = 1
+        
+        top_id = session.query(class_).filter(
+            Cluster.name.like(like_value)).order_by(order_by)
+        try:
+            top_id = top_id[0]
+        except Exception, e:
+            # It's OK, we simply don't have any such IDs yet.
+            pass
+        else:
+            _, id = top_id.name.split(split_by)
+            next_id = int(id) + 1
+            
+        return next_id
 
     def execute(self, args):
         try:
 
+            
             engine = self._get_engine(args)
 
             print("\nPinging database..")
             engine.execute(ping_queries[args.odb_type])
             print("Ping OK\n")
+            
+            session = self._get_session(engine)
+
+            next_id = self.get_next_id(session, Cluster, Cluster.name, 
+                                       'ZatoQuickstartCluster-%', Cluster.id.desc(),
+                                       '#')
+            cluster_name = 'ZatoQuickstartCluster-#{next_id}'.format(next_id=next_id)
 
             # TODO: ZeroMQ
             print("TODO: Pinging ZeroMQ..")
             print("TODO: Ping OK\n")
 
+            
             ca_dir = os.path.abspath(os.path.join(self.target_dir, "./ca"))
             lb_dir = os.path.abspath(os.path.join(self.target_dir, "./load-balancer"))
             server_dir = os.path.abspath(os.path.join(self.target_dir, "./server"))
@@ -82,7 +108,7 @@ class Quickstart(ZatoCommand):
 
             args.cluster_name = "ZatoQuickstart"
             args.server_name = "ZatoServer"
-
+            
             # Make sure the ODB exists.
             create_odb.CreateODB().execute(args)
 
@@ -99,7 +125,7 @@ class Quickstart(ZatoCommand):
             # Create the security server.
             create_security_server.CreateSecurityServer(security_server_dir).execute(args)
 
-            # .. copy the security server'ss crypto material over to its directory.
+            # .. copy the security server's crypto material over to its directory.
             shutil.copy2(security_server_format_args['priv_key_name'], os.path.join(security_server_dir, 'security-server-priv-key.pem'))
             shutil.copy2(security_server_format_args['cert_name'], os.path.join(security_server_dir, 'security-server-cert.pem'))
             shutil.copy2(os.path.join(ca_dir, 'ca-material/ca-cert.pem'), os.path.join(security_server_dir, 'ca-chain.pem'))
@@ -112,11 +138,12 @@ class Quickstart(ZatoCommand):
             shutil.copy2(lb_format_args["priv_key_name"], os.path.join(lb_dir, 'config', "lba-priv-key.pem"))
             shutil.copy2(lb_format_args["cert_name"], os.path.join(lb_dir, 'config', "lba-cert.pem"))
             shutil.copy2(os.path.join(ca_dir, "ca-material/ca-cert.pem"), os.path.join(lb_dir, 'config', "ca-chain.pem"))
-
+            
+            
             # Create the server
             os.mkdir(server_dir)
-            cs = create_server.CreateServer(server_dir)
-
+            cs = create_server.CreateServer(server_dir, cluster_name)
+            
             # Copy crypto stuff to the newly created directories. We're doing
             # it here because CreateServer's execute expects the pub_key to be
             # already at its place.
@@ -130,8 +157,8 @@ class Quickstart(ZatoCommand):
             cs.execute(args)
 
             # Create the web admin now.
-
-            tech_account_name = 'techadmin1'
+            
+            tech_account_name = 'techadmin-{random}'.format(random=uuid4().hex[:12])
             tech_account_password_clear = uuid4().hex
             
             os.mkdir(zato_admin_dir)
@@ -147,26 +174,14 @@ class Quickstart(ZatoCommand):
             shutil.copy2(zato_admin_format_args["cert_name"], os.path.join(zato_admin_dir, "zato-admin-cert.pem"))
             shutil.copy2(os.path.join(ca_dir, "ca-material/ca-cert.pem"), os.path.join(zato_admin_dir, "ca-chain.pem"))
 
+
             print("Setting up ODB objects..")
 
-            next_id = 1
-            session = self._get_session(engine)
-
-            top_id_cluster = session.query(Cluster).filter(
-                Cluster.name.like("ZatoQuickstartCluster-%")).order_by(Cluster.id.desc())
-            try:
-                top_id_cluster = top_id_cluster[0]
-            except IndexError, e:
-                # It's OK, we simply don't have any quickstart clusters yet.
-                pass
-            else:
-                _, id = top_id_cluster.name.split("#")
-                next_id = int(id) + 1
 
             #
             # Cluster
             #
-            cluster = Cluster(None, 'ZatoQuickstartCluster-#{next_id}'.format(next_id=next_id),
+            cluster = Cluster(None, cluster_name,
                               'An automatically generated quickstart cluster',
                               args.odb_type, args.odb_host, args.odb_port, args.odb_user,
                               args.odb_dbname, args.odb_schema, args.zeromq_host,
@@ -185,6 +200,7 @@ class Quickstart(ZatoCommand):
                             datetime.now(),
                             'zato-quickstart/' + current_host())
             session.add(server)
+            
 
             #
             # ChannelURLDefinition
@@ -210,7 +226,7 @@ class Quickstart(ZatoCommand):
             salt = uuid4().hex
             password = sha256(tech_account_password_clear+ ':' + salt).hexdigest()
             tech_account = TechnicalAccount(None, tech_account_name, 
-                                password, salt, True, sec_def)
+                                password, salt, True, sec_def, cluster=cluster)
             session.add(tech_account)
             
             #
@@ -218,7 +234,9 @@ class Quickstart(ZatoCommand):
             #
             #channel_url_sec = ChannelURLSecurity(zato_soap, sec_def)
             #session.add(channel_url_sec)
+
             
+
             session.commit()
 
             print('ODB objects created')
@@ -229,6 +247,8 @@ class Quickstart(ZatoCommand):
 To start the load-balancer's agent, type 'zato start {lb_dir}'.
 To start the ZatoAdmin web console, type 'zato start {zato_admin_dir}'.
             """.format(server_dir=server_dir, lb_dir=lb_dir, zato_admin_dir=zato_admin_dir))
+            
+
 
         except Exception, e:
             print("\nAn exception has been caught, quitting now!\n")
@@ -237,6 +257,7 @@ To start the ZatoAdmin web console, type 'zato start {zato_admin_dir}'.
         except KeyboardInterrupt:
             print("\nQuitting.")
             sys.exit(1)
+            
 
 def main(target_dir):
     Quickstart(target_dir).run()

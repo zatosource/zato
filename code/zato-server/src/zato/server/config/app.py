@@ -102,10 +102,9 @@ class ZatoContext(PythonConfig):
     @Object
     def soap_config(self):
         return {
+            
+            # Ping
             "zato:ping": "zato.server.service.internal.Ping",
-
-            # TODO: Don't forget to remove it.
-            "http://example.org/math/#Add": "zato.server.service.internal.Ping",
 
             # SQL connection pools
             "zato:pool.sql.get-list":"zato.server.service.internal.sql.GetSQLConnectionPoolList",
@@ -128,14 +127,14 @@ class ZatoContext(PythonConfig):
 
             # SOAP channels
             "zato:channel.soap.get-list":"zato.server.service.internal.soap.GetChannelList",
+            
+            # Technical accounts
+            "zato:security.tech-account.get-list":"zato.server.service.internal.security.tech_account.GetDefinitionList",
 
             # WS-Security
             "zato:security.wss.get-list":"zato.server.service.internal.security.wss.GetDefinitionList",
             "zato:security.wss.get-details":"zato.server.service.internal.security.wss.GetDetails",
             "zato:security.wss.edit":"zato.server.service.internal.security.wss.EditDefinition",
-
-            # HelloWorld TODO: Remove it when the time comes.
-            "hello-world":"example.adapter.crm.service.HelloWorld"
         }
 
     @Object
@@ -187,13 +186,13 @@ class ZatoContext(PythonConfig):
     def parallel_server(self):
 
         server = ParallelServer()
-        server.odb_manager = self.odb_manager()
+        server.odb = self.odb_manager()
+        server.soap_handler = self.soap_message_handler()
 
         # Regular objects.
         #server.sql_pool = self.sql_pool()
         #server.odb_pool_config = self.odb_pool_config()
         #server.service_store = self.service_store()
-        #server.soap_channel_store = self.soap_channel_store()
         #server.wss_nonce_cache = self.wss_nonce_cache()
         #server.wss_store = self.wss_username_password_store()
 

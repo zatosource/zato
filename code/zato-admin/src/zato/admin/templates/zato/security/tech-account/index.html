@@ -23,64 +23,65 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} Scheduler JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/security/wss.js"></script>
+    <script type="text/javascript" src="/static/js/security/tech-account.js"></script>
 
     </script>
 
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">WS-Security</h1>
+<h2 class="zato">Technical accounts</h1>
 
 {% if not zato_clusters %}
     <p>
     There aren't any Zato clusters registered with this ZatoAdmin instance.
-    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
-    <br/><br/>
     </p>
 {% else %}
 
     <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
 
-    {% if not server_id %}
-        Choose a cluster to manage WS-Security definitions.
+    {% if not cluster_id %}
+        Choose a cluster to manage technical accounts.
         <br/><br/>
     {% endif %}
 
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show definitions" />
+        <input type="submit" value="Show accounts" />
     </form>
 
 
-    {% if server_id %}
+    {% if accounts %}
 
         <br/>
-
-        <input type="hidden" id="current_server_id" value="{{ server_id }}" />
-        <a id="create-link" href="#" class="common">Create a new definition</a>
-
-
-        <br/><br/>
+            <a href="javascript:tech_account_create('{{ cluster_id }}')" class="common">Create a new technical account</a>
+        <br/>
+        <br/>
 
         <script type="text/javascript">
         YAHOO.util.Event.addListener(window, "load", function() {
             YAHOO.example.EnhanceFromMarkup = function() {
                 data_column_defs = [
-                    {key:"def_selection", label:"", sortable:false},
-                    {key:"def_data", label:"Definition", sortable:true},
+                    {key:"selection", label:"", sortable:false},
+                    {key:"name", label:"Name", sortable:true},
+                    {key:"is_active", label:"Is active", sortable:true},
+                    {key:"edit", label:"&nbsp;", sortable:false},
+                    {key:"delete", label:"&nbsp;", sortable:false},
                 ];
 
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
                 data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
                 data_ds.responseSchema = {
-                    fields: [{key:"def_selection"},
-                            {key:"def_data"},
+                    fields: [{key:"selection"},
+                            {key:"name"},
+                            {key:"is_active"},
+                            {key:"edit"},
+                            {key:"delete"},
                     ]
                 };
 
                 data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
-                        {sortedBy:{key:"def_data",dir:"desc"}}
+                        {sortedBy:{key:"name",dir:"desc"}}
                 );
 
                 return {
@@ -103,26 +104,33 @@
                 </thead>
 
                 <tbody>
-                {% for def in definitions %}
+                {% for account in accounts %}
 
                     <tr>
                         <td>
                             <input type="checkbox" />
                         </td>
+                        
                         <td>
-                                <a href="/zato/security/wss/details/{{ server_id }}/{{ def.id }}/" class="common">{{ def.name }}</a>
-                            <br/>
-                            <span style="font-size:11px;">
-
-                            User name: {{ def.username }}, <a class="common" href="#">(change password)</a>
-                            <br/>
-                            Reject empty nonce creation timestamp: {{ def.reject_empty_nonce_ts }},
-                            reject stale user name tokens: {{ def.reject_stale_username }}
-                            <br/>
-                            User name expiry limit (s): {{ def.expiry_limit }},
-                            nonce freshness time (s): {{ def.nonce_freshness }}
-
+                            {{ account.name }}
                         </td>
+                        
+                        <td>
+                            {% if account.is_active %}
+                            Yes
+                            {% else %}
+                            No
+                            {% endif %}
+                        </td>
+                        
+                        <td>    
+                            <a href="javascript:tech_account_edit('{{ account.id }}')">Edit</a>
+                        </td>
+                        
+                        <td>    
+                            <a href="javascript:tech_account_delete('{{ account.id }}')">Delete</a>
+                        </td>
+                        
                     </tr>
                 {% endfor %}
 
@@ -130,8 +138,8 @@
             </table>
         </div>
 
-    {% endif %} {% comment %}server_id{% endcomment %}
+    {% endif %} {% comment %}accounts{% endcomment %}
 
-{% endif %}{% comment %}not zato_servers{% endcomment %}
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

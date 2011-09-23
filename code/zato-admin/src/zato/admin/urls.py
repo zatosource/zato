@@ -28,7 +28,7 @@ from zato.admin import settings
 from zato.admin.web.views import main, cluster, service, servers, scheduler, channel, \
      load_balancer
 from zato.admin.web.views.pool import sql
-from zato.admin.web.views.security import wss
+from zato.admin.web.views.security import tech_account, wss
 
 
 urlpatterns = patterns("",
@@ -77,6 +77,7 @@ urlpatterns = patterns("",
     url(r"^zato/channels/soap/$", channel.soap, name="channel-soap"),
 
     # Security.
+    url(r"^zato/security/tech-account/$", tech_account.index, name="security-tech-account"),
     url(r"^zato/security/wss/$", wss.index, name="security-wss"),
     url(r"^zato/security/wss/details/(?P<server_id>\d*)/(?P<def_id>\d)/edit/$", wss.edit, name="security-wss-details-edit"),
     url(r"^zato/security/wss/details/(?P<server_id>\d*)/(?P<def_id>\d*)/$", wss.details, name="security-wss-details"),

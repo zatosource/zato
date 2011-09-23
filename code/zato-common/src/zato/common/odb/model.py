@@ -277,8 +277,12 @@ class TechnicalAccount(Base):
     security_def = relationship(SecurityDefinition, 
                 backref=backref('tech_account', order_by=id, uselist=False))
     
+    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('tech_accounts', order_by=id))
+    
     def __init__(self, id=None, name=None, password=None, salt=None, 
-                 is_active=None, security_def=None, expected_password=None):
+                 is_active=None, security_def=None, expected_password=None,
+                 cluster=None):
         self.id = id
         self.name = name
         self.password = password
@@ -286,7 +290,22 @@ class TechnicalAccount(Base):
         self.is_active = is_active
         self.security_def = security_def
         self.expected_password = expected_password
+        self.cluster = cluster
+
+################################################################################
+
+class Service(Base):
+    """ A Zato service.
+    """
+    __tablename__ = 'service'
+    __table_args__ = (UniqueConstraint('name'), UniqueConstraint('impl_name'), {})
     
+    id = Column(Integer,  Sequence('service_id_seq'), primary_key=True)
+    name = Column(String(2000), nullable=False)
+    impl_name = Column(String(2000), nullable=False)
+    usage_count = Column(Integer(), server_default='0', nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+        
 ################################################################################
 
 class SQLConnectionPool(Base):
