@@ -45,6 +45,9 @@ class ODBManager(object):
         self.crypto_manager = crypto_manager
         self.pool = pool
         
+    def query(self, *args, **kwargs):
+        return self.session.query(*args, **kwargs)
+        
     def fetch_server(self):
         if not self.pool:
             if not self.odb_config:
@@ -108,3 +111,4 @@ class ODBManager(object):
                                    'url_type':url_type}
             
         return result
+    

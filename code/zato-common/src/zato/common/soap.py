@@ -54,8 +54,9 @@ class SOAPPool(object):
         msg = 'About to invoke a service. url=[{0}] script_path=[{1}] msg_headers=[{2}] soap_body=[{3}]'.format(
             self.url, script_path, msg_headers, soap_body)
         logger.debug(msg)
+        
 
-        response = self._pool.urlopen('POST', script_path, payload, headers).data
+        response = self._pool.urlopen('POST', script_path, payload, msg_headers).data
         logger.debug('Received a response [{0}]'.format(response))
 
         return response

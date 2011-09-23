@@ -50,7 +50,6 @@ zato_message = Template("""
     <error_details>$error_details</error_details>
     <data>$data</data>
     <envelope>
-        <pub_key>$pub_key</pub_key>
     </envelope>
 </zato_message>""")
 
@@ -125,54 +124,54 @@ class SOAPMessageHandler(ApplicationContextAware):
         self.crypto_manager = crypto_manager
         self.wss_store = wss_store
 
-    def soap_message(self, request, headers):
+    def handle(self, request, headers):
         try:
-            self.logger.debug("request=[%s] headers=[%s]" % (request, headers))
+            self.logger.debug("request=[{0}] headers=[{1}]".format(request, headers))
 
             # HTTP headers are all uppercased at this point.
-            soap_action = headers.get("SOAPACTION")
+            soap_action = headers.get('SOAPACTION')
 
             if not soap_action:
-                return client_soap_error("Client did not send a SOAPAction header")
+                return client_soap_error('Client did not send a SOAPAction header')
 
             # SOAP clients may send an empty header, i.e. SOAPAction: "",
             # as opposed to not sending the header at all.
             soap_action = soap_action.lstrip('"').rstrip('"')
 
             if not soap_action:
-                return client_soap_error("Client sent an empty SOAPAction header")
+                return client_soap_error('Client sent an empty SOAPAction header')
 
             service_class_name = self.soap_config.get(soap_action)
-            self.logger.debug("service_class_name=[%s]" % service_class_name)
+            self.logger.debug('service_class_name=[{0}]'.format(service_class_name))
 
             if not service_class_name:
-                return client_soap_error("Unrecognized SOAPAction [%s]" % soap_action)
+                return client_soap_error('Unrecognized SOAPAction [{0}]'.format(soap_action))
 
-            self.logger.log(TRACE1, "service_store.services=[%s]" % self.service_store.services)
+            self.logger.log(TRACE1, 'service_store.services=[{0}]'.format(self.service_store.services))
             service_data = self.service_store.services.get(service_class_name)
 
             if not service_data:
-                return server_soap_error("No service could handle SOAPAction [%s]" % soap_action)
+                return server_soap_error('No service could handle SOAPAction [{0}]'.format(soap_action))
 
             soap = objectify.fromstring(request)
             body = soap_body_xpath(soap)
 
             if not body:
-                return client_soap_error("Client did not send [%s] element" % body_path)
+                return client_soap_error('Client did not send the [{0}] element'.format(body_path))
 
             if self.wss_store.needs_wss(service_class_name):
                 # Will raise an exception if anything goes wrong.
                 self.wss_store.handle_request(service_class_name, service_data, soap)
 
-            service_class = service_data["service_class"]
+            service_class = service_data['service_class']
 
             service_instance = service_class()
-            service_instance.server = self.app_context.get_object("parallel_server")
+            service_instance.server = self.app_context.get_object('parallel_server')
 
             body_payload = get_body_payload(body)
 
             service_response = service_instance.handle(payload=body_payload,
-                                                raw_request=request, channel="soap")
+                                                raw_request=request, channel='soap')
 
             # Responses from all Zato's interal services are wrapped in
             # in the <zato_message> element. Each one is also assigned the server's
@@ -180,27 +179,26 @@ class SOAPMessageHandler(ApplicationContextAware):
             if isinstance(service_instance, AdminService):
 
                 if self.logger.isEnabledFor(TRACE1):
-                    self.logger.log(TRACE1, "len(service_response)=[%s]" % len(service_response))
+                    self.logger.log(TRACE1, 'len(service_response)=[%s]'.format(len(service_response)))
                     for item in service_response:
-                        self.logger.log(TRACE1, "service_response item=[%r]" % item)
+                        self.logger.log(TRACE1, 'service_response item=[{0}]'.format(item))
 
                 error_code, rest = service_response
                 if error_code == ZATO_OK:
-                    error_details = ""
+                    error_details = ''
                     data = rest
                 else:
                     error_details = rest
-                    data = ""
-
+                    data = ''
+                    
                 response = zato_message.safe_substitute(error_code=error_code,
-                                error_details=error_details, data=data,
-                                pub_key=self.crypto_manager.pub_key_pem)
+                                error_details=error_details, data=data)
             else:
                 response = service_response
 
             response = soap_doc.safe_substitute(body=response)
 
-            self.logger.debug("Returning response=[%s]" % response)
+            self.logger.debug('Returning response=[{0}]'.format(response))
             return response
 
         except ClientSecurityException, e:

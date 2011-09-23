@@ -31,7 +31,6 @@ from lxml import etree
 from lxml.objectify import Element
 
 # Zato
-from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.server_model import WSSUsernameTokenDefinition
 from zato.admin.web.forms.security.wss import WSSUsernameTokenDefinitionForm

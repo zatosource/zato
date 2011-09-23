@@ -171,7 +171,7 @@ def _visit_egg(egg_path, names_only):
                 logger.error(msg)
         finally:
             # It's safe to delete the newly added distribution because
-            # we're still holding an import lock and if we managed to get
+            # we're still holding onto an import lock and if we managed to get
             # here it means the distribution has been activated.
             msg = "Will now delete egg_path [%s] from sys.path" % egg_path
             logger.debug(msg)
@@ -264,10 +264,10 @@ class ServiceStore(InitializingObject):
         from zato.server.service import internal
         from zato.server.service.internal import AdminService
         from zato.server.service.internal import sql, scheduler, service, soap
-        from zato.server.service.internal.security import wss
+        from zato.server.service.internal.security import wss, tech_account
 
         # XXX: The list would be better read from the IoC container
-        modules = [internal, sql, scheduler, service, soap, wss]
+        modules = [internal, sql, scheduler, service, soap, wss, tech_account]
 
         # Read all definitions of Zato's own internal services.
         for mod in modules:

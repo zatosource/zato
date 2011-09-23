@@ -24,6 +24,8 @@ import os, uuid
 
 # Zato
 from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents
+from zato.common import ZATO_JOIN_REQUEST_ACCEPTED
+from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
 from zato.server.repo import RepoManager
 
@@ -139,9 +141,10 @@ class CreateServer(ZatoCommand):
 
     needs_empty_dir = True
 
-    def __init__(self, target_dir):
+    def __init__(self, target_dir, cluster_name=None):
         super(CreateServer, self).__init__()
         self.target_dir = os.path.abspath(target_dir)
+        self.cluster_name = cluster_name
         self.dirs_prepared = False
         self.odb_token = uuid.uuid4().hex
 
@@ -157,6 +160,15 @@ class CreateServer(ZatoCommand):
         self.dirs_prepared = True
 
     def execute(self, args, server_pub_key=None):
+        
+        # Service list 1)
+        # We need to check if we're the first server to join the cluster. If we
+        # are then we need to populate the ODB with a list of internal services
+        # available in the server. At this point we only check what
+        # the command-line parameters were and later on, in point 2),
+        # the actual list gets added to the ODB.
+        cluster_name = args.cluster if 'cluster' in args else self.cluster_name
+
         if not self.dirs_prepared:
             self.prepare_directories()
 
@@ -198,6 +210,26 @@ class CreateServer(ZatoCommand):
         
         print('Core configuration stored in {server_conf_loc}'.format(server_conf_loc=server_conf_loc))
 
+        
+        # Service list 2)
+        # We'll need to add the list of services to the ODB depending on just 
+        # how many active servers there are in the cluster.
+        
+        engine = self._get_engine(args)
+        session = self._get_session(engine)
+
+        cluster = session.query(Cluster).filter(Cluster.name==cluster_name).first()
+        if not cluster:
+            should_add = True # A new cluster so it can't have any services yet.
+        else:
+            # .Need to add the list if there aren't any servers yet.
+            should_add = not session.query(Server).\
+                   filter(Server.cluster_id==cluster.id).\
+                   filter(Server.last_join_status==ZATO_JOIN_REQUEST_ACCEPTED+'a').\
+                   count()
+        
+        #if should_add
+        
         msg = """\nSuccessfully created a new server.
 You can now start it with the 'zato start {path}' command.
 """.format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))

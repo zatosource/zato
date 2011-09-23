@@ -135,6 +135,11 @@ class ZatoHTTPListener(HTTPServer):
                 url_type = url_data['url_type']
                 
                 self.handle_security(url_data, task.request_data, body, headers)
+                
+                # TODO: Shadow out any passwords that may be contained in HTTP
+                # headers or in the message itself. Of course, that only applies
+                # to auth schemes we're aware of (HTTP Basic Auth, WSS etc.)
+
             else:
                 msg = ("The URL [{0}] doesn't exist or has no security "
                       "configuration assigned").format(task.request_data.uri)
@@ -142,7 +147,8 @@ class ZatoHTTPListener(HTTPServer):
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
-            response = '<?xml version="1.0" encoding="utf-8"?><axx />' #self.soap_dispatcher.handle(request_body, headers)
+            #response = '<?xml version="1.0" encoding="utf-8"?><axx />' 
+            response = self.server.soap_handler.handle(body, headers)
 
         except HTTPException, e:
             task.setResponseStatus(e.status, e.reason)
@@ -186,7 +192,7 @@ class ParallelServer(object):
         """
         
         # Security configuration of HTTP URLs.
-        self.url_security = self.odb_manager.get_url_security(server)
+        self.url_security = self.odb.get_url_security(server)
         self.logger.log(logging.DEBUG, 'url_security=[{0}]'.format(self.url_security))
         
         # All of the ZeroMQ sockets need to be created in the main thread.
@@ -231,7 +237,7 @@ class ParallelServer(object):
         
         # First try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
-        server = self.odb_manager.fetch_server()
+        server = self.odb.fetch_server()
         
         if not server:
             raise Exception('Server does not exist in the ODB')
