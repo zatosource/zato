@@ -43,7 +43,7 @@ from zato.cli import ZatoCommand, common_odb_opts, zeromq_opts, create_odb, \
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.odb import engine_def, ping_queries
 from zato.common.odb.model import *
-from zato.common.util import current_host, security_def_type
+from zato.common.util import current_host, security_def_type, tech_account_password
 from zato.server import main
 from zato.server.crypto import CryptoManager
 from zato.server.repo import RepoManager
@@ -224,7 +224,7 @@ class Quickstart(ZatoCommand):
             # TechnicalAccount
             #
             salt = uuid4().hex
-            password = sha256(tech_account_password_clear+ ':' + salt).hexdigest()
+            password = tech_account_password(tech_account_password_clear, salt)
             tech_account = TechnicalAccount(None, tech_account_name, 
                                 password, salt, True, sec_def, cluster=cluster)
             session.add(tech_account)

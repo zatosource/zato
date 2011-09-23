@@ -19,10 +19,17 @@
     <script type="text/javascript" src="/static/yui/build/menu/menu-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
 
+    {% comment %} Validation framework {% endcomment %}
+    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
+    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+
+    {% comment %} Scriptaculous effects {% endcomment %}
+    <script type="text/javascript" src="/static/js/effects.js"></script>
+    
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} Scheduler JS {% endcomment %}
+    {% comment %} Tech account JS {% endcomment %}
     <script type="text/javascript" src="/static/js/security/tech-account.js"></script>
 
     </script>
@@ -49,14 +56,31 @@
         {{ choose_cluster_form.cluster }}
         <input type="submit" value="Show accounts" />
     </form>
-
-
+    
     {% if accounts %}
 
         <br/>
             <a href="javascript:tech_account_create('{{ cluster_id }}')" class="common">Create a new technical account</a>
         <br/>
         <br/>
+        
+        <div id="create-tech-account" class="yui-pe-content">
+            <div class="hd">Create a new technical account</div>
+            <div class="bd">
+                <form action="{% url security-tech-account-create %}" method="post" id="create-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ create_form.is_active }} <input type="hidden" name="cluster_id" value="{{ cluster_id }}" /></td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
 
         <script type="text/javascript">
         YAHOO.util.Event.addListener(window, "load", function() {
@@ -66,6 +90,7 @@
                     {key:"name", label:"Name", sortable:true},
                     {key:"is_active", label:"Is active", sortable:true},
                     {key:"edit", label:"&nbsp;", sortable:false},
+                    {key:"change_password", label:"&nbsp;", sortable:false},
                     {key:"delete", label:"&nbsp;", sortable:false},
                 ];
 
@@ -76,6 +101,7 @@
                             {key:"name"},
                             {key:"is_active"},
                             {key:"edit"},
+                            {key:"change_password"},
                             {key:"delete"},
                     ]
                 };
@@ -124,11 +150,15 @@
                         </td>
                         
                         <td>    
-                            <a href="javascript:tech_account_edit('{{ account.id }}')">Edit</a>
+                            <a href="javascript:tech_account_edit('{{ account.id }}', '{{ account.name }}', '{{ cluster_id }}')">Edit</a>
                         </td>
                         
                         <td>    
-                            <a href="javascript:tech_account_delete('{{ account.id }}')">Delete</a>
+                            <a href="javascript:tech_account_change_password('{{ account.id }}', '{{ account.name }}', '{{ cluster_id }}')">Change password</a>
+                        </td>
+                        
+                        <td>    
+                            <a href="javascript:tech_account_delete('{{ account.id }}', '{{ account.name }}', '{{ cluster_id }}')">Delete</a>
                         </td>
                         
                     </tr>
