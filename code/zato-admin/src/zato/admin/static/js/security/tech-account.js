@@ -318,6 +318,10 @@ function tech_account_change_password(tech_account_id) {
     // Set up the form validation if necessary.
     if(typeof change_password_validation == "undefined") {
         change_password_validation = new Validation("change-password-form");
+
+        Validation.add("validate-password-confirm", "Passwords need to be the same",
+                       {equalToField:"id_password1"});
+        
     }
     change_password_validation.reset();
 
