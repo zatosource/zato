@@ -211,3 +211,37 @@ class ChangePassword(AdminService):
             raise 
         
         return ZATO_OK, ''
+    
+class Delete(AdminService):
+    """ Deletes a technical account.
+    """
+    def handle(self, *args, **kwargs):
+        
+        payload = kwargs.get('payload')
+        request_params = ['tech_account_id', 'zato_admin_tech_account_name']
+        params = _get_params(payload, request_params, 'data.')
+        
+        tech_account_id = params['tech_account_id']
+        zato_admin_tech_account_name = params['zato_admin_tech_account_name']
+        
+        tech_account = self.server.odb.query(TechnicalAccount).\
+            filter(TechnicalAccount.id==tech_account_id).\
+            one()
+        
+        if tech_account.name == zato_admin_tech_account_name:
+            msg = "Can't delete account [{0}], at least one client console uses it".\
+                format(zato_admin_tech_account_name)
+            raise Exception(msg)
+        
+        try:
+            self.server.odb.delete(tech_account)
+            self.server.odb.commit()
+        except Exception, e:
+            msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
+            self.logger.error(msg)
+            self.server.odb.rollback()
+            
+            raise
+        
+        return ZATO_OK, ''
+    

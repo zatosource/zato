@@ -134,6 +134,7 @@ class ZatoContext(PythonConfig):
             "zato:security.tech-account.create":"zato.server.service.internal.security.tech_account.Create",
             "zato:security.tech-account.edit":"zato.server.service.internal.security.tech_account.Edit",
             "zato:security.tech-account.change-password":"zato.server.service.internal.security.tech_account.ChangePassword",
+            "zato:security.tech-account.delete":"zato.server.service.internal.security.tech_account.Delete",
 
             # WS-Security
             "zato:security.wss.get-list":"zato.server.service.internal.security.wss.GetDefinitionList",
