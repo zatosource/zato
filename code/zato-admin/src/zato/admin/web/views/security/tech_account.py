@@ -36,7 +36,7 @@ from validate import is_boolean
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms import ChooseClusterForm
+from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.security.tech_account import \
      CreateTechnicalAccountForm, EditTechnicalAccountForm
 from zato.admin.web.views import meth_allowed
@@ -55,6 +55,7 @@ def index(req):
     
     create_form = CreateTechnicalAccountForm()
     edit_form = EditTechnicalAccountForm(prefix='edit')
+    change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':
         
@@ -84,7 +85,8 @@ def index(req):
         'choose_cluster_form':choose_cluster_form,
         'accounts':accounts,
         'create_form':create_form,
-        'edit_form':edit_form
+        'edit_form':edit_form,
+        'change_password_form':change_password_form
         }
     
     # TODO: Should really be done by a decorator.
@@ -172,6 +174,34 @@ def edit(req):
     
     except Exception, e:
         msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return HttpResponse()
+
+@meth_allowed('POST')
+def change_password(req):
+    
+    cluster_id = req.POST.get('cluster_id')
+    tech_account_id = req.POST.get('tech_account_id')
+    
+    password1 = req.POST.get('password1', '')
+    password2 = req.POST.get('password2', '')
+    
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.tech_account_id = tech_account_id
+        zato_message.data.password1 = password1
+        zato_message.data.password2 = password2
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster,
+                        'zato:security.tech-account.change-password', zato_message)
+    
+    except Exception, e:
+        msg = "Could not change the password, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
