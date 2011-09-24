@@ -45,6 +45,7 @@ TechnicalAccount.prototype.add_row = function(tech_account, data_dt) {
     
     var added_record = data_dt.getRecord(add_at_idx);
     
+    added_record.setData("tech_account_id", tech_account.id);
     added_record.setData("name", tech_account.name);
     added_record.setData("is_active", tech_account.is_active_html());
 
@@ -86,7 +87,7 @@ function setup_create_dialog() {
         // Hide the dialog and confirm the changes have been saved.
         create_dialog.hide();
 
-        update_user_message(true, "Succesfully created a new technical account, don't forget to set its password now");
+        update_user_message(true, "Succesfully created a new technical account, don't forget to update its password now");
 
         // Cleanup after work.
         create_cleanup();
@@ -147,8 +148,22 @@ function setup_edit_dialog() {
 
     var on_edit_success = function(o) {
 
-        // Hide the dialog and confirm the changes have been saved.
         edit_dialog.hide();
+        
+        var records = data_dt.getRecordSet().getRecords();
+        for (x=0; x < records.length; x++) {
+            var record = records[x];
+            var tech_account_id = record.getData("tech_account_id");
+            if(tech_account_id && tech_account_id == $("id_edit-tech_account_id").value) {
+
+                var is_active = $F("id_edit-is_active") ? "Yes": "No";
+                
+                record.setData("name", $("id_edit-name").value);
+                record.setData("is_active", is_active);
+                
+                data_dt.render();
+            }
+        }
 
         update_user_message(true, "Succesfully updated the technical account");
 
@@ -202,7 +217,7 @@ function tech_account_edit(tech_account_id) {
     if(typeof edit_validation == "undefined") {
         edit_validation = new Validation("edit-form");
     }
-    edit_cleanup();
+    edit_validation.reset();
 
     // Get the account's details from DB.
 
