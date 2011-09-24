@@ -201,6 +201,70 @@ function setup_edit_dialog() {
     edit_dialog.render();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// change_password
+////////////////////////////////////////////////////////////////////////////////
+function change_password_cleanup() {
+    change_password_validation.reset();
+    $("change-password-form").reset();
+}
+
+function setup_change_password_dialog() {
+
+    var on_change_password_submit = function() {
+        if(change_password_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+            change_password_validation.reset();
+        }
+    };
+
+    var on_change_password_cancel = function() {
+        this.cancel();
+        change_password_cleanup();
+    };
+
+    var on_change_password_success = function(o) {
+
+        change_password_dialog.hide();
+        update_user_message(true, "Succesfully updated the password");
+
+        // Cleanup after work.
+        change_password_cleanup();
+
+    };
+
+    var on_change_password_failure = function(o) {
+        change_password_cleanup();
+        update_user_message(false, o.responseText);
+        change_password_dialog.hide();
+    };
+
+    // Remove progressively enhanced content class, just before creating the module.
+    YAHOO.util.Dom.removeClass("change-password-tech-account", "yui-pe-content");
+
+    // Instantiate the dialog.
+    change_password_dialog = new YAHOO.widget.Dialog("change-password-tech-account",
+                            { width: "39em",
+                              fixedcenter: true,
+                              visible: false,
+                              draggable: true,
+                              postmethod: "async",
+                              hideaftersubmit: false,
+                              constraintoviewport: true,
+                              buttons: [{text:"Submit", handler:on_change_password_submit},
+                                        {text:"Cancel", handler:on_change_password_cancel, isDefault:true}]
+                            });
+
+    change_password_dialog.callback.success = on_change_password_success;
+    change_password_dialog.callback.failure = on_change_password_failure;
+
+    // Render the dialog.
+    change_password_dialog.render();
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 function tech_account_create(cluster_id) {
 
     // Set up the form validation if necessary.
@@ -249,8 +313,34 @@ function tech_account_edit(tech_account_id) {
     YAHOO.util.Connect.asyncRequest("GET",  url, callback);
 }
 
+function tech_account_change_password(tech_account_id) {
+
+    // Set up the form validation if necessary.
+    if(typeof change_password_validation == "undefined") {
+        change_password_validation = new Validation("change-password-form");
+    }
+    change_password_validation.reset();
+
+    var records = data_dt.getRecordSet().getRecords();
+    for (x=0; x < records.length; x++) {
+        var record = records[x];
+        var tech_account_id_record = record.getData("tech_account_id");
+        if(tech_account_id_record && tech_account_id == tech_account_id_record) {
+            $("change-password-name").update(record.getData("name"));
+            break;
+        }
+    }
+    
+    $("id_change_password-tech_account_id").setValue(tech_account_id);
+    $("id_change_password-cluster_id").value = $("cluster_id").value;
+    
+    change_password_dialog.show();
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 YAHOO.util.Event.onDOMReady(function() {
     setup_create_dialog();
     setup_edit_dialog();
-    //setup_delete_dialog();
+    setup_change_password_dialog();
 });

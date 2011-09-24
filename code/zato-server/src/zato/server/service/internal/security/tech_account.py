@@ -169,3 +169,45 @@ class Edit(AdminService):
             raise 
         
         return ZATO_OK, ''
+    
+class ChangePassword(AdminService):
+    """ Changes the password of a technical account.
+    """
+    def handle(self, *args, **kwargs):
+        
+        payload = kwargs.get('payload')
+        request_params = ['tech_account_id', 'password1', 'password2']
+        params = _get_params(payload, request_params, 'data.')
+        
+        tech_account_id = params['tech_account_id']
+        password1 = params.get('password1')
+        password2 = params.get('password2')
+        
+        if not password1:
+            raise Exception('Password must not be empty')
+        
+        if not password2:
+            raise Exception('Password must be repeated')
+        
+        if password1 != password2:
+            raise Exception('Passwords are not the same')
+        
+        tech_account = self.server.odb.query(TechnicalAccount).\
+            filter(TechnicalAccount.id==tech_account_id).\
+            one()
+        
+        salt = uuid4().hex
+        tech_account.password = tech_account_password(password1, salt)
+        tech_account.salt = salt
+        
+        try:
+            self.server.odb.add(tech_account)
+            self.server.odb.commit()
+        except Exception, e:
+            msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
+            self.logger.error(msg)
+            self.server.odb.rollback()
+            
+            raise 
+        
+        return ZATO_OK, ''

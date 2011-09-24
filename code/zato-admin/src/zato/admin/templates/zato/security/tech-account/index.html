@@ -106,6 +106,31 @@
                 </form>
             </div>
         </div>
+        
+        <div id="change-password-tech-account" class="yui-pe-content">
+            <div class="hd">Change the technical account's password</div>
+            <div class="bd">
+                <form action="{% url security-tech-account-change-password %}" method="post" id="change-password-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm password</td>
+                            <td>{{ change_password_form.password2 }} 
+                                <input type="hidden" id="id_change_password-tech_account_id" name="tech_account_id" value="" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value="" />
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
 
         <script type="text/javascript">
         YAHOO.util.Event.addListener(window, "load", function() {
