@@ -190,7 +190,7 @@ class ChangePassword(AdminService):
             raise Exception('Password must be repeated')
         
         if password1 != password2:
-            raise Exception('Passwords are not the same')
+            raise Exception('Passwords need to be the same')
         
         tech_account = self.server.odb.query(TechnicalAccount).\
             filter(TechnicalAccount.id==tech_account_id).\
