@@ -111,6 +111,7 @@
         YAHOO.util.Event.addListener(window, "load", function() {
             YAHOO.example.EnhanceFromMarkup = function() {
                 data_column_defs = [
+                    {key:"tech_account_id", label:"tech_account_id", hidden:true},
                     {key:"selection", label:"", sortable:false},
                     {key:"name", label:"Name", sortable:true},
                     {key:"is_active", label:"Is active", sortable:true},
@@ -122,7 +123,9 @@
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
                 data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
                 data_ds.responseSchema = {
-                    fields: [{key:"selection"},
+                    fields: [
+                            {key:"tech_account_id"},
+                            {key:"selection"},
                             {key:"name"},
                             {key:"is_active"},
                             {key:"edit"},
@@ -158,6 +161,7 @@
                 {% for account in accounts %}
 
                     <tr>
+                        <td>{{ account.id }}</td>
                         <td>
                             <input type="checkbox" />
                         </td>
