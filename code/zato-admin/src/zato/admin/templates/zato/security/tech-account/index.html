@@ -14,11 +14,14 @@
     <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/menu/menu-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/cookie/cookie-min.js"></script>
 
     {% comment %} Validation framework {% endcomment %}
     <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
@@ -67,6 +70,8 @@
             <a href="javascript:tech_account_create('{{ cluster_id }}')" class="common">Create a new technical account</a>
         <br/>
         <br/>
+        
+        <div id="delete-container"></div>
         
         <div id="create-tech-account" class="yui-pe-content">
             <div class="hd">Create a new technical account</div>

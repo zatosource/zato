@@ -82,6 +82,7 @@ urlpatterns = patterns("",
     url(r"^zato/security/tech-account/edit/$", tech_account.edit, name="security-tech-account-edit"),
     url(r"^zato/security/tech-account/change-password/$", tech_account.change_password, name="security-tech-account-change-password"),
     url(r"^zato/security/tech-account/get/by-id/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$", tech_account.get_by_id, name="security-tech-account-get-by-id"),
+    url(r"^zato/security/tech-account/delete/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$", tech_account.delete, name="security-tech-account-delete"),
     
     url(r"^zato/security/wss/$", wss.index, name="security-wss"),
     url(r"^zato/security/wss/details/(?P<server_id>\d*)/(?P<def_id>\d)/edit/$", wss.edit, name="security-wss-details-edit"),

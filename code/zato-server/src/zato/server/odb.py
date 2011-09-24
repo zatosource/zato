@@ -51,6 +51,9 @@ class ODBManager(object):
     def add(self, *args, **kwargs):
         return self.session.add(*args, **kwargs)
     
+    def delete(self, *args, **kwargs):
+        return self.session.delete(*args, **kwargs)
+    
     def commit(self, *args, **kwargs):
         return self.session.commit(*args, **kwargs)
     
