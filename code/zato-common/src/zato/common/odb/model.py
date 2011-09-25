@@ -227,9 +227,11 @@ class WSSDefinition(Base):
     password = Column(String(200), nullable=False)
     password_type = Column(String(45), nullable=False)
     reject_empty_nonce_ts = Column(Boolean(), nullable=False)
-    reject_stale_username = Column(Boolean(), nullable=False)
+    reject_stale_username = Column(Boolean(), nullable=True)
     expiry_limit = Column(Integer(), nullable=False)
-    nonce_freshness = Column(Integer(), nullable=False)
+    nonce_freshness = Column(Integer(), nullable=True)
+    
+    is_active = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wss_defs', order_by=id))
