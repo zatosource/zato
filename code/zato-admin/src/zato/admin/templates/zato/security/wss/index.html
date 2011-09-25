@@ -13,16 +13,29 @@
     <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/menu/menu-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
 
+    {% comment %} Validation framework {% endcomment %}
+    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
+    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+
+    {% comment %} Scriptaculous effects {% endcomment %}
+    <script type="text/javascript" src="/static/js/effects.js"></script>
+
+    {% comment %} String formatting {% endcomment %}
+    <script type="text/javascript" src="/static/js/stringformat.js"></script>
+    
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} Scheduler JS {% endcomment %}
+    {% comment %} WS-Security {% endcomment %}
     <script type="text/javascript" src="/static/js/security/wss.js"></script>
 
     </script>
@@ -42,7 +55,7 @@
 
     <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
 
-    {% if not server_id %}
+    {% if not cluster_id %}
         Choose a cluster to manage WS-Security definitions.
         <br/><br/>
     {% endif %}
@@ -53,34 +66,48 @@
     </form>
 
 
-    {% if server_id %}
+    {% if cluster_id %}
 
         <br/>
-
-        <input type="hidden" id="current_server_id" value="{{ server_id }}" />
-        <a id="create-link" href="#" class="common">Create a new definition</a>
-
-
+        <a href="javascript:wss_create('{{ cluster_id }}')" class="common">Create a new WS-Security definition</a>
         <br/><br/>
 
         <script type="text/javascript">
         YAHOO.util.Event.addListener(window, "load", function() {
             YAHOO.example.EnhanceFromMarkup = function() {
                 data_column_defs = [
-                    {key:"def_selection", label:"", sortable:false},
-                    {key:"def_data", label:"Definition", sortable:true},
+                    {key:"selection", label:"", sortable:false},
+                    {key:"name", label:"Name", sortable:true},
+                    {key:"is_active", label:"Is active", sortable:true},
+                    {key:"username", label:"Username", sortable:true},
+                    {key:"reject_empty_nonce_ts", label:"Reject empty nonce TS", sortable:true},
+                    {key:"reject_stale_username", label:"Reject stale username", sortable:true},
+                    {key:"expiry_limit", label:"Expiry (s)", sortable:true},
+                    {key:"nonce_freshness", label:"Nonce freshness (s)", sortable:true},
+                    {key:"edit", label:"&nbsp;", sortable:false},
+                    {key:"change_password", label:"&nbsp;", sortable:false},
+                    {key:"delete", label:"&nbsp;", sortable:false},
                 ];
 
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
                 data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
                 data_ds.responseSchema = {
-                    fields: [{key:"def_selection"},
-                            {key:"def_data"},
+                    fields: [{key:"selection"},
+                            {key:"name"},
+                            {key:"is_active"},
+                            {key:"username"},
+                            {key:"reject_empty_nonce_ts"},
+                            {key:"reject_stale_username"},
+                            {key:"expiry_limit"},
+                            {key:"nonce_freshness"},
+                            {key:"edit"},
+                            {key:"change_password"},
+                            {key:"delete"},
                     ]
                 };
 
                 data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
-                        {sortedBy:{key:"def_data",dir:"desc"}}
+                        {sortedBy:{key:"name",dir:"desc"}}
                 );
 
                 return {
@@ -91,6 +118,45 @@
 
         });
         </script>
+        
+        <div id="create-wss" class="yui-pe-content">
+            <div class="hd">Create a new WSS definition</div>
+            <div class="bd">
+                <form action="{% url security-wss-create %}" method="post" id="create-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ create_form.is_active }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Username</td>
+                            <td>{{ create_form.username }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Reject empty nonce creation timestamps</td>
+                            <td>{{ create_form.reject_empty_nonce_ts }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Reject stale username tokens</td>
+                            <td>{{ create_form.reject_stale_username }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Expiry (seconds)</td>
+                            <td>{{ create_form.expiry_limit }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Nonce freshness (seconds)</td>
+                            <td>{{ create_form.nonce_freshness }} </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
 
         <div id="markup">
             <table id="data-table">
@@ -103,26 +169,33 @@
                 </thead>
 
                 <tbody>
-                {% for def in definitions %}
+                {% for wss in definitions %}
 
                     <tr>
                         <td>
                             <input type="checkbox" />
                         </td>
-                        <td>
-                                <a href="/zato/security/wss/details/{{ server_id }}/{{ def.id }}/" class="common">{{ def.name }}</a>
-                            <br/>
-                            <span style="font-size:11px;">
-
-                            User name: {{ def.username }}, <a class="common" href="#">(change password)</a>
-                            <br/>
-                            Reject empty nonce creation timestamp: {{ def.reject_empty_nonce_ts }},
-                            reject stale user name tokens: {{ def.reject_stale_username }}
-                            <br/>
-                            User name expiry limit (s): {{ def.expiry_limit }},
-                            nonce freshness time (s): {{ def.nonce_freshness }}
-
+                        
+                        <td>{{ wss.name }}</td>
+                        <td>{{ wss.is_active }}</td>
+                        <td>{{ wss.username }}</td>
+                        <td>{{ wss.reject_empty_nonce_ts }}</td>
+                        <td>{{ wss.reject_stale_username }}</td>
+                        <td>{{ wss.expiry_limit }}</td>
+                        <td>{{ wss.nonce_freshness }}</td>
+                        
+                        <td>    
+                            <a href="javascript:wss_edit('{{ wss.id }}')">Edit</a>
                         </td>
+                        
+                        <td>    
+                            <a href="javascript:wss_change_password('{{ wss.id }}')">Change password</a>
+                        </td>
+                        
+                        <td>    
+                            <a href="javascript:wss_delete('{{ wss.id }}')">Delete</a>
+                        </td>
+
                     </tr>
                 {% endfor %}
 
@@ -130,8 +203,8 @@
             </table>
         </div>
 
-    {% endif %} {% comment %}server_id{% endcomment %}
+    {% endif %} {% comment %}cluster_id{% endcomment %}
 
-{% endif %}{% comment %}not zato_servers{% endcomment %}
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

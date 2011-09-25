@@ -22,12 +22,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django import forms
 
-class WSSUsernameTokenDefinitionForm(forms.Form):
+class DefinitionForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:90%"}))
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     original_name = forms.CharField(widget=forms.HiddenInput())
     username = forms.CharField(widget=forms.TextInput(attrs={"class":"required"}))
-    reject_empty_nonce_ts = forms.BooleanField(widget=forms.CheckboxInput())
-    reject_stale_username = forms.BooleanField(widget=forms.CheckboxInput())
+    reject_empty_nonce_ts = forms.BooleanField(widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    reject_stale_username = forms.BooleanField(widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     expiry_limit = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
     nonce_freshness = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
