@@ -71,7 +71,7 @@ class Quickstart(ZatoCommand):
             top_id = top_id[0]
         except Exception, e:
             # It's OK, we simply don't have any such IDs yet.
-            pass
+            return next_id
         else:
             _, id = top_id.name.split(split_by)
             next_id = int(id) + 1
@@ -81,6 +81,14 @@ class Quickstart(ZatoCommand):
     def execute(self, args):
         try:
 
+            # Make sure the ODB tables exists.
+            # Note: Also make sure that's always at the very top of the method
+            # as otherwise the 'quickstart' command will fail on a pristine
+            # database, one that hasn't been used with Zato yet.
+            create_odb.CreateODB().execute(args)
+
+            args.cluster_name = "ZatoQuickstart"
+            args.server_name = "ZatoServer"
             
             engine = self._get_engine(args)
 
@@ -105,12 +113,6 @@ class Quickstart(ZatoCommand):
             server_dir = os.path.abspath(os.path.join(self.target_dir, "./server"))
             zato_admin_dir = os.path.abspath(os.path.join(self.target_dir, "./zato-admin"))
             security_server_dir = os.path.abspath(os.path.join(self.target_dir, "./security-server"))
-
-            args.cluster_name = "ZatoQuickstart"
-            args.server_name = "ZatoServer"
-            
-            # Make sure the ODB exists.
-            create_odb.CreateODB().execute(args)
 
             # Create the CA.
             os.mkdir(ca_dir)
