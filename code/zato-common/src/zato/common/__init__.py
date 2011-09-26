@@ -27,6 +27,9 @@ from lxml import etree
 from lxml import objectify
 from lxml.objectify import ObjectPath as _ObjectPath
 
+# Bunch
+from bunch import Bunch
+
 # The namespace for use in all Zato's own services.
 zato_namespace = "http://gefira.pl/zato" # TODO: Change it to a target URL when we finally have it
 zato_ns_map = {None: zato_namespace}
@@ -111,9 +114,17 @@ ZATO_SINGLETON_SERVER = '/zato/singleton'
 # Status of a server's join request
 ZATO_JOIN_REQUEST_ACCEPTED = 'ACCEPTED'
 
-# All URL type Zato understands.
+# All URL types Zato understands.
 ZATO_URL_TYPE_SOAP = 'soap'
 ZATO_URL_TYPE_PLAIN_HTTP = 'plain_http'
+
+# Whether WS-Security passwords are transmitted in clear-text or not.
+ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear-text', label='Clear text')
+ZATO_WSS_PASSWORD_DIGEST = Bunch(name='digest', label='Digest')
+ZATO_WSS_PASSWORD_TYPES = {
+    ZATO_WSS_PASSWORD_CLEAR_TEXT.name:ZATO_WSS_PASSWORD_CLEAR_TEXT.label,
+    ZATO_WSS_PASSWORD_DIGEST.name:ZATO_WSS_PASSWORD_DIGEST.label
+}
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):

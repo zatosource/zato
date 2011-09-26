@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -30,14 +31,18 @@ from django.shortcuts import render_to_response
 from lxml import etree
 from lxml.objectify import Element
 
+# Validate
+from validate import is_boolean
+
 # Zato
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.server_model import WSSUsernameTokenDefinition
 from zato.admin.web.forms.security.wss import DefinitionForm
 from zato.admin.web.views import meth_allowed
-from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
+from zato.common import zato_namespace, zato_path, ZatoException, \
+     ZATO_NOT_GIVEN, ZATO_WSS_PASSWORD_TYPES
 from zato.admin.web import invoke_admin_service
-from zato.common.odb.model import Cluster
+from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
@@ -46,14 +51,17 @@ def _get_edit_create_message(params):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.definition = Element('definition')
-    zato_message.definition.id = params['id']
-    zato_message.definition.name = params['name']
-    zato_message.definition.username = params['username']
-    zato_message.definition.reject_empty_nonce_ts = True if params.get('reject_empty_nonce_ts') == 'on' else False
-    zato_message.definition.reject_stale_username = True if params.get('reject_stale_username') == 'on' else False
-    zato_message.definition.expiry_limit = params['expiry_limit']
-    zato_message.definition.nonce_freshness = params['nonce_freshness']
+    zato_message.data = Element('data')
+    zato_message.data.id = params.get('id')
+    zato_message.data.cluster_id = params['cluster_id']
+    zato_message.data.name = params['name']
+    zato_message.data.is_active = bool(params.get('is_active'))
+    zato_message.data.username = params['username']
+    zato_message.data.password_type = params['password_type']
+    zato_message.data.reject_empty_nonce_ts = bool(params.get('reject_empty_nonce_ts'))
+    zato_message.data.reject_stale_username = bool(params.get('reject_stale_username'))
+    zato_message.data.expiry_limit = params['expiry_limit']
+    zato_message.data.nonce_freshness = params['nonce_freshness']
 
     return zato_message
 
@@ -79,17 +87,20 @@ def index(req):
             for definition_elem in zato_message.data.definition_list.definition:
 
                 id = definition_elem.id.text
-                name = unicode(definition_elem.name.text)
-                username = unicode(definition_elem.username.text)
+                name = definition_elem.name.text
+                is_active = is_boolean(definition_elem.is_active.text)
+                username = definition_elem.username.text
+                password_type = ZATO_WSS_PASSWORD_TYPES[definition_elem.password_type.text]
                 reject_empty_nonce_ts = definition_elem.reject_empty_nonce_ts
                 reject_stale_username = definition_elem.reject_stale_username
                 expiry_limit = definition_elem.expiry_limit
                 nonce_freshness = definition_elem.nonce_freshness
 
-                definition = WSSUsernameTokenDefinition(id, name, None, username,
-                    reject_empty_nonce_ts, reject_stale_username,
-                    expiry_limit, nonce_freshness)
-                definitions.append(definition)
+                wss = WSSDefinition(id, name, is_active, username, None,
+                        password_type, reject_empty_nonce_ts, reject_stale_username,
+                        expiry_limit, nonce_freshness)
+
+                definitions.append(wss)
 
             definitions.sort()
 
@@ -169,4 +180,17 @@ def edit(req, server_id, def_id):
 
 @meth_allowed('POST')
 def create(req):
-    return HttpResponse()
+    try:
+        cluster_id = req.POST.get('cluster_id')
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+
+        zato_message = _get_edit_create_message(req.POST)
+
+        _, zato_message, soap_response = invoke_admin_service(cluster,
+                            'zato:security.wss.create', zato_message)
+    except Exception, e:
+        msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return HttpResponse(zato_message.data.wss.id.text)
