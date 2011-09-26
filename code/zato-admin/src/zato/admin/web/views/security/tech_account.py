@@ -31,7 +31,7 @@ from django.shortcuts import render_to_response
 from lxml import etree
 from lxml.objectify import Element
 
-# ConfigObj
+# Validate
 from validate import is_boolean
 
 # Zato

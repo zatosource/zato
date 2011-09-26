@@ -19,6 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from traceback import format_exc
+from uuid import uuid4
+
 # SQLAlchemy
 from sqlalchemy.orm.query import orm_exc
 
@@ -28,11 +32,11 @@ from lxml.objectify import Element
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
-from zato.common.odb.model import WSSDefinition
+from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
-class GetDefinitionList(AdminService):
+class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
     def handle(self, *args, **kwargs):
@@ -44,8 +48,9 @@ class GetDefinitionList(AdminService):
 
             definition_elem = Element("definition")
             definition_elem.id = definition.id
-
             definition_elem.name = definition.name
+            definition_elem.is_active = definition.is_active
+            definition_elem.password_type = definition.password_type
             definition_elem.username = definition.username
             definition_elem.reject_empty_nonce_ts = definition.reject_empty_nonce_ts
             definition_elem.reject_stale_username = definition.reject_stale_username
@@ -83,7 +88,56 @@ class GetDetails(AdminService):
 
             return ZATO_OK, etree.tostring(definition_elem)
 
-class EditDefinition(AdminService):
+class Create(AdminService):
+    """ Creates a new WS-Security definition.
+    """
+    def handle(self, *args, **kwargs):
+        
+        payload = kwargs.get('payload')
+        request_params = ['cluster_id', 'name', 'is_active', 'username', 
+                          'password_type', 'reject_empty_nonce_ts', 
+                          'reject_stale_username',  'expiry_limit',
+                          'nonce_freshness']
+        params = _get_params(payload, request_params, 'data.')
+        
+        cluster_id = params['cluster_id']
+        name = params['name']
+        
+        cluster = self.server.odb.query(Cluster).filter_by(id=cluster_id).first()
+        
+        # Let's see if we already have a definition of that name before committing
+        # any stuff into the database.
+        existing_one = self.server.odb.query(WSSDefinition).\
+            filter(Cluster.id==cluster_id).\
+            filter(WSSDefinition.name==name).first()
+        
+        if existing_one:
+            raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
+        
+        wss_elem = Element('wss')
+
+        try:
+            wss = WSSDefinition(None, name, params['is_active'], params['username'], 
+                                uuid4().hex,  params['password_type'],
+                                params['reject_empty_nonce_ts'], 
+                                params['reject_stale_username'], params['expiry_limit'], 
+                                params['nonce_freshness'], cluster)
+            
+            self.server.odb.add(wss)
+            self.server.odb.commit()
+            
+            wss_elem.id = wss.id
+            
+        except Exception, e:
+            msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
+            self.logger.error(msg)
+            self.server.odb.rollback()
+            
+            raise 
+        
+        return ZATO_OK, etree.tostring(wss_elem)
+
+class Edit(AdminService):
     """ Updates a WS-S definition.
     """
     def handle(self, *args, **kwargs):

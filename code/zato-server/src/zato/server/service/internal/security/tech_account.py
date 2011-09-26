@@ -36,7 +36,7 @@ from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common.util import TRACE1, tech_account_password
 from zato.server.service.internal import _get_params, AdminService
 
-class GetDefinitionList(AdminService):
+class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
     sorted by the 'name' attribute.
     """

@@ -78,12 +78,13 @@
                 data_column_defs = [
                     {key:"selection", label:"", sortable:false},
                     {key:"name", label:"Name", sortable:true},
-                    {key:"is_active", label:"Is active", sortable:true},
+                    {key:"is_active", label:"Active", sortable:true},
                     {key:"username", label:"Username", sortable:true},
-                    {key:"reject_empty_nonce_ts", label:"Reject empty nonce TS", sortable:true},
-                    {key:"reject_stale_username", label:"Reject stale username", sortable:true},
+                    {key:"password_type", label:"Password type", sortable:true},
+                    {key:"reject_empty_nonce_ts", label:"Empty nonce TS", sortable:true},
+                    {key:"reject_stale_username", label:"Stale username", sortable:true},
                     {key:"expiry_limit", label:"Expiry (s)", sortable:true},
-                    {key:"nonce_freshness", label:"Nonce freshness (s)", sortable:true},
+                    {key:"nonce_freshness", label:"Freshness (s)", sortable:true},
                     {key:"edit", label:"&nbsp;", sortable:false},
                     {key:"change_password", label:"&nbsp;", sortable:false},
                     {key:"delete", label:"&nbsp;", sortable:false},
@@ -96,6 +97,7 @@
                             {key:"name"},
                             {key:"is_active"},
                             {key:"username"},
+                            {key:"password_type"},
                             {key:"reject_empty_nonce_ts"},
                             {key:"reject_stale_username"},
                             {key:"expiry_limit"},
@@ -137,6 +139,10 @@
                             <td>{{ create_form.username }} </td>
                         </tr>
                         <tr>
+                            <td style="vertical-align:middle">Password type</td>
+                            <td>{{ create_form.password_type }} </td>
+                        </tr>
+                        <tr>
                             <td style="vertical-align:middle">Reject empty nonce creation timestamps</td>
                             <td>{{ create_form.reject_empty_nonce_ts }} </td>
                         </tr>
@@ -172,30 +178,18 @@
                 {% for wss in definitions %}
 
                     <tr>
-                        <td>
-                            <input type="checkbox" />
-                        </td>
-                        
+                        <td><input type="checkbox" /></td>
                         <td>{{ wss.name }}</td>
-                        <td>{{ wss.is_active }}</td>
+                        <td>{% if wss.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{{ wss.username }}</td>
-                        <td>{{ wss.reject_empty_nonce_ts }}</td>
-                        <td>{{ wss.reject_stale_username }}</td>
+                        <td>{{ wss.password_type }}</td>
+                        <td>{% if wss.reject_empty_nonce_ts %}Reject{% else %}Allow{% endif %}</td>
+                        <td>{% if wss.reject_stale_username %}Reject{% else %}Allow{% endif %}</td>
                         <td>{{ wss.expiry_limit }}</td>
                         <td>{{ wss.nonce_freshness }}</td>
-                        
-                        <td>    
-                            <a href="javascript:wss_edit('{{ wss.id }}')">Edit</a>
-                        </td>
-                        
-                        <td>    
-                            <a href="javascript:wss_change_password('{{ wss.id }}')">Change password</a>
-                        </td>
-                        
-                        <td>    
-                            <a href="javascript:wss_delete('{{ wss.id }}')">Delete</a>
-                        </td>
-
+                        <td><a href="javascript:wss_edit('{{ wss.id }}')">Edit</a></td>
+                        <td><a href="javascript:wss_change_password('{{ wss.id }}')">Change password</a></td>
+                        <td><a href="javascript:wss_delete('{{ wss.id }}')">Delete</a></td>
                     </tr>
                 {% endfor %}
 

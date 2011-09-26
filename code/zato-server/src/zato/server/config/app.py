@@ -129,7 +129,7 @@ class ZatoContext(PythonConfig):
             "zato:channel.soap.get-list":"zato.server.service.internal.soap.GetChannelList",
             
             # Technical accounts
-            "zato:security.tech-account.get-list":"zato.server.service.internal.security.tech_account.GetDefinitionList",
+            "zato:security.tech-account.get-list":"zato.server.service.internal.security.tech_account.GetList",
             "zato:security.tech-account.get-by-id":"zato.server.service.internal.security.tech_account.GetByID",
             "zato:security.tech-account.create":"zato.server.service.internal.security.tech_account.Create",
             "zato:security.tech-account.edit":"zato.server.service.internal.security.tech_account.Edit",
@@ -137,9 +137,10 @@ class ZatoContext(PythonConfig):
             "zato:security.tech-account.delete":"zato.server.service.internal.security.tech_account.Delete",
 
             # WS-Security
-            "zato:security.wss.get-list":"zato.server.service.internal.security.wss.GetDefinitionList",
+            "zato:security.wss.get-list":"zato.server.service.internal.security.wss.GetList",
             "zato:security.wss.get-details":"zato.server.service.internal.security.wss.GetDetails",
-            "zato:security.wss.edit":"zato.server.service.internal.security.wss.EditDefinition",
+            "zato:security.wss.create":"zato.server.service.internal.security.wss.Create",
+            "zato:security.wss.edit":"zato.server.service.internal.security.wss.Edit",
         }
 
     @Object

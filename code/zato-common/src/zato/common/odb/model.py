@@ -237,16 +237,17 @@ class WSSDefinition(Base):
     cluster = relationship(Cluster, backref=backref('wss_defs', order_by=id))
     
     security_def_id = Column(Integer, ForeignKey('security_def.id'), 
-                             nullable=False)
+                             nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('wss_def', 
                                                     order_by=id, uselist=False))
 
-    def __init__(self, id=None, name=None, username=None, password=None,
-                 password_type=None, reject_empty_nonce_ts=None, 
+    def __init__(self, id=None, name=None, is_active=None, username=None, 
+                 password=None, password_type=None, reject_empty_nonce_ts=None, 
                  reject_stale_username=None, expiry_limit=None, 
                  nonce_freshness=None, cluster=None):
         self.id = id
         self.name = name
+        self.is_active = is_active
         self.username = username
         self.password = password
         self.password_type = password_type
