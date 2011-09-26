@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
 from traceback import format_exc
 
 # Django
@@ -193,4 +194,9 @@ def create(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return HttpResponse(zato_message.data.wss.id.text)
+        return_data = {'pk': zato_message.data.wss.id.text,
+         'fields': 
+             {'password_type':ZATO_WSS_PASSWORD_TYPES[req.POST['password_type']]
+              }
+         }
+        return HttpResponse(dumps(return_data), mimetype='application/javascript')
