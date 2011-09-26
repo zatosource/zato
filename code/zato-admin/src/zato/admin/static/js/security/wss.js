@@ -25,6 +25,7 @@ WSS.prototype.toString = function() {
         name=[" + this.name + "]\
         is_active=[" + this.is_active + "]\
         username=[" + this.username + "]\
+        password_type=[" + this.password_type + "]\
         reject_empty_nonce_ts=[" + this.reject_empty_nonce_ts + "]\
         reject_stale_username=[" + this.reject_stale_username + "]\
         expiry_limit=[" + this.expiry_limit + "]\
@@ -36,6 +37,10 @@ WSS.prototype.boolean_html = function(attr) {
     return attr ? "Yes": "No";
 }
 
+WSS.prototype.boolean_html_reject = function(attr) {
+    return attr ? "Reject": "Allow";
+}
+
 // Dumps properties in a form suitable for creating a new data table row.
 WSS.prototype.to_record = function() {
     var record = new Array();
@@ -44,8 +49,9 @@ WSS.prototype.to_record = function() {
     record["name"] = this.name;
     record["is_active"] = this.boolean_html(this.is_active);
     record["username"] = this.username;
-    record["reject_empty_nonce_ts"] = this.boolean_html(this.reject_empty_nonce_ts);
-    record["reject_stale_username"] = this.boolean_html(this.reject_stale_username);
+    record["password_type"] = this.password_type;
+    record["reject_empty_nonce_ts"] = this.boolean_html_reject(this.reject_empty_nonce_ts);
+    record["reject_stale_username"] = this.boolean_html_reject(this.reject_stale_username);
     record["expiry_limit"] = this.expiry_limit;
     record["nonce_freshness"] = this.nonce_freshness;
     
@@ -102,11 +108,13 @@ function setup_create_dialog() {
     var on_create_success = function(o) {
 
         var wss = new WSS();
+        var json = YAHOO.lang.JSON.parse(o.responseText);
         
-        wss.id = o.responseText;
+        wss.id = json.pk;
         wss.cluster_id = $("id_cluster").value;
         wss.name = $("id_name").value;
         wss.is_active = $F("id_is_active") == "on";
+        wss.password_type = json.fields.password_type;
         wss.username = $("id_username").value;
         wss.reject_empty_nonce_ts = $F("id_reject_empty_nonce_ts") == "on";
         wss.reject_stale_username = $F("id_reject_stale_username") == "on";
