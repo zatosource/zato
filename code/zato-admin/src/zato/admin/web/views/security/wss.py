@@ -166,3 +166,23 @@ def create(req):
 @meth_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato:security.wss.change-password')
+
+@meth_allowed('POST')
+def delete(req, wss_id, cluster_id):
+    
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.wss_id = wss_id
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster,
+                        'zato:security.wss.delete', zato_message)
+    
+    except Exception, e:
+        msg = "Could not delete the WS-Security definition, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return HttpResponse()

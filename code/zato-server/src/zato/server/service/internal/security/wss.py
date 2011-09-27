@@ -200,3 +200,30 @@ class ChangePassword(AdminService):
             raise 
         
         return ZATO_OK, ''
+    
+class Delete(AdminService):
+    """ Deletes a WS-Security definition.
+    """
+    def handle(self, *args, **kwargs):
+        
+        try:
+            payload = kwargs.get('payload')
+            request_params = ['wss_id']
+            params = _get_params(payload, request_params, 'data.')
+            
+            wss_id = params['wss_id']
+            
+            wss = self.server.odb.query(WSSDefinition).\
+                filter(WSSDefinition.id==wss_id).\
+                one()
+            
+            self.server.odb.delete(wss)
+            self.server.odb.commit()
+        except Exception, e:
+            msg = "Could not delete the WS-Security definition, e=[{e}]".format(e=format_exc(e))
+            self.logger.error(msg)
+            self.server.odb.rollback()
+            
+            raise
+        
+        return ZATO_OK, ''
