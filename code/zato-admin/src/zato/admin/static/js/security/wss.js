@@ -73,7 +73,7 @@ WSS.prototype.add_row = function(wss, data_dt) {
     
     var added_record = data_dt.getRecord(add_at_idx);
     
-    added_record.setData("id", wss.id);
+    added_record.setData("wss_id", wss.id);
     added_record.setData("name", wss.name);
     added_record.setData("is_active", wss.is_active);
     added_record.setData("username", wss.username);
