@@ -141,6 +141,7 @@ class ZatoContext(PythonConfig):
             'zato:security.wss.create':'zato.server.service.internal.security.wss.Create',
             'zato:security.wss.edit':'zato.server.service.internal.security.wss.Edit',
             'zato:security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
+            'zato:security.wss.delete':'zato.server.service.internal.security.wss.Delete',
         }
 
     @Object
