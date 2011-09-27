@@ -244,7 +244,7 @@ class WSSDefinition(Base):
     def __init__(self, id=None, name=None, is_active=None, username=None, 
                  password=None, password_type=None, reject_empty_nonce_ts=None, 
                  reject_stale_username=None, expiry_limit=None, 
-                 nonce_freshness=None, cluster=None):
+                 nonce_freshness=None, cluster=None, password_type_raw=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -256,6 +256,7 @@ class WSSDefinition(Base):
         self.expiry_limit = expiry_limit
         self.nonce_freshness = nonce_freshness
         self.cluster = cluster
+        self.password_type_raw = password_type_raw
 
     def __repr__(self):
         return make_repr(self)

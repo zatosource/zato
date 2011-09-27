@@ -86,8 +86,7 @@ urlpatterns = patterns("",
     
     url(r"^zato/security/wss/$", wss.index, name="security-wss"),
     url(r"^zato/security/wss/create/$", wss.create, name="security-wss-create"),
-    url(r"^zato/security/wss/(?P<server_id>\d*)/(?P<def_id>\d)/edit/$", wss.edit, name="security-wss-edit"),
-    url(r"^zato/security/wss/(?P<server_id>\d*)/(?P<def_id>\d*)/$", wss.details, name="security-wss-details"),
+    url(r"^zato/security/wss/edit/$", wss.edit, name="security-wss-edit"),
 
     # SQL connection pools.
     url(r"^zato/pool/sql/$", sql.index, name="pool-sql"),
