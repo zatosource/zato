@@ -204,10 +204,12 @@ function setup_edit_dialog() {
                 var is_active = $F("id_edit-is_active") ? "Yes": "No";
                 var reject_empty_nonce_ts = $F("id_edit-reject_empty_nonce_ts") ? "Reject": "Allow";
                 var reject_stale_username = $F("id_edit-reject_stale_username") ? "Reject": "Allow";
+
+                var password_type = $('id_edit-password_type')[$('id_edit-password_type').selectedIndex].text;
                 
                 record.setData("name", $("id_edit-name").value);
                 record.setData("is_active", is_active);
-                record.setData("password_type", $("id_edit-password_type").value);
+                record.setData("password_type", password_type);
                 record.setData("username", $("id_edit-username").value);
                 record.setData("reject_empty_nonce_ts", reject_empty_nonce_ts);
                 record.setData("reject_stale_username", reject_stale_username);
@@ -218,7 +220,7 @@ function setup_edit_dialog() {
             }
         }
 
-        update_user_message(true, "Succesfully updated the technical account");
+        update_user_message(true, "Succesfully updated the WS-Security definition");
 
         // Cleanup after work.
         edit_cleanup();
@@ -291,7 +293,7 @@ function wss_edit(wss_id) {
             $("id_edit-name").value = record.getData("name");
             $("id_edit-is_active").setValue(is_active);
             $("id_edit-username").value = record.getData("username");
-            $("id_edit-password_type").value = record.getData("password_type");
+            $("id_edit-password_type").value = record.getData("password_type_raw");
             $("id_edit-reject_empty_nonce_ts").setValue(reject_empty_nonce_ts);
             $("id_edit-reject_stale_username").setValue(reject_stale_username);
             $("id_edit-expiry_limit").value = record.getData("expiry_limit");
