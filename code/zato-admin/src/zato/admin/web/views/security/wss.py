@@ -119,7 +119,7 @@ def index(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)
 
-    return render_to_response('zato/security/wss/index.html', return_data)
+    return render_to_response('zato/security/wss.html', return_data)
 
 @meth_allowed('POST')
 def edit(req):
