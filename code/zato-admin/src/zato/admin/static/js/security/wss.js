@@ -9,6 +9,8 @@ var WSS = Class.create({
         this.name = null;
         this.is_active = null;
         this.username = null;
+        this.password_type = null;
+        this.password_type_raw = null;
         this.reject_empty_nonce_ts = null;
         this.reject_stale_username = null;
         this.expiry_limit = null;
@@ -25,6 +27,7 @@ WSS.prototype.toString = function() {
         name=[" + this.name + "]\
         is_active=[" + this.is_active + "]\
         username=[" + this.username + "]\
+        password_type_raw=[" + this.password_type_raw + "]\
         password_type=[" + this.password_type + "]\
         reject_empty_nonce_ts=[" + this.reject_empty_nonce_ts + "]\
         reject_stale_username=[" + this.reject_stale_username + "]\
@@ -49,6 +52,7 @@ WSS.prototype.to_record = function() {
     record["name"] = this.name;
     record["is_active"] = this.boolean_html(this.is_active);
     record["username"] = this.username;
+    record["password_type_raw"] = this.password_type_raw;
     record["password_type"] = this.password_type;
     record["reject_empty_nonce_ts"] = this.boolean_html_reject(this.reject_empty_nonce_ts);
     record["reject_stale_username"] = this.boolean_html_reject(this.reject_stale_username);
@@ -73,6 +77,8 @@ WSS.prototype.add_row = function(wss, data_dt) {
     added_record.setData("name", wss.name);
     added_record.setData("is_active", wss.is_active);
     added_record.setData("username", wss.username);
+    added_record.setData("password_type", wss.password_type);
+    added_record.setData("password_type_raw", wss.password_type_raw);
     added_record.setData("reject_empty_nonce_ts", wss.reject_empty_nonce_ts);
     added_record.setData("reject_stale_username", wss.reject_stale_username);
     added_record.setData("expiry_limit", wss.expiry_limit);
@@ -114,6 +120,7 @@ function setup_create_dialog() {
         wss.cluster_id = $("id_cluster").value;
         wss.name = $("id_name").value;
         wss.is_active = $F("id_is_active") == "on";
+        wss.password_type_raw = json.fields.password_type_raw;
         wss.password_type = json.fields.password_type;
         wss.username = $("id_username").value;
         wss.reject_empty_nonce_ts = $F("id_reject_empty_nonce_ts") == "on";
@@ -161,6 +168,92 @@ function setup_create_dialog() {
     create_dialog.render();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// edit
+////////////////////////////////////////////////////////////////////////////////
+function edit_cleanup() {
+    edit_validation.reset();
+    $("edit-form").reset();
+}
+
+function setup_edit_dialog() {
+
+    var on_edit_submit = function() {
+        if(edit_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+            edit_validation.reset();
+        }
+    };
+
+    var on_edit_cancel = function() {
+        this.cancel();
+        edit_cleanup();
+    };
+
+    var on_edit_success = function(o) {
+
+        edit_dialog.hide();
+        
+        var records = data_dt.getRecordSet().getRecords();
+        for (x=0; x < records.length; x++) {
+            var record = records[x];
+            var wss_id = record.getData("wss_id");
+            if(wss_id && wss_id == $("id_edit-wss_id").value) {
+
+                var is_active = $F("id_edit-is_active") ? "Yes": "No";
+                var reject_empty_nonce_ts = $F("id_edit-reject_empty_nonce_ts") ? "Reject": "Allow";
+                var reject_stale_username = $F("id_edit-reject_stale_username") ? "Reject": "Allow";
+                
+                record.setData("name", $("id_edit-name").value);
+                record.setData("is_active", is_active);
+                record.setData("password_type", $("id_edit-password_type").value);
+                record.setData("username", $("id_edit-username").value);
+                record.setData("reject_empty_nonce_ts", reject_empty_nonce_ts);
+                record.setData("reject_stale_username", reject_stale_username);
+                record.setData("expiry_limit", $("id_edit-expiry_limit").value);
+                record.setData("nonce_freshness", $("id_edit-nonce_freshness").value);
+                
+                data_dt.render();
+            }
+        }
+
+        update_user_message(true, "Succesfully updated the technical account");
+
+        // Cleanup after work.
+        edit_cleanup();
+
+    };
+
+    var on_edit_failure = function(o) {
+        edit_cleanup();
+        update_user_message(false, o.responseText);
+        edit_dialog.hide();
+    };
+
+    // Remove progressively enhanced content class, just before creating the module.
+    YAHOO.util.Dom.removeClass("edit-form", "yui-pe-content");
+
+    // Instantiate the dialog.
+    edit_dialog = new YAHOO.widget.Dialog("edit-div",
+                            { width: "39em",
+                              fixedcenter: true,
+                              visible: false,
+                              draggable: true,
+                              postmethod: "async",
+                              hideaftersubmit: false,
+                              constraintoviewport: true,
+                              buttons: [{text:"Submit", handler:on_edit_submit},
+                                        {text:"Cancel", handler:on_edit_cancel, isDefault:true}]
+                            });
+
+    edit_dialog.callback.success = on_edit_success;
+    edit_dialog.callback.failure = on_edit_failure;
+
+    // Render the dialog.
+    edit_dialog.render();
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -174,11 +267,46 @@ function wss_create(cluster_id) {
     create_dialog.show();
 }
 
+function wss_edit(wss_id) {
+
+    // Set up the form validation if necessary.
+    if(typeof edit_validation == "undefined") {
+        edit_validation = new Validation("edit-form");
+    }
+    edit_validation.reset();
+    
+    $("id_edit-cluster_id").value = $("cluster_id").value;
+
+    var records = data_dt.getRecordSet().getRecords();
+    for (x=0; x < records.length; x++) {
+        var record = records[x];
+        var wss_id_record = record.getData("wss_id");
+        if(wss_id_record && wss_id_record == wss_id) {
+        
+            is_active = record.getData("is_active") == 'Yes' ? 'on' : ''
+            reject_empty_nonce_ts = record.getData("reject_empty_nonce_ts") == 'Reject' ? 'on' : ''
+            reject_stale_username = record.getData("reject_stale_username") == 'Reject' ? 'on' : ''
+            
+            $("id_edit-wss_id").value = record.getData("wss_id");
+            $("id_edit-name").value = record.getData("name");
+            $("id_edit-is_active").setValue(is_active);
+            $("id_edit-username").value = record.getData("username");
+            $("id_edit-password_type").value = record.getData("password_type");
+            $("id_edit-reject_empty_nonce_ts").setValue(reject_empty_nonce_ts);
+            $("id_edit-reject_stale_username").setValue(reject_stale_username);
+            $("id_edit-expiry_limit").value = record.getData("expiry_limit");
+            $("id_edit-nonce_freshness").value = record.getData("nonce_freshness");
+        }
+    }
+    
+    edit_dialog.show();
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 
 YAHOO.util.Event.onDOMReady(function() {
     setup_create_dialog();
-    //setup_edit_dialog();
+    setup_edit_dialog();
     //setup_change_password_dialog();
     //setup_delete_dialog();
 });

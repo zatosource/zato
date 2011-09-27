@@ -138,7 +138,6 @@ class ZatoContext(PythonConfig):
 
             # WS-Security
             "zato:security.wss.get-list":"zato.server.service.internal.security.wss.GetList",
-            "zato:security.wss.get-details":"zato.server.service.internal.security.wss.GetDetails",
             "zato:security.wss.create":"zato.server.service.internal.security.wss.Create",
             "zato:security.wss.edit":"zato.server.service.internal.security.wss.Edit",
         }

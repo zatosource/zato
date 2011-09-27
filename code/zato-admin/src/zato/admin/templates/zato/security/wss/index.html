@@ -76,6 +76,8 @@
         YAHOO.util.Event.addListener(window, "load", function() {
             YAHOO.example.EnhanceFromMarkup = function() {
                 data_column_defs = [
+                    {key:"wss_id", label:"wss_id", hidden:true},
+                    {key:"password_type_raw", label:"password_type_raw", hidden:true},
                     {key:"selection", label:"", sortable:false},
                     {key:"name", label:"Name", sortable:true},
                     {key:"is_active", label:"Active", sortable:true},
@@ -93,7 +95,10 @@
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
                 data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
                 data_ds.responseSchema = {
-                    fields: [{key:"selection"},
+                    fields: [
+                            {key:"wss_id"},
+                            {key:"password_type_raw"},
+                            {key:"selection"},
                             {key:"name"},
                             {key:"is_active"},
                             {key:"username"},
@@ -122,7 +127,7 @@
         </script>
         
         <div id="create-wss" class="yui-pe-content">
-            <div class="hd">Create a new WSS definition</div>
+            <div class="hd">Create a new WS-Security definition</div>
             <div class="bd">
                 <form action="{% url security-wss-create %}" method="post" id="create-form">
                     <table class="form-data" border="0">
@@ -163,6 +168,50 @@
                 </form>
             </div>
         </div>
+        
+        <div id="edit-div" class="yui-pe-content">
+            <div class="hd">Edit the WS-Security definition</div>
+            <div class="bd">
+                <form action="{% url security-wss-edit %}" method="post" id="edit-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ edit_form.is_active }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Username</td>
+                            <td>{{ edit_form.username }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password type</td>
+                            <td>{{ edit_form.password_type }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Reject empty nonce creation timestamps</td>
+                            <td>{{ edit_form.reject_empty_nonce_ts }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Reject stale username tokens</td>
+                            <td>{{ edit_form.reject_stale_username }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Expiry (seconds)</td>
+                            <td>{{ edit_form.expiry_limit }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Nonce freshness (seconds)</td>
+                            <td>{{ edit_form.nonce_freshness }} </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-wss_id" name="wss_id" />
+                </form>
+            </div>
+        </div>
 
         <div id="markup">
             <table id="data-table">
@@ -178,6 +227,8 @@
                 {% for wss in definitions %}
 
                     <tr>
+                        <td>{{ wss.id }}</td>
+                        <td>{{ wss.password_type_raw }}</td>
                         <td><input type="checkbox" /></td>
                         <td>{{ wss.name }}</td>
                         <td>{% if wss.is_active %}Yes{% else %}No{% endif %}</td>

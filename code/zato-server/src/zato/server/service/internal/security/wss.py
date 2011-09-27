@@ -40,13 +40,13 @@ class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
     def handle(self, *args, **kwargs):
-        definition_list = Element("definition_list")
+        definition_list = Element('definition_list')
 
-        definitions = self.server.odb.query(WSSDefinition).order_by("name").all()
+        definitions = self.server.odb.query(WSSDefinition).order_by('name').all()
 
         for definition in definitions:
 
-            definition_elem = Element("definition")
+            definition_elem = Element('definition')
             definition_elem.id = definition.id
             definition_elem.name = definition.name
             definition_elem.is_active = definition.is_active
@@ -60,33 +60,6 @@ class GetList(AdminService):
             definition_list.append(definition_elem)
 
         return ZATO_OK, etree.tostring(definition_list)
-
-class GetDetails(AdminService):
-    """ Returns details of a particular WS-S definition.
-    """
-    def handle(self, *args, **kwargs):
-
-        payload = kwargs.get("payload")
-        request_params = ["id"]
-        new_params = _get_params(payload, request_params, "definition.")
-        def_id = new_params["id"]
-
-        try:
-            definition = self.server.odb.query(WSSDefinition).filter_by(id=def_id).one()
-        except orm_exc.NoResultFound:
-            raise ZatoException("WS-S definition [%s] does not exist" % definition_name)
-        else:
-            definition_elem = Element("definition")
-            definition_elem.id = definition.id
-
-            definition_elem.name = definition.name
-            definition_elem.username = definition.username
-            definition_elem.reject_empty_nonce_ts = definition.reject_empty_nonce_ts
-            definition_elem.reject_stale_username = definition.reject_stale_username
-            definition_elem.expiry_limit = definition.expiry_limit
-            definition_elem.nonce_freshness = definition.nonce_freshness
-
-            return ZATO_OK, etree.tostring(definition_elem)
 
 class Create(AdminService):
     """ Creates a new WS-Security definition.
@@ -142,25 +115,46 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        payload = kwargs.get("payload")
-        request_params = ["id", "name", "original_name", "username", "reject_empty_nonce_ts",
-                          "reject_stale_username", "expiry_limit", "nonce_freshness"]
-        new_params = _get_params(payload, request_params, "definition.")
-        def_id = new_params["id"]
+        payload = kwargs.get('payload')
+        request_params = ['id', 'name', 'username', 'reject_empty_nonce_ts',
+                          'reject_stale_username', 'expiry_limit', 'nonce_freshness',
+                          'cluster_id']
+        new_params = _get_params(payload, request_params, 'data.')
+        
+        def_id = new_params['id']
+        name = new_params['name']
+        cluster_id = new_params['cluster_id']
+        
+        existing_one = self.server.odb.query(WSSDefinition).\
+            filter(Cluster.id==cluster_id).\
+            filter(WSSDefinition.name==name).\
+            filter(WSSDefinition.id != def_id).\
+            first()
+        
+        if existing_one:
+            raise Exception('WS-Security [{0}] already exists on this cluster'.format(name))
 
         try:
             definition = self.server.odb.query(WSSDefinition).filter_by(id=def_id).one()
-        except orm_exc.NoResultFound:
-            raise ZatoException("WS-S definition [%s] does not exist" % new_params["original_name"])
-        else:
-            definition.name = new_params["name"]
-            definition.username = new_params["username"]
-            definition.reject_empty_nonce_ts = new_params["reject_empty_nonce_ts"]
-            definition.reject_stale_username = new_params["reject_stale_username"]
-            definition.expiry_limit = new_params["expiry_limit"]
-            definition.nonce_freshness = new_params["nonce_freshness"]
+            
+            definition.name = name
+            definition.username = new_params['username']
+            definition.reject_empty_nonce_ts = new_params['reject_empty_nonce_ts']
+            definition.reject_stale_username = new_params['reject_stale_username']
+            definition.expiry_limit = new_params['expiry_limit']
+            definition.nonce_freshness = new_params['nonce_freshness']
 
             self.server.odb.add(definition)
             self.server.odb.commit()
+            
+        except orm_exc.NoResultFound:
+            raise ZatoException('WS-S definition [%s] does not exist' % new_params['original_name'])
+        except Exception, e:
+            msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
+            self.logger.error(msg)
+            self.server.odb.rollback()
+            
+            raise 
 
-        return ZATO_OK, ""
+
+        return ZATO_OK, ''
