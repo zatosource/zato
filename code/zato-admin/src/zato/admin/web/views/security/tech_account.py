@@ -95,7 +95,7 @@ def index(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/security/tech-account/index.html', return_data)
+    return render_to_response('zato/security/tech-account.html', return_data)
 
 @meth_allowed('POST')
 def create(req):
