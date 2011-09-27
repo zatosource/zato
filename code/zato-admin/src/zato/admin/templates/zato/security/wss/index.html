@@ -212,6 +212,31 @@
                 </form>
             </div>
         </div>
+        
+        <div id="change-password" class="yui-pe-content">
+            <div class="hd">Change the WS-Security definition's password</div>
+            <div class="bd">
+                <form action="{% url security-wss-change-password %}" method="post" id="change-password-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm password</td>
+                            <td>{{ change_password_form.password2 }} 
+                                <input type="hidden" id="id_change_password-wss_id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" />
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
 
         <div id="markup">
             <table id="data-table">
