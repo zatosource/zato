@@ -176,10 +176,10 @@ class ChangePassword(AdminService):
     def handle(self, *args, **kwargs):
         
         payload = kwargs.get('payload')
-        request_params = ['tech_account_id', 'password1', 'password2']
+        request_params = ['id', 'password1', 'password2']
         params = _get_params(payload, request_params, 'data.')
         
-        tech_account_id = params['tech_account_id']
+        id = params['id']
         password1 = params.get('password1')
         password2 = params.get('password2')
         
@@ -193,7 +193,7 @@ class ChangePassword(AdminService):
             raise Exception('Passwords need to be the same')
         
         tech_account = self.server.odb.query(TechnicalAccount).\
-            filter(TechnicalAccount.id==tech_account_id).\
+            filter(TechnicalAccount.id==id).\
             one()
         
         salt = uuid4().hex

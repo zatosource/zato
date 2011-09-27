@@ -21,6 +21,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from traceback import format_exc
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+
+# lxml
+from lxml.objectify import Element
+
+# Zato
+from zato.admin.web import invoke_admin_service
+from zato.common import zato_namespace
+from zato.common.odb.model import Cluster
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +41,7 @@ from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, \
      LB_AGENT_CONNECT_TIMEOUT
 from zato.common.util import get_lb_client as _get_lb_client
 
+logger = logging.getLogger(__name__)
 
 def get_lb_client(cluster):
     """ A convenience wrapper over the function for creating a load-balancer client
@@ -84,3 +97,31 @@ def set_servers_state(cluster, client):
                 cluster.some_down = True
             if maint:
                 cluster.some_maint = True
+
+
+def change_password(req, service_name):
+    
+    cluster_id = req.POST.get('cluster_id')
+    id = req.POST.get('id')
+    
+    password1 = req.POST.get('password1', '')
+    password2 = req.POST.get('password2', '')
+    
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = id
+        zato_message.data.password1 = password1
+        zato_message.data.password2 = password2
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster,
+                        service_name, zato_message)
+    
+    except Exception, e:
+        msg = 'Could not change the password, e=[{e}]'.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return HttpResponse()

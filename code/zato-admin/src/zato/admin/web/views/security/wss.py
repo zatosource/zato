@@ -36,10 +36,10 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.admin.web.forms import ChooseClusterForm
+from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.server_model import WSSUsernameTokenDefinition
 from zato.admin.web.forms.security.wss import DefinitionForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, \
      ZATO_NOT_GIVEN, ZATO_WSS_PASSWORD_TYPES
 from zato.admin.web import invoke_admin_service
@@ -76,6 +76,7 @@ def index(req):
     
     create_form = DefinitionForm()
     edit_form = DefinitionForm(prefix='edit')
+    change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
@@ -110,7 +111,8 @@ def index(req):
         'choose_cluster_form':choose_cluster_form,
         'definitions':definitions,
         'create_form': create_form,
-        'edit_form': edit_form
+        'edit_form': edit_form,
+        'change_password_form': change_password_form
         }
 
     # TODO: Should really be done by a decorator.
@@ -160,3 +162,7 @@ def create(req):
               }
          }
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    
+@meth_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato:security.wss.change-password')

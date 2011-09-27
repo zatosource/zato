@@ -37,6 +37,7 @@ from validate import is_boolean
 # Zato
 from zato.admin.settings import TECH_ACCOUNT_NAME
 from zato.admin.web import invoke_admin_service
+from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.security.tech_account import \
      CreateTechnicalAccountForm, EditTechnicalAccountForm
@@ -182,31 +183,7 @@ def edit(req):
 
 @meth_allowed('POST')
 def change_password(req):
-    
-    cluster_id = req.POST.get('cluster_id')
-    tech_account_id = req.POST.get('tech_account_id')
-    
-    password1 = req.POST.get('password1', '')
-    password2 = req.POST.get('password2', '')
-    
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
-    try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.tech_account_id = tech_account_id
-        zato_message.data.password1 = password1
-        zato_message.data.password2 = password2
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.tech-account.change-password', zato_message)
-    
-    except Exception, e:
-        msg = "Could not change the password, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        return HttpResponse()
+    return _change_password(req, 'zato:security.tech-account.change-password')
     
 @meth_allowed('POST')
 def delete(req, tech_account_id, cluster_id):

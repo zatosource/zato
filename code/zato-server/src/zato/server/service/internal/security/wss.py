@@ -160,3 +160,43 @@ class Edit(AdminService):
 
 
         return ZATO_OK, ''
+    
+class ChangePassword(AdminService):
+    """ Changes the password of a WS-Security definition.
+    """
+    def handle(self, *args, **kwargs):
+        
+        try:
+            payload = kwargs.get('payload')
+            request_params = ['id', 'password1', 'password2']
+            params = _get_params(payload, request_params, 'data.')
+            
+            id = params['id']
+            password1 = params.get('password1')
+            password2 = params.get('password2')
+            
+            if not password1:
+                raise Exception('Password must not be empty')
+            
+            if not password2:
+                raise Exception('Password must be repeated')
+            
+            if password1 != password2:
+                raise Exception('Passwords need to be the same')
+            
+            wss = self.server.odb.query(WSSDefinition).\
+                filter(WSSDefinition.id==id).\
+                one()
+            
+            wss.password = password1
+        
+            self.server.odb.add(wss)
+            self.server.odb.commit()
+        except Exception, e:
+            msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
+            self.logger.error(msg)
+            self.server.odb.rollback()
+            
+            raise 
+        
+        return ZATO_OK, ''

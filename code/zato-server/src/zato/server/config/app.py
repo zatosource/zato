@@ -104,42 +104,43 @@ class ZatoContext(PythonConfig):
         return {
             
             # Ping
-            "zato:ping": "zato.server.service.internal.Ping",
+            'zato:ping': 'zato.server.service.internal.Ping',
 
             # SQL connection pools
-            "zato:pool.sql.get-list":"zato.server.service.internal.sql.GetSQLConnectionPoolList",
-            "zato:pool.sql.create":"zato.server.service.internal.sql.CreateSQLConnectionPool",
-            "zato:pool.sql.edit":"zato.server.service.internal.sql.EditSQLConnectionPool",
-            "zato:pool.sql.delete":"zato.server.service.internal.sql.DeleteSQLConnectionPool",
-            "zato:pool.sql.change-password":"zato.server.service.internal.sql.ChangePasswordSQLConnectionPool",
-            "zato:pool.sql.ping":"zato.server.service.internal.sql.PingSQLConnectionPool",
+            'zato:pool.sql.get-list':'zato.server.service.internal.sql.GetSQLConnectionPoolList',
+            'zato:pool.sql.create':'zato.server.service.internal.sql.CreateSQLConnectionPool',
+            'zato:pool.sql.edit':'zato.server.service.internal.sql.EditSQLConnectionPool',
+            'zato:pool.sql.delete':'zato.server.service.internal.sql.DeleteSQLConnectionPool',
+            'zato:pool.sql.change-password':'zato.server.service.internal.sql.ChangePasswordSQLConnectionPool',
+            'zato:pool.sql.ping':'zato.server.service.internal.sql.PingSQLConnectionPool',
 
             # Scheduler
-            "zato:scheduler.job.get-list":"zato.server.service.internal.scheduler.GetJobList",
-            "zato:scheduler.job.create":"zato.server.service.internal.scheduler.CreateJob",
-            "zato:scheduler.job.edit":"zato.server.service.internal.scheduler.EditJob",
-            "zato:scheduler.job.execute":"zato.server.service.internal.scheduler.ExecuteJob",
-            "zato:scheduler.job.delete":"zato.server.service.internal.scheduler.DeleteJob",
+            'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetJobList',
+            'zato:scheduler.job.create':'zato.server.service.internal.scheduler.CreateJob',
+            'zato:scheduler.job.edit':'zato.server.service.internal.scheduler.EditJob',
+            'zato:scheduler.job.execute':'zato.server.service.internal.scheduler.ExecuteJob',
+            'zato:scheduler.job.delete':'zato.server.service.internal.scheduler.DeleteJob',
 
             # Services
-            "zato:service.get-list":"zato.server.service.internal.service.GetServiceList",
-            "zato:service.get-details":"zato.server.service.internal.service.GetServiceDetails",
+            'zato:service.get-list':'zato.server.service.internal.service.GetServiceList',
+            'zato:service.get-details':'zato.server.service.internal.service.GetServiceDetails',
 
             # SOAP channels
-            "zato:channel.soap.get-list":"zato.server.service.internal.soap.GetChannelList",
+            'zato:channel.soap.get-list':'zato.server.service.internal.soap.GetChannelList',
             
             # Technical accounts
-            "zato:security.tech-account.get-list":"zato.server.service.internal.security.tech_account.GetList",
-            "zato:security.tech-account.get-by-id":"zato.server.service.internal.security.tech_account.GetByID",
-            "zato:security.tech-account.create":"zato.server.service.internal.security.tech_account.Create",
-            "zato:security.tech-account.edit":"zato.server.service.internal.security.tech_account.Edit",
-            "zato:security.tech-account.change-password":"zato.server.service.internal.security.tech_account.ChangePassword",
-            "zato:security.tech-account.delete":"zato.server.service.internal.security.tech_account.Delete",
+            'zato:security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
+            'zato:security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
+            'zato:security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
+            'zato:security.tech-account.edit':'zato.server.service.internal.security.tech_account.Edit',
+            'zato:security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
+            'zato:security.tech-account.delete':'zato.server.service.internal.security.tech_account.Delete',
 
             # WS-Security
-            "zato:security.wss.get-list":"zato.server.service.internal.security.wss.GetList",
-            "zato:security.wss.create":"zato.server.service.internal.security.wss.Create",
-            "zato:security.wss.edit":"zato.server.service.internal.security.wss.Edit",
+            'zato:security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
+            'zato:security.wss.create':'zato.server.service.internal.security.wss.Create',
+            'zato:security.wss.edit':'zato.server.service.internal.security.wss.Edit',
+            'zato:security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
         }
 
     @Object
