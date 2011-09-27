@@ -116,9 +116,9 @@ class Edit(AdminService):
     def handle(self, *args, **kwargs):
 
         payload = kwargs.get('payload')
-        request_params = ['id', 'name', 'username', 'reject_empty_nonce_ts',
-                          'reject_stale_username', 'expiry_limit', 'nonce_freshness',
-                          'cluster_id']
+        request_params = ['id', 'is_active', 'name', 'username', 'password_type', 
+                          'reject_empty_nonce_ts', 'reject_stale_username', 
+                          'expiry_limit', 'nonce_freshness', 'cluster_id']
         new_params = _get_params(payload, request_params, 'data.')
         
         def_id = new_params['id']
@@ -132,13 +132,15 @@ class Edit(AdminService):
             first()
         
         if existing_one:
-            raise Exception('WS-Security [{0}] already exists on this cluster'.format(name))
+            raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
 
         try:
             definition = self.server.odb.query(WSSDefinition).filter_by(id=def_id).one()
             
             definition.name = name
+            definition.is_active = new_params['is_active']
             definition.username = new_params['username']
+            definition.password_type = new_params['password_type']
             definition.reject_empty_nonce_ts = new_params['reject_empty_nonce_ts']
             definition.reject_stale_username = new_params['reject_stale_username']
             definition.expiry_limit = new_params['expiry_limit']
