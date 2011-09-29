@@ -82,6 +82,7 @@ urlpatterns = patterns("",
     url(r"^zato/security/basic-auth/create/$", basic_auth.create, name="security-basic-auth-create"),
     url(r"^zato/security/basic-auth/edit/$", basic_auth.edit, name="security-basic-auth-edit"),
     url(r"^zato/security/basic-auth/change-password/$", basic_auth.change_password, name="security-basic-auth-change-password"),
+    url(r"^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$", basic_auth.delete, name="security-basic-auth-delete"),
     
     url(r"^zato/security/tech-account/$", tech_account.index, name="security-tech-account"),
     url(r"^zato/security/tech-account/create/$", tech_account.create, name="security-tech-account-create"),
