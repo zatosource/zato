@@ -1,0 +1,224 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <style type="text/css">
+        .yui-pe .yui-pe-content {
+            display:none;
+        }
+    </style>
+    
+    <link rel="stylesheet" type="text/css" href="/static/css/ssl.css">
+
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/cookie/cookie-min.js"></script>
+
+    {% comment %} Validation framework {% endcomment %}
+    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
+    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+
+    {% comment %} Scriptaculous effects {% endcomment %}
+    <script type="text/javascript" src="/static/js/effects.js"></script>
+
+    {% comment %} String formatting {% endcomment %}
+    <script type="text/javascript" src="/static/js/stringformat.js"></script>
+    
+    {% comment %} Common JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    {% comment %} SSL/TLS {% endcomment %}
+    <script type="text/javascript" src="/static/js/security/ssl.js"></script>
+
+    </script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">SSL/TLS</h1>
+
+{% if not zato_clusters %}
+    <p>
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
+    <br/><br/>
+    </p>
+{% else %}
+
+    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+
+    {% if not cluster_id %}
+        Choose a cluster to manage SSL/TLS definitions.
+        <br/><br/>
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_cluster_form.cluster }}
+        <input type="submit" value="Show definitions" />
+    </form>
+
+
+    {% if cluster_id %}
+
+        <br/>
+        <a href="javascript:create('{{ cluster_id }}')" class="common">Create a new SSL/TLS definition</a>
+        <br/><br/>
+
+        <script type="text/javascript">
+        YAHOO.util.Event.addListener(window, "load", function() {
+            YAHOO.example.EnhanceFromMarkup = function() {
+                data_column_defs = [
+                    {key:"id", label:"id", hidden:true},
+                    {key:"selection", label:"", sortable:false},
+                    {key:"name", label:"Name", sortable:true},
+                    {key:"is_active", label:"Active", sortable:true},
+                    {key:"definition", label:"Definition", sortable:true},
+                    {key:"edit", label:"&nbsp;", sortable:false},
+                    {key:"change_password", label:"&nbsp;", sortable:false},
+                    {key:"delete", label:"&nbsp;", sortable:false},
+                ];
+
+                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
+                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
+                data_ds.responseSchema = {
+                    fields: [
+                            {key:"id"},
+                            {key:"selection"},
+                            {key:"name"},
+                            {key:"is_active"},
+                            {key:"definition"},
+                            {key:"edit"},
+                            {key:"change_password"},
+                            {key:"delete"},
+                    ]
+                };
+
+                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
+                        {sortedBy:{key:"name",dir:"desc"}}
+                );
+
+                return {
+                    oDS: data_ds,
+                    oDT: data_dt
+                };
+            }();
+
+        });
+        </script>
+        
+        <div id="create-div" class="yui-pe-content">
+            <div class="hd">Create a new SSL/TLS definition</div>
+            <div class="bd">
+                <form action="{% url security-basic-auth-create %}" method="post" id="create-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ create_form.is_active }} </td>
+                        </tr>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle;width:40%">
+                                Definition
+                                <br/>
+                                <span style="font-size:smaller">
+                                Field names must be given in the full form, for instance,
+                                commonName instead of CN.
+                                </span>
+                            </td>
+                            <td>
+                                <table class="ssl-def">
+                                    <tr>
+                                        <th>Field</th>
+                                        <th>&nbsp;</th>
+                                        <th>Value</th>
+                                        <th>&nbsp;</th>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="text" /></td>
+                                        <td>
+                                            <select name="">
+                                                <option value="is-equal">==</option>
+                                                <option value="is-not-equal">!=</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" /></td>
+                                        <td><a href="#" class="common">Add to definition</a></td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+        
+        <div id="edit-div" class="yui-pe-content">
+            <div class="hd">Edit the SSL/TLS definition</div>
+            <div class="bd">
+                <form action="{% url security-basic-auth-edit %}" method="post" id="edit-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ edit_form.is_active }} </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+        
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+
+                    <tr>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for item in items %}
+
+                    <tr>
+                        <td>{{ item.id }}</td>
+                        <td><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{% if item.is_active %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ item.definition }}</td>
+                        <td><a href="javascript:edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:delete_('{{ item.id }}')">Delete</a></td>
+                    </tr>
+                {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
