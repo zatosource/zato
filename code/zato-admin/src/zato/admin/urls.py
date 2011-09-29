@@ -28,7 +28,7 @@ from zato.admin import settings
 from zato.admin.web.views import main, cluster, service, servers, scheduler, channel, \
      load_balancer
 from zato.admin.web.views.pool import sql
-from zato.admin.web.views.security import tech_account, wss
+from zato.admin.web.views.security import basic_auth, tech_account, wss
 
 
 urlpatterns = patterns("",
@@ -77,6 +77,12 @@ urlpatterns = patterns("",
     url(r"^zato/channels/soap/$", channel.soap, name="channel-soap"),
 
     # Security.
+
+    url(r"^zato/security/basic-auth/$", basic_auth.index, name="security-basic-auth"),
+    url(r"^zato/security/basic-auth/create/$", basic_auth.create, name="security-basic-auth-create"),
+    url(r"^zato/security/basic-auth/edit/$", basic_auth.edit, name="security-basic-auth-edit"),
+    url(r"^zato/security/basic-auth/change-password/$", basic_auth.change_password, name="security-basic-auth-change-password"),
+    
     url(r"^zato/security/tech-account/$", tech_account.index, name="security-tech-account"),
     url(r"^zato/security/tech-account/create/$", tech_account.create, name="security-tech-account-create"),
     url(r"^zato/security/tech-account/edit/$", tech_account.edit, name="security-tech-account-edit"),

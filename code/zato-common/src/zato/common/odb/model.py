@@ -260,6 +260,41 @@ class WSSDefinition(Base):
 
     def __repr__(self):
         return make_repr(self)
+    
+class HTTPBasicAuth(Base):
+    """ An HTTP Basic Auth definition.
+    """
+    __tablename__ = 'http_basic_auth_def'
+    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
+
+    id = Column(Integer,  Sequence('http_b_auth_def_id_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    username = Column(String(200), nullable=False)
+    domain = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    
+    is_active = Column(Boolean(), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('http_basic_auth_defs', order_by=id))
+    
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
+                             nullable=True)
+    security_def = relationship(SecurityDefinition, backref=backref('http_basic_auth_def', 
+                                                    order_by=id, uselist=False))
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, 
+                 domain=None, password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.domain = domain
+        self.password = password
+        self.cluster = cluster
+
+    def __repr__(self):
+        return make_repr(self)
 
 ################################################################################
 
