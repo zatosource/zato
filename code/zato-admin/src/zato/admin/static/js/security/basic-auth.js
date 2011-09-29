@@ -1,88 +1,67 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A base class for representing a WS-Security definition
-var WSS = Class.create({
+// A base class for representing an HTTP Basic Auth definition
+var HTTPBasicAuth = Class.create({
     initialize: function() {
         this.id = null;
         this.cluster_id = null;
         this.name = null;
         this.is_active = null;
         this.username = null;
-        this.password_type = null;
-        this.password_type_raw = null;
-        this.reject_empty_nonce_ts = null;
-        this.reject_stale_username = null;
-        this.expiry_limit = null;
-        this.nonce_freshness = null;
+        this.domain = null;
+        this.password = null;
 
     }
 });
 
 // A nicer toString.
-WSS.prototype.toString = function() {
-    return "<WSS\
+HTTPBasicAuth.prototype.toString = function() {
+    return "<HTTPBasicAuth\
         id=[" + this.id + "]\
         cluster_id=[" + this.cluster_id + "]\
         name=[" + this.name + "]\
         is_active=[" + this.is_active + "]\
         username=[" + this.username + "]\
-        password_type_raw=[" + this.password_type_raw + "]\
-        password_type=[" + this.password_type + "]\
-        reject_empty_nonce_ts=[" + this.reject_empty_nonce_ts + "]\
-        reject_stale_username=[" + this.reject_stale_username + "]\
-        expiry_limit=[" + this.expiry_limit + "]\
-        nonce_freshness=[" + this.nonce_freshness + "]\
+        domain=[" + this.domain + "]\
+        password=[" + this.password + "]\
     >";
 };
 
-WSS.prototype.boolean_html = function(attr) {
+HTTPBasicAuth.prototype.boolean_html = function(attr) {
     return attr ? "Yes": "No";
 }
 
-WSS.prototype.boolean_html_reject = function(attr) {
-    return attr ? "Reject": "Allow";
-}
 
 // Dumps properties in a form suitable for creating a new data table row.
-WSS.prototype.to_record = function() {
+HTTPBasicAuth.prototype.to_record = function() {
     var record = new Array();
     
     record["selection"] = "<input type='checkbox' />";
     record["name"] = this.name;
     record["is_active"] = this.boolean_html(this.is_active);
     record["username"] = this.username;
-    record["password_type_raw"] = this.password_type_raw;
-    record["password_type"] = this.password_type;
-    record["reject_empty_nonce_ts"] = this.boolean_html_reject(this.reject_empty_nonce_ts);
-    record["reject_stale_username"] = this.boolean_html_reject(this.reject_stale_username);
-    record["expiry_limit"] = this.expiry_limit;
-    record["nonce_freshness"] = this.nonce_freshness;
+    record["domain"] = this.domain;
     
-    record["edit"] = String.format("<a href=\"javascript:wss_edit('{0}')\">Edit</a>", this.id);
-    record["change_password"] = String.format("<a href=\"javascript:wss_change_password('{0}')\">Change password</a>", this.id);
-    record["delete"] = String.format("<a href=\"javascript:wss_delete('{0}')\">Delete</a>", this.id);
+    record["edit"] = String.format("<a href=\"javascript:edit('{0}')\">Edit</a>", this.id);
+    record["change_password"] = String.format("<a href=\"javascript:change_password('{0}')\">Change password</a>", this.id);
+    record["delete"] = String.format("<a href=\"javascript:delete_('{0}')\">Delete</a>", this.id);
 
     return record;
 };
 
-WSS.prototype.add_row = function(wss, data_dt) {
+HTTPBasicAuth.prototype.add_row = function(object, data_dt) {
 
     var add_at_idx = 0;
-    data_dt.addRow(wss.to_record(), add_at_idx);
+    data_dt.addRow(object.to_record(), add_at_idx);
     
     var added_record = data_dt.getRecord(add_at_idx);
     
-    added_record.setData("wss_id", wss.id);
-    added_record.setData("name", wss.name);
-    added_record.setData("is_active", wss.is_active);
-    added_record.setData("username", wss.username);
-    added_record.setData("password_type", wss.password_type);
-    added_record.setData("password_type_raw", wss.password_type_raw);
-    added_record.setData("reject_empty_nonce_ts", wss.reject_empty_nonce_ts);
-    added_record.setData("reject_stale_username", wss.reject_stale_username);
-    added_record.setData("expiry_limit", wss.expiry_limit);
-    added_record.setData("nonce_freshness", wss.nonce_freshness);
+    added_record.setData("id", object.id);
+    added_record.setData("name", object.name);
+    added_record.setData("is_active", object.is_active);
+    added_record.setData("username", object.username);
+    added_record.setData("domain", object.domain);
 
 }
 
@@ -113,26 +92,21 @@ function setup_create_dialog() {
 
     var on_create_success = function(o) {
 
-        var wss = new WSS();
+        var object = new HTTPBasicAuth();
         var json = YAHOO.lang.JSON.parse(o.responseText);
         
-        wss.id = json.pk;
-        wss.cluster_id = $("id_cluster").value;
-        wss.name = $("id_name").value;
-        wss.is_active = $F("id_is_active") == "on";
-        wss.password_type_raw = json.fields.password_type_raw;
-        wss.password_type = json.fields.password_type;
-        wss.username = $("id_username").value;
-        wss.reject_empty_nonce_ts = $F("id_reject_empty_nonce_ts") == "on";
-        wss.reject_stale_username = $F("id_reject_stale_username") == "on";
-        wss.expiry_limit = $("id_expiry_limit").value;
-        wss.nonce_freshness = $("id_nonce_freshness").value;
-        wss.add_row(wss, data_dt);
+        object.id = json.pk;
+        object.cluster_id = $("id_cluster").value;
+        object.name = $("id_name").value;
+        object.is_active = $F("id_is_active") == "on";
+        object.username = $("id_username").value;
+        object.domain = $("id_domain").value;
+        object.add_row(object, data_dt);
         
         // Hide the dialog and confirm the changes have been saved.
         create_dialog.hide();
 
-        update_user_message(true, "Succesfully created a new WS-Security definition, don't forget to update its password now");
+        update_user_message(true, "Succesfully created a new HTTP Basic Auth definition, don't forget to update its password now");
 
         // Cleanup after work.
         create_cleanup();
@@ -146,10 +120,10 @@ function setup_create_dialog() {
     };
 
     // Remove progressively enhanced content class, just before creating the module.
-    YAHOO.util.Dom.removeClass("create-wss", "yui-pe-content");
+    YAHOO.util.Dom.removeClass("create-div", "yui-pe-content");
 
     // Instantiate the dialog.
-    create_dialog = new YAHOO.widget.Dialog("create-wss",
+    create_dialog = new YAHOO.widget.Dialog("create-div",
                             { width: "39em",
                               fixedcenter: true,
                               visible: false,
@@ -198,29 +172,20 @@ function setup_edit_dialog() {
         var records = data_dt.getRecordSet().getRecords();
         for (x=0; x < records.length; x++) {
             var record = records[x];
-            var wss_id = record.getData("wss_id");
-            if(wss_id && wss_id == $("id_edit-wss_id").value) {
+            var id = record.getData("id");
+            if(id && id == $("id_edit-id").value) {
 
                 var is_active = $F("id_edit-is_active") ? "Yes": "No";
-                var reject_empty_nonce_ts = $F("id_edit-reject_empty_nonce_ts") ? "Reject": "Allow";
-                var reject_stale_username = $F("id_edit-reject_stale_username") ? "Reject": "Allow";
-
-                var password_type = $('id_edit-password_type')[$('id_edit-password_type').selectedIndex].text;
-                
                 record.setData("name", $("id_edit-name").value);
                 record.setData("is_active", is_active);
-                record.setData("password_type", password_type);
                 record.setData("username", $("id_edit-username").value);
-                record.setData("reject_empty_nonce_ts", reject_empty_nonce_ts);
-                record.setData("reject_stale_username", reject_stale_username);
-                record.setData("expiry_limit", $("id_edit-expiry_limit").value);
-                record.setData("nonce_freshness", $("id_edit-nonce_freshness").value);
+                record.setData("domain", $("id_edit-domain").value);
                 
                 data_dt.render();
             }
         }
 
-        update_user_message(true, "Succesfully updated the WS-Security definition");
+        update_user_message(true, "Succesfully updated the HTTP Basic Auth definition");
 
         // Cleanup after work.
         edit_cleanup();
@@ -325,14 +290,14 @@ function setup_change_password_dialog() {
 function setup_delete_dialog() {
 
     var on_success = function(o) {
-        msg = "Successfully deleted the WS-Security definition [" + current_delete_name + "]";
+        msg = "Successfully deleted the HTTP Basic Auth definition [" + current_delete_name + "]";
 
         // Delete the row..
         
         var records = data_dt.getRecordSet().getRecords();
         for (x=0; x < records.length; x++) {
             var record = records[x];
-            var id_record = record.getData("wss_id");
+            var id_record = record.getData("id");
             if(id_record && current_delete_id == id_record) {
                 data_dt.deleteRow(x);
                 break;
@@ -394,7 +359,7 @@ function setup_delete_dialog() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
-function wss_create(cluster_id) {
+function create(cluster_id) {
 
     // Set up the form validation if necessary.
     if(typeof create_validation == "undefined") {
@@ -404,7 +369,7 @@ function wss_create(cluster_id) {
     create_dialog.show();
 }
 
-function wss_edit(wss_id) {
+function edit(id) {
 
     // Set up the form validation if necessary.
     if(typeof edit_validation == "undefined") {
@@ -417,29 +382,23 @@ function wss_edit(wss_id) {
     var records = data_dt.getRecordSet().getRecords();
     for (x=0; x < records.length; x++) {
         var record = records[x];
-        var wss_id_record = record.getData("wss_id");
-        if(wss_id_record && wss_id_record == wss_id) {
+        var id_record = record.getData("id");
+        if(id_record && id_record == id) {
         
-            is_active = record.getData("is_active") == 'Yes' ? 'on' : ''
-            reject_empty_nonce_ts = record.getData("reject_empty_nonce_ts") == 'Reject' ? 'on' : ''
-            reject_stale_username = record.getData("reject_stale_username") == 'Reject' ? 'on' : ''
+            is_active = record.getData("is_active") ? 'on' : ''
             
-            $("id_edit-wss_id").value = record.getData("wss_id");
+            $("id_edit-id").value = record.getData("id");
             $("id_edit-name").value = record.getData("name");
             $("id_edit-is_active").setValue(is_active);
             $("id_edit-username").value = record.getData("username");
-            $("id_edit-password_type").value = record.getData("password_type_raw");
-            $("id_edit-reject_empty_nonce_ts").setValue(reject_empty_nonce_ts);
-            $("id_edit-reject_stale_username").setValue(reject_stale_username);
-            $("id_edit-expiry_limit").value = record.getData("expiry_limit");
-            $("id_edit-nonce_freshness").value = record.getData("nonce_freshness");
+            $("id_edit-domain").value = record.getData("domain");
         }
     }
     
     edit_dialog.show();
 }
 
-function wss_change_password(wss_id) {
+function change_password(id) {
 
     // Set up the form validation if necessary.
     if(typeof change_password_validation == "undefined") {
@@ -454,34 +413,34 @@ function wss_change_password(wss_id) {
     var records = data_dt.getRecordSet().getRecords();
     for (x=0; x < records.length; x++) {
         var record = records[x];
-        var wss_id_record = record.getData("wss_id");
-        if(wss_id_record && wss_id == wss_id_record) {
+        var id_record = record.getData("id");
+        if(id_record && id == id_record) {
             $("change-password-name").update(record.getData("name"));
             break;
         }
     }
     
-    $("id_change_password-wss_id").setValue(wss_id);
+    $("id_change_password-id").setValue(id);
     $("id_change_password-cluster_id").value = $("cluster_id").value;
     
     change_password_dialog.show();
 }
 
-function wss_delete(wss_id) {
+function delete_(id) {
 
-    current_delete_id = wss_id;
+    current_delete_id = id;
     
     var records = data_dt.getRecordSet().getRecords();
     for (x=0; x < records.length; x++) {
         var record = records[x];
-        var id_record = record.getData("wss_id");
-        if(id_record && wss_id == id_record) {
+        var id_record = record.getData("id");
+        if(id_record && id == id_record) {
             current_delete_name = record.getData("name").strip();
             break;
         }
     }
 
-    delete_dialog.setBody(String.format("Are you sure you want to delete the WS-Security definition [{0}]", current_delete_name));
+    delete_dialog.setBody(String.format("Are you sure you want to delete the HTTP Basic Auth definition [{0}]", current_delete_name));
     delete_dialog.show();
     
 }
