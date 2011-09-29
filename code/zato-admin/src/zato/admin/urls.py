@@ -28,7 +28,7 @@ from zato.admin import settings
 from zato.admin.web.views import main, cluster, service, servers, scheduler, channel, \
      load_balancer
 from zato.admin.web.views.pool import sql
-from zato.admin.web.views.security import basic_auth, tech_account, wss
+from zato.admin.web.views.security import basic_auth, ssl, tech_account, wss
 
 
 urlpatterns = patterns("",
@@ -76,14 +76,22 @@ urlpatterns = patterns("",
     # Channels.
     url(r"^zato/channels/soap/$", channel.soap, name="channel-soap"),
 
-    # Security.
+    # Security..
 
+    # .. HTTP Basic Auth
     url(r"^zato/security/basic-auth/$", basic_auth.index, name="security-basic-auth"),
     url(r"^zato/security/basic-auth/create/$", basic_auth.create, name="security-basic-auth-create"),
     url(r"^zato/security/basic-auth/edit/$", basic_auth.edit, name="security-basic-auth-edit"),
     url(r"^zato/security/basic-auth/change-password/$", basic_auth.change_password, name="security-basic-auth-change-password"),
     url(r"^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$", basic_auth.delete, name="security-basic-auth-delete"),
+
+    # .. SSL/TLS
+    url(r"^zato/security/ssl/$", ssl.index, name="security-ssl"),
+    url(r"^zato/security/ssl/create/$", ssl.create, name="security-ssl-create"),
+    url(r"^zato/security/ssl/edit/$", ssl.edit, name="security-ssl-edit"),
+    url(r"^zato/security/ssl/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$", ssl.delete, name="security-ssl-delete"),
     
+    # .. Technical accounts
     url(r"^zato/security/tech-account/$", tech_account.index, name="security-tech-account"),
     url(r"^zato/security/tech-account/create/$", tech_account.create, name="security-tech-account-create"),
     url(r"^zato/security/tech-account/edit/$", tech_account.edit, name="security-tech-account-edit"),
@@ -91,6 +99,7 @@ urlpatterns = patterns("",
     url(r"^zato/security/tech-account/get/by-id/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$", tech_account.get_by_id, name="security-tech-account-get-by-id"),
     url(r"^zato/security/tech-account/delete/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$", tech_account.delete, name="security-tech-account-delete"),
     
+    # .. WS-Security
     url(r"^zato/security/wss/$", wss.index, name="security-wss"),
     url(r"^zato/security/wss/create/$", wss.create, name="security-wss-create"),
     url(r"^zato/security/wss/edit/$", wss.edit, name="security-wss-edit"),

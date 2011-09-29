@@ -295,6 +295,46 @@ class HTTPBasicAuth(Base):
 
     def __repr__(self):
         return make_repr(self)
+    
+class SSLBasicAuth(Base):
+    """ An SSL/TLS-based auth definition.
+    """
+    __tablename__ = 'ssl_auth_def'
+    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
+
+    id = Column(Integer,  Sequence('ssl_def_id_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('ssl_defs', order_by=id))
+    
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
+                             nullable=True)
+    security_def = relationship(SecurityDefinition, backref=backref('ssl_auth_def', 
+                                                    order_by=id, uselist=False))
+
+    def __init__(self, id=None, name=None, is_active=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.cluster = cluster
+
+    def __repr__(self):
+        return make_repr(self)
+    
+class SSLBasicAuthItem(Base):
+    """ A particular key/value pair of a given SSL/TLS-based auth definition.
+    """
+    __tablename__ = 'ssl_auth_def_item'
+    __table_args__ = (UniqueConstraint('def_id', 'key', 'value'), {})
+    
+    id = Column(Integer,  Sequence('ssl_def_item_id_seq'), primary_key=True)
+    key = Column(String(200), nullable=False)
+    value = Column(String(200), nullable=False)
+    
+    def_id = Column(Integer, ForeignKey('ssl_auth_def.id'), nullable=False)
+    def_ = relationship(SSLBasicAuth, backref=backref('items', order_by=id))
 
 ################################################################################
 
