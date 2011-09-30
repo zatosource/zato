@@ -42,30 +42,35 @@ from zato.admin.web.forms.security.basic_auth import DefinitionForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
 from zato.admin.web import invoke_admin_service
-from zato.common.odb.model import Cluster, HTTPBasicAuth
+from zato.common.odb.model import Cluster, SSLBasicAuth, SSLBasicAuthItem
+from zato.common import ZATO_FIELD_OPERATORS
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
-
-operators = {
-    'is-equal-to': '==',
-    'is-not-equal-to': '!=',
-    }
 
 ZATO_FORM_SEPARATOR = '***ZATO_FORM_SEPARATOR***'
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
+    
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.username = params[prefix + 'username']
-    zato_message.data.domain = params[prefix + 'domain']
-
+    zato_message.data.def_items = Element('items')
+    
+    hidden = params.getlist('ssl-def-hidden')
+    for elem in hidden:
+        field, operator, value = elem.split(ZATO_FORM_SEPARATOR)
+        item = Element('item')
+        item.field = field
+        item.operator = operator
+        item.value = value
+        zato_message.data.def_items.append(item)
+        
     return zato_message
 
 @meth_allowed('GET')
@@ -86,7 +91,7 @@ def index(req):
         zato_message = Element('{%s}zato_message' % zato_namespace)
 
         _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
-                'zato:security.basic-auth.get-list', zato_message)
+                'zato:security.ssl.get-list', zato_message)
 
         if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
             for definition_elem in zato_message.data.definition_list.definition:
@@ -136,35 +141,32 @@ def edit(req):
 @meth_allowed('POST')
 def create(req):
 
-    logger.debug('create req.POST=[{0}]'.format(req.POST))
-    
-    return_data = {'pk': 'zzz'}
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
-    
-    '''
     try:
+        
         cluster_id = req.POST.get('cluster_id')
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
         zato_message = _get_edit_create_message(req.POST)
+        
+        return_data = {'pk': 'zzz'}
 
         _, zato_message, soap_response = invoke_admin_service(cluster,
-                            'zato:security.basic-auth.create', zato_message)
+                            'zato:security.ssl.create', zato_message)
+
     except Exception, e:
-        msg = "Could not create an HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not create an SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return_data = {'pk': zato_message.data.basic_auth.id.text}
+        return_data = {'pk': zato_message.data.ssl.id.text}
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
-        '''
     
 @meth_allowed('POST')
 def format_item(req):
 
     field = req.POST['ssl-def-field']
     op_raw = req.POST['ssl-def-op']
-    op = operators[op_raw]
+    op = ZATO_FIELD_OPERATORS[op_raw]
     value = req.POST['ssl-def-value']
     id = uuid4().hex
     
@@ -181,10 +183,6 @@ def format_item(req):
     """.format(id=id, field=field, op=op, op_raw=op_raw, value=value, sep=ZATO_FORM_SEPARATOR)
     
     return HttpResponse(row_template)
-    
-@meth_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato:security.basic-auth.change-password')
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):

@@ -126,6 +126,11 @@ ZATO_WSS_PASSWORD_TYPES = {
     ZATO_WSS_PASSWORD_DIGEST.name:ZATO_WSS_PASSWORD_DIGEST.label
 }
 
+ZATO_FIELD_OPERATORS = {
+    'is-equal-to': '==',
+    'is-not-equal-to': '!=',
+    }
+
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):
         self.path = path
