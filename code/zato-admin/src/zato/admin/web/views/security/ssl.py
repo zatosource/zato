@@ -50,6 +50,16 @@ logger = logging.getLogger(__name__)
 
 ZATO_FORM_SEPARATOR = '***ZATO_FORM_SEPARATOR***'
 
+def _get_definition_text(items):
+    """ Takes a list of definition items returned by the backend and turns
+    it into a pretty-printed HTML snippet.
+    """
+    out = []
+    for item in items.getchildren():
+        out.append('{0} {1} {2}'.format(
+            item.field, ZATO_FIELD_OPERATORS[item.operator], item.value))
+    return '<br/>'.join(out)
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
@@ -79,7 +89,7 @@ def index(req):
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
     choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
     cluster_id = req.GET.get('cluster')
-    items = []
+    defs = []
     
     create_form = DefinitionForm()
     edit_form = DefinitionForm(prefix='edit')
@@ -99,15 +109,16 @@ def index(req):
                 id = definition_elem.id.text
                 name = definition_elem.name.text
                 is_active = is_boolean(definition_elem.is_active.text)
-                username = definition_elem.username.text
-                domain = definition_elem.domain.text
+                
+                definition_text = _get_definition_text(definition_elem.def_items)
+                auth = SSLBasicAuth(id, name, is_active, definition_text=definition_text)
 
-                items.append(HTTPBasicAuth(id, name, is_active, username, domain))
+                defs.append(auth)
 
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,
-        'items':items,
+        'defs':defs,
         'create_form': create_form,
         'edit_form': edit_form,
         'change_password_form': change_password_form

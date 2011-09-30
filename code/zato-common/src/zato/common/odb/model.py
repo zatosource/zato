@@ -314,11 +314,13 @@ class SSLBasicAuth(Base):
     security_def = relationship(SecurityDefinition, backref=backref('ssl_auth_def', 
                                                     order_by=id, uselist=False))
 
-    def __init__(self, id=None, name=None, is_active=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, cluster=None,
+                 definition_text=''):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.cluster = cluster
+        self.definition_text = definition_text # Not used by the database
 
     def __repr__(self):
         return make_repr(self)
@@ -335,7 +337,7 @@ class SSLBasicAuthItem(Base):
     value = Column(String(200), nullable=False)
     
     def_id = Column(Integer, ForeignKey('ssl_auth_def.id'), nullable=False)
-    def_ = relationship(SSLBasicAuth, backref=backref('items', order_by=id))
+    def_ = relationship(SSLBasicAuth, backref=backref('items', order_by=field))
     
     def __init__(self, id=None, field=None, operator=None, value=None, def_=None):
         self.id = id
