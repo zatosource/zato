@@ -327,14 +327,22 @@ class SSLBasicAuthItem(Base):
     """ A particular key/value pair of a given SSL/TLS-based auth definition.
     """
     __tablename__ = 'ssl_auth_def_item'
-    __table_args__ = (UniqueConstraint('def_id', 'key', 'value'), {})
+    __table_args__ = (UniqueConstraint('def_id', 'field', 'value'), {})
     
     id = Column(Integer,  Sequence('ssl_def_item_id_seq'), primary_key=True)
-    key = Column(String(200), nullable=False)
+    field = Column(String(200), nullable=False)
+    operator = Column(String(20), nullable=False)
     value = Column(String(200), nullable=False)
     
     def_id = Column(Integer, ForeignKey('ssl_auth_def.id'), nullable=False)
     def_ = relationship(SSLBasicAuth, backref=backref('items', order_by=id))
+    
+    def __init__(self, id=None, field=None, operator=None, value=None, def_=None):
+        self.id = id
+        self.field = field
+        self.operator = operator
+        self.value = value
+        self.def_ = def_
 
 ################################################################################
 

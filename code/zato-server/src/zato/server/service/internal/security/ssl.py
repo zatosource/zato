@@ -31,18 +31,18 @@ from lxml import etree
 from lxml.objectify import Element
 
 # Zato
-from zato.common import ZatoException, ZATO_OK
-from zato.common.odb.model import Cluster, HTTPBasicAuth
+from zato.common import ZatoException, ZATO_FIELD_OPERATORS, ZATO_OK
+from zato.common.odb.model import Cluster, SSLBasicAuth, SSLBasicAuthItem
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
-    """ Returns a list of HTTP Basic Auth definitions available.
+    """ Returns a list of SSL/TLS definitions available.
     """
     def handle(self, *args, **kwargs):
         definition_list = Element('definition_list')
 
-        definitions = self.server.odb.query(HTTPBasicAuth).order_by('name').all()
+        definitions = self.server.odb.query(SSLBasicAuth).order_by('name').all()
 
         for definition in definitions:
 
@@ -50,59 +50,90 @@ class GetList(AdminService):
             definition_elem.id = definition.id
             definition_elem.name = definition.name
             definition_elem.is_active = definition.is_active
-            definition_elem.username = definition.username
-            definition_elem.domain = definition.domain
 
             definition_list.append(definition_elem)
 
         return ZATO_OK, etree.tostring(definition_list)
 
 class Create(AdminService):
-    """ Creates a new HTTP Basic Auth definition.
+    """ Creates a new SSL/TLS definition.
     """
     def handle(self, *args, **kwargs):
         
         try:
-
+            
             payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'name', 'is_active', 'username', 'domain']
-            params = _get_params(payload, request_params, 'data.')
+            core_params = ['cluster_id', 'name', 'is_active']
+            params = _get_params(payload, core_params, 'data.')
+            
+            def_items = _get_params(payload, ['def_items'], 'data.', use_text=False)
             
             cluster_id = params['cluster_id']
             name = params['name']
+            is_active = params['is_active']
+            
+            items = []
+            
+            children = def_items.getchildren()
+            if not children:
+                raise Exception('[def_items] element must not be empty')
+            
+            for child in children:
+                field = child.field.text.strip()
+                operator = child.operator.text.strip()
+                value = child.value.text.strip()
+                
+                if not field:
+                    raise Exception('Field must not be empty in [{0}] [{1}] [{2}]'.format(
+                        field, operator, value))
+                
+                if not operator:
+                    raise Exception('Operator must not be empty in [{0}] [{1}] [{2}]'.format(
+                        field, operator, value))
+                
+                if not value:
+                    raise Exception('Value must not be empty in [{0}] [{1}] [{2}]'.format(
+                        field, operator, value))
+                
+                if not operator in ZATO_FIELD_OPERATORS:
+                    raise Exception('Operator must be one of [{0}] in [{1}] [{2}] [{3}]'.format(
+                        sorted(ZATO_FIELD_OPERATORS.keys()), field, operator, value))
+                
+                item = SSLBasicAuthItem(None, field, operator, value)
+                items.append(item)
+                
             
             cluster = self.server.odb.query(Cluster).filter_by(id=cluster_id).first()
             
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
-            existing_one = self.server.odb.query(HTTPBasicAuth).\
+            existing_one = self.server.odb.query(SSLBasicAuth).\
                 filter(Cluster.id==cluster_id).\
-                filter(HTTPBasicAuth.name==name).first()
+                filter(SSLBasicAuth.name==name).first()
             
             if existing_one:
-                raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(name))
-            
-            auth_elem = Element('basic_auth')
-            
-            auth = HTTPBasicAuth(None, name, params['is_active'], params['username'], 
-                                params['domain'], uuid4().hex, cluster)
+                raise Exception('SSL/TLS definition [{0}] already exists on this cluster'.format(name))
+
+            auth = SSLBasicAuth(None, name, is_active, cluster)
+            auth.items = items
             
             self.server.odb.add(auth)
             self.server.odb.commit()
             
+            auth_elem = Element('ssl')
             auth_elem.id = auth.id
             
+            return ZATO_OK, etree.tostring(auth_elem)
+            
         except Exception, e:
-            msg = "Could not create an HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+            msg = "Could not create an SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
             self.server.odb.rollback()
             
             raise 
         
-        return ZATO_OK, etree.tostring(auth_elem)
-
 class Edit(AdminService):
-    """ Updates an HTTP Basic Auth definition.
+    """ Updates an SSL/TLS definition.
     """
     def handle(self, *args, **kwargs):
 
@@ -124,7 +155,7 @@ class Edit(AdminService):
                 first()
             
             if existing_one:
-                raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('SSL/TLS definition [{0}] already exists on this cluster'.format(name))
             
             definition = self.server.odb.query(HTTPBasicAuth).filter_by(id=def_id).one()
             
@@ -148,48 +179,8 @@ class Edit(AdminService):
 
         return ZATO_OK, ''
     
-class ChangePassword(AdminService):
-    """ Changes the password of an HTTP Basic Auth definition.
-    """
-    def handle(self, *args, **kwargs):
-        
-        try:
-            payload = kwargs.get('payload')
-            request_params = ['id', 'password1', 'password2']
-            params = _get_params(payload, request_params, 'data.')
-            
-            id = params['id']
-            password1 = params.get('password1')
-            password2 = params.get('password2')
-            
-            if not password1:
-                raise Exception('Password must not be empty')
-            
-            if not password2:
-                raise Exception('Password must be repeated')
-            
-            if password1 != password2:
-                raise Exception('Passwords need to be the same')
-            
-            auth = self.server.odb.query(HTTPBasicAuth).\
-                filter(HTTPBasicAuth.id==id).\
-                one()
-            
-            auth.password = password1
-        
-            self.server.odb.add(auth)
-            self.server.odb.commit()
-        except Exception, e:
-            msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
-            self.logger.error(msg)
-            self.server.odb.rollback()
-            
-            raise 
-        
-        return ZATO_OK, ''
-    
 class Delete(AdminService):
-    """ Deletes an HTTP Basic Auth definition.
+    """ Deletes an SSL/TLS definition.
     """
     def handle(self, *args, **kwargs):
         

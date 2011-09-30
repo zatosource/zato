@@ -38,15 +38,19 @@ ZATO_NO_DEFAULT_VALUE = "ZATO_NO_DEFAULT_VALUE"
 logger = logging.getLogger("zato.server.service.internal")
 
 def _get_params(payload, request_params, path_prefix="", default_value=ZATO_NO_DEFAULT_VALUE,
-                force_type=None, force_type_params=[]):
+                force_type=None, force_type_params=[], use_text=True):
     """ Gets all requested parameters from a message. Will raise an exception
     if any is missing.
     """
     params = {}
     for param in request_params:
 
-        # Check whether all required parameters were passed in..
-        value = zato_path(path_prefix + param, True).get_from(payload).text
+        elem = zato_path(path_prefix + param, True).get_from(payload)
+        
+        if use_text:
+            value = elem.text # We are interested in the text the elem contains ..
+        else:
+            return elem # .. or in the elem itself.
 
         # Use a default value if an element is empty and we're allowed to
         # substitute its (empty) value with the default one.
