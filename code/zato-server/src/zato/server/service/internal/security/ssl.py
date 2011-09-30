@@ -50,6 +50,15 @@ class GetList(AdminService):
             definition_elem.id = definition.id
             definition_elem.name = definition.name
             definition_elem.is_active = definition.is_active
+            definition_elem.def_items = Element('def_items')
+            
+            for item in definition.items:
+                item_elem = Element('item')
+                item_elem.field = item.field
+                item_elem.operator = item.operator
+                item_elem.value = item.value
+                
+                definition_elem.def_items.append(item_elem)
 
             definition_list.append(definition_elem)
 

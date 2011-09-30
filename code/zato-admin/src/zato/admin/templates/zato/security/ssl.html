@@ -199,14 +199,14 @@
                 </thead>
 
                 <tbody>
-                {% for item in items %}
+                {% for def in defs %}
 
                     <tr>
-                        <td>{{ item.id }}</td>
+                        <td>{{ def.id }}</td>
                         <td><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
-                        <td>{% if item.is_active %}Yes{% else %}No{% endif %}</td>
-                        <td>{{ item.definition }}</td>
+                        <td>{{ def.name }}</td>
+                        <td>{% if def.is_active %}Yes{% else %}No{% endif %}</td>
+                        <td>{% autoescape off %}{{ def.definition_text }}{% endautoescape %}</td>
                         <td><a href="javascript:edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:delete_('{{ item.id }}')">Delete</a></td>
