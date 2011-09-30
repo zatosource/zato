@@ -85,7 +85,6 @@
                     {key:"is_active", label:"Active", sortable:true},
                     {key:"definition", label:"Definition", sortable:true},
                     {key:"edit", label:"&nbsp;", sortable:false},
-                    {key:"change_password", label:"&nbsp;", sortable:false},
                     {key:"delete", label:"&nbsp;", sortable:false},
                 ];
 
@@ -99,7 +98,6 @@
                             {key:"is_active"},
                             {key:"definition"},
                             {key:"edit"},
-                            {key:"change_password"},
                             {key:"delete"},
                     ]
                 };
@@ -208,7 +206,6 @@
                         <td>{% if def.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{% autoescape off %}{{ def.definition_text }}{% endautoescape %}</td>
                         <td><a href="javascript:edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:delete_('{{ item.id }}')">Delete</a></td>
                     </tr>
                 {% endfor %}
