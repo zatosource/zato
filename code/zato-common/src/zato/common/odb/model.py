@@ -132,7 +132,7 @@ class Server(Base):
     odb_token = Column(String(32), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('servers', order_by=id))
+    cluster = relationship(Cluster, backref=backref('servers', order_by=name))
 
     def __init__(self, id=None, name=None, cluster=None, odb_token=None,
                  last_join_status=None, last_join_mod_date=None, last_join_mod_by=None):
@@ -200,7 +200,7 @@ class ChannelURLDefinition(Base):
     is_internal = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=id))
+    cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=url_pattern))
     
     def __init__(self, id=None, url_pattern=None, url_type=None, is_internal=None,
                  cluster=None):
@@ -234,12 +234,12 @@ class WSSDefinition(Base):
     is_active = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('wss_defs', order_by=id))
+    cluster = relationship(Cluster, backref=backref('wss_defs', order_by=name))
     
     security_def_id = Column(Integer, ForeignKey('security_def.id'), 
                              nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('wss_def', 
-                                                    order_by=id, uselist=False))
+                                                    order_by=name, uselist=False))
 
     def __init__(self, id=None, name=None, is_active=None, username=None, 
                  password=None, password_type=None, reject_empty_nonce_ts=None, 
@@ -276,12 +276,12 @@ class HTTPBasicAuth(Base):
     is_active = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_basic_auth_defs', order_by=id))
+    cluster = relationship(Cluster, backref=backref('http_basic_auth_defs', order_by=name))
     
     security_def_id = Column(Integer, ForeignKey('security_def.id'), 
                              nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('http_basic_auth_def', 
-                                                    order_by=id, uselist=False))
+                                                    order_by=name, uselist=False))
 
     def __init__(self, id=None, name=None, is_active=None, username=None, 
                  domain=None, password=None, cluster=None):
@@ -307,12 +307,12 @@ class SSLBasicAuth(Base):
     is_active = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('ssl_defs', order_by=id))
+    cluster = relationship(Cluster, backref=backref('ssl_defs', order_by=name))
     
     security_def_id = Column(Integer, ForeignKey('security_def.id'), 
                              nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('ssl_auth_def', 
-                                                    order_by=id, uselist=False))
+                                                    order_by=name, uselist=False))
 
     def __init__(self, id=None, name=None, is_active=None, cluster=None,
                  definition_text=''):
@@ -367,7 +367,7 @@ class TechnicalAccount(Base):
                 backref=backref('tech_account', order_by=id, uselist=False))
     
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('tech_accounts', order_by=id))
+    cluster = relationship(Cluster, backref=backref('tech_accounts', order_by=name))
     
     def __init__(self, id=None, name=None, password=None, salt=None, 
                  is_active=None, security_def=None, expected_password=None,
@@ -417,7 +417,7 @@ class SQLConnectionPool(Base):
     pool_size = Column(Integer(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('sql_pools', order_by=id))
+    cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name))
 
     def __init__(self, id=None, name=None, db_name=None, user=None, engine=None,
                  extra=None, host=None, port=None, pool_size=None, cluster=None):
