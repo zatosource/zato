@@ -120,7 +120,7 @@
         <div id="create-div" class="yui-pe-content">
             <div class="hd">Create a new SSL/TLS definition</div>
             <div class="bd">
-                <form action="{% url security-basic-auth-create %}" method="post" id="create-form">
+                <form action="{% url security-ssl-create %}" method="post" id="create-form">
                     <table class="form-data" border="0">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -142,19 +142,19 @@
                             </td>
                             <td>
                                 <form action="" id="create-form">
-                                <table class="ssl-def">
+                                <table class="ssl-def" id="ssl-def-table">
                                     <tr>
                                         <th>Field</th>
                                         <th>&nbsp;</th>
                                         <th>Value</th>
                                         <th>&nbsp;</th>
                                     </tr>
-                                    <tr id="ssl-def-last">
+                                    <tr id="ssl-def-inputs">
                                         <td><input type="text" name="ssl-def-field"  id="ssl-def-field" /></td>
                                         <td>
                                             <select name="ssl-def-op" id="ssl-def-op">
-                                                <option value="is-equal">==</option>
-                                                <option value="is-not-equal">!=</option>
+                                                <option value="is-equal-to">==</option>
+                                                <option value="is-not-equal-to">!=</option>
                                             </select>
                                         </td>
                                         <td><input type="text" name="ssl-def-value" id="ssl-def-value" /></td>
@@ -173,7 +173,7 @@
         <div id="edit-div" class="yui-pe-content">
             <div class="hd">Edit the SSL/TLS definition</div>
             <div class="bd">
-                <form action="{% url security-basic-auth-edit %}" method="post" id="edit-form">
+                <form action="{% url security-ssl-edit %}" method="post" id="edit-form">
                     <table class="form-data" border="0">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
