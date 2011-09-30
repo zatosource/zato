@@ -141,6 +141,7 @@
                                 </span>
                             </td>
                             <td>
+                                <form action="" id="create-form">
                                 <table class="ssl-def">
                                     <tr>
                                         <th>Field</th>
@@ -148,18 +149,19 @@
                                         <th>Value</th>
                                         <th>&nbsp;</th>
                                     </tr>
-                                    <tr>
-                                        <td><input type="text" /></td>
+                                    <tr id="ssl-def-last">
+                                        <td><input type="text" name="ssl-def-field"  id="ssl-def-field" /></td>
                                         <td>
-                                            <select name="">
+                                            <select name="ssl-def-op" id="ssl-def-op">
                                                 <option value="is-equal">==</option>
                                                 <option value="is-not-equal">!=</option>
                                             </select>
                                         </td>
-                                        <td><input type="text" /></td>
-                                        <td><a href="#" class="common">Add to definition</a></td>
+                                        <td><input type="text" name="ssl-def-value" id="ssl-def-value" /></td>
+                                        <td><a href="javascript:add_to_def()" class="common">Add to definition</a></td>
                                     </tr>
                                 </table>
+                                </form>
                             </td>
                         </tr>
                     </table>
