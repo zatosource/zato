@@ -193,6 +193,16 @@ function add_to_def() {
 
     $('ssl-def-field').removeClassName('required');
     $('ssl-def-value').removeClassName('required');
+    
+    /* Check for duplicate fields */
+    var def_elems = $$('tr[id^="ssl-def-row-"]');
+    var given = $('ssl-def-field').value.strip();
+    for(var x=0; x<def_elems.length; x++) {
+        if(def_elems[x].firstDescendant().innerHTML == given) {
+            alert(String.format('Field [{0}] already exists in the definition', given));
+            return;
+        }
+    }
 
     var on_success = function(o) {
         $('ssl-def-table').insert(o.responseText);
