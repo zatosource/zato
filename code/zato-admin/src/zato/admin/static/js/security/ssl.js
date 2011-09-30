@@ -1,8 +1,8 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-// A base class for representing an HTTP Basic Auth definition
-var HTTPBasicAuth = Class.create({
+// A base class for representing an SSL/TLS definition
+var SSLAuth = Class.create({
     initialize: function() {
         this.id = null;
         this.cluster_id = null;
@@ -16,8 +16,8 @@ var HTTPBasicAuth = Class.create({
 });
 
 // A nicer toString.
-HTTPBasicAuth.prototype.toString = function() {
-    return "<HTTPBasicAuth\
+SSLAuth.prototype.toString = function() {
+    return "<SSLAuth\
         id=[" + this.id + "]\
         cluster_id=[" + this.cluster_id + "]\
         name=[" + this.name + "]\
@@ -28,13 +28,13 @@ HTTPBasicAuth.prototype.toString = function() {
     >";
 };
 
-HTTPBasicAuth.prototype.boolean_html = function(attr) {
+SSLAuth.prototype.boolean_html = function(attr) {
     return attr ? "Yes": "No";
 }
 
 
 // Dumps properties in a form suitable for creating a new data table row.
-HTTPBasicAuth.prototype.to_record = function() {
+SSLAuth.prototype.to_record = function() {
     var record = new Array();
     
     record["selection"] = "<input type='checkbox' />";
@@ -50,7 +50,7 @@ HTTPBasicAuth.prototype.to_record = function() {
     return record;
 };
 
-HTTPBasicAuth.prototype.add_row = function(object, data_dt) {
+SSLAuth.prototype.add_row = function(object, data_dt) {
 
     var add_at_idx = 0;
     data_dt.addRow(object.to_record(), add_at_idx);
@@ -87,17 +87,28 @@ function create_cleanup() {
 
     $('ssl-def-field').removeClassName('required');
     $('ssl-def-value').removeClassName('required');
+    
+    $$("tr[id^='ssl-def-row-']").each(function(elem) {
+        elem.remove();
+    })
+    
+    
 }
 
 function setup_create_dialog() {
 
     var on_create_submit = function() {
         if(create_validation.validate()) {
-
-            // Check whether there's at least one field/value pair in the
-            // definition.
-            alert("There must be least one field/value pair added to the definition.");
-            if(0) {
+        
+            var def_elems = $$('tr[id^="ssl-def-row-"]');
+            
+            // First let's check whether there's at least one field/value pair
+            // in the definition.
+            if(!(def_elems && def_elems.length)) {
+                alert("There must be least one field/value pair added to the definition.");
+                return;
+            }
+            else {
                 // Submit the form if no errors have been found on the UI side.
                 this.submit();
                 create_validation.reset();
@@ -112,7 +123,8 @@ function setup_create_dialog() {
 
     var on_create_success = function(o) {
 
-        var object = new HTTPBasicAuth();
+    /*
+        var object = new SSLAuth();
         var json = YAHOO.lang.JSON.parse(o.responseText);
         
         object.id = json.pk;
@@ -122,11 +134,12 @@ function setup_create_dialog() {
         object.username = $("id_username").value;
         object.domain = $("id_domain").value;
         object.add_row(object, data_dt);
+        */
         
         // Hide the dialog and confirm the changes have been saved.
         create_dialog.hide();
 
-        update_user_message(true, "Succesfully created a new HTTP Basic Auth definition, don't forget to update its password now");
+        update_user_message(true, "Succesfully created a new SSL/TLS definition");
 
         // Cleanup after work.
         create_cleanup();
@@ -144,7 +157,7 @@ function setup_create_dialog() {
 
     // Instantiate the dialog.
     create_dialog = new YAHOO.widget.Dialog("create-div",
-                            { width: "59em",
+                            { width: "79em",
                               fixedcenter: true,
                               visible: false,
                               draggable: true,
@@ -172,12 +185,42 @@ function add_to_def() {
     $('ssl-def-field').addClassName('required');
     $('ssl-def-value').addClassName('required');
 
-    Validation.validate('ssl-def-field');
-    Validation.validate('ssl-def-value');
+    var valid_field = Validation.validate('ssl-def-field');
+    var valid_value = Validation.validate('ssl-def-value');
+    if(!(valid_field && valid_value)) {
+        return;
+    }
 
     $('ssl-def-field').removeClassName('required');
     $('ssl-def-value').removeClassName('required');
+
+    var on_success = function(o) {
+        $('ssl-def-table').insert(o.responseText);
+        $('ssl-def-field').clear();
+        $('ssl-def-value').clear();
+        $('ssl-def-field').focus();
+    };
+
+    var on_failure = function(o) {
+        update_user_message(false, o.responseText);
+    }
+
+    var callback = {
+        success: on_success,
+        failure: on_failure,
+    };
+
+    var url = String.format('./format-item/');
+
+    YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
+    YAHOO.util.Connect.setForm($('create-form'));
     
+    var transaction = YAHOO.util.Connect.asyncRequest('POST', url, callback);
+    
+}
+
+function remove_from_def(id) {
+    $('ssl-def-row-' + id).remove();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -223,7 +266,7 @@ function setup_edit_dialog() {
             }
         }
 
-        update_user_message(true, "Succesfully updated the HTTP Basic Auth definition");
+        update_user_message(true, "Succesfully updated the SSL/TLS definition");
 
         // Cleanup after work.
         edit_cleanup();
@@ -267,7 +310,7 @@ function setup_edit_dialog() {
 function setup_delete_dialog() {
 
     var on_success = function(o) {
-        msg = "Successfully deleted the HTTP Basic Auth definition [" + current_delete_name + "]";
+        msg = "Successfully deleted the SSL/TLS definition [" + current_delete_name + "]";
 
         // Delete the row..
         
@@ -389,7 +432,7 @@ function delete_(id) {
         }
     }
 
-    delete_dialog.setBody(String.format("Are you sure you want to delete the HTTP Basic Auth definition [{0}]", current_delete_name));
+    delete_dialog.setBody(String.format("Are you sure you want to delete the SSL/TLS definition [{0}]", current_delete_name));
     delete_dialog.show();
     
 }

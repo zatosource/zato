@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from json import dumps
 from traceback import format_exc
+from uuid import uuid4
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -45,6 +46,13 @@ from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
+
+operators = {
+    'is-equal-to': '==',
+    'is-not-equal-to': '!=',
+    }
+
+ZATO_FORM_SEPARATOR = '***ZATO_FORM_SEPARATOR***'
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
@@ -127,6 +135,13 @@ def edit(req):
 
 @meth_allowed('POST')
 def create(req):
+
+    logger.debug('create req.POST=[{0}]'.format(req.POST))
+    
+    return_data = {'pk': 'zzz'}
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    
+    '''
     try:
         cluster_id = req.POST.get('cluster_id')
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
@@ -142,6 +157,30 @@ def create(req):
     else:
         return_data = {'pk': zato_message.data.basic_auth.id.text}
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
+        '''
+    
+@meth_allowed('POST')
+def format_item(req):
+
+    field = req.POST['ssl-def-field']
+    op_raw = req.POST['ssl-def-op']
+    op = operators[op_raw]
+    value = req.POST['ssl-def-value']
+    id = uuid4().hex
+    
+    row_template = """
+        <tr id="ssl-def-row-{id}">
+            <td>{field}</td>
+            <td>{op}</td>
+            <td>{value}</td>
+            <td>
+                <a href="javascript:remove_from_def('{id}')" class="common">Remove from definition</a>
+                <input type="hidden" name="ssl-def-hidden" value="{field}{sep}{op_raw}{sep}{value}" />
+            </td>
+        </tr>
+    """.format(id=id, field=field, op=op, op_raw=op_raw, value=value, sep=ZATO_FORM_SEPARATOR)
+    
+    return HttpResponse(row_template)
     
 @meth_allowed('POST')
 def change_password(req):
