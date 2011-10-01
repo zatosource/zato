@@ -67,7 +67,7 @@ function create_cleanup() {
     //$('ssl-def-value').removeClassName('required');
     
     create_validation.reset();
-    $("create-form").reset();
+    $("main-form").reset();
 
     /* See comment for add_to_def for explanation */
 
@@ -141,10 +141,10 @@ function setup_create_dialog() {
     };
 
     // Remove progressively enhanced content class, just before creating the module.
-    YAHOO.util.Dom.removeClass("create-div", "yui-pe-content");
+    YAHOO.util.Dom.removeClass("form-div", "yui-pe-content");
 
     // Instantiate the dialog.
-    create_dialog = new YAHOO.widget.Dialog("create-div",
+    create_dialog = new YAHOO.widget.Dialog("form-div",
                             { width: "79em",
                               fixedcenter: true,
                               visible: false,
@@ -211,7 +211,7 @@ function add_to_def() {
     var url = String.format('./format-item/');
 
     YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
-    YAHOO.util.Connect.setForm($('create-form'));
+    YAHOO.util.Connect.setForm($('main-form'));
     
     var transaction = YAHOO.util.Connect.asyncRequest('POST', url, callback);
     
@@ -226,78 +226,6 @@ function remove_from_def(id) {
 ////////////////////////////////////////////////////////////////////////////////
 function edit_cleanup() {
     edit_validation.reset();
-    $("edit-form").reset();
-}
-
-function setup_edit_dialog() {
-
-    var on_edit_submit = function() {
-        if(edit_validation.validate()) {
-            // Submit the form if no errors have been found on the UI side.
-            this.submit();
-            edit_validation.reset();
-        }
-    };
-
-    var on_edit_cancel = function() {
-        this.cancel();
-        edit_cleanup();
-    };
-
-    var on_edit_success = function(o) {
-
-        edit_dialog.hide();
-        
-        var records = data_dt.getRecordSet().getRecords();
-        for (x=0; x < records.length; x++) {
-            var record = records[x];
-            var id = record.getData("id");
-            if(id && id == $("id_edit-id").value) {
-
-                var is_active = $F("id_edit-is_active") ? "Yes": "No";
-                record.setData("name", $("id_edit-name").value);
-                record.setData("is_active", is_active);
-                record.setData("username", $("id_edit-username").value);
-                record.setData("domain", $("id_edit-domain").value);
-                
-                data_dt.render();
-            }
-        }
-
-        update_user_message(true, "Succesfully updated the SSL/TLS definition");
-
-        // Cleanup after work.
-        edit_cleanup();
-
-    };
-
-    var on_edit_failure = function(o) {
-        edit_cleanup();
-        update_user_message(false, o.responseText);
-        edit_dialog.hide();
-    };
-
-    // Remove progressively enhanced content class, just before creating the module.
-    YAHOO.util.Dom.removeClass("edit-form", "yui-pe-content");
-
-    // Instantiate the dialog.
-    edit_dialog = new YAHOO.widget.Dialog("edit-div",
-                            { width: "39em",
-                              fixedcenter: true,
-                              visible: false,
-                              draggable: true,
-                              postmethod: "async",
-                              hideaftersubmit: false,
-                              constraintoviewport: true,
-                              buttons: [{text:"Submit", handler:on_edit_submit},
-                                        {text:"Cancel", handler:on_edit_cancel, isDefault:true}]
-                            });
-
-    edit_dialog.callback.success = on_edit_success;
-    edit_dialog.callback.failure = on_edit_failure;
-
-    // Render the dialog.
-    edit_dialog.render();
 }
 
 
@@ -380,7 +308,7 @@ function create(cluster_id) {
 
     // Set up the form validation if necessary.
     if(typeof create_validation == "undefined") {
-        create_validation = new Validation("create-form");
+        create_validation = new Validation("main-form");
     }
     create_validation.reset();
     create_dialog.show();
@@ -390,11 +318,12 @@ function edit(id) {
 
     // Set up the form validation if necessary.
     if(typeof edit_validation == "undefined") {
-        edit_validation = new Validation("edit-form");
+        edit_validation = new Validation("main-form");
     }
     edit_validation.reset();
     
-    $("id_edit-cluster_id").value = $("cluster_id").value;
+    cluster_id = $("cluster_id").value
+    $("id_edit-cluster_id").value = cluster_id;
 
     var records = data_dt.getRecordSet().getRecords();
     for (x=0; x < records.length; x++) {
@@ -404,11 +333,29 @@ function edit(id) {
         
             is_active = record.getData("is_active") ? 'on' : ''
             
-            $("id_edit-id").value = record.getData("id");
+            $("id_edit-id").value = id;
             $("id_edit-name").value = record.getData("name");
             $("id_edit-is_active").setValue(is_active);
-            $("id_edit-username").value = record.getData("username");
-            $("id_edit-domain").value = record.getData("domain");
+
+            var on_success = function(o) {
+        
+                update_user_message(true, o.responseText);
+            };
+        
+            var on_failure = function(o) {
+                update_user_message(false, o.responseText);
+            }
+        
+            var callback = {
+                success: on_success,
+                failure: on_failure,
+            };
+
+            var url = String.format('./format-items/{0}/cluster/{1}/', id, cluster_id);
+    
+            YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get("csrftoken"));
+            var transaction = YAHOO.util.Connect.asyncRequest("POST", url, callback);
+            
         }
     }
     
@@ -438,6 +385,5 @@ function delete_(id) {
 
 YAHOO.util.Event.onDOMReady(function() {
     setup_create_dialog();
-    //setup_edit_dialog();
     setup_delete_dialog();
 });
