@@ -94,6 +94,7 @@ function create_cleanup() {
         elem.remove();
     })
     
+    clear_def_table();
     
 }
 
@@ -235,6 +236,7 @@ function remove_from_def(id) {
 ////////////////////////////////////////////////////////////////////////////////
 function edit_cleanup() {
     edit_validation.reset();
+	clear_def_table();
 }
 
 
@@ -333,12 +335,13 @@ function edit(id) {
     }
 
 	clear_def_table();
+	$('ssl-def-tbody').insert("<tr id='ssl-def-row-loader'><td colspan='3' class='loader'><span><img src='/static/gfx/ajax-loader.gif'/> Please wait</span></td></tr>");
     $('main-form').writeAttribute('action', './edit/');
     edit_validation.reset();
     
     cluster_id = $('cluster_id').value
     $('cluster_id').value = cluster_id;
-
+	
     var records = data_dt.getRecordSet().getRecords();
     for (x=0; x < records.length; x++) {
         var record = records[x];
@@ -352,6 +355,7 @@ function edit(id) {
             $('id_is_active').setValue(is_active);
 
             var on_success = function(o) {
+				clear_def_table();
 				$('ssl-def-tbody').insert(o.responseText);
             };
         

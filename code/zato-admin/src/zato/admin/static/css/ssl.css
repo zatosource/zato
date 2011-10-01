@@ -6,3 +6,9 @@ table.ssl-def th {
     font-size:11px;
     text-align:center;
 }
+
+table.ssl-def td.loader {
+    font-size: smaller;
+    vertical-align:top;
+    font-weight:600
+}
