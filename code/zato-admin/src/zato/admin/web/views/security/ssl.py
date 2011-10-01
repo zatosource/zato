@@ -152,7 +152,6 @@ def edit(req):
 def create(req):
 
     try:
-        
         cluster_id = req.POST.get('cluster_id')
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
@@ -160,15 +159,26 @@ def create(req):
         
         return_data = {'pk': 'zzz'}
 
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                            'zato:security.ssl.create', zato_message)
+        # Create the definition first ..
+        _, zato_message, soap_response = invoke_admin_service(cluster, 
+                                    'zato:security.ssl.create', zato_message)
+        new_id = zato_message.data.ssl.id.text
+        
+        # .. and now grab its items for further formatting.
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = new_id
+        _, zato_message, soap_response = invoke_admin_service(cluster, 
+                                    'zato:security.ssl.get', zato_message)
+        
+        definition_text = _get_definition_text(zato_message.data.definition.def_items)
 
     except Exception, e:
         msg = "Could not create an SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return_data = {'pk': zato_message.data.ssl.id.text}
+        return_data = {'pk': new_id, 'definition_text':definition_text}
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
     
 @meth_allowed('POST')

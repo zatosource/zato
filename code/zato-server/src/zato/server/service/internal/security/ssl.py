@@ -36,6 +36,35 @@ from zato.common.odb.model import Cluster, SSLAuth, SSLAuthItem
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
+class Get(AdminService):
+    """ Returns a particular SSL/TLS definition.
+    """
+    def handle(self, *args, **kwargs):
+
+        payload = kwargs.get('payload')
+        request_params = ['id']
+        params = _get_params(payload, request_params, 'data.')
+        
+        definition = self.server.odb.query(SSLAuth).\
+            filter(SSLAuth.id==params['id']).\
+            one()
+
+        definition_elem = Element('definition')
+        definition_elem.id = definition.id
+        definition_elem.name = definition.name
+        definition_elem.is_active = definition.is_active
+        definition_elem.def_items = Element('def_items')
+            
+        for item in definition.items:
+            item_elem = Element('item')
+            item_elem.field = item.field
+            item_elem.operator = item.operator
+            item_elem.value = item.value
+                
+            definition_elem.def_items.append(item_elem)
+
+        return ZATO_OK, etree.tostring(definition_elem)
+
 class GetList(AdminService):
     """ Returns a list of SSL/TLS definitions available.
     """

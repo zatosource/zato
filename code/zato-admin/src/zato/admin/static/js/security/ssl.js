@@ -5,12 +5,9 @@
 var SSLAuth = Class.create({
     initialize: function() {
         this.id = null;
-        this.cluster_id = null;
         this.name = null;
         this.is_active = null;
-        this.username = null;
-        this.domain = null;
-        this.password = null;
+        this.definition_text = null;
 
     }
 });
@@ -22,9 +19,7 @@ SSLAuth.prototype.toString = function() {
         cluster_id=[" + this.cluster_id + "]\
         name=[" + this.name + "]\
         is_active=[" + this.is_active + "]\
-        username=[" + this.username + "]\
-        domain=[" + this.domain + "]\
-        password=[" + this.password + "]\
+        definition_text=[" + this.definition_text + "]\
     >";
 };
 
@@ -40,11 +35,9 @@ SSLAuth.prototype.to_record = function() {
     record["selection"] = "<input type='checkbox' />";
     record["name"] = this.name;
     record["is_active"] = this.boolean_html(this.is_active);
-    record["username"] = this.username;
-    record["domain"] = this.domain;
+    record["definition_text"] = this.definition_text;
     
     record["edit"] = String.format("<a href=\"javascript:edit('{0}')\">Edit</a>", this.id);
-    record["change_password"] = String.format("<a href=\"javascript:change_password('{0}')\">Change password</a>", this.id);
     record["delete"] = String.format("<a href=\"javascript:delete_('{0}')\">Delete</a>", this.id);
 
     return record;
@@ -60,8 +53,7 @@ SSLAuth.prototype.add_row = function(object, data_dt) {
     added_record.setData("id", object.id);
     added_record.setData("name", object.name);
     added_record.setData("is_active", object.is_active);
-    added_record.setData("username", object.username);
-    added_record.setData("domain", object.domain);
+    added_record.setData("definition_text", object.definition_text);
 
 }
 
@@ -123,18 +115,14 @@ function setup_create_dialog() {
 
     var on_create_success = function(o) {
 
-    /*
         var object = new SSLAuth();
         var json = YAHOO.lang.JSON.parse(o.responseText);
-        
+
         object.id = json.pk;
-        object.cluster_id = $("id_cluster").value;
         object.name = $("id_name").value;
         object.is_active = $F("id_is_active") == "on";
-        object.username = $("id_username").value;
-        object.domain = $("id_domain").value;
+        object.definition_text = json.definition_text
         object.add_row(object, data_dt);
-        */
         
         // Hide the dialog and confirm the changes have been saved.
         create_dialog.hide();
