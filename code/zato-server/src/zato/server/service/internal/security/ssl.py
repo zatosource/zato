@@ -32,7 +32,7 @@ from lxml.objectify import Element
 
 # Zato
 from zato.common import ZatoException, ZATO_FIELD_OPERATORS, ZATO_OK
-from zato.common.odb.model import Cluster, SSLBasicAuth, SSLBasicAuthItem
+from zato.common.odb.model import Cluster, SSLAuth, SSLAuthItem
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
@@ -42,7 +42,7 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         definition_list = Element('definition_list')
 
-        definitions = self.server.odb.query(SSLBasicAuth).order_by('name').all()
+        definitions = self.server.odb.query(SSLAuth).order_by('name').all()
 
         for definition in definitions:
 
@@ -108,7 +108,7 @@ class Create(AdminService):
                     raise Exception('Operator must be one of [{0}] in [{1}] [{2}] [{3}]'.format(
                         sorted(ZATO_FIELD_OPERATORS.keys()), field, operator, value))
                 
-                item = SSLBasicAuthItem(None, field, operator, value)
+                item = SSLAuthItem(None, field, operator, value)
                 items.append(item)
                 
             
@@ -116,14 +116,14 @@ class Create(AdminService):
             
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
-            existing_one = self.server.odb.query(SSLBasicAuth).\
+            existing_one = self.server.odb.query(SSLAuth).\
                 filter(Cluster.id==cluster_id).\
-                filter(SSLBasicAuth.name==name).first()
+                filter(SSLAuth.name==name).first()
             
             if existing_one:
                 raise Exception('SSL/TLS definition [{0}] already exists on this cluster'.format(name))
 
-            auth = SSLBasicAuth(None, name, is_active, cluster)
+            auth = SSLAuth(None, name, is_active, cluster)
             auth.items = items
             
             self.server.odb.add(auth)
@@ -157,16 +157,16 @@ class Edit(AdminService):
             name = new_params['name']
             cluster_id = new_params['cluster_id']
 
-            existing_one = self.server.odb.query(HTTPBasicAuth).\
+            existing_one = self.server.odb.query(SSLAuth).\
                 filter(Cluster.id==cluster_id).\
-                filter(HTTPBasicAuth.name==name).\
-                filter(HTTPBasicAuth.id != def_id).\
+                filter(SSLAuth.name==name).\
+                filter(SSLAuth.id != def_id).\
                 first()
             
             if existing_one:
                 raise Exception('SSL/TLS definition [{0}] already exists on this cluster'.format(name))
             
-            definition = self.server.odb.query(HTTPBasicAuth).filter_by(id=def_id).one()
+            definition = self.server.odb.query(SSLAuth).filter_by(id=def_id).one()
             
             definition.name = name
             definition.is_active = new_params['is_active']
@@ -177,9 +177,9 @@ class Edit(AdminService):
             self.server.odb.commit()
             
         except orm_exc.NoResultFound:
-            raise ZatoException('HTTP Basic Auth definition [%s] does not exist' % new_params['original_name'])
+            raise ZatoException('SSL/TLS definition [%s] does not exist' % new_params['original_name'])
         except Exception, e:
-            msg = "Could not update the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+            msg = "Could not update the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
             self.server.odb.rollback()
             
@@ -200,15 +200,16 @@ class Delete(AdminService):
             
             id = params['id']
             
-            auth = self.server.odb.query(HTTPBasicAuth).\
-                filter(HTTPBasicAuth.id==id).\
+            auth = self.server.odb.query(SSLAuth).\
+                filter(SSLAuth.id==id).\
                 one()
             
             self.server.odb.delete(auth)
             self.server.odb.commit()
         except Exception, e:
-            msg = "Could not delete the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+            msg = "Could not delete the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
+            self.server.odb.rollback()
             
             raise
         

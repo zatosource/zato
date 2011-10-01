@@ -334,7 +334,6 @@ function setup_delete_dialog() {
             }
         }
 
-
         // .. and confirm everything went fine.
         update_user_message(true, msg);
     };
@@ -452,5 +451,5 @@ function delete_(id) {
 YAHOO.util.Event.onDOMReady(function() {
     setup_create_dialog();
     //setup_edit_dialog();
-    //setup_delete_dialog();
+    setup_delete_dialog();
 });

@@ -38,11 +38,11 @@ from validate import is_boolean
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
-from zato.admin.web.forms.security.basic_auth import DefinitionForm
+from zato.admin.web.forms.security.ssl import DefinitionForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
 from zato.admin.web import invoke_admin_service
-from zato.common.odb.model import Cluster, SSLBasicAuth, SSLBasicAuthItem
+from zato.common.odb.model import Cluster, SSLAuth, SSLAuthItem
 from zato.common import ZATO_FIELD_OPERATORS
 from zato.common.util import TRACE1, to_form
 
@@ -111,7 +111,7 @@ def index(req):
                 is_active = is_boolean(definition_elem.is_active.text)
                 
                 definition_text = _get_definition_text(definition_elem.def_items)
-                auth = SSLBasicAuth(id, name, is_active, definition_text=definition_text)
+                auth = SSLAuth(id, name, is_active, definition_text=definition_text)
 
                 defs.append(auth)
 
@@ -132,8 +132,7 @@ def index(req):
 
 @meth_allowed('POST')
 def edit(req):
-    """ Updates the HTTP Basic Auth definitions's parameters (everything except
-    for the password).
+    """ Updates the SSL/TLS definition's parameters.
     """
     try:
         cluster_id = req.POST.get('cluster_id')
@@ -141,9 +140,9 @@ def edit(req):
         zato_message = _get_edit_create_message(req.POST, prefix='edit-')
 
         _, zato_message, soap_response = invoke_admin_service(cluster,
-                                    'zato:security.basic-auth.edit', zato_message)
+                                    'zato:security.ssl.edit', zato_message)
     except Exception, e:
-        msg = "Could not update the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not update the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -206,10 +205,10 @@ def delete(req, id, cluster_id):
         zato_message.data.id = id
         
         _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.basic-auth.delete', zato_message)
+                        'zato:security.ssl.delete', zato_message)
     
     except Exception, e:
-        msg = "Could not delete the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not delete the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

@@ -209,6 +209,7 @@ class Delete(AdminService):
         except Exception, e:
             msg = "Could not delete the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
+            self.server.odb.rollback()
             
             raise
         

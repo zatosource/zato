@@ -205,8 +205,8 @@
                         <td>{{ def.name }}</td>
                         <td>{% if def.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{% autoescape off %}{{ def.definition_text }}{% endautoescape %}</td>
-                        <td><a href="javascript:edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:edit('{{ def.id }}')">Edit</a></td>
+                        <td><a href="javascript:delete_('{{ def.id }}')">Delete</a></td>
                     </tr>
                 {% endfor %}
 
