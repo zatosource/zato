@@ -88,6 +88,7 @@ urlpatterns = patterns("",
     # .. SSL/TLS
     url(r"^zato/security/ssl/$", ssl.index, name="security-ssl"),
     url(r"^zato/security/ssl/format-item/$", ssl.format_item, name="security-format-item"),
+    url(r"^zato/security/ssl/format-items/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$", ssl.format_items, name="security-format-items"),
     url(r"^zato/security/ssl/create/$", ssl.create, name="security-ssl-create"),
     url(r"^zato/security/ssl/edit/$", ssl.edit, name="security-ssl-edit"),
     url(r"^zato/security/ssl/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$", ssl.delete, name="security-ssl-delete"),

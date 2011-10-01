@@ -115,18 +115,18 @@
         });
         </script>
         
-        <div id="create-div" class="yui-pe-content">
-            <div class="hd">Create a new SSL/TLS definition</div>
+        <div id="form-div" class="yui-pe-content">
+            <div class="hd" id="form-title">zato-should-be-filled-in</div>
             <div class="bd">
-                <form action="{% url security-ssl-create %}" method="post" id="create-form">
+                <form action="/zato-does-not-exist" method="post" id="main-form">
                     <table class="form-data" border="0">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
-                            <td>{{ create_form.name }}</td>
+                            <td>{{ main_form.name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Is active</td>
-                            <td>{{ create_form.is_active }} </td>
+                            <td>{{ main_form.is_active }} </td>
                         </tr>
                         </tr>
                         <tr>
@@ -162,26 +162,7 @@
                         </tr>
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                </form>
-            </div>
-        </div>
-        
-        <div id="edit-div" class="yui-pe-content">
-            <div class="hd">Edit the SSL/TLS definition</div>
-            <div class="bd">
-                <form action="{% url security-ssl-edit %}" method="post" id="edit-form">
-                    <table class="form-data" border="0">
-                        <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td>{{ edit_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Is active</td>
-                            <td>{{ edit_form.is_active }} </td>
-                        </tr>
-                    </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    <input type="hidden" id="id_edit-id" name="id" />
+                    <input type="hidden" id="id" name="id" />
                 </form>
             </div>
         </div>

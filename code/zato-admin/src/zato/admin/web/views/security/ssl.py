@@ -37,7 +37,7 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
+from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.security.ssl import DefinitionForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
@@ -49,6 +49,27 @@ from zato.common.util import TRACE1, to_form
 logger = logging.getLogger(__name__)
 
 ZATO_FORM_SEPARATOR = '***ZATO_FORM_SEPARATOR***'
+
+def _format_item(field, op_raw, value):
+    """ Formats an SSL/TLS definition's item for the purpose of displaying
+    it in create/edit forms.
+    """
+    op = ZATO_FIELD_OPERATORS[op_raw]
+    id = uuid4().hex
+    
+    out = """
+        <tr id="ssl-def-row-{id}">
+            <td>{field}</td>
+            <td>{op}</td>
+            <td>{value}</td>
+            <td>
+                <a href="javascript:remove_from_def('{id}')" class="common">Remove from definition</a>
+                <input type="hidden" name="ssl-def-hidden" value="{field}{sep}{op_raw}{sep}{value}" />
+            </td>
+        </tr>
+    """.format(id=id, field=field, op=op, op_raw=op_raw, value=value, sep=ZATO_FORM_SEPARATOR)
+    
+    return out
 
 def _get_definition_text(items):
     """ Takes a list of definition items returned by the backend and turns
@@ -91,9 +112,7 @@ def index(req):
     cluster_id = req.GET.get('cluster')
     defs = []
     
-    create_form = DefinitionForm()
-    edit_form = DefinitionForm(prefix='edit')
-    change_password_form = ChangePasswordForm()
+    main_form = DefinitionForm()
 
     if cluster_id and req.method == 'GET':
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
@@ -119,9 +138,7 @@ def index(req):
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,
         'defs':defs,
-        'create_form': create_form,
-        'edit_form': edit_form,
-        'change_password_form': change_password_form
+        'main_form': main_form,
         }
 
     # TODO: Should really be done by a decorator.
@@ -157,8 +174,6 @@ def create(req):
 
         zato_message = _get_edit_create_message(req.POST)
         
-        return_data = {'pk': 'zzz'}
-
         # Create the definition first ..
         _, zato_message, soap_response = invoke_admin_service(cluster, 
                                     'zato:security.ssl.create', zato_message)
@@ -183,26 +198,27 @@ def create(req):
     
 @meth_allowed('POST')
 def format_item(req):
+    
+    formatted = _format_item(req.POST['ssl-def-field'], req.POST['ssl-def-op'], req.POST['ssl-def-value'])
+    return HttpResponse(formatted)
 
-    field = req.POST['ssl-def-field']
-    op_raw = req.POST['ssl-def-op']
-    op = ZATO_FIELD_OPERATORS[op_raw]
-    value = req.POST['ssl-def-value']
-    id = uuid4().hex
+@meth_allowed('POST')
+def format_items(req, id, cluster_id):
+
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     
-    row_template = """
-        <tr id="ssl-def-row-{id}">
-            <td>{field}</td>
-            <td>{op}</td>
-            <td>{value}</td>
-            <td>
-                <a href="javascript:remove_from_def('{id}')" class="common">Remove from definition</a>
-                <input type="hidden" name="ssl-def-hidden" value="{field}{sep}{op_raw}{sep}{value}" />
-            </td>
-        </tr>
-    """.format(id=id, field=field, op=op, op_raw=op_raw, value=value, sep=ZATO_FORM_SEPARATOR)
+    # .. and now grab its items for further formatting.
+    zato_message = Element('{%s}zato_message' % zato_namespace)
+    zato_message.data = Element('data')
+    zato_message.data.id = id
+    _, zato_message, soap_response = invoke_admin_service(cluster, 
+                                'zato:security.ssl.get', zato_message)
     
-    return HttpResponse(row_template)
+    out = []
+    for item in zato_message.data.definition.def_items.getchildren():
+        out.append(_format_item(item.field, item.operator, item.value))
+        
+    return HttpResponse('<br/>'.join(out))
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
