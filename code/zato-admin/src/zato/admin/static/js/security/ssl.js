@@ -14,17 +14,17 @@ var SSLAuth = Class.create({
 
 // A nicer toString.
 SSLAuth.prototype.toString = function() {
-    return "<SSLAuth\
-        id=[" + this.id + "]\
-        cluster_id=[" + this.cluster_id + "]\
-        name=[" + this.name + "]\
-        is_active=[" + this.is_active + "]\
-        definition_text=[" + this.definition_text + "]\
-    >";
+    return '<SSLAuth\
+        id=[' + this.id + ']\
+        cluster_id=[' + this.cluster_id + ']\
+        name=[' + this.name + ']\
+        is_active=[' + this.is_active + ']\
+        definition_text=[' + this.definition_text + ']\
+    >';
 };
 
 SSLAuth.prototype.boolean_html = function(attr) {
-    return attr ? "Yes": "No";
+    return attr ? 'Yes': 'No';
 }
 
 
@@ -32,13 +32,13 @@ SSLAuth.prototype.boolean_html = function(attr) {
 SSLAuth.prototype.to_record = function() {
     var record = new Array();
     
-    record["selection"] = "<input type='checkbox' />";
-    record["name"] = this.name;
-    record["is_active"] = this.boolean_html(this.is_active);
-    record["definition_text"] = this.definition_text;
+    record['selection'] = "<input type='checkbox' />";
+    record['name'] = this.name;
+    record['is_active'] = this.boolean_html(this.is_active);
+    record['definition_text'] = this.definition_text;
     
-    record["edit"] = String.format("<a href=\"javascript:edit('{0}')\">Edit</a>", this.id);
-    record["delete"] = String.format("<a href=\"javascript:delete_('{0}')\">Delete</a>", this.id);
+    record['edit'] = String.format("<a href=\'javascript:edit('{0}')\'>Edit</a>", this.id);
+    record['delete'] = String.format("<a href=\'javascript:delete_('{0}')\'>Delete</a>", this.id);
 
     return record;
 };
@@ -50,14 +50,24 @@ SSLAuth.prototype.add_row = function(object, data_dt) {
     
     var added_record = data_dt.getRecord(add_at_idx);
     
-    added_record.setData("id", object.id);
-    added_record.setData("name", object.name);
-    added_record.setData("is_active", object.is_active);
-    added_record.setData("definition_text", object.definition_text);
+    added_record.setData('id', object.id);
+    added_record.setData('name', object.name);
+    added_record.setData('is_active', object.is_active);
+    added_record.setData('definition_text', object.definition_text);
 
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+
+function clear_def_table() {
+	/* Clears the table used for creating and editing of the definitions.
+	Removes each 'tr' element, except for the one used for adding new 
+	field/value pairs. */
+	
+    $$("tr[id^='ssl-def-row-']").each(function(elem) {
+        elem.remove();
+    })
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // create
@@ -67,7 +77,7 @@ function create_cleanup() {
     //$('ssl-def-value').removeClassName('required');
     
     create_validation.reset();
-    $("main-form").reset();
+    $('main-form').reset();
 
     /* See comment for add_to_def for explanation */
 
@@ -87,17 +97,17 @@ function create_cleanup() {
     
 }
 
-function setup_create_dialog() {
+function setup_main_dialog() {
 
     var on_create_submit = function() {
         if(create_validation.validate()) {
         
-            var def_elems = $$('tr[id^="ssl-def-row-"]');
+            var def_elems = $$("tr[id^='ssl-def-row-']");
             
             // First let's check whether there's at least one field/value pair
             // in the definition.
             if(!(def_elems && def_elems.length)) {
-                alert("There must be least one field/value pair added to the definition.");
+                alert('There must be least one field/value pair added to the definition.');
                 return;
             }
             else {
@@ -119,15 +129,15 @@ function setup_create_dialog() {
         var json = YAHOO.lang.JSON.parse(o.responseText);
 
         object.id = json.pk;
-        object.name = $("id_name").value;
-        object.is_active = $F("id_is_active") == "on";
+        object.name = $('id_name').value;
+        object.is_active = $F('id_is_active') == 'on';
         object.definition_text = json.definition_text
         object.add_row(object, data_dt);
         
         // Hide the dialog and confirm the changes have been saved.
-        create_dialog.hide();
+        main_dialog.hide();
 
-        update_user_message(true, "Succesfully created a new SSL/TLS definition");
+        update_user_message(true, 'Succesfully created a new SSL/TLS definition');
 
         // Cleanup after work.
         create_cleanup();
@@ -137,30 +147,30 @@ function setup_create_dialog() {
     var on_create_failure = function(o) {
         create_cleanup();
         update_user_message(false, o.responseText);
-        create_dialog.hide();
+        main_dialog.hide();
     };
 
     // Remove progressively enhanced content class, just before creating the module.
-    YAHOO.util.Dom.removeClass("form-div", "yui-pe-content");
+    YAHOO.util.Dom.removeClass('form-div', 'yui-pe-content');
 
     // Instantiate the dialog.
-    create_dialog = new YAHOO.widget.Dialog("form-div",
-                            { width: "79em",
+    main_dialog = new YAHOO.widget.Dialog('form-div',
+                            { width: '79em',
                               fixedcenter: true,
                               visible: false,
                               draggable: true,
-                              postmethod: "async",
+                              postmethod: 'async',
                               hideaftersubmit: false,
                               constraintoviewport: true,
-                              buttons: [{text:"Submit", handler:on_create_submit},
-                                        {text:"Cancel", handler:on_create_cancel, isDefault:true}]
+                              buttons: [{text:'Submit', handler:on_create_submit},
+                                        {text:'Cancel', handler:on_create_cancel, isDefault:true}]
                             });
 
-    create_dialog.callback.success = on_create_success;
-    create_dialog.callback.failure = on_create_failure;
+    main_dialog.callback.success = on_create_success;
+    main_dialog.callback.failure = on_create_failure;
 
     // Render the dialog.
-    create_dialog.render();
+    main_dialog.render();
 }
 
 function add_to_def() {
@@ -183,7 +193,7 @@ function add_to_def() {
     $('ssl-def-value').removeClassName('required');
     
     /* Check for duplicate fields */
-    var def_elems = $$('tr[id^="ssl-def-row-"]');
+    var def_elems = $$("tr[id^='ssl-def-row-']");
     var given = $('ssl-def-field').value.strip();
     for(var x=0; x<def_elems.length; x++) {
         if(def_elems[x].firstDescendant().innerHTML == given) {
@@ -193,7 +203,7 @@ function add_to_def() {
     }
 
     var on_success = function(o) {
-        $('ssl-def-table').insert(o.responseText);
+        $('ssl-def-tbody').insert(o.responseText);
         $('ssl-def-field').clear();
         $('ssl-def-value').clear();
         $('ssl-def-field').focus();
@@ -208,8 +218,7 @@ function add_to_def() {
         failure: on_failure,
     };
 
-    var url = String.format('./format-item/');
-
+    var url = './format-item/'
     YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
     YAHOO.util.Connect.setForm($('main-form'));
     
@@ -236,14 +245,14 @@ function edit_cleanup() {
 function setup_delete_dialog() {
 
     var on_success = function(o) {
-        msg = "Successfully deleted the SSL/TLS definition [" + current_delete_name + "]";
+        msg = 'Successfully deleted the SSL/TLS definition [' + current_delete_name + ']';
 
         // Delete the row..
         
         var records = data_dt.getRecordSet().getRecords();
         for (x=0; x < records.length; x++) {
             var record = records[x];
-            var id_record = record.getData("id");
+            var id_record = record.getData('id');
             if(id_record && current_delete_id == id_record) {
                 data_dt.deleteRow(x);
                 break;
@@ -265,10 +274,10 @@ function setup_delete_dialog() {
 
     var on_yes = function() {
 
-        var url = String.format("./delete/{0}/cluster/{1}/", current_delete_id, $("cluster_id").value);
+        var url = String.format('./delete/{0}/cluster/{1}/', current_delete_id, $('cluster_id').value);
 
-        YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get("csrftoken"));
-        var transaction = YAHOO.util.Connect.asyncRequest("POST", url, callback);
+        YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
+        var transaction = YAHOO.util.Connect.asyncRequest('POST', url, callback);
 
         this.hide();
     };
@@ -277,8 +286,8 @@ function setup_delete_dialog() {
         this.hide();
     };
 
-    delete_dialog = new YAHOO.widget.SimpleDialog("delete_dialog", {
-        width: "36em",
+    delete_dialog = new YAHOO.widget.SimpleDialog('delete_dialog', {
+        width: '36em',
         effect:{
             effect: YAHOO.widget.ContainerEffect.FADE,
             duration: 0.10
@@ -289,15 +298,15 @@ function setup_delete_dialog() {
         draggable: true
     });
 
-    delete_dialog.setHeader("Are you sure?");
-    delete_dialog.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_WARN);
+    delete_dialog.setHeader('Are you sure?');
+    delete_dialog.cfg.setProperty('icon', YAHOO.widget.SimpleDialog.ICON_WARN);
 
     var delete_buttons = [
-        {text: "Yes", handler: on_yes},
-        {text:"Cancel", handler: on_no, isDefault:true}
+        {text: 'Yes', handler: on_yes},
+        {text:'Cancel', handler: on_no, isDefault:true}
     ];
 
-    delete_dialog.cfg.queueProperty("buttons", delete_buttons);
+    delete_dialog.cfg.queueProperty('buttons', delete_buttons);
     delete_dialog.render(document.body);
 
 };
@@ -307,39 +316,43 @@ function setup_delete_dialog() {
 function create(cluster_id) {
 
     // Set up the form validation if necessary.
-    if(typeof create_validation == "undefined") {
-        create_validation = new Validation("main-form");
+    if(typeof create_validation == 'undefined') {
+        create_validation = new Validation('main-form');
     }
+
+    $('main-form').writeAttribute('action', './create/');
     create_validation.reset();
-    create_dialog.show();
+    main_dialog.show();
 }
 
 function edit(id) {
 
     // Set up the form validation if necessary.
-    if(typeof edit_validation == "undefined") {
-        edit_validation = new Validation("main-form");
+    if(typeof edit_validation == 'undefined') {
+        edit_validation = new Validation('main-form');
     }
+
+	clear_def_table();
+    $('main-form').writeAttribute('action', './edit/');
     edit_validation.reset();
     
-    cluster_id = $("cluster_id").value
-    $("id_edit-cluster_id").value = cluster_id;
+    cluster_id = $('cluster_id').value
+    $('cluster_id').value = cluster_id;
 
     var records = data_dt.getRecordSet().getRecords();
     for (x=0; x < records.length; x++) {
         var record = records[x];
-        var id_record = record.getData("id");
+        var id_record = record.getData('id');
         if(id_record && id_record == id) {
         
-            is_active = record.getData("is_active") ? 'on' : ''
+            is_active = record.getData('is_active') ? 'on' : ''
             
-            $("id_edit-id").value = id;
-            $("id_edit-name").value = record.getData("name");
-            $("id_edit-is_active").setValue(is_active);
+            $('id').value = id;
+            $('id_name').value = record.getData('name');
+            $('id_is_active').setValue(is_active);
 
             var on_success = function(o) {
-        
-                update_user_message(true, o.responseText);
+				$('ssl-def-tbody').insert(o.responseText);
             };
         
             var on_failure = function(o) {
@@ -353,13 +366,14 @@ function edit(id) {
 
             var url = String.format('./format-items/{0}/cluster/{1}/', id, cluster_id);
     
-            YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get("csrftoken"));
-            var transaction = YAHOO.util.Connect.asyncRequest("POST", url, callback);
+            YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
+            var transaction = YAHOO.util.Connect.asyncRequest('POST', url, callback);
+            
+            break;
             
         }
     }
-    
-    edit_dialog.show();
+    main_dialog.show();
 }
 
 function delete_(id) {
@@ -369,14 +383,14 @@ function delete_(id) {
     var records = data_dt.getRecordSet().getRecords();
     for (x=0; x < records.length; x++) {
         var record = records[x];
-        var id_record = record.getData("id");
+        var id_record = record.getData('id');
         if(id_record && id == id_record) {
-            current_delete_name = record.getData("name").strip();
+            current_delete_name = record.getData('name').strip();
             break;
         }
     }
 
-    delete_dialog.setBody(String.format("Are you sure you want to delete the SSL/TLS definition [{0}]", current_delete_name));
+    delete_dialog.setBody(String.format('Are you sure you want to delete the SSL/TLS definition [{0}]', current_delete_name));
     delete_dialog.show();
     
 }
@@ -384,6 +398,6 @@ function delete_(id) {
 // /////////////////////////////////////////////////////////////////////////////
 
 YAHOO.util.Event.onDOMReady(function() {
-    setup_create_dialog();
+    setup_main_dialog();
     setup_delete_dialog();
 });
