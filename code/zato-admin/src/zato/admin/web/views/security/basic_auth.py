@@ -108,7 +108,7 @@ def index(req):
 
 @meth_allowed('POST')
 def edit(req):
-    """ Updates the HTTP Basic Auth definitions's parameters (everything except
+    """ Updates the HTTP Basic Auth definition's parameters (everything except
     for the password).
     """
     try:

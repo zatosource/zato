@@ -296,7 +296,7 @@ class HTTPBasicAuth(Base):
     def __repr__(self):
         return make_repr(self)
     
-class SSLBasicAuth(Base):
+class SSLAuth(Base):
     """ An SSL/TLS-based auth definition.
     """
     __tablename__ = 'ssl_auth_def'
@@ -312,7 +312,7 @@ class SSLBasicAuth(Base):
     security_def_id = Column(Integer, ForeignKey('security_def.id'), 
                              nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('ssl_auth_def', 
-                                                    order_by=name, uselist=False))
+                                    order_by=name, uselist=False))
 
     def __init__(self, id=None, name=None, is_active=None, cluster=None,
                  definition_text=''):
@@ -325,7 +325,7 @@ class SSLBasicAuth(Base):
     def __repr__(self):
         return make_repr(self)
     
-class SSLBasicAuthItem(Base):
+class SSLAuthItem(Base):
     """ A particular key/value pair of a given SSL/TLS-based auth definition.
     """
     __tablename__ = 'ssl_auth_def_item'
@@ -336,8 +336,10 @@ class SSLBasicAuthItem(Base):
     operator = Column(String(20), nullable=False)
     value = Column(String(200), nullable=False)
     
-    def_id = Column(Integer, ForeignKey('ssl_auth_def.id'), nullable=False)
-    def_ = relationship(SSLBasicAuth, backref=backref('items', order_by=field))
+    def_id = Column(Integer, ForeignKey('ssl_auth_def.id', ondelete='CASCADE'),
+                    nullable=False)
+    def_ = relationship(SSLAuth, backref=backref('items', order_by=field,
+                    cascade='all, delete, delete-orphan', single_parent=True))
     
     def __init__(self, id=None, field=None, operator=None, value=None, def_=None):
         self.id = id
