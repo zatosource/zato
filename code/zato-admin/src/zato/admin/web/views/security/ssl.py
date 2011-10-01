@@ -218,7 +218,7 @@ def format_items(req, id, cluster_id):
     for item in zato_message.data.definition.def_items.getchildren():
         out.append(_format_item(item.field, item.operator, item.value))
         
-    return HttpResponse('<br/>'.join(out))
+    return HttpResponse(''.join(out))
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):

@@ -146,17 +146,19 @@
                                         <th>Value</th>
                                         <th>&nbsp;</th>
                                     </tr>
-                                    <tr id="ssl-def-inputs">
-                                        <td><input type="text" name="ssl-def-field"  id="ssl-def-field" /></td>
-                                        <td>
-                                            <select name="ssl-def-op" id="ssl-def-op">
-                                                <option value="is-equal-to">==</option>
-                                                <option value="is-not-equal-to">!=</option>
-                                            </select>
-                                        </td>
-                                        <td><input type="text" name="ssl-def-value" id="ssl-def-value" /></td>
-                                        <td><a href="javascript:add_to_def()" class="common">Add to definition</a></td>
-                                    </tr>
+                                    <tbody id="ssl-def-tbody">
+                                        <tr id="ssl-def-inputs">
+                                            <td><input type="text" name="ssl-def-field"  id="ssl-def-field" /></td>
+                                            <td>
+                                                <select name="ssl-def-op" id="ssl-def-op">
+                                                    <option value="is-equal-to">==</option>
+                                                    <option value="is-not-equal-to">!=</option>
+                                                </select>
+                                            </td>
+                                            <td><input type="text" name="ssl-def-value" id="ssl-def-value" /></td>
+                                            <td><a href="javascript:add_to_def()" class="common">Add to definition</a></td>
+                                        </tr>
+                                    </tbody>
                                 </table>
                             </td>
                         </tr>
