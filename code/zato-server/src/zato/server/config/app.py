@@ -151,6 +151,7 @@ class ZatoContext(PythonConfig):
             'zato:security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
             
             # SSL/TLS
+            'zato:security.ssl.get':'zato.server.service.internal.security.ssl.Get',
             'zato:security.ssl.get-list':'zato.server.service.internal.security.ssl.GetList',
             'zato:security.ssl.create':'zato.server.service.internal.security.ssl.Create',
             'zato:security.ssl.edit':'zato.server.service.internal.security.ssl.Edit',
