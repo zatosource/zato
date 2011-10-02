@@ -81,7 +81,7 @@ def _get_definition_text(items):
             item.field, ZATO_FIELD_OPERATORS[item.operator], item.value))
     return '<br/>'.join(out)
 
-def _get_edit_create_message(params, prefix=''):
+def _get_edit_create_message(params):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     
@@ -89,8 +89,8 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data = Element('data')
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.data.name = params['name']
+    zato_message.data.is_active = bool(params.get('is_active'))
     zato_message.data.def_items = Element('items')
     
     hidden = params.getlist('ssl-def-hidden')
@@ -154,7 +154,7 @@ def edit(req):
     try:
         cluster_id = req.POST.get('cluster_id')
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = _get_edit_create_message(req.POST, prefix='edit-')
+        zato_message = _get_edit_create_message(req.POST)
 
         _, zato_message, soap_response = invoke_admin_service(cluster,
                                     'zato:security.ssl.edit', zato_message)

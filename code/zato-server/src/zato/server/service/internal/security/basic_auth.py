@@ -136,8 +136,6 @@ class Edit(AdminService):
             self.server.odb.add(definition)
             self.server.odb.commit()
             
-        except orm_exc.NoResultFound:
-            raise ZatoException('HTTP Basic Auth definition [%s] does not exist' % new_params['original_name'])
         except Exception, e:
             msg = "Could not update the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)

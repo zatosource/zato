@@ -72,11 +72,11 @@ function clear_def_table() {
 ////////////////////////////////////////////////////////////////////////////////
 // create
 ////////////////////////////////////////////////////////////////////////////////
-function create_cleanup() {
+function main_cleanup() {
 
     //$('ssl-def-value').removeClassName('required');
     
-    create_validation.reset();
+    main_validation.reset();
     $('main-form').reset();
 
     /* See comment for add_to_def for explanation */
@@ -100,8 +100,8 @@ function create_cleanup() {
 
 function setup_main_dialog() {
 
-    var on_create_submit = function() {
-        if(create_validation.validate()) {
+    var on_button_submit = function() {
+        if(main_validation.validate()) {
         
             var def_elems = $$("tr[id^='ssl-def-row-']");
             
@@ -114,18 +114,19 @@ function setup_main_dialog() {
             else {
                 // Submit the form if no errors have been found on the UI side.
                 this.submit();
-                create_validation.reset();
+                main_validation.reset();
             }
         }
     };
 
-    var on_create_cancel = function() {
+    var on_button_cancel = function() {
         this.cancel();
-        create_cleanup();
+        main_cleanup();
     };
 
-    var on_create_success = function(o) {
+    var on_button_success = function(o) {
 
+		/*
         var object = new SSLAuth();
         var json = YAHOO.lang.JSON.parse(o.responseText);
 
@@ -134,19 +135,33 @@ function setup_main_dialog() {
         object.is_active = $F('id_is_active') == 'on';
         object.definition_text = json.definition_text
         object.add_row(object, data_dt);
+		*/
         
         // Hide the dialog and confirm the changes have been saved.
         main_dialog.hide();
 
-        update_user_message(true, 'Succesfully created a new SSL/TLS definition');
+		if(current_action == 'create') {
+			success_msg = 'Succesfully created a new SSL/TLS definition';
+		}
+		else {
+			success_msg = 'Succesfully updated the SSL/TLS definition';
+		};
+
+        update_user_message(true, success_msg);
 
         // Cleanup after work.
-        create_cleanup();
+        main_cleanup();
 
     };
 
-    var on_create_failure = function(o) {
-        create_cleanup();
+    var on_button_failure = function(o) {
+		if(current_action == 'create') {
+			main_cleanup();
+		}
+		else {
+			edit_cleanup();
+		}
+		
         update_user_message(false, o.responseText);
         main_dialog.hide();
     };
@@ -163,12 +178,12 @@ function setup_main_dialog() {
                               postmethod: 'async',
                               hideaftersubmit: false,
                               constraintoviewport: true,
-                              buttons: [{text:'Submit', handler:on_create_submit},
-                                        {text:'Cancel', handler:on_create_cancel, isDefault:true}]
+                              buttons: [{text:'Submit', handler:on_button_submit},
+                                        {text:'Cancel', handler:on_button_cancel, isDefault:true}]
                             });
 
-    main_dialog.callback.success = on_create_success;
-    main_dialog.callback.failure = on_create_failure;
+    main_dialog.callback.success = on_button_success;
+    main_dialog.callback.failure = on_button_failure;
 
     // Render the dialog.
     main_dialog.render();
@@ -235,7 +250,7 @@ function remove_from_def(id) {
 // edit
 ////////////////////////////////////////////////////////////////////////////////
 function edit_cleanup() {
-    edit_validation.reset();
+    main_validation.reset();
 	clear_def_table();
 }
 
@@ -317,27 +332,33 @@ function setup_delete_dialog() {
 
 function create(cluster_id) {
 
+	current_action = 'create';
+
     // Set up the form validation if necessary.
-    if(typeof create_validation == 'undefined') {
-        create_validation = new Validation('main-form');
+    if(typeof main_validation == 'undefined') {
+        main_validation = new Validation('main-form');
     }
 
+	main_cleanup();
     $('main-form').writeAttribute('action', './create/');
-    create_validation.reset();
+    main_validation.reset();
+	clear_def_table();
     main_dialog.show();
 }
 
 function edit(id) {
 
+	current_action = 'edit';
+
     // Set up the form validation if necessary.
-    if(typeof edit_validation == 'undefined') {
-        edit_validation = new Validation('main-form');
+    if(typeof main_validation == 'undefined') {
+        main_validation = new Validation('main-form');
     }
 
 	clear_def_table();
 	$('ssl-def-tbody').insert("<tr id='ssl-def-row-loader'><td colspan='3' class='loader'><span><img src='/static/gfx/ajax-loader.gif'/> Please wait</span></td></tr>");
     $('main-form').writeAttribute('action', './edit/');
-    edit_validation.reset();
+    main_validation.reset();
     
     cluster_id = $('cluster_id').value
     $('cluster_id').value = cluster_id;
