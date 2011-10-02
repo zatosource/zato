@@ -36,6 +36,39 @@ from zato.common.odb.model import Cluster, SSLAuth, SSLAuthItem
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
+def _get_items(def_items):
+    items = []
+    
+    children = def_items.getchildren()
+    if not children:
+        raise Exception('[def_items] element must not be empty')
+    
+    for child in children:
+        field = child.field.text.strip()
+        operator = child.operator.text.strip()
+        value = child.value.text.strip()
+        
+        if not field:
+            raise Exception('Field must not be empty in [{0}] [{1}] [{2}]'.format(
+                field, operator, value))
+        
+        if not operator:
+            raise Exception('Operator must not be empty in [{0}] [{1}] [{2}]'.format(
+                field, operator, value))
+        
+        if not value:
+            raise Exception('Value must not be empty in [{0}] [{1}] [{2}]'.format(
+                field, operator, value))
+        
+        if not operator in ZATO_FIELD_OPERATORS:
+            raise Exception('Operator must be one of [{0}] in [{1}] [{2}] [{3}]'.format(
+                sorted(ZATO_FIELD_OPERATORS.keys()), field, operator, value))
+        
+        item = SSLAuthItem(None, field, operator, value)
+        items.append(item)
+        
+    return items
+
 class Get(AdminService):
     """ Returns a particular SSL/TLS definition.
     """
@@ -110,37 +143,6 @@ class Create(AdminService):
             name = params['name']
             is_active = params['is_active']
             
-            items = []
-            
-            children = def_items.getchildren()
-            if not children:
-                raise Exception('[def_items] element must not be empty')
-            
-            for child in children:
-                field = child.field.text.strip()
-                operator = child.operator.text.strip()
-                value = child.value.text.strip()
-                
-                if not field:
-                    raise Exception('Field must not be empty in [{0}] [{1}] [{2}]'.format(
-                        field, operator, value))
-                
-                if not operator:
-                    raise Exception('Operator must not be empty in [{0}] [{1}] [{2}]'.format(
-                        field, operator, value))
-                
-                if not value:
-                    raise Exception('Value must not be empty in [{0}] [{1}] [{2}]'.format(
-                        field, operator, value))
-                
-                if not operator in ZATO_FIELD_OPERATORS:
-                    raise Exception('Operator must be one of [{0}] in [{1}] [{2}] [{3}]'.format(
-                        sorted(ZATO_FIELD_OPERATORS.keys()), field, operator, value))
-                
-                item = SSLAuthItem(None, field, operator, value)
-                items.append(item)
-                
-            
             cluster = self.server.odb.query(Cluster).filter_by(id=cluster_id).first()
             
             # Let's see if we already have a definition of that name before committing
@@ -153,7 +155,7 @@ class Create(AdminService):
                 raise Exception('SSL/TLS definition [{0}] already exists on this cluster'.format(name))
 
             auth = SSLAuth(None, name, is_active, cluster)
-            auth.items = items
+            auth.items = _get_items(def_items)
             
             self.server.odb.add(auth)
             self.server.odb.commit()
@@ -178,9 +180,9 @@ class Edit(AdminService):
         try:
             
             payload = kwargs.get('payload')
-            request_params = ['id', 'is_active', 'name', 'username', 'domain', 
-                              'cluster_id']
+            request_params = ['id', 'is_active', 'name', 'cluster_id']
             new_params = _get_params(payload, request_params, 'data.')
+            def_items = _get_params(payload, ['def_items'], 'data.', use_text=False)
             
             def_id = new_params['id']
             name = new_params['name']
@@ -195,18 +197,16 @@ class Edit(AdminService):
             if existing_one:
                 raise Exception('SSL/TLS definition [{0}] already exists on this cluster'.format(name))
             
-            definition = self.server.odb.query(SSLAuth).filter_by(id=def_id).one()
+            auth = self.server.odb.query(SSLAuth).filter_by(id=def_id).one()
+            self.server.odb.query(SSLAuthItem).filter(SSLAuthItem.def_id==auth.id).delete()
             
-            definition.name = name
-            definition.is_active = new_params['is_active']
-            definition.username = new_params['username']
-            definition.domain = new_params['domain']
+            auth.name = name
+            auth.is_active = new_params['is_active']
+            auth.items = _get_items(def_items)
 
-            self.server.odb.add(definition)
+            self.server.odb.add(auth)
             self.server.odb.commit()
             
-        except orm_exc.NoResultFound:
-            raise ZatoException('SSL/TLS definition [%s] does not exist' % new_params['original_name'])
         except Exception, e:
             msg = "Could not update the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
