@@ -225,6 +225,8 @@ class ParallelServer(object):
             push_sing_to_para = ZMQPush(name, self.zmq_context)
             self.zmq_items[name] = push_sing_to_para
             
+            self.service_store.read_internal_services()
+            
             Thread(target=self.singleton_server.run).start()
     
     def _after_init_accepted(self, server):

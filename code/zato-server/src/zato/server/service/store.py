@@ -203,9 +203,6 @@ class ServiceStore(InitializingObject):
         data = load(open(location), Loader=Loader)
         self.service_store_config = data["services"]
 
-    def after_properties_set(self):
-        self.read_internal_services()
-
     def _invoke_hook(self, object_, hook_name):
         """ A utility method for invoking various service's hooks.
         """
@@ -288,7 +285,7 @@ class ServiceStore(InitializingObject):
 
                             self.services[class_name] = data
                 except TypeError, e:
-                    # Ignore non-class objects passed to issubclass
+                    # Ignore non-class objects passed in to issubclass
                     self.logger.log(TRACE1, "Ignoring exception, name=[%s], item=[%s], e=[%s]" % (
                         name, item, format_exc()))
 
