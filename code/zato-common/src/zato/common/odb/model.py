@@ -464,3 +464,27 @@ class SQLConnectionPoolPassword(Base):
 
     def __repr__(self):
         return make_repr(self)
+
+
+################################################################################
+
+class Job(Base):
+    """ A scheduler's job. Stores all the information needed to execute a job
+    if it's a one-time job, otherwise the information is kept in related tables.
+    """
+    __tablename__ = 'service'
+    __table_args__ = (UniqueConstraint('name'), {})
+    
+    id = Column(Integer,  Sequence('job_id_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    name = Column(String(200), nullable=False)
+    job_type = Column(String(20), nullable=False)
+    extra = Column(LargeBinary(400000), nullable=True)
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('jobs', order_by=name))
+    
+    service_id = Column(Integer, ForeignKey('service.id'), nullable=False)
+    service = relationship(Cluster, backref=backref('jobs', order_by=name))
+
+################################################################################
