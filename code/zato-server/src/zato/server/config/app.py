@@ -209,11 +209,11 @@ class ZatoContext(PythonConfig):
         server = ParallelServer()
         server.odb = self.odb_manager()
         server.soap_handler = self.soap_message_handler()
+        server.service_store = self.service_store()
 
         # Regular objects.
         #server.sql_pool = self.sql_pool()
         #server.odb_pool_config = self.odb_pool_config()
-        #server.service_store = self.service_store()
         #server.wss_nonce_cache = self.wss_nonce_cache()
         #server.wss_store = self.wss_username_password_store()
 

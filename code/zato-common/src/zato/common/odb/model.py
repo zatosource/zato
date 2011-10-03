@@ -388,20 +388,6 @@ class TechnicalAccount(Base):
 
 ################################################################################
 
-class Service(Base):
-    """ A Zato service.
-    """
-    __tablename__ = 'service'
-    __table_args__ = (UniqueConstraint('name'), UniqueConstraint('impl_name'), {})
-    
-    id = Column(Integer,  Sequence('service_id_seq'), primary_key=True)
-    name = Column(String(2000), nullable=False)
-    impl_name = Column(String(2000), nullable=False)
-    usage_count = Column(Integer(), server_default='0', nullable=False)
-    is_internal = Column(Boolean(), nullable=False)
-        
-################################################################################
-
 class SQLConnectionPool(Base):
     """ An SQL connection pool.
     """
@@ -468,23 +454,60 @@ class SQLConnectionPoolPassword(Base):
 
 ################################################################################
 
+class Service(Base):
+    """ A set of basic informations about a service available in a given cluster.
+    """
+    __tablename__ = 'service'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    
+    id = Column(Integer,  Sequence('service_id_seq'), primary_key=True)
+    name = Column(String(2000), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    impl_name = Column(String(2000), nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('services', order_by=name))
+    
+class DeployedService(Base):
+    """ A service living on a given server.
+    """
+    __tablename__ = 'deployed_service'
+    __table_args__ = (UniqueConstraint('server_id', 'service_id'), {})
+    
+    deployment_time = Column(DateTime(), nullable=False)
+    details = Column(String(2000), nullable=False)
+
+    server_id = Column(Integer, ForeignKey('server.id'), nullable=False,
+                       primary_key=True)
+    server = relationship(Server, backref=backref('deployed_services', 
+                                                order_by=deployment_time))
+    
+    service_id = Column(Integer, ForeignKey('service.id'), nullable=False,
+                        primary_key=True)
+    service = relationship(Service, backref=backref('deployment_data', 
+                                                order_by=deployment_time))
+    
+################################################################################
+
 class Job(Base):
     """ A scheduler's job. Stores all the information needed to execute a job
     if it's a one-time job, otherwise the information is kept in related tables.
     """
-    __tablename__ = 'service'
-    __table_args__ = (UniqueConstraint('name'), {})
+    __tablename__ = 'job'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
     
     id = Column(Integer,  Sequence('job_id_seq'), primary_key=True)
-    is_active = Column(Boolean(), nullable=False)
     name = Column(String(200), nullable=False)
-    job_type = Column(String(20), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    job_type = Column(Enum('one-time', 'interval-based', 'cron-style', 
+                           name='job_type'), nullable=False)
     extra = Column(LargeBinary(400000), nullable=True)
     
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('jobs', order_by=name))
     
     service_id = Column(Integer, ForeignKey('service.id'), nullable=False)
-    service = relationship(Cluster, backref=backref('jobs', order_by=name))
+    service = relationship(Service, backref=backref('jobs', order_by=name))
 
 ################################################################################
