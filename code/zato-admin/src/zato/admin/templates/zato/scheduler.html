@@ -130,8 +130,8 @@
                     oDT: data_dt
                 };
             }();
-
-            data_dt.subscribe("cellClickEvent", on_cell_click_event);
+            
+            /* data_dt.subscribe("cellClickEvent", on_cell_click_event); */
 
         });
         </script>
@@ -195,7 +195,7 @@
                                 <input id="id_create-one-time-date_time" class="required"
                                     name="create-one-time-date_time" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:show_create_one_time_date_time_picker();"
+                                        onclick="javascript:dt_picker('id_create-one-time-date_time')"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -219,6 +219,8 @@
                 </form>
             </div>
         </div>
+        
+        <!--
 
         <div id="create-interval_based" class="yui-pe-content">
             <div class="hd">Create an interval-based job</div>
@@ -414,6 +416,8 @@
                 </form>
             </div>
         </div>
+        
+        -->
 
     {% endif %} {% comment %}cluster_id{% endcomment %}
 

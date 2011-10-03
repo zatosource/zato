@@ -34,6 +34,171 @@ Job.prototype.to_record = function() {
     return record;
 };
 
+// /////////////////////////////////////////////////////////////////////////////
+function dt_picker(input_id) {
+
+    var year, month, day, hour, minute;
+    var date_time = $(input_id).value;
+
+    // It's okay if there's no value at all, it could be a 'create' action
+    // currently being handled.
+    if(date_time == '') {
+        now = new Date();
+        year = now.getFullYear();
+        month = now.getMonth();
+        day = now.getDay();
+        hour = now.getHours();
+        minute = now.getMinutes();
+        second = now.getSeconds();
+    }
+    else {
+        var date_time_splitted = date_time.split(" ");
+        if(date_time_splitted.length != 2) {
+            return; // What can we do..
+        }
+
+        var date_splitted = date_time_splitted[0].split("-");
+        if(date_splitted.length != 3) {
+            return; // Same as above..
+        }
+
+        year = parseInt(date_splitted[0]);
+        month = parseInt(date_splitted[1]) - 1;
+        day = parseInt(date_splitted[2]);
+
+        var time_splitted = date_time_splitted[1].split(":");
+        if(time_splitted.length != 3) {
+            return; // Same as above..
+        }
+
+        hour = parseInt(time_splitted[0]);
+        minute = parseInt(time_splitted[1]);
+        second = parseInt(time_splitted[2]);
+
+        var date_time_splitted = date_time.split(" ");
+    }
+
+    var picker_options = {
+        time:true,
+        year_range:10,
+        minute_interval:1,
+        initial_year: year,
+        initial_month: month,
+        initial_day: day,
+        initial_hour: hour,
+        initial_minute: minute,
+        initial_second: second,
+    }
+    var calendar_date_select = new CalendarDateSelect($(input_id), picker_options);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// create
+// /////////////////////////////////////////////////////////////////////////////
+
+function create(job_type) {
+    // Show the dialogs.
+    
+    if(job_type == 'one-time') {
+        $('create-one_time').show();
+        create_one_time_dialog.show();
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+function setup_create_dialog_one_time() {
+    var create_one_time_validation = new Validation('create-form-one_time');
+
+    var on_submit = function() {
+        if(create_one_time_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+        }
+    };
+
+    var on_cancel = function() {
+        this.cancel();
+        create_one_time_dialog.hide();
+        $('create-form-one_time').reset();
+        create_one_time_validation.reset();
+    };
+
+    var on_success = function(o) {
+
+        var job = new OneTimeJob(null);
+
+        job.properties_from_form('id_create-one-time-');
+        job.server_id = $('current_server_id').value;
+        job.definition = o.responseText;
+
+        data_dt.addRow(job.to_record());
+        create_one_time_dialog.hide();
+        $('create-form-one_time').reset();
+        create_one_time_validation.reset();
+
+        update_user_message(true, 'Successfully created job [' + job.job_name + '].');
+    };
+
+    var on_failure = function(o) {
+        create_one_time_dialog.hide();
+        $('create-form-one_time').reset();
+        create_one_time_validation.reset();
+        update_user_message(false, o.responseText);
+    };
+
+    // Instantiate the dialog if necessary.
+    if(typeof create_one_time_dialog == 'undefined') {
+        create_one_time_dialog = new YAHOO.widget.Dialog('create-one_time',
+                                { width: '50em',
+                                  fixedcenter: true,
+                                  visible: false,
+                                  draggable: true,
+                                  postmethod: 'async',
+                                  hideaftersubmit: false,
+                                  constraintoviewport: true,
+                                  buttons: [{text:'Submit', handler:on_submit},
+                                            {text:'Cancel', handler:on_cancel, isDefault:true}]
+                                });
+
+        create_one_time_dialog.callback.success = on_success;
+        create_one_time_dialog.callback.failure = on_failure;
+
+        create_one_time_dialog.render();
+    }
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+
+YAHOO.util.Event.onDOMReady(function() {
+
+    Date.prototype.getPaddedHours = function() {
+        var hour = this.getHours();
+        if (hour < 10)
+            hour = "0" + hour;
+        return hour;
+    }
+
+    // Customize formatting of hours by adding a leading '0' if it's < 10
+    Date.prototype.toFormattedString = function(include_time) {
+        var hour;
+        var str = this.getFullYear() + "-" + Date.padded2(this.getMonth() + 1) + "-" +Date.padded2(this.getDate());
+        if (include_time) {
+            hour = this.getHours();
+            str += " " + this.getPaddedHours() + ":" + this.getPaddedMinutes() + ":00";
+        }
+        return str;
+    };
+
+    setup_create_dialog_one_time();
+    //setup_edit_dialog();
+    //setup_change_password_dialog();
+    //setup_delete_dialog();
+});
+
+// /////////////////////////////////////////////////////////////////////////////
+
 /*
 
 // Populates the job's attributes basing on the values from a given record.
@@ -454,93 +619,12 @@ function job_edit(job) {
 
 YAHOO.util.Event.onDOMReady(function() {
 
-    // Customize formatting of hours by adding a leading '0' if it's < 10
-    Date.prototype.toFormattedString = function(include_time) {
-        var hour;
-        var str = this.getFullYear() + "-" + Date.padded2(this.getMonth() + 1) + "-" +Date.padded2(this.getDate());
-        if (include_time) {
-            hour = this.getHours();
-            str += " " + this.getPaddedHours() + ":" + this.getPaddedMinutes() + ":00";
-        }
-        return str;
-    };
-
-    Date.prototype.getPaddedHours = function() {
-        var hour = this.getHours();
-        if (hour < 10)
-            hour = "0" + hour;
-        return hour;
-    }
-
     // /////////////////////////////////////////////////////////////////////////
     //
     // Job creation context menu
     //
     // /////////////////////////////////////////////////////////////////////////
     var on_create_one_time = function() {
-
-        var create_one_time_validation = new Validation("create-form-one_time", {immediate: true});
-
-        var on_create_one_time_submit = function() {
-            if(create_one_time_validation.validate()) {
-                // Submit the form if no errors have been found on the UI side.
-                this.submit();
-            }
-        };
-
-        var on_create_one_time_cancel = function() {
-            this.cancel();
-            create_one_time_dialog.hide();
-            $("create-form-one_time").reset();
-            create_one_time_validation.reset();
-        };
-
-        var on_create_one_time_success = function(o) {
-
-            var job = new OneTimeJob(null);
-
-            job.properties_from_form("id_create-one-time-");
-            job.server_id = $("current_server_id").value;
-            job.definition = o.responseText;
-
-            data_dt.addRow(job.to_record());
-            create_one_time_dialog.hide();
-            $("create-form-one_time").reset();
-            create_one_time_validation.reset();
-
-            update_user_message(true, "Successfully created job [" + job.job_name + "].");
-        };
-
-        var on_create_one_time_failure = function(o) {
-            create_one_time_dialog.hide();
-            $("create-form-one_time").reset();
-            create_one_time_validation.reset();
-            update_user_message(false, o.responseText);
-        };
-
-        // Instantiate the dialog if necessary.
-        if(typeof create_one_time_dialog == "undefined") {
-            create_one_time_dialog = new YAHOO.widget.Dialog("create-one_time",
-                                    { width: "50em",
-                                      fixedcenter: true,
-                                      visible: false,
-                                      draggable: true,
-                                      postmethod: "async",
-                                      hideaftersubmit: false,
-                                      constraintoviewport: true,
-                                      buttons: [{text:"Submit", handler:on_create_one_time_submit},
-                                                {text:"Cancel", handler:on_create_one_time_cancel, isDefault:true}]
-                                    });
-
-            create_one_time_dialog.callback.success = on_create_one_time_success;
-            create_one_time_dialog.callback.failure = on_create_one_time_failure;
-
-            create_one_time_dialog.render();
-        }
-
-        // Show the dialog.
-        $("create-one_time").show();
-        create_one_time_dialog.show();
     };
 
     var on_create_interval_based = function() {
@@ -632,79 +716,6 @@ YAHOO.util.Event.onDOMReady(function() {
     }
 
 });
-
-function show_create_one_time_date_time_picker() {
-    _show_date_time_picker("id_create-one-time-date_time");
-}
-
-function show_create_interval_based_date_time_picker() {
-    _show_date_time_picker("id_create-interval-based-start_date");
-}
-
-function show_edit_one_time_date_time_picker() {
-    _show_date_time_picker("id_edit-one-time-date_time");
-}
-
-function show_edit_interval_based_date_time_picker() {
-    _show_date_time_picker("id_edit-interval-based-start_date");
-}
-
-function _show_date_time_picker(input_id) {
-
-    var year, month, day, hour, minute;
-    var date_time = $(input_id).value;
-
-    // It's okay if there's no value at all, it could be a 'create' action
-    // currently being handled.
-    if(date_time == "") {
-        now = new Date();
-        year = now.getFullYear();
-        month = now.getMonth();
-        day = now.getDay();
-        hour = now.getHours();
-        minute = now.getMinutes();
-        second = now.getSeconds();
-    }
-    else {
-        var date_time_splitted = date_time.split(" ");
-        if(date_time_splitted.length != 2) {
-            return; // What can we do..
-        }
-
-        var date_splitted = date_time_splitted[0].split("-");
-        if(date_splitted.length != 3) {
-            return; // Same as above..
-        }
-
-        year = parseInt(date_splitted[0]);
-        month = parseInt(date_splitted[1]) - 1;
-        day = parseInt(date_splitted[2]);
-
-        var time_splitted = date_time_splitted[1].split(":");
-        if(time_splitted.length != 3) {
-            return; // Same as above..
-        }
-
-        hour = parseInt(time_splitted[0]);
-        minute = parseInt(time_splitted[1]);
-        second = parseInt(time_splitted[2]);
-
-        var date_time_splitted = date_time.split(" ");
-    }
-
-    var picker_options = {
-        time:true,
-        year_range:10,
-        minute_interval:1,
-        initial_year: year,
-        initial_month: month,
-        initial_day: day,
-        initial_hour: hour,
-        initial_minute: minute,
-        initial_second: second,
-    }
-    var calendar_date_select = new CalendarDateSelect($(input_id), picker_options);
-}
 
 function on_cell_click_event(args) {
     var target = args.target;
