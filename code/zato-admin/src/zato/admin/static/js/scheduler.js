@@ -3,19 +3,10 @@
 var Job = Class.create({
     initialize: function(record) {
         this.job_name = null;
+        this.is_active = null;
         this.job_type = null;
-        this.server_id = null;
-        this.record = record;
-        this.service = null;
-        this.date_time = null;
-        this.extra = null;
-        this.definition = null;
-        this.date_time_raw = null;
-        this.server_id = $("current_server_id").value;
+        this.definition_text = null;
 
-        if(record) {
-            this.set_properties(record);
-        }
     }
 });
 
@@ -23,18 +14,9 @@ var Job = Class.create({
 Job.prototype.toString = function() {
     return "<Job\
  job_name=[" + this.job_name + "]\
+ is_active=[" + this.is_active + "]\
  job_type=[" + this.job_type + "]\
- server_id=[" + this.server_id + "]\
- service=[" + this.service + "]\
- extra=[" + this.extra + "]\
- date_time_raw=[" + this.date_time_raw + "]\
- start_date_raw=[" + this.start_date_raw + "]\
- weeks=[" + this.weeks + "]\
- days=[" + this.days + "]\
- hours=[" + this.hours + "]\
- minutes=[" + this.minutes + "]\
- seconds=[" + this.seconds + "]\
- repeat=[" + this.repeat + "]\
+ definition_text=[" + this.definition_text + "]\
 >";
 };
 
@@ -43,28 +25,16 @@ Job.prototype.to_record = function() {
     var record = new Array();
     record["job_name"] = this.job_name;
     record["job_type"] = friendly_names.get(this.job_type);
-    record["definition"] = this.definition;
+    record["definition_text"] = this.definition_text;
     record["service"] = this.service;
     record["edit"] = "";
     record["execute"] = "";
     record["delete"] = "";
-    record["job_type_raw"] = this.job_type;
-    record["server_id"] = this.server_id;
-
-    record["date_time_raw"] = this.date_time_raw;
-    record["start_date_raw"] = this.start_date_raw;
-    record["weeks"] = this.weeks;
-    record["days"] = this.days;
-    record["hours"] = this.hours;
-    record["minutes"]= this.minutes;
-    record["seconds"] = this.seconds;
-    record["repeat"] = this.repeat;
-    record["extra"] = this.extra;
-
-    this.server_id = $("current_server_id").value;
 
     return record;
 };
+
+/*
 
 // Populates the job's attributes basing on the values from a given record.
 Job.prototype.set_properties = function(record) {
@@ -753,3 +723,5 @@ function on_cell_click_event(args) {
         job_edit(job);
      }
 }
+
+*/

@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+
+'''
 # stdlib
 import copy, logging
 from time import strptime
@@ -539,3 +541,4 @@ class Scheduler(APScheduler, DisposableObject):
         self.logger.debug("Shutting down the scheduler, destroy_wait_time=[%s]s." % self.destroy_wait_time)
         self.shutdown(int(self.destroy_wait_time))
         self.logger.info("Scheduler shut down successfully.")
+'''

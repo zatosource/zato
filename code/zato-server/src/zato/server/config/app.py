@@ -39,7 +39,7 @@ from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.pool.sql import SQLConnectionPool, SQLConnectionPool
 from zato.server.repo import RepoManager
-from zato.server.scheduler import Scheduler
+#from zato.server.scheduler import Scheduler
 from zato.server.security.wss import WSSUsernameTokenProfileStore
 from zato.server.service.store import EggServiceImporter, ServiceStore
 
@@ -224,7 +224,7 @@ class ZatoContext(PythonConfig):
         server = SingletonServer()
         server.pickup = self.pickup()
         server.config_repo_manager = self.config_repo_manager()
-        server.scheduler = self.scheduler()
+        #server.scheduler = self.scheduler()
         server.config_queue = multiprocessing.Queue()
 
         return server
@@ -234,10 +234,10 @@ class ZatoContext(PythonConfig):
 
     @Object
     def scheduler(self):
-        scheduler = Scheduler()
+        '''scheduler = Scheduler()
         scheduler.config_repo_manager = self.config_repo_manager()
 
-        return scheduler
+        return scheduler'''
 
     # #######################################################
     # SQL connection pools management
