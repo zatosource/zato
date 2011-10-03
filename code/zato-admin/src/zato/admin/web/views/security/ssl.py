@@ -148,24 +148,6 @@ def index(req):
     return render_to_response('zato/security/ssl.html', return_data)
 
 @meth_allowed('POST')
-def edit(req):
-    """ Updates the SSL/TLS definition's parameters.
-    """
-    try:
-        cluster_id = req.POST.get('cluster_id')
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = _get_edit_create_message(req.POST)
-
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                                    'zato:security.ssl.edit', zato_message)
-    except Exception, e:
-        msg = "Could not update the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        return HttpResponse()
-
-@meth_allowed('POST')
 def create(req):
 
     try:
@@ -194,6 +176,37 @@ def create(req):
         return HttpResponseServerError(msg)
     else:
         return_data = {'pk': new_id, 'definition_text':definition_text}
+        return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    
+@meth_allowed('POST')
+def edit(req):
+    """ Updates the SSL/TLS definition's parameters.
+    """
+    id = req.POST['id']
+    try:
+        cluster_id = req.POST.get('cluster_id')
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = _get_edit_create_message(req.POST)
+
+        # Update the definition first ..
+        _, zato_message, soap_response = invoke_admin_service(cluster,
+                                    'zato:security.ssl.edit', zato_message)
+        
+        # .. and now grab its items for further formatting.
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = id
+        _, zato_message, soap_response = invoke_admin_service(cluster, 
+                                    'zato:security.ssl.get', zato_message)
+        
+        definition_text = _get_definition_text(zato_message.data.definition.def_items)
+        
+    except Exception, e:
+        msg = "Could not update the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return_data = {'pk': id, 'definition_text':definition_text}
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
     
 @meth_allowed('POST')

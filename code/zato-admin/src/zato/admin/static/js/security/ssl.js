@@ -37,8 +37,8 @@ SSLAuth.prototype.to_record = function() {
     record['is_active'] = this.boolean_html(this.is_active);
     record['definition_text'] = this.definition_text;
     
-    record['edit'] = String.format("<a href=\'javascript:edit('{0}')\'>Edit</a>", this.id);
-    record['delete'] = String.format("<a href=\'javascript:delete_('{0}')\'>Delete</a>", this.id);
+    record['edit'] = String.format("<a href='javascript:edit({0})'>Edit</a>", this.id);
+    record['delete'] = String.format("<a href='javascript:delete_({0})'>Delete</a>", this.id);
 
     return record;
 };
@@ -69,9 +69,8 @@ function clear_def_table() {
     })
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// create
-////////////////////////////////////////////////////////////////////////////////
+// /////////////////////////////////////////////////////////////////////////////
+
 function main_cleanup() {
 
     //$('ssl-def-value').removeClassName('required');
@@ -125,17 +124,34 @@ function setup_main_dialog() {
     };
 
     var on_button_success = function(o) {
+	
+		var json = YAHOO.lang.JSON.parse(o.responseText);
 
-		/*
-        var object = new SSLAuth();
-        var json = YAHOO.lang.JSON.parse(o.responseText);
-
-        object.id = json.pk;
-        object.name = $('id_name').value;
-        object.is_active = $F('id_is_active') == 'on';
-        object.definition_text = json.definition_text
-        object.add_row(object, data_dt);
-		*/
+		if(current_action == 'create') {
+			var object = new SSLAuth();
+	
+			object.id = json.pk;
+			object.name = $('id_name').value;
+			object.is_active = $F('id_is_active') == 'on';
+			object.definition_text = json.definition_text
+			object.add_row(object, data_dt);
+		}
+		else {
+			var records = data_dt.getRecordSet().getRecords();
+			for (x=0; x < records.length; x++) {
+				var record = records[x];
+				var id = record.getData('id');
+				if(id && id == json.pk) {
+	
+					var is_active = $F('id_is_active') ? 'Yes': 'No';
+					record.setData('name', $('id_name').value);
+					record.setData('is_active', is_active);
+					record.setData('definition_text', json.definition_text);
+					
+					data_dt.render();
+				}
+			}
+		}
         
         // Hide the dialog and confirm the changes have been saved.
         main_dialog.hide();
@@ -246,19 +262,6 @@ function remove_from_def(id) {
     $('ssl-def-row-' + id).remove();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// edit
-////////////////////////////////////////////////////////////////////////////////
-function edit_cleanup() {
-    main_validation.reset();
-	clear_def_table();
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-// delete
-////////////////////////////////////////////////////////////////////////////////
-
 function setup_delete_dialog() {
 
     var on_success = function(o) {
@@ -330,9 +333,14 @@ function setup_delete_dialog() {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+// create
+////////////////////////////////////////////////////////////////////////////////
+
 function create(cluster_id) {
 
 	current_action = 'create';
+	$('form-title').update('Create a new SSL/TLS definition');
 
     // Set up the form validation if necessary.
     if(typeof main_validation == 'undefined') {
@@ -346,9 +354,14 @@ function create(cluster_id) {
     main_dialog.show();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// edit
+////////////////////////////////////////////////////////////////////////////////
+
 function edit(id) {
 
 	current_action = 'edit';
+	$('form-title').update('Edit the SSL/TLS definition');
 
     // Set up the form validation if necessary.
     if(typeof main_validation == 'undefined') {
@@ -369,7 +382,7 @@ function edit(id) {
         var id_record = record.getData('id');
         if(id_record && id_record == id) {
         
-            is_active = record.getData('is_active') ? 'on' : ''
+            is_active = record.getData('is_active') == 'Yes' ? 'on' : ''
             
             $('id').value = id;
             $('id_name').value = record.getData('name');
@@ -400,6 +413,15 @@ function edit(id) {
     }
     main_dialog.show();
 }
+
+function edit_cleanup() {
+    main_validation.reset();
+	clear_def_table();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// delete
+////////////////////////////////////////////////////////////////////////////////
 
 function delete_(id) {
 
