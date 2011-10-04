@@ -21,13 +21,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy.orm import joinedload, sessionmaker
+from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.common.odb.model import ChannelURLDefinition, ChannelURLSecurity, \
-     Cluster, SecurityDefinition, Server, TechnicalAccount
+     Cluster, DeployedService, SecurityDefinition, Server, Service, \
+     TechnicalAccount
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -38,12 +41,14 @@ class ODBManager(object):
     """ Manages connections to the server's Operational Database.
     """
     def __init__(self, well_known_data=None, odb_data=None, odb_config=None,
-                 crypto_manager=None, pool=None):
+                 crypto_manager=None, pool=None, server=None, cluster=None):
         self.well_known_data = well_known_data
         self.odb_data = odb_data
         self.odb_config = odb_data
         self.crypto_manager = crypto_manager
         self.pool = pool
+        self.server = server
+        self.cluster = cluster
         
     def query(self, *args, **kwargs):
         return self.session.query(*args, **kwargs)
@@ -61,6 +66,9 @@ class ODBManager(object):
         return self.session.rollback(*args, **kwargs)
         
     def fetch_server(self):
+        """ Fetches the server from the ODB. Also sets the 'cluster' attribute
+        to the value pointed to by the server's .cluster attribute.
+        """
         if not self.pool:
             if not self.odb_config:
                 odb_data = dict(self.odb_data.items())
@@ -83,9 +91,14 @@ class ODBManager(object):
         self.session = Session()
         
         try:
-            return self.session.query(Server).filter(Server.odb_token == self.odb_data['token']).one()
+            self.server = self.session.query(Server).\
+                   filter(Server.odb_token == self.odb_data['token']).\
+                   one()
+            self.cluster = self.server.cluster
+            return self.server
         except Exception, e:
-            msg = 'Could not find the server in the ODB'
+            msg = 'Could not find the server in the ODB, token=[{0}]'.format(
+                self.odb_data['token'])
             logger.error(msg)
             raise
         
@@ -124,3 +137,43 @@ class ODBManager(object):
             
         return result
     
+    def add_service(self, name, impl_name, is_internal, deployment_time, details):
+        """ Adds information about the server's service into the ODB. 
+        """
+        try:
+            service = Service(None, name, impl_name, is_internal, True, self.cluster)
+            self.add(service)
+            try:
+                self.commit()
+            except IntegrityError, e:
+                logger.debug('IntegrityError (Service), e=[{e}]'.format(e=format_exc(e)))
+                self.rollback()
+
+                # We know the service exists in the ODB so we can now add 
+                # information about its deployment status.
+                service = self.session.query(Service).\
+                    filter(Service.name==name).\
+                    filter(Cluster.id==self.cluster.id).\
+                    one()
+                self.add_deployed_service(deployment_time, details, service)
+                
+        except Exception, e:
+            msg = 'Could not add the Service, e=[{e}]'.format(e=format_exc(e))
+            logger.error(msg)
+            self.rollback()
+            
+    def add_deployed_service(self, deployment_time, details, service):
+        """ Adds information about the server's deployed service into the ODB. 
+        """
+        try:
+            service = DeployedService(deployment_time, details, self.server, service)
+            self.add(service)
+            try:
+                self.commit()
+            except IntegrityError, e:
+                logger.debug('IntegrityError (DeployedService), e=[{e}]'.format(e=format_exc(e)))
+                self.rollback()
+        except Exception, e:
+            msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
+            logger.error(msg)
+            self.rollback()
