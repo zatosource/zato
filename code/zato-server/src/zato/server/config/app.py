@@ -92,6 +92,7 @@ class ZatoContext(PythonConfig):
     @Object
     def service_store(self):
         store = ServiceStore()
+        store.odb = self.odb_manager()
         store.services = {}
 
         return store

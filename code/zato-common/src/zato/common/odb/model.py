@@ -469,6 +469,15 @@ class Service(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('services', order_by=name))
     
+    def __init__(self, id=None, name=None, impl_name=None, is_internal=None, 
+                 is_active=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.impl_name = impl_name
+        self.is_internal = is_internal
+        self.is_active = is_active
+        self.cluster = cluster
+    
 class DeployedService(Base):
     """ A service living on a given server.
     """
@@ -487,6 +496,12 @@ class DeployedService(Base):
                         primary_key=True)
     service = relationship(Service, backref=backref('deployment_data', 
                                                 order_by=deployment_time))
+    
+    def __init__(self, deployment_time, details, server, service):
+        self.deployment_time = deployment_time
+        self.details = details
+        self.server = server
+        self.service = service
     
 ################################################################################
 
