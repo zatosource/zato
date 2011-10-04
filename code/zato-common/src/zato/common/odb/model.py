@@ -525,4 +525,39 @@ class Job(Base):
     service_id = Column(Integer, ForeignKey('service.id'), nullable=False)
     service = relationship(Service, backref=backref('jobs', order_by=name))
 
+    interval_based_id = Column(Integer, ForeignKey('job_interval_based.job_id'), nullable=True)
+    interval_based = relationship('IntervalBasedJob', backref=backref('parent_job', uselist=False))
+    
+    cron_style_id = Column(Integer, ForeignKey('job_cron_style.job_id'), nullable=True)
+    cron_style = relationship('CronStyleJob', backref=backref('parent_job', uselist=False))
+    
+class IntervalBasedJob(Base):
+    """ A Cron-style scheduler's job.
+    """
+    __tablename__ = 'job_interval_based'
+    __table_args__ = (UniqueConstraint('job_id'), {})
+    
+    id = Column(Integer,  Sequence('job_intrvl_seq'), primary_key=True)
+    job_id = Column(Integer, nullable=False)
+    start_date = Column(DateTime(), nullable=False)
+    
+    #job_id = Column(Integer, nullable=False)
+    
+class CronStyleJob(Base):
+    """ A Cron-style scheduler's job.
+    """
+    __tablename__ = 'job_cron_style'
+    __table_args__ = (UniqueConstraint('job_id'), {})
+    
+    id = Column(Integer,  Sequence('job_cron_seq'), primary_key=True)
+    job_id = Column(Integer, nullable=False)
+    start_date = Column(DateTime(), nullable=False)
+    definition = Column(String(4000), nullable=False)
+    weeks = Column(Integer, nullable=True)
+    days = Column(Integer, nullable=True)
+    hours = Column(Integer, nullable=True)
+    minutes = Column(Integer, nullable=True)
+    seconds = Column(Integer, nullable=True)
+    repeats = Column(Integer, nullable=True)
+
 ################################################################################
