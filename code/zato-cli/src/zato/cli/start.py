@@ -64,6 +64,8 @@ Examples:
 
         if not parallel_count:
             parallel_count = multiprocessing.cpu_count() * 2
+        else:
+            parallel_count = int(parallel_count)
 
         for idx in range(parallel_count):
 

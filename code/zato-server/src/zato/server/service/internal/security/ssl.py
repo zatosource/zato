@@ -78,7 +78,8 @@ class Get(AdminService):
         request_params = ['id']
         params = _get_params(payload, request_params, 'data.')
         
-        definition = self.server.odb.query(SSLAuth).\
+        session = self.server.odb.session()
+        definition = session.query(SSLAuth).\
             filter(SSLAuth.id==params['id']).\
             one()
 
@@ -102,9 +103,15 @@ class GetList(AdminService):
     """ Returns a list of SSL/TLS definitions available.
     """
     def handle(self, *args, **kwargs):
+        
+        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+        
+        session = self.server.odb.session()
         definition_list = Element('definition_list')
-
-        definitions = self.server.odb.query(SSLAuth).order_by('name').all()
+        definitions = session.query(SSLAuth).\
+            filter(Cluster.id==params['cluster_id']).\
+            order_by('name').\
+            all()
 
         for definition in definitions:
 
@@ -143,11 +150,12 @@ class Create(AdminService):
             name = params['name']
             is_active = params['is_active']
             
-            cluster = self.server.odb.query(Cluster).filter_by(id=cluster_id).first()
+            session = self.server.odb.session()
+            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
             
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
-            existing_one = self.server.odb.query(SSLAuth).\
+            existing_one = session.query(SSLAuth).\
                 filter(Cluster.id==cluster_id).\
                 filter(SSLAuth.name==name).first()
             
@@ -157,8 +165,8 @@ class Create(AdminService):
             auth = SSLAuth(None, name, is_active, cluster)
             auth.items = _get_items(def_items)
             
-            self.server.odb.add(auth)
-            self.server.odb.commit()
+            session.add(auth)
+            session.commit()
             
             auth_elem = Element('ssl')
             auth_elem.id = auth.id
@@ -168,7 +176,7 @@ class Create(AdminService):
         except Exception, e:
             msg = "Could not create an SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -187,8 +195,9 @@ class Edit(AdminService):
             def_id = new_params['id']
             name = new_params['name']
             cluster_id = new_params['cluster_id']
-
-            existing_one = self.server.odb.query(SSLAuth).\
+            
+            session = self.server.odb.session()
+            existing_one = session.query(SSLAuth).\
                 filter(Cluster.id==cluster_id).\
                 filter(SSLAuth.name==name).\
                 filter(SSLAuth.id != def_id).\
@@ -197,20 +206,20 @@ class Edit(AdminService):
             if existing_one:
                 raise Exception('SSL/TLS definition [{0}] already exists on this cluster'.format(name))
             
-            auth = self.server.odb.query(SSLAuth).filter_by(id=def_id).one()
-            self.server.odb.query(SSLAuthItem).filter(SSLAuthItem.def_id==auth.id).delete()
+            auth = session.query(SSLAuth).filter_by(id=def_id).one()
+            session.query(SSLAuthItem).filter(SSLAuthItem.def_id==auth.id).delete()
             
             auth.name = name
             auth.is_active = new_params['is_active']
             auth.items = _get_items(def_items)
 
-            self.server.odb.add(auth)
-            self.server.odb.commit()
+            session.add(auth)
+            session.commit()
             
         except Exception, e:
             msg = "Could not update the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
 
@@ -229,16 +238,17 @@ class Delete(AdminService):
             
             id = params['id']
             
-            auth = self.server.odb.query(SSLAuth).\
+            session = self.server.odb.session()
+            auth = session.query(SSLAuth).\
                 filter(SSLAuth.id==id).\
                 one()
             
-            self.server.odb.delete(auth)
-            self.server.odb.commit()
+            session.delete(auth)
+            session.commit()
         except Exception, e:
             msg = "Could not delete the SSL/TLS definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise
         

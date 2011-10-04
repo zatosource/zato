@@ -96,8 +96,8 @@
         YAHOO.util.Event.addListener(window, "load", function() {
             YAHOO.example.EnhanceFromMarkup = function() {
                 data_column_defs = [
-                    {key:'job_name', label:'Name', sortable:true},
-                    {key:'is_active', label:'Type', sortable:true},
+                    {key:'name', label:'Name', sortable:true},
+                    {key:'is_active', label:'Active', sortable:true},
                     {key:'job_type', label:'Type', sortable:true},
                     {key:'definition_text', label:'Definition', sortable:false},
                     {key:'service', label:'Service', sortable:true},
@@ -109,7 +109,7 @@
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get('data-table'));
                 data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
                 data_ds.responseSchema = {
-                    fields: [{key:'job_name'},
+                    fields: [{key:'name'},
                             {key:'is_active'},
                             {key:'job_type'},
                             {key:'definition_text'},
@@ -122,7 +122,7 @@
                 };
 
                 data_dt = new YAHOO.widget.DataTable('markup', data_column_defs, data_ds,
-                        {sortedBy:{key:'job_name',dir:'desc'}}
+                        {sortedBy:{key:'name',dir:'desc'}}
                 );
 
                 return {
@@ -156,7 +156,7 @@
                 {% for job in jobs %}
 
                     <tr>
-                        <td>{{ job.job_name }}</td>
+                        <td>{{ job.name }}</td>
                         <td>{{ job.is_active }}</td>
                         <td>{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition }}</td>
@@ -183,7 +183,12 @@
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
-                            <td>{{ create_one_time_form.job_name }}</td>
+                            <td>{{ create_one_time_form.name }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ create_one_time_form.is_active }}</td>
                         </tr>
 
                         <tr>
@@ -192,10 +197,10 @@
                                 <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
-                                <input id="id_create-one-time-date_time" class="required"
-                                    name="create-one-time-date_time" type="text" />
+                                <input id="id_create-one-time-start_date" class="required"
+                                    name="create-one-time-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:dt_picker('id_create-one-time-date_time')"
+                                        onclick="javascript:dt_picker('id_create-one-time-start_date')"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -224,12 +229,12 @@
         <div id="create-interval_based" class="yui-pe-content">
             <div class="hd">Create an interval-based job</div>
             <div class="bd">
-                <form action=".?server={{ server_id }}" method="post" id="create-form-interval_based">
+                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
                     <table class="form-data" border="0">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
-                            <td>{{ create_interval_based_form.job_name }}</td>
+                            <td>{{ create_interval_based_form.name }}</td>
                         </tr>
 
                         <tr>
@@ -266,7 +271,7 @@
                                 <input id="id_create-interval-based-start_date"
                                     name="create-interval-based-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:show_create_interval_based_date_time_picker();"
+                                        onclick="javascript:show_create_interval_based_start_date_picker();"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -288,7 +293,6 @@
 
                     </table>
 
-                    {{ create_interval_based_form.original_job_name }}
                     <input type="hidden" name="zato_action" value="create" />
                     <input type="hidden" name="job_type" value="interval_based" />
 
@@ -299,12 +303,12 @@
         <div id="edit-one_time" class="yui-pe-content">
             <div class="hd">Edit a one-time job</div>
             <div class="bd">
-                <form action=".?server={{ server_id }}" method="post" id="edit-form-one_time">
+                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
                     <table class="form-data" border="0">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
-                            <td>{{ edit_one_time_form.job_name }}</td>
+                            <td>{{ edit_one_time_form.name }}</td>
                         </tr>
 
                         <tr>
@@ -313,10 +317,10 @@
                                 <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
-                                <input id="id_edit-one-time-date_time" class="required"
-                                    name="edit-one-time-date_time" type="text" />
+                                <input id="id_edit-one-time-start_date" class="required"
+                                    name="edit-one-time-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:show_edit_one_time_date_time_picker();"
+                                        onclick="javascript:show_edit_one_time_start_date_picker();"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -333,7 +337,7 @@
 
                     </table>
 
-                    {{ edit_one_time_form.original_job_name }}
+                    {{ edit_one_time_form.original_name }}
                     <input type="hidden" name="zato_action" value="edit" />
                     <input type="hidden" name="job_type" value="one_time" />
 
@@ -344,12 +348,12 @@
         <div id="edit-interval_based" class="yui-pe-content">
             <div class="hd">Edit an interval-based job</div>
             <div class="bd">
-                <form action=".?server={{ server_id }}" method="post" id="edit-form-interval_based">
+                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
                     <table class="form-data" border="0">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
-                            <td>{{ edit_interval_based_form.job_name }}</td>
+                            <td>{{ edit_interval_based_form.name }}</td>
                         </tr>
 
                         <tr>
@@ -386,7 +390,7 @@
                                 <input id="id_edit-interval-based-start_date"
                                     name="edit-interval-based-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:show_edit_interval_based_date_time_picker();"
+                                        onclick="javascript:show_edit_interval_based_start_date_picker();"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -408,7 +412,7 @@
 
                     </table>
 
-                    {{ edit_interval_based_form.original_job_name }}
+                    {{ edit_interval_based_form.original_name }}
                     <input type="hidden" name="zato_action" value="edit" />
                     <input type="hidden" name="job_type" value="interval_based" />
 

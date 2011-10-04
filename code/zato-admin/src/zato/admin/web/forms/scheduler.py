@@ -23,17 +23,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 class OneTimeSchedulerJobForm(forms.Form):
-    temp_id = forms.CharField(widget=forms.HiddenInput())
-    job_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     service = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     extra = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
     # The only attribute specific to one-time jobs.
-    date_time = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
+    start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
 
 class IntervalBasedSchedulerJobForm(forms.Form):
-    temp_id = forms.CharField(widget=forms.HiddenInput())
-    job_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     service = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     extra = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 

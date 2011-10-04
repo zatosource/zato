@@ -2,7 +2,7 @@
 // A base class for representing a scheduler's job.
 var Job = Class.create({
     initialize: function(record) {
-        this.job_name = null;
+        this.name = null;
         this.is_active = null;
         this.job_type = null;
         this.definition_text = null;
@@ -13,7 +13,7 @@ var Job = Class.create({
 // A nicer toString.
 Job.prototype.toString = function() {
     return "<Job\
- job_name=[" + this.job_name + "]\
+ name=[" + this.name + "]\
  is_active=[" + this.is_active + "]\
  job_type=[" + this.job_type + "]\
  definition_text=[" + this.definition_text + "]\
@@ -23,7 +23,7 @@ Job.prototype.toString = function() {
 // Dumps properties in a form suitable for creating a new data table row.
 Job.prototype.to_record = function() {
     var record = new Array();
-    record["job_name"] = this.job_name;
+    record["name"] = this.name;
     record["job_type"] = friendly_names.get(this.job_type);
     record["definition_text"] = this.definition_text;
     record["service"] = this.service;
@@ -51,11 +51,11 @@ var OneTimeJob = Class.create(Job, {
 function dt_picker(input_id) {
 
     var year, month, day, hour, minute;
-    var date_time = $(input_id).value;
+    var start_date = $(input_id).value;
 
     // It's okay if there's no value at all, it could be a 'create' action
     // currently being handled.
-    if(date_time == '') {
+    if(start_date == '') {
         now = new Date();
         year = now.getFullYear();
         month = now.getMonth();
@@ -65,12 +65,12 @@ function dt_picker(input_id) {
         second = now.getSeconds();
     }
     else {
-        var date_time_splitted = date_time.split(" ");
-        if(date_time_splitted.length != 2) {
+        var start_date_splitted = start_date.split(" ");
+        if(start_date_splitted.length != 2) {
             return; // What can we do..
         }
 
-        var date_splitted = date_time_splitted[0].split("-");
+        var date_splitted = start_date_splitted[0].split("-");
         if(date_splitted.length != 3) {
             return; // Same as above..
         }
@@ -79,7 +79,7 @@ function dt_picker(input_id) {
         month = parseInt(date_splitted[1]) - 1;
         day = parseInt(date_splitted[2]);
 
-        var time_splitted = date_time_splitted[1].split(":");
+        var time_splitted = start_date_splitted[1].split(":");
         if(time_splitted.length != 3) {
             return; // Same as above..
         }
@@ -88,7 +88,7 @@ function dt_picker(input_id) {
         minute = parseInt(time_splitted[1]);
         second = parseInt(time_splitted[2]);
 
-        var date_time_splitted = date_time.split(" ");
+        var start_date_splitted = start_date.split(" ");
     }
 
     var picker_options = {
@@ -141,14 +141,15 @@ function setup_create_dialog_one_time() {
 
         var job = new OneTimeJob(null);
 
-        /* job.definition = o.responseText; */
+        job.name = $('id_create-one-time-name').value;
+        job.definition = o.responseText;
 
         data_dt.addRow(job.to_record());
         create_one_time_dialog.hide();
         $('create-form-one_time').reset();
         create_one_time_validation.reset();
 
-        update_user_message(true, 'Successfully created a new one-time job [' + job.job_name + '].');
+        update_user_message(true, 'Successfully created a new one-time job [' + job.name + '].');
     };
 
     var on_failure = function(o) {
@@ -220,8 +221,8 @@ Job.prototype.set_properties = function(record) {
         var data = record.getData(col.key);
 
         // Common attributes
-        if(col.key == "job_name") {
-            this.job_name = data;
+        if(col.key == "name") {
+            this.name = data;
         }
         else if(col.key == "job_type_raw"){
             this.job_type = data;
@@ -234,8 +235,8 @@ Job.prototype.set_properties = function(record) {
         }
 
         // One-time jobs only
-        else if(col.key == "date_time_raw"){
-            this.date_time_raw = data;
+        else if(col.key == "start_date_raw"){
+            this.start_date_raw = data;
         }
 
         // Interval-based jobs only.
@@ -268,14 +269,14 @@ Job.prototype.update_record = function() {
     var new_values = new Hash();
 
     // Common attributes.
-    new_values.set("job_name", this.job_name);
+    new_values.set("name", this.name);
     new_values.set("job_type", friendly_names.get(this.job_type));
     new_values.set("definition", this.definition);
     new_values.set("service", this.service);
     new_values.set("extra", this.extra);
 
     // One-time jobs.
-    new_values.set("date_time_raw", this.date_time_raw);
+    new_values.set("start_date_raw", this.start_date_raw);
 
     // Interval-based jobs.
     new_values.set("start_date_raw", this.start_date_raw);
@@ -305,7 +306,7 @@ Job.prototype.update_record = function() {
 
 // Builds a delete URL for the current job.
 Job.prototype.get_delete_url = function() {
-    return "/zato/scheduler/delete/?job_name=" + this.job_name + "&server=" + this.server_id;
+    return "/zato/scheduler/delete/?name=" + this.name + "&server=" + this.server_id;
 }
 
 // Builds an execute URL for the current job.
@@ -315,7 +316,7 @@ Job.prototype.get_execute_url = function() {
 
 // Builds an execute POST datafor the current job.
 Job.prototype.get_execute_data = function() {
-    return "zato_action=execute&job_name=" + this.job_name
+    return "zato_action=execute&name=" + this.name
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -326,7 +327,7 @@ Job.prototype.get_execute_data = function() {
 function job_delete(job) {
 
     var on_success = function(o) {
-        msg = "Successfully deleted job [" + job.job_name + "].";
+        msg = "Successfully deleted job [" + job.name + "].";
 
         // Delete the row..
         data_dt.deleteRow(job.record);
@@ -376,7 +377,7 @@ function job_delete(job) {
     delete_dialog.cfg.queueProperty("buttons", delete_buttons);
     delete_dialog.render(document.body);
 
-    delete_dialog.setBody("Are you sure you want to delete job [" + job.job_name + "]?");
+    delete_dialog.setBody("Are you sure you want to delete job [" + job.name + "]?");
     delete_dialog.show();
 }
 
@@ -439,7 +440,7 @@ function job_edit(job) {
             edit_one_time_dialog.hide();
             $("edit-form-one_time").reset();
 
-            update_user_message(true, "Successfully saved the changes to job [" + job.job_name + "].");
+            update_user_message(true, "Successfully saved the changes to job [" + job.name + "].");
         };
 
         var on_failure = function(o) {
@@ -476,9 +477,9 @@ function job_edit(job) {
         edit_one_time_dialog.callback.argument = job.record.getId();
 
         // Populate the form.
-        $("id_edit-one-time-job_name").value = job.job_name;
-        $("id_edit-one-time-original_job_name").value = job.job_name;
-        $("id_edit-one-time-date_time").value = job.date_time_raw;
+        $("id_edit-one-time-name").value = job.name;
+        $("id_edit-one-time-original_name").value = job.name;
+        $("id_edit-one-time-start_date").value = job.start_date_raw;
         $("id_edit-one-time-service").value = job.service;
         $("id_edit-one-time-extra").value = job.extra;
 
@@ -515,7 +516,7 @@ function job_edit(job) {
             edit_interval_based_dialog.hide();
             $("edit-form-interval_based").reset();
 
-            update_user_message(true, "Successfully saved the changes to job [" + job.job_name + "].");
+            update_user_message(true, "Successfully saved the changes to job [" + job.name + "].");
         };
 
         var on_failure = function(o) {
@@ -551,8 +552,8 @@ function job_edit(job) {
         edit_interval_based_dialog.callback.argument = job.record.getId();
 
         // Populate the form.
-        $("id_edit-interval-based-job_name").value = job.job_name;
-        $("id_edit-interval-based-original_job_name").value = job.job_name;
+        $("id_edit-interval-based-name").value = job.name;
+        $("id_edit-interval-based-original_name").value = job.name;
         $("id_edit-interval-based-start_date").value = job.start_date_raw;
         $("id_edit-interval-based-service").value = job.service;
         $("id_edit-interval-based-extra").value = job.extra;
@@ -620,7 +621,7 @@ YAHOO.util.Event.onDOMReady(function() {
             $("create-form-interval_based").reset();
             create_interval_based_validation.reset();
 
-            update_user_message(true, "Successfully created job [" + job.job_name + "].");
+            update_user_message(true, "Successfully created job [" + job.name + "].");
         };
 
         var on_create_interval_based_failure = function(o) {

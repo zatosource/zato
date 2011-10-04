@@ -27,10 +27,14 @@ from traceback import format_exc
 from lxml import etree
 from lxml.objectify import Element
 
+# validate
+from validate import is_boolean
+
 # Zato
 from zato.common import path, scheduler_date_time_format_interval_based, \
      scheduler_date_time_format_one_time, ZatoException, ZATO_OK, zato_path
-from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob
+from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
+     Service
 from zato.common.util import pprint, TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
@@ -47,9 +51,15 @@ class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     def handle(self, *args, **kwargs):
+        
+        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+        
         definition_list = Element('definition_list')
-
-        definitions = self.server.odb.query(Job).order_by('name').all()
+        session = self.server.odb.session()
+        definitions = session.query(Job).\
+            filter(Cluster.id==params['cluster_id']).\
+            order_by('job.name').\
+            all()
 
         for definition in definitions:
 
@@ -57,16 +67,6 @@ class GetList(AdminService):
             definition_elem.id = definition.id
             definition_elem.name = definition.name
             definition_elem.is_active = definition.is_active
-            
-            '''definition_elem.def_items = Element('def_items')
-            
-            for item in definition.items:
-                item_elem = Element('item')
-                item_elem.field = item.field
-                item_elem.operator = item.operator
-                item_elem.value = item.value
-                
-                definition_elem.def_items.append(item_elem)'''
 
             definition_list.append(definition_elem)
 
@@ -77,25 +77,20 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        def _handle_one_time(payload, job_name, service, extra):
+
+        '''
+        def _handle_one_time(payload, core_params, extra):
             request_params = ['date_time']
-            params = _get_params(payload, request_params, 'data.job.')
+            params = _get_params(payload, request_params, 'data.')
+            date_time = params['date_time']
 
-            # Were date & time provided in a correct format?
-            strptime(params['date_time'], scheduler_date_time_format_one_time)
-
-            params_pprinted = pprint((job_name, service, extra, params))
-
-            self.logger.debug('About to create a one-time job, params=[%s]'.format(
-                params_pprinted))
-            '''result, response = self.server.send_config_request('CREATE_JOB',
-                                ['one_time', job_name, service, extra, params],
-                                timeout=4.0)
-            self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-            '''
+            # Were date & time provided in the correct format? (Will raise
+            # an exception if they weren't).
+            strptime(date_time, scheduler_date_time_format_one_time)
+            
             return ZATO_OK, ''
 
-        def _handle_interval_based(payload, job_name, service, extra):
+        def _handle_interval_based(payload, name, service, extra):
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat', 'start_date']
             params = _get_params(payload, request_params, 'data.job.',
                                      default_value=0, force_type=int,
@@ -108,35 +103,79 @@ class Create(AdminService):
 
             params['start_date'] = _get_interval_based_start_date(payload)
             
-            params_pprinted = pprint((job_name, service, extra, params))
+            params_pprinted = pprint((name, service, extra, params))
             self.logger.debug('About to create an interval-based job, params=[%s]'.format(
                 params_pprinted))
 
             result, response = self.server.send_config_request('CREATE_JOB',
-                            ['interval_based', job_name, service, extra, params],
+                            ['interval_based', name, service, extra, params],
                             timeout=6.0)
             self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
             return result, response
-
+            '''
+        
         payload = kwargs.get('payload')
-        self.logger.log(TRACE1, 'payload=[%r]' % payload)
-        job_type = zato_path('data.job.job_type', True).get_from(payload)
-
-        # Sanity check.
+        params = ['cluster_id', 'name', 'is_active', 'job_type', 'service',
+                       'start_date', 'extra']
+        params = _get_params(payload, params, 'data.')
+        
+        job_type = params['job_type']
+        cluster_id = params['cluster_id']
+        name = params['name']
+        service_name = params['service']
+        
         if job_type not in ('one_time', 'interval_based', 'cron_style'):
-            msg = 'Unrecognized job type [%s]' % job_type
+            msg = 'Unrecognized job type [%s]'.format(job_type)
             self.logger.error(msg)
             raise ZatoException(msg)
+        
+        session = self.server.odb.session()
+        
+        # Let's see if we don't have a job of that name already defined.
+        existing_one = session.query(Job).\
+            filter(Cluster.id==cluster_id).\
+            filter(Job.name==name).first()
+        
+        if existing_one:
+            raise Exception('Job [{0}] already exists on this cluster'.format(
+                name))
+        
+        # Is the service's name correct?
+        service = session.query(Service).\
+            filter(Cluster.id==cluster_id).\
+            filter(Service.name==service_name).first()
+        
+        if not service:
+            raise Exception('Service [{0}] does not exist on this cluster'.format(
+                service_name))
+        
+        # We can create a base Job object now and - optionally - another one
+        # if the job type's is either interval-based or Cron-style. The base
+        # instance will be enough if it's a one-time job.
+        
+        job = Job(None, name, is_boolean(params['is_active']), job_type,
+                  params['start_date'], params['extra'].encode('utf-8'), 
+                  cluster_id=cluster_id, service=service)
+        try:
+            # Add but don't commit yet.
+            session.add(job)
 
-        job_name = unicode(zato_path('data.job.job_name', True).get_from(payload))
-        service = unicode(zato_path('data.job.service', True).get_from(payload))
-
-        # Extra parameters are not mandatory.
-        extra = path('data.job.extra').get_from(payload)
-        extra = unicode(extra) if extra else ''
-
+            if job_type == 'one_time':
+                session.commit()
+            else:
+                # ZZZ Handle other types.
+                session.commit()
+        except Exception, e:
+            msg = 'Could not create a job, e=[{e}]'.format(e=format_exc(e))
+            self.logger.error(msg)
+            session.rollback()
+            
+            raise 
+        
         # Let the handler take care the rest.
-        return locals()['_handle_' + job_type](payload, job_name, service, extra)
+        #return locals()['_handle_' + job_type](payload, core_params, extra)
+        
+        return ZATO_OK, ''
 
 
 '''
@@ -164,18 +203,18 @@ class EditJob(AdminService):
     @synchronized()
     def handle(self, *args, **kwargs):
 
-        def _handle_one_time(payload, job_name, original_job_name, service, extra):
+        def _handle_one_time(payload, name, original_name, service, extra):
             request_params = ['date_time']
             params = _get_params(payload, request_params, 'data.job.')
 
             # Were date & time provided in a correct format?
             strptime(params['date_time'], scheduler_date_time_format_one_time)
 
-            params_pprinted = pprint((job_name, service, extra, params))
+            params_pprinted = pprint((name, service, extra, params))
 
             self.logger.debug('About to edit a one-time job, params=[%s]' % params_pprinted)
             result, response = self.server.send_config_request('EDIT_JOB',
-                                ['one_time', job_name, original_job_name, service, extra, params],
+                                ['one_time', name, original_name, service, extra, params],
                                 timeout=5.0)
             self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
             if response:
@@ -184,7 +223,7 @@ class EditJob(AdminService):
 
             return result, response
 
-        def _handle_interval_based(payload, job_name, original_job_name, service, extra):
+        def _handle_interval_based(payload, name, original_name, service, extra):
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat']
             params = _get_params(payload, request_params, 'data.job.',
                                      default_value=0, force_type=int,
@@ -203,11 +242,11 @@ class EditJob(AdminService):
                 start_date = ''
             params['start_date'] = str(start_date)
 
-            params_pprinted = pprint((job_name, service, extra, start_date, params))
+            params_pprinted = pprint((name, service, extra, start_date, params))
 
             self.logger.debug('About to edit an interval-based job, params=[%s]' % params_pprinted)
             result, response = self.server.send_config_request('EDIT_JOB',
-                                ['interval_based', job_name, original_job_name, service, extra, params],
+                                ['interval_based', name, original_name, service, extra, params],
                                 timeout=5.0)
             self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
             return result, response
@@ -221,8 +260,8 @@ class EditJob(AdminService):
             self.logger.error(msg)
             raise ZatoException(msg)
 
-        job_name = unicode(zato_path('data.job.job_name', True).get_from(payload))
-        original_job_name = unicode(zato_path('data.job.original_job_name', True).get_from(payload))
+        name = unicode(zato_path('data.job.name', True).get_from(payload))
+        original_name = unicode(zato_path('data.job.original_name', True).get_from(payload))
         service = unicode(zato_path('data.job.service', True).get_from(payload))
 
         # Extra parameters are not mandatory.
@@ -230,16 +269,16 @@ class EditJob(AdminService):
         extra = unicode(extra) if extra else ''
 
         # Let the handler take care of it.
-        return locals()['_handle_' + job_type](payload, job_name, original_job_name, service, extra)
+        return locals()['_handle_' + job_type](payload, name, original_name, service, extra)
 
 class ExecuteJob(AdminService):
     """ Executes a scheduler's job.
     """
     def handle(self, *args, **kwargs):
         payload = kwargs.get('payload')
-        job_name = unicode(zato_path('job.job_name', True).get_from(payload))
+        name = unicode(zato_path('job.name', True).get_from(payload))
 
-        result, response = self.server.send_config_request('EXECUTE_JOB', job_name,
+        result, response = self.server.send_config_request('EXECUTE_JOB', name,
                             timeout=3.0)
         self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
         return result, response
@@ -250,9 +289,9 @@ class DeleteJob(AdminService):
     @synchronized()
     def handle(self, *args, **kwargs):
         payload = kwargs.get('payload')
-        job_name = unicode(zato_path('job.job_name', True).get_from(payload))
+        name = unicode(zato_path('job.name', True).get_from(payload))
 
-        result, response = self.server.send_config_request('DELETE_JOB', job_name,
+        result, response = self.server.send_config_request('DELETE_JOB', name,
                             timeout=3.0)
         self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
         return result, response
