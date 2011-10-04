@@ -86,7 +86,7 @@ common_ca_create_opts = [
 
 common_logging_conf_contents = """
 [loggers]
-keys=root
+keys=root,zato
 
 [handlers]
 keys=rotating_file_handler, stdout_handler
@@ -97,6 +97,12 @@ keys=default_formatter, colour_formatter
 [logger_root]
 level=INFO
 handlers=rotating_file_handler, stdout_handler
+
+[logger_zato]
+level=INFO
+handlers=rotating_file_handler, stdout_handler
+qualname=zato
+propagate=0
 
 [handler_rotating_file_handler]
 class=logging.handlers.RotatingFileHandler
