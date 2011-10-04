@@ -171,6 +171,12 @@ class Create(AdminService):
             session.rollback()
             
             raise 
+        else:
+            
+            job_elem = Element('job')
+            job_elem.id = job.id
+            
+            return ZATO_OK, etree.tostring(job_elem)
         
         # Let the handler take care the rest.
         #return locals()['_handle_' + job_type](payload, core_params, extra)
