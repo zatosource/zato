@@ -515,8 +515,9 @@ class Job(Base):
     id = Column(Integer,  Sequence('job_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    job_type = Column(Enum('one-time', 'interval-based', 'cron-style', 
+    job_type = Column(Enum('one_time', 'interval_based', 'cron_style', 
                            name='job_type'), nullable=False)
+    start_date = Column(DateTime(), nullable=False)
     extra = Column(LargeBinary(400000), nullable=True)
     
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
@@ -525,11 +526,23 @@ class Job(Base):
     service_id = Column(Integer, ForeignKey('service.id'), nullable=False)
     service = relationship(Service, backref=backref('jobs', order_by=name))
 
-    interval_based_id = Column(Integer, ForeignKey('job_interval_based.job_id'), nullable=True)
-    interval_based = relationship('IntervalBasedJob', backref=backref('parent_job', uselist=False))
-    
-    cron_style_id = Column(Integer, ForeignKey('job_cron_style.job_id'), nullable=True)
-    cron_style = relationship('CronStyleJob', backref=backref('parent_job', uselist=False))
+    def __init__(self, id=None, name=None, is_active=None, job_type=None, 
+                 start_date=None, extra=None, cluster=None, cluster_id=None,
+                 service=None, service_id=None, interval_based=None, 
+                 cron_style=None, definition_text=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.job_type = job_type
+        self.start_date = start_date
+        self.extra = extra
+        self.cluster = cluster
+        self.cluster_id = cluster_id
+        self.service = service
+        self.service_id = service_id
+        self.interval_based = interval_based
+        self.cron_style = cron_style
+        self.definition_text = definition_text # Not used by the database
     
 class IntervalBasedJob(Base):
     """ A Cron-style scheduler's job.
@@ -539,9 +552,28 @@ class IntervalBasedJob(Base):
     
     id = Column(Integer,  Sequence('job_intrvl_seq'), primary_key=True)
     job_id = Column(Integer, nullable=False)
-    start_date = Column(DateTime(), nullable=False)
     
-    #job_id = Column(Integer, nullable=False)
+    weeks = Column(Integer, nullable=True)
+    days = Column(Integer, nullable=True)
+    hours = Column(Integer, nullable=True)
+    minutes = Column(Integer, nullable=True)
+    seconds = Column(Integer, nullable=True)
+    repeats = Column(Integer, nullable=True)
+    
+    job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
+    job = relationship(Job, backref=backref('interval_based', uselist=False))
+    
+    def __init__(self, id=None, job=None, weeks=None, days=None, hours=None,
+                 minutes=None, seconds=None, repeats=None, definition_text=None):
+        self.id = id
+        self.job = job
+        self.weeks = weeks
+        self.days = days
+        self.hours = hours
+        self.minutes = minutes
+        self.seconds = seconds
+        self.repeats = repeats
+        self.definition_text = definition_text # Not used by the database
     
 class CronStyleJob(Base):
     """ A Cron-style scheduler's job.
@@ -550,14 +582,15 @@ class CronStyleJob(Base):
     __table_args__ = (UniqueConstraint('job_id'), {})
     
     id = Column(Integer,  Sequence('job_cron_seq'), primary_key=True)
-    job_id = Column(Integer, nullable=False)
-    start_date = Column(DateTime(), nullable=False)
     definition = Column(String(4000), nullable=False)
-    weeks = Column(Integer, nullable=True)
-    days = Column(Integer, nullable=True)
-    hours = Column(Integer, nullable=True)
-    minutes = Column(Integer, nullable=True)
-    seconds = Column(Integer, nullable=True)
-    repeats = Column(Integer, nullable=True)
+    
+    job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
+    job = relationship(Job, backref=backref('cron_style', uselist=False))
+    
+    def __init__(self, id=None, job=None, definition=None, definition_text=None):
+        self.id = id
+        self.job = job
+        self.definition = definition
+        self.definition_text = definition_text # Not used by the database
 
 ################################################################################

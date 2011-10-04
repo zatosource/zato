@@ -43,16 +43,15 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         
         definition_list = Element('definition_list')
+        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        payload = kwargs.get('payload')
-        request_params = ['id']
-        params = _get_params(payload, request_params, 'cluster.')
-        
-        q = self.server.odb.query(TechnicalAccount).\
+        session = self.server.odb.session()
+        q = session.query(TechnicalAccount).\
                     order_by(TechnicalAccount.name).\
-                    filter(Cluster.id==params['id'])
+                    filter(Cluster.id==params['cluster_id']).\
+                    all()
 
-        for definition in q.all():
+        for definition in q:
 
             definition_elem = Element('definition')
             
@@ -72,8 +71,9 @@ class GetByID(AdminService):
         payload = kwargs.get('payload')
         request_params = ['tech_account_id']
         params = _get_params(payload, request_params, 'data.')
-        
-        tech_account = self.server.odb.query(TechnicalAccount.id, 
+
+        session = self.server.odb.session()        
+        tech_account = session.query(TechnicalAccount.id, 
                                              TechnicalAccount.name, 
                                              TechnicalAccount.is_active).\
             filter(TechnicalAccount.id==params['tech_account_id']).one()
@@ -97,14 +97,15 @@ class Create(AdminService):
         cluster_id = params['cluster_id']
         name = params['name']
         
-        cluster = self.server.odb.query(Cluster).filter_by(id=cluster_id).first()
+        session = self.server.odb.session()
+        cluster = session.query(Cluster).filter_by(id=cluster_id).first()
         
         salt = uuid4().hex
         password = tech_account_password(uuid4().hex, salt)
         
         # Let's see if we already have an account of that name before committing
         # any stuff into the database.
-        existing_one = self.server.odb.query(TechnicalAccount).\
+        existing_one = session.query(TechnicalAccount).\
             filter(Cluster.id==cluster_id).\
             filter(TechnicalAccount.name==name).first()
         
@@ -115,15 +116,15 @@ class Create(AdminService):
         
         try:
             tech_account = TechnicalAccount(None, name, password, salt, params['is_active'], cluster=cluster)
-            self.server.odb.add(tech_account)
-            self.server.odb.commit()
+            session.add(tech_account)
+            session.commit()
             
             tech_account_elem.id = tech_account.id
             
         except Exception, e:
             msg = "Could not create a technical account, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -143,7 +144,8 @@ class Edit(AdminService):
         tech_account_id = params['tech_account_id']
         name = params['name']
         
-        existing_one = self.server.odb.query(TechnicalAccount).\
+        session = self.server.odb.session()
+        existing_one = session.query(TechnicalAccount).\
             filter(Cluster.id==cluster_id).\
             filter(TechnicalAccount.name==name).\
             filter(TechnicalAccount.id != tech_account_id).\
@@ -152,19 +154,19 @@ class Edit(AdminService):
         if existing_one:
             raise Exception('Technical account [{0}] already exists on this cluster'.format(name))
         
-        tech_account = self.server.odb.query(TechnicalAccount).\
+        tech_account = session.query(TechnicalAccount).\
             filter(TechnicalAccount.id==tech_account_id).one()
         
         tech_account.name = name
         tech_account.is_active = is_boolean(params['is_active'])
         
         try:
-            self.server.odb.add(tech_account)
-            self.server.odb.commit()
+            session.add(tech_account)
+            session.commit()
         except Exception, e:
             msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -192,7 +194,8 @@ class ChangePassword(AdminService):
         if password1 != password2:
             raise Exception('Passwords need to be the same')
         
-        tech_account = self.server.odb.query(TechnicalAccount).\
+        session = self.server.odb.session()
+        tech_account = session.query(TechnicalAccount).\
             filter(TechnicalAccount.id==id).\
             one()
         
@@ -201,12 +204,12 @@ class ChangePassword(AdminService):
         tech_account.salt = salt
         
         try:
-            self.server.odb.add(tech_account)
-            self.server.odb.commit()
+            session.add(tech_account)
+            session.commit()
         except Exception, e:
             msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -224,7 +227,8 @@ class Delete(AdminService):
         tech_account_id = params['tech_account_id']
         zato_admin_tech_account_name = params['zato_admin_tech_account_name']
         
-        tech_account = self.server.odb.query(TechnicalAccount).\
+        session = self.server.odb.session()
+        tech_account = session.query(TechnicalAccount).\
             filter(TechnicalAccount.id==tech_account_id).\
             one()
         
@@ -234,12 +238,12 @@ class Delete(AdminService):
             raise Exception(msg)
         
         try:
-            self.server.odb.delete(tech_account)
-            self.server.odb.commit()
+            session.delete(tech_account)
+            session.commit()
         except Exception, e:
             msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise
         

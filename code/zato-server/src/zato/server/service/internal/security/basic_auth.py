@@ -40,9 +40,14 @@ class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
     def handle(self, *args, **kwargs):
+        
+        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+        session = self.server.odb.session()
         definition_list = Element('definition_list')
-
-        definitions = self.server.odb.query(HTTPBasicAuth).order_by('name').all()
+        definitions = session.query(HTTPBasicAuth).\
+            filter(Cluster.id==params['cluster_id']).\
+            order_by('name').\
+            all()
 
         for definition in definitions:
 
@@ -70,12 +75,13 @@ class Create(AdminService):
             
             cluster_id = params['cluster_id']
             name = params['name']
-            
-            cluster = self.server.odb.query(Cluster).filter_by(id=cluster_id).first()
+
+            session = self.server.odb.session()            
+            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
             
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
-            existing_one = self.server.odb.query(HTTPBasicAuth).\
+            existing_one = session.query(HTTPBasicAuth).\
                 filter(Cluster.id==cluster_id).\
                 filter(HTTPBasicAuth.name==name).first()
             
@@ -87,15 +93,15 @@ class Create(AdminService):
             auth = HTTPBasicAuth(None, name, params['is_active'], params['username'], 
                                 params['domain'], uuid4().hex, cluster)
             
-            self.server.odb.add(auth)
-            self.server.odb.commit()
+            session.add(auth)
+            session.commit()
             
             auth_elem.id = auth.id
             
         except Exception, e:
             msg = "Could not create an HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -116,8 +122,9 @@ class Edit(AdminService):
             def_id = new_params['id']
             name = new_params['name']
             cluster_id = new_params['cluster_id']
-
-            existing_one = self.server.odb.query(HTTPBasicAuth).\
+            
+            session = self.server.odb.session()
+            existing_one = session.query(HTTPBasicAuth).\
                 filter(Cluster.id==cluster_id).\
                 filter(HTTPBasicAuth.name==name).\
                 filter(HTTPBasicAuth.id != def_id).\
@@ -126,20 +133,20 @@ class Edit(AdminService):
             if existing_one:
                 raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(name))
             
-            definition = self.server.odb.query(HTTPBasicAuth).filter_by(id=def_id).one()
+            definition = session.query(HTTPBasicAuth).filter_by(id=def_id).one()
             
             definition.name = name
             definition.is_active = new_params['is_active']
             definition.username = new_params['username']
             definition.domain = new_params['domain']
 
-            self.server.odb.add(definition)
-            self.server.odb.commit()
+            session.add(definition)
+            session.commit()
             
         except Exception, e:
             msg = "Could not update the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
 
@@ -169,18 +176,19 @@ class ChangePassword(AdminService):
             if password1 != password2:
                 raise Exception('Passwords need to be the same')
             
-            auth = self.server.odb.query(HTTPBasicAuth).\
+            session = self.server.odb.session()
+            auth = session.query(HTTPBasicAuth).\
                 filter(HTTPBasicAuth.id==id).\
                 one()
             
             auth.password = password1
         
-            self.server.odb.add(auth)
-            self.server.odb.commit()
+            session.add(auth)
+            session.commit()
         except Exception, e:
             msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -198,17 +206,19 @@ class Delete(AdminService):
             
             id = params['id']
             
-            auth = self.server.odb.query(HTTPBasicAuth).\
+            session = self.server.odb.session()
+            auth = session.query(HTTPBasicAuth).\
                 filter(HTTPBasicAuth.id==id).\
                 one()
             
-            self.server.odb.delete(auth)
-            self.server.odb.commit()
+            session.delete(auth)
+            session.commit()
         except Exception, e:
             msg = "Could not delete the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise
         
         return ZATO_OK, ''
+    

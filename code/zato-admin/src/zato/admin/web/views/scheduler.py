@@ -48,7 +48,7 @@ from zato.admin.web.server_model import OneTimeSchedulerJob, IntervalBasedSchedu
 from zato.admin.web.forms.scheduler import OneTimeSchedulerJobForm, IntervalBasedSchedulerJobForm
 from zato.common import scheduler_date_time_format_one_time, scheduler_date_time_format_interval_based, \
      ZATO_OK, zato_namespace, zato_path, ZatoException
-from zato.common.odb.model import Cluster
+from zato.common.odb.model import Cluster, Job
 from zato.common.util import pprint, TRACE1
 
 logger = logging.getLogger(__name__)
@@ -58,11 +58,11 @@ create_interval_based_prefix = 'create-interval-based'
 edit_one_time_prefix = 'edit-one-time'
 edit_interval_based_prefix = 'edit-interval-based'
 
-def _get_date_time(date_time, date_time_format):
-    if not date_time:
+def _get_start_date(start_date, start_date_format):
+    if not start_date:
         return ''
 
-    strp = strptime(str(date_time), date_time_format)
+    strp = strptime(str(start_date), start_date_format)
     return datetime(year=strp.tm_year, month=strp.tm_mon, day=strp.tm_mday,
                        hour=strp.tm_hour, minute=strp.tm_min)
 
@@ -100,26 +100,27 @@ def _get_interval_based_job_definition(start_date, repeat, weeks, days, hours,
 
     return buf.getvalue()
 
-def _get_create_edit_message(params, form_prefix=""):
+def _get_create_edit_message(cluster, params, form_prefix=""):
     """ Creates a base document which can be used by both 'edit' and 'create'
     actions, regardless of the job's type.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
-    zato_message.data.job = Element('job')
-    zato_message.data.job.job_name = unicode(params[form_prefix + 'job_name'])
-    zato_message.data.job.service = unicode(params.get(form_prefix + 'service', ''))
-    zato_message.data.job.extra = unicode(params.get(form_prefix + 'extra', ''))
+    zato_message.data.name = params[form_prefix + 'name']
+    zato_message.data.cluster_id = cluster.id
+    zato_message.data.is_active = bool(params.get(form_prefix + 'is_active'))
+    zato_message.data.service = params.get(form_prefix + 'service', '')
+    zato_message.data.extra = params.get(form_prefix + 'extra', '')
 
     return zato_message
 
-def _get_create_edit_one_time_message(params, form_prefix=""):
+def _get_create_edit_one_time_message(cluster, params, form_prefix=""):
     """ Creates a base document which can be used by both 'edit' and 'create'
     actions. Used when creating one-time jobs.
     """
-    zato_message = _get_create_edit_message(params, form_prefix)
-    zato_message.data.job.job_type = 'one_time'
-    zato_message.data.job.date_time = params[form_prefix + 'date_time']
+    zato_message = _get_create_edit_message(cluster, params, form_prefix)
+    zato_message.data.job_type = 'one_time'
+    zato_message.data.start_date = params[form_prefix + 'start_date']
 
     return zato_message
 
@@ -128,14 +129,14 @@ def _get_create_edit_interval_based_message(params, form_prefix=""):
     actions. Used when creating interval-based jobs.
     """
     zato_message = _get_create_edit_message(params, form_prefix)
-    zato_message.data.job.job_type = 'interval_based'
-    zato_message.data.job.weeks = unicode(params.get(form_prefix + 'weeks', ''))
-    zato_message.data.job.days = unicode(params.get(form_prefix + 'days', ''))
-    zato_message.data.job.hours = unicode(params.get(form_prefix + 'hours', ''))
-    zato_message.data.job.seconds = unicode(params.get(form_prefix + 'seconds', ''))
-    zato_message.data.job.minutes = unicode(params.get(form_prefix + 'minutes', ''))
-    zato_message.data.job.repeat = unicode(params.get(form_prefix + 'repeat', ''))
-    zato_message.data.job.start_date = params.get(form_prefix + 'start_date', '')
+    zato_message.data.job_type = 'interval_based'
+    zato_message.data.weeks = unicode(params.get(form_prefix + 'weeks', ''))
+    zato_message.data.days = unicode(params.get(form_prefix + 'days', ''))
+    zato_message.data.hours = unicode(params.get(form_prefix + 'hours', ''))
+    zato_message.data.seconds = unicode(params.get(form_prefix + 'seconds', ''))
+    zato_message.data.minutes = unicode(params.get(form_prefix + 'minutes', ''))
+    zato_message.data.repeat = unicode(params.get(form_prefix + 'repeat', ''))
+    zato_message.data.start_date = params.get(form_prefix + 'start_date', '')
 
     return zato_message
 
@@ -143,19 +144,19 @@ def _create_one_time(cluster, params):
     """ Creates a one-time scheduler job.
     """
     logger.info('About to create a one-time job, cluster=[{0}], params=[{1}]'.format(cluster, params))
-    zato_message = _get_create_edit_one_time_message(params, create_one_time_prefix+'-')
+    zato_message = _get_create_edit_one_time_message(cluster, params, create_one_time_prefix+'-')
 
     invoke_admin_service(cluster, 'zato:scheduler.job.create', zato_message)
 
-    date_time = _get_date_time(params['create-one-time-date_time'], scheduler_date_time_format_one_time)
-    logger.log(TRACE1, 'date_time=[{0}]'.format(date_time))
+    start_date = _get_start_date(params['create-one-time-start_date'], scheduler_date_time_format_one_time)
+    logger.log(TRACE1, 'start_date=[{0}]'.format(start_date))
 
-    job = OneTimeSchedulerJob(date_time=date_time)
+    job = Job(start_date=start_date)
 
     logger.info('Successfully created a one-time job, cluster=[{0}], params=[{1}]'.format(cluster, params))
-    logger.log(TRACE1, 'job.definition=[{0}]'.format(job.definition))
+    logger.log(TRACE1, 'job.definition_text=[{0}]'.format(job.definition_text))
 
-    return job.definition
+    return job.definition_text
 
 def _create_interval_based(server_address, params):
     """ Creates an interval-based scheduler job.
@@ -167,7 +168,7 @@ def _create_interval_based(server_address, params):
 
     start_date = params.get('create-interval-based-start_date')
     if start_date:
-        start_date = _get_date_time(start_date, scheduler_date_time_format_one_time)
+        start_date = _get_start_date(start_date, scheduler_date_time_format_one_time)
     repeat = params.get('create-interval-based-repeat')
     weeks = params.get('create-interval-based-weeks')
     days = params.get('create-interval-based-days')
@@ -189,14 +190,14 @@ def _edit_one_time(server_address, params):
     logger.info('About to change a one-time job, server_address=[%s], params=[%s]' % (server_address, params))
     zato_message = _get_create_edit_one_time_message(params, edit_one_time_prefix+'-')
 
-    # original_job_name is needed only by an 'edit' action.
-    zato_message.data.job.original_job_name = params.get('edit-one-time-original_job_name')
+    # original_name is needed only by an 'edit' action.
+    zato_message.data.job.original_name = params.get('edit-one-time-original_name')
     invoke_admin_service(server_address, 'zato:scheduler.job.edit', etree.tostring(zato_message))
 
-    dt = _get_date_time(params['edit-one-time-date_time'], scheduler_date_time_format_one_time)
+    dt = _get_start_date(params['edit-one-time-start_date'], scheduler_date_time_format_one_time)
     logger.log(TRACE1, 'dt=[%s]' % dt)
 
-    job = OneTimeSchedulerJob(date_time=dt)
+    job = OneTimeSchedulerJob(start_date=dt)
 
     logger.info('Successfully changed a one-time job, server_address=[%s], params=[%s]' % (server_address, params))
     logger.log(TRACE1, 'job.definition=[%s]' % job.definition)
@@ -209,13 +210,13 @@ def _edit_interval_based(server_address, params):
     logger.info('About to change an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
     zato_message = _get_create_edit_interval_based_message(params, edit_interval_based_prefix+'-')
 
-    # original_job_name is needed only by an 'edit' action.
-    zato_message.data.job.original_job_name = params.get('edit-interval-based-original_job_name')
+    # original_name is needed only by an 'edit' action.
+    zato_message.data.job.original_name = params.get('edit-interval-based-original_name')
     invoke_admin_service(server_address, 'zato:scheduler.job.edit', etree.tostring(zato_message))
 
     start_date = params.get('edit-interval-based-start_date')
     if start_date:
-        start_date = _get_date_time(start_date, scheduler_date_time_format_one_time)
+        start_date = _get_start_date(start_date, scheduler_date_time_format_one_time)
     repeat = params.get('edit-interval-based-repeat')
     weeks = params.get('edit-interval-based-weeks')
     days = params.get('edit-interval-based-days')
@@ -238,7 +239,7 @@ def _execute(server_address, params):
 
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.job = Element('job')
-    zato_message.job.job_name = params['job_name']
+    zato_message.job.name = params['name']
     invoke_admin_service(server_address, 'zato:scheduler.job.execute', etree.tostring(zato_message))
 
     logger.info('Successfully submitted a request, server_address=[%s], params=[%s]' % (server_address, params))
@@ -256,39 +257,41 @@ def index(req):
         # We have a server to pick the schedulers from, try to invoke it now.
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.cluster_id = cluster_id
         _, zato_message, soap_response  = invoke_admin_service(cluster, 
                 'zato:scheduler.job.get-list', zato_message)
 
         if zato_path('data.job_list.job').get_from(zato_message) is not None:
             for job_elem in zato_message.data.job_list.job:
                 job = None
-                job_name = unicode(job_elem.name.text)
+                name = unicode(job_elem.name.text)
                 job_type = unicode(job_elem.type)
-                original_job_name = unicode(job_elem.name.text)
+                original_name = unicode(job_elem.name.text)
                 service = unicode(job_elem.service.text)
                 extra = unicode(job_elem.extra.text) if job_elem.extra.text else ''
                 job_type_friendly = job_type_friendly_names[job_type]
 
                 if job_type == 'one_time':
 
-                    job = OneTimeSchedulerJob(uuid4().hex, original_job_name, job_name, job_type,
+                    job = OneTimeSchedulerJob(uuid4().hex, original_name, name, job_type,
                                        job_type_friendly, service, extra,
-                                       _get_date_time(job_elem.date_time, scheduler_date_time_format_one_time),
-                                       job_elem.date_time)
+                                       _get_start_date(job_elem.start_date, scheduler_date_time_format_one_time),
+                                       job_elem.start_date)
 
                 elif job_type == 'interval_based':
-                    start_date = _get_date_time(job_elem.start_date, scheduler_date_time_format_interval_based)
+                    start_date = _get_start_date(job_elem.start_date, scheduler_date_time_format_interval_based)
                     definition = _get_interval_based_job_definition(start_date,
                             job_elem.repeat, job_elem.weeks, job_elem.days,
                             job_elem.hours, job_elem.minutes, job_elem.seconds)
-                    job = IntervalBasedSchedulerJob(uuid4().hex, original_job_name, job_name, job_type,
+                    job = IntervalBasedSchedulerJob(uuid4().hex, original_name, name, job_type,
                                        job_type_friendly, service, extra,
                                        start_date,  job_elem.start_date, job_elem.weeks,
                                        job_elem.days, job_elem.hours, job_elem.minutes,
                                        job_elem.seconds, job_elem.repeat,
                                        definition)
                 else:
-                    msg = 'Unrecognized job type, name=[%s], type=[%s].' % (job_name, job_type)
+                    msg = 'Unrecognized job type, name=[%s], type=[%s].' % (name, job_type)
                     logger.error(msg)
                     raise ZatoException(msg)
 
@@ -363,23 +366,23 @@ def delete(req):
     """
     try:
         server_id = req.GET.get('server')
-        job_name = req.GET.get('job_name')
+        name = req.GET.get('name')
 
         if not server_id:
             raise ZatoException('No [server] parameter found, req.GET=[%s]' % req.GET)
 
-        if not job_name:
-            raise ZatoException('No [job_name] parameter found, req.GET=[%s]' % req.GET)
+        if not name:
+            raise ZatoException('No [name] parameter found, req.GET=[%s]' % req.GET)
 
         server = Server.objects.get(id=server_id)
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.job = Element('job')
-        zato_message.job.job_name = job_name
+        zato_message.job.name = name
 
         invoke_admin_service(server.address, 'zato:scheduler.job.delete', etree.tostring(zato_message))
 
     except Exception, e:
-        msg = 'Could not delete the job. server_id=[%s], job_name=[%s], e=[%s]' % (req.GET.get('server'), req.GET.get('job_name'), format_exc())
+        msg = 'Could not delete the job. server_id=[%s], name=[%s], e=[%s]' % (req.GET.get('server'), req.GET.get('name'), format_exc())
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -388,7 +391,7 @@ def delete(req):
 
 @meth_allowed('POST')
 def get_definition(req, start_date, repeat, weeks, days, hours, minutes, seconds):
-    start_date = _get_date_time(start_date, scheduler_date_time_format_interval_based)
+    start_date = _get_start_date(start_date, scheduler_date_time_format_interval_based)
 
     definition = _get_interval_based_job_definition(start_date, repeat, weeks, days, hours, minutes, seconds)
     logger.log(TRACE1, 'definition=[%s]' % definition)

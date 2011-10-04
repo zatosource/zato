@@ -40,9 +40,14 @@ class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
     def handle(self, *args, **kwargs):
+        
+        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         definition_list = Element('definition_list')
-
-        definitions = self.server.odb.query(WSSDefinition).order_by('name').all()
+        session = self.server.odb.session()
+        definitions = session.query(WSSDefinition).\
+            filter(Cluster.id==params['cluster_id']).\
+            order_by('name').\
+            all()
 
         for definition in definitions:
 
@@ -76,11 +81,12 @@ class Create(AdminService):
         cluster_id = params['cluster_id']
         name = params['name']
         
-        cluster = self.server.odb.query(Cluster).filter_by(id=cluster_id).first()
+        session = self.server.odb.session()
+        cluster = session.query(Cluster).filter_by(id=cluster_id).first()
         
         # Let's see if we already have a definition of that name before committing
         # any stuff into the database.
-        existing_one = self.server.odb.query(WSSDefinition).\
+        existing_one = session.query(WSSDefinition).\
             filter(Cluster.id==cluster_id).\
             filter(WSSDefinition.name==name).first()
         
@@ -96,15 +102,15 @@ class Create(AdminService):
                                 params['reject_stale_username'], params['expiry_limit'], 
                                 params['nonce_freshness'], cluster)
             
-            self.server.odb.add(wss)
-            self.server.odb.commit()
+            session.add(wss)
+            session.commit()
             
             wss_elem.id = wss.id
             
         except Exception, e:
             msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -125,7 +131,8 @@ class Edit(AdminService):
         name = new_params['name']
         cluster_id = new_params['cluster_id']
         
-        existing_one = self.server.odb.query(WSSDefinition).\
+        session = self.server.odb.session()
+        existing_one = session.query(WSSDefinition).\
             filter(Cluster.id==cluster_id).\
             filter(WSSDefinition.name==name).\
             filter(WSSDefinition.id != def_id).\
@@ -135,7 +142,7 @@ class Edit(AdminService):
             raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
 
         try:
-            definition = self.server.odb.query(WSSDefinition).filter_by(id=def_id).one()
+            definition = session.query(WSSDefinition).filter_by(id=def_id).one()
             
             definition.name = name
             definition.is_active = new_params['is_active']
@@ -146,13 +153,13 @@ class Edit(AdminService):
             definition.expiry_limit = new_params['expiry_limit']
             definition.nonce_freshness = new_params['nonce_freshness']
 
-            self.server.odb.add(definition)
-            self.server.odb.commit()
+            session.add(definition)
+            session.commit()
             
         except Exception, e:
             msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
 
@@ -182,18 +189,19 @@ class ChangePassword(AdminService):
             if password1 != password2:
                 raise Exception('Passwords need to be the same')
             
-            wss = self.server.odb.query(WSSDefinition).\
+            session = self.server.odb.session()
+            wss = session.query(WSSDefinition).\
                 filter(WSSDefinition.id==id).\
                 one()
             
             wss.password = password1
         
-            self.server.odb.add(wss)
-            self.server.odb.commit()
+            session.add(wss)
+            session.commit()
         except Exception, e:
             msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise 
         
@@ -211,16 +219,17 @@ class Delete(AdminService):
             
             wss_id = params['wss_id']
             
-            wss = self.server.odb.query(WSSDefinition).\
+            session = self.server.odb.session()
+            wss = session.query(WSSDefinition).\
                 filter(WSSDefinition.id==wss_id).\
                 one()
             
-            self.server.odb.delete(wss)
-            self.server.odb.commit()
+            session.delete(wss)
+            session.commit()
         except Exception, e:
             msg = "Could not delete the WS-Security definition, e=[{e}]".format(e=format_exc(e))
             self.logger.error(msg)
-            self.server.odb.rollback()
+            session.rollback()
             
             raise
         

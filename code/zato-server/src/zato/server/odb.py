@@ -21,10 +21,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from contextlib import closing
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy.orm import joinedload, sessionmaker
+from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
 from sqlalchemy.exc import IntegrityError
 
 # Zato
@@ -50,20 +51,26 @@ class ODBManager(object):
         self.server = server
         self.cluster = cluster
         
+    def session(self):
+        with closing(self._Session()) as session:
+            return session
+        
+    '''
     def query(self, *args, **kwargs):
-        return self.session.query(*args, **kwargs)
+        return self._session.query(*args, **kwargs)
     
     def add(self, *args, **kwargs):
-        return self.session.add(*args, **kwargs)
+        return self._session.add(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
-        return self.session.delete(*args, **kwargs)
+        return self._session.delete(*args, **kwargs)
     
     def commit(self, *args, **kwargs):
-        return self.session.commit(*args, **kwargs)
+        return self._session.commit(*args, **kwargs)
     
     def rollback(self, *args, **kwargs):
-        return self.session.rollback(*args, **kwargs)
+        return self._session.rollback(*args, **kwargs)
+    '''
         
     def fetch_server(self):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
@@ -87,11 +94,11 @@ class ODBManager(object):
         self.pool.ping({'pool_name': ZATO_ODB_POOL_NAME})
         engine = self.pool.get(ZATO_ODB_POOL_NAME)
         
-        Session = sessionmaker(bind=engine)
-        self.session = Session()
+        self._Session = scoped_session(sessionmaker(bind=engine))
+        self._session = self._Session()
         
         try:
-            self.server = self.session.query(Server).\
+            self.server = self._session.query(Server).\
                    filter(Server.odb_token == self.odb_data['token']).\
                    one()
             self.cluster = self.server.cluster
@@ -113,7 +120,7 @@ class ODBManager(object):
         
         result = {}
         
-        sec_def_q = self.session.query(SecurityDefinition.id, 
+        sec_def_q = self._session.query(SecurityDefinition.id, 
                             SecurityDefinition.security_def_type, 
                             ChannelURLDefinition.url_pattern,
                             ChannelURLDefinition.url_type).\
@@ -128,7 +135,7 @@ class ODBManager(object):
             # Will raise KeyError if the DB gets somehow misconfigured.
             db_class = sec_type_db_class[sec_def_type]
             
-            sec_def = self.session.query(db_class).\
+            sec_def = self._session.query(db_class).\
                     filter(db_class.security_def_id==sec_def_id).\
                     one()
             
@@ -142,16 +149,16 @@ class ODBManager(object):
         """
         try:
             service = Service(None, name, impl_name, is_internal, True, self.cluster)
-            self.add(service)
+            self._session.add(service)
             try:
-                self.commit()
+                self._session.commit()
             except IntegrityError, e:
                 logger.debug('IntegrityError (Service), e=[{e}]'.format(e=format_exc(e)))
-                self.rollback()
+                self._session.rollback()
 
                 # We know the service exists in the ODB so we can now add 
                 # information about its deployment status.
-                service = self.session.query(Service).\
+                service = self._session.query(Service).\
                     filter(Service.name==name).\
                     filter(Cluster.id==self.cluster.id).\
                     one()
@@ -160,20 +167,20 @@ class ODBManager(object):
         except Exception, e:
             msg = 'Could not add the Service, e=[{e}]'.format(e=format_exc(e))
             logger.error(msg)
-            self.rollback()
+            self._session.rollback()
             
     def add_deployed_service(self, deployment_time, details, service):
         """ Adds information about the server's deployed service into the ODB. 
         """
         try:
             service = DeployedService(deployment_time, details, self.server, service)
-            self.add(service)
+            self._session.add(service)
             try:
-                self.commit()
+                self._session.commit()
             except IntegrityError, e:
                 logger.debug('IntegrityError (DeployedService), e=[{e}]'.format(e=format_exc(e)))
-                self.rollback()
+                self._session.rollback()
         except Exception, e:
             msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
             logger.error(msg)
-            self.rollback()
+            self._session.rollback()
