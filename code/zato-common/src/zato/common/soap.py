@@ -79,7 +79,7 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
     soap_response = pool.invoke('/zato/soap', soap_action, soap_body, headers)
 
 
-    print('soap_response=[{0}]'.format(soap_response))
+    logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
     response = objectify.fromstring(soap_response)
 
     # Do we have a SOAP fault?

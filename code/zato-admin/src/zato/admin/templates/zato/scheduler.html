@@ -178,7 +178,7 @@
         <div id="create-one_time" class="yui-pe-content">
             <div class="hd">Create a one-time job</div>
             <div class="bd">
-                <form action=".?server={{ server_id }}" method="post" id="create-form-one_time">
+                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-one_time">
                     <table class="form-data" border="0">
 
                         <tr>
@@ -212,7 +212,6 @@
 
                     </table>
 
-                    {{ create_one_time_form.original_job_name }}
                     <input type="hidden" name="zato_action" value="create" />
                     <input type="hidden" name="job_type" value="one_time" />
 

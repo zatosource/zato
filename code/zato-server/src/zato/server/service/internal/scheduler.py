@@ -19,20 +19,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-
-'''
-
 # stdlib
-import json
 from time import strptime
+from traceback import format_exc
 
-# Spring Python
-from springpython.util import synchronized
+# lxml
+from lxml import etree
+from lxml.objectify import Element
 
 # Zato
+from zato.common import path, scheduler_date_time_format_interval_based, \
+     scheduler_date_time_format_one_time, ZatoException, ZATO_OK, zato_path
+from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob
 from zato.common.util import pprint, TRACE1
-from zato.common import(path, zato_path, ZatoException, scheduler_date_time_format_one_time,
-                       scheduler_date_time_format_interval_based)
 from zato.server.service.internal import _get_params, AdminService
 
 def _get_interval_based_start_date(payload):
@@ -44,16 +43,38 @@ def _get_interval_based_start_date(payload):
         start_date
     return str(start_date)
 
-class GetJobList(AdminService):
+class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     def handle(self, *args, **kwargs):
-        return self.server.send_config_request('GET_JOB_LIST', timeout=1.0) # TODO: Make it a configurable option.
+        definition_list = Element('definition_list')
 
-class CreateJob(AdminService):
+        definitions = self.server.odb.query(Job).order_by('name').all()
+
+        for definition in definitions:
+
+            definition_elem = Element('definition')
+            definition_elem.id = definition.id
+            definition_elem.name = definition.name
+            definition_elem.is_active = definition.is_active
+            
+            '''definition_elem.def_items = Element('def_items')
+            
+            for item in definition.items:
+                item_elem = Element('item')
+                item_elem.field = item.field
+                item_elem.operator = item.operator
+                item_elem.value = item.value
+                
+                definition_elem.def_items.append(item_elem)'''
+
+            definition_list.append(definition_elem)
+
+        return ZATO_OK, etree.tostring(definition_list)
+    
+class Create(AdminService):
     """ Creates a new scheduler's job.
     """
-    @synchronized()
     def handle(self, *args, **kwargs):
 
         def _handle_one_time(payload, job_name, service, extra):
@@ -65,12 +86,14 @@ class CreateJob(AdminService):
 
             params_pprinted = pprint((job_name, service, extra, params))
 
-            self.logger.debug('About to create a one-time job, params=[%s]' % params_pprinted)
-            result, response = self.server.send_config_request('CREATE_JOB',
+            self.logger.debug('About to create a one-time job, params=[%s]'.format(
+                params_pprinted))
+            '''result, response = self.server.send_config_request('CREATE_JOB',
                                 ['one_time', job_name, service, extra, params],
                                 timeout=4.0)
             self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-            return result, response
+            '''
+            return ZATO_OK, ''
 
         def _handle_interval_based(payload, job_name, service, extra):
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat', 'start_date']
@@ -79,15 +102,15 @@ class CreateJob(AdminService):
                                      force_type_params=request_params[:-1])
 
             if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
-                msg = 'At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given.'
+                msg = 'At least one of [\'weeks\', \'days\', \'hours\', \'minutes\', \'seconds\'] must be given.'
                 self.logger.error(msg)
                 raise ZatoException(msg)
 
             params['start_date'] = _get_interval_based_start_date(payload)
-
+            
             params_pprinted = pprint((job_name, service, extra, params))
-
-            self.logger.debug('About to create an interval-based job, params=[%s]' % params_pprinted)
+            self.logger.debug('About to create an interval-based job, params=[%s]'.format(
+                params_pprinted))
 
             result, response = self.server.send_config_request('CREATE_JOB',
                             ['interval_based', job_name, service, extra, params],
@@ -114,6 +137,25 @@ class CreateJob(AdminService):
 
         # Let the handler take care the rest.
         return locals()['_handle_' + job_type](payload, job_name, service, extra)
+
+
+'''
+
+# stdlib
+import json
+
+# Spring Python
+from springpython.util import synchronized
+
+# Zato
+from zato.common.util import pprint, TRACE1
+from zato.common import(path, zato_path, ZatoException, scheduler_date_time_format_one_time,
+                       scheduler_date_time_format_interval_based)
+from zato.server.service.internal import _get_params, AdminService
+
+
+
+
 
 
 class EditJob(AdminService):
