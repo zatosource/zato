@@ -83,9 +83,10 @@ class ZatoHTTPListener(HTTPServer):
                 self.logger.error(msg)
                 raise HTTPException(httplib.FORBIDDEN, msg)
 
-        # Note that both checks below a different message to the client than
-        # what goes into logs. It's to conceal from bad-behaving users what really went
-        # wrong (that of course assumes they can't access the logs).
+        # Note that both checks below send a different message to the client 
+        # when compared with what goes into logs. It's to conceal from
+        # bad-behaving users what really went wrong (that of course assumes 
+        # they can't access the logs).
 
         msg_template = 'The {0} is incorrect, URI=[{1}], X_ZATO_USER=[{2}]'
 

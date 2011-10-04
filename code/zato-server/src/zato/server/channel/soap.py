@@ -179,7 +179,7 @@ class SOAPMessageHandler(ApplicationContextAware):
             if isinstance(service_instance, AdminService):
 
                 if self.logger.isEnabledFor(TRACE1):
-                    self.logger.log(TRACE1, 'len(service_response)=[%s]'.format(len(service_response)))
+                    self.logger.log(TRACE1, 'len(service_response)=[{0}]'.format(len(service_response)))
                     for item in service_response:
                         self.logger.log(TRACE1, 'service_response item=[{0}]'.format(item))
 

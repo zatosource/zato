@@ -24,26 +24,24 @@ from django import forms
 
 class OneTimeSchedulerJobForm(forms.Form):
     temp_id = forms.CharField(widget=forms.HiddenInput())
-    original_job_name = forms.CharField(widget=forms.HiddenInput())
-    job_name = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:100%"}))
-    service = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:100%"}))
-    extra = forms.CharField(widget=forms.Textarea(attrs={"style":"width:100%"}))
+    job_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    service = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
     # The only attribute specific to one-time jobs.
-    date_time = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:30%; height:19px"}))
+    date_time = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
 
 class IntervalBasedSchedulerJobForm(forms.Form):
     temp_id = forms.CharField(widget=forms.HiddenInput())
-    original_job_name = forms.CharField(widget=forms.HiddenInput())
-    job_name = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:100%"}))
-    service = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:100%"}))
-    extra = forms.CharField(widget=forms.Textarea(attrs={"style":"width:100%"}))
+    job_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    service = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    extra = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
 
     # Attributes specific to interval-based jobs.
-    weeks = forms.CharField(widget=forms.TextInput(attrs={"class":"validate-digits", "style":"width:8%"}))
-    days = forms.CharField(widget=forms.TextInput(attrs={"class":"validate-digits", "style":"width:8%"}))
-    hours = forms.CharField(widget=forms.TextInput(attrs={"class":"validate-digits", "style":"width:8%"}))
-    minutes = forms.CharField(widget=forms.TextInput(attrs={"class":"validate-digits", "style":"width:8%"}))
-    seconds = forms.CharField(widget=forms.TextInput(attrs={"class":"validate-digits", "style":"width:8%"}))
-    start_date = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:30%; height:19px"}))
-    repeat = forms.CharField(widget=forms.TextInput(attrs={"style":"width:8%"}))
+    weeks = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
+    days = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
+    hours = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
+    minutes = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
+    seconds = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
+    start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
+    repeat = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))

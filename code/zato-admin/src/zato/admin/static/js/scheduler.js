@@ -34,7 +34,20 @@ Job.prototype.to_record = function() {
     return record;
 };
 
+// A specialized subclass for one-time jobs.
+var OneTimeJob = Class.create(Job, {
+    initialize: function($super, record) {
+        $super(record);
+        this.job_type = 'one_time';
+    },
+    set_properties: function($super, record) {
+        $super(record);
+    },
+});
+
+
 // /////////////////////////////////////////////////////////////////////////////
+
 function dt_picker(input_id) {
 
     var year, month, day, hour, minute;
@@ -128,16 +141,14 @@ function setup_create_dialog_one_time() {
 
         var job = new OneTimeJob(null);
 
-        job.properties_from_form('id_create-one-time-');
-        job.server_id = $('current_server_id').value;
-        job.definition = o.responseText;
+        /* job.definition = o.responseText; */
 
         data_dt.addRow(job.to_record());
         create_one_time_dialog.hide();
         $('create-form-one_time').reset();
         create_one_time_validation.reset();
 
-        update_user_message(true, 'Successfully created job [' + job.job_name + '].');
+        update_user_message(true, 'Successfully created a new one-time job [' + job.job_name + '].');
     };
 
     var on_failure = function(o) {
@@ -305,54 +316,6 @@ Job.prototype.get_execute_url = function() {
 // Builds an execute POST datafor the current job.
 Job.prototype.get_execute_data = function() {
     return "zato_action=execute&job_name=" + this.job_name
-}
-
-// A specialized subclass for one-time jobs.
-var OneTimeJob = Class.create(Job, {
-    initialize: function($super, record) {
-        $super(record);
-        this.job_type = "one_time";
-    },
-    set_properties: function($super, record) {
-        $super(record);
-    },
-});
-
-OneTimeJob.prototype.properties_from_form = function(field_prefix) {
-
-    // TODO: Should be moved to the base class.
-    this.job_name = $(field_prefix + "job_name").value;
-    this.service = $(field_prefix + "service").value;
-    this.extra = $(field_prefix + "extra").value;
-
-    this.date_time_raw = $(field_prefix + "date_time").value;
-}
-
-// A specialized subclass for interval-based jobs.
-var IntervalBasedJob = Class.create(Job, {
-    initialize: function($super, record) {
-        $super(record);
-        this.job_type = "interval_based";
-    },
-    set_properties: function($super, record) {
-        $super(record);
-    },
-});
-
-IntervalBasedJob.prototype.properties_from_form = function(field_prefix) {
-
-    // TODO: Should be moved to the base class.
-    this.job_name = $(field_prefix + "job_name").value;
-    this.service = $(field_prefix + "service").value;
-    this.extra = $(field_prefix + "extra").value;
-
-    this.start_date_raw = $(field_prefix + "start_date").value;
-    this.weeks = $(field_prefix + "weeks").value;
-    this.days = $(field_prefix + "days").value;
-    this.hours = $(field_prefix + "hours").value;
-    this.minutes = $(field_prefix + "minutes").value;
-    this.seconds = $(field_prefix + "seconds").value;
-    this.repeat = $(field_prefix + "repeat").value;
 }
 
 // /////////////////////////////////////////////////////////////////////////////

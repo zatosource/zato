@@ -40,6 +40,7 @@ from lxml import etree
 from lxml.objectify import Element
 
 # Zato
+from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.views import meth_allowed
 from zato.admin.settings import job_type_friendly_names
@@ -48,7 +49,6 @@ from zato.admin.web.forms.scheduler import OneTimeSchedulerJobForm, IntervalBase
 from zato.common import scheduler_date_time_format_one_time, scheduler_date_time_format_interval_based, \
      ZATO_OK, zato_namespace, zato_path, ZatoException
 from zato.common.odb.model import Cluster
-from zato.common.soap import invoke_admin_service
 from zato.common.util import pprint, TRACE1
 
 logger = logging.getLogger(__name__)
@@ -139,21 +139,21 @@ def _get_create_edit_interval_based_message(params, form_prefix=""):
 
     return zato_message
 
-def _create_one_time(server_address, params):
+def _create_one_time(cluster, params):
     """ Creates a one-time scheduler job.
     """
-    logger.info('About to create a one-time job, server_address=[%s], params=[%s]' % (server_address, params))
+    logger.info('About to create a one-time job, cluster=[{0}], params=[{1}]'.format(cluster, params))
     zato_message = _get_create_edit_one_time_message(params, create_one_time_prefix+'-')
 
-    invoke_admin_service(server_address, 'zato:scheduler.job.create', etree.tostring(zato_message))
+    invoke_admin_service(cluster, 'zato:scheduler.job.create', zato_message)
 
     date_time = _get_date_time(params['create-one-time-date_time'], scheduler_date_time_format_one_time)
-    logger.log(TRACE1, 'date_time=[%s]' % date_time)
+    logger.log(TRACE1, 'date_time=[{0}]'.format(date_time))
 
     job = OneTimeSchedulerJob(date_time=date_time)
 
-    logger.info('Successfully created a one-time job, server_address=[%s], params=[%s]' % (server_address, params))
-    logger.log(TRACE1, 'job.definition=[%s]' % job.definition)
+    logger.info('Successfully created a one-time job, cluster=[{0}], params=[{1}]'.format(cluster, params))
+    logger.log(TRACE1, 'job.definition=[{0}]'.format(job.definition))
 
     return job.definition
 
@@ -251,12 +251,13 @@ def index(req):
     cluster_id = req.GET.get('cluster')
 
     # Build a list of schedulers for a given Zato cluster.
-    server_id = req.GET.get('server')
-    if server_id and req.method == 'GET':
+    if cluster_id and req.method == 'GET':
 
         # We have a server to pick the schedulers from, try to invoke it now.
-        server = Server.objects.get(id=server_id)
-        _ignored, zato_message, soap_response  = invoke_admin_service(server.address, 'zato:scheduler.job.get-list')
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 
+                'zato:scheduler.job.get-list', zato_message)
 
         if zato_path('data.job_list.job').get_from(zato_message) is not None:
             for job_elem in zato_message.data.job_list.job:
@@ -311,7 +312,7 @@ def index(req):
             return HttpResponseServerError(msg)
 
 
-        server = Server.objects.get(id=server_id)
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
 
         # Try to match the action and a job type with an action handler..
         handler_name = '_' + action
@@ -329,7 +330,7 @@ def index(req):
 
         # .. invoke the action handler.
         try:
-            response = handler(server.address, req.POST)
+            response = handler(cluster, req.POST)
             response = response if response else ''
             return HttpResponse(response)
         except Exception, e:
@@ -347,13 +348,14 @@ def index(req):
         {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,
-        'jobs':jobs, 'server_id':server_id,
+        'jobs':jobs, 
+        'cluster_id':cluster_id,
         'friendly_names':job_type_friendly_names.items(),
         'create_one_time_form':OneTimeSchedulerJobForm(prefix=create_one_time_prefix),
         'create_interval_based_form':IntervalBasedSchedulerJobForm(prefix=create_interval_based_prefix),
         'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
         'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix)
-                               })
+        })
 
 @meth_allowed("POST")
 def delete(req):

@@ -116,11 +116,11 @@ class ZatoContext(PythonConfig):
             'zato:pool.sql.ping':'zato.server.service.internal.sql.PingSQLConnectionPool',
 
             # Scheduler
-            'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetJobList',
-            'zato:scheduler.job.create':'zato.server.service.internal.scheduler.CreateJob',
-            'zato:scheduler.job.edit':'zato.server.service.internal.scheduler.EditJob',
-            'zato:scheduler.job.execute':'zato.server.service.internal.scheduler.ExecuteJob',
-            'zato:scheduler.job.delete':'zato.server.service.internal.scheduler.DeleteJob',
+            'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
+            'zato:scheduler.job.create':'zato.server.service.internal.scheduler.Create',
+            'zato:scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
+            'zato:scheduler.job.execute':'zato.server.service.internal.scheduler.Execute',
+            'zato:scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
 
             # Services
             'zato:service.get-list':'zato.server.service.internal.service.GetServiceList',
