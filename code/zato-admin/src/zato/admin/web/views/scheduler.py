@@ -25,15 +25,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from cStringIO import StringIO
+from datetime import datetime
+from json import dumps
 from uuid import uuid4
 from time import strptime
-from datetime import datetime
-from cStringIO import StringIO
 from traceback import format_exc
 
 # Django
-from django.shortcuts import render_to_response
 from django.http import HttpResponse, HttpResponseServerError
+from django.shortcuts import render_to_response
 
 # lxml
 from lxml import etree
@@ -66,6 +67,11 @@ def _get_start_date(start_date, start_date_format):
     return datetime(year=strp.tm_year, month=strp.tm_mon, day=strp.tm_mday,
                        hour=strp.tm_hour, minute=strp.tm_min)
 
+def _get_one_time_job_definition(start_date):
+    start_date = _get_start_date(start_date, scheduler_date_time_format_one_time)
+    return 'Execute once on {0} at {1}'.format(start_date.strftime('%Y-%m-%d'),
+                start_date.strftime('%H:%M:%S'))
+
 def _get_interval_based_job_definition(start_date, repeat, weeks, days, hours,
                                         minutes, seconds):
 
@@ -82,6 +88,7 @@ def _get_interval_based_job_definition(start_date, repeat, weeks, days, hours,
             buf.write(' Execute once.')
         elif repeat == 2:
             buf.write(' Repeat twice.')
+        # .. my hand is itching to add the 'Repeat thrice.' here ;-)
         elif repeat > 2:
             buf.write(' Repeat ')
             buf.write(str(repeat))
@@ -143,20 +150,15 @@ def _get_create_edit_interval_based_message(params, form_prefix=""):
 def _create_one_time(cluster, params):
     """ Creates a one-time scheduler job.
     """
-    logger.info('About to create a one-time job, cluster=[{0}], params=[{1}]'.format(cluster, params))
+    logger.info('About to create a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
     zato_message = _get_create_edit_one_time_message(cluster, params, create_one_time_prefix+'-')
 
-    invoke_admin_service(cluster, 'zato:scheduler.job.create', zato_message)
+    _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', zato_message)
+    new_id = zato_message.data.job.id.text
+    logger.info('Successfully created a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
-    start_date = _get_start_date(params['create-one-time-start_date'], scheduler_date_time_format_one_time)
-    logger.log(TRACE1, 'start_date=[{0}]'.format(start_date))
-
-    job = Job(start_date=start_date)
-
-    logger.info('Successfully created a one-time job, cluster=[{0}], params=[{1}]'.format(cluster, params))
-    logger.log(TRACE1, 'job.definition_text=[{0}]'.format(job.definition_text))
-
-    return job.definition_text
+    return dumps({'id': new_id, 
+            'definition_text':_get_one_time_job_definition(params['create-one-time-start_date'])})
 
 def _create_interval_based(server_address, params):
     """ Creates an interval-based scheduler job.
@@ -335,7 +337,7 @@ def index(req):
         try:
             response = handler(cluster, req.POST)
             response = response if response else ''
-            return HttpResponse(response)
+            return HttpResponse(response, mimetype='application/javascript')
         except Exception, e:
             msg = ('Could not invoke action [%s], job_type=[%s], e=[%s]'
                    'req.POST=[%s], req.GET=[%s]') % (action, job_type,

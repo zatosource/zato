@@ -139,10 +139,12 @@ function setup_create_dialog_one_time() {
 
     var on_success = function(o) {
 
-        var job = new OneTimeJob(null);
+        var json = YAHOO.lang.JSON.parse(o.responseText);
+        var job = new OneTimeJob();
 
+        job.id = json.id;        
         job.name = $('id_create-one-time-name').value;
-        job.definition = o.responseText;
+        job.definition_text = json.definition_text;
 
         data_dt.addRow(job.to_record());
         create_one_time_dialog.hide();
