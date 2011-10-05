@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
 from time import strptime
 from traceback import format_exc
 
@@ -51,26 +52,26 @@ class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
-        definition_list = Element('definition_list')
-        session = self.server.odb.session()
-        definitions = session.query(Job).\
-            filter(Cluster.id==params['cluster_id']).\
-            order_by('job.name').\
-            all()
 
-        for definition in definitions:
-
-            definition_elem = Element('definition')
-            definition_elem.id = definition.id
-            definition_elem.name = definition.name
-            definition_elem.is_active = definition.is_active
-
-            definition_list.append(definition_elem)
-
-        return ZATO_OK, etree.tostring(definition_list)
+        with closing(self.server.odb.session()) as session:
+            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+            definition_list = Element('definition_list')
+            definitions = session.query(Job).\
+                filter(Cluster.id==params['cluster_id']).\
+                order_by('job.name').\
+                all()
+    
+            for definition in definitions:
+    
+                definition_elem = Element('definition')
+                definition_elem.id = definition.id
+                definition_elem.name = definition.name
+                definition_elem.is_active = definition.is_active
+    
+                definition_list.append(definition_elem)
+    
+            return ZATO_OK, etree.tostring(definition_list)
+    
     
 class Create(AdminService):
     """ Creates a new scheduler's job.

@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
@@ -41,196 +42,195 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        definition_list = Element('definition_list')
-        session = self.server.odb.session()
-        definitions = session.query(WSSDefinition).\
-            filter(Cluster.id==params['cluster_id']).\
-            order_by('name').\
-            all()
-
-        for definition in definitions:
-
-            definition_elem = Element('definition')
-            definition_elem.id = definition.id
-            definition_elem.name = definition.name
-            definition_elem.is_active = definition.is_active
-            definition_elem.password_type = definition.password_type
-            definition_elem.username = definition.username
-            definition_elem.reject_empty_nonce_ts = definition.reject_empty_nonce_ts
-            definition_elem.reject_stale_username = definition.reject_stale_username
-            definition_elem.expiry_limit = definition.expiry_limit
-            definition_elem.nonce_freshness = definition.nonce_freshness
-
-            definition_list.append(definition_elem)
-
-        return ZATO_OK, etree.tostring(definition_list)
+        with closing(self.server.odb.session()) as session:
+            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+            definition_list = Element('definition_list')
+            definitions = session.query(WSSDefinition).\
+                filter(Cluster.id==params['cluster_id']).\
+                order_by('name').\
+                all()
+    
+            for definition in definitions:
+    
+                definition_elem = Element('definition')
+                definition_elem.id = definition.id
+                definition_elem.name = definition.name
+                definition_elem.is_active = definition.is_active
+                definition_elem.password_type = definition.password_type
+                definition_elem.username = definition.username
+                definition_elem.reject_empty_nonce_ts = definition.reject_empty_nonce_ts
+                definition_elem.reject_stale_username = definition.reject_stale_username
+                definition_elem.expiry_limit = definition.expiry_limit
+                definition_elem.nonce_freshness = definition.nonce_freshness
+    
+                definition_list.append(definition_elem)
+    
+            return ZATO_OK, etree.tostring(definition_list)
 
 class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
     def handle(self, *args, **kwargs):
         
-        payload = kwargs.get('payload')
-        request_params = ['cluster_id', 'name', 'is_active', 'username', 
-                          'password_type', 'reject_empty_nonce_ts', 
-                          'reject_stale_username',  'expiry_limit',
-                          'nonce_freshness']
-        params = _get_params(payload, request_params, 'data.')
-        
-        cluster_id = params['cluster_id']
-        name = params['name']
-        
-        session = self.server.odb.session()
-        cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-        
-        # Let's see if we already have a definition of that name before committing
-        # any stuff into the database.
-        existing_one = session.query(WSSDefinition).\
-            filter(Cluster.id==cluster_id).\
-            filter(WSSDefinition.name==name).first()
-        
-        if existing_one:
-            raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
-        
-        wss_elem = Element('wss')
-
-        try:
-            wss = WSSDefinition(None, name, params['is_active'], params['username'], 
-                                uuid4().hex,  params['password_type'],
-                                params['reject_empty_nonce_ts'], 
-                                params['reject_stale_username'], params['expiry_limit'], 
-                                params['nonce_freshness'], cluster)
+        with closing(self.server.odb.session()) as session:
+            payload = kwargs.get('payload')
+            request_params = ['cluster_id', 'name', 'is_active', 'username', 
+                              'password_type', 'reject_empty_nonce_ts', 
+                              'reject_stale_username',  'expiry_limit',
+                              'nonce_freshness']
+            params = _get_params(payload, request_params, 'data.')
             
-            session.add(wss)
-            session.commit()
+            cluster_id = params['cluster_id']
+            name = params['name']
             
-            wss_elem.id = wss.id
+            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
             
-        except Exception, e:
-            msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
-            self.logger.error(msg)
-            session.rollback()
+            # Let's see if we already have a definition of that name before committing
+            # any stuff into the database.
+            existing_one = session.query(WSSDefinition).\
+                filter(Cluster.id==cluster_id).\
+                filter(WSSDefinition.name==name).first()
             
-            raise 
-        
-        return ZATO_OK, etree.tostring(wss_elem)
+            if existing_one:
+                raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
+            
+            wss_elem = Element('wss')
+    
+            try:
+                wss = WSSDefinition(None, name, params['is_active'], params['username'], 
+                                    uuid4().hex,  params['password_type'],
+                                    params['reject_empty_nonce_ts'], 
+                                    params['reject_stale_username'], params['expiry_limit'], 
+                                    params['nonce_freshness'], cluster)
+                
+                session.add(wss)
+                session.commit()
+                
+                wss_elem.id = wss.id
+                
+            except Exception, e:
+                msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+                
+                raise 
+            
+            return ZATO_OK, etree.tostring(wss_elem)
 
 class Edit(AdminService):
     """ Updates a WS-S definition.
     """
     def handle(self, *args, **kwargs):
 
-        payload = kwargs.get('payload')
-        request_params = ['id', 'is_active', 'name', 'username', 'password_type', 
-                          'reject_empty_nonce_ts', 'reject_stale_username', 
-                          'expiry_limit', 'nonce_freshness', 'cluster_id']
-        new_params = _get_params(payload, request_params, 'data.')
-        
-        def_id = new_params['id']
-        name = new_params['name']
-        cluster_id = new_params['cluster_id']
-        
-        session = self.server.odb.session()
-        existing_one = session.query(WSSDefinition).\
-            filter(Cluster.id==cluster_id).\
-            filter(WSSDefinition.name==name).\
-            filter(WSSDefinition.id != def_id).\
-            first()
-        
-        if existing_one:
-            raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
-
-        try:
-            definition = session.query(WSSDefinition).filter_by(id=def_id).one()
+        with closing(self.server.odb.session()) as session:
+            payload = kwargs.get('payload')
+            request_params = ['id', 'is_active', 'name', 'username', 'password_type', 
+                              'reject_empty_nonce_ts', 'reject_stale_username', 
+                              'expiry_limit', 'nonce_freshness', 'cluster_id']
+            new_params = _get_params(payload, request_params, 'data.')
             
-            definition.name = name
-            definition.is_active = new_params['is_active']
-            definition.username = new_params['username']
-            definition.password_type = new_params['password_type']
-            definition.reject_empty_nonce_ts = new_params['reject_empty_nonce_ts']
-            definition.reject_stale_username = new_params['reject_stale_username']
-            definition.expiry_limit = new_params['expiry_limit']
-            definition.nonce_freshness = new_params['nonce_freshness']
-
-            session.add(definition)
-            session.commit()
+            def_id = new_params['id']
+            name = new_params['name']
+            cluster_id = new_params['cluster_id']
             
-        except Exception, e:
-            msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
-            self.logger.error(msg)
-            session.rollback()
+            existing_one = session.query(WSSDefinition).\
+                filter(Cluster.id==cluster_id).\
+                filter(WSSDefinition.name==name).\
+                filter(WSSDefinition.id != def_id).\
+                first()
             
-            raise 
-
-
-        return ZATO_OK, ''
+            if existing_one:
+                raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
+    
+            try:
+                definition = session.query(WSSDefinition).filter_by(id=def_id).one()
+                
+                definition.name = name
+                definition.is_active = new_params['is_active']
+                definition.username = new_params['username']
+                definition.password_type = new_params['password_type']
+                definition.reject_empty_nonce_ts = new_params['reject_empty_nonce_ts']
+                definition.reject_stale_username = new_params['reject_stale_username']
+                definition.expiry_limit = new_params['expiry_limit']
+                definition.nonce_freshness = new_params['nonce_freshness']
+    
+                session.add(definition)
+                session.commit()
+                
+            except Exception, e:
+                msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+                
+                raise 
+    
+            return ZATO_OK, ''
     
 class ChangePassword(AdminService):
     """ Changes the password of a WS-Security definition.
     """
     def handle(self, *args, **kwargs):
         
-        try:
-            payload = kwargs.get('payload')
-            request_params = ['id', 'password1', 'password2']
-            params = _get_params(payload, request_params, 'data.')
+        with closing(self.server.odb.session()) as session:
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['id', 'password1', 'password2']
+                params = _get_params(payload, request_params, 'data.')
+                
+                id = params['id']
+                password1 = params.get('password1')
+                password2 = params.get('password2')
+                
+                if not password1:
+                    raise Exception('Password must not be empty')
+                
+                if not password2:
+                    raise Exception('Password must be repeated')
+                
+                if password1 != password2:
+                    raise Exception('Passwords need to be the same')
+                
+                wss = session.query(WSSDefinition).\
+                    filter(WSSDefinition.id==id).\
+                    one()
+                
+                wss.password = password1
             
-            id = params['id']
-            password1 = params.get('password1')
-            password2 = params.get('password2')
+                session.add(wss)
+                session.commit()
+            except Exception, e:
+                msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+                
+                raise 
             
-            if not password1:
-                raise Exception('Password must not be empty')
-            
-            if not password2:
-                raise Exception('Password must be repeated')
-            
-            if password1 != password2:
-                raise Exception('Passwords need to be the same')
-            
-            session = self.server.odb.session()
-            wss = session.query(WSSDefinition).\
-                filter(WSSDefinition.id==id).\
-                one()
-            
-            wss.password = password1
-        
-            session.add(wss)
-            session.commit()
-        except Exception, e:
-            msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
-            self.logger.error(msg)
-            session.rollback()
-            
-            raise 
-        
-        return ZATO_OK, ''
+            return ZATO_OK, ''
     
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
     def handle(self, *args, **kwargs):
         
-        try:
-            payload = kwargs.get('payload')
-            request_params = ['wss_id']
-            params = _get_params(payload, request_params, 'data.')
+        with closing(self.server.odb.session()) as session:
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['wss_id']
+                params = _get_params(payload, request_params, 'data.')
+                
+                wss_id = params['wss_id']
+                
+                wss = session.query(WSSDefinition).\
+                    filter(WSSDefinition.id==wss_id).\
+                    one()
+                
+                session.delete(wss)
+                session.commit()
+            except Exception, e:
+                msg = "Could not delete the WS-Security definition, e=[{e}]".format(e=format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+                
+                raise
             
-            wss_id = params['wss_id']
-            
-            session = self.server.odb.session()
-            wss = session.query(WSSDefinition).\
-                filter(WSSDefinition.id==wss_id).\
-                one()
-            
-            session.delete(wss)
-            session.commit()
-        except Exception, e:
-            msg = "Could not delete the WS-Security definition, e=[{e}]".format(e=format_exc(e))
-            self.logger.error(msg)
-            session.rollback()
-            
-            raise
-        
-        return ZATO_OK, ''
+            return ZATO_OK, ''
