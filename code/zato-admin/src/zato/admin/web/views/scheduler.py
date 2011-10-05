@@ -263,23 +263,28 @@ def index(req):
         zato_message.data.cluster_id = cluster_id
         _, zato_message, soap_response  = invoke_admin_service(cluster, 
                 'zato:scheduler.job.get-list', zato_message)
-
-        if zato_path('data.job_list.job').get_from(zato_message) is not None:
-            for job_elem in zato_message.data.job_list.job:
+        
+        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
+            for job_elem in zato_message.data.definition_list.definition:
+                
                 job = None
-                name = unicode(job_elem.name.text)
-                job_type = unicode(job_elem.type)
-                original_name = unicode(job_elem.name.text)
-                service = unicode(job_elem.service.text)
-                extra = unicode(job_elem.extra.text) if job_elem.extra.text else ''
+                
+                id = job_elem.id.text
+                name = job_elem.name.text
+                is_active = job_elem.is_active.text
+                job_type = job_elem.job_type.text
+                
+                #service = job_elem.service.text
                 job_type_friendly = job_type_friendly_names[job_type]
-
+                
                 if job_type == 'one_time':
 
-                    job = OneTimeSchedulerJob(uuid4().hex, original_name, name, job_type,
+                    '''job = OneTimeSchedulerJob(uuid4().hex, original_name, name, job_type,
                                        job_type_friendly, service, extra,
                                        _get_start_date(job_elem.start_date, scheduler_date_time_format_one_time),
                                        job_elem.start_date)
+                                       '''
+                    job = Job(id, name, is_active, job_type_friendly=job_type_friendly)
 
                 elif job_type == 'interval_based':
                     start_date = _get_start_date(job_elem.start_date, scheduler_date_time_format_interval_based)
@@ -293,14 +298,13 @@ def index(req):
                                        job_elem.seconds, job_elem.repeat,
                                        definition)
                 else:
-                    msg = 'Unrecognized job type, name=[%s], type=[%s].' % (name, job_type)
+                    msg = 'Unrecognized job type, name=[%s], type=[%s]'.format(name, job_type)
                     logger.error(msg)
                     raise ZatoException(msg)
 
-                logger.log(TRACE1, 'Appending job=[%s]' % job)
                 jobs.append(job)
         else:
-            logger.info('No jobs found, soap_response=[%s]' % soap_response)
+            logger.info('No jobs found, soap_response=[%s]'.format(soap_response))
 
     if req.method == 'POST':
 
