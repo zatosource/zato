@@ -67,6 +67,8 @@ class GetList(AdminService):
                 definition_elem.id = definition.id
                 definition_elem.name = definition.name
                 definition_elem.is_active = definition.is_active
+                definition_elem.job_type = definition.job_type
+                definition_elem.start_date = definition.start_date
     
                 definition_list.append(definition_elem)
     

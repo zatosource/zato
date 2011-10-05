@@ -529,7 +529,7 @@ class Job(Base):
     def __init__(self, id=None, name=None, is_active=None, job_type=None, 
                  start_date=None, extra=None, cluster=None, cluster_id=None,
                  service=None, service_id=None, interval_based=None, 
-                 cron_style=None, definition_text=None):
+                 cron_style=None, definition_text=None, job_type_friendly=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -543,6 +543,7 @@ class Job(Base):
         self.interval_based = interval_based
         self.cron_style = cron_style
         self.definition_text = definition_text # Not used by the database
+        self.job_type_friendly = job_type_friendly # Not used by the database
     
 class IntervalBasedJob(Base):
     """ A Cron-style scheduler's job.
