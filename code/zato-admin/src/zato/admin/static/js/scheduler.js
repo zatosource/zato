@@ -31,7 +31,7 @@ Job.prototype.to_record = function() {
     record['is_active'] = this.boolean_html(this.is_active);
     record['job_type'] = friendly_names.get(this.job_type);
     record['definition_text'] = this.definition_text;
-    record['service'] = this.service;
+    record['service'] = String.format('<a href="/zato/service/?service={0}">{1}</a>', this.service, this.service)
     
     record['edit'] = String.format("<a href=\"javascript:edit('one-time', {0})\">Edit</a>", this.id);
     record['execute'] = String.format("<a href='javascript:execute({0})'>Execute</a>", this.id);
@@ -39,6 +39,22 @@ Job.prototype.to_record = function() {
 
     return record;
 };
+
+Job.prototype.add_row = function(object, data_dt) {
+
+    var add_at_idx = 0;
+    data_dt.addRow(object.to_record(), add_at_idx);
+    
+    var added_record = data_dt.getRecord(add_at_idx);
+    
+    added_record.setData('id', object.id);
+    added_record.setData('name', object.name);
+    added_record.setData('is_active', object.is_active);
+    added_record.setData('job_type', object.job_type);
+    added_record.setData('service', object.is_active);
+    added_record.setData('definition_text', object.definition_text);
+
+}
 
 // A specialized subclass for one-time jobs.
 var OneTimeJob = Class.create(Job, {
@@ -146,20 +162,20 @@ function setup_create_dialog_one_time() {
     var on_success = function(o) {
 
         var json = YAHOO.lang.JSON.parse(o.responseText);
-        var job = new OneTimeJob();
+        var object = new OneTimeJob();
 
-        job.id = json.id;        
-        job.name = $('id_create-one-time-name').value;
-        job.is_active = $F('id_create-one-time-is_active') == 'on';
-        job.service = $('id_create-one-time-service').value;
-        job.definition_text = json.definition_text;
+        object.id = json.id;        
+        object.name = $('id_create-one-time-name').value;
+        object.is_active = $F('id_create-one-time-is_active') == 'on';
+        object.service = $('id_create-one-time-service').value;
+        object.definition_text = json.definition_text;
 
-        data_dt.addRow(job.to_record());
+        object.add_row(object, data_dt);
         create_one_time_dialog.hide();
         $('create-form-one_time').reset();
         create_one_time_validation.reset();
 
-        update_user_message(true, 'Successfully created a new one-time job [' + job.name + '].');
+        update_user_message(true, 'Successfully created a new one-time job [' + object.name + '].');
     };
 
     var on_failure = function(o) {

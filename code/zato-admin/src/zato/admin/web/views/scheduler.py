@@ -40,6 +40,9 @@ from django.shortcuts import render_to_response
 from lxml import etree
 from lxml.objectify import Element
 
+# Validate
+from validate import is_boolean
+
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
@@ -67,7 +70,7 @@ def _get_start_date(start_date, start_date_format):
     return datetime(year=strp.tm_year, month=strp.tm_mon, day=strp.tm_mday,
                        hour=strp.tm_hour, minute=strp.tm_min)
 
-def _get_one_time_job_definition(start_date):
+def _one_time_job_def(start_date):
     start_date = _get_start_date(start_date, scheduler_date_time_format_one_time)
     return 'Execute once on {0} at {1}'.format(start_date.strftime('%Y-%m-%d'),
                 start_date.strftime('%H:%M:%S'))
@@ -158,7 +161,7 @@ def _create_one_time(cluster, params):
     logger.info('Successfully created a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
     return dumps({'id': new_id, 
-            'definition_text':_get_one_time_job_definition(params['create-one-time-start_date'])})
+            'definition_text':_one_time_job_def(params['create-one-time-start_date'])})
 
 def _create_interval_based(server_address, params):
     """ Creates an interval-based scheduler job.
@@ -271,20 +274,18 @@ def index(req):
                 
                 id = job_elem.id.text
                 name = job_elem.name.text
-                is_active = job_elem.is_active.text
+                is_active = is_boolean(job_elem.is_active.text)
                 job_type = job_elem.job_type.text
-                
-                #service = job_elem.service.text
+                start_date = job_elem.start_date.text
+                service_name = job_elem.service_name.text
                 job_type_friendly = job_type_friendly_names[job_type]
                 
                 if job_type == 'one_time':
-
-                    '''job = OneTimeSchedulerJob(uuid4().hex, original_name, name, job_type,
-                                       job_type_friendly, service, extra,
-                                       _get_start_date(job_elem.start_date, scheduler_date_time_format_one_time),
-                                       job_elem.start_date)
-                                       '''
-                    job = Job(id, name, is_active, job_type_friendly=job_type_friendly)
+                    
+                    job = Job(id, name, is_active, job_type, start_date,
+                              service_name=service_name, 
+                              job_type_friendly=job_type_friendly,
+                              definition_text=_one_time_job_def(start_date))
 
                 elif job_type == 'interval_based':
                     start_date = _get_start_date(job_elem.start_date, scheduler_date_time_format_interval_based)

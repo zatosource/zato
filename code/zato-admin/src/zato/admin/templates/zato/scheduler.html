@@ -104,8 +104,8 @@
                     {key:'job_type', label:'Type', sortable:true},
                     {key:'definition_text', label:'Definition', sortable:false},
                     {key:'service', label:'Service', sortable:true},
-                    {key:'edit', label:'', sortable:false},
                     {key:'execute', label:'', sortable:false},
+                    {key:'edit', label:'', sortable:false},
                     {key:'delete', label:'', sortable:false},
                 ];
 
@@ -117,8 +117,8 @@
                             {key:'job_type'},
                             {key:'definition_text'},
                             {key:'service'},
-                            {key:'edit'},
                             {key:'execute'},
+                            {key:'edit'},
                             {key:'delete'},
 
                     ]
@@ -160,16 +160,13 @@
 
                     <tr>
                         <td>{{ job.name }}</td>
-                        <td>{{ job.is_active }}</td>
+                        <td>{% if job.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{{ job.job_type_friendly }}</td>
-                        <td>{{ job.definition }}</td>
-                        <td>{{ job.service }}</td>
-                        <td><a href="#">Edit</a>
-                        </td>
-                        <td><a href="#">Execute</a>
-                        </td>
-                        <td><a href="#">Delete</a>
-                        </td>
+                        <td>{{ job.definition_text }}</td>
+                        <td><a href="{% url service %}?service={{ job.service_name }}">{{ job.service_name }}</a></td>
+                        <td><a href="javascript:execute({{ job.id }})">Execute</a></td>
+                        <td><a href="javascript:edit('one-time', {{ job.id }})">Edit</a></td>
+                        <td><a href="javascript:delete({{ job.id }})">Delete</a></td>
                     </tr>
                 {% endfor %}
 

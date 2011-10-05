@@ -56,8 +56,12 @@ class GetList(AdminService):
         with closing(self.server.odb.session()) as session:
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
-            definitions = session.query(Job).\
+            definitions = session.query(Job.id, Job.name, Job.is_active,
+                                        Job.job_type, Job.start_date, 
+                                        Service.name.label('service_name'),
+                                        Service.id.label('service_id')).\
                 filter(Cluster.id==params['cluster_id']).\
+                filter(Job.service_id==Service.id).\
                 order_by('job.name').\
                 all()
     
@@ -69,6 +73,8 @@ class GetList(AdminService):
                 definition_elem.is_active = definition.is_active
                 definition_elem.job_type = definition.job_type
                 definition_elem.start_date = definition.start_date
+                definition_elem.service_id = definition.service_id
+                definition_elem.service_name = definition.service_name
     
                 definition_list.append(definition_elem)
     
