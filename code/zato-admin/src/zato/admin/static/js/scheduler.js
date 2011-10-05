@@ -10,26 +10,32 @@ var Job = Class.create({
     }
 });
 
+Job.prototype.boolean_html = function(attr) {
+    return attr ? 'Yes': 'No';
+}
+
 // A nicer toString.
 Job.prototype.toString = function() {
-    return "<Job\
- name=[" + this.name + "]\
- is_active=[" + this.is_active + "]\
- job_type=[" + this.job_type + "]\
- definition_text=[" + this.definition_text + "]\
->";
+    return '<Job\
+ name=[' + this.name + ']\
+ is_active=[' + this.is_active + ']\
+ job_type=[' + this.job_type + ']\
+ definition_text=[' + this.definition_text + ']\
+>';
 };
 
 // Dumps properties in a form suitable for creating a new data table row.
 Job.prototype.to_record = function() {
     var record = new Array();
-    record["name"] = this.name;
-    record["job_type"] = friendly_names.get(this.job_type);
-    record["definition_text"] = this.definition_text;
-    record["service"] = this.service;
-    record["edit"] = "";
-    record["execute"] = "";
-    record["delete"] = "";
+    record['name'] = this.name;
+    record['is_active'] = this.boolean_html(this.is_active);
+    record['job_type'] = friendly_names.get(this.job_type);
+    record['definition_text'] = this.definition_text;
+    record['service'] = this.service;
+    
+    record['edit'] = String.format("<a href=\"javascript:edit('one-time', {0})\">Edit</a>", this.id);
+    record['execute'] = String.format("<a href='javascript:execute({0})'>Execute</a>", this.id);
+    record['delete'] = String.format("<a href='javascript:delete({0})'>Delete</a>", this.id);
 
     return record;
 };
@@ -144,6 +150,8 @@ function setup_create_dialog_one_time() {
 
         job.id = json.id;        
         job.name = $('id_create-one-time-name').value;
+        job.is_active = $F('id_create-one-time-is_active') == 'on';
+        job.service = $('id_create-one-time-service').value;
         job.definition_text = json.definition_text;
 
         data_dt.addRow(job.to_record());

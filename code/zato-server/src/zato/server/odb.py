@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from contextlib import closing
 from traceback import format_exc
 
 # SQLAlchemy
@@ -52,8 +51,7 @@ class ODBManager(object):
         self.cluster = cluster
         
     def session(self):
-        with closing(self._Session()) as session:
-            return session
+        return self._Session()
         
     '''
     def query(self, *args, **kwargs):
