@@ -226,9 +226,26 @@ function setup_create_dialog_interval_based() {
 
     var on_submit = function() {
         if(create_interval_based_validation.validate()) {
-            // Submit the form if no errors have been found on the UI side.
-            this.submit();
-        }
+
+			var seen_anything = false;
+			var suffixes = ['weeks', 'days', 'hours', 'minutes', 'seconds'];
+			
+			suffixes.each(function(name) {
+				var value = $('id_create-interval-based-' + name).value;
+				if(value) {
+					seen_anything = true;
+					throw $break;
+				}
+			});
+			
+			if(!seen_anything) {
+				alert('At least one of the weeks, days, hours, minutes or seconds must be provided');
+			}
+			else {
+				// Submit the form if no errors have been found on the UI side.
+				this.submit();
+			}
+		}
     };
 
     var on_cancel = function() {
