@@ -146,6 +146,9 @@ function create(job_type) {
         $('create-one_time').show();
         create_one_time_dialog.show();
     }
+	else if(job_type == 'interval-based') {
+		create_interval_based_dialog.show();
+	}
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -213,6 +216,74 @@ function setup_create_dialog_one_time() {
         create_one_time_dialog.callback.failure = on_failure;
 
         create_one_time_dialog.render();
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+function setup_create_dialog_interval_based() {
+    var create_interval_based_validation = new Validation('create-form-interval_based');
+
+    var on_submit = function() {
+        if(create_interval_based_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+        }
+    };
+
+    var on_cancel = function() {
+        this.cancel();
+        create_interval_based_dialog.hide();
+        $('create-form-interval_based').reset();
+        create_interval_based_validation.reset();
+    };
+
+    var on_success = function(o) {
+
+        var json = YAHOO.lang.JSON.parse(o.responseText);
+        var object = new OneTimeJob();
+		
+        object.id = json.id;        
+        object.name = $('id_create-interval-based-name').value;
+        object.is_active = $F('id_create-interval-based-is_active') == 'on';
+        object.service = $('id_create-interval-based-service').value;
+        object.definition_text = json.definition_text;
+		object.start_date = $('id_create-interval-based-start_date').value;
+		object.extra = $('id_create-interval-based-extra').value;
+		
+        object.add_row(object, data_dt);
+        create_interval_based_dialog.hide();
+        $('create-form-interval_based').reset();
+        create_interval_based_validation.reset();
+
+        update_user_message(true, 'Successfully created a new interval-based job [' + object.name + '].');
+    };
+
+    var on_failure = function(o) {
+        create_interval_based_dialog.hide();
+        $('create-form-interval_based').reset();
+        create_interval_based_validation.reset();
+        update_user_message(false, o.responseText);
+    };
+
+    // Instantiate the dialog if necessary.
+    if(typeof create_interval_based_dialog == 'undefined') {
+        create_interval_based_dialog = new YAHOO.widget.Dialog('create-interval_based',
+                                { width: '50em',
+                                  fixedcenter: true,
+                                  visible: false,
+                                  draggable: true,
+                                  postmethod: 'async',
+                                  hideaftersubmit: false,
+                                  constraintoviewport: true,
+                                  buttons: [{text:'Submit', handler:on_submit},
+                                            {text:'Cancel', handler:on_cancel, isDefault:true}]
+                                });
+
+        create_interval_based_dialog.callback.success = on_success;
+        create_interval_based_dialog.callback.failure = on_failure;
+
+        create_interval_based_dialog.render();
     }
 }
 
@@ -446,7 +517,10 @@ YAHOO.util.Event.onDOMReady(function() {
     };
 
     setup_create_dialog_one_time();
+	setup_create_dialog_interval_based();
+	
     setup_edit_dialog_one_time();
+	
     setup_delete_dialog();
 });
 
