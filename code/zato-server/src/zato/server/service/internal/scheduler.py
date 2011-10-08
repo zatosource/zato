@@ -58,6 +58,7 @@ class GetList(AdminService):
             definition_list = Element('definition_list')
             definitions = session.query(Job.id, Job.name, Job.is_active,
                                         Job.job_type, Job.start_date, 
+                                        Job.extra,
                                         Service.name.label('service_name'),
                                         Service.id.label('service_id')).\
                 filter(Cluster.id==params['cluster_id']).\
@@ -73,9 +74,10 @@ class GetList(AdminService):
                 definition_elem.is_active = definition.is_active
                 definition_elem.job_type = definition.job_type
                 definition_elem.start_date = definition.start_date
+                definition_elem.extra = definition.extra
                 definition_elem.service_id = definition.service_id
                 definition_elem.service_name = definition.service_name
-    
+                
                 definition_list.append(definition_elem)
     
             return ZATO_OK, etree.tostring(definition_list)
@@ -88,17 +90,6 @@ class Create(AdminService):
 
 
         '''
-        def _handle_one_time(payload, core_params, extra):
-            request_params = ['date_time']
-            params = _get_params(payload, request_params, 'data.')
-            date_time = params['date_time']
-
-            # Were date & time provided in the correct format? (Will raise
-            # an exception if they weren't).
-            strptime(date_time, scheduler_date_time_format_one_time)
-            
-            return ZATO_OK, ''
-
         def _handle_interval_based(payload, name, service, extra):
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat', 'start_date']
             params = _get_params(payload, request_params, 'data.job.',
@@ -126,7 +117,7 @@ class Create(AdminService):
         payload = kwargs.get('payload')
         params = ['cluster_id', 'name', 'is_active', 'job_type', 'service',
                        'start_date', 'extra']
-        params = _get_params(payload, params, 'data.')
+        params = _get_params(payload, params, 'data.', default_value='')
         
         job_type = params['job_type']
         cluster_id = params['cluster_id']
@@ -134,7 +125,7 @@ class Create(AdminService):
         service_name = params['service']
         
         if job_type not in ('one_time', 'interval_based', 'cron_style'):
-            msg = 'Unrecognized job type [%s]'.format(job_type)
+            msg = 'Unrecognized job type [{0}]'.format(job_type)
             self.logger.error(msg)
             raise ZatoException(msg)
         
@@ -162,8 +153,10 @@ class Create(AdminService):
         # if the job type's is either interval-based or Cron-style. The base
         # instance will be enough if it's a one-time job.
         
+        extra = params['extra'].encode('utf-8')
+        
         job = Job(None, name, is_boolean(params['is_active']), job_type,
-                  params['start_date'], params['extra'].encode('utf-8'), 
+                  params['start_date'], extra, 
                   cluster_id=cluster_id, service=service)
         try:
             # Add but don't commit yet.

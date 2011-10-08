@@ -278,12 +278,13 @@ def index(req):
                 job_type = job_elem.job_type.text
                 start_date = job_elem.start_date.text
                 service_name = job_elem.service_name.text
+                extra = job_elem.extra.text if job_elem.extra.text else ''
                 job_type_friendly = job_type_friendly_names[job_type]
                 
                 if job_type == 'one_time':
                     
                     job = Job(id, name, is_active, job_type, start_date,
-                              service_name=service_name, 
+                              extra, service_name=service_name, 
                               job_type_friendly=job_type_friendly,
                               definition_text=_one_time_job_def(start_date))
 
