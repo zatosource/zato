@@ -27,6 +27,7 @@ Job.prototype.toString = function() {
 // Dumps properties in a form suitable for creating a new data table row.
 Job.prototype.to_record = function() {
     var record = new Array();
+	record['selection'] = '<input type="checkbox" />';
     record['name'] = this.name;
     record['is_active'] = this.boolean_html(this.is_active);
     record['job_type'] = friendly_names.get(this.job_type);
