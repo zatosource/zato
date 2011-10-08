@@ -44,9 +44,141 @@ def _get_interval_based_start_date(payload):
     if start_date:
         # Were optional date & time provided in a correct format?
         strptime(str(start_date), scheduler_date_time_format_interval_based)
-    else:
-        start_date
+
     return str(start_date)
+
+def _create_edit(action, payload, logger, session):
+    """ Creating and updating a job requires a series of very similar steps
+    so they've been all put here and depending on the 'action' parameter 
+    (be it 'create'/'edit') some additional operations are performed.
+    """
+    core_params = ['cluster_id', 'name', 'is_active', 'job_type', 'service',
+                   'start_date', 'extra']
+    params = _get_params(payload, core_params, 'data.', default_value='')
+    
+    job_type = params['job_type']
+    cluster_id = params['cluster_id']
+    name = params['name']
+    service_name = params['service']
+    
+    if job_type not in ('one_time', 'interval_based', 'cron_style'):
+        msg = 'Unrecognized job type [{0}]'.format(job_type)
+        logger.error(msg)
+        raise ZatoException(msg)
+    
+    # For finding out if we don't have a job of that name already defined.
+    existing_one_base = session.query(Job).\
+        filter(Cluster.id==cluster_id).\
+        filter(Job.name==name)
+    
+    if action == 'create':
+        existing_one = existing_one_base.first()
+    else:
+        edit_params = _get_params(payload, ['id'], 'data.')
+        job_id = edit_params['id']
+        existing_one = existing_one_base.filter(Job.id != job_id).first()
+    
+    if existing_one:
+        raise Exception('Job [{0}] already exists on this cluster'.format(
+            name))
+    
+    # Is the service's name correct?
+    service = session.query(Service).\
+        filter(Cluster.id==cluster_id).\
+        filter(Service.name==service_name).first()
+    
+    if not service:
+        msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+        logger.error(msg)
+        raise Exception(msg)
+    
+    # We can create/edit a base Job object now and - optionally - another one
+    # if the job type's is either interval-based or Cron-style. The base
+    # instance will be enough if it's a one-time job.
+    
+    extra = params['extra'].encode('utf-8')
+    is_active = is_boolean(params['is_active'])
+    start_date = params['start_date']
+    
+    if action == 'create':
+        job = Job(None, name, job_type, is_active,
+                  start_date, extra, 
+                  cluster_id=cluster_id, service=service)
+    else:
+        job = session.query(Job).filter_by(id=job_id).one()
+        job.name = name
+        job.is_active = is_active
+        job.start_date = start_date
+        job.service = service
+        job.extra = extra
+        
+    try:
+        # Add but don't commit yet.
+        session.add(job)
+
+        if job_type == 'one_time':
+            session.commit()
+        else:
+            # ZZZ Handle other types.
+            session.commit()
+    except Exception, e:
+        session.rollback()
+        msg = 'Could not complete the request, e=[{e}]'.format(e=format_exc(e))
+        logger.error(msg)
+        
+        raise 
+    else:
+        if action == 'create':
+            job_elem = Element('job')
+            job_elem.id = job.id
+            out = etree.tostring(job_elem)
+        else:
+            out = ''
+        
+        return ZATO_OK, out
+
+class Create(AdminService):
+    """ Creates a new scheduler's job.
+    """
+    def handle(self, *args, **kwargs):
+        return _create_edit('create', kwargs.get('payload'), self.logger, 
+                            self.server.odb.session())
+
+        '''
+        def _handle_interval_based(payload, name, service, extra):
+            request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat', 'start_date']
+            params = _get_params(payload, request_params, 'data.job.',
+                                     default_value=0, force_type=int,
+                                     force_type_params=request_params[:-1])
+
+            if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
+                msg = 'At least one of [\'weeks\', \'days\', \'hours\', \'minutes\', \'seconds\'] must be given.'
+                self.logger.error(msg)
+                raise ZatoException(msg)
+
+            params['start_date'] = _get_interval_based_start_date(payload)
+            
+            params_pprinted = pprint((name, service, extra, params))
+            self.logger.debug('About to create an interval-based job, params=[%s]'.format(
+                params_pprinted))
+
+            result, response = self.server.send_config_request('CREATE_JOB',
+                            ['interval_based', name, service, extra, params],
+                            timeout=6.0)
+            self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
+            return result, response
+            '''
+        
+        # Let the handler take care the rest.
+        #return locals()['_handle_' + job_type](payload, core_params, extra)
+        
+class Edit(AdminService):
+    """ Update a new scheduler's job.
+    """
+    def handle(self, *args, **kwargs):
+        return _create_edit('edit', kwargs.get('payload'), self.logger, 
+                            self.server.odb.session())
+
 
 class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
@@ -81,110 +213,6 @@ class GetList(AdminService):
                 definition_list.append(definition_elem)
     
             return ZATO_OK, etree.tostring(definition_list)
-    
-    
-class Create(AdminService):
-    """ Creates a new scheduler's job.
-    """
-    def handle(self, *args, **kwargs):
-
-
-        '''
-        def _handle_interval_based(payload, name, service, extra):
-            request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat', 'start_date']
-            params = _get_params(payload, request_params, 'data.job.',
-                                     default_value=0, force_type=int,
-                                     force_type_params=request_params[:-1])
-
-            if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
-                msg = 'At least one of [\'weeks\', \'days\', \'hours\', \'minutes\', \'seconds\'] must be given.'
-                self.logger.error(msg)
-                raise ZatoException(msg)
-
-            params['start_date'] = _get_interval_based_start_date(payload)
-            
-            params_pprinted = pprint((name, service, extra, params))
-            self.logger.debug('About to create an interval-based job, params=[%s]'.format(
-                params_pprinted))
-
-            result, response = self.server.send_config_request('CREATE_JOB',
-                            ['interval_based', name, service, extra, params],
-                            timeout=6.0)
-            self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-            return result, response
-            '''
-        
-        payload = kwargs.get('payload')
-        params = ['cluster_id', 'name', 'is_active', 'job_type', 'service',
-                       'start_date', 'extra']
-        params = _get_params(payload, params, 'data.', default_value='')
-        
-        job_type = params['job_type']
-        cluster_id = params['cluster_id']
-        name = params['name']
-        service_name = params['service']
-        
-        if job_type not in ('one_time', 'interval_based', 'cron_style'):
-            msg = 'Unrecognized job type [{0}]'.format(job_type)
-            self.logger.error(msg)
-            raise ZatoException(msg)
-        
-        session = self.server.odb.session()
-        
-        # Let's see if we don't have a job of that name already defined.
-        existing_one = session.query(Job).\
-            filter(Cluster.id==cluster_id).\
-            filter(Job.name==name).first()
-        
-        if existing_one:
-            raise Exception('Job [{0}] already exists on this cluster'.format(
-                name))
-        
-        # Is the service's name correct?
-        service = session.query(Service).\
-            filter(Cluster.id==cluster_id).\
-            filter(Service.name==service_name).first()
-        
-        if not service:
-            raise Exception('Service [{0}] does not exist on this cluster'.format(
-                service_name))
-        
-        # We can create a base Job object now and - optionally - another one
-        # if the job type's is either interval-based or Cron-style. The base
-        # instance will be enough if it's a one-time job.
-        
-        extra = params['extra'].encode('utf-8')
-        
-        job = Job(None, name, is_boolean(params['is_active']), job_type,
-                  params['start_date'], extra, 
-                  cluster_id=cluster_id, service=service)
-        try:
-            # Add but don't commit yet.
-            session.add(job)
-
-            if job_type == 'one_time':
-                session.commit()
-            else:
-                # ZZZ Handle other types.
-                session.commit()
-        except Exception, e:
-            msg = 'Could not create a job, e=[{e}]'.format(e=format_exc(e))
-            self.logger.error(msg)
-            session.rollback()
-            
-            raise 
-        else:
-            
-            job_elem = Element('job')
-            job_elem.id = job.id
-            
-            return ZATO_OK, etree.tostring(job_elem)
-        
-        # Let the handler take care the rest.
-        #return locals()['_handle_' + job_type](payload, core_params, extra)
-        
-        return ZATO_OK, ''
-
 
 '''
 

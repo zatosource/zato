@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 class OneTimeSchedulerJobForm(forms.Form):
+    id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     service = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))

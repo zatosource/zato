@@ -118,13 +118,14 @@ def _get_create_edit_message(cluster, params, form_prefix=""):
     zato_message.data = Element('data')
     zato_message.data.name = params[form_prefix + 'name']
     zato_message.data.cluster_id = cluster.id
+    zato_message.data.id = params.get(form_prefix + 'id', '')
     zato_message.data.is_active = bool(params.get(form_prefix + 'is_active'))
     zato_message.data.service = params.get(form_prefix + 'service', '')
     zato_message.data.extra = params.get(form_prefix + 'extra', '')
 
     return zato_message
 
-def _get_create_edit_one_time_message(cluster, params, form_prefix=""):
+def _get_create_edit_one_time_message(cluster, params, form_prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create'
     actions. Used when creating one-time jobs.
     """
@@ -153,12 +154,12 @@ def _get_create_edit_interval_based_message(params, form_prefix=""):
 def _create_one_time(cluster, params):
     """ Creates a one-time scheduler job.
     """
-    logger.info('About to create a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
+    logger.debug('About to create a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
     zato_message = _get_create_edit_one_time_message(cluster, params, create_one_time_prefix+'-')
 
     _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', zato_message)
     new_id = zato_message.data.job.id.text
-    logger.info('Successfully created a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
+    logger.debug('Successfully created a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
     return dumps({'id': new_id, 
             'definition_text':_one_time_job_def(params['create-one-time-start_date'])})
@@ -166,7 +167,7 @@ def _create_one_time(cluster, params):
 def _create_interval_based(server_address, params):
     """ Creates an interval-based scheduler job.
     """
-    logger.info('About to create an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
+    logger.debug('About to create an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
     zato_message = _get_create_edit_interval_based_message(params, create_interval_based_prefix+'-')
 
     invoke_admin_service(server_address, 'zato:scheduler.job.create', etree.tostring(zato_message))
@@ -184,35 +185,23 @@ def _create_interval_based(server_address, params):
     definition = _get_interval_based_job_definition(start_date, repeat, weeks,
                     days, hours, minutes, seconds)
 
-    logger.info('Successfully created an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
-    logger.log(TRACE1, 'definition=[%s]' % definition)
-
     return definition
 
-def _edit_one_time(server_address, params):
+def _edit_one_time(cluster, params):
     """ Updates a one-time scheduler job.
     """
-    logger.info('About to change a one-time job, server_address=[%s], params=[%s]' % (server_address, params))
-    zato_message = _get_create_edit_one_time_message(params, edit_one_time_prefix+'-')
+    logger.debug('About to change a one-time job, cluster.id=[{0}, params=[{1}]]'.format(cluster.id, params))
+    zato_message = _get_create_edit_one_time_message(cluster, params, edit_one_time_prefix+'-')
 
-    # original_name is needed only by an 'edit' action.
-    zato_message.data.job.original_name = params.get('edit-one-time-original_name')
-    invoke_admin_service(server_address, 'zato:scheduler.job.edit', etree.tostring(zato_message))
+    _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', zato_message)
+    logger.debug('Successfully updated a one-time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
-    dt = _get_start_date(params['edit-one-time-start_date'], scheduler_date_time_format_one_time)
-    logger.log(TRACE1, 'dt=[%s]' % dt)
-
-    job = OneTimeSchedulerJob(start_date=dt)
-
-    logger.info('Successfully changed a one-time job, server_address=[%s], params=[%s]' % (server_address, params))
-    logger.log(TRACE1, 'job.definition=[%s]' % job.definition)
-
-    return job.definition
+    return dumps({'definition_text':_one_time_job_def(params['edit-one-time-start_date'])})
 
 def _edit_interval_based(server_address, params):
     """ Creates an interval-based scheduler job.
     """
-    logger.info('About to change an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
+    logger.debug('About to change an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
     zato_message = _get_create_edit_interval_based_message(params, edit_interval_based_prefix+'-')
 
     # original_name is needed only by an 'edit' action.
@@ -231,9 +220,6 @@ def _edit_interval_based(server_address, params):
 
     definition = _get_interval_based_job_definition(start_date, repeat, weeks,
                     days, hours, minutes, seconds)
-
-    logger.info('Saved changes to an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
-    logger.log(TRACE1, 'definition=[%s]' % definition)
 
     return definition
 
@@ -322,7 +308,6 @@ def index(req):
             logger.error(msg)
             return HttpResponseServerError(msg)
 
-
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
 
         # Try to match the action and a job type with an action handler..
@@ -332,9 +317,9 @@ def index(req):
 
         handler = globals().get(handler_name)
         if not handler:
-            msg = ('No handler found for action [%s], job_type=[%s], '
-                   'req.POST=[%s], req.GET=[%s].') % (action, job_type,
-                      pprint(req.POST), pprint(req.GET))
+            msg = ('No handler found for action [{0}], job_type=[{1}], '
+                   'req.POST=[{2}], req.GET=[{3}].'.format(action, job_type,
+                      pprint(req.POST), pprint(req.GET)))
 
             logger.error(msg)
             return HttpResponseServerError(msg)
