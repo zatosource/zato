@@ -353,29 +353,21 @@ def index(req):
         'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix)
         })
 
-@meth_allowed("POST")
-def delete(req):
+@meth_allowed('POST')
+def delete(req, job_id, cluster_id):
     """ Deletes a scheduler's job.
     """
     try:
-        server_id = req.GET.get('server')
-        name = req.GET.get('name')
-
-        if not server_id:
-            raise ZatoException('No [server] parameter found, req.GET=[%s]' % req.GET)
-
-        if not name:
-            raise ZatoException('No [name] parameter found, req.GET=[%s]' % req.GET)
-
-        server = Server.objects.get(id=server_id)
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.job = Element('job')
-        zato_message.job.name = name
+        zato_message.data = Element('data')
+        zato_message.data.id = job_id
 
-        invoke_admin_service(server.address, 'zato:scheduler.job.delete', etree.tostring(zato_message))
+        invoke_admin_service(cluster, 'zato:scheduler.job.delete', zato_message)
 
     except Exception, e:
-        msg = 'Could not delete the job. server_id=[%s], name=[%s], e=[%s]' % (req.GET.get('server'), req.GET.get('name'), format_exc())
+        msg = 'Could not delete the job. job_id=[{0}], cluster_id=[{1}], e=[{2}]'.format(
+            job_id, cluster_id, format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

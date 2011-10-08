@@ -115,7 +115,7 @@ urlpatterns = patterns('',
 
     # Scheduler
     url(r'^zato/scheduler/$', scheduler.index, name='scheduler'),
-    url(r'^zato/scheduler/delete/$', scheduler.delete, name='scheduler-job-delete'),
+    url(r'^zato/scheduler/delete/(?P<job_id>.*)/cluster/(?P<cluster_id>.*)/$', scheduler.delete, name='scheduler-job-delete'),
     url(r'^zato/scheduler/get-definition/(?P<start_date>.*)/(?P<repeat>.*)/'
         '(?P<weeks>.*)/(?P<days>.*)/(?P<hours>.*)/(?P<minutes>.*)/(?P<seconds>.*)/$',
         scheduler.get_definition, name='scheduler-job-get-definition'),

@@ -137,6 +137,39 @@ def _create_edit(action, payload, logger, session):
         
         return ZATO_OK, out
 
+class GetList(AdminService):
+    """ Returns a list of all jobs defined in the SingletonServer's scheduler.
+    """
+    def handle(self, *args, **kwargs):
+        with closing(self.server.odb.session()) as session:
+            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+            definition_list = Element('definition_list')
+            definitions = session.query(Job.id, Job.name, Job.is_active,
+                                        Job.job_type, Job.start_date, 
+                                        Job.extra,
+                                        Service.name.label('service_name'),
+                                        Service.id.label('service_id')).\
+                filter(Cluster.id==params['cluster_id']).\
+                filter(Job.service_id==Service.id).\
+                order_by('job.name').\
+                all()
+    
+            for definition in definitions:
+    
+                definition_elem = Element('definition')
+                definition_elem.id = definition.id
+                definition_elem.name = definition.name
+                definition_elem.is_active = definition.is_active
+                definition_elem.job_type = definition.job_type
+                definition_elem.start_date = definition.start_date
+                definition_elem.extra = definition.extra
+                definition_elem.service_id = definition.service_id
+                definition_elem.service_name = definition.service_name
+                
+                definition_list.append(definition_elem)
+    
+            return ZATO_OK, etree.tostring(definition_list)
+
 class Create(AdminService):
     """ Creates a new scheduler's job.
     """
@@ -179,41 +212,32 @@ class Edit(AdminService):
         return _create_edit('edit', kwargs.get('payload'), self.logger, 
                             self.server.odb.session())
 
-
-class GetList(AdminService):
-    """ Returns a list of all jobs defined in the SingletonServer's scheduler.
+class Delete(AdminService):
+    """ Deletes a scheduler's job.
     """
     def handle(self, *args, **kwargs):
-
         with closing(self.server.odb.session()) as session:
-            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-            definition_list = Element('definition_list')
-            definitions = session.query(Job.id, Job.name, Job.is_active,
-                                        Job.job_type, Job.start_date, 
-                                        Job.extra,
-                                        Service.name.label('service_name'),
-                                        Service.id.label('service_id')).\
-                filter(Cluster.id==params['cluster_id']).\
-                filter(Job.service_id==Service.id).\
-                order_by('job.name').\
-                all()
-    
-            for definition in definitions:
-    
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.is_active = definition.is_active
-                definition_elem.job_type = definition.job_type
-                definition_elem.start_date = definition.start_date
-                definition_elem.extra = definition.extra
-                definition_elem.service_id = definition.service_id
-                definition_elem.service_name = definition.service_name
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['id']
+                params = _get_params(payload, request_params, 'data.')
                 
-                definition_list.append(definition_elem)
-    
-            return ZATO_OK, etree.tostring(definition_list)
-
+                id = params['id']
+                
+                job = session.query(Job).\
+                    filter(Job.id==id).\
+                    one()
+                
+                session.delete(job)
+                session.commit()
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not delete the job, e=[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+                
+                raise
+            
+            return ZATO_OK, ''
 '''
 
 # stdlib
