@@ -75,7 +75,7 @@ def _one_time_job_def(start_date):
     return 'Execute once on {0} at {1}'.format(start_date.strftime('%Y-%m-%d'),
                 start_date.strftime('%H:%M:%S'))
 
-def _get_interval_based_job_definition(start_date, repeat, weeks, days, hours,
+def _interval_based_job_def(start_date, repeat, weeks, days, hours,
                                         minutes, seconds):
 
     buf = StringIO()
@@ -135,18 +135,18 @@ def _get_create_edit_one_time_message(cluster, params, form_prefix=''):
 
     return zato_message
 
-def _get_create_edit_interval_based_message(params, form_prefix=""):
+def _get_create_edit_interval_based_message(cluster, params, form_prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create'
     actions. Used when creating interval-based jobs.
     """
-    zato_message = _get_create_edit_message(params, form_prefix)
+    zato_message = _get_create_edit_message(cluster, params, form_prefix)
     zato_message.data.job_type = 'interval_based'
-    zato_message.data.weeks = unicode(params.get(form_prefix + 'weeks', ''))
-    zato_message.data.days = unicode(params.get(form_prefix + 'days', ''))
-    zato_message.data.hours = unicode(params.get(form_prefix + 'hours', ''))
-    zato_message.data.seconds = unicode(params.get(form_prefix + 'seconds', ''))
-    zato_message.data.minutes = unicode(params.get(form_prefix + 'minutes', ''))
-    zato_message.data.repeat = unicode(params.get(form_prefix + 'repeat', ''))
+    zato_message.data.weeks = params.get(form_prefix + 'weeks', '')
+    zato_message.data.days = params.get(form_prefix + 'days', '')
+    zato_message.data.hours = params.get(form_prefix + 'hours', '')
+    zato_message.data.seconds = params.get(form_prefix + 'seconds', '')
+    zato_message.data.minutes = params.get(form_prefix + 'minutes', '')
+    zato_message.data.repeat = params.get(form_prefix + 'repeat', '')
     zato_message.data.start_date = params.get(form_prefix + 'start_date', '')
 
     return zato_message
@@ -164,13 +164,15 @@ def _create_one_time(cluster, params):
     return dumps({'id': new_id, 
             'definition_text':_one_time_job_def(params['create-one-time-start_date'])})
 
-def _create_interval_based(server_address, params):
+def _create_interval_based(cluster, params):
     """ Creates an interval-based scheduler job.
     """
-    logger.debug('About to create an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
-    zato_message = _get_create_edit_interval_based_message(params, create_interval_based_prefix+'-')
+    logger.debug('About to create an interval-based job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
+    zato_message = _get_create_edit_interval_based_message(cluster, params, create_interval_based_prefix+'-')
 
-    invoke_admin_service(server_address, 'zato:scheduler.job.create', etree.tostring(zato_message))
+    _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', zato_message)
+    new_id = zato_message.data.job.id.text
+    logger.debug('Successfully created an interval-based job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
     start_date = params.get('create-interval-based-start_date')
     if start_date:
@@ -182,10 +184,10 @@ def _create_interval_based(server_address, params):
     minutes = params.get('create-interval-based-minutes')
     seconds = params.get('create-interval-based-seconds')
 
-    definition = _get_interval_based_job_definition(start_date, repeat, weeks,
-                    days, hours, minutes, seconds)
+    definition = _interval_based_job_def(start_date, repeat, weeks, days, hours, 
+                                         minutes, seconds)
 
-    return definition
+    return dumps({'id': new_id, 'definition_text':definition})
 
 def _edit_one_time(cluster, params):
     """ Updates a one-time scheduler job.
@@ -218,7 +220,7 @@ def _edit_interval_based(server_address, params):
     minutes = params.get('edit-interval-based-minutes')
     seconds = params.get('edit-interval-based-seconds')
 
-    definition = _get_interval_based_job_definition(start_date, repeat, weeks,
+    definition = _interval_based_job_def(start_date, repeat, weeks,
                     days, hours, minutes, seconds)
 
     return definition
@@ -276,17 +278,16 @@ def index(req):
 
                 elif job_type == 'interval_based':
                     start_date = _get_start_date(job_elem.start_date, scheduler_date_time_format_interval_based)
-                    definition = _get_interval_based_job_definition(start_date,
-                            job_elem.repeat, job_elem.weeks, job_elem.days,
-                            job_elem.hours, job_elem.minutes, job_elem.seconds)
-                    job = IntervalBasedSchedulerJob(uuid4().hex, original_name, name, job_type,
-                                       job_type_friendly, service, extra,
-                                       start_date,  job_elem.start_date, job_elem.weeks,
-                                       job_elem.days, job_elem.hours, job_elem.minutes,
-                                       job_elem.seconds, job_elem.repeat,
-                                       definition)
+                    #definition = _interval_based_job_def(start_date,
+                    #        job_elem.repeat, job_elem.weeks, job_elem.days,
+                    #        job_elem.hours, job_elem.minutes, job_elem.seconds)
+                    
+                    job = Job(id, name, is_active, job_type, start_date,
+                              extra, service_name=service_name, 
+                              job_type_friendly=job_type_friendly,
+                              definition_text='')
                 else:
-                    msg = 'Unrecognized job type, name=[%s], type=[%s]'.format(name, job_type)
+                    msg = 'Unrecognized job type, name=[{0}], type=[{1}]'.format(name, job_type)
                     logger.error(msg)
                     raise ZatoException(msg)
 
@@ -378,7 +379,7 @@ def delete(req, job_id, cluster_id):
 def get_definition(req, start_date, repeat, weeks, days, hours, minutes, seconds):
     start_date = _get_start_date(start_date, scheduler_date_time_format_interval_based)
 
-    definition = _get_interval_based_job_definition(start_date, repeat, weeks, days, hours, minutes, seconds)
+    definition = _interval_based_job_def(start_date, repeat, weeks, days, hours, minutes, seconds)
     logger.log(TRACE1, 'definition=[%s]' % definition)
 
     return HttpResponse(definition)

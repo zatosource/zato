@@ -215,7 +215,7 @@
 
                         <tr>
                             <td style="vertical-align:middle">
-                                Date &amp; time<br/>
+                                Start date &amp; time<br/>
                                 <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
@@ -296,8 +296,6 @@
             </div>
         </div>
         
-        <!--
-
         <div id="create-interval_based" class="yui-pe-content">
             <div class="hd">Create an interval-based job</div>
             <div class="bd">
@@ -340,10 +338,10 @@
                                 <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
-                                <input id="id_create-interval-based-start_date"
+                                <input id="id_create-interval-based-start_date" class="required"
                                     name="create-interval-based-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:show_create_interval_based_start_date_picker();"
+                                        onclick="javascript:dt_picker('id_create-interval-based-start_date')"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -371,6 +369,8 @@
                 </form>
             </div>
         </div>
+        
+        <!--
 
         <div id="edit-interval_based" class="yui-pe-content">
             <div class="hd">Edit an interval-based job</div>
