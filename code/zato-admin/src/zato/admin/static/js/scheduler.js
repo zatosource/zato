@@ -336,7 +336,7 @@ function setup_edit_dialog_one_time() {
 function setup_delete_dialog() {
 
     var on_success = function(o) {
-        msg = 'Successfully deleted the SSL/TLS definition [' + current_delete_name + ']';
+        msg = 'Successfully deleted the job [' + current_delete_name + ']';
 
         // Delete the row..
         
