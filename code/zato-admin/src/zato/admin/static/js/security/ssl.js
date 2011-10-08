@@ -437,7 +437,7 @@ function delete_(id) {
         }
     }
 
-    delete_dialog.setBody(String.format('Are you sure you want to delete the SSL/TLS definition [{0}]', current_delete_name));
+    delete_dialog.setBody(String.format('Are you sure you want to delete the SSL/TLS definition [{0}]?', current_delete_name));
     delete_dialog.show();
     
 }
