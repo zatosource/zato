@@ -75,26 +75,26 @@ def _one_time_job_def(start_date):
     return 'Execute once on {0} at {1}'.format(start_date.strftime('%Y-%m-%d'),
                 start_date.strftime('%H:%M:%S'))
 
-def _interval_based_job_def(start_date, repeat, weeks, days, hours,
+def _interval_based_job_def(start_date, repeats, weeks, days, hours,
                                         minutes, seconds):
 
     buf = StringIO()
 
     if start_date:
-        buf.write('Start on %s, at %s.' % (start_date.strftime('%Y-%m-%d'),
+        buf.write('Start on {0}, at {1}.'.format(start_date.strftime('%Y-%m-%d'),
                 start_date.strftime('%H:%M:%S')))
 
-    if not repeat:
+    if not repeats:
         buf.write(' Repeat indefinitely.')
     else:
-        if repeat == 1:
+        if repeats == 1:
             buf.write(' Execute once.')
-        elif repeat == 2:
+        elif repeats == 2:
             buf.write(' Repeat twice.')
-        # .. my hand is itching to add the 'Repeat thrice.' here ;-)
-        elif repeat > 2:
+        # .. my hand is itching to add the 'repeats thrice.' here ;-)
+        elif repeats > 2:
             buf.write(' Repeat ')
-            buf.write(str(repeat))
+            buf.write(str(repeats))
             buf.write(' times.')
 
     interval = []
@@ -103,7 +103,8 @@ def _interval_based_job_def(start_date, repeat, weeks, days, hours,
                     ('hour',hours), ('minute',minutes),
                     ('second',seconds)):
         if value:
-            interval.append('%s %s%s' % (value, name, 's' if value > 1 else ''))
+            value = int(value)
+            interval.append('{0} {1}{2}'.format(value, name, 's' if value > 1 else ''))
 
     buf.write(', '.join(interval))
     buf.write('.')
@@ -146,7 +147,7 @@ def _get_create_edit_interval_based_message(cluster, params, form_prefix=''):
     zato_message.data.hours = params.get(form_prefix + 'hours', '')
     zato_message.data.seconds = params.get(form_prefix + 'seconds', '')
     zato_message.data.minutes = params.get(form_prefix + 'minutes', '')
-    zato_message.data.repeat = params.get(form_prefix + 'repeat', '')
+    zato_message.data.repeats = params.get(form_prefix + 'repeats', '')
     zato_message.data.start_date = params.get(form_prefix + 'start_date', '')
 
     return zato_message
@@ -177,14 +178,14 @@ def _create_interval_based(cluster, params):
     start_date = params.get('create-interval-based-start_date')
     if start_date:
         start_date = _get_start_date(start_date, scheduler_date_time_format_one_time)
-    repeat = params.get('create-interval-based-repeat')
+    repeats = params.get('create-interval-based-repeats')
     weeks = params.get('create-interval-based-weeks')
     days = params.get('create-interval-based-days')
     hours = params.get('create-interval-based-hours')
     minutes = params.get('create-interval-based-minutes')
     seconds = params.get('create-interval-based-seconds')
 
-    definition = _interval_based_job_def(start_date, repeat, weeks, days, hours, 
+    definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, 
                                          minutes, seconds)
 
     return dumps({'id': new_id, 'definition_text':definition})
@@ -213,14 +214,14 @@ def _edit_interval_based(server_address, params):
     start_date = params.get('edit-interval-based-start_date')
     if start_date:
         start_date = _get_start_date(start_date, scheduler_date_time_format_one_time)
-    repeat = params.get('edit-interval-based-repeat')
+    repeats = params.get('edit-interval-based-repeats')
     weeks = params.get('edit-interval-based-weeks')
     days = params.get('edit-interval-based-days')
     hours = params.get('edit-interval-based-hours')
     minutes = params.get('edit-interval-based-minutes')
     seconds = params.get('edit-interval-based-seconds')
 
-    definition = _interval_based_job_def(start_date, repeat, weeks,
+    definition = _interval_based_job_def(start_date, repeats, weeks,
                     days, hours, minutes, seconds)
 
     return definition
@@ -278,14 +279,14 @@ def index(req):
 
                 elif job_type == 'interval_based':
                     start_date = _get_start_date(job_elem.start_date, scheduler_date_time_format_interval_based)
-                    #definition = _interval_based_job_def(start_date,
-                    #        job_elem.repeat, job_elem.weeks, job_elem.days,
-                    #        job_elem.hours, job_elem.minutes, job_elem.seconds)
+                    definition = _interval_based_job_def(start_date,
+                            job_elem.repeats, job_elem.weeks, job_elem.days,
+                            job_elem.hours, job_elem.minutes, job_elem.seconds)
                     
                     job = Job(id, name, is_active, job_type, start_date,
                               extra, service_name=service_name, 
                               job_type_friendly=job_type_friendly,
-                              definition_text='')
+                              definition_text=definition)
                 else:
                     msg = 'Unrecognized job type, name=[{0}], type=[{1}]'.format(name, job_type)
                     logger.error(msg)
@@ -376,10 +377,10 @@ def delete(req, job_id, cluster_id):
         return HttpResponse()
 
 @meth_allowed('POST')
-def get_definition(req, start_date, repeat, weeks, days, hours, minutes, seconds):
+def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds):
     start_date = _get_start_date(start_date, scheduler_date_time_format_interval_based)
 
-    definition = _interval_based_job_def(start_date, repeat, weeks, days, hours, minutes, seconds)
+    definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, seconds)
     logger.log(TRACE1, 'definition=[%s]' % definition)
 
     return HttpResponse(definition)

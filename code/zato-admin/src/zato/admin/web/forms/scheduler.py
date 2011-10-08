@@ -45,4 +45,4 @@ class IntervalBasedSchedulerJobForm(forms.Form):
     minutes = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     seconds = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:8%'}))
     start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
-    repeat = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))
+    repeats = forms.CharField(widget=forms.TextInput(attrs={'style':'width:8%'}))
