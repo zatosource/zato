@@ -329,6 +329,99 @@ function setup_edit_dialog_one_time() {
     }
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// delete
+// /////////////////////////////////////////////////////////////////////////////
+
+function setup_delete_dialog() {
+
+    var on_success = function(o) {
+        msg = 'Successfully deleted the SSL/TLS definition [' + current_delete_name + ']';
+
+        // Delete the row..
+        
+        var records = data_dt.getRecordSet().getRecords();
+        for (x=0; x < records.length; x++) {
+            var record = records[x];
+            var id_record = record.getData('id');
+            if(id_record && current_delete_id == id_record) {
+                data_dt.deleteRow(x);
+                break;
+            }
+        }
+
+        // .. and confirm everything went fine.
+        update_user_message(true, msg);
+    };
+
+    var on_failure = function(o) {
+        update_user_message(false, o.responseText);
+    }
+
+    var callback = {
+        success: on_success,
+        failure: on_failure,
+    };
+
+    var on_yes = function() {
+
+        var url = String.format('./delete/{0}/cluster/{1}/', current_delete_id, $('cluster_id').value);
+
+        YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
+        var transaction = YAHOO.util.Connect.asyncRequest('POST', url, callback);
+
+        this.hide();
+    };
+
+    var on_no = function() {
+        this.hide();
+    };
+
+    delete_dialog = new YAHOO.widget.SimpleDialog('delete_dialog', {
+        width: '36em',
+        effect:{
+            effect: YAHOO.widget.ContainerEffect.FADE,
+            duration: 0.10
+        },
+        fixedcenter: true,
+        modal: false,
+        visible: false,
+        draggable: true
+    });
+
+    delete_dialog.setHeader('Are you sure?');
+    delete_dialog.cfg.setProperty('icon', YAHOO.widget.SimpleDialog.ICON_WARN);
+
+    var delete_buttons = [
+        {text: 'Yes', handler: on_yes},
+        {text:'Cancel', handler: on_no, isDefault:true}
+    ];
+
+    delete_dialog.cfg.queueProperty('buttons', delete_buttons);
+    delete_dialog.render(document.body);
+
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+
+function delete_(id) {
+
+    current_delete_id = id;
+    
+    var records = data_dt.getRecordSet().getRecords();
+    for (x=0; x < records.length; x++) {
+        var record = records[x];
+        var id_record = record.getData('id');
+        if(id_record && id == id_record) {
+            current_delete_name = record.getData('name').strip();
+            break;
+        }
+    }
+
+    delete_dialog.setBody(String.format('Are you sure you want to delete the job [{0}]?', current_delete_name));
+    delete_dialog.show();
+    
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -354,9 +447,7 @@ YAHOO.util.Event.onDOMReady(function() {
 
     setup_create_dialog_one_time();
     setup_edit_dialog_one_time();
-    //setup_edit_dialog();
-    //setup_change_password_dialog();
-    //setup_delete_dialog();
+    setup_delete_dialog();
 });
 
 // /////////////////////////////////////////////////////////////////////////////
