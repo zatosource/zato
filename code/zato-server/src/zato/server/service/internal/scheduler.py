@@ -119,6 +119,25 @@ def _create_edit(action, payload, logger, session):
 
         if job_type == 'one_time':
             session.commit()
+            
+        elif job_type == 'interval_based':
+            request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats']
+            params = _get_params(payload, request_params, 'data.',
+                default_value=0, force_type=int, force_type_params=request_params)
+
+            if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
+                msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given."
+                logger.error(msg)
+                raise ZatoException(msg)
+
+            ib_job = IntervalBasedJob(None, job, params.get('weeks'), 
+                                      params.get('days'), 
+                    params.get('hours'), params.get('minutes'), params.get('seconds'), 
+                    params.get('repeats'))
+            
+            session.add(ib_job)
+            session.commit()
+            
         else:
             # ZZZ Handle other types.
             session.commit()
@@ -143,17 +162,23 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         with closing(self.server.odb.session()) as session:
+            
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
+            
             definitions = session.query(Job.id, Job.name, Job.is_active,
-                                        Job.job_type, Job.start_date, 
-                                        Job.extra,
-                                        Service.name.label('service_name'),
-                                        Service.id.label('service_id')).\
-                filter(Cluster.id==params['cluster_id']).\
-                filter(Job.service_id==Service.id).\
-                order_by('job.name').\
-                all()
+                Job.job_type, Job.start_date,  Job.extra,
+                Service.name.label('service_name'), Service.id.label('service_id'),
+                IntervalBasedJob.weeks, IntervalBasedJob.days,
+                IntervalBasedJob.hours, IntervalBasedJob.minutes, 
+                IntervalBasedJob.seconds, IntervalBasedJob.repeats,
+                CronStyleJob.definition.label('cron_definition')).\
+                    outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
+                    outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
+                    filter(Cluster.id==params['cluster_id']).\
+                    filter(Job.service_id==Service.id).\
+                    order_by('job.name').\
+                    all()
     
             for definition in definitions:
     
@@ -166,6 +191,12 @@ class GetList(AdminService):
                 definition_elem.extra = definition.extra
                 definition_elem.service_id = definition.service_id
                 definition_elem.service_name = definition.service_name
+                definition_elem.weeks = definition.weeks
+                definition_elem.days = definition.days
+                definition_elem.hours = definition.hours
+                definition_elem.minutes = definition.minutes
+                definition_elem.seconds = definition.seconds
+                definition_elem.repeats = definition.repeats
                 
                 definition_list.append(definition_elem)
     
