@@ -100,8 +100,9 @@ def _create_edit(action, payload, logger, session):
     is_active = is_boolean(params['is_active'])
     start_date = params['start_date']
     
+    
     if action == 'create':
-        job = Job(None, name, job_type, is_active,
+        job = Job(None, name, is_active, job_type, 
                   start_date, extra, 
                   cluster_id=cluster_id, service=service)
     else:
