@@ -209,8 +209,9 @@ function add_to_def() {
 
     /* The .addClassName/.removeClassName dance is required because we want
     add_to_def to validate only these two particular fields, not the whole form,
-    and conversly, we don't want the 'Submit' button these very two buttons
-    below because it's 100% fine they're empty when someone submits form */
+    and conversly, we don't want the 'Submit' button to validate these two very 
+	buttons below because it's 100% fine they're empty when someone submits 
+	the form. */
 
     $('ssl-def-field').addClassName('required');
     $('ssl-def-value').addClassName('required');
