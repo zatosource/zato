@@ -14,6 +14,10 @@ Job.prototype.boolean_html = function(attr) {
     return attr ? 'Yes': 'No';
 }
 
+Job.prototype.service_text = function(attr) {
+    return String.format('<a href="/zato/service/?service={0}">{1}</a>', this.service, this.service);
+}
+
 // A nicer toString.
 Job.prototype.toString = function() {
     return '<Job\
@@ -32,7 +36,7 @@ Job.prototype.to_record = function() {
     record['is_active'] = this.boolean_html(this.is_active);
     record['job_type'] = friendly_names.get(this.job_type);
     record['definition_text'] = this.definition_text;
-	record['service_text'] = String.format('<a href="/zato/service/?service={0}">{1}</a>', this.service, this.service)
+	record['service_text'] = this.service_text();
     
     record['edit'] = String.format("<a href=\"javascript:edit('one-time', {0})\">Edit</a>", this.id);
     record['execute'] = String.format("<a href='javascript:execute({0})'>Execute</a>", this.id);
@@ -229,6 +233,7 @@ function edit(job_type, job_id) {
 			
 				var is_active = record.getData('is_active') ? 'on' : ''
 			
+				$('id_edit-one-time-id').value = record.getData('id');
 				$('id_edit-one-time-name').value = record.getData('name');
 				$('id_edit-one-time-start_date').value = record.getData('start_date');
 				$('id_edit-one-time-is_active').setValue(is_active);
@@ -268,18 +273,32 @@ function setup_edit_dialog_one_time() {
         var json = YAHOO.lang.JSON.parse(o.responseText);
         var object = new OneTimeJob();
 
-        object.id = json.id;        
+        object.id = $('id_edit-one-time-id').value;
         object.name = $('id_edit-one-time-name').value;
         object.is_active = $F('id_edit-one-time-is_active') == 'on';
         object.service = $('id_edit-one-time-service').value;
         object.definition_text = json.definition_text;
+		
+		edit_one_time_dialog.hide();
+		$('edit-form-one_time').reset();
+		edit_one_time_validation.reset();
 
-        object.add_row(object, data_dt);
-        edit_one_time_dialog.hide();
-        $('edit-form-one_time').reset();
-        edit_one_time_validation.reset();
+		var records = data_dt.getRecordSet().getRecords();
+		for (x=0; x < records.length; x++) {
+			var record = records[x];
+			var id = record.getData('id');
+			if(id && id == object.id) {
 
-        update_user_message(true, 'Successfully edited the new one-time job [' + object.name + '].');
+				record.setData('name', object.name);
+				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('service_text', object.service_text());
+				record.setData('definition_text', object.definition_text);
+				
+				data_dt.render();
+			}
+		}
+			
+        update_user_message(true, 'Successfully edited the one-time job [' + object.name + '].');
     };
 
     var on_failure = function(o) {
