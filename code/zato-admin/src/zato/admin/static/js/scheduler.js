@@ -31,7 +31,7 @@ Job.prototype.to_record = function() {
     record['is_active'] = this.boolean_html(this.is_active);
     record['job_type'] = friendly_names.get(this.job_type);
     record['definition_text'] = this.definition_text;
-    record['service'] = String.format('<a href="/zato/service/?service={0}">{1}</a>', this.service, this.service)
+	record['service_text'] = String.format('<a href="/zato/service/?service={0}">{1}</a>', this.service, this.service)
     
     record['edit'] = String.format("<a href=\"javascript:edit('one-time', {0})\">Edit</a>", this.id);
     record['execute'] = String.format("<a href='javascript:execute({0})'>Execute</a>", this.id);
@@ -50,9 +50,12 @@ Job.prototype.add_row = function(object, data_dt) {
     added_record.setData('id', object.id);
     added_record.setData('name', object.name);
     added_record.setData('is_active', object.is_active);
+	added_record.setData('start_date', object.start_date);
     added_record.setData('job_type', object.job_type);
-    added_record.setData('service', object.is_active);
+    added_record.setData('service', object.service);
+	added_record.setData('service_text', object.service_text);
     added_record.setData('definition_text', object.definition_text);
+	added_record.setData('extra', object.extra);
 
 }
 
@@ -163,13 +166,15 @@ function setup_create_dialog_one_time() {
 
         var json = YAHOO.lang.JSON.parse(o.responseText);
         var object = new OneTimeJob();
-
+		
         object.id = json.id;        
         object.name = $('id_create-one-time-name').value;
         object.is_active = $F('id_create-one-time-is_active') == 'on';
         object.service = $('id_create-one-time-service').value;
         object.definition_text = json.definition_text;
-
+		object.start_date = $('id_create-one-time-start_date').value;
+		object.extra = $('id_create-one-time-extra').value;
+		
         object.add_row(object, data_dt);
         create_one_time_dialog.hide();
         $('create-form-one_time').reset();
@@ -206,6 +211,104 @@ function setup_create_dialog_one_time() {
     }
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// edit
+// /////////////////////////////////////////////////////////////////////////////
+
+function edit(job_type, job_id) {
+    // Show the dialogs.
+    
+    if(job_type == 'one-time') {
+
+		var records = data_dt.getRecordSet().getRecords();
+		for (x=0; x < records.length; x++) {
+			var record = records[x];
+			var id = record.getData('id');
+			if(id && id == job_id) {
+			
+				var is_active = record.getData('is_active') ? 'on' : ''
+			
+				$('id_edit-one-time-name').value = record.getData('name');
+				$('id_edit-one-time-start_date').value = record.getData('start_date');
+				$('id_edit-one-time-is_active').setValue(is_active);
+				$('id_edit-one-time-service').setValue(record.getData('service'));
+				$('id_edit-one-time-extra').setValue(record.getData('extra'));
+				
+				break;
+			}
+		}    
+    
+        $('edit-one_time').show();
+        edit_one_time_dialog.show();
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+function setup_edit_dialog_one_time() {
+    var edit_one_time_validation = new Validation('edit-form-one_time');
+
+    var on_submit = function() {
+        if(edit_one_time_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+        }
+    };
+
+    var on_cancel = function() {
+        this.cancel();
+        edit_one_time_dialog.hide();
+        $('edit-form-one_time').reset();
+        edit_one_time_validation.reset();
+    };
+
+    var on_success = function(o) {
+
+        var json = YAHOO.lang.JSON.parse(o.responseText);
+        var object = new OneTimeJob();
+
+        object.id = json.id;        
+        object.name = $('id_edit-one-time-name').value;
+        object.is_active = $F('id_edit-one-time-is_active') == 'on';
+        object.service = $('id_edit-one-time-service').value;
+        object.definition_text = json.definition_text;
+
+        object.add_row(object, data_dt);
+        edit_one_time_dialog.hide();
+        $('edit-form-one_time').reset();
+        edit_one_time_validation.reset();
+
+        update_user_message(true, 'Successfully edited the new one-time job [' + object.name + '].');
+    };
+
+    var on_failure = function(o) {
+        edit_one_time_dialog.hide();
+        $('edit-form-one_time').reset();
+        edit_one_time_validation.reset();
+        update_user_message(false, o.responseText);
+    };
+
+    // Instantiate the dialog if necessary.
+    if(typeof edit_one_time_dialog == 'undefined') {
+        edit_one_time_dialog = new YAHOO.widget.Dialog('edit-one_time',
+                                { width: '50em',
+                                  fixedcenter: true,
+                                  visible: false,
+                                  draggable: true,
+                                  postmethod: 'async',
+                                  hideaftersubmit: false,
+                                  constraintoviewport: true,
+                                  buttons: [{text:'Submit', handler:on_submit},
+                                            {text:'Cancel', handler:on_cancel, isDefault:true}]
+                                });
+
+        edit_one_time_dialog.callback.success = on_success;
+        edit_one_time_dialog.callback.failure = on_failure;
+
+        edit_one_time_dialog.render();
+    }
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -230,6 +333,7 @@ YAHOO.util.Event.onDOMReady(function() {
     };
 
     setup_create_dialog_one_time();
+    setup_edit_dialog_one_time();
     //setup_edit_dialog();
     //setup_change_password_dialog();
     //setup_delete_dialog();

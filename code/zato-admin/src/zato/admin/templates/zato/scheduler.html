@@ -99,27 +99,39 @@
         YAHOO.util.Event.addListener(window, "load", function() {
             YAHOO.example.EnhanceFromMarkup = function() {
                 data_column_defs = [
+                
+                    {key:'id', label:'id', hidden:true},
+                    {key:'selection', label:'&nbsp;', sortable:false},
                     {key:'name', label:'Name', sortable:true},
                     {key:'is_active', label:'Active', sortable:true},
                     {key:'job_type', label:'Type', sortable:true},
                     {key:'definition_text', label:'Definition', sortable:false},
-                    {key:'service', label:'Service', sortable:true},
+                    {key:'service_text', label:'Service', sortable:true},
                     {key:'execute', label:'', sortable:false},
                     {key:'edit', label:'', sortable:false},
                     {key:'delete', label:'', sortable:false},
+                    {key:'start_date', label:'start_date', hidden:true},
+                    {key:'service', label:'service', hidden:true},
+                    {key:'extra', label:'extra', hidden:true},
                 ];
 
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get('data-table'));
                 data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
                 data_ds.responseSchema = {
-                    fields: [{key:'name'},
+                    fields: [
+                            {key:'id'},
+                            {key:'selection'},
+                            {key:'name'},
                             {key:'is_active'},
                             {key:'job_type'},
                             {key:'definition_text'},
-                            {key:'service'},
+                            {key:'service_text'},
                             {key:'execute'},
                             {key:'edit'},
                             {key:'delete'},
+                            {key:'start_date'},
+                            {key:'service'},
+                            {key:'extra'},
 
                     ]
                 };
@@ -152,6 +164,10 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                     </tr>
                 </thead>
 
@@ -159,6 +175,8 @@
                 {% for job in jobs %}
 
                     <tr>
+                        <td>{{ job.id }}</td>
+                        <td><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
                         <td>{% if job.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{{ job.job_type_friendly }}</td>
@@ -166,7 +184,10 @@
                         <td><a href="{% url service %}?service={{ job.service_name }}">{{ job.service_name }}</a></td>
                         <td><a href="javascript:execute({{ job.id }})">Execute</a></td>
                         <td><a href="javascript:edit('one-time', {{ job.id }})">Edit</a></td>
-                        <td><a href="javascript:delete({{ job.id }})">Delete</a></td>
+                        <td><a href="javascript:delete_({{ job.id }});">Delete</a></td>
+                        <td>{{ job.start_date }}</td>
+                        <td>{{ job.service_name }}</td>
+                        <td>{{ job.extra }}</td>
                     </tr>
                 {% endfor %}
 
@@ -218,6 +239,56 @@
                     </table>
 
                     <input type="hidden" name="zato_action" value="create" />
+                    <input type="hidden" name="job_type" value="one_time" />
+
+                </form>
+            </div>
+        </div>
+        
+        <div id="edit-one_time" class="yui-pe-content">
+            <div class="hd">Edit a one-time job</div>
+            <div class="bd">
+                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_one_time_form.name }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ edit_one_time_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Date &amp; time<br/>
+                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                            </td>
+                            <td>
+                                <input id="id_edit-one-time-start_date" class="required"
+                                    name="edit-one-time-start_date" type="text" />
+                                    <img alt="Calendar"
+                                        onclick="javascript:dt_picker('id_edit-one-time-start_date')"
+                                        src="/static/gfx/calendar_date_select/calendar.gif"
+                                        style="border:0px; cursor:pointer;" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_one_time_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ edit_one_time_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    {{ edit_one_time_form.original_name }}
+                    <input type="hidden" name="zato_action" value="edit" />
                     <input type="hidden" name="job_type" value="one_time" />
 
                 </form>
@@ -295,51 +366,6 @@
 
                     <input type="hidden" name="zato_action" value="create" />
                     <input type="hidden" name="job_type" value="interval_based" />
-
-                </form>
-            </div>
-        </div>
-
-        <div id="edit-one_time" class="yui-pe-content">
-            <div class="hd">Edit a one-time job</div>
-            <div class="bd">
-                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
-                    <table class="form-data" border="0">
-
-                        <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td>{{ edit_one_time_form.name }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">
-                                Date &amp; time<br/>
-                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
-                            </td>
-                            <td>
-                                <input id="id_edit-one-time-start_date" class="required"
-                                    name="edit-one-time-start_date" type="text" />
-                                    <img alt="Calendar"
-                                        onclick="javascript:show_edit_one_time_start_date_picker();"
-                                        src="/static/gfx/calendar_date_select/calendar.gif"
-                                        style="border:0px; cursor:pointer;" />
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Service</td>
-                            <td>{{ edit_one_time_form.service }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Extra data</td>
-                            <td>{{ edit_one_time_form.extra }}</td>
-                        </tr>
-
-                    </table>
-
-                    {{ edit_one_time_form.original_name }}
-                    <input type="hidden" name="zato_action" value="edit" />
-                    <input type="hidden" name="job_type" value="one_time" />
 
                 </form>
             </div>
