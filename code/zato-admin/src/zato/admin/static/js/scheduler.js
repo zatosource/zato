@@ -40,7 +40,7 @@ Job.prototype.to_record = function() {
     
     record['edit'] = String.format("<a href=\"javascript:edit('one-time', {0})\">Edit</a>", this.id);
     record['execute'] = String.format("<a href='javascript:execute({0})'>Execute</a>", this.id);
-    record['delete'] = String.format("<a href='javascript:delete({0})'>Delete</a>", this.id);
+    record['delete'] = String.format("<a href='javascript:delete_({0})'>Delete</a>", this.id);
 
     return record;
 };
