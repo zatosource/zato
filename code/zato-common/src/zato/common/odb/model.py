@@ -562,8 +562,9 @@ class IntervalBasedJob(Base):
     seconds = Column(Integer, nullable=True)
     repeats = Column(Integer, nullable=True)
     
-    job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
-    job = relationship(Job, backref=backref('interval_based', uselist=False))
+    job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
+    job = relationship(Job, backref=backref('interval_based', uselist=False,
+                    cascade='all, delete, delete-orphan', single_parent=True))
     
     def __init__(self, id=None, job=None, weeks=None, days=None, hours=None,
                  minutes=None, seconds=None, repeats=None, definition_text=None):
@@ -586,8 +587,9 @@ class CronStyleJob(Base):
     id = Column(Integer,  Sequence('job_cron_seq'), primary_key=True)
     definition = Column(String(4000), nullable=False)
     
-    job_id = Column(Integer, ForeignKey('job.id'), nullable=False)
-    job = relationship(Job, backref=backref('cron_style', uselist=False))
+    job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
+    job = relationship(Job, backref=backref('cron_style', uselist=False,
+                    cascade='all, delete, delete-orphan', single_parent=True))
     
     def __init__(self, id=None, job=None, definition=None, definition_text=None):
         self.id = id

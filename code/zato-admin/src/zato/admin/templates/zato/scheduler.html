@@ -114,6 +114,12 @@
                     {key:'start_date', label:'start_date', hidden:true},
                     {key:'service', label:'service', hidden:true},
                     {key:'extra', label:'extra', hidden:true},
+                    {key:'weeks', label:'weeks', hidden:true},
+                    {key:'days', label:'days', hidden:true},
+                    {key:'hours', label:'hours', hidden:true},
+                    {key:'minutes', label:'minutes', hidden:true},
+                    {key:'seconds', label:'seconds', hidden:true},
+                    {key:'repeats', label:'repeats', hidden:true},
                 ];
 
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get('data-table'));
@@ -133,6 +139,12 @@
                             {key:'start_date'},
                             {key:'service'},
                             {key:'extra'},
+                            {key:'weeks'},
+                            {key:'days'},
+                            {key:'hours'},
+                            {key:'minutes'},
+                            {key:'seconds'},
+                            {key:'repeats'},
 
                     ]
                 };
@@ -169,6 +181,12 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                     </tr>
                 </thead>
 
@@ -184,11 +202,18 @@
                         <td>{{ job.definition_text }}</td>
                         <td><a href="{% url service %}?service={{ job.service_name }}">{{ job.service_name }}</a></td>
                         <td><a href="javascript:execute({{ job.id }})">Execute</a></td>
-                        <td><a href="javascript:edit('one-time', {{ job.id }})">Edit</a></td>
+                        <td><a href="javascript:edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
                         <td><a href="javascript:delete_({{ job.id }});">Delete</a></td>
                         <td>{{ job.start_date }}</td>
                         <td>{{ job.service_name }}</td>
                         <td>{{ job.extra }}</td>
+                        <td>{{ job.interval_based.weeks }}</td>
+                        <td>{{ job.interval_based.days }}</td>
+                        <td>{{ job.interval_based.hours }}</td>
+                        <td>{{ job.interval_based.minutes }}</td>
+                        <td>{{ job.interval_based.seconds }}</td>
+                        <td>{{ job.interval_based.repeats }}</td>
+                        
                     </tr>
                 {% endfor %}
 
@@ -375,8 +400,6 @@
             </div>
         </div>
         
-        <!--
-
         <div id="edit-interval_based" class="yui-pe-content">
             <div class="hd">Edit an interval-based job</div>
             <div class="bd">
@@ -386,6 +409,11 @@
                         <tr>
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ edit_interval_based_form.name }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ edit_interval_based_form.is_active }}</td>
                         </tr>
 
                         <tr>
@@ -444,7 +472,7 @@
 
                     </table>
 
-                    {{ edit_interval_based_form.original_name }}
+                    {{ edit_interval_based_form.id }}
                     <input type="hidden" name="zato_action" value="edit" />
                     <input type="hidden" name="job_type" value="interval_based" />
 
@@ -452,8 +480,6 @@
             </div>
         </div>
         
-        -->
-
     {% endif %} {% comment %}cluster_id{% endcomment %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
