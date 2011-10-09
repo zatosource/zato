@@ -470,6 +470,7 @@ function setup_edit_dialog_one_time() {
         object.name = $('id_edit-one_time-name').value;
         object.is_active = $F('id_edit-one_time-is_active') == 'on';
         object.service = $('id_edit-one_time-service').value;
+		object.extra = $('id_edit-one_time-extra').value;
         object.definition_text = json.definition_text;
 		
 		edit_one_time_dialog.hide();
@@ -485,6 +486,7 @@ function setup_edit_dialog_one_time() {
 				record.setData('name', object.name);
 				record.setData('is_active', object.is_active ? 'Yes': 'No');
 				record.setData('service_text', object.service_text());
+				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
 				
 				data_dt.render();
@@ -550,6 +552,7 @@ function setup_edit_dialog_interval_based() {
         object.name = $('id_edit-interval_based-name').value;
         object.is_active = $F('id_edit-interval_based-is_active') == 'on';
         object.service = $('id_edit-interval_based-service').value;
+		object.extra = $('id_edit-interval_based-extra').value;
         object.definition_text = json.definition_text;
 		
 		edit_interval_based_dialog.hide();
@@ -565,6 +568,7 @@ function setup_edit_dialog_interval_based() {
 				record.setData('name', object.name);
 				record.setData('is_active', object.is_active ? 'Yes': 'No');
 				record.setData('service_text', object.service_text());
+				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
 				
 				data_dt.render();
@@ -630,6 +634,7 @@ function setup_edit_dialog_cron_style() {
         object.name = $('id_edit-cron_style-name').value;
         object.is_active = $F('id_edit-cron_style-is_active') == 'on';
         object.service = $('id_edit-cron_style-service').value;
+		object.extra = $('id_edit-cron_style-extra').value;
 		object.cron_definition = $('id_edit-cron_style-cron_definition').value;
         object.definition_text = json.definition_text;
 		
@@ -646,6 +651,7 @@ function setup_edit_dialog_cron_style() {
 				record.setData('name', object.name);
 				record.setData('is_active', object.is_active ? 'Yes': 'No');
 				record.setData('service_text', object.service_text());
+				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
 				record.setData('cron_definition', object.cron_definition);
 				
