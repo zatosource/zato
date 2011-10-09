@@ -309,32 +309,49 @@ function setup_create_dialog_interval_based() {
 // /////////////////////////////////////////////////////////////////////////////
 
 function edit(job_type, job_id) {
-    // Show the dialogs.
-    
-    if(job_type == 'one-time') {
-
-		var records = data_dt.getRecordSet().getRecords();
-		for (x=0; x < records.length; x++) {
-			var record = records[x];
-			var id = record.getData('id');
-			if(id && id == job_id) {
+	
+	// TODO: Oh crap, that should actually be straightened out. We should settle
+	//       on it being either e.g. one-time or one_time throughout all the 
+	//       application. Preferrably the latter so it can be used as a name
+	//       of a function/method.
+	job_type = job_type.replace('_', '-');
+	
+	var prefix = String.format('id_edit-{0}-', job_type);
+	var extra_fields = [];
+	
+    if(job_type == 'interval-based') {
+		extra_fields = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'];
+	};
+	
+	var records = data_dt.getRecordSet().getRecords();
+	for (x=0; x < records.length; x++) {
+		var record = records[x];
+		var id = record.getData('id');
+		if(id && id == job_id) {
+		
+			var is_active = record.getData('is_active') ? 'on' : ''
 			
-				var is_active = record.getData('is_active') ? 'on' : ''
+			$(prefix + 'id').value = record.getData('id');
+			$(prefix + 'name').value = record.getData('name');
+			$(prefix + 'start_date').value = record.getData('start_date');
+			$(prefix + 'is_active').setValue(is_active);
+			$(prefix + 'service').setValue(record.getData('service'));
+			$(prefix + 'extra').setValue(record.getData('extra'));
 			
-				$('id_edit-one-time-id').value = record.getData('id');
-				$('id_edit-one-time-name').value = record.getData('name');
-				$('id_edit-one-time-start_date').value = record.getData('start_date');
-				$('id_edit-one-time-is_active').setValue(is_active);
-				$('id_edit-one-time-service').setValue(record.getData('service'));
-				$('id_edit-one-time-extra').setValue(record.getData('extra'));
-				
-				break;
-			}
-		}    
-    
-        $('edit-one_time').show();
-        edit_one_time_dialog.show();
-    }
+			extra_fields.each(function(name) {
+				$(prefix + name).value = record.getData(name);
+			});
+			
+			break;
+		}
+	}
+	
+	// TODO: See above, this replacing dance should really be done away with.
+	job_type = job_type.replace('-', '_');
+	
+	$('edit-' + job_type).show();
+	window['edit_' + job_type + '_dialog'].show();	
+	
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -414,6 +431,86 @@ function setup_edit_dialog_one_time() {
         edit_one_time_dialog.callback.failure = on_failure;
 
         edit_one_time_dialog.render();
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+function setup_edit_dialog_interval_based() {
+    var edit_interval_based_validation = new Validation('edit-form-interval_based');
+
+    var on_submit = function() {
+        if(edit_interval_based_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+        }
+    };
+
+    var on_cancel = function() {
+        this.cancel();
+        edit_interval_based_dialog.hide();
+        $('edit-form-interval_based').reset();
+        edit_interval_based_validation.reset();
+    };
+
+    var on_success = function(o) {
+
+        var json = YAHOO.lang.JSON.parse(o.responseText);
+        var object = new OneTimeJob();
+
+        object.id = $('id_edit-interval-based-id').value;
+        object.name = $('id_edit-interval-based-name').value;
+        object.is_active = $F('id_edit-interval-based-is_active') == 'on';
+        object.service = $('id_edit-interval-based-service').value;
+        object.definition_text = json.definition_text;
+		
+		edit_interval_based_dialog.hide();
+		$('edit-form-interval_based').reset();
+		edit_interval_based_validation.reset();
+
+		var records = data_dt.getRecordSet().getRecords();
+		for (x=0; x < records.length; x++) {
+			var record = records[x];
+			var id = record.getData('id');
+			if(id && id == object.id) {
+
+				record.setData('name', object.name);
+				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('service_text', object.service_text());
+				record.setData('definition_text', object.definition_text);
+				
+				data_dt.render();
+			}
+		}
+			
+        update_user_message(true, 'Successfully edited the interval-based job [' + object.name + '].');
+    };
+
+    var on_failure = function(o) {
+        edit_interval_based_dialog.hide();
+        $('edit-form-interval_based').reset();
+        edit_interval_based_validation.reset();
+        update_user_message(false, o.responseText);
+    };
+
+    // Instantiate the dialog if necessary.
+    if(typeof edit_interval_based_dialog == 'undefined') {
+        edit_interval_based_dialog = new YAHOO.widget.Dialog('edit-interval_based',
+                                { width: '50em',
+                                  fixedcenter: true,
+                                  visible: false,
+                                  draggable: true,
+                                  postmethod: 'async',
+                                  hideaftersubmit: false,
+                                  constraintoviewport: true,
+                                  buttons: [{text:'Submit', handler:on_submit},
+                                            {text:'Cancel', handler:on_cancel, isDefault:true}]
+                                });
+
+        edit_interval_based_dialog.callback.success = on_success;
+        edit_interval_based_dialog.callback.failure = on_failure;
+
+        edit_interval_based_dialog.render();
     }
 }
 
@@ -537,6 +634,7 @@ YAHOO.util.Event.onDOMReady(function() {
 	setup_create_dialog_interval_based();
 	
     setup_edit_dialog_one_time();
+	setup_edit_dialog_interval_based();
 	
     setup_delete_dialog();
 });

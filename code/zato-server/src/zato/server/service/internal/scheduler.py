@@ -122,18 +122,17 @@ def _create_edit(action, payload, logger, session):
             
         elif job_type == 'interval_based':
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats']
-            params = _get_params(payload, request_params, 'data.',
-                default_value=0, force_type=int, force_type_params=request_params)
+            params = _get_params(payload, request_params, 'data.', default_value='')
 
             if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
                 msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given."
                 logger.error(msg)
                 raise ZatoException(msg)
 
-            ib_job = IntervalBasedJob(None, job, params.get('weeks'), 
-                                      params.get('days'), 
-                    params.get('hours'), params.get('minutes'), params.get('seconds'), 
-                    params.get('repeats'))
+            ib_job = IntervalBasedJob(None, job)
+            for param, value in params.items():
+                if value:
+                    setattr(ib_job, param, value)
             
             session.add(ib_job)
             session.commit()
@@ -191,12 +190,12 @@ class GetList(AdminService):
                 definition_elem.extra = definition.extra
                 definition_elem.service_id = definition.service_id
                 definition_elem.service_name = definition.service_name
-                definition_elem.weeks = definition.weeks
-                definition_elem.days = definition.days
-                definition_elem.hours = definition.hours
-                definition_elem.minutes = definition.minutes
-                definition_elem.seconds = definition.seconds
-                definition_elem.repeats = definition.repeats
+                definition_elem.weeks = definition.weeks if definition.weeks else ''
+                definition_elem.days = definition.days if definition.days else ''
+                definition_elem.hours = definition.hours if definition.hours else ''
+                definition_elem.minutes = definition.minutes if definition.minutes else ''
+                definition_elem.seconds = definition.seconds if definition.seconds else ''
+                definition_elem.repeats = definition.repeats if definition.repeats else ''
                 
                 definition_list.append(definition_elem)
     

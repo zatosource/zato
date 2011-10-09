@@ -52,7 +52,7 @@ from zato.admin.web.server_model import OneTimeSchedulerJob, IntervalBasedSchedu
 from zato.admin.web.forms.scheduler import OneTimeSchedulerJobForm, IntervalBasedSchedulerJobForm
 from zato.common import scheduler_date_time_format_one_time, scheduler_date_time_format_interval_based, \
      ZATO_OK, zato_namespace, zato_path, ZatoException
-from zato.common.odb.model import Cluster, Job
+from zato.common.odb.model import Cluster, CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint, TRACE1
 
 logger = logging.getLogger(__name__)
@@ -278,8 +278,8 @@ def index(req):
                               definition_text=_one_time_job_def(start_date))
 
                 elif job_type == 'interval_based':
-                    start_date = _get_start_date(job_elem.start_date, scheduler_date_time_format_interval_based)
-                    definition = _interval_based_job_def(start_date,
+                    definition = _interval_based_job_def(
+                        _get_start_date(job_elem.start_date, scheduler_date_time_format_interval_based),
                             job_elem.repeats, job_elem.weeks, job_elem.days,
                             job_elem.hours, job_elem.minutes, job_elem.seconds)
                     
@@ -287,6 +287,18 @@ def index(req):
                               extra, service_name=service_name, 
                               job_type_friendly=job_type_friendly,
                               definition_text=definition)
+                    
+                    weeks = job_elem.weeks.text if job_elem.weeks.text else ''
+                    days = job_elem.days.text if job_elem.days.text else ''
+                    hours = job_elem.hours.text if job_elem.hours.text else ''
+                    minutes = job_elem.minutes.text if job_elem.minutes.text else ''
+                    seconds = job_elem.seconds.text if job_elem.seconds.text else ''
+                    repeats = job_elem.repeats.text if job_elem.repeats.text else ''
+                    
+                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
+                                        seconds, repeats)
+                    job.interval_based = ib_job
+                    
                 else:
                     msg = 'Unrecognized job type, name=[{0}], type=[{1}]'.format(name, job_type)
                     logger.error(msg)

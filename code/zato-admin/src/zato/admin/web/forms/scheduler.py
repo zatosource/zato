@@ -33,6 +33,7 @@ class OneTimeSchedulerJobForm(forms.Form):
     start_date = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%; height:19px'}))
 
 class IntervalBasedSchedulerJobForm(forms.Form):
+    id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     service = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
