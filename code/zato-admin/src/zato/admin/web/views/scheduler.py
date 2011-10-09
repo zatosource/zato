@@ -201,15 +201,14 @@ def _edit_one_time(cluster, params):
 
     return dumps({'definition_text':_one_time_job_def(params['edit-one-time-start_date'])})
 
-def _edit_interval_based(server_address, params):
+def _edit_interval_based(cluster, params):
     """ Creates an interval-based scheduler job.
     """
-    logger.debug('About to change an interval-based job, server_address=[%s], params=[%s]' % (server_address, params))
-    zato_message = _get_create_edit_interval_based_message(params, edit_interval_based_prefix+'-')
+    logger.debug('About to change an interval-based job, cluster.id=[{0}, params=[{1}]]'.format(cluster.id, params))
+    zato_message = _get_create_edit_interval_based_message(cluster, params, edit_interval_based_prefix+'-')
 
-    # original_name is needed only by an 'edit' action.
-    zato_message.data.job.original_name = params.get('edit-interval-based-original_name')
-    invoke_admin_service(server_address, 'zato:scheduler.job.edit', etree.tostring(zato_message))
+    _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', zato_message)
+    logger.debug('Successfully updated an interval-based job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
     start_date = params.get('edit-interval-based-start_date')
     if start_date:
@@ -221,10 +220,10 @@ def _edit_interval_based(server_address, params):
     minutes = params.get('edit-interval-based-minutes')
     seconds = params.get('edit-interval-based-seconds')
 
-    definition = _interval_based_job_def(start_date, repeats, weeks,
-                    days, hours, minutes, seconds)
+    definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, 
+                                         minutes, seconds)
 
-    return definition
+    return dumps({'definition_text':definition})
 
 def _execute(server_address, params):
     """ Submits a request for an execution of a job.

@@ -128,8 +128,13 @@ def _create_edit(action, payload, logger, session):
                 msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given."
                 logger.error(msg)
                 raise ZatoException(msg)
+            
+            if action == 'create':
+                ib_job = IntervalBasedJob(None, job)
+            else:
+                ib_job = session.query(IntervalBasedJob).filter_by(
+                    id=job.interval_based.id).one()
 
-            ib_job = IntervalBasedJob(None, job)
             for param, value in params.items():
                 if value:
                     setattr(ib_job, param, value)
