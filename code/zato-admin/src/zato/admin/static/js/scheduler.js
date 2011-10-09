@@ -167,7 +167,6 @@ function create(job_type) {
     // Show the dialogs.
     
     if(job_type == 'one-time') {
-        $('create-one_time').show();
         create_one_time_dialog.show();
     }
 	else if(job_type == 'interval-based') {
