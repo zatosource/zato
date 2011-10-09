@@ -136,6 +136,30 @@ function dt_picker(input_id) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+
+function validate_interval_based_fields(action) {
+
+	var seen_anything = false;
+	var suffixes = ['weeks', 'days', 'hours', 'minutes', 'seconds'];
+	
+	suffixes.each(function(name) {
+		var value = $('id_' + action + '-interval-based-' + name).value;
+		if(value) {
+			seen_anything = true;
+			throw $break;
+		}
+	});
+	
+	if(!seen_anything) {
+		alert('At least one of the weeks, days, hours, minutes or seconds must be provided');
+		return false;
+	}
+	else {
+		return true;
+	}
+}
+
+// /////////////////////////////////////////////////////////////////////////////
 // create
 // /////////////////////////////////////////////////////////////////////////////
 
@@ -178,6 +202,7 @@ function setup_create_dialog_one_time() {
         object.id = json.id;        
         object.name = $('id_create-one-time-name').value;
         object.is_active = $F('id_create-one-time-is_active') == 'on';
+		object.job_type = 'one_time';
         object.service = $('id_create-one-time-service').value;
         object.definition_text = json.definition_text;
 		object.start_date = $('id_create-one-time-start_date').value;
@@ -225,26 +250,9 @@ function setup_create_dialog_interval_based() {
     var create_interval_based_validation = new Validation('create-form-interval_based');
 
     var on_submit = function() {
-        if(create_interval_based_validation.validate()) {
-
-			var seen_anything = false;
-			var suffixes = ['weeks', 'days', 'hours', 'minutes', 'seconds'];
-			
-			suffixes.each(function(name) {
-				var value = $('id_create-interval-based-' + name).value;
-				if(value) {
-					seen_anything = true;
-					throw $break;
-				}
-			});
-			
-			if(!seen_anything) {
-				alert('At least one of the weeks, days, hours, minutes or seconds must be provided');
-			}
-			else {
-				// Submit the form if no errors have been found on the UI side.
+        if(create_interval_based_validation.validate() 
+			&& validate_interval_based_fields('create')) {
 				this.submit();
-			}
 		}
     };
 
@@ -263,6 +271,7 @@ function setup_create_dialog_interval_based() {
         object.id = json.id;        
         object.name = $('id_create-interval-based-name').value;
         object.is_active = $F('id_create-interval-based-is_active') == 'on';
+		object.job_type = 'interval_based';
         object.service = $('id_create-interval-based-service').value;
         object.definition_text = json.definition_text;
 		object.start_date = $('id_create-interval-based-start_date').value;
@@ -440,10 +449,10 @@ function setup_edit_dialog_interval_based() {
     var edit_interval_based_validation = new Validation('edit-form-interval_based');
 
     var on_submit = function() {
-        if(edit_interval_based_validation.validate()) {
-            // Submit the form if no errors have been found on the UI side.
-            this.submit();
-        }
+        if(edit_interval_based_validation.validate() 
+			&& validate_interval_based_fields('edit')) {
+				this.submit();
+		}
     };
 
     var on_cancel = function() {
