@@ -34,11 +34,11 @@ Job.prototype.to_record = function() {
 	record['selection'] = '<input type="checkbox" />';
     record['name'] = this.name;
     record['is_active'] = this.boolean_html(this.is_active);
-    record['job_type'] = friendly_names.get(this.job_type);
+	record['job_type'] = this.job_type;
+    record['job_type_friendly'] = friendly_names.get(this.job_type);
     record['definition_text'] = this.definition_text;
 	record['service_text'] = this.service_text();
-    
-    record['edit'] = String.format("<a href=\"javascript:edit('one-time', {0})\">Edit</a>", this.id);
+    record['edit'] = String.format("<a href=\"javascript:edit('{0}', {1})\">Edit</a>", this.job_type, this.id);
     record['execute'] = String.format("<a href='javascript:execute({0})'>Execute</a>", this.id);
     record['delete'] = String.format("<a href='javascript:delete_({0})'>Delete</a>", this.id);
 
@@ -51,24 +51,47 @@ Job.prototype.add_row = function(object, data_dt) {
     data_dt.addRow(object.to_record(), add_at_idx);
     
     var added_record = data_dt.getRecord(add_at_idx);
-    
+	
     added_record.setData('id', object.id);
     added_record.setData('name', object.name);
     added_record.setData('is_active', object.is_active);
 	added_record.setData('start_date', object.start_date);
     added_record.setData('job_type', object.job_type);
+	added_record.setData('job_type_friendly', friendly_names.get(object.job_type));
     added_record.setData('service', object.service);
 	added_record.setData('service_text', object.service_text);
     added_record.setData('definition_text', object.definition_text);
 	added_record.setData('extra', object.extra);
+	
+	return added_record;
 
 }
 
-// A specialized subclass for one-time jobs.
+// Specialized subclasses.
 var OneTimeJob = Class.create(Job, {
     initialize: function($super, record) {
         $super(record);
         this.job_type = 'one_time';
+    },
+    set_properties: function($super, record) {
+        $super(record);
+    },
+});
+
+var IntervalBasedJob = Class.create(Job, {
+    initialize: function($super, record) {
+        $super(record);
+        this.job_type = 'interval_based';
+    },
+    set_properties: function($super, record) {
+        $super(record);
+    },
+});
+
+var CronStyleJob = Class.create(Job, {
+    initialize: function($super, record) {
+        $super(record);
+        this.job_type = 'cron_style';
     },
     set_properties: function($super, record) {
         $super(record);
@@ -143,7 +166,7 @@ function validate_interval_based_fields(action) {
 	var suffixes = ['weeks', 'days', 'hours', 'minutes', 'seconds'];
 	
 	suffixes.each(function(name) {
-		var value = $('id_' + action + '-interval-based-' + name).value;
+		var value = $('id_' + action + '-interval_based-' + name).value;
 		if(value) {
 			seen_anything = true;
 			throw $break;
@@ -164,14 +187,8 @@ function validate_interval_based_fields(action) {
 // /////////////////////////////////////////////////////////////////////////////
 
 function create(job_type) {
-    // Show the dialogs.
-    
-    if(job_type == 'one-time') {
-        create_one_time_dialog.show();
-    }
-	else if(job_type == 'interval-based') {
-		create_interval_based_dialog.show();
-	}
+    // Show the create dialog.
+	window[String.format('create_{0}_dialog', job_type)].show();
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -199,20 +216,19 @@ function setup_create_dialog_one_time() {
         var object = new OneTimeJob();
 		
         object.id = json.id;        
-        object.name = $('id_create-one-time-name').value;
-        object.is_active = $F('id_create-one-time-is_active') == 'on';
-		object.job_type = 'one_time';
-        object.service = $('id_create-one-time-service').value;
+        object.name = $('id_create-one_time-name').value;
+        object.is_active = $F('id_create-one_time-is_active') == 'on';
+        object.service = $('id_create-one_time-service').value;
         object.definition_text = json.definition_text;
-		object.start_date = $('id_create-one-time-start_date').value;
-		object.extra = $('id_create-one-time-extra').value;
+		object.start_date = $('id_create-one_time-start_date').value;
+		object.extra = $('id_create-one_time-extra').value;
 		
         object.add_row(object, data_dt);
         create_one_time_dialog.hide();
         $('create-form-one_time').reset();
         create_one_time_validation.reset();
 
-        update_user_message(true, 'Successfully created a new one-time job [' + object.name + '].');
+        update_user_message(true, 'Successfully created a new one_time job [' + object.name + '].');
     };
 
     var on_failure = function(o) {
@@ -265,23 +281,22 @@ function setup_create_dialog_interval_based() {
     var on_success = function(o) {
 
         var json = YAHOO.lang.JSON.parse(o.responseText);
-        var object = new OneTimeJob();
+        var object = new IntervalBasedJob();
 		
         object.id = json.id;        
-        object.name = $('id_create-interval-based-name').value;
-        object.is_active = $F('id_create-interval-based-is_active') == 'on';
-		object.job_type = 'interval_based';
-        object.service = $('id_create-interval-based-service').value;
+        object.name = $('id_create-interval_based-name').value;
+        object.is_active = $F('id_create-interval_based-is_active') == 'on';
+        object.service = $('id_create-interval_based-service').value;
         object.definition_text = json.definition_text;
-		object.start_date = $('id_create-interval-based-start_date').value;
-		object.extra = $('id_create-interval-based-extra').value;
+		object.start_date = $('id_create-interval_based-start_date').value;
+		object.extra = $('id_create-interval_based-extra').value;
 		
         object.add_row(object, data_dt);
         create_interval_based_dialog.hide();
         $('create-form-interval_based').reset();
         create_interval_based_validation.reset();
 
-        update_user_message(true, 'Successfully created a new interval-based job [' + object.name + '].');
+        update_user_message(true, 'Successfully created a new interval_based job [' + object.name + '].');
     };
 
     var on_failure = function(o) {
@@ -313,22 +328,90 @@ function setup_create_dialog_interval_based() {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+
+function setup_create_dialog_cron_style() {
+    var create_cron_style_validation = new Validation('create-form-cron_style');
+
+    var on_submit = function() {
+        if(create_cron_style_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+        }
+    };
+
+    var on_cancel = function() {
+        this.cancel();
+        create_cron_style_dialog.hide();
+        $('create-form-cron_style').reset();
+        create_cron_style_validation.reset();
+    };
+
+    var on_success = function(o) {
+
+        var json = YAHOO.lang.JSON.parse(o.responseText);
+        var object = new CronStyleJob();
+		
+        object.id = json.id;        
+        object.name = $('id_create-cron_style-name').value;
+        object.is_active = $F('id_create-cron_style-is_active') == 'on';
+        object.service = $('id_create-cron_style-service').value;
+        object.definition_text = json.definition_text;
+		object.start_date = $('id_create-cron_style-start_date').value;
+		object.cron_definition = $('id_create-cron_style-cron_definition').value;
+		object.extra = $('id_create-cron_style-extra').value;
+		
+        var record = object.add_row(object, data_dt);
+		record.setData('cron_definition', object.cron_definition);
+		
+        create_cron_style_dialog.hide();
+        $('create-form-cron_style').reset();
+        create_cron_style_validation.reset();
+
+        update_user_message(true, 'Successfully created a new cron_style job [' + object.name + '].');
+    };
+
+    var on_failure = function(o) {
+        create_cron_style_dialog.hide();
+        $('create-form-cron_style').reset();
+        create_cron_style_validation.reset();
+        update_user_message(false, o.responseText);
+    };
+
+    // Instantiate the dialog if necessary.
+    if(typeof create_cron_style_dialog == 'undefined') {
+        create_cron_style_dialog = new YAHOO.widget.Dialog('create-cron_style',
+                                { width: '50em',
+                                  fixedcenter: true,
+                                  visible: false,
+                                  draggable: true,
+                                  postmethod: 'async',
+                                  hideaftersubmit: false,
+                                  constraintoviewport: true,
+                                  buttons: [{text:'Submit', handler:on_submit},
+                                            {text:'Cancel', handler:on_cancel, isDefault:true}]
+                                });
+
+        create_cron_style_dialog.callback.success = on_success;
+        create_cron_style_dialog.callback.failure = on_failure;
+
+        create_cron_style_dialog.render();
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
 // edit
 // /////////////////////////////////////////////////////////////////////////////
 
 function edit(job_type, job_id) {
 	
-	// TODO: Oh crap, that should actually be straightened out. We should settle
-	//       on it being either e.g. one-time or one_time throughout all the 
-	//       application. Preferrably the latter so it can be used as a name
-	//       of a function/method.
-	job_type = job_type.replace('_', '-');
-	
 	var prefix = String.format('id_edit-{0}-', job_type);
 	var extra_fields = [];
 	
-    if(job_type == 'interval-based') {
+    if(job_type == 'interval_based') {
 		extra_fields = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats'];
+	}
+	else if(job_type == 'cron_style') {
+		extra_fields = ['cron_definition'];
 	};
 	
 	var records = data_dt.getRecordSet().getRecords();
@@ -338,7 +421,7 @@ function edit(job_type, job_id) {
 		if(id && id == job_id) {
 		
 			var is_active = record.getData('is_active') ? 'on' : ''
-			
+
 			$(prefix + 'id').value = record.getData('id');
 			$(prefix + 'name').value = record.getData('name');
 			$(prefix + 'start_date').value = record.getData('start_date');
@@ -353,9 +436,6 @@ function edit(job_type, job_id) {
 			break;
 		}
 	}
-	
-	// TODO: See above, this replacing dance should really be done away with.
-	job_type = job_type.replace('-', '_');
 	
 	$('edit-' + job_type).show();
 	window['edit_' + job_type + '_dialog'].show();	
@@ -386,10 +466,10 @@ function setup_edit_dialog_one_time() {
         var json = YAHOO.lang.JSON.parse(o.responseText);
         var object = new OneTimeJob();
 
-        object.id = $('id_edit-one-time-id').value;
-        object.name = $('id_edit-one-time-name').value;
-        object.is_active = $F('id_edit-one-time-is_active') == 'on';
-        object.service = $('id_edit-one-time-service').value;
+        object.id = $('id_edit-one_time-id').value;
+        object.name = $('id_edit-one_time-name').value;
+        object.is_active = $F('id_edit-one_time-is_active') == 'on';
+        object.service = $('id_edit-one_time-service').value;
         object.definition_text = json.definition_text;
 		
 		edit_one_time_dialog.hide();
@@ -464,12 +544,12 @@ function setup_edit_dialog_interval_based() {
     var on_success = function(o) {
 
         var json = YAHOO.lang.JSON.parse(o.responseText);
-        var object = new OneTimeJob();
+        var object = new IntervalBasedJob();
 
-        object.id = $('id_edit-interval-based-id').value;
-        object.name = $('id_edit-interval-based-name').value;
-        object.is_active = $F('id_edit-interval-based-is_active') == 'on';
-        object.service = $('id_edit-interval-based-service').value;
+        object.id = $('id_edit-interval_based-id').value;
+        object.name = $('id_edit-interval_based-name').value;
+        object.is_active = $F('id_edit-interval_based-is_active') == 'on';
+        object.service = $('id_edit-interval_based-service').value;
         object.definition_text = json.definition_text;
 		
 		edit_interval_based_dialog.hide();
@@ -519,6 +599,88 @@ function setup_edit_dialog_interval_based() {
         edit_interval_based_dialog.callback.failure = on_failure;
 
         edit_interval_based_dialog.render();
+    }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+function setup_edit_dialog_cron_style() {
+    var edit_cron_style_validation = new Validation('edit-form-cron_style');
+
+    var on_submit = function() {
+        if(edit_cron_style_validation.validate()) {
+            // Submit the form if no errors have been found on the UI side.
+            this.submit();
+        }
+    };
+
+    var on_cancel = function() {
+        this.cancel();
+        edit_cron_style_dialog.hide();
+        $('edit-form-cron_style').reset();
+        edit_cron_style_validation.reset();
+    };
+
+    var on_success = function(o) {
+
+        var json = YAHOO.lang.JSON.parse(o.responseText);
+        var object = new CronStyleJob();
+
+        object.id = $('id_edit-cron_style-id').value;
+        object.name = $('id_edit-cron_style-name').value;
+        object.is_active = $F('id_edit-cron_style-is_active') == 'on';
+        object.service = $('id_edit-cron_style-service').value;
+		object.cron_definition = $('id_edit-cron_style-cron_definition').value;
+        object.definition_text = json.definition_text;
+		
+		edit_cron_style_dialog.hide();
+		$('edit-form-cron_style').reset();
+		edit_cron_style_validation.reset();
+
+		var records = data_dt.getRecordSet().getRecords();
+		for (x=0; x < records.length; x++) {
+			var record = records[x];
+			var id = record.getData('id');
+			if(id && id == object.id) {
+
+				record.setData('name', object.name);
+				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('service_text', object.service_text());
+				record.setData('definition_text', object.definition_text);
+				record.setData('cron_definition', object.cron_definition);
+				
+				data_dt.render();
+			}
+		}
+			
+        update_user_message(true, 'Successfully edited the cron-style job [' + object.name + '].');
+    };
+
+    var on_failure = function(o) {
+        edit_cron_style_dialog.hide();
+        $('edit-form-cron_style').reset();
+        edit_cron_style_validation.reset();
+        update_user_message(false, o.responseText);
+    };
+
+    // Instantiate the dialog if necessary.
+    if(typeof edit_cron_style_dialog == 'undefined') {
+        edit_cron_style_dialog = new YAHOO.widget.Dialog('edit-cron_style',
+                                { width: '50em',
+                                  fixedcenter: true,
+                                  visible: false,
+                                  draggable: true,
+                                  postmethod: 'async',
+                                  hideaftersubmit: false,
+                                  constraintoviewport: true,
+                                  buttons: [{text:'Submit', handler:on_submit},
+                                            {text:'Cancel', handler:on_cancel, isDefault:true}]
+                                });
+
+        edit_cron_style_dialog.callback.success = on_success;
+        edit_cron_style_dialog.callback.failure = on_failure;
+
+        edit_cron_style_dialog.render();
     }
 }
 
@@ -637,504 +799,10 @@ YAHOO.util.Event.onDOMReady(function() {
         }
         return str;
     };
-
-    setup_create_dialog_one_time();
-	setup_create_dialog_interval_based();
 	
-    setup_edit_dialog_one_time();
-	setup_edit_dialog_interval_based();
-	
+	['one_time', 'interval_based', 'cron_style'].each(function(job_type) {
+		window[String.format('setup_create_dialog_{0}', job_type)]();
+		window[String.format('setup_edit_dialog_{0}', job_type)]();
+	});
     setup_delete_dialog();
 });
-
-// /////////////////////////////////////////////////////////////////////////////
-
-/*
-
-// Populates the job's attributes basing on the values from a given record.
-Job.prototype.set_properties = function(record) {
-    var cols = data_dt.getColumnSet().keys;
-    for(var x=0; x<cols.length; x++) {
-        var col = cols[x];
-        var data = record.getData(col.key);
-
-        // Common attributes
-        if(col.key == "name") {
-            this.name = data;
-        }
-        else if(col.key == "job_type_raw"){
-            this.job_type = data;
-        }
-        else if(col.key == "service"){
-            this.service = data;
-        }
-        else if(col.key == "extra"){
-            this.extra = data;
-        }
-
-        // One-time jobs only
-        else if(col.key == "start_date_raw"){
-            this.start_date_raw = data;
-        }
-
-        // Interval-based jobs only.
-        else if(col.key == "start_date_raw"){
-            this.start_date_raw = data;
-        }
-        else if(col.key == "weeks"){
-            this.weeks = data;
-        }
-        else if(col.key == "days"){
-            this.days = data;
-        }
-        else if(col.key == "hours"){
-            this.hours = data;
-        }
-        else if(col.key == "minutes"){
-            this.minutes = data;
-        }
-        else if(col.key == "seconds"){
-            this.seconds = data;
-        }
-        else if(col.key == "repeat"){
-            this.repeat = data;
-        }
-    }
-}
-// The reverse of Job.set_properties, updates a record with new job's values.
-Job.prototype.update_record = function() {
-
-    var new_values = new Hash();
-
-    // Common attributes.
-    new_values.set("name", this.name);
-    new_values.set("job_type", friendly_names.get(this.job_type));
-    new_values.set("definition", this.definition);
-    new_values.set("service", this.service);
-    new_values.set("extra", this.extra);
-
-    // One-time jobs.
-    new_values.set("start_date_raw", this.start_date_raw);
-
-    // Interval-based jobs.
-    new_values.set("start_date_raw", this.start_date_raw);
-    new_values.set("weeks", this.weeks);
-    new_values.set("days", this.days);
-    new_values.set("hours", this.hours);
-    new_values.set("minutes", this.minutes);
-    new_values.set("seconds", this.seconds);
-    new_values.set("repeat", this.repeat);
-
-    var new_values_keys = new_values.keys();
-
-    var cols = data_dt.getColumnSet().keys;
-    for(var col_idx=0; col_idx<cols.length; col_idx++) {
-        var col = cols[col_idx];
-        for(var nv_idx=0; nv_idx<new_values_keys.length; nv_idx++) {
-            var new_value_key = new_values_keys[nv_idx];
-            var new_value = new_values.get(new_value_key);
-            if(col.key == new_value_key && new_value) {
-                this.record.setData(col.key, new_value);
-                data_dt.updateCell(this.record, col.key, new_value);
-            }
-        }
-    }
-}
-
-
-// Builds a delete URL for the current job.
-Job.prototype.get_delete_url = function() {
-    return "/zato/scheduler/delete/?name=" + this.name + "&server=" + this.server_id;
-}
-
-// Builds an execute URL for the current job.
-Job.prototype.get_execute_url = function() {
-    return ".?server=" + this.server_id;
-}
-
-// Builds an execute POST datafor the current job.
-Job.prototype.get_execute_data = function() {
-    return "zato_action=execute&name=" + this.name
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-//
-// delete
-//
-// /////////////////////////////////////////////////////////////////////////////
-function job_delete(job) {
-
-    var on_success = function(o) {
-        msg = "Successfully deleted job [" + job.name + "].";
-
-        // Delete the row..
-        data_dt.deleteRow(job.record);
-
-        // .. and confirm everything went fine.
-        update_user_message(true, msg);
-    };
-
-    var on_failure = function(o) {
-        update_user_message(false, o.responseText);
-    }
-
-    var callback = {
-        success: on_success,
-        failure: on_failure,
-    };
-
-    var on_yes = function() {
-        var transaction = YAHOO.util.Connect.asyncRequest("GET", job.get_delete_url(), callback);
-        this.hide();
-    };
-
-    var on_no = function() {
-        this.hide();
-    };
-
-    delete_dialog = new YAHOO.widget.SimpleDialog("delete_dialog", {
-        width: "36em",
-        effect:{
-            effect: YAHOO.widget.ContainerEffect.FADE,
-            duration: 0.10
-        },
-        fixedcenter: true,
-        modal: false,
-        visible: false,
-        draggable: true
-    });
-
-    delete_dialog.setHeader("Are you sure?");
-    delete_dialog.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_WARN);
-
-    var delete_buttons = [
-        {text: "Yes", handler: on_yes},
-        {text:"Cancel", handler: on_no, isDefault:true}
-    ];
-
-    delete_dialog.cfg.queueProperty("buttons", delete_buttons);
-    delete_dialog.render(document.body);
-
-    delete_dialog.setBody("Are you sure you want to delete job [" + job.name + "]?");
-    delete_dialog.show();
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-//
-// execute
-//
-// /////////////////////////////////////////////////////////////////////////////
-function job_execute(job) {
-
-    var on_execute_success = function(o) {
-        update_user_message(true, "Request submitted, check the server's log for details.");
-    };
-
-    var on_execute_failure = function(o) {
-        update_user_message(false, o.responseText);
-    };
-
-    var callback = {
-      success: on_execute_success,
-      failure: on_execute_failure,
-    };
-
-    var transaction = YAHOO.util.Connect.asyncRequest("POST", job.get_execute_url(),
-        callback, job.get_execute_data());
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-//
-// edit
-//
-// /////////////////////////////////////////////////////////////////////////////
-function job_edit(job) {
-
-    var edit_one_time_job = function(job) {
-        var edit_one_time_validation = new Validation("edit-form-one_time", {immediate: true});
-
-        var on_submit = function() {
-            if(edit_one_time_validation.validate()) {
-                // Submit the form if no errors have been found on the UI side.
-                this.submit();
-            }
-        };
-
-        var on_cancel = function() {
-            this.cancel();
-            edit_one_time_dialog.hide();
-            $("edit-one_time").reset();
-        };
-
-        var on_success = function(o) {
-
-            var record_id = o.argument;
-            job.record = data_dt.getRecord(record_id);
-
-            job.definition = o.responseText;
-            job.properties_from_form("id_edit-one-time-");
-            job.update_record();
-
-            edit_one_time_dialog.hide();
-            $("edit-form-one_time").reset();
-
-            update_user_message(true, "Successfully saved the changes to job [" + job.name + "].");
-        };
-
-        var on_failure = function(o) {
-            edit_one_time_dialog.hide();
-            $("edit-form-one_time").reset();
-            update_user_message(false, o.responseText);
-        }
-
-        var callback = {
-            success: on_success,
-            failure: on_failure,
-        };
-
-        // Instantiate the dialog if necessary.
-        if(typeof edit_one_time_dialog == "undefined") {
-            edit_one_time_dialog = new YAHOO.widget.Dialog("edit-one_time",
-                                    { width: "50em",
-                                      fixedcenter: true,
-                                      visible: false,
-                                      draggable: true,
-                                      postmethod: "async",
-                                      hideaftersubmit: false,
-                                      constraintoviewport: true,
-                                      buttons: [{text:"Submit", handler:on_submit},
-                                                {text:"Cancel", handler:on_cancel, isDefault:true}]
-                                    });
-
-            edit_one_time_dialog.callback.success = on_success;
-            edit_one_time_dialog.callback.failure = on_failure;
-
-            edit_one_time_dialog.render();
-        }
-
-        edit_one_time_dialog.callback.argument = job.record.getId();
-
-        // Populate the form.
-        $("id_edit-one-time-name").value = job.name;
-        $("id_edit-one-time-original_name").value = job.name;
-        $("id_edit-one-time-start_date").value = job.start_date_raw;
-        $("id_edit-one-time-service").value = job.service;
-        $("id_edit-one-time-extra").value = job.extra;
-
-        // Show the dialog.
-        $("edit-one_time").show();
-        edit_one_time_dialog.show();
-    }
-
-    var edit_interval_based_job = function(job) {
-        var edit_interval_based_validation = new Validation("edit-form-interval_based", {immediate: true});
-
-        var on_submit = function() {
-            if(edit_interval_based_validation.validate()) {
-                // Submit the form if no errors have been found on the UI side.
-                this.submit();
-            }
-        };
-
-        var on_cancel = function() {
-            this.cancel();
-            edit_interval_based_dialog.hide();
-            $("edit-interval_based").reset();
-        };
-
-        var on_success = function(o) {
-
-            var record_id = o.argument;
-            job.record = data_dt.getRecord(record_id);
-
-            job.definition = o.responseText;
-            job.properties_from_form("id_edit-interval-based-");
-            job.update_record();
-
-            edit_interval_based_dialog.hide();
-            $("edit-form-interval_based").reset();
-
-            update_user_message(true, "Successfully saved the changes to job [" + job.name + "].");
-        };
-
-        var on_failure = function(o) {
-            edit_interval_based_dialog.hide();
-            $("edit-form-interval_based").reset();
-            update_user_message(false, o.responseText);
-        }
-
-        var callback = {
-            success: on_success,
-            failure: on_failure,
-        };
-
-        // Instantiate the dialog if necessary.
-        if(typeof edit_interval_based_dialog == "undefined") {
-            edit_interval_based_dialog = new YAHOO.widget.Dialog("edit-interval_based",
-                                    { width: "50em",
-                                      fixedcenter: true,
-                                      visible: false,
-                                      draggable: true,
-                                      postmethod: "async",
-                                      hideaftersubmit: false,
-                                      constraintoviewport: true,
-                                      buttons: [{text:"Submit", handler:on_submit},
-                                                {text:"Cancel", handler:on_cancel, isDefault:true}]
-                                    });
-
-            edit_interval_based_dialog.callback.success = on_success;
-            edit_interval_based_dialog.callback.failure = on_failure;
-            edit_interval_based_dialog.render();
-        }
-
-        edit_interval_based_dialog.callback.argument = job.record.getId();
-
-        // Populate the form.
-        $("id_edit-interval-based-name").value = job.name;
-        $("id_edit-interval-based-original_name").value = job.name;
-        $("id_edit-interval-based-start_date").value = job.start_date_raw;
-        $("id_edit-interval-based-service").value = job.service;
-        $("id_edit-interval-based-extra").value = job.extra;
-        $("id_edit-interval-based-start_date").value = job.start_date_raw;
-        $("id_edit-interval-based-weeks").value = job.weeks;
-        $("id_edit-interval-based-days").value = job.days;
-        $("id_edit-interval-based-hours").value = job.hours;
-        $("id_edit-interval-based-minutes").value = job.minutes;
-        $("id_edit-interval-based-seconds").value = job.seconds;
-        $("id_edit-interval-based-repeat").value = job.repeat;
-
-        // Show the dialog.
-        $("edit-interval_based").show();
-        edit_interval_based_dialog.show();
-    }
-
-
-    switch(job.job_type) {
-        case 'one_time':
-            edit_one_time_job(new OneTimeJob(job.record));
-            return;
-        case 'interval_based':
-            edit_interval_based_job(new IntervalBasedJob(job.record));
-            return;
-    }
-}
-
-YAHOO.util.Event.onDOMReady(function() {
-
-    // /////////////////////////////////////////////////////////////////////////
-    //
-    // Job creation context menu
-    //
-    // /////////////////////////////////////////////////////////////////////////
-    var on_create_one_time = function() {
-    };
-
-    var on_create_interval_based = function() {
-
-        var create_interval_based_validation = new Validation("create-form-interval_based", {immediate: true});
-
-        var on_create_interval_based_submit = function() {
-            if(create_interval_based_validation.validate()) {
-                // Submit the form if no errors have been found on the UI side.
-                this.submit();
-            }
-        };
-
-        var on_create_interval_based_cancel = function() {
-            this.cancel();
-            create_interval_based_dialog.hide();
-            $("create-form-interval_based").reset();
-            create_interval_based_validation.reset();
-        };
-
-        var on_create_interval_based_success = function(o) {
-
-            var job = new IntervalBasedJob(null);
-
-            job.properties_from_form("id_create-interval-based-");
-            job.definition = o.responseText;
-
-            data_dt.addRow(job.to_record());
-            create_interval_based_dialog.hide();
-            $("create-form-interval_based").reset();
-            create_interval_based_validation.reset();
-
-            update_user_message(true, "Successfully created job [" + job.name + "].");
-        };
-
-        var on_create_interval_based_failure = function(o) {
-            create_interval_based_dialog.hide();
-            $("create-form-interval_based").reset();
-            update_user_message(false, o.responseText);
-            create_interval_based_validation.reset();
-        };
-
-        // Instantiate the dialog if necessary.
-        if(typeof create_interval_based_dialog == "undefined") {
-            create_interval_based_dialog = new YAHOO.widget.Dialog("create-interval_based",
-                                    { width: "50em",
-                                      fixedcenter: true,
-                                      visible: false,
-                                      draggable: true,
-                                      postmethod: "async",
-                                      hideaftersubmit: false,
-                                      constraintoviewport: true,
-                                      buttons: [{text:"Submit", handler:on_create_interval_based_submit},
-                                                {text:"Cancel", handler:on_create_interval_based_cancel, isDefault:true}]
-                                    });
-
-            create_interval_based_dialog.callback.success = on_create_interval_based_success;
-            create_interval_based_dialog.callback.failure = on_create_interval_based_failure;
-
-            create_interval_based_dialog.render();
-        }
-
-        // Show the dialog.
-        $("create-interval_based").show();
-        create_interval_based_dialog.show();
-    };
-
-    var on_create_cron_style = function() {
-        alert("Cron-style not implemented yet.");
-    };
-
-    var item_data = [
-        {text: "One-time", onclick: {fn: on_create_one_time}},
-        {text: "Interval-based", onclick: {fn: on_create_interval_based}},
-        {text: "Cron-style", onclick: {fn: on_create_cron_style}},
-    ];
-
-    var create_menu = new YAHOO.widget.ContextMenu("create_menu", {
-        trigger: $("create-link"),
-        itemdata: item_data,
-    });
-
-    create_menu.render(document.body);
-
-    // Hide dialogs on startup, after creating the menu.
-    var dialogs = ["create-one_time", "create-interval_based", "edit-one_time", "edit-interval_based"];
-    for(idx in dialogs) {
-        $(dialogs[idx]).hide()
-    }
-
-});
-
-function on_cell_click_event(args) {
-    var target = args.target;
-    var column = data_dt.getColumn(target);
-    var record = data_dt.getRecord(target);
-
-    var job = new Job(record);
-
-     if(column.key == "delete") {
-        job_delete(job);
-     }
-     else if(column.key == "execute") {
-        job_execute(job);
-     }
-     else if(column.key == "edit") {
-        job_edit(job);
-     }
-}
-
-*/

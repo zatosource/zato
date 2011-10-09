@@ -32,8 +32,8 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.common import path, scheduler_date_time_format_interval_based, \
-     scheduler_date_time_format_one_time, ZatoException, ZATO_OK, zato_path
+from zato.common import path, scheduler_date_time_format, \
+     scheduler_date_time_format, ZatoException, ZATO_OK, zato_path
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.util import pprint, TRACE1
@@ -43,7 +43,7 @@ def _get_interval_based_start_date(payload):
     start_date = zato_path('data.job.start_date', True).get_from(payload)
     if start_date:
         # Were optional date & time provided in a correct format?
-        strptime(str(start_date), scheduler_date_time_format_interval_based)
+        strptime(str(start_date), scheduler_date_time_format)
 
     return str(start_date)
 
@@ -117,10 +117,7 @@ def _create_edit(action, payload, logger, session):
         # Add but don't commit yet.
         session.add(job)
 
-        if job_type == 'one_time':
-            session.commit()
-            
-        elif job_type == 'interval_based':
+        if job_type == 'interval_based':
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats']
             params = _get_params(payload, request_params, 'data.', default_value='')
 
@@ -140,11 +137,23 @@ def _create_edit(action, payload, logger, session):
                     setattr(ib_job, param, value)
             
             session.add(ib_job)
-            session.commit()
             
-        else:
-            # ZZZ Handle other types.
-            session.commit()
+        elif job_type == 'cron_style':
+            params = _get_params(payload, ['cron_definition'], 'data.')
+            cron_definition = params['cron_definition']
+            
+            if action == 'create':
+                cs_job = CronStyleJob(None, job)
+            else:
+                cs_job = session.query(CronStyleJob).filter_by(
+                    id=job.cron_style.id).one()
+                
+            cs_job.cron_definition = cron_definition
+            session.add(cs_job)
+
+        # We can commit it all now.
+        session.commit()            
+            
     except Exception, e:
         session.rollback()
         msg = 'Could not complete the request, e=[{e}]'.format(e=format_exc(e))
@@ -176,7 +185,7 @@ class GetList(AdminService):
                 IntervalBasedJob.weeks, IntervalBasedJob.days,
                 IntervalBasedJob.hours, IntervalBasedJob.minutes, 
                 IntervalBasedJob.seconds, IntervalBasedJob.repeats,
-                CronStyleJob.definition.label('cron_definition')).\
+                CronStyleJob.cron_definition).\
                     outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
                     outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
                     filter(Cluster.id==params['cluster_id']).\
@@ -201,6 +210,10 @@ class GetList(AdminService):
                 definition_elem.minutes = definition.minutes if definition.minutes else ''
                 definition_elem.seconds = definition.seconds if definition.seconds else ''
                 definition_elem.repeats = definition.repeats if definition.repeats else ''
+                definition_elem.cron_definition = (definition.cron_definition if 
+                    definition.cron_definition else '')
+                
+                print(repr((definition.name, definition.cron_definition)))
                 
                 definition_list.append(definition_elem)
     
@@ -212,34 +225,6 @@ class Create(AdminService):
     def handle(self, *args, **kwargs):
         return _create_edit('create', kwargs.get('payload'), self.logger, 
                             self.server.odb.session())
-
-        '''
-        def _handle_interval_based(payload, name, service, extra):
-            request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat', 'start_date']
-            params = _get_params(payload, request_params, 'data.job.',
-                                     default_value=0, force_type=int,
-                                     force_type_params=request_params[:-1])
-
-            if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
-                msg = 'At least one of [\'weeks\', \'days\', \'hours\', \'minutes\', \'seconds\'] must be given.'
-                self.logger.error(msg)
-                raise ZatoException(msg)
-
-            params['start_date'] = _get_interval_based_start_date(payload)
-            
-            params_pprinted = pprint((name, service, extra, params))
-            self.logger.debug('About to create an interval-based job, params=[%s]'.format(
-                params_pprinted))
-
-            result, response = self.server.send_config_request('CREATE_JOB',
-                            ['interval_based', name, service, extra, params],
-                            timeout=6.0)
-            self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-            return result, response
-            '''
-        
-        # Let the handler take care the rest.
-        #return locals()['_handle_' + job_type](payload, core_params, extra)
         
 class Edit(AdminService):
     """ Update a new scheduler's job.
@@ -274,122 +259,3 @@ class Delete(AdminService):
                 raise
             
             return ZATO_OK, ''
-'''
-
-# stdlib
-import json
-
-# Spring Python
-from springpython.util import synchronized
-
-# Zato
-from zato.common.util import pprint, TRACE1
-from zato.common import(path, zato_path, ZatoException, scheduler_date_time_format_one_time,
-                       scheduler_date_time_format_interval_based)
-from zato.server.service.internal import _get_params, AdminService
-
-
-
-
-
-
-class EditJob(AdminService):
-    """ Changes the properties of a job.
-    """
-    @synchronized()
-    def handle(self, *args, **kwargs):
-
-        def _handle_one_time(payload, name, original_name, service, extra):
-            request_params = ['date_time']
-            params = _get_params(payload, request_params, 'data.job.')
-
-            # Were date & time provided in a correct format?
-            strptime(params['date_time'], scheduler_date_time_format_one_time)
-
-            params_pprinted = pprint((name, service, extra, params))
-
-            self.logger.debug('About to edit a one-time job, params=[%s]' % params_pprinted)
-            result, response = self.server.send_config_request('EDIT_JOB',
-                                ['one_time', name, original_name, service, extra, params],
-                                timeout=5.0)
-            self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-            if response:
-                response = json.loads(response)
-            self.logger.log(TRACE1, 'response2=[%s]' % response)
-
-            return result, response
-
-        def _handle_interval_based(payload, name, original_name, service, extra):
-            request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeat']
-            params = _get_params(payload, request_params, 'data.job.',
-                                     default_value=0, force_type=int,
-                                     force_type_params=request_params[:-1])
-
-            if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
-                msg = 'At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given.'
-                self.logger.error(msg)
-                raise ZatoException(msg)
-
-            # Were optional date & time provided in a correct format?
-            start_date = zato_path('job.start_date').get_from(payload)
-            if start_date:
-                strptime(str(start_date), scheduler_date_time_format_interval_based)
-            else:
-                start_date = ''
-            params['start_date'] = str(start_date)
-
-            params_pprinted = pprint((name, service, extra, start_date, params))
-
-            self.logger.debug('About to edit an interval-based job, params=[%s]' % params_pprinted)
-            result, response = self.server.send_config_request('EDIT_JOB',
-                                ['interval_based', name, original_name, service, extra, params],
-                                timeout=5.0)
-            self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-            return result, response
-
-        payload = kwargs.get('payload')
-        job_type = zato_path('data.job.job_type', True).get_from(payload)
-
-        # Make sure we know what kind of job it is.
-        if job_type not in ('one_time', 'interval_based', 'cron_style'):
-            msg = 'Unrecognized job type [%s]' % job_type
-            self.logger.error(msg)
-            raise ZatoException(msg)
-
-        name = unicode(zato_path('data.job.name', True).get_from(payload))
-        original_name = unicode(zato_path('data.job.original_name', True).get_from(payload))
-        service = unicode(zato_path('data.job.service', True).get_from(payload))
-
-        # Extra parameters are not mandatory.
-        extra = path('zato_message.data.job.extra').get_from(payload)
-        extra = unicode(extra) if extra else ''
-
-        # Let the handler take care of it.
-        return locals()['_handle_' + job_type](payload, name, original_name, service, extra)
-
-class ExecuteJob(AdminService):
-    """ Executes a scheduler's job.
-    """
-    def handle(self, *args, **kwargs):
-        payload = kwargs.get('payload')
-        name = unicode(zato_path('job.name', True).get_from(payload))
-
-        result, response = self.server.send_config_request('EXECUTE_JOB', name,
-                            timeout=3.0)
-        self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-        return result, response
-
-class DeleteJob(AdminService):
-    """ Deletes a scheduler's job.
-    """
-    @synchronized()
-    def handle(self, *args, **kwargs):
-        payload = kwargs.get('payload')
-        name = unicode(zato_path('job.name', True).get_from(payload))
-
-        result, response = self.server.send_config_request('DELETE_JOB', name,
-                            timeout=3.0)
-        self.logger.log(TRACE1, 'result=[%s], response1=[%s]' % (result, response))
-        return result, response
-        
-'''

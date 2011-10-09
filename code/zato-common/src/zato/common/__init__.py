@@ -84,10 +84,7 @@ zato_data_xpath = etree.XPath(zato_data_path, namespaces={"soapenv":soapenv_name
 zato_error_code_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:error_code"
 zato_error_code_path_xpath = etree.XPath(zato_error_code_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
 
-# Scheduler's date time formats (right now it's the same one for both one-time
-# and interval-based jobs although it may change with time).
-scheduler_date_time_format_one_time = "%Y-%m-%d %H:%M:%S"
-scheduler_date_time_format_interval_based = "%Y-%m-%d %H:%M:%S"
+scheduler_date_time_format = "%Y-%m-%d %H:%M:%S"
 
 soap_date_time_format = "%Y-%m-%dT%H:%M:%S.%fZ"
 

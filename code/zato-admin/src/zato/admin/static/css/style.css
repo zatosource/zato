@@ -124,6 +124,11 @@ html {
     cursor: pointer;
 }
 
+span.form_hint {
+    font-size:smaller; 
+    color:#666666
+}
+
 a.community {
     color: #225522 !important
 }
