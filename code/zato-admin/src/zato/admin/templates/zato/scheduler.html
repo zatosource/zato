@@ -91,9 +91,9 @@
 
         <br/>
         Create a new job:
-            <a href="javascript:create('one-time')" class="common">one-time</a>, 
-            <a href="javascript:create('interval-based')" class="common">interval-based</a>, 
-            <a href="javascript:create('cron-style')" class="common">Cron-style</a>
+            <a href="javascript:create('one_time')" class="common">one-time</a>, 
+            <a href="javascript:create('interval_based')" class="common">interval-based</a>, 
+            <a href="javascript:create('cron_style')" class="common">cron-style</a>
         <br/><br/>
 
         <script type="text/javascript">
@@ -105,7 +105,7 @@
                     {key:'selection', label:'&nbsp;', sortable:false},
                     {key:'name', label:'Name', sortable:true},
                     {key:'is_active', label:'Active', sortable:true},
-                    {key:'job_type', label:'Type', sortable:true},
+                    {key:'job_type_friendly', label:'Type', sortable:true},
                     {key:'definition_text', label:'Definition', sortable:false},
                     {key:'service_text', label:'Service', sortable:true},
                     {key:'execute', label:'', sortable:false},
@@ -120,6 +120,8 @@
                     {key:'minutes', label:'minutes', hidden:true},
                     {key:'seconds', label:'seconds', hidden:true},
                     {key:'repeats', label:'repeats', hidden:true},
+                    {key:'cron_definition', label:'cron_definition', hidden:true},
+                    {key:'job_type', label:'job_type', hidden:true},
                 ];
 
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get('data-table'));
@@ -130,7 +132,7 @@
                             {key:'selection'},
                             {key:'name'},
                             {key:'is_active'},
-                            {key:'job_type'},
+                            {key:'job_type_friendly'},
                             {key:'definition_text'},
                             {key:'service_text'},
                             {key:'execute'},
@@ -145,7 +147,8 @@
                             {key:'minutes'},
                             {key:'seconds'},
                             {key:'repeats'},
-
+                            {key:'cron_definition'},
+                            {key:'job_type'},
                     ]
                 };
 
@@ -159,8 +162,6 @@
                 };
             }();
             
-            /* data_dt.subscribe("cellClickEvent", on_cell_click_event); */
-
         });
         </script>
 
@@ -169,6 +170,8 @@
                 <thead>
 
                     <tr>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -199,7 +202,7 @@
                         <td>{{ job.name }}</td>
                         <td>{% if job.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{{ job.job_type_friendly }}</td>
-                        <td>{{ job.definition_text }}</td>
+                        <td>{{ job.definition_text|safe }}</td>
                         <td><a href="{% url service %}?service={{ job.service_name }}">{{ job.service_name }}</a></td>
                         <td><a href="javascript:execute({{ job.id }})">Execute</a></td>
                         <td><a href="javascript:edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
@@ -213,6 +216,8 @@
                         <td>{{ job.interval_based.minutes }}</td>
                         <td>{{ job.interval_based.seconds }}</td>
                         <td>{{ job.interval_based.repeats }}</td>
+                        <td>{{ job.cron_style.cron_definition }}</td>
+                        <td>{{ job.job_type }}</td>
                         
                     </tr>
                 {% endfor %}
@@ -220,7 +225,6 @@
                 </tbody>
             </table>
         </div>
-
 
         <div id="create-one_time" class="yui-pe-content">
             <div class="hd">Create a one-time job</div>
@@ -241,13 +245,13 @@
                         <tr>
                             <td style="vertical-align:middle">
                                 Start date &amp; time<br/>
-                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                                <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
-                                <input id="id_create-one-time-start_date" class="required"
-                                    name="create-one-time-start_date" type="text" />
+                                <input id="id_create-one_time-start_date" class="required"
+                                    name="create-one_time-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:dt_picker('id_create-one-time-start_date')"
+                                        onclick="javascript:dt_picker('id_create-one_time-start_date')"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -290,13 +294,13 @@
                         <tr>
                             <td style="vertical-align:middle">
                                 Date &amp; time<br/>
-                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                                <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
-                                <input id="id_edit-one-time-start_date" class="required"
-                                    name="edit-one-time-start_date" type="text" />
+                                <input id="id_edit-one_time-start_date" class="required"
+                                    name="edit-one_time-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:dt_picker('id_edit-one-time-start_date')"
+                                        onclick="javascript:dt_picker('id_edit-one_time-start_date')"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
@@ -365,20 +369,20 @@
                         <tr>
                             <td style="vertical-align:middle">
                                 Start date &amp; time<br/>
-                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                                <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
-                                <input id="id_create-interval-based-start_date" class="required"
-                                    name="create-interval-based-start_date" type="text" />
+                                <input id="id_create-interval_based-start_date" class="required"
+                                    name="create-interval_based-start_date" type="text" />
                                     <img alt="Calendar"
-                                        onclick="javascript:dt_picker('id_create-interval-based-start_date')"
+                                        onclick="javascript:dt_picker('id_create-interval_based-start_date')"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
                                         style="border:0px; cursor:pointer;" />
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Number of repeatss</td>
+                            <td style="vertical-align:middle">Number of repeats</td>
                             <td>{{ create_interval_based_form.repeats }}</td>
                         </tr>
 
@@ -444,11 +448,11 @@
                         <tr>
                             <td style="vertical-align:middle">
                                 Start date &amp; time<br/>
-                                <span style="font-size:smaller; color:#666666">(YYYY-MM-DD hh:mm:ss)</span>
+                                <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
                             </td>
                             <td>
-                                <input id="id_edit-interval-based-start_date"
-                                    name="edit-interval-based-start_date" type="text" />
+                                <input id="id_edit-interval_based-start_date"
+                                    name="edit-interval_based-start_date" type="text" />
                                     <img alt="Calendar"
                                         onclick="javascript:show_edit_interval_based_start_date_picker();"
                                         src="/static/gfx/calendar_date_select/calendar.gif"
@@ -457,7 +461,7 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Number of repeatss</td>
+                            <td style="vertical-align:middle">Number of repeats</td>
                             <td>{{ edit_interval_based_form.repeats }}</td>
                         </tr>
 
@@ -475,6 +479,119 @@
                     {{ edit_interval_based_form.id }}
                     <input type="hidden" name="zato_action" value="edit" />
                     <input type="hidden" name="job_type" value="interval_based" />
+
+                </form>
+            </div>
+        </div>
+        
+        <div id="create-cron_style" class="yui-pe-content">
+            <div class="hd">Create an cron-style job</div>
+            <div class="bd">
+                <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-cron_style">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ create_cron_style_form.name }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ create_cron_style_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
+                            </td>
+                            <td>
+                                <input id="id_create-cron_style-start_date" class="required"
+                                    name="create-cron_style-start_date" type="text" />
+                                    <img alt="Calendar"
+                                        onclick="javascript:dt_picker('id_create-cron_style-start_date')"
+                                        src="/static/gfx/calendar_date_select/calendar.gif"
+                                        style="border:0px; cursor:pointer;" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Definition<br/>
+                            <span class="form_hint">(cron syntax)</span>
+                            </td>
+                            <td>{{ create_cron_style_form.cron_definition }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_cron_style_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ create_cron_style_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    <input type="hidden" name="zato_action" value="create" />
+                    <input type="hidden" name="job_type" value="cron_style" />
+
+                </form>
+            </div>
+        </div>
+        
+        <div id="edit-cron_style" class="yui-pe-content">
+            <div class="hd">Edit a cron-style job</div>
+            <div class="bd">
+                <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-cron_style">
+                    <table class="form-data" border="0">
+
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td>{{ edit_cron_style_form.name }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Is active</td>
+                            <td>{{ edit_cron_style_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">
+                                Start date &amp; time<br/>
+                                <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
+                            </td>
+                            <td>
+                                <input id="id_edit-cron_style-start_date" class="required"
+                                    name="edit-cron_style-start_date" type="text" />
+                                    <img alt="Calendar"
+                                        onclick="javascript:dt_picker('id_edit-cron_style-start_date')"
+                                        src="/static/gfx/calendar_date_select/calendar.gif"
+                                        style="border:0px; cursor:pointer;" />
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Definition<br/>
+                            <span class="form_hint">(cron syntax)</span>
+                            </td>
+                            <td>{{ edit_cron_style_form.cron_definition }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_cron_style_form.service }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Extra data</td>
+                            <td>{{ edit_cron_style_form.extra }}</td>
+                        </tr>
+
+                    </table>
+
+                    {{ edit_cron_style_form.id }}
+                    <input type="hidden" name="zato_action" value="edit" />
+                    <input type="hidden" name="job_type" value="cron_style" />
 
                 </form>
             </div>

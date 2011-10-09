@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-SSL_KEY_FILE = "zato-admin-priv-key.pem"
-SSL_CERT_FILE = "zato-admin-cert.pem"
-SSL_CA_CERTS = "ca-chain.pem"
+SSL_KEY_FILE = 'zato-admin-priv-key.pem'
+SSL_CERT_FILE = 'zato-admin-cert.pem'
+SSL_CA_CERTS = 'ca-chain.pem'
 
 LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
@@ -42,32 +42,33 @@ import os
 
 # Maps SQLAlchemy engine's name to a UI-friendly one.
 engine_friendly_name = {
-    "postgres": "PostgreSQL",
-    "oracle": "Oracle",
-    "mysql": "MySQL",
-    "mssql": "MS SQL Server",
-    "access": "MS Access",
-    "firebird": "Firebird",
-    "db2": "DB2",
-    "informix":"Informix"
+    'postgres': 'PostgreSQL',
+    'oracle': 'Oracle',
+    'mysql': 'MySQL',
+    'mssql': 'MS SQL Server',
+    'access': 'MS Access',
+    'firebird': 'Firebird',
+    'db2': 'DB2',
+    'informix':'Informix'
 }
 
 odb_engine_friendly_name = {
-    "postgresql": "PostgreSQL",
-    "oracle": "Oracle",
-    "mysql": "MySQL",
+    'postgresql': 'PostgreSQL',
+    'oracle': 'Oracle',
+    'mysql': 'MySQL',
 }
 
 django_sqlalchemy_engine = {
-    "postgresql": "postgresql_psycopg2",
-    "mysql":"mysql",
-    "oracle":"oracle",
+    'postgresql': 'postgresql_psycopg2',
+    'mysql':'mysql',
+    'oracle':'oracle',
 }
 
 sqlalchemy_django_engine = dict((v,k) for k,v in django_sqlalchemy_engine.items())
 
 # Maps job types as they are used by servers into UI friendly names.
 job_type_friendly_names = {
-    "one_time": "One-time",
-    "interval_based": "Interval-based",
+    'one_time': 'one-time',
+    'interval_based': 'interval-based',
+    'cron_style': 'cron-style',
 }

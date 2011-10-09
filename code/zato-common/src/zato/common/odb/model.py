@@ -585,16 +585,15 @@ class CronStyleJob(Base):
     __table_args__ = (UniqueConstraint('job_id'), {})
     
     id = Column(Integer,  Sequence('job_cron_seq'), primary_key=True)
-    definition = Column(String(4000), nullable=False)
+    cron_definition = Column(String(4000), nullable=False)
     
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
     job = relationship(Job, backref=backref('cron_style', uselist=False,
                     cascade='all, delete, delete-orphan', single_parent=True))
     
-    def __init__(self, id=None, job=None, definition=None, definition_text=None):
+    def __init__(self, id=None, job=None, cron_definition=None):
         self.id = id
         self.job = job
-        self.definition = definition
-        self.definition_text = definition_text # Not used by the database
+        self.cron_definition = cron_definition
 
 ################################################################################
