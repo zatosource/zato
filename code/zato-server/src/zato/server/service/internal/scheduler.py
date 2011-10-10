@@ -48,6 +48,8 @@ PREDEFINED_CRON_DEFINITIONS = {
     '@hourly': '0 * * * *',
     }
 
+CRON_EXPRESSION_LEN = 5
+
 def _get_interval_based_start_date(payload):
     start_date = zato_path('data.job.start_date', True).get_from(payload)
     if start_date:
@@ -149,7 +151,7 @@ def _create_edit(action, payload, logger, session):
             
         elif job_type == 'cron_style':
             params = _get_params(payload, ['cron_definition'], 'data.')
-            cron_definition = params['cron_definition']
+            cron_definition = params['cron_definition'].strip()
             
             if cron_definition.startswith('@'):
                 if not cron_definition in PREDEFINED_CRON_DEFINITIONS:
@@ -161,7 +163,15 @@ def _create_edit(action, payload, logger, session):
                     raise Exception(msg)
                 
                 cron_definition = PREDEFINED_CRON_DEFINITIONS[cron_definition]
-                    
+            else:
+                splitted = cron_definition.strip().split()
+                if not len(splitted) == CRON_EXPRESSION_LEN:
+                    msg = ('Expression [{0}] in invalid, it needs to contain '
+                           'exactly {1} whitespace-separated fields').format(
+                               cron_definition, CRON_EXPRESSION_LEN)
+                    logger.error(msg)
+                    raise Exception(msg)
+                cron_definition = ' '.join(splitted)
             
             if action == 'create':
                 cs_job = CronStyleJob(None, job)
