@@ -39,6 +39,15 @@ from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
 from zato.common.util import pprint, TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
+PREDEFINED_CRON_DEFINITIONS = {
+    '@yearly': '0 0 1 1 *',
+    '@annually': '0 0 1 1 *', # Same as 'yearly'.
+    '@monthly': '0 0 1 * *',
+    '@weekly': '0 0 * * 0',
+    '@daily': '0 0 * * *',
+    '@hourly': '0 * * * *',
+    }
+
 def _get_interval_based_start_date(payload):
     start_date = zato_path('data.job.start_date', True).get_from(payload)
     if start_date:
@@ -142,6 +151,18 @@ def _create_edit(action, payload, logger, session):
             params = _get_params(payload, ['cron_definition'], 'data.')
             cron_definition = params['cron_definition']
             
+            if cron_definition.startswith('@'):
+                if not cron_definition in PREDEFINED_CRON_DEFINITIONS:
+                    msg = ('If using a predefined definition, it must be '
+                             'one of {0} instead of [{1}]').format(
+                                 sorted(PREDEFINED_CRON_DEFINITIONS), 
+                                 cron_definition)
+                    logger.error(msg)
+                    raise Exception(msg)
+                
+                cron_definition = PREDEFINED_CRON_DEFINITIONS[cron_definition]
+                    
+            
             if action == 'create':
                 cs_job = CronStyleJob(None, job)
             else:
@@ -161,12 +182,17 @@ def _create_edit(action, payload, logger, session):
         
         raise 
     else:
+        job_elem = Element('job')
+        
         if action == 'create':
-            job_elem = Element('job')
             job_elem.id = job.id
-            out = etree.tostring(job_elem)
-        else:
-            out = ''
+            
+        if job_type == 'cron_style':
+            # Needs to be returned because we might've been performing
+            # a substitution like changing '@hourly' into '0 * * * *'.
+            job_elem.cron_definition = cs_job.cron_definition
+
+        out = etree.tostring(job_elem)
         
         return ZATO_OK, out
 
