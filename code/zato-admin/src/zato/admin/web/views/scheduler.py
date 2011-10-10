@@ -219,12 +219,13 @@ def _create_cron_style(cluster, params):
 
     _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', zato_message)
     new_id = zato_message.data.job.id.text
+    cron_definition = zato_message.data.job.cron_definition.text
     logger.debug('Successfully created a cron_style job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
     return dumps({'id': new_id, 
             'definition_text':_cron_style_job_def(
-                params['create-cron_style-start_date'],
-                params['create-cron_style-cron_definition'])})
+                params['create-cron_style-start_date'], cron_definition),
+            'cron_definition': cron_definition})
 
 def _edit_one_time(cluster, params):
     """ Updates a one_time scheduler job.
@@ -268,14 +269,14 @@ def _edit_cron_style(cluster, params):
     zato_message = _get_create_edit_cron_style_message(cluster, params, edit_cron_style_prefix+'-')
 
     _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', zato_message)
+    cron_definition = zato_message.data.job.cron_definition.text
     logger.debug('Successfully updated a cron_style job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
     start_date = _get_start_date(params.get('edit-cron_style-start_date'), 
                                  scheduler_date_time_format)
-    cron_definition = params.get('edit-cron_style-cron_definition')
     definition = _cron_style_job_def(start_date, cron_definition)
 
-    return dumps({'definition_text':definition})
+    return dumps({'definition_text':definition, 'cron_definition': cron_definition})
 
 def _execute(server_address, params):
     """ Submits a request for an execution of a job.

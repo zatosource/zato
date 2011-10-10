@@ -357,7 +357,7 @@ function setup_create_dialog_cron_style() {
         object.service = $('id_create-cron_style-service').value;
         object.definition_text = json.definition_text;
 		object.start_date = $('id_create-cron_style-start_date').value;
-		object.cron_definition = $('id_create-cron_style-cron_definition').value;
+		object.cron_definition = json.cron_definition;
 		object.extra = $('id_create-cron_style-extra').value;
 		
         var record = object.add_row(object, data_dt);
@@ -635,7 +635,7 @@ function setup_edit_dialog_cron_style() {
         object.is_active = $F('id_edit-cron_style-is_active') == 'on';
         object.service = $('id_edit-cron_style-service').value;
 		object.extra = $('id_edit-cron_style-extra').value;
-		object.cron_definition = $('id_edit-cron_style-cron_definition').value;
+		object.cron_definition = json.cron_definition;
         object.definition_text = json.definition_text;
 		
 		edit_cron_style_dialog.hide();
