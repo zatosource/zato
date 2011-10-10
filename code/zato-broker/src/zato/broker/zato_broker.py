@@ -33,7 +33,8 @@ CONFIG_MESSAGE_PREFIX = 'ZATO_CONFIG'
 
 class Broker(BaseBroker):
     def on_message(self, msg):
-        logger.log(TRACE1, 'Got message [{0}]'.format(msg))
+        if logger.isEnabledFor(TRACE1):
+            logger.log(TRACE1, 'Got message [{0}]'.format(msg))
 
 if __name__ == '__main__':
     broker = Broker(Addresses())

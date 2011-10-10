@@ -59,6 +59,8 @@ class BaseBroker(object):
         self.from_broker_sock_push = self.context.socket(zmq.PUSH)
         self.from_broker_sock_push.bind(self.addresses.push)
         
+        # XREQ is the same as DEALER but zmq doesn't expose the latter name
+        # so we have to use the older one.
         self.from_broker_sock_dealer = self.context.socket(zmq.XREQ)
         self.from_broker_sock_dealer.bind(self.addresses.dealer)
         

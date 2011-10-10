@@ -20,13 +20,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, httplib, json, logging, time
+import asyncore, httplib, json, logging, socket, time
 from hashlib import sha256
+from thread import start_new_thread
 from threading import Thread
 from traceback import format_exc
 
 # Zope
 from zope.server.http.httpserver import HTTPServer
+from zope.server.http.httpserverchannel import HTTPServerChannel
+from zope.server.http.httptask import HTTPTask
+from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # ZeroMQ
@@ -43,6 +47,8 @@ from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
 from zato.server.channel.soap import server_soap_error
 
+logger = logging.getLogger(__name__)
+
 def wrap_error_message(url_type, msg):
     """ Wraps an error message in a transport-specific envelope.
     """
@@ -52,7 +58,6 @@ def wrap_error_message(url_type, msg):
     # Let's return the message as-is if we don't have any specific envelope
     # to use.
     return msg
-        
 
 class HTTPException(Exception):
     """ Raised when the underlying error condition can be easily expressed
@@ -61,8 +66,121 @@ class HTTPException(Exception):
     def __init__(self, status, reason):
         self.status = status
         self.reason = reason
-
+        
+class _HTTPTask(HTTPTask):
+    """ An HTTP task which knows how to uses ZMQ sockets.
+    """
+    def service(self, thread_data):
+        try:
+            try:
+                self.start()
+                self.channel.server.executeRequest(self, thread_data)
+                self.finish()
+            except socket.error:
+                self.close_on_finish = 1
+                if self.channel.adj.log_socket_errors:
+                    raise
+        finally:
+            if self.close_on_finish:
+                self.channel.close_when_done()
+                
+class _HTTPServerChannel(HTTPServerChannel):
+    """ A subclass which uses Zato's own _HTTPTasks.
+    """
+    task_class = _HTTPTask
+    
+    def service(self, thread_data):
+        """Execute all pending tasks"""
+        while True:
+            task = None
+            task_lock.acquire()
+            try:
+                if self.tasks:
+                    task = self.tasks.pop(0)
+                else:
+                    # No more tasks
+                    self.running_tasks = False
+                    self.set_async()
+                    break
+            finally:
+                task_lock.release()
+            try:
+                task.service(thread_data)
+            except:
+                # propagate the exception, but keep executing tasks
+                self.server.addTask(self)
+                raise
+        
+class _TaskDispatcher(ThreadedTaskDispatcher):
+    """ A task dispatcher which knows how to pass custom arguments down to
+    the newly created threads.
+    """
+    def __init__(self, zmq_context):
+        super(_TaskDispatcher, self).__init__()
+        self.zmq_context = zmq_context
+        
+    def _thread_data(self):
+        return self.zmq_context
+    
+    def setThreadCount(self, count):
+        """ Mostly copy & paste from the base classes except for the part
+        that passes the arguments to the thread.
+        """
+        mlock = self.thread_mgmt_lock
+        mlock.acquire()
+        try:
+            threads = self.threads
+            thread_no = 0
+            running = len(threads) - self.stop_count
+            while running < count:
+                # Start threads.
+                while thread_no in threads:
+                    thread_no = thread_no + 1
+                threads[thread_no] = 1
+                running += 1
+                thread_data = self._thread_data()
+                start_new_thread(self.handlerThread, (thread_no, thread_data))
+                thread_no = thread_no + 1
+            if running > count:
+                # Stop threads.
+                to_stop = running - count
+                self.stop_count += to_stop
+                for n in range(to_stop):
+                    self.queue.put(None)
+                    running -= 1
+        finally:
+            mlock.release()
+            
+    def handlerThread(self, thread_no, thread_data):
+        """ Mostly copy & paste from the base classes except for the part
+        that passes the arguments to the thread.
+        """
+        threads = self.threads
+        try:
+            while threads.get(thread_no):
+                task = self.queue.get()
+                if task is None:
+                    # Special value: kill this thread.
+                    break
+                try:
+                    task.service(thread_data)
+                except Exception, e:
+                    logger.error('Exception during task {0}'.format(
+                        format_exc(e)))
+        finally:
+            mlock = self.thread_mgmt_lock
+            mlock.acquire()
+            try:
+                self.stop_count -= 1
+                try: del threads[thread_no]
+                except KeyError: pass
+            finally:
+                mlock.release()
+            
 class ZatoHTTPListener(HTTPServer):
+    
+    channel_class = _HTTPServerChannel
+    
     def __init__(self, server, task_dispatcher):
         self.logger = logging.getLogger("%s.%s" % (__name__, 
                                                    self.__class__.__name__))
@@ -116,7 +234,7 @@ class ZatoHTTPListener(HTTPServer):
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
         getattr(self, handler_name)(sec_def, request_data, body, headers)
             
-    def executeRequest(self, task):
+    def executeRequest(self, task, task_data):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
@@ -264,7 +382,7 @@ class ParallelServer(object):
         """
         
     def run_forever(self):
-        task_dispatcher = ThreadedTaskDispatcher()
+        task_dispatcher = _TaskDispatcher(self.zmq_context)
         task_dispatcher.setThreadCount(20)
 
         self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
