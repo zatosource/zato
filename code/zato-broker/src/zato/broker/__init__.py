@@ -24,11 +24,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from gevent import monkey
 monkey.patch_all()
 
-# ZeroMQ
-import zmq
+# Bunch
+from bunch import Bunch
 
 # gevent
 from gevent import spawn
+
+# ZeroMQ
+import zmq
 
 # gevent_zeromq
 from gevent_zeromq import zmq
@@ -38,38 +41,47 @@ to_brok_address_pull = 'tcp://*:5100'
 from_brok_address_push = 'tcp://*:5101'
 from_brok_address_dealer = 'tcp://*:5102'
 
-class Addresses(object):
-    def __init__(self, pull=to_brok_address_pull, push=from_brok_address_push, 
-                 dealer=from_brok_address_dealer):
-        self.pull = pull
-        self.push = push
-        self.dealer = dealer
+class SocketPair(object):
+    def __init__(self, name=None, pull_addr=None, push_addr=None):
+        self.name = name
+        self.pull = pull_addr
+        self.push = push_addr
 
 class BaseBroker(object):
-    def __init__(self, addresses):
-        self.addresses = addresses
+    def __init__(self, pairs):
+        self.pairs = pairs
         self.context = zmq.Context()
         self.keep_running = True
+        self.sockets = Bunch()
+        self.pull_sockets = []
+        self.poller = zmq.Poller()
         
     def pre_run(self):
+        """ Initialize all objects first.
+        """
         
-        self.to_broker_sock_pull = self.context.socket(zmq.PULL)
-        self.to_broker_sock_pull.bind(self.addresses.pull)
-        
-        self.from_broker_sock_push = self.context.socket(zmq.PUSH)
-        self.from_broker_sock_push.bind(self.addresses.push)
-        
-        # XREQ is the same as DEALER but zmq doesn't expose the latter name
-        # so we have to use the older one.
-        self.from_broker_sock_dealer = self.context.socket(zmq.XREQ)
-        self.from_broker_sock_dealer.bind(self.addresses.dealer)
+        for pair in self.pairs:
+            sock_pull = self.context.socket(zmq.PULL)
+            sock_pull.bind(pair.pull_addr)
+            
+            sock_push = self.context.socket(zmq.PUSH)
+            sock_push.bind(pair.push_addr)
+            
+            self.sockets[pair.name].pull = sock_pull
+            self.sockets[pair.name].push = sock_push
+            
+            self.pull_sockets.append(sock_pull)
+            self.poller.register(sock_pull, zmq.POLLIN)
         
     def run(self):
         self.pre_run()
         
         while self.keep_running:
-            msg = self.to_broker_sock_pull.recv()
-            spawn(self.on_message, msg)
+            socks = dict(self.poller.poll())
+            for sock in self.pull_sockets:
+                if socks.get(sock) == zmq.POLLIN:
+                    msg = sock.recv()
+                    spawn(self.on_message, msg)
         
     def on_message(self, msg):
         raise NotImplementedError()
