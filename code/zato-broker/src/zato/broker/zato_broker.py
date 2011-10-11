@@ -19,13 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Zato stuff needs to be imported first because of its doing the monkey-patching.
+from zato.broker import BaseBroker
+from zato.common.util import TRACE1
+
 # stdlib
 from logging import getLogger
 from urllib2 import build_opener, Request
-
-# Zato
-from zato.broker import BaseBroker, Addresses
-from zato.common.util import TRACE1
 
 logger = getLogger(__name__)
 
@@ -35,7 +35,4 @@ class Broker(BaseBroker):
     def on_message(self, msg):
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Got message [{0}]'.format(msg))
-
-if __name__ == '__main__':
-    broker = Broker(Addresses())
-    broker.run()
+        
