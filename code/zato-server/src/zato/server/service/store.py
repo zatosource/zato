@@ -264,11 +264,11 @@ class ServiceStore(InitializingObject):
         from zato.server.service.internal import AdminService
         from zato.server.service.internal import sql, scheduler, service, soap
         from zato.server.service.internal.security import basic_auth, \
-             ssl, tech_account, wss
+             tech_account, wss
 
         # XXX: The list would be better read from the IoC container
         modules = [internal, sql, scheduler, service, soap, wss, tech_account, 
-                   basic_auth, ssl]
+                   basic_auth]
 
         # Read all definitions of Zato's own internal services.
         for mod in modules:
