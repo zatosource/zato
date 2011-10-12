@@ -42,7 +42,7 @@ from springpython.util import synchronized
 # Zato
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
      ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP
-from zato.common.util import TRACE1, zmq_names, ZMQPull, ZMQPush
+from zato.common.util import TRACE1, zmq_names, ZMQSub, ZMQPush
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
 from zato.server.channel.soap import server_soap_error
@@ -266,7 +266,6 @@ class ZatoHTTPListener(HTTPServer):
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
-            #response = '<?xml version="1.0" encoding="utf-8"?><axx />' 
             response = self.server.soap_handler.handle(body, headers)
 
         except HTTPException, e:
@@ -318,6 +317,7 @@ class ParallelServer(object):
         
         if self.singleton_server:
 
+            """
             # Singleton -> Parallel (pull)
             name = zmq_names.inproc.singleton_to_parallel
             pull_sing_to_para = ZMQPull(name, self.zmq_context, self.on_inproc_message_handler)
@@ -343,10 +343,12 @@ class ParallelServer(object):
             name = zmq_names.inproc.singleton_to_parallel
             push_sing_to_para = ZMQPush(name, self.zmq_context)
             self.zmq_items[name] = push_sing_to_para
+            """
             
             self.service_store.read_internal_services()
             
-            Thread(target=self.singleton_server.run).start()
+            kwargs={'zmq_context':self.zmq_context}
+            Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     
     def _after_init_accepted(self, server):
         pass
@@ -398,7 +400,7 @@ class ParallelServer(object):
             
             # ZeroMQ
             for zmq_item in self.zmq_items.values():
-                zmq_item.stop()
+                zmq_item.close()
                 
             self.zmq_context.term()
             

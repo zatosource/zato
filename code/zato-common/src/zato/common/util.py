@@ -44,6 +44,7 @@ from bunch import Bunch
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
 from zato.common import ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER
+from zato.common.broker_message import ZERO_MQ_SOCKET
 
 logger = logging.getLogger(__name__)
 
@@ -68,38 +69,49 @@ def zmq_inproc_name(component):
     """
     return 'inproc://zato/{0}'.format(component)
 
-class ZMQPull(object):
+class ZMQSub(object):
     
-    def __init__(self, name, zmq_context, on_message_handler, keep_running=True):
+    def __init__(self, name, zmq_context, on_message_handler, admin_token,
+                 keep_running=True):
         self.name = name
+        self.zmq_context = zmq_context
         self.on_message_handler = on_message_handler
+        self.admin_token = admin_token
         self.keep_running = keep_running
-        self.socket_type = zmq.PULL
         
-        self.socket = zmq_context.socket(self.socket_type)
-        self.socket.bind(name)
-
     def start(self):
-        Thread(args=(self.socket,), target=self.listen).start()
+        Thread(target=self.listen).start()
         
-    def stop(self, socket=None):
+    def close(self, socket=None):
         self.keep_running = False
         if socket:
             socket.close()
     
-    def listen(self, socket):
-        logger.debug('Starting [{0}]/[{1}]'.format(self.__class__.__name__, self.name))
+    def listen(self):
+        logger.debug('Starting [{0}]/[{1}]'.format(self.__class__.__name__, 
+                self.name))
+        
+        socket = self.zmq_context.socket(zmq.SUB)
+        socket.connect(self.name)
+        socket.setsockopt(zmq.SUBSCRIBE, b'')
+        
+        poller = zmq.Poller()
+        poller.register(socket, zmq.POLLIN)
         
         while self.keep_running:
             try:
-                msg = socket.recv()
+                socks = dict(poller.poll())
+                if socks.get(socket) == zmq.POLLIN:
+                    msg = socket.recv()
+                    print(333, msg)
             except zmq.ZMQError, e:
                 msg = 'Caught ZMQError [{0}], quitting.'.format(e.strerror)
                 logger.warn(msg)
-                self.stop(socket)
+                self.close(socket)
+                
             else:
-                if msg == 'ZATO;STOP':
-                    self.stop(socket)
+                if msg == ZERO_MQ_SOCKET.CLOSE:
+                    self.close(socket)
                 else:
                     self.on_message_handler(msg)
                 
@@ -119,7 +131,7 @@ class ZMQPush(object):
             msg = 'Caught ZMQError [{0}], continuing anyway.'.format(e.strerror)
             logger.warn(msg)
         
-    def stop(self):
+    def close(self):
         msg = 'Stopping [{0}/{1}]'.format(self.name, self.socket_type)
         logger.info(msg)
         self.socket.close()
