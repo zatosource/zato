@@ -34,9 +34,9 @@ from validate import is_boolean
 # Zato
 from zato.common import path, scheduler_date_time_format, \
      scheduler_date_time_format, ZatoException, ZATO_OK, zato_path
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
-from zato.common.util import pprint, TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
 PREDEFINED_CRON_DEFINITIONS = {
@@ -210,6 +210,13 @@ class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     def handle(self, *args, **kwargs):
+        
+        #msg = b'{0};{1}'.format(MESSAGE_TYPE.TO_SINGLETON, SCHEDULER.CREATE)
+
+        #push = ZMQPush('tcp://127.0.0.1:5100', self.server.zmq_context)
+        #push.send(msg)
+        #push.close()
+        
         with closing(self.server.odb.session()) as session:
             
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
