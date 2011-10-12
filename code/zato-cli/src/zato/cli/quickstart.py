@@ -36,7 +36,7 @@ from sqlalchemy.orm import sessionmaker
 from M2Crypto import RSA
 
 # Zato
-from zato.cli import ZatoCommand, common_odb_opts, zeromq_opts, create_odb, \
+from zato.cli import ZatoCommand, common_odb_opts, zmq_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_zato_admin, create_server, create_zato_admin
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
@@ -57,7 +57,7 @@ class Quickstart(ZatoCommand):
         super(Quickstart, self).__init__()
         self.target_dir = target_dir
 
-    opts = deepcopy(common_odb_opts) + deepcopy(zeromq_opts)
+    opts = deepcopy(common_odb_opts) + deepcopy(zmq_opts)
     description = "Quickly sets up a working Zato environment."
     
     def get_next_id(self, session, class_, like_attr, like_value, order_by, split_by):
@@ -170,10 +170,9 @@ class Quickstart(ZatoCommand):
             cluster = Cluster(None, cluster_name,
                               'An automatically generated quickstart cluster',
                               args.odb_type, args.odb_host, args.odb_port, args.odb_user,
-                              args.odb_dbname, args.odb_schema, args.zeromq_host,
-                              args.zeromq_start_port, 
-                              'localhost', 20151, 
-                              'localhost', 15100)
+                              args.odb_dbname, args.odb_schema, args.zmq_host,
+                              args.zmq_start_port, 
+                              'localhost', 20151,  11223)
             
             #
             # Server

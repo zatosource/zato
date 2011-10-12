@@ -82,18 +82,16 @@ class Cluster(Base):
     odb_user = Column(String(200), nullable=False)
     odb_db_name = Column(String(200), nullable=False)
     odb_schema = Column(String(200), nullable=True)
-    zeromq_host = Column(String(200), nullable=False) # TODO: Should be renamed to zmq_host
-    zeromq_start_port = Column(Integer(), nullable=False) # TODO: Should be renamed to zmq_start_port
+    zmq_host = Column(String(200), nullable=False)
+    zmq_start_port = Column(Integer(), nullable=False)
     lb_host = Column(String(200), nullable=False)
     lb_agent_port = Column(Integer(), nullable=False)
-    sec_server_host = Column(String(200), nullable=False)
-    sec_server_port = Column(Integer(), nullable=False)
+    lb_port = Column(Integer(), nullable=False)
 
     def __init__(self, id=None, name=None, description=None, odb_type=None,
                  odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
-                 odb_schema=None, zeromq_host=None, zeromq_start_port=None,
-                 lb_host=None, lb_agent_port=None,
-                 sec_server_host=None, sec_server_port=None):
+                 odb_schema=None, zmq_host=None, zmq_start_port=None,
+                 lb_host=None, lb_agent_port=None, lb_port=None):
         self.id = id
         self.name = name
         self.description = description
@@ -103,12 +101,11 @@ class Cluster(Base):
         self.odb_user = odb_user
         self.odb_db_name = odb_db_name
         self.odb_schema = odb_schema
-        self.zeromq_host = zeromq_host
-        self.zeromq_start_port = zeromq_start_port
+        self.zmq_host = zmq_host
+        self.zmq_start_port = zmq_start_port
         self.lb_host = lb_host
         self.lb_agent_port = lb_agent_port
-        self.sec_server_host = sec_server_host
-        self.sec_server_port = sec_server_port
+        self.lb_port = lb_port
 
     def __repr__(self):
         return make_repr(self)
