@@ -46,7 +46,7 @@ _opts_odb_user = "ODB database user"
 _opts_odb_schema = "ODB database schema"
 _opts_odb_dbname = "ODB database name"
 _opts_zeromq_host = "ZeroMQ host"
-_opts_zeromq_port = "ZeroMQ port"
+_opts_zeromq_start_port = "ZeroMQ starting port"
 
 supported_db_types = ("oracle", "postgresql", "sqlserver", "mysql")
 
@@ -73,7 +73,7 @@ common_odb_opts = [
 
 zeromq_opts = [
     dict(name="zeromq_host", help=_opts_zeromq_host),
-    dict(name="zeromq_port", help=_opts_zeromq_port),
+    dict(name="zeromq_start_port", help=_opts_zeromq_start_port),
 ]
 
 common_ca_create_opts = [

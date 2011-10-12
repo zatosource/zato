@@ -83,7 +83,7 @@ class Cluster(Base):
     odb_db_name = Column(String(200), nullable=False)
     odb_schema = Column(String(200), nullable=True)
     zeromq_host = Column(String(200), nullable=False)
-    zeromq_port = Column(Integer(), nullable=False)
+    zeromq_start_port = Column(Integer(), nullable=False)
     lb_host = Column(String(200), nullable=False)
     lb_agent_port = Column(Integer(), nullable=False)
     sec_server_host = Column(String(200), nullable=False)
@@ -91,7 +91,7 @@ class Cluster(Base):
 
     def __init__(self, id=None, name=None, description=None, odb_type=None,
                  odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
-                 odb_schema=None, zeromq_host=None, zeromq_port=None,
+                 odb_schema=None, zeromq_host=None, zeromq_start_port=None,
                  lb_host=None, lb_agent_port=None,
                  sec_server_host=None, sec_server_port=None):
         self.id = id
@@ -104,7 +104,7 @@ class Cluster(Base):
         self.odb_db_name = odb_db_name
         self.odb_schema = odb_schema
         self.zeromq_host = zeromq_host
-        self.zeromq_port = zeromq_port
+        self.zeromq_start_port = zeromq_start_port
         self.lb_host = lb_host
         self.lb_agent_port = lb_agent_port
         self.sec_server_host = sec_server_host

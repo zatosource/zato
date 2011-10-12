@@ -103,11 +103,6 @@ class Quickstart(ZatoCommand):
                                        '#')
             cluster_name = 'ZatoQuickstartCluster-#{next_id}'.format(next_id=next_id)
 
-            # TODO: ZeroMQ
-            print("TODO: Pinging ZeroMQ..")
-            print("TODO: Ping OK\n")
-
-            
             ca_dir = os.path.abspath(os.path.join(self.target_dir, "./ca"))
             lb_dir = os.path.abspath(os.path.join(self.target_dir, "./load-balancer"))
             server_dir = os.path.abspath(os.path.join(self.target_dir, "./server"))
@@ -187,7 +182,7 @@ class Quickstart(ZatoCommand):
                               'An automatically generated quickstart cluster',
                               args.odb_type, args.odb_host, args.odb_port, args.odb_user,
                               args.odb_dbname, args.odb_schema, args.zeromq_host,
-                              args.zeromq_port, 
+                              args.zeromq_start_port, 
                               'localhost', 20151, 
                               'localhost', 15100)
             
