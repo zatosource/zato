@@ -36,12 +36,13 @@ from zope.server.taskthreads import ThreadedTaskDispatcher
 # ZeroMQ
 import zmq
 
-# Spring Python
-from springpython.util import synchronized
+# Bunch
+from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
      ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP
+from zato.broker.client import BrokerClient
 from zato.common.util import TRACE1, zmq_names
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
@@ -115,13 +116,12 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the newly created threads.
     """
-    def __init__(self, zmq_context):
+    def __init__(self, zmq_context, zmq_push_addr, zmq_sub_addr):
         super(_TaskDispatcher, self).__init__()
         self.zmq_context = zmq_context
+        self.zmq_push_addr = zmq_push_addr
+        self.zmq_sub_addr = zmq_sub_addr
         
-    def _thread_data(self):
-        return self.zmq_context
-    
     def setThreadCount(self, count):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
@@ -138,8 +138,14 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                     thread_no = thread_no + 1
                 threads[thread_no] = 1
                 running += 1
-                thread_data = self._thread_data()
+
+                # It's safe to pass ZMQ contexts between threads.
+                thread_data = Bunch({'zmq_context': self.zmq_context,
+                               'zmq_push_addr': self.zmq_push_addr,
+                               'zmq_sub_addr': self.zmq_sub_addr})
+                
                 start_new_thread(self.handlerThread, (thread_no, thread_data))
+                
                 thread_no = thread_no + 1
             if running > count:
                 # Stop threads.
@@ -155,6 +161,11 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
         """
+        # We're in a new thread now so we can start the broker client though note
+        # that the message handler will be assigned to it later on.
+        thread_data.broker_client = BrokerClient(thread_data.zmq_context,
+                thread_data.zmq_push_addr, thread_data.zmq_sub_addr)
+        
         threads = self.threads
         try:
             while threads.get(thread_no):
@@ -181,12 +192,16 @@ class ZatoHTTPListener(HTTPServer):
     
     channel_class = _HTTPServerChannel
     
-    def __init__(self, server, task_dispatcher):
+    def __init__(self, server, task_dispatcher, broker_client=None):
         self.logger = logging.getLogger("%s.%s" % (__name__, 
                                                    self.__class__.__name__))
         self.server = server
+        self.broker_client = broker_client
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
+        
+    def _on_zmq_msg(self, msg):
+        print(333333333333, msg)
 
     def _handle_security_tech_account(self, sec_def, request_data, body, headers):
         """ Handles the 'tech-account' security config type.
@@ -234,7 +249,7 @@ class ZatoHTTPListener(HTTPServer):
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
         getattr(self, handler_name)(sec_def, request_data, body, headers)
             
-    def executeRequest(self, task, task_data):
+    def executeRequest(self, task, context):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
@@ -243,7 +258,7 @@ class ZatoHTTPListener(HTTPServer):
         # later on, if we don't stumble upon an exception, we may learn that
         # it is for instance, a SOAP URL.
         url_type = None
-
+        
         try:
             # Collect necessary request data.
             body = task.request_data.getBodyStream().getvalue()
@@ -266,7 +281,7 @@ class ZatoHTTPListener(HTTPServer):
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
-            response = self.server.soap_handler.handle(body, headers)
+            response = self.server.soap_handler.handle(body, headers, context)
 
         except HTTPException, e:
             task.setResponseStatus(e.status, e.reason)
@@ -313,7 +328,10 @@ class ParallelServer(object):
         self.url_security = self.odb.get_url_security(server)
         self.logger.log(logging.DEBUG, 'url_security=[{0}]'.format(self.url_security))
         
-        # All of the ZeroMQ sockets need to be created in the main thread.
+        self.zmq_push_addr = 'tcp://{0}:{1}'.format(server.cluster.zmq_host, 
+                server.cluster.zmq_start_port)
+        self.zmq_sub_addr = 'tcp://{0}:{1}'.format(server.cluster.zmq_host, 
+                server.cluster.zmq_start_port+1)
         
         if self.singleton_server:
 
@@ -349,8 +367,8 @@ class ParallelServer(object):
             
             kwargs={'zmq_context':self.zmq_context,
                     'zmq_host': server.cluster.zmq_host,
-                    'zmq_push_port': server.cluster.zmq_start_port + 2,
-                    'zmq_sub_port': server.cluster.zmq_start_port + 3,
+                    'zmq_push_port': server.cluster.zmq_start_port+2,
+                    'zmq_sub_port': server.cluster.zmq_start_port+3,
                     }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     
@@ -388,8 +406,10 @@ class ParallelServer(object):
         """
         
     def run_forever(self):
-        task_dispatcher = _TaskDispatcher(self.zmq_context)
-        task_dispatcher.setThreadCount(120)
+
+        task_dispatcher = _TaskDispatcher(self.zmq_context, self.zmq_push_addr, 
+                self.zmq_sub_addr)
+        task_dispatcher.setThreadCount(60)
 
         self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
 
@@ -414,7 +434,7 @@ class ParallelServer(object):
             
             # Zope
             task_dispatcher.shutdown()
-
+'''
     def send_config_request(self, command, data=None, timeout=None):
         """ Sends a synchronous IPC request to the SingletonServer.
         """
@@ -483,3 +503,4 @@ class ParallelServer(object):
         self.wss_nonce_cache[wsse_nonce] = recycle_time
 
         return ZATO_OK, ""
+'''
