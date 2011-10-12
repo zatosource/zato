@@ -42,9 +42,10 @@ class SingletonServer(object):
     hot-deployment or on-disk configuration management.
     """
     
-    def __init__(self, parallel_server=None, zmq_context=None):
+    def __init__(self, parallel_server=None, zmq_context=None, zmq_host=None):
         self.parallel_server = parallel_server
         self.zmq_context = zmq_context
+        self.zmq_host = zmq_host
     
     def on_inproc_message_handler(self, msg):
         print('Singleton handler', msg)
@@ -52,9 +53,10 @@ class SingletonServer(object):
     def run(self, *ignored_args, **kwargs):
         self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, 
                                         self.__class__.__name__, hex(id(self))))
-        
-        if 'zmq_context' in kwargs:
-            self.zmq_context = kwargs['zmq_context']
+
+        for name in('zmq_context', 'zmq_host'):
+            if name in kwargs:
+                setattr(self, name, kwargs[name])
 
         # Initialize scheduler.
         #self.scheduler.init(self)

@@ -60,22 +60,33 @@ class ZMQSub(object):
         logger.debug('Starting [{0}]/[{1}]'.format(self.__class__.__name__, 
                 self.address))
         
-        socket = self.zmq_context.socket(zmq.SUB)
-        socket.connect(self.address)
+        self.socket = self.zmq_context.socket(zmq.SUB)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.connect(self.address)
+        
         for pattern in self.sub_patterns:
-            socket.setsockopt(zmq.SUBSCRIBE, pattern)
+            self.socket.setsockopt(zmq.SUBSCRIBE, pattern)
         
         poller = zmq.Poller()
-        poller.register(socket, zmq.POLLIN)
+        poller.register(self.socket, zmq.POLLIN)
         
         while self.keep_running:
             try:
                 socks = dict(poller.poll())
-                if socks.get(socket) == zmq.POLLIN:
-                    msg = socket.recv()
-            except zmq.ZMQError, e:
-                msg = 'Caught ZMQError [{0}], quitting.'.format(e.strerror)
-                logger.error(msg)
+                if socks.get(self.socket) == zmq.POLLIN:
+                    msg = self.socket.recv()
+            except Exception, e:
+                
+                # It's OK and needs not to disturb the user so log it only
+                # in the DEBUG level.
+                if isinstance(e, zmq.ZMQError) and e.errno == zmq.ETERM:
+                    msg = 'Caught a zmq.ETERM {0}, quitting'.format(format_exc(e))
+                    meth = logger.debug
+                else:
+                    msg = 'Caught an exception [{0}], quitting.'.format(format_exc(e))
+                    meth = logger.error
+                    
+                meth(msg)
                 self.close()
             else:
                 self.on_before_msg_handler(msg)
@@ -87,7 +98,7 @@ class ZMQSub(object):
                     logger.error(msg.format(msg, format_exc(e)))
                     
                 self.on_after_msg_handler(msg, e)
-
+                
 class ZMQPush(object):
     """ Sends messages to ZeroMQ using a PUSH socket.
     """
@@ -97,6 +108,7 @@ class ZMQPush(object):
         self.socket_type = zmq.PUSH 
         
         self.socket = self.zmq_context.socket(self.socket_type)
+        self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.connect(self.address)
         
     def send(self, msg):
@@ -120,6 +132,7 @@ class BrokerClient(object):
         self._push = ZMQPush(zmq_context, push_address)
         self._sub = ZMQSub(zmq_context, sub_address, on_message_handler,
                            sub_patterns)
+    
     def start_subscriber(self):
         self._sub.start()
     

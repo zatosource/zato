@@ -402,6 +402,10 @@ class ParallelServer(object):
             for zmq_item in self.zmq_items.values():
                 zmq_item.close()
                 
+
+            if self.singleton_server:
+                self.singleton_server.broker_client.close()
+                
             self.zmq_context.term()
             
             # Zope
