@@ -38,8 +38,7 @@ from M2Crypto import RSA
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts, zeromq_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, ca_create_security_server, create_security_server, \
-     create_server, create_zato_admin
+     ca_create_zato_admin, create_server, create_zato_admin
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.odb import engine_def, ping_queries
 from zato.common.odb.model import *
@@ -107,7 +106,6 @@ class Quickstart(ZatoCommand):
             lb_dir = os.path.abspath(os.path.join(self.target_dir, "./load-balancer"))
             server_dir = os.path.abspath(os.path.join(self.target_dir, "./server"))
             zato_admin_dir = os.path.abspath(os.path.join(self.target_dir, "./zato-admin"))
-            security_server_dir = os.path.abspath(os.path.join(self.target_dir, "./security-server"))
 
             # Create the CA.
             os.mkdir(ca_dir)
@@ -117,15 +115,6 @@ class Quickstart(ZatoCommand):
             lb_format_args = ca_create_lb_agent.CreateLBAgent(ca_dir).execute(args)
             server_format_args = ca_create_server.CreateServer(ca_dir).execute(args)
             zato_admin_format_args = ca_create_zato_admin.CreateZatoAdmin(ca_dir).execute(args)
-            security_server_format_args = ca_create_security_server.CreateSecurityServer(ca_dir).execute(args)
-
-            # Create the security server.
-            create_security_server.CreateSecurityServer(security_server_dir).execute(args)
-
-            # .. copy the security server's crypto material over to its directory.
-            shutil.copy2(security_server_format_args['priv_key_name'], os.path.join(security_server_dir, 'security-server-priv-key.pem'))
-            shutil.copy2(security_server_format_args['cert_name'], os.path.join(security_server_dir, 'security-server-cert.pem'))
-            shutil.copy2(os.path.join(ca_dir, 'ca-material/ca-cert.pem'), os.path.join(security_server_dir, 'ca-chain.pem'))
 
             # Create the LB agent.
             os.mkdir(lb_dir)
