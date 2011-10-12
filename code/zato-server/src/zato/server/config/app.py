@@ -225,7 +225,7 @@ class ZatoContext(PythonConfig):
         server = SingletonServer()
         server.pickup = self.pickup()
         server.config_repo_manager = self.config_repo_manager()
-        #server.scheduler = self.scheduler()
+        server.scheduler = self.scheduler()
         server.config_queue = multiprocessing.Queue()
 
         return server
@@ -235,10 +235,8 @@ class ZatoContext(PythonConfig):
 
     @Object
     def scheduler(self):
-        '''scheduler = Scheduler()
-        scheduler.config_repo_manager = self.config_repo_manager()
-
-        return scheduler'''
+        #return Scheduler()
+        pass
 
     # #######################################################
     # SQL connection pools management

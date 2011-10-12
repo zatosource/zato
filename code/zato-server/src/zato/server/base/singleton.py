@@ -31,9 +31,10 @@ from lxml import etree
 import zmq
 
 # Zato
+from zato.broker.client import BrokerClient
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
      ZATO_ERROR, ZATO_OK, ZatoException
-from zato.common.util import TRACE1, zmq_names, ZMQSub, ZMQPush
+from zato.common.util import TRACE1, zmq_names
 
 class SingletonServer(object):
     """ A server of which one instance only may be running in a Zato container.
@@ -58,9 +59,9 @@ class SingletonServer(object):
         # Initialize scheduler.
         #self.scheduler.init(self)
         
-        self.broker_sub = ZMQSub('tcp://*:5103', self.zmq_context,
-                self.on_config_msg, 'zzz')
-        self.broker_sub.start()
+        self.broker_client = BrokerClient(self.zmq_context, 
+            'tcp://127.0.0.1:5102',  'tcp://127.0.0.1:5103', self.on_config_msg)
+        self.broker_client.start_subscriber()
         
         '''
         # Start the pickup monitor.
