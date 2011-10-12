@@ -73,8 +73,8 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
                        has been returned in the response. Will raise a ZatoException if it hasn't
                        and 'needs_config_key' is True.
     """
-    url = 'http://{0}:{1}'.format(cluster.sec_server_host, cluster.sec_server_port)
-    logger.log(TRACE1, 'About to invoke admin service url=[{0}]'.format(url))
+    url = 'http://{0}:{1}'.format(cluster.lb_host, cluster.lb_port)
+    logger.log(TRACE1, 'About to invoke the admin service url=[{0}]'.format(url))
     pool = SOAPPool(url)
     soap_response = pool.invoke('/zato/soap', soap_action, soap_body, headers)
 

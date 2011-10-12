@@ -348,9 +348,9 @@ class ParallelServer(object):
             self.service_store.read_internal_services()
             
             kwargs={'zmq_context':self.zmq_context,
-                    'zmq_host': server.cluster.zeromq_host,
-                    'zmq_push_port': server.cluster.zeromq_start_port + 2,
-                    'zmq_sub_port': server.cluster.zeromq_start_port + 3,
+                    'zmq_host': server.cluster.zmq_host,
+                    'zmq_push_port': server.cluster.zmq_start_port + 2,
+                    'zmq_sub_port': server.cluster.zmq_start_port + 3,
                     }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     
@@ -389,7 +389,7 @@ class ParallelServer(object):
         
     def run_forever(self):
         task_dispatcher = _TaskDispatcher(self.zmq_context)
-        task_dispatcher.setThreadCount(20)
+        task_dispatcher.setThreadCount(120)
 
         self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
 
