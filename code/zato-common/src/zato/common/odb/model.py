@@ -82,8 +82,8 @@ class Cluster(Base):
     odb_user = Column(String(200), nullable=False)
     odb_db_name = Column(String(200), nullable=False)
     odb_schema = Column(String(200), nullable=True)
-    zeromq_host = Column(String(200), nullable=False)
-    zeromq_start_port = Column(Integer(), nullable=False)
+    zeromq_host = Column(String(200), nullable=False) # TODO: Should be renamed to zmq_host
+    zeromq_start_port = Column(Integer(), nullable=False) # TODO: Should be renamed to zmq_start_port
     lb_host = Column(String(200), nullable=False)
     lb_agent_port = Column(Integer(), nullable=False)
     sec_server_host = Column(String(200), nullable=False)

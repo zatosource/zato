@@ -32,6 +32,7 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
+from zato.broker.client import BrokerClient
 from zato.common import path, scheduler_date_time_format, \
      scheduler_date_time_format, ZatoException, ZATO_OK, zato_path
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
@@ -211,11 +212,13 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        #msg = b'{0};{1}'.format(MESSAGE_TYPE.TO_SINGLETON, SCHEDULER.CREATE)
+        msg = b'{0};{1}'.format(MESSAGE_TYPE.TO_SINGLETON, SCHEDULER.CREATE)
 
-        #push = ZMQPush('tcp://127.0.0.1:5100', self.server.zmq_context)
-        #push.send(msg)
-        #push.close()
+        def x():
+            pass
+        
+        c = BrokerClient(self.server.zmq_context, 'tcp://localhost:5100', 'tcp://localhost:5101', x)
+        c.send(msg)
         
         with closing(self.server.odb.session()) as session:
             

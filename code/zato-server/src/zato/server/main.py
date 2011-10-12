@@ -110,6 +110,13 @@ def run(host, port, base_dir, start_singleton):
 
     print('OK..')
     parallel_server.run_forever()
+    
+    # $ sudo netstat -an | grep TIME_WAIT | wc -l
+    
+    # cat /proc/sys/net/core/wmem_max - 109568
+    # /sbin/sysctl net.ipv4.tcp_mem="109568 109568 109568"
+    # echo 0 > /proc/sys/net/ipv4/conf/eth0/rp_filter
+
 
     '''
     job_list_location = os.path.join(repo_location, config['scheduler']['job_list_location'])

@@ -347,7 +347,11 @@ class ParallelServer(object):
             
             self.service_store.read_internal_services()
             
-            kwargs={'zmq_context':self.zmq_context}
+            kwargs={'zmq_context':self.zmq_context,
+                    'zmq_host': server.cluster.zeromq_host,
+                    'zmq_push_port': server.cluster.zeromq_start_port + 2,
+                    'zmq_sub_port': server.cluster.zeromq_start_port + 3,
+                    }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     
     def _after_init_accepted(self, server):
