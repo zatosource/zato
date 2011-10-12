@@ -213,12 +213,7 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         
         msg = b'{0};{1}'.format(MESSAGE_TYPE.TO_SINGLETON, SCHEDULER.CREATE)
-
-        def x():
-            pass
-        
-        c = BrokerClient(self.server.zmq_context, 'tcp://localhost:5100', 'tcp://localhost:5101', x)
-        c.send(msg)
+        kwargs['context'].broker_client.send(msg)
         
         with closing(self.server.odb.session()) as session:
             

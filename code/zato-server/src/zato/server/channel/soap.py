@@ -124,7 +124,7 @@ class SOAPMessageHandler(ApplicationContextAware):
         self.crypto_manager = crypto_manager
         self.wss_store = wss_store
 
-    def handle(self, request, headers):
+    def handle(self, request, headers, context):
         try:
             self.logger.debug("request=[{0}] headers=[{1}]".format(request, headers))
 
@@ -171,7 +171,7 @@ class SOAPMessageHandler(ApplicationContextAware):
             body_payload = get_body_payload(body)
 
             service_response = service_instance.handle(payload=body_payload,
-                                                raw_request=request, channel='soap')
+                    raw_request=request, channel='soap', context=context)
 
             # Responses from all Zato's interal services are wrapped in
             # in the <zato_message> element. Each one is also assigned the server's

@@ -57,7 +57,7 @@ class ZMQSub(object):
         self.socket.close()
     
     def listen(self):
-        logger.error('Starting [{0}]/[{1}]'.format(self.__class__.__name__, 
+        logger.info('Starting [{0}]/[{1}]'.format(self.__class__.__name__, 
                 self.address))
         
         self.socket = self.zmq_context.socket(zmq.SUB)
@@ -127,8 +127,8 @@ class BrokerClient(object):
     """ A ZeroMQ broker client which knows how to subscribe to messages and push
     the messages onto the broker.
     """
-    def __init__(self, zmq_context, push_address, sub_address, on_message_handler,
-                 sub_patterns=(b'',)):
+    def __init__(self, zmq_context, push_address, sub_address, 
+                 on_message_handler=None, sub_patterns=(b'',)):
         self._push = ZMQPush(zmq_context, push_address)
         self._sub = ZMQSub(zmq_context, sub_address, on_message_handler,
                            sub_patterns)
