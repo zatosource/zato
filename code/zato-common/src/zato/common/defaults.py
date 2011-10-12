@@ -21,6 +21,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 zato_admin_host = "127.0.0.1"
 zato_admin_port = 8183
-ssl_proxy_header_prefix = "X-Zato-SSLProxy-"
 
 http_plain_server_port = 17010
