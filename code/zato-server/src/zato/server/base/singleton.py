@@ -30,13 +30,10 @@ from lxml import etree
 # ZeroMQ
 import zmq
 
-# Spring Python
-from springpython.util import synchronized
-
 # Zato
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
      ZATO_ERROR, ZATO_OK, ZatoException
-from zato.common.util import TRACE1, zmq_names, ZMQPull, ZMQPush
+from zato.common.util import TRACE1, zmq_names, ZMQSub, ZMQPush
 
 class SingletonServer(object):
     """ A server of which one instance only may be running in a Zato container.
@@ -46,21 +43,24 @@ class SingletonServer(object):
     
     def __init__(self, parallel_server=None, zmq_context=None):
         self.parallel_server = parallel_server
-        self.zmq_context = zmq_context or zmq.Context()
+        self.zmq_context = zmq_context
     
     def on_inproc_message_handler(self, msg):
         print('Singleton handler', msg)
 
-    def run(self, *ignored_args, **ignored_kwargs):
+    def run(self, *ignored_args, **kwargs):
         self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, 
                                         self.__class__.__name__, hex(id(self))))
+        
+        if 'zmq_context' in kwargs:
+            self.zmq_context = kwargs['zmq_context']
 
         # Initialize scheduler.
-        self.logger.debug('Scheduler initializing.')
         #self.scheduler.init(self)
         
-        print('SINGLETON')
-        
+        self.broker_sub = ZMQSub('tcp://*:5103', self.zmq_context,
+                self.on_config_msg, 'zzz')
+        self.broker_sub.start()
         
         '''
         # Start the pickup monitor.
@@ -68,12 +68,12 @@ class SingletonServer(object):
         self.pickup.watch()
         
         '''
+        
+################################################################################
 
-    def stopped(self, component):
-        """ Handler for Circuits 'stop' event.
-        """
-        # Stop the pickup monitor thread.
-        self.pickup.stop()
+    def on_config_msg(self, msg):
+        print(1111, msg)
+
 
 ################################################################################
 
@@ -97,6 +97,7 @@ class SingletonServer(object):
         return ZATO_OK, ""
 
 
+'''
 ################################################################################
 
     def _on_config_GET_JOB_LIST(self, msg):
@@ -283,3 +284,4 @@ class SingletonServer(object):
             self._send_config_request(req, q)
 
         return ZATO_OK, ""
+'''

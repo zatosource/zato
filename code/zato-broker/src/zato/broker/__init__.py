@@ -19,14 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Monkey patch before importing anything else.
-
-from gevent import monkey
-monkey.patch_all()
-
-from gevent_zeromq import monkey_patch
-monkey_patch()
-
 # stdlib
 import logging
 from traceback import format_exc
@@ -34,26 +26,16 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# gevent
-import gevent
-from gevent import spawn
-
 # ZeroMQ
 import zmq
-
-# Requests
-from requests import get
-
-# gevent_zeromq
-from gevent_zeromq import zmq
 
 logger = logging.getLogger(__name__)
 
 class SocketPair(object):
-    def __init__(self, name=None, pull=None, push=None):
+    def __init__(self, name=None, pull=None, pub=None):
         self.name = name
         self.pull = pull
-        self.push = push
+        self.pub = pub
 
 class BaseBroker(object):
     def __init__(self, *pairs):
@@ -72,38 +54,39 @@ class BaseBroker(object):
             sock_pull = self.context.socket(zmq.PULL)
             sock_pull.bind(pair.pull)
             
-            sock_push = self.context.socket(zmq.PUSH)
-            sock_push.bind(pair.push)
+            sock_pub = self.context.socket(zmq.PUB)
+            sock_pub.bind(pair.pub)
             
             self.sockets[pair.name] = Bunch()
             self.sockets[pair.name].pull = sock_pull
-            self.sockets[pair.name].push = sock_push
+            self.sockets[pair.name].pub = sock_pub
             
             self.pull_sockets.append(sock_pull)
             self.poller.register(sock_pull, zmq.POLLIN)
         
     def run(self):
         self.pre_run()
-        try:
-            while self.keep_running:
+        while self.keep_running:
+            try:
                 socks = dict(self.poller.poll())
                 for sock in self.pull_sockets:
                     if socks.get(sock) == zmq.POLLIN:
                         msg = sock.recv()
-        except Exception, e:
-            msg = 'Exception caught [{0}]'.format(format_exc(e))
-            logger.error(msg)
-        finally:
-            # Sockets ..
-            for pair in self.sockets.values():
-                pair.pull.close()
-                pair.push.close()
+                        self.on_message(msg)
+            except Exception, e:
+                msg = 'Exception caught [{0}]'.format(format_exc(e))
+                logger.error(msg)
                 
-            # .. and the context.
-            self.context.term()
+        # Sockets ..
+        for pair in self.sockets.values():
+            pair.pull.close()
+            pair.pub.close()
             
-            msg = 'Closed ZMQ sockets and terminated the context'
-            logger.info(msg)
+        # .. and the context.
+        self.context.term()
+        
+        msg = 'Closed ZMQ sockets and terminated the context'
+        logger.info(msg)
         
     def on_message(self, msg):
         raise NotImplementedError()

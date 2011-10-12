@@ -27,12 +27,32 @@ from zato.common.util import TRACE1
 from logging import getLogger
 from urllib2 import build_opener, Request
 
+# Zato
+from zato.common.broker_message import MESSAGE_TYPE
+
 logger = getLogger(__name__)
 
 CONFIG_MESSAGE_PREFIX = 'ZATO_CONFIG'
 
+msg_socket = {
+    MESSAGE_TYPE.TO_PARALLEL: 'parallel',
+    MESSAGE_TYPE.TO_SINGLETON: 'singleton',
+}
+
+msg_types = msg_socket.keys()
+
 class Broker(BaseBroker):
     def on_message(self, msg):
+        
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Got message [{0}]'.format(msg))
+            
+        msg_type = msg[:4]
+        if msg_type not in msg_types:
+            err_msg = 'Unrecognized msg_type [{0}], msg [{1}]'.format(msg_type, msg)
+            logger.error(err_msg)
+            raise Exception(err_msg)
+        
+        socket = self.sockets[msg_socket[msg_type]].pub
+        socket.send(msg[5:])
         
