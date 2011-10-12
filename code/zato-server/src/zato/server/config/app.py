@@ -150,13 +150,6 @@ class ZatoContext(PythonConfig):
             'zato:security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
             'zato:security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
             'zato:security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
-            
-            # SSL/TLS
-            'zato:security.ssl.get':'zato.server.service.internal.security.ssl.Get',
-            'zato:security.ssl.get-list':'zato.server.service.internal.security.ssl.GetList',
-            'zato:security.ssl.create':'zato.server.service.internal.security.ssl.Create',
-            'zato:security.ssl.edit':'zato.server.service.internal.security.ssl.Edit',
-            'zato:security.ssl.delete':'zato.server.service.internal.security.ssl.Delete',
         }
 
     @Object
