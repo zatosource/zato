@@ -57,7 +57,7 @@ class ZMQSub(object):
         self.socket.close()
     
     def listen(self):
-        logger.debug('Starting [{0}]/[{1}]'.format(self.__class__.__name__, 
+        logger.error('Starting [{0}]/[{1}]'.format(self.__class__.__name__, 
                 self.address))
         
         self.socket = self.zmq_context.socket(zmq.SUB)

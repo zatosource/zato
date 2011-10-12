@@ -43,6 +43,8 @@ msg_types = msg_socket.keys()
 
 class Broker(BaseBroker):
     def on_message(self, msg):
+
+        print(333333333, msg)
         
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Got message [{0}]'.format(msg))
@@ -54,5 +56,6 @@ class Broker(BaseBroker):
             raise Exception(err_msg)
         
         socket = self.sockets[msg_socket[msg_type]].pub
+        print(5555555, socket, msg_socket[msg_type], dir(socket), socket.socket_type)
         socket.send(msg[5:])
         
