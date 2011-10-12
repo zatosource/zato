@@ -28,7 +28,7 @@ from zato.admin import settings
 from zato.admin.web.views import main, cluster, service, servers, scheduler, channel, \
      load_balancer
 from zato.admin.web.views.pool import sql
-from zato.admin.web.views.security import basic_auth, ssl, tech_account, wss
+from zato.admin.web.views.security import basic_auth, tech_account, wss
 
 
 urlpatterns = patterns('',
@@ -84,14 +84,6 @@ urlpatterns = patterns('',
     url(r'^zato/security/basic-auth/edit/$', basic_auth.edit, name='security-basic-auth-edit'),
     url(r'^zato/security/basic-auth/change-password/$', basic_auth.change_password, name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', basic_auth.delete, name='security-basic-auth-delete'),
-
-    # .. SSL/TLS
-    url(r'^zato/security/ssl/$', ssl.index, name='security-ssl'),
-    url(r'^zato/security/ssl/format-item/$', ssl.format_item, name='security-format-item'),
-    url(r'^zato/security/ssl/format-items/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', ssl.format_items, name='security-format-items'),
-    url(r'^zato/security/ssl/create/$', ssl.create, name='security-ssl-create'),
-    url(r'^zato/security/ssl/edit/$', ssl.edit, name='security-ssl-edit'),
-    url(r'^zato/security/ssl/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', ssl.delete, name='security-ssl-delete'),
     
     # .. Technical accounts
     url(r'^zato/security/tech-account/$', tech_account.index, name='security-tech-account'),
