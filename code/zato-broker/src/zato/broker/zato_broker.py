@@ -27,8 +27,11 @@ from zato.common.util import TRACE1
 from logging import getLogger
 from urllib2 import build_opener, Request
 
+# anyjson
+from anyjson import loads
+
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE
+from zato.common.broker_message import MESSAGE, MESSAGE_TYPE
 
 logger = getLogger(__name__)
 
@@ -41,21 +44,39 @@ msg_socket = {
 
 msg_types = msg_socket.keys()
 
+config = loads(open('./config.json').read())
+token_expected = config['token']
+log_invalid_tokens = config['log_invalid_tokens']
+
 class Broker(BaseBroker):
     def on_message(self, msg):
-
-        print(333333333, msg)
         
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Got message [{0}]'.format(msg))
             
-        msg_type = msg[:4]
-        if msg_type not in msg_types:
-            err_msg = 'Unrecognized msg_type [{0}], msg [{1}]'.format(msg_type, msg)
-            logger.error(err_msg)
-            raise Exception(err_msg)
+        msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
+
+        # OK, it's something ours.
+        if msg_type < MESSAGE_TYPE.USER_DEFINED_START:
         
-        socket = self.sockets[msg_socket[msg_type]].pub
-        print(5555555, socket, msg_socket[msg_type], dir(socket), socket.socket_type)
-        socket.send(msg[5:])
+            if msg_type not in msg_types:
+                log_msg = ''.join([msg_type, '*'*32, msg[MESSAGE.PAYLOAD_START:]])
+                err_msg = 'Unrecognized msg_type [{0}], msg [{1}]'.format(msg_type, log_msg)
+                logger.error(err_msg)
+                raise Exception(err_msg)
+            
+            token = msg[MESSAGE.MESSAGE_TYPE_LENGTH:MESSAGE.PAYLOAD_START]
+            if token != token_expected:
+                err_msg = 'Invalid token received, msg_type [{0}]'.format(msg_type)
+                if log_invalid_tokens:
+                    err_msg += ', token [{0}]'.format(token)
+                logger.error(err_msg)
+                raise Exception(err_msg)
+            
+            socket = self.sockets[msg_socket[msg_type]].pub
+        else:
+            # User-defined messages always go to parallel servers.
+            socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL]].pub
+        
+        socket.send(msg)
         
