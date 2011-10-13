@@ -27,7 +27,7 @@ MESSAGE.MESSAGE_TYPE_LENGTH = 4
 MESSAGE.TOKEN_LENGTH = 32
 MESSAGE.TOKEN_START = MESSAGE.MESSAGE_TYPE_LENGTH-1
 MESSAGE.TOKEN_END = (MESSAGE.MESSAGE_TYPE_LENGTH + MESSAGE.TOKEN_LENGTH)-1
-MESSAGE.PAYLOAD_START = (MESSAGE.MESSAGE_TYPE_LENGTH + MESSAGE.TOKEN_LENGTH)-1
+MESSAGE.PAYLOAD_START = MESSAGE.MESSAGE_TYPE_LENGTH + MESSAGE.TOKEN_LENGTH
 MESSAGE.NULL_TOKEN = '0' * 32
 
 MESSAGE_TYPE = Bunch()
@@ -41,7 +41,21 @@ SCHEDULER.EDIT = b'1001'
 SCHEDULER.DELETE = b'1002'
 SCHEDULER.EXECUTE = b'1003'
 
-ZERO_MQ_SOCKET = Bunch()
-ZERO_MQ_SOCKET.CLOSE = b'1100'
+ZMQ_SOCKET = Bunch()
+ZMQ_SOCKET.CLOSE = b'1100'
 
 #SECURITY.BASIC_AUTH_ = 110
+
+code_to_name = {}
+
+# To prevent 'RuntimeError: dictionary changed size during iteration'
+bunch_name, bunch = None, None
+
+for bunch_name, bunch in globals().items():
+    if isinstance(bunch, Bunch) and not bunch is Bunch:
+        if bunch not in(MESSAGE, MESSAGE_TYPE):
+            for code_name, code_value in bunch.items():
+                code_name = bunch_name + '_' + code_name
+                code_to_name[code_value] = code_name
+                
+del bunch_name, bunch, code_name, code_value

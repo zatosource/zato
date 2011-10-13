@@ -44,7 +44,7 @@ from bunch import Bunch
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
 from zato.common import ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER
-from zato.common.broker_message import ZERO_MQ_SOCKET
+from zato.common.broker_message import ZMQ_SOCKET
 
 logger = logging.getLogger(__name__)
 

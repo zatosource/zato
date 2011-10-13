@@ -30,10 +30,14 @@ from lxml import etree
 # ZeroMQ
 import zmq
 
+# anyjson
+from anyjson import loads
+
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
      ZATO_ERROR, ZATO_OK, ZatoException
+from zato.common.broker_message import code_to_name, MESSAGE
 from zato.common.util import TRACE1, zmq_names
 
 class SingletonServer(object):
@@ -78,8 +82,22 @@ class SingletonServer(object):
 ################################################################################
 
     def on_config_msg(self, msg):
-        print('111100000000000000000000000000000000x0x0x0x0x0x0x0x0', msg)
-
+        
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug('Got message [{0}]'.format(msg))
+            
+        msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
+        msg = loads(msg[MESSAGE.PAYLOAD_START:])
+        
+        action = code_to_name[msg['action']]
+        handler = 'on_config_{0}'.format(action)
+        handler = getattr(self, handler)
+        
+        handler(msg)
+        
+    def on_config_SCHEDULER_CREATE(self, msg):
+        pass
+            
 
 ################################################################################
 
