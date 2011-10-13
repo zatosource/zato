@@ -58,14 +58,16 @@ class Broker(BaseBroker):
 
         # OK, it's something ours.
         if msg_type < MESSAGE_TYPE.USER_DEFINED_START:
+            
+            msg_shadowed = ''.join([msg_type, MESSAGE.NULL_TOKEN, msg[MESSAGE.PAYLOAD_START:]]) 
         
             if msg_type not in msg_types:
-                log_msg = ''.join([msg_type, '*'*32, msg[MESSAGE.PAYLOAD_START:]])
-                err_msg = 'Unrecognized msg_type [{0}], msg [{1}]'.format(msg_type, log_msg)
+                err_msg = 'Unrecognized msg_type [{0}], msg [{1}]'.format(
+                    msg_type, msg_shadowed)
                 logger.error(err_msg)
                 raise Exception(err_msg)
             
-            token = msg[MESSAGE.MESSAGE_TYPE_LENGTH:MESSAGE.PAYLOAD_START]
+            token = msg[MESSAGE.TOKEN_START:MESSAGE.TOKEN_END]
             if token != token_expected:
                 err_msg = 'Invalid token received, msg_type [{0}]'.format(msg_type)
                 if log_invalid_tokens:
@@ -74,6 +76,9 @@ class Broker(BaseBroker):
                 raise Exception(err_msg)
             
             socket = self.sockets[msg_socket[msg_type]].pub
+            
+            # We don't want the subscribers to know what the original token was.
+            msg = bytes(msg_shadowed)
         else:
             # User-defined messages always go to parallel servers.
             socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL]].pub
