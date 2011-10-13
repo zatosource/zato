@@ -359,7 +359,7 @@ def index(req):
                 job.definition_text = definition_text
                 jobs.append(job)
         else:
-            logger.info('No jobs found, soap_response=[%s]'.format(soap_response))
+            logger.info('No jobs found, soap_response=[{0}]'.format(soap_response))
 
     if req.method == 'POST':
 
