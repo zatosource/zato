@@ -119,6 +119,7 @@ def _create_edit(action, payload, logger, session, broker_client):
                   cluster_id=cluster_id, service=service)
     else:
         job = session.query(Job).filter_by(id=job_id).one()
+        old_name = job.name
         job.name = name
         job.is_active = is_active
         job.start_date = start_date
@@ -193,6 +194,8 @@ def _create_edit(action, payload, logger, session, broker_client):
                    'is_active':is_active, 'start_date':start_date,
                    'extra':extra, 'service': service_name, 'name': name
                    }
+            if action == 'edit':
+                msg['old_name'] = old_name
 
             if job_type == 'interval_based':
                 for param, value in ib_params.items():
