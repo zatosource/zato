@@ -76,7 +76,7 @@ class SingletonServer(object):
         self.broker_sub_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_sub_port)
         
         # Initialize scheduler.
-        #self.scheduler.init(self)
+        self.scheduler.singleton = self
         
         self.broker_client = BrokerClient(self.broker_token, self.zmq_context, 
             self.broker_push_addr,  self.broker_sub_addr, self.on_config_msg)
