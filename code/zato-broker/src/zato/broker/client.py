@@ -27,6 +27,12 @@ from traceback import format_exc
 # ZeroMQ
 import zmq
 
+# anyjson
+from anyjson import dumps
+
+# Zato
+from zato.common.broker_message import MESSAGE_TYPE
+
 logger = logging.getLogger(__name__)
 
 class ZMQSub(object):
@@ -113,7 +119,7 @@ class ZMQPush(object):
         
     def send(self, msg):
         try:
-            self.socket.send(msg)
+            self.socket.send_unicode(msg)
         except zmq.ZMQError, e:
             msg = 'Caught ZMQError [{0}], continuing anyway.'.format(e.strerror)
             logger.warn(msg)
@@ -127,8 +133,9 @@ class BrokerClient(object):
     """ A ZeroMQ broker client which knows how to subscribe to messages and push
     the messages onto the broker.
     """
-    def __init__(self, zmq_context, push_address, sub_address, 
+    def __init__(self, token, zmq_context, push_address, sub_address, 
                  on_message_handler=None, sub_patterns=(b'',)):
+        self.token = token
         self._push = ZMQPush(zmq_context, push_address)
         self._sub = ZMQSub(zmq_context, sub_address, on_message_handler,
                            sub_patterns)
@@ -136,8 +143,14 @@ class BrokerClient(object):
     def start_subscriber(self):
         self._sub.start()
     
-    def send(self, msg):
-        self._push.send(msg)
+    def send(self, msg, to_parallel=True):
+        msg_type = MESSAGE_TYPE.TO_PARALLEL if to_parallel else MESSAGE_TYPE.TO_SINGLETON
+        msg = '{0}{1}{2}'.format(msg_type, self.token, msg)
+        return self._push.send(msg)
+        
+    def send_json(self, msg, to_parallel=True):
+        msg = dumps(msg)
+        return self.send(msg, to_parallel)
     
     def close(self):
         self._push.close()

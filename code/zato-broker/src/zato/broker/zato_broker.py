@@ -59,7 +59,7 @@ class Broker(BaseBroker):
         # OK, it's something ours.
         if msg_type < MESSAGE_TYPE.USER_DEFINED_START:
             
-            msg_shadowed = ''.join([msg_type, '*'*32, msg[MESSAGE.PAYLOAD_START-1:]]) 
+            msg_shadowed = ''.join([msg_type, MESSAGE.NULL_TOKEN, msg[MESSAGE.PAYLOAD_START:]]) 
         
             if msg_type not in msg_types:
                 err_msg = 'Unrecognized msg_type [{0}], msg [{1}]'.format(

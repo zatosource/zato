@@ -45,8 +45,8 @@ _opts_odb_port = "ODB database port"
 _opts_odb_user = "ODB database user"
 _opts_odb_schema = "ODB database schema"
 _opts_odb_dbname = "ODB database name"
-_opts_zmq_host = "zmq host"
-_opts_zmq_start_port = "zmq starting port"
+_opts_broker_host = "broker host"
+_opts_broker_start_port = "broker starting port"
 
 supported_db_types = ("oracle", "postgresql", "sqlserver", "mysql")
 
@@ -71,9 +71,9 @@ common_odb_opts = [
         dict(name="--odb-password", help="ODB database password"),
 ]
 
-zmq_opts = [
-    dict(name="zmq_host", help=_opts_zmq_host),
-    dict(name="zmq_start_port", help=_opts_zmq_start_port),
+broker_opts = [
+    dict(name="broker_host", help=_opts_broker_host),
+    dict(name="broker_start_port", help=_opts_broker_start_port),
 ]
 
 common_ca_create_opts = [
