@@ -40,10 +40,10 @@ from bunch import Bunch
 from zato.broker.zato_client import BrokerClient
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
      ZATO_ERROR, ZATO_OK, ZatoException
-from zato.common.broker_message import code_to_name, MESSAGE
 from zato.common.util import TRACE1, zmq_names
+from zato.server.base import BaseServer
 
-class SingletonServer(object):
+class SingletonServer(BaseServer):
     """ A server of which one instance only may be running in a Zato container.
     Holds and processes data which can't be made parallel, such as scheduler,
     hot-deployment or on-disk configuration management.
@@ -79,7 +79,7 @@ class SingletonServer(object):
         self.scheduler.singleton = self
         
         self.broker_client = BrokerClient(self.broker_token, self.zmq_context, 
-            self.broker_push_addr,  self.broker_sub_addr, self.on_config_msg)
+            self.broker_push_addr,  self.broker_sub_addr, self.on_broker_msg)
         self.broker_client.start_subscriber()
         
         '''
@@ -91,28 +91,7 @@ class SingletonServer(object):
         
 ################################################################################
 
-    def on_config_msg(self, msg):
-        """ Receives a configuration message, parses its JSON contents and invokes
-        an appropriate handler, the one indicated by the msg's 'action' key so
-        if the action is '1000' then self.on_config_SCHEDULER_CREATE
-        will be invoked (because '1000' happens to be the code for creating
-        a new scheduler's job, see zato.common.broker_message for the list
-        of all actions).
-        """
-        
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug('Got message [{0}]'.format(msg))
-            
-        msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
-        msg = loads(msg[MESSAGE.PAYLOAD_START:])
-        msg = Bunch(msg)
-        
-        action = code_to_name[msg['action']]
-        handler = 'on_config_{0}'.format(action)
-        handler = getattr(self, handler)
-        handler(msg)
-        
-    def on_config_SCHEDULER_CREATE(self, msg):
+    def on_broker_msg_SCHEDULER_CREATE(self, msg):
         self.scheduler.create(msg)
             
 
