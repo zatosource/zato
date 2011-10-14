@@ -212,8 +212,8 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        msg = b'{0};{1}'.format(MESSAGE_TYPE.TO_SINGLETON, SCHEDULER.CREATE)
-        kwargs['context'].broker_client.send(msg)
+        msg = {'action': SCHEDULER.CREATE}
+        kwargs['thread_ctx'].broker_client.send_json(msg, False)
         
         with closing(self.server.odb.session()) as session:
             

@@ -116,11 +116,12 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the newly created threads.
     """
-    def __init__(self, zmq_context, zmq_push_addr, zmq_sub_addr):
+    def __init__(self, broker_token, zmq_context, broker_push_addr, broker_sub_addr):
         super(_TaskDispatcher, self).__init__()
+        self.broker_token = broker_token
         self.zmq_context = zmq_context
-        self.zmq_push_addr = zmq_push_addr
-        self.zmq_sub_addr = zmq_sub_addr
+        self.broker_push_addr = broker_push_addr
+        self.broker_sub_addr = broker_sub_addr
         
     def setThreadCount(self, count):
         """ Mostly copy & paste from the base classes except for the part
@@ -140,9 +141,10 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 running += 1
 
                 # It's safe to pass ZMQ contexts between threads.
-                thread_data = Bunch({'zmq_context': self.zmq_context,
-                               'zmq_push_addr': self.zmq_push_addr,
-                               'zmq_sub_addr': self.zmq_sub_addr})
+                thread_data = Bunch({'broker_token':self.broker_token,
+                               'zmq_context': self.zmq_context,
+                               'broker_push_addr': self.broker_push_addr,
+                               'broker_sub_addr': self.broker_sub_addr})
                 
                 start_new_thread(self.handlerThread, (thread_no, thread_data))
                 
@@ -163,8 +165,9 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         """
         # We're in a new thread now so we can start the broker client though note
         # that the message handler will be assigned to it later on.
-        thread_data.broker_client = BrokerClient(thread_data.zmq_context,
-                thread_data.zmq_push_addr, thread_data.zmq_sub_addr)
+        thread_data.broker_client = BrokerClient(self.broker_token,
+                thread_data.zmq_context, thread_data.broker_push_addr, 
+                thread_data.broker_sub_addr)
         
         threads = self.threads
         try:
@@ -249,7 +252,7 @@ class ZatoHTTPListener(HTTPServer):
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
         getattr(self, handler_name)(sec_def, request_data, body, headers)
             
-    def executeRequest(self, task, context):
+    def executeRequest(self, task, thread_ctx):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
@@ -281,7 +284,7 @@ class ZatoHTTPListener(HTTPServer):
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
-            response = self.server.soap_handler.handle(body, headers, context)
+            response = self.server.soap_handler.handle(body, headers, thread_ctx)
 
         except HTTPException, e:
             task.setResponseStatus(e.status, e.reason)
@@ -328,10 +331,11 @@ class ParallelServer(object):
         self.url_security = self.odb.get_url_security(server)
         self.logger.log(logging.DEBUG, 'url_security=[{0}]'.format(self.url_security))
         
-        self.zmq_push_addr = 'tcp://{0}:{1}'.format(server.cluster.zmq_host, 
-                server.cluster.zmq_start_port)
-        self.zmq_sub_addr = 'tcp://{0}:{1}'.format(server.cluster.zmq_host, 
-                server.cluster.zmq_start_port+1)
+        self.broker_token = server.cluster.broker_token
+        self.broker_push_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port)
+        self.broker_sub_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port+1)
         
         if self.singleton_server:
 
@@ -366,9 +370,10 @@ class ParallelServer(object):
             self.service_store.read_internal_services()
             
             kwargs={'zmq_context':self.zmq_context,
-                    'zmq_host': server.cluster.zmq_host,
-                    'zmq_push_port': server.cluster.zmq_start_port+2,
-                    'zmq_sub_port': server.cluster.zmq_start_port+3,
+                    'broker_host': server.cluster.broker_host,
+                    'broker_push_port': server.cluster.broker_start_port+2,
+                    'broker_sub_port': server.cluster.broker_start_port+3,
+                    'broker_token':self.broker_token,
                     }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     
@@ -407,8 +412,8 @@ class ParallelServer(object):
         
     def run_forever(self):
 
-        task_dispatcher = _TaskDispatcher(self.zmq_context, self.zmq_push_addr, 
-                self.zmq_sub_addr)
+        task_dispatcher = _TaskDispatcher(self.broker_token, self.zmq_context, 
+            self.broker_push_addr, self.broker_sub_addr)
         task_dispatcher.setThreadCount(60)
 
         self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))

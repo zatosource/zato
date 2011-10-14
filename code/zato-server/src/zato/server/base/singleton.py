@@ -46,9 +46,13 @@ class SingletonServer(object):
     hot-deployment or on-disk configuration management.
     """
     
-    def __init__(self, parallel_server=None, zmq_context=None, zmq_host=None,
-                 zmq_push_port=None, zmq_sub_port=None):
+    def __init__(self, parallel_server=None, broker_token=None, zmq_context=None, 
+                 broker_host=None, broker_push_port=None, broker_sub_port=None):
         self.parallel_server = parallel_server
+        self.broker_token = broker_token
+        self.broker_host = broker_host
+        self.broker_push_port = broker_push_port
+        self.broker_sub_port = broker_sub_port
         self.zmq_context = zmq_context
     
     def on_inproc_message_handler(self, msg):
@@ -58,18 +62,19 @@ class SingletonServer(object):
         self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, 
                                         self.__class__.__name__, hex(id(self))))
 
-        for name in('zmq_context', 'zmq_host', 'zmq_push_port', 'zmq_sub_port'):
+        for name in('broker_token', 'zmq_context', 'broker_host', 'broker_push_port', 
+                    'broker_sub_port'):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
                 
-        self.zmq_push_addr = 'tcp://{0}:{1}'.format(self.zmq_host, self.zmq_push_port)
-        self.zmq_sub_addr = 'tcp://{0}:{1}'.format(self.zmq_host, self.zmq_sub_port)
-
+        self.broker_push_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_port)
+        self.broker_sub_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_sub_port)
+        
         # Initialize scheduler.
         #self.scheduler.init(self)
         
-        self.broker_client = BrokerClient(self.zmq_context, 
-            self.zmq_push_addr,  self.zmq_sub_addr, self.on_config_msg)
+        self.broker_client = BrokerClient(self.broker_token, self.zmq_context, 
+            self.broker_push_addr,  self.broker_sub_addr, self.on_config_msg)
         self.broker_client.start_subscriber()
         
         '''
@@ -96,7 +101,7 @@ class SingletonServer(object):
         handler(msg)
         
     def on_config_SCHEDULER_CREATE(self, msg):
-        pass
+        print(29292, 'SCHEDULER_CREATE')
             
 
 ################################################################################
