@@ -786,6 +786,29 @@ function delete_(id) {
 
 // /////////////////////////////////////////////////////////////////////////////
 
+function execute(id) {
+
+    var on_success = function(o) {
+        update_user_message(true, 'Request submitted, check the logs for details');
+    };
+
+    var on_failure = function(o) {
+        update_user_message(false, o.responseText);
+    }
+
+    var callback = {
+        success: on_success,
+        failure: on_failure,
+    };
+
+	var url = String.format('./execute/{0}/cluster/{1}/', id, $('cluster_id').value);
+
+	YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
+	var transaction = YAHOO.util.Connect.asyncRequest('POST', url, callback);
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
 YAHOO.util.Event.onDOMReady(function() {
 
     Date.prototype.getPaddedHours = function() {

@@ -319,3 +319,32 @@ class Delete(AdminService):
                 raise
             
             return ZATO_OK, ''
+
+class Execute(AdminService):
+    """ Executes a scheduler's job.
+    """
+    def handle(self, *args, **kwargs):
+        with closing(self.server.odb.session()) as session:
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['id']
+                params = _get_params(payload, request_params, 'data.')
+                
+                id = params['id']
+                
+                job = session.query(Job).\
+                    filter(Job.id==id).\
+                    one()
+                
+                msg = {'action': SCHEDULER.EXECUTE, 'name': job.name}
+                kwargs['thread_ctx'].broker_client.send_json(msg, False)
+                
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not execute the job, e=[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+                
+                raise
+            
+            return ZATO_OK, ''
+        

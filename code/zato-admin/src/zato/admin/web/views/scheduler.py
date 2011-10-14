@@ -442,6 +442,27 @@ def delete(req, job_id, cluster_id):
     else:
         # 200 OK
         return HttpResponse()
+    
+@meth_allowed('POST')
+def execute(req, job_id, cluster_id):
+    """ Executes a scheduler's job.
+    """
+    try:
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = job_id
+
+        invoke_admin_service(cluster, 'zato:scheduler.job.execute', zato_message)
+
+    except Exception, e:
+        msg = 'Could not execute the job. job_id=[{0}], cluster_id=[{1}], e=[{2}]'.format(
+            job_id, cluster_id, format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        # 200 OK
+        return HttpResponse()
 
 @meth_allowed('POST')
 def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds):
