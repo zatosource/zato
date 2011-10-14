@@ -170,11 +170,13 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
 
         # We're in a new thread now so we can start the broker client though note
         # that the message handler will be assigned to it later on.
-        thread_data.broker_client = BrokerClient(self.broker_token,
+        thread_data.broker_client = BrokerClient('parallel', self.broker_token,
                 thread_data.zmq_context, thread_data.broker_push_addr, 
                 thread_data.broker_pull_addr, self.message_handler)
-        thread_data.broker_client.set_message_handler_kwargs(**{
-            'broker_client': thread_data.broker_client})
+        
+        args = Bunch({'broker_client': thread_data.broker_client})
+        thread_data.broker_client.set_message_handler_args(args)
+        
         thread_data.broker_client.start_subscriber()
         
         threads = self.threads
@@ -422,14 +424,15 @@ class ParallelServer(BaseServer):
 
 # ##############################################################################
 
-    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, **kwargs):
+    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, args):
+
         service_info = self.service_store.services[msg.service]
         class_ = service_info['service_class']
         instance = class_()
         instance.server = self
-
+        
         response = instance.handle(payload=msg.extra, raw_request=msg, 
-                    channel='scheduler_job', thread_ctx=kwargs)
+                    channel='scheduler_job', thread_ctx=args)
         
         if self.logger.isEnabledFor(logging.DEBUG):
             msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))

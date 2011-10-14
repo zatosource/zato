@@ -31,10 +31,10 @@ class BrokerClient(_BrokerClient):
     """ A ZeroMQ broker client which knows how to subscribe to messages and push
     the messages onto the broker.
     """
-    def __init__(self, token, zmq_context, push_address, pull_address, 
-                 on_message_handler=None, **message_handler_kwargs):
-        super(BrokerClient, self).__init__(zmq_context, push_address, pull_address, 
-                    on_message_handler, **message_handler_kwargs)
+    def __init__(self, name, token, zmq_context, push_address, pull_address, 
+                 on_message_handler=None, message_handler_args=None):
+        super(BrokerClient, self).__init__(name, zmq_context, push_address, pull_address, 
+                    on_message_handler, message_handler_args)
         self.token = token
         
     def send(self, msg, to_parallel=True):
