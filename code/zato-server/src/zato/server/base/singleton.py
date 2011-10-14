@@ -87,6 +87,13 @@ class SingletonServer(object):
 ################################################################################
 
     def on_config_msg(self, msg):
+        """ Receives a configuration message, parses its JSON contents and invokes
+        an appropriate handler, the one indicated by the msg's 'action' key so
+        if the action is '1000' then self.on_config_SCHEDULER_CREATE
+        will be invoked (because '1000' happens to be the code for creating
+        a new scheduler's job, see zato.common.broker_message for the list
+        of all actions).
+        """
         
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug('Got message [{0}]'.format(msg))
