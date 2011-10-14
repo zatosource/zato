@@ -307,6 +307,10 @@ class Delete(AdminService):
                 
                 session.delete(job)
                 session.commit()
+
+                msg = {'action': SCHEDULER.DELETE, 'name': job.name}
+                kwargs['thread_ctx'].broker_client.send_json(msg, False)
+                
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the job, e=[{e}]'.format(e=format_exc(e))

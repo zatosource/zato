@@ -96,10 +96,19 @@ class Scheduler(object):
             args=[job_data.name, job_data.service, job_data.extra], 
             name=job_data.name)
         
+    def delete(self, job_data):
+        for job in self._sched.get_jobs():
+            if job.name == job_data.name:
+                self._sched.unschedule_job(job)
+                logger.info('Job [{0}] deleted'.format(job_data.name))
+                break
+        else:
+            logger.warn('Job [{0}] was not scheduled, could not delete it'.format(job_data.name))
+        
 if __name__ == '__main__':
     from bunch import Bunch
-    job_data = Bunch(
-        {"name": "[e0ry845", 
+    job_data1 = Bunch(
+        {"name": "zzz", 
          "service": "zato.server.service.internal.Ping", 
          "extra": "", 
          "job_type": 
@@ -110,8 +119,12 @@ if __name__ == '__main__':
          "start_date": "2011-10-14 22:36:00"}
     )
     
+    job_data2 = Bunch({'name':'zzz'})
+    
     s = Scheduler()
-    s.create(job_data)
+    s.create(job_data1)
+    s.delete(job_data2)
+    
     import time
     time.sleep(100)
         
