@@ -163,11 +163,13 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
         """
+
         # We're in a new thread now so we can start the broker client though note
         # that the message handler will be assigned to it later on.
         thread_data.broker_client = BrokerClient(self.broker_token,
                 thread_data.zmq_context, thread_data.broker_push_addr, 
                 thread_data.broker_sub_addr)
+        thread_data.broker_client.start_subscriber()
         
         threads = self.threads
         try:
@@ -203,8 +205,10 @@ class ZatoHTTPListener(HTTPServer):
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
         
-    def _on_zmq_msg(self, msg):
-        print(333333333333, msg)
+    def _on_broker_msg(self, msg):
+        """ Passes the message on to a parallel server.
+        """
+        self.server._on_broker_msg(msg)
 
     def _handle_security_tech_account(self, sec_def, request_data, body, headers):
         """ Handles the 'tech-account' security config type.
@@ -284,6 +288,7 @@ class ZatoHTTPListener(HTTPServer):
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
+            thread_ctx.broker_client.set_message_handler(self._on_broker_msg)
             response = self.server.soap_handler.handle(body, headers, thread_ctx)
 
         except HTTPException, e:
@@ -439,6 +444,10 @@ class ParallelServer(object):
             
             # Zope
             task_dispatcher.shutdown()
+
+    def _on_broker_msg(self, msg):
+        self.logger.error(str(msg))
+            
 '''
     def send_config_request(self, command, data=None, timeout=None):
         """ Sends a synchronous IPC request to the SingletonServer.

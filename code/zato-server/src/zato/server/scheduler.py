@@ -30,6 +30,7 @@ from apscheduler.scheduler import Scheduler as APScheduler
 
 # Zato 
 from zato.common import scheduler_date_time_format
+from zato.common.broker_message import SCHEDULER
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,14 @@ class Scheduler(object):
         self._sched.start()
         
     def _on_job_execution(self, name, service, extra):
-        logger.info(str((name, service, extra)))
+        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name,
+               'service': service, 'extra':extra}
+        self.singleton.broker_client.send_json(msg)
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = 'Job executed, name [{0}], service [{1}], extra [{2}]'.format(
+                job_name, service, extra)
+            logger.debug(msg)
 
     def create(self, job_data):
         if logger.isEnabledFor(logging.DEBUG):
@@ -71,7 +79,7 @@ if __name__ == '__main__':
                 'service': 'zato.server.service.internal.Ping',
                 'job_type': 'one_time', 
                 'is_active': True, 
-                'start_date': '2011-10-14 15:49:10', 
+                'start_date': '2011-10-14 16:01:10', 
                 'extra': 'qwertyuiop'})
     
     s = Scheduler()
