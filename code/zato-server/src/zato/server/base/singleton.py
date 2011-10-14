@@ -34,7 +34,7 @@ import zmq
 from anyjson import loads
 
 # Zato
-from zato.broker.client import BrokerClient
+from zato.broker.zato_client import BrokerClient
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
      ZATO_ERROR, ZATO_OK, ZatoException
 from zato.common.broker_message import code_to_name, MESSAGE
