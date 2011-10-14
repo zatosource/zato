@@ -35,7 +35,7 @@ class BaseServer(object):
     """ A base class upon which singleton and parallel servers are created.
     """
     
-    def on_broker_msg(self, msg, **kwargs):
+    def on_broker_msg(self, msg, args):
         """ Receives a configuration message, parses its JSON contents and invokes
         an appropriate handler, the one indicated by the msg's 'action' key so
         if the action is '1000' then self.on_config_SCHEDULER_CREATE
@@ -54,4 +54,4 @@ class BaseServer(object):
         action = code_to_name[msg['action']]
         handler = 'on_broker_msg_{0}'.format(action)
         handler = getattr(self, handler)
-        handler(msg, **kwargs)
+        handler(msg, args)

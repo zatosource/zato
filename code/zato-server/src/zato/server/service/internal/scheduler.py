@@ -213,7 +213,7 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         
         msg = {'action': SCHEDULER.CREATE, 'job_type': 'one_time',
-               'is_active':True, 'start_date':'2011-10-14 19:23:30',
+               'is_active':True, 'start_date':'2011-10-14 20:18:10',
                'extra':'qwertyuiop',
                'service': 'zato.server.service.internal.Ping',
                'name': 'zzz'
@@ -258,8 +258,6 @@ class GetList(AdminService):
                 definition_elem.repeats = definition.repeats if definition.repeats else ''
                 definition_elem.cron_definition = (definition.cron_definition if 
                     definition.cron_definition else '')
-                
-                print(repr((definition.name, definition.cron_definition)))
                 
                 definition_list.append(definition_elem)
     

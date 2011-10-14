@@ -59,9 +59,6 @@ class SingletonServer(BaseServer):
         self.broker_push_port = broker_push_port
         self.broker_sub_port = broker_sub_port
         self.zmq_context = zmq_context
-    
-    def on_inproc_message_handler(self, msg):
-        print('Singleton handler', msg)
 
     def run(self, *ignored_args, **kwargs):
         self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, 
@@ -78,8 +75,8 @@ class SingletonServer(BaseServer):
         # Initialize scheduler.
         self.scheduler.singleton = self
         
-        self.broker_client = BrokerClient(self.broker_token, self.zmq_context, 
-            self.broker_push_addr,  self.broker_sub_addr, self.on_broker_msg)
+        self.broker_client = BrokerClient('singleton', self.broker_token, 
+            self.zmq_context, self.broker_push_addr,  self.broker_sub_addr, self.on_broker_msg)
         self.broker_client.start_subscriber()
         
         '''
@@ -91,7 +88,7 @@ class SingletonServer(BaseServer):
         
 ################################################################################
 
-    def on_broker_msg_SCHEDULER_CREATE(self, msg):
+    def on_broker_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
         self.scheduler.create(msg)
             
 
