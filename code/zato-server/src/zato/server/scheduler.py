@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, logging
+import logging, time
 from datetime import datetime, timedelta
 from threading import Event
 from traceback import format_exc
@@ -53,7 +53,7 @@ class Scheduler(object):
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Job executed, name [{0}], service [{1}], extra [{2}]'.format(
-                job_name, service, extra)
+                name, service, extra)
             logger.debug(msg)
 
     def create(self, job_data):
@@ -104,13 +104,22 @@ class Scheduler(object):
                 break
         else:
             logger.warn('Job [{0}] was not scheduled, could not delete it'.format(job_data.name))
+            
+    def execute(self, job_data):
+        for job in self._sched.get_jobs():
+            if job.name == job_data.name:
+                self._on_job_execution(*job.args)
+                logger.info('Job [{0}] executed'.format(job_data.name))
+                break
+        else:
+            logger.warn('Job [{0}] was not scheduled, could not execute it'.format(job_data.name))
         
 if __name__ == '__main__':
     from bunch import Bunch
     job_data1 = Bunch(
         {"name": "zzz", 
          "service": "zato.server.service.internal.Ping", 
-         "extra": "", 
+         "extra": "aabbcc", 
          "job_type": 
          "cron_style", 
          "cron_definition": "* * * * *", 
@@ -123,7 +132,8 @@ if __name__ == '__main__':
     
     s = Scheduler()
     s.create(job_data1)
-    s.delete(job_data2)
+    #s.delete(job_data2)
+    s.execute(job_data2)
     
     import time
     time.sleep(100)

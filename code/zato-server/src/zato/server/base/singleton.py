@@ -93,7 +93,9 @@ class SingletonServer(BaseServer):
         
     def on_broker_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
         self.scheduler.delete(msg)
-            
+        
+    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
+        self.scheduler.execute(msg)
 
 ################################################################################
 
