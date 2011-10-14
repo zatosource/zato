@@ -90,6 +90,9 @@ class SingletonServer(BaseServer):
 
     def on_broker_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
         self.scheduler.create(msg)
+        
+    def on_broker_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
+        self.scheduler.delete(msg)
             
 
 ################################################################################
