@@ -32,9 +32,9 @@ class BrokerClient(_BrokerClient):
     the messages onto the broker.
     """
     def __init__(self, token, zmq_context, push_address, pull_address, 
-                 on_message_handler=None):
+                 on_message_handler=None, **message_handler_kwargs):
         super(BrokerClient, self).__init__(zmq_context, push_address, pull_address, 
-                    on_message_handler)
+                    on_message_handler, **message_handler_kwargs)
         self.token = token
         
     def send(self, msg, to_parallel=True):

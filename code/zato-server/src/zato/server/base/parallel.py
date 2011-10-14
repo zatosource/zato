@@ -117,13 +117,13 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     the newly created threads.
     """
     def __init__(self, message_handler, broker_token, zmq_context, 
-            broker_push_addr, broker_sub_addr):
+            broker_push_addr, broker_pull_addr):
         super(_TaskDispatcher, self).__init__()
         self.message_handler = message_handler
         self.broker_token = broker_token
         self.zmq_context = zmq_context
         self.broker_push_addr = broker_push_addr
-        self.broker_sub_addr = broker_sub_addr
+        self.broker_pull_addr = broker_pull_addr
         
     def setThreadCount(self, count):
         """ Mostly copy & paste from the base classes except for the part
@@ -148,7 +148,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                     'broker_token':self.broker_token,
                     'zmq_context': self.zmq_context,
                     'broker_push_addr': self.broker_push_addr,
-                    'broker_sub_addr': self.broker_sub_addr})
+                    'broker_pull_addr': self.broker_pull_addr})
                 
                 start_new_thread(self.handlerThread, (thread_no, thread_data))
                 
@@ -172,7 +172,9 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         # that the message handler will be assigned to it later on.
         thread_data.broker_client = BrokerClient(self.broker_token,
                 thread_data.zmq_context, thread_data.broker_push_addr, 
-                thread_data.broker_sub_addr, self.message_handler)
+                thread_data.broker_pull_addr, self.message_handler)
+        thread_data.broker_client.set_message_handler_kwargs(**{
+            'broker_client': thread_data.broker_client})
         thread_data.broker_client.start_subscriber()
         
         threads = self.threads
@@ -342,7 +344,7 @@ class ParallelServer(BaseServer):
         self.broker_token = server.cluster.broker_token
         self.broker_push_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port)
-        self.broker_sub_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+        self.broker_pull_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port+1)
         
         if self.singleton_server:
@@ -393,10 +395,10 @@ class ParallelServer(BaseServer):
     def run_forever(self):
 
         task_dispatcher = _TaskDispatcher(self.on_broker_msg, self.broker_token, 
-            self.zmq_context,  self.broker_push_addr, self.broker_sub_addr)
+            self.zmq_context,  self.broker_push_addr, self.broker_pull_addr)
         task_dispatcher.setThreadCount(60)
 
-        self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
+        self.logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 
         ZatoHTTPListener(self, task_dispatcher)
 
@@ -417,3 +419,19 @@ class ParallelServer(BaseServer):
                 
             self.zmq_context.term()
             task_dispatcher.shutdown()
+
+# ##############################################################################
+
+    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, **kwargs):
+        service_info = self.service_store.services[msg.service]
+        class_ = service_info['service_class']
+        instance = class_()
+        instance.server = self
+
+        response = instance.handle(payload=msg.extra, raw_request=msg, 
+                    channel='scheduler_job', thread_ctx=kwargs)
+        
+        if self.logger.isEnabledFor(logging.DEBUG):
+            msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
+            self.logger.debug(str(msg))
+            

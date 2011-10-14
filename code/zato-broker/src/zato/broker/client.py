@@ -42,17 +42,19 @@ class ZMQPull(object):
     on each incoming message.
     """
     
-    def __init__(self, zmq_context, address, on_message_handler, keep_running=True):
+    def __init__(self, zmq_context, address, on_message_handler, 
+                 keep_running=True, **message_handler_kwargs):
         self.zmq_context = zmq_context
         self.address = address
         self.on_message_handler = on_message_handler
+        self.message_handler_kwargs = message_handler_kwargs
         self.keep_running = keep_running
 
     # Custom subclasses may wish to override the two hooks below.
-    def on_before_msg_handler(self, msg):
+    def on_before_msg_handler(self, msg, **kwargs):
         pass
 
-    def on_after_msg_handler(self, msg, e=None):
+    def on_after_msg_handler(self, msg, e=None, **kwargs):
         pass
     
     def start(self):
@@ -92,15 +94,15 @@ class ZMQPull(object):
                 meth(msg)
                 self.close()
             else:
-                self.on_before_msg_handler(msg)
+                self.on_before_msg_handler(msg, **self.message_handler_kwargs)
                 try:
                     e = None
-                    self.on_message_handler(msg)
+                    self.on_message_handler(msg, **self.message_handler_kwargs)
                 except Exception, e:
                     msg = 'Could not invoke the message handler, msg [{0}] e [{1}]'
                     logger.error(msg.format(msg, format_exc(e)))
                     
-                self.on_after_msg_handler(msg, e)
+                self.on_after_msg_handler(msg, e, **self.message_handler_kwargs)
                 
 class ZMQPush(object):
     """ Sends messages to ZeroMQ using a PUSH socket.
@@ -131,12 +133,16 @@ class BrokerClient(object):
     the messages onto the broker.
     """
     def __init__(self, zmq_context, push_address, pull_address, 
-                 on_message_handler=None,):
+                 on_message_handler=None, **message_handler_kwargs):
         self._push = ZMQPush(zmq_context, push_address)
-        self._pull = ZMQPull(zmq_context, pull_address, on_message_handler)
+        self._pull = ZMQPull(zmq_context, pull_address, on_message_handler,
+                             True,  **message_handler_kwargs)
         
     def set_message_handler(self, handler):
         self._pull.on_message_handler = handler
+        
+    def set_message_handler_kwargs(self, **kwargs):
+        self._pull.message_handler_kwargs = kwargs
     
     def start_subscriber(self):
         self._pull.start()
