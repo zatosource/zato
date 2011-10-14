@@ -37,17 +37,15 @@ from zato.common.broker_message import MESSAGE_TYPE
 
 logger = logging.getLogger(__name__)
 
-class ZMQSub(object):
+class ZMQPull(object):
     """ A ZeroMQ subscriber. Runs in a background thread and invokes the handler
     on each incoming message.
     """
     
-    def __init__(self, zmq_context, address, on_message_handler, 
-                 sub_patterns=(b'',), keep_running=True):
+    def __init__(self, zmq_context, address, on_message_handler, keep_running=True):
         self.zmq_context = zmq_context
         self.address = address
         self.on_message_handler = on_message_handler
-        self.sub_patterns = sub_patterns
         self.keep_running = keep_running
 
     # Custom subclasses may wish to override the two hooks below.
@@ -68,12 +66,9 @@ class ZMQSub(object):
         logger.info('Starting [{0}]/[{1}]'.format(self.__class__.__name__, 
                 self.address))
         
-        self.socket = self.zmq_context.socket(zmq.SUB)
+        self.socket = self.zmq_context.socket(zmq.PULL)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.connect(self.address)
-        
-        for pattern in self.sub_patterns:
-            self.socket.setsockopt(zmq.SUBSCRIBE, pattern)
         
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
@@ -135,18 +130,20 @@ class BrokerClient(object):
     """ A ZeroMQ broker client which knows how to subscribe to messages and push
     the messages onto the broker.
     """
-    def __init__(self, zmq_context, push_address, sub_address, 
-                 on_message_handler=None, sub_patterns=(b'',)):
+    def __init__(self, zmq_context, push_address, pull_address, 
+                 on_message_handler=None,):
         self._push = ZMQPush(zmq_context, push_address)
-        self._sub = ZMQSub(zmq_context, sub_address, on_message_handler,
-                           sub_patterns)
+        self._pull = ZMQPull(zmq_context, pull_address, on_message_handler)
+        
+    def set_message_handler(self, handler):
+        self._pull.on_message_handler = handler
     
     def start_subscriber(self):
-        self._sub.start()
+        self._pull.start()
     
     def send(self, msg):
         return self._push.send(msg)
     
     def close(self):
         self._push.close()
-        self._sub.close()
+        self._pull.close()

@@ -76,13 +76,13 @@ class Broker(BaseBroker):
                 logger.error(err_msg)
                 raise Exception(err_msg)
             
-            socket = self.sockets[msg_socket[msg_type]].pub
+            socket = self.sockets[msg_socket[msg_type]].push
             
             # We don't want the subscribers to know what the original token was.
             msg = bytes(msg_shadowed)
         else:
             # User-defined messages always go to parallel servers.
-            socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL]].pub
+            socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL]].push
         
         socket.send(msg)
         
