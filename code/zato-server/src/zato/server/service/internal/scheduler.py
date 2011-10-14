@@ -59,7 +59,7 @@ def _get_interval_based_start_date(payload):
 
     return str(start_date)
 
-def _create_edit(action, payload, logger, session):
+def _create_edit(action, payload, logger, session, broker_client):
     """ Creating and updating a job requires a series of very similar steps
     so they've been all put here and depending on the 'action' parameter 
     (be it 'create'/'edit') some additional operations are performed.
@@ -131,9 +131,9 @@ def _create_edit(action, payload, logger, session):
 
         if job_type == 'interval_based':
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats']
-            params = _get_params(payload, request_params, 'data.', default_value='')
+            ib_params = _get_params(payload, request_params, 'data.', default_value='')
 
-            if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
+            if not any(ib_params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
                 msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given."
                 logger.error(msg)
                 raise ZatoException(msg)
@@ -144,15 +144,15 @@ def _create_edit(action, payload, logger, session):
                 ib_job = session.query(IntervalBasedJob).filter_by(
                     id=job.interval_based.id).one()
 
-            for param, value in params.items():
+            for param, value in ib_params.items():
                 if value:
                     setattr(ib_job, param, value)
             
             session.add(ib_job)
             
         elif job_type == 'cron_style':
-            params = _get_params(payload, ['cron_definition'], 'data.')
-            cron_definition = params['cron_definition'].strip()
+            cs_params = _get_params(payload, ['cron_definition'], 'data.')
+            cron_definition = cs_params['cron_definition'].strip()
             
             if cron_definition.startswith('@'):
                 if not cron_definition in PREDEFINED_CRON_DEFINITIONS:
@@ -184,7 +184,27 @@ def _create_edit(action, payload, logger, session):
             session.add(cs_job)
 
         # We can commit it all now.
-        session.commit()            
+        session.commit()
+        
+        # Now send it to the broker, but only if the job is active.
+        if is_active:
+            msg_action = SCHEDULER.CREATE if action == 'create' else SCHEDULER.EDIT
+            msg = {'action': msg_action, 'job_type': job_type,
+                   'is_active':is_active, 'start_date':start_date,
+                   'extra':extra, 'service': service_name, 'name': name
+                   }
+
+            if job_type == 'interval_based':
+                for param, value in ib_params.items():
+                    msg[param] = int(value) if value else 0
+            elif job_type == 'cron_style':
+                msg['cron_definition'] = cron_definition
+            
+            broker_client.send_json(msg, False)
+        else:
+            msg = 'Job [{0}] is not active, not scheduling it'.format(name)
+            logger.debug(msg)
+        
             
     except Exception, e:
         session.rollback()
@@ -211,14 +231,6 @@ class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     def handle(self, *args, **kwargs):
-        
-        msg = {'action': SCHEDULER.CREATE, 'job_type': 'one_time',
-               'is_active':True, 'start_date':'2011-10-14 20:18:10',
-               'extra':'qwertyuiop',
-               'service': 'zato.server.service.internal.Ping',
-               'name': 'zzz'
-               }
-        kwargs['thread_ctx'].broker_client.send_json(msg, False)
         
         with closing(self.server.odb.session()) as session:
             
@@ -268,14 +280,14 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         return _create_edit('create', kwargs.get('payload'), self.logger, 
-                            self.server.odb.session())
+            self.server.odb.session(), kwargs['thread_ctx'].broker_client)
         
 class Edit(AdminService):
     """ Update a new scheduler's job.
     """
     def handle(self, *args, **kwargs):
         return _create_edit('edit', kwargs.get('payload'), self.logger, 
-                            self.server.odb.session())
+            self.server.odb.session(), kwargs['thread_ctx'].broker_client)
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.

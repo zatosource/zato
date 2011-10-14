@@ -42,6 +42,10 @@ class Scheduler(object):
         self._sched = APScheduler()
         self._sched.start()
         
+    def _parse_cron(self, def_):
+        minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
+        return minute, hour, day_of_month, month, day_of_week
+        
     def _on_job_execution(self, name, service, extra):
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name,
                'service': service, 'extra':extra}
@@ -72,15 +76,39 @@ class Scheduler(object):
         self._sched.add_date_job(self._on_job_execution, start_date, 
             [job_data.name, job_data.service, job_data.extra], name=job_data.name)
         
+    def create_interval_based(self, job_data):
+        """ Schedules the execution of an interval-based job.
+        """
+        start_date = datetime.strptime(job_data.start_date, scheduler_date_time_format)
+        self._sched.add_interval_job(self._on_job_execution, 
+            job_data.weeks, job_data.days, job_data.hours, job_data.minutes, 
+            job_data.seconds, start_date, [job_data.name, job_data.service, job_data.extra], 
+            name=job_data.name)
+        
+    def create_cron_style(self, job_data):
+        """ Schedules the execution of a one-time job.
+        """
+        start_date = datetime.strptime(job_data.start_date, scheduler_date_time_format)
+        minute, hour, day_of_month, month, day_of_week = self._parse_cron(job_data.cron_definition)
+        self._sched.add_cron_job(self._on_job_execution, 
+            year=None, month=month, day=day_of_month, hour=hour,
+            minute=minute, second=None, start_date=start_date, 
+            args=[job_data.name, job_data.service, job_data.extra], 
+            name=job_data.name)
+        
 if __name__ == '__main__':
     from bunch import Bunch
-    job_data = Bunch({'action': '1000', 
-                'name': 'zzz',
-                'service': 'zato.server.service.internal.Ping',
-                'job_type': 'one_time', 
-                'is_active': True, 
-                'start_date': '2011-10-14 16:01:10', 
-                'extra': 'qwertyuiop'})
+    job_data = Bunch(
+        {"name": "[e0ry845", 
+         "service": "zato.server.service.internal.Ping", 
+         "extra": "", 
+         "job_type": 
+         "cron_style", 
+         "cron_definition": "* * * * *", 
+         "is_active": True, 
+         "action": "1000", 
+         "start_date": "2011-10-14 22:36:00"}
+    )
     
     s = Scheduler()
     s.create(job_data)
