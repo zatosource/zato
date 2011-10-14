@@ -33,6 +33,9 @@ import zmq
 # anyjson
 from anyjson import loads
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
@@ -46,9 +49,11 @@ class SingletonServer(object):
     hot-deployment or on-disk configuration management.
     """
     
-    def __init__(self, parallel_server=None, broker_token=None, zmq_context=None, 
-                 broker_host=None, broker_push_port=None, broker_sub_port=None):
+    def __init__(self, parallel_server=None, scheduler=None, broker_token=None, 
+                 zmq_context=None, broker_host=None, broker_push_port=None, 
+                 broker_sub_port=None):
         self.parallel_server = parallel_server
+        self.scheduler = scheduler
         self.broker_token = broker_token
         self.broker_host = broker_host
         self.broker_push_port = broker_push_port
@@ -100,15 +105,15 @@ class SingletonServer(object):
             
         msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
         msg = loads(msg[MESSAGE.PAYLOAD_START:])
+        msg = Bunch(msg)
         
         action = code_to_name[msg['action']]
         handler = 'on_config_{0}'.format(action)
         handler = getattr(self, handler)
-        
         handler(msg)
         
     def on_config_SCHEDULER_CREATE(self, msg):
-        print(29292, 'SCHEDULER_CREATE')
+        self.scheduler.create(msg)
             
 
 ################################################################################

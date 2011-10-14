@@ -20,16 +20,65 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-# stdlib
 import copy, logging
-from time import strptime
+from datetime import datetime, timedelta
 from threading import Event
 from traceback import format_exc
-from datetime import datetime, timedelta
 
-# PyYAML
-from yaml import load, Loader
+# APScheduler
+from apscheduler.scheduler import Scheduler as APScheduler
 
+# Zato 
+from zato.common import scheduler_date_time_format
+
+logger = logging.getLogger(__name__)
+
+logging.basicConfig(level=logging.DEBUG)
+
+class Scheduler(object):
+    def __init__(self, singleton=None):
+        self.singleton = singleton
+        self._sched = APScheduler()
+        self._sched.start()
+        
+    def _on_job_execution(self, name, service, extra):
+        logger.info(str((name, service, extra)))
+
+    def create(self, job_data):
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(job_data)
+            
+        if not job_data.is_active:
+            msg = 'Job [{0}] is not active, not scheduling it'.format(job_data.name)
+            logger.info(msg)
+            return
+        
+        handler = 'create_{0}'.format(job_data.job_type)
+        handler = getattr(self, handler)
+        handler(job_data)
+        
+    def create_one_time(self, job_data):
+        """ Schedules the execution of a one-time job.
+        """
+        start_date = datetime.strptime(job_data.start_date, scheduler_date_time_format)
+        self._sched.add_date_job(self._on_job_execution, start_date, 
+            [job_data.name, job_data.service, job_data.extra], name=job_data.name)
+        
+if __name__ == '__main__':
+    from bunch import Bunch
+    job_data = Bunch({'action': '1000', 
+                'name': 'zzz',
+                'service': 'zato.server.service.internal.Ping',
+                'job_type': 'one_time', 
+                'is_active': True, 
+                'start_date': '2011-10-14 15:49:10', 
+                'extra': 'qwertyuiop'})
+    
+    s = Scheduler()
+    s.create(job_data)
+    import time
+    time.sleep(100)
+        
 '''
 # stdlib
 import copy, logging

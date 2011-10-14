@@ -51,8 +51,9 @@ log_invalid_tokens = config['log_invalid_tokens']
 class Broker(BaseBroker):
     def on_message(self, msg):
         
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'Got message [{0}]'.format(msg))
+        #if logger.isEnabledFor(TRACE1):
+        #    logger.log(TRACE1, 'Got message [{0}]'.format(msg))
+        logger.info('Got message [{0}]'.format(msg))
             
         msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
 
