@@ -19,6 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+""" 
+A base ZeroMQ message broker. Written without any dependecies on Zato code base 
+so it can be re-used outside of the Zato project.
+"""
+
 # stdlib
 import logging
 from traceback import format_exc

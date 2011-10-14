@@ -42,7 +42,7 @@ from bunch import Bunch
 # Zato
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
      ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP
-from zato.broker.client import BrokerClient
+from zato.broker.zato_client import BrokerClient
 from zato.common.util import TRACE1, zmq_names
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer, IPCMessage
