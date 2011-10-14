@@ -45,7 +45,7 @@ from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
 from zato.broker.zato_client import BrokerClient
 from zato.common.util import TRACE1, zmq_names
 from zato.common.odb import create_pool
-from zato.server.base import BaseServer, IPCMessage
+from zato.server.base import BaseServer
 from zato.server.channel.soap import server_soap_error
 
 logger = logging.getLogger(__name__)
@@ -116,8 +116,10 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the newly created threads.
     """
-    def __init__(self, broker_token, zmq_context, broker_push_addr, broker_sub_addr):
+    def __init__(self, message_handler, broker_token, zmq_context, 
+            broker_push_addr, broker_sub_addr):
         super(_TaskDispatcher, self).__init__()
+        self.message_handler = message_handler
         self.broker_token = broker_token
         self.zmq_context = zmq_context
         self.broker_push_addr = broker_push_addr
@@ -141,10 +143,12 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 running += 1
 
                 # It's safe to pass ZMQ contexts between threads.
-                thread_data = Bunch({'broker_token':self.broker_token,
-                               'zmq_context': self.zmq_context,
-                               'broker_push_addr': self.broker_push_addr,
-                               'broker_sub_addr': self.broker_sub_addr})
+                thread_data = Bunch({
+                    'message_handler': self.message_handler,
+                    'broker_token':self.broker_token,
+                    'zmq_context': self.zmq_context,
+                    'broker_push_addr': self.broker_push_addr,
+                    'broker_sub_addr': self.broker_sub_addr})
                 
                 start_new_thread(self.handlerThread, (thread_no, thread_data))
                 
@@ -168,7 +172,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         # that the message handler will be assigned to it later on.
         thread_data.broker_client = BrokerClient(self.broker_token,
                 thread_data.zmq_context, thread_data.broker_push_addr, 
-                thread_data.broker_sub_addr)
+                thread_data.broker_sub_addr, self.message_handler)
         thread_data.broker_client.start_subscriber()
         
         threads = self.threads
@@ -288,7 +292,6 @@ class ZatoHTTPListener(HTTPServer):
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
-            thread_ctx.broker_client.set_message_handler(self._on_broker_msg)
             response = self.server.soap_handler.handle(body, headers, thread_ctx)
 
         except HTTPException, e:
@@ -313,7 +316,7 @@ class ZatoHTTPListener(HTTPServer):
         task.write(response)
 
 
-class ParallelServer(object):
+class ParallelServer(BaseServer):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb_manager=None, singleton_server=None):
         self.host = host
@@ -343,34 +346,6 @@ class ParallelServer(object):
                 server.cluster.broker_start_port+1)
         
         if self.singleton_server:
-
-            """
-            # Singleton -> Parallel (pull)
-            name = zmq_names.inproc.singleton_to_parallel
-            pull_sing_to_para = ZMQPull(name, self.zmq_context, self.on_inproc_message_handler)
-            pull_sing_to_para.start()
-            self.zmq_items[name] = pull_sing_to_para
-            
-            # Parallel -> Singleton (pull)
-            name = zmq_names.inproc.parallel_to_singleton
-            pull_para_to_sing = ZMQPull(name, self.zmq_context, self.singleton_server.on_inproc_message_handler)
-            pull_para_to_sing.start()
-            self.zmq_items[name] = pull_para_to_sing
-            
-            # So that the .bind call in ZMQPull's above has enough time.
-            # TODO: Make it a configurable option.
-            time.sleep(0.05)
-            
-            # Parallel (push) -> Singleton
-            name = zmq_names.inproc.parallel_to_singleton
-            push_para_to_sing = ZMQPush(name, self.zmq_context)
-            self.zmq_items[name] = push_para_to_sing
-            
-            # Singleton (push) -> Parallel
-            name = zmq_names.inproc.singleton_to_parallel
-            push_sing_to_para = ZMQPush(name, self.zmq_context)
-            self.zmq_items[name] = push_sing_to_para
-            """
             
             self.service_store.read_internal_services()
             
@@ -417,8 +392,8 @@ class ParallelServer(object):
         
     def run_forever(self):
 
-        task_dispatcher = _TaskDispatcher(self.broker_token, self.zmq_context, 
-            self.broker_push_addr, self.broker_sub_addr)
+        task_dispatcher = _TaskDispatcher(self.on_broker_msg, self.broker_token, 
+            self.zmq_context,  self.broker_push_addr, self.broker_sub_addr)
         task_dispatcher.setThreadCount(60)
 
         self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
@@ -441,80 +416,4 @@ class ParallelServer(object):
                 self.singleton_server.broker_client.close()
                 
             self.zmq_context.term()
-            
-            # Zope
             task_dispatcher.shutdown()
-
-    def _on_broker_msg(self, msg):
-        self.logger.error(str(msg))
-            
-'''
-    def send_config_request(self, command, data=None, timeout=None):
-        """ Sends a synchronous IPC request to the SingletonServer.
-        """
-        request = self._create_ipc_config_request(command, data)
-        return self._send_config_request(request, self.partner_request_queues.values()[0], timeout)
-
-################################################################################
-
-    def _on_config_sql(self, msg):
-        """ A common method for handling all SQL connection pools-related config
-        requests. Must always be called from within a concrete, synchronized,
-        configuration handler (such as _on_config_EDIT_SQL_CONNECTION_POOL etc.)
-        """
-        command = msg.command
-        params = json.loads(msg.params["data"])
-
-        command_handler = getattr(self.sql_pool, "_on_config_" + command)
-        command_handler(params)
-
-        return ZATO_OK, ""
-
-    @synchronized()
-    def _on_config_EDIT_SQL_CONNECTION_POOL(self, msg):
-        """ Updates all of SQL connection pool's parameters, except for
-        the password.
-        """
-        return self._on_config_sql(msg)
-
-    @synchronized()
-    def _on_config_CREATE_SQL_CONNECTION_POOL(self, msg):
-        """ Creates a new SQL connection pool with no password set.
-        """
-        return self._on_config_sql(msg)
-
-    @synchronized()
-    def _on_config_DELETE_SQL_CONNECTION_POOL(self, msg):
-        """ Deletes an SQL connection pool.
-        """
-        return self._on_config_sql(msg)
-
-    @synchronized()
-    def _on_config_CHANGE_PASSWORD_SQL_CONNECTION_POOL(self, msg):
-        """ Deletes an SQL connection pool.
-        """
-        return self._on_config_sql(msg)
-
-################################################################################
-
-    @synchronized()
-    def _on_config_LOAD_EGG_SERVICES(self, msg):
-        """ Loads Zato services from a given .egg distribution and makes them
-        available for immediate use.
-        """
-        egg_path = json.loads(msg.params["data"])
-        self.service_store.import_services_from_egg(egg_path, self)
-
-        return ZATO_OK, ""
-
-################################################################################
-
-    @synchronized()
-    def _on_config_ADD_TO_WSS_NONCE_CACHE(self, msg):
-        wsse_nonce, recycle_time = json.loads(msg.params["data"])
-
-        # Note that the method is already synchronized.
-        self.wss_nonce_cache[wsse_nonce] = recycle_time
-
-        return ZATO_OK, ""
-'''

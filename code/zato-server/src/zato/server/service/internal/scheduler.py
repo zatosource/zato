@@ -213,7 +213,7 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         
         msg = {'action': SCHEDULER.CREATE, 'job_type': 'one_time',
-               'is_active':True, 'start_date':'2011-10-14 16:50:25',
+               'is_active':True, 'start_date':'2011-10-14 18:51:10',
                'extra':'qwertyuiop',
                'service': 'zato.server.service.internal.Ping',
                'name': 'zzz'
