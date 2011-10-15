@@ -128,6 +128,16 @@ ZATO_FIELD_OPERATORS = {
     'is-not-equal-to': '!=',
     }
 
+# How much various ZeroMQ ports are shifted with regards to the base port
+# configured for the cluster. The direction of ports reflected in the names 
+# is always assumed to be from the broker to clients.
+PORTS = Bunch()
+PORTS.BROKER_PARALLEL_PUSH = 0
+PORTS.BROKER_PARALLEL_PULL = 1
+PORTS.BROKER_PARALLEL_PUB = 2
+PORTS.BROKER_SINGLETON_PUSH = 50
+PORTS.BROKER_SINGLETON_PULL = 51
+
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):
         self.path = path

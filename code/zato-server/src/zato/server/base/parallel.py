@@ -34,8 +34,8 @@ import zmq
 from bunch import Bunch
 
 # Zato
-from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
-     ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP
+from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
+     ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP)
 from zato.common.util import TRACE1, zmq_names
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer
@@ -204,19 +204,19 @@ class ParallelServer(BaseServer):
         
         self.broker_token = server.cluster.broker_token
         self.broker_push_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port)
+                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PUSH)
         self.broker_pull_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port+1)
+                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PULL)
         
         if self.singleton_server:
             
             self.service_store.read_internal_services()
             
             kwargs={'zmq_context':self.zmq_context,
-                    'broker_host': server.cluster.broker_host,
-                    'broker_push_port': server.cluster.broker_start_port+2,
-                    'broker_sub_port': server.cluster.broker_start_port+3,
-                    'broker_token':self.broker_token,
+            'broker_host': server.cluster.broker_host,
+            'broker_push_port': server.cluster.broker_start_port + PORTS.BROKER_SINGLETON_PUSH,
+            'broker_pull_port': server.cluster.broker_start_port + PORTS.BROKER_SINGLETON_PULL,
+            'broker_token':self.broker_token,
                     }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     

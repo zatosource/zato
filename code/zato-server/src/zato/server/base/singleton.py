@@ -51,13 +51,13 @@ class SingletonServer(BaseServer):
     
     def __init__(self, parallel_server=None, scheduler=None, broker_token=None, 
                  zmq_context=None, broker_host=None, broker_push_port=None, 
-                 broker_sub_port=None):
+                 broker_pull_port=None):
         self.parallel_server = parallel_server
         self.scheduler = scheduler
         self.broker_token = broker_token
         self.broker_host = broker_host
         self.broker_push_port = broker_push_port
-        self.broker_sub_port = broker_sub_port
+        self.broker_pull_port = broker_pull_port
         self.zmq_context = zmq_context
 
     def run(self, *ignored_args, **kwargs):
@@ -65,12 +65,12 @@ class SingletonServer(BaseServer):
                                         self.__class__.__name__, hex(id(self))))
 
         for name in('broker_token', 'zmq_context', 'broker_host', 'broker_push_port', 
-                    'broker_sub_port'):
+                    'broker_pull_port'):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
                 
         self.broker_push_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_port)
-        self.broker_sub_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_sub_port)
+        self.broker_sub_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_pull_port)
         
         # Initialize scheduler.
         self.scheduler.singleton = self
