@@ -385,7 +385,8 @@ function edit(id) {
         var id_record = record.getData("id");
         if(id_record && id_record == id) {
         
-            is_active = record.getData("is_active") ? 'on' : ''
+			// TODO: This == 'Yes' thing isn't exactly anything like it should be done.
+			var is_active = record.getData('is_active') == 'Yes' ? 'on' : ''
             
             $("id_edit-id").value = record.getData("id");
             $("id_edit-name").value = record.getData("name");
