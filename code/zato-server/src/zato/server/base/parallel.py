@@ -42,8 +42,6 @@ from zato.server.base import BaseServer
 from zato.server.base._overridden import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
 from zato.server.channel.soap import server_soap_error
 
-logger = logging.getLogger(__name__)
-
 def wrap_error_message(url_type, msg):
     """ Wraps an error message in a transport-specific envelope.
     """
@@ -183,12 +181,12 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BaseServer):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb_manager=None, singleton_server=None):
+                 odb=None, singleton_server=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
-        self.odb_manager = odb_manager
+        self.odb = odb
         self.singleton_server = singleton_server
         
         self.zmq_items = {}
@@ -223,7 +221,18 @@ class ParallelServer(BaseServer):
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     
     def _after_init_accepted(self, server):
-        pass
+        if self.singleton_server:
+            for(_, name, is_active, job_type, start_date, extra, service,\
+                _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
+                    in self.odb.get_job_list(server.cluster.id):
+                if is_active:
+                    job_data = Bunch({'name':name, 'is_active':is_active, 
+                        'job_type':job_type, 'start_date':start_date, 
+                        'extra':extra, 'service':service,  'weeks':weeks, 
+                        'days':days, 'hours':hours, 'minutes':minutes, 
+                        'seconds':seconds,  'repeats':repeats, 
+                        'cron_definition':cron_definition})
+                    self.singleton_server.scheduler.create_edit('create', job_data)
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -281,6 +290,7 @@ class ParallelServer(BaseServer):
                 self.singleton_server.broker_client.close()
                 
             self.zmq_context.term()
+            self.odb.close()
             task_dispatcher.shutdown()
 
 # ##############################################################################

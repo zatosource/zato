@@ -38,6 +38,7 @@ from zato.common import path, scheduler_date_time_format, \
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
+from zato.common.odb.query import job_list
 from zato.server.service.internal import _get_params, AdminService
 
 PREDEFINED_CRON_DEFINITIONS = {
@@ -238,21 +239,8 @@ class GetList(AdminService):
             
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
+            definitions = job_list(session, params['cluster_id'])
             
-            definitions = session.query(Job.id, Job.name, Job.is_active,
-                Job.job_type, Job.start_date,  Job.extra,
-                Service.name.label('service_name'), Service.id.label('service_id'),
-                IntervalBasedJob.weeks, IntervalBasedJob.days,
-                IntervalBasedJob.hours, IntervalBasedJob.minutes, 
-                IntervalBasedJob.seconds, IntervalBasedJob.repeats,
-                CronStyleJob.cron_definition).\
-                    outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
-                    outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
-                    filter(Cluster.id==params['cluster_id']).\
-                    filter(Job.service_id==Service.id).\
-                    order_by('job.name').\
-                    all()
-    
             for definition in definitions:
     
                 definition_elem = Element('definition')
