@@ -32,7 +32,6 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.broker.client import BrokerClient
 from zato.common import path, scheduler_date_time_format, \
      scheduler_date_time_format, ZatoException, ZATO_OK, zato_path
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
