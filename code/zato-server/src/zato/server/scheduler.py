@@ -36,6 +36,11 @@ logger = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 
+def _start_date(job_data):
+    if isinstance(job_data.start_date, basestring):
+        return datetime.strptime(job_data.start_date, scheduler_date_time_format)
+    return job_data.start_date
+
 class Scheduler(object):
     """ The Zato's job scheduler. All of the operations assume the data's being
     first validated and sanitized by relevant Zato public API services.
@@ -81,7 +86,7 @@ class Scheduler(object):
     def create_one_time(self, job_data):
         """ Schedules the execution of a one-time job.
         """
-        start_date = datetime.strptime(job_data.start_date, scheduler_date_time_format)
+        start_date = _start_date(job_data)
         self._sched.add_date_job(self._on_job_execution, start_date, 
             [job_data.name, job_data.service, job_data.extra], name=job_data.name)
         
@@ -90,7 +95,7 @@ class Scheduler(object):
     def create_interval_based(self, job_data):
         """ Schedules the execution of an interval-based job.
         """
-        start_date = datetime.strptime(job_data.start_date, scheduler_date_time_format)
+        start_date = _start_date(job_data)
         self._sched.add_interval_job(self._on_job_execution, 
             job_data.weeks, job_data.days, job_data.hours, job_data.minutes, 
             job_data.seconds, start_date, [job_data.name, job_data.service, job_data.extra], 
@@ -101,7 +106,7 @@ class Scheduler(object):
     def create_cron_style(self, job_data):
         """ Schedules the execution of a one-time job.
         """
-        start_date = datetime.strptime(job_data.start_date, scheduler_date_time_format)
+        start_date = _start_date(job_data)
         minute, hour, day_of_month, month, day_of_week = self._parse_cron(job_data.cron_definition)
         self._sched.add_cron_job(self._on_job_execution, 
             year=None, month=month, day=day_of_month, hour=hour,

@@ -31,6 +31,7 @@ from sqlalchemy.exc import IntegrityError
 from zato.common.odb.model import ChannelURLDefinition, ChannelURLSecurity, \
      Cluster, DeployedService, SecurityDefinition, Server, Service, \
      TechnicalAccount
+from zato.common.odb.query import job_list
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,9 @@ class ODBManager(object):
         
     def session(self):
         return self._Session()
+    
+    def close(self):
+        self._session.close()
         
     '''
     def query(self, *args, **kwargs):
@@ -182,3 +186,8 @@ class ODBManager(object):
             msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
+            
+    def get_job_list(self, cluster_id):
+        """ Returns a list of jobs defined on the given cluster .
+        """
+        return job_list(self._session, cluster_id)
