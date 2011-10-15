@@ -281,15 +281,17 @@ class Create(AdminService):
     """ Creates a new scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        return _create_edit('create', kwargs.get('payload'), self.logger, 
-            self.server.odb.session(), kwargs['thread_ctx'].broker_client)
+        with closing(self.server.odb.session()) as session:
+            return _create_edit('create', kwargs.get('payload'), self.logger, 
+                session, kwargs['thread_ctx'].broker_client)
         
 class Edit(AdminService):
     """ Update a new scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        return _create_edit('edit', kwargs.get('payload'), self.logger, 
-            self.server.odb.session(), kwargs['thread_ctx'].broker_client)
+        with closing(self.server.odb.session()) as session:
+            return _create_edit('edit', kwargs.get('payload'), self.logger, 
+                session, kwargs['thread_ctx'].broker_client)
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
