@@ -37,12 +37,11 @@ class BrokerClient(_BrokerClient):
                     on_message_handler, message_handler_args)
         self.token = token
         
-    def send(self, msg, to_parallel=True):
-        msg_type = MESSAGE_TYPE.TO_PARALLEL if to_parallel else MESSAGE_TYPE.TO_SINGLETON
+    def send(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_THREAD):
         msg = '{0}{1}{2}'.format(msg_type, self.token, msg)
         return self._push.send(msg)
         
-    def send_json(self, msg, to_parallel=True):
+    def send_json(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_THREAD):
         msg = dumps(msg)
-        return self.send(msg, to_parallel)
+        return self.send(msg, msg_type)
         

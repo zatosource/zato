@@ -39,6 +39,7 @@ CONFIG_MESSAGE_PREFIX = 'ZATO_CONFIG'
 
 msg_socket = {
     MESSAGE_TYPE.TO_PARALLEL: 'parallel',
+    MESSAGE_TYPE.TO_PARALLEL_THREAD: 'parallel',
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
 }
 
@@ -75,7 +76,10 @@ class Broker(BaseBroker):
                 logger.error(err_msg)
                 raise Exception(err_msg)
             
-            socket = self.sockets[msg_socket[msg_type]].push
+            if msg_type == MESSAGE_TYPE.TO_PARALLEL:
+                socket = self.sockets[msg_socket[msg_type]].pub
+            else:
+                socket = self.sockets[msg_socket[msg_type]].push
             
             # We don't want the subscribers to know what the original token was.
             msg = bytes(msg_shadowed)

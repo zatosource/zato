@@ -32,24 +32,24 @@ from traceback import format_exc
 # ZeroMQ
 import zmq
 
-# Zato
-from zato.common.broker_message import MESSAGE_TYPE
-
 logger = logging.getLogger(__name__)
 
-class ZMQPull(object):
-    """ A ZeroMQ subscriber. Runs in a background thread and invokes the handler
-    on each incoming message.
+class ZMQPullSub(object):
+    """ A ZeroMQ client which pulls and subscribe to messages. Runs in a background 
+    thread and invokes the handler on each incoming message.
     """
     
-    def __init__(self, name, zmq_context, address, on_message_handler, 
-                 keep_running=True, message_handler_args=None):
+    def __init__(self, name, zmq_context, pull_address, sub_address, 
+                 on_message_handler,  keep_running=True, message_handler_args=None):
         self.name = name
         self.zmq_context = zmq_context
-        self.address = address
+        self.pull_address = pull_address
+        self.sub_address = sub_address
         self.on_message_handler = on_message_handler
         self.message_handler_args = message_handler_args
         self.keep_running = keep_running
+        self.pull_socket = None
+        self.sub_socket = None
 
     # Custom subclasses may wish to override the two hooks below.
     def on_before_msg_handler(self, msg, args):
@@ -61,28 +61,48 @@ class ZMQPull(object):
     def start(self):
         Thread(target=self.listen).start()
         
-    def close(self, socket=None):
+    def close(self, pull_socket=None, sub_socket=None):
         self.keep_running = False
-        self.socket.close()
+        ps = pull_socket if pull_socket else self.pull_socket
+        ss = pull_socket if sub_socket else self.sub_socket
+        
+        if ps:
+            ps.close()
+        if ss:
+            ss.close()
     
     def listen(self):
-        logger.info('Starting [{0}]/[{1}]/[{2}]'.format(
-            self.name, self.__class__.__name__, self.address))
-        
-        self.socket = self.zmq_context.socket(zmq.PULL)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.connect(self.address)
         
         poller = zmq.Poller()
-        poller.register(self.socket, zmq.POLLIN)
+        
+        if self.pull_address:
+            self.pull_socket = self.zmq_context.socket(zmq.PULL)
+            self.pull_socket.setsockopt(zmq.LINGER, 0)
+            self.pull_socket.connect(self.pull_address)
+            poller.register(self.pull_socket, zmq.POLLIN)
+            
+            logger.debug('Starting PULL [{0}/{1}]'.format(
+                self.name, self.pull_address))
+            
+        if self.sub_address:
+            self.sub_socket = self.zmq_context.socket(zmq.SUB)
+            self.sub_socket.setsockopt(zmq.LINGER, 0)
+            self.sub_socket.connect(self.sub_address)
+            self.sub_socket.setsockopt(zmq.SUBSCRIBE, b'')
+            poller.register(self.sub_socket, zmq.POLLIN)
+            
+            logger.debug('Starting SUB [{0}/{1}]'.format(
+                self.name, self.sub_address))
+            
+        _socks = self.pull_socket), self.sub_socket)
         
         while self.keep_running:
             try:
-                socks = dict(poller.poll())
-                if socks.get(self.socket) == zmq.POLLIN:
-                    msg = self.socket.recv()
+                poll_socks = dict(poller.poll())
+                for id, sock in _socks:
+                    if poll_socks.get(sock) == zmq.POLLIN:
+                        msg = sock.recv()
             except Exception, e:
-                
                 # It's OK and needs not to disturb the user so log it only
                 # in the DEBUG level.
                 if isinstance(e, zmq.ZMQError) and e.errno == zmq.ETERM:
@@ -138,10 +158,10 @@ class BrokerClient(object):
     the messages onto the broker.
     """
     def __init__(self, name, zmq_context, push_address, pull_address, 
-                 on_message_handler=None, message_handler_args=None):
+                 sub_address,  on_message_handler=None, message_handler_args=None):
         self._push = ZMQPush(name, zmq_context, push_address)
-        self._pull = ZMQPull(name, zmq_context, pull_address, on_message_handler,
-                             True,  message_handler_args)
+        self._pull = ZMQPullSub(name, zmq_context, pull_address, sub_address,
+                                on_message_handler, True,  message_handler_args)
         
     def set_message_handler(self, handler):
         self._pull.on_message_handler = handler

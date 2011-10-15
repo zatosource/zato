@@ -36,15 +36,16 @@ import zmq
 
 logger = logging.getLogger(__name__)
 
-class SocketPair(object):
-    def __init__(self, name=None, pull=None, push=None):
+class SocketData(object):
+    def __init__(self, name=None, pull=None, push=None, pub=None):
         self.name = name
         self.pull = pull
         self.push = push
+        self.pub = pub
 
 class BaseBroker(object):
-    def __init__(self, *pairs):
-        self.pairs = pairs
+    def __init__(self, *socket_data):
+        self.socket_data = socket_data
         self.context = zmq.Context()
         self.keep_running = True
         self.sockets = Bunch()
@@ -55,16 +56,21 @@ class BaseBroker(object):
         """ Initialize all objects first.
         """
         
-        for pair in self.pairs:
+        for item in self.socket_data:
             sock_pull = self.context.socket(zmq.PULL)
-            sock_pull.bind(pair.pull)
+            sock_pull.bind(item.pull)
             
             sock_push = self.context.socket(zmq.PUSH)
-            sock_push.bind(pair.push)
+            sock_push.bind(item.push)
             
-            self.sockets[pair.name] = Bunch()
-            self.sockets[pair.name].pull = sock_pull
-            self.sockets[pair.name].push = sock_push
+            self.sockets[item.name] = Bunch()
+            self.sockets[item.name].pull = sock_pull
+            self.sockets[item.name].push = sock_push
+            
+            if item.pub:
+                sock_pub = self.context.socket(zmq.PUB)
+                sock_pub.bind(item.pub)
+                self.sockets[item.name].pub = sock_pub
             
             self.pull_sockets.append(sock_pull)
             self.poller.register(sock_pull, zmq.POLLIN)
@@ -83,9 +89,11 @@ class BaseBroker(object):
                 logger.error(msg)
                 
         # Sockets ..
-        for pair in self.sockets.values():
-            pair.pull.close()
-            pair.push.close()
+        for item in self.sockets.values():
+            item.pull.close()
+            item.push.close()
+            if 'pub' in item:
+                item.pub.close()
             
         # .. and the context.
         self.context.term()

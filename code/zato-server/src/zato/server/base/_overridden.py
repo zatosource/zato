@@ -87,13 +87,14 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     the newly created threads.
     """
     def __init__(self, message_handler, broker_token, zmq_context, 
-            broker_push_addr, broker_pull_addr):
+            broker_push_addr, broker_pull_addr, broker_sub_addr):
         super(_TaskDispatcher, self).__init__()
         self.message_handler = message_handler
         self.broker_token = broker_token
         self.zmq_context = zmq_context
         self.broker_push_addr = broker_push_addr
         self.broker_pull_addr = broker_pull_addr
+        self.broker_sub_addr = broker_sub_addr
         
     def setThreadCount(self, count):
         """ Mostly copy & paste from the base classes except for the part
@@ -118,7 +119,9 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                     'broker_token':self.broker_token,
                     'zmq_context': self.zmq_context,
                     'broker_push_addr': self.broker_push_addr,
-                    'broker_pull_addr': self.broker_pull_addr})
+                    'broker_pull_addr': self.broker_pull_addr,
+                    'broker_sub_addr': self.broker_sub_addr,
+                })
                 
                 start_new_thread(self.handlerThread, (thread_no, thread_data))
                 
@@ -140,9 +143,10 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
 
         # We're in a new thread now so we can start the broker client though note
         # that the message handler will be assigned to it later on.
-        thread_data.broker_client = BrokerClient('parallel', self.broker_token,
+        thread_data.broker_client = BrokerClient('parallel/thread', self.broker_token,
                 thread_data.zmq_context, thread_data.broker_push_addr, 
-                thread_data.broker_pull_addr, self.message_handler)
+                thread_data.broker_pull_addr, self.broker_sub_addr,
+                self.message_handler)
         
         args = Bunch({'broker_client': thread_data.broker_client})
         thread_data.broker_client.set_message_handler_args(args)
