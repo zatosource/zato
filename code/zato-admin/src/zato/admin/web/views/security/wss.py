@@ -82,6 +82,8 @@ def index(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
         zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.cluster_id = cluster_id
 
         _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
                 'zato:security.wss.get-list', zato_message)
