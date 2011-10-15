@@ -257,20 +257,20 @@ class GetList(AdminService):
     
                 definition_elem = Element('definition')
                 definition_elem.id = definition.id
-                definition_elem.name = definition.name
+                definition_elem.name = definition.name.decode('utf-8')
                 definition_elem.is_active = definition.is_active
                 definition_elem.job_type = definition.job_type
                 definition_elem.start_date = definition.start_date
-                definition_elem.extra = definition.extra
+                definition_elem.extra = definition.extra.decode('utf-8')
                 definition_elem.service_id = definition.service_id
-                definition_elem.service_name = definition.service_name
+                definition_elem.service_name = definition.service_name.decode('utf-8')
                 definition_elem.weeks = definition.weeks if definition.weeks else ''
                 definition_elem.days = definition.days if definition.days else ''
                 definition_elem.hours = definition.hours if definition.hours else ''
                 definition_elem.minutes = definition.minutes if definition.minutes else ''
                 definition_elem.seconds = definition.seconds if definition.seconds else ''
                 definition_elem.repeats = definition.repeats if definition.repeats else ''
-                definition_elem.cron_definition = (definition.cron_definition if 
+                definition_elem.cron_definition = (definition.cron_definition.decode('utf-8') if 
                     definition.cron_definition else '')
                 
                 definition_list.append(definition_elem)
