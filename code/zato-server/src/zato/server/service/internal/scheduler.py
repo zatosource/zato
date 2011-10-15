@@ -202,11 +202,10 @@ def _create_edit(action, payload, logger, session, broker_client):
                     msg[param] = int(value) if value else 0
             elif job_type == 'cron_style':
                 msg['cron_definition'] = cron_definition
-            
-            broker_client.send_json(msg, False)
         else:
-            msg = 'Job [{0}] is not active, not scheduling it'.format(name)
-            logger.debug(msg)
+            msg = {'action': SCHEDULER.DELETE, 'name': name}
+            
+        broker_client.send_json(msg, False)
         
             
     except Exception, e:
