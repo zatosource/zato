@@ -94,7 +94,7 @@ class Scheduler(object):
         self._sched.add_interval_job(self._on_job_execution, 
             job_data.weeks, job_data.days, job_data.hours, job_data.minutes, 
             job_data.seconds, start_date, [job_data.name, job_data.service, job_data.extra], 
-            name=job_data.name)
+            name=job_data.name, max_runs=job_data.repeats)
         
         logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))
         
