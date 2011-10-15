@@ -22,16 +22,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import asyncore, httplib, json, logging, socket, time
 from hashlib import sha256
-from thread import start_new_thread
 from threading import Thread
-from traceback import format_exc
 
-# Zope
+# zope.server
 from zope.server.http.httpserver import HTTPServer
-from zope.server.http.httpserverchannel import HTTPServerChannel
-from zope.server.http.httptask import HTTPTask
-from zope.server.serverchannelbase import task_lock
-from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # ZeroMQ
 import zmq
@@ -42,10 +36,10 @@ from bunch import Bunch
 # Zato
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
      ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP
-from zato.broker.zato_client import BrokerClient
 from zato.common.util import TRACE1, zmq_names
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer
+from zato.server.base._overridden import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
 from zato.server.channel.soap import server_soap_error
 
 logger = logging.getLogger(__name__)
@@ -68,139 +62,6 @@ class HTTPException(Exception):
         self.status = status
         self.reason = reason
         
-class _HTTPTask(HTTPTask):
-    """ An HTTP task which knows how to uses ZMQ sockets.
-    """
-    def service(self, thread_data):
-        try:
-            try:
-                self.start()
-                self.channel.server.executeRequest(self, thread_data)
-                self.finish()
-            except socket.error:
-                self.close_on_finish = 1
-                if self.channel.adj.log_socket_errors:
-                    raise
-        finally:
-            if self.close_on_finish:
-                self.channel.close_when_done()
-                
-class _HTTPServerChannel(HTTPServerChannel):
-    """ A subclass which uses Zato's own _HTTPTasks.
-    """
-    task_class = _HTTPTask
-    
-    def service(self, thread_data):
-        """Execute all pending tasks"""
-        while True:
-            task = None
-            task_lock.acquire()
-            try:
-                if self.tasks:
-                    task = self.tasks.pop(0)
-                else:
-                    # No more tasks
-                    self.running_tasks = False
-                    self.set_async()
-                    break
-            finally:
-                task_lock.release()
-            try:
-                task.service(thread_data)
-            except:
-                # propagate the exception, but keep executing tasks
-                self.server.addTask(self)
-                raise
-        
-class _TaskDispatcher(ThreadedTaskDispatcher):
-    """ A task dispatcher which knows how to pass custom arguments down to
-    the newly created threads.
-    """
-    def __init__(self, message_handler, broker_token, zmq_context, 
-            broker_push_addr, broker_pull_addr):
-        super(_TaskDispatcher, self).__init__()
-        self.message_handler = message_handler
-        self.broker_token = broker_token
-        self.zmq_context = zmq_context
-        self.broker_push_addr = broker_push_addr
-        self.broker_pull_addr = broker_pull_addr
-        
-    def setThreadCount(self, count):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-        mlock = self.thread_mgmt_lock
-        mlock.acquire()
-        try:
-            threads = self.threads
-            thread_no = 0
-            running = len(threads) - self.stop_count
-            while running < count:
-                # Start threads.
-                while thread_no in threads:
-                    thread_no = thread_no + 1
-                threads[thread_no] = 1
-                running += 1
-
-                # It's safe to pass ZMQ contexts between threads.
-                thread_data = Bunch({
-                    'message_handler': self.message_handler,
-                    'broker_token':self.broker_token,
-                    'zmq_context': self.zmq_context,
-                    'broker_push_addr': self.broker_push_addr,
-                    'broker_pull_addr': self.broker_pull_addr})
-                
-                start_new_thread(self.handlerThread, (thread_no, thread_data))
-                
-                thread_no = thread_no + 1
-            if running > count:
-                # Stop threads.
-                to_stop = running - count
-                self.stop_count += to_stop
-                for n in range(to_stop):
-                    self.queue.put(None)
-                    running -= 1
-        finally:
-            mlock.release()
-            
-    def handlerThread(self, thread_no, thread_data):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-
-        # We're in a new thread now so we can start the broker client though note
-        # that the message handler will be assigned to it later on.
-        thread_data.broker_client = BrokerClient('parallel', self.broker_token,
-                thread_data.zmq_context, thread_data.broker_push_addr, 
-                thread_data.broker_pull_addr, self.message_handler)
-        
-        args = Bunch({'broker_client': thread_data.broker_client})
-        thread_data.broker_client.set_message_handler_args(args)
-        
-        thread_data.broker_client.start_subscriber()
-        
-        threads = self.threads
-        try:
-            while threads.get(thread_no):
-                task = self.queue.get()
-                if task is None:
-                    # Special value: kill this thread.
-                    break
-                try:
-                    task.service(thread_data)
-                except Exception, e:
-                    logger.error('Exception during task {0}'.format(
-                        format_exc(e)))
-        finally:
-            mlock = self.thread_mgmt_lock
-            mlock.acquire()
-            try:
-                self.stop_count -= 1
-                try: del threads[thread_no]
-                except KeyError: pass
-            finally:
-                mlock.release()
-            
 class ZatoHTTPListener(HTTPServer):
     
     channel_class = _HTTPServerChannel
