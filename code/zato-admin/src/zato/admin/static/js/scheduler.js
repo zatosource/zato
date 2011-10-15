@@ -434,7 +434,8 @@ function edit(job_type, job_id) {
 		var id = record.getData('id');
 		if(id && id == job_id) {
 		
-			var is_active = record.getData('is_active') ? 'on' : ''
+			// TODO: This == 'Yes' thing isn't exactly anything like it should be done.
+			var is_active = record.getData('is_active') == 'Yes' ? 'on' : ''
 
 			$(prefix + 'id').value = record.getData('id');
 			$(prefix + 'name').value = record.getData('name');
