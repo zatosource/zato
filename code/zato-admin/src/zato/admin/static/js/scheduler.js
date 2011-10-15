@@ -33,7 +33,8 @@ Job.prototype.to_record = function() {
     var record = new Array();
 	record['selection'] = '<input type="checkbox" />';
     record['name'] = this.name;
-    record['is_active'] = this.boolean_html(this.is_active);
+	record['is_active'] = this.is_active;
+    record['is_active_text'] = this.boolean_html(this.is_active);
 	record['job_type'] = this.job_type;
     record['job_type_friendly'] = friendly_names.get(this.job_type);
     record['definition_text'] = this.definition_text;
@@ -55,6 +56,7 @@ Job.prototype.add_row = function(object, data_dt) {
     added_record.setData('id', object.id);
     added_record.setData('name', object.name);
     added_record.setData('is_active', object.is_active);
+	added_record.setData('is_active_text', object.boolean_html(object.is_active));
 	added_record.setData('start_date', object.start_date);
     added_record.setData('job_type', object.job_type);
 	added_record.setData('job_type_friendly', friendly_names.get(object.job_type));
@@ -434,8 +436,7 @@ function edit(job_type, job_id) {
 		var id = record.getData('id');
 		if(id && id == job_id) {
 		
-			// TODO: This == 'Yes' thing isn't exactly anything like it should be done.
-			var is_active = record.getData('is_active') == 'Yes' ? 'on' : ''
+			var is_active = to_bool(record.getData('is_active'));
 
 			$(prefix + 'id').value = record.getData('id');
 			$(prefix + 'name').value = record.getData('name');
@@ -499,7 +500,8 @@ function setup_edit_dialog_one_time() {
 			if(id && id == object.id) {
 
 				record.setData('name', object.name);
-				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('is_active', object.is_active);
+				record.setData('is_active_text', object.boolean_html(object.is_active));
 				record.setData('service_text', object.service_text());
 				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
@@ -587,7 +589,8 @@ function setup_edit_dialog_interval_based() {
 			if(id && id == object.id) {
 
 				record.setData('name', object.name);
-				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('is_active', object.is_active);
+				record.setData('is_active_text', object.boolean_html(object.is_active));
 				record.setData('service_text', object.service_text());
 				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
@@ -676,7 +679,8 @@ function setup_edit_dialog_cron_style() {
 			if(id && id == object.id) {
 
 				record.setData('name', object.name);
-				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('is_active', object.is_active);
+				record.setData('is_active_text', object.boolean_html(object.is_active));
 				record.setData('service_text', object.service_text());
 				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
