@@ -290,8 +290,22 @@ function setup_create_dialog_interval_based() {
         object.definition_text = json.definition_text;
 		object.start_date = $('id_create-interval_based-start_date').value;
 		object.extra = $('id_create-interval_based-extra').value;
+		object.weeks = $('id_create-interval_based-weeks').value;
+		object.days = $('id_create-interval_based-days').value;
+		object.hours = $('id_create-interval_based-hours').value;
+		object.minutes = $('id_create-interval_based-minutes').value;
+		object.seconds = $('id_create-interval_based-seconds').value;
+		object.repeats = $('id_create-interval_based-repeats').value;
 		
-        object.add_row(object, data_dt);
+		var record = object.add_row(object, data_dt);
+		
+		record.setData('weeks', object.weeks);
+		record.setData('days', object.days);
+		record.setData('hours', object.hours);
+		record.setData('minutes', object.minutes);
+		record.setData('seconds', object.seconds);
+		record.setData('repeats', object.repeats);
+		
         create_interval_based_dialog.hide();
         $('create-form-interval_based').reset();
         create_interval_based_validation.reset();
@@ -554,6 +568,12 @@ function setup_edit_dialog_interval_based() {
         object.service = $('id_edit-interval_based-service').value;
 		object.extra = $('id_edit-interval_based-extra').value;
         object.definition_text = json.definition_text;
+		object.weeks = $('id_edit-interval_based-weeks').value;
+		object.days = $('id_edit-interval_based-days').value;
+		object.hours = $('id_edit-interval_based-hours').value;
+		object.minutes = $('id_edit-interval_based-minutes').value;
+		object.seconds = $('id_edit-interval_based-seconds').value;
+		object.repeats = $('id_edit-interval_based-repeats').value;
 		
 		edit_interval_based_dialog.hide();
 		$('edit-form-interval_based').reset();
@@ -570,6 +590,12 @@ function setup_edit_dialog_interval_based() {
 				record.setData('service_text', object.service_text());
 				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
+				record.setData('weeks', object.weeks);
+				record.setData('days', object.days);
+				record.setData('hours', object.hours);
+				record.setData('minutes', object.minutes);
+				record.setData('seconds', object.seconds);
+				record.setData('repeats', object.repeats);
 				
 				data_dt.render();
 			}
