@@ -34,6 +34,7 @@ import zmq
 from bunch import Bunch
 
 # Zato
+from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP)
 from zato.common.util import TRACE1, zmq_names
@@ -181,13 +182,14 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BaseServer):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb=None, singleton_server=None):
+                 odb=None, singleton_server=None, broker_client=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
         self.odb = odb
         self.singleton_server = singleton_server
+        self.broker_client = broker_client
         
         self.zmq_items = {}
         
@@ -207,6 +209,8 @@ class ParallelServer(BaseServer):
                 server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PUSH)
         self.broker_pull_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PULL)
+        self.broker_sub_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_SUB)
         
         if self.singleton_server:
             
@@ -233,6 +237,11 @@ class ParallelServer(BaseServer):
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
+                    
+        self.broker_client = BrokerClient('parallel', self.broker_token, 
+            self.zmq_context, self.broker_push_addr, None,
+            self.broker_sub_addr, self.on_broker_msg)
+        self.broker_client.start_subscriber()
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -267,7 +276,8 @@ class ParallelServer(BaseServer):
     def run_forever(self):
 
         task_dispatcher = _TaskDispatcher(self.on_broker_msg, self.broker_token, 
-            self.zmq_context,  self.broker_push_addr, self.broker_pull_addr)
+            self.zmq_context,  self.broker_push_addr, self.broker_pull_addr,
+            None)
         task_dispatcher.setThreadCount(60)
 
         self.logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))

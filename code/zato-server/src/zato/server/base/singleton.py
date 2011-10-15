@@ -70,13 +70,14 @@ class SingletonServer(BaseServer):
                 setattr(self, name, kwargs[name])
                 
         self.broker_push_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_port)
-        self.broker_sub_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_pull_port)
+        self.broker_pull_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_pull_port)
         
         # Initialize scheduler.
         self.scheduler.singleton = self
         
         self.broker_client = BrokerClient('singleton', self.broker_token, 
-            self.zmq_context, self.broker_push_addr,  self.broker_sub_addr, self.on_broker_msg)
+            self.zmq_context, self.broker_push_addr,  self.broker_pull_addr, 
+            None, self.on_broker_msg)
         self.broker_client.start_subscriber()
         
         '''
