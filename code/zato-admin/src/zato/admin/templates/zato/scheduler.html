@@ -104,7 +104,8 @@
                     {key:'id', label:'id', hidden:true},
                     {key:'selection', label:'&nbsp;', sortable:false},
                     {key:'name', label:'Name', sortable:true},
-                    {key:'is_active', label:'Active', sortable:true},
+                    {key:'is_active', label:'is_active', hidden:true},
+                    {key:'is_active_text', label:'Active', sortable:true},
                     {key:'job_type_friendly', label:'Type', sortable:true},
                     {key:'definition_text', label:'Definition', sortable:false},
                     {key:'service_text', label:'Service', sortable:true},
@@ -132,6 +133,7 @@
                             {key:'selection'},
                             {key:'name'},
                             {key:'is_active'},
+                            {key:'is_active_text'},
                             {key:'job_type_friendly'},
                             {key:'definition_text'},
                             {key:'service_text'},
@@ -190,6 +192,8 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                     </tr>
                 </thead>
 
@@ -200,7 +204,8 @@
                         <td>{{ job.id }}</td>
                         <td><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
-                        <td>{% if job.is_active %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ job.is_active }}</td>
+                        <td>{{ job.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition_text|safe }}</td>
                         <td><a href="{% url service %}?service={{ job.service_name }}">{{ job.service_name }}</a></td>
