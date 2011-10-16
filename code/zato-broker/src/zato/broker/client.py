@@ -53,7 +53,7 @@ class ZMQPullSub(object):
         self.sub_handler_args = sub_handler_args
         self.pull_socket = None
         self.sub_socket = None
-
+        
     # Custom subclasses may wish to override the two hooks below.
     def on_before_msg_handler(self, msg, args):
         pass

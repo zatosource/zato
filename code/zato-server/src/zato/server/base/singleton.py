@@ -81,7 +81,7 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client.zmq_context = self.zmq_context
         self.broker_client.push_addr = self.broker_push_addr
         self.broker_client.pull_addr = self.broker_pull_addr
-        self.broker_client.on_pull_handler = self.on_broker_pull_msg
+        self.broker_client.on_pull_handler = self.on_broker_msg
         self.broker_client.init()
         self.broker_client.start()
         

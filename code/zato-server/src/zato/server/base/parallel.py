@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, httplib, json, logging, socket, time
 from hashlib import sha256
 from threading import Thread
+from traceback import format_exc
 
 # zope.server
 from zope.server.http.httpserver import HTTPServer
@@ -147,7 +148,7 @@ class ZatoHTTPListener(HTTPServer):
             else:
                 msg = ("The URL [{0}] doesn't exist or has no security "
                       "configuration assigned").format(task.request_data.uri)
-                self.logger.error(msg)
+                self.logger.info(msg)
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
@@ -271,10 +272,15 @@ class ParallelServer(BrokerMessageReceiver):
         """
         
     def run_forever(self):
+        
+        sec_config = Bunch()
+        
+        # HTTP Basic Auth
+        #hba_config = self.odb.get_job_list(self, cluster_id):
 
-        task_dispatcher = _TaskDispatcher(self.on_broker_pull_msg, 1, self.broker_token, 
+        task_dispatcher = _TaskDispatcher(self.on_broker_msg, 1, self.broker_token, 
             self.zmq_context,  self.broker_push_addr, self.broker_pull_addr,
-            self.broker_sub_addr)
+            self.broker_sub_addr, sec_config)
         task_dispatcher.setThreadCount(4)
 
         self.logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
@@ -316,5 +322,3 @@ class ParallelServer(BrokerMessageReceiver):
             msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
             self.logger.debug(str(msg))
             
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg):
-        self.basic_auth_store.create(msg)
