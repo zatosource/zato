@@ -20,10 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
+import logging, socket
 from copy import deepcopy
 from thread import start_new_thread
-from threading import local
+from threading import local, RLock
 from traceback import format_exc
 
 # zope.server
@@ -40,6 +40,165 @@ from zato.broker.zato_client import BrokerClient
 from zato.server.base import BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
+
+class _WorkerStore(BrokerMessageReceiver):
+    """ Each worker thread has its own configuration store. The store is assigned
+    to the thread's threading.local variable. All the methods assume the data's
+    being already validated and sanitized by one of Zato's internal services.
+    
+    There are exactly two threads willing to access the data at any time
+    - the worker thread this store belongs to
+    - the background ZeroMQ thread which may wish to update the store's configuration
+    hence the need for employing RLocks yet there shouldn't be much contention
+    because configuration updates are extremaly rare when compared to regular
+    access by worker threads.
+    """
+    def __init__(self):
+        self._basic_auth = Bunch()
+        self._tech_acc = Bunch()
+        self._wss = Bunch()
+        self._basic_auth_lock = RLock()
+        self._tech_acc_lock = RLock()
+        self._wss_lock = RLock()
+        
+    def basic_auth(self, name):
+        """ Returns the configuration of the HTTP Basic Auth security definition
+        of the given name.
+        """
+        with self._basic_auth_lock:
+            return self._basic_auth[name]
+
+    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
+        """ Creates a new HTTP Basic Auth security definition
+        """
+        with self._basic_auth_lock:
+            self._basic_auth[msg.name] = msg
+        
+    def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
+        """ Updates an existing HTTP Basic Auth security definition.
+        """
+        with self._basic_auth_lock:
+            del self._basic_auth[msg.old_name]
+            self._basic_auth[msg.name] = msg
+        
+    def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
+        """ Deletes an HTTP Basic Auth security definition.
+        """
+        with self._basic_auth_lock:
+            del self._basic_auth[msg.name]
+        
+    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an HTTP Basic Auth security definition.
+        """
+        with self._basic_auth_lock:
+            self._basic_auth[msg.name]['password'] = msg.password
+            
+# ##############################################################################
+            
+class _TaskDispatcher(ThreadedTaskDispatcher):
+    """ A task dispatcher which knows how to pass custom arguments down to
+    the worker threads.
+    """
+    def __init__(self, pull_handler, sub_handler, broker_token, 
+                 zmq_context, broker_push_addr, broker_pull_addr, broker_sub_addr,
+                 sec_config):
+        super(_TaskDispatcher, self).__init__()
+        self.pull_handler = pull_handler
+        self.sub_handler = sub_handler
+        self.broker_token = broker_token
+        self.zmq_context = zmq_context
+        self.broker_push_addr = broker_push_addr
+        self.broker_pull_addr = broker_pull_addr
+        self.broker_sub_addr = broker_sub_addr
+        self.sec_config = sec_config
+        
+    def setThreadCount(self, count):
+        """ Mostly copy & paste from the base classes except for the part
+        that passes the arguments to the thread.
+        """
+        mlock = self.thread_mgmt_lock
+        mlock.acquire()
+        try:
+            threads = self.threads
+            thread_no = 0
+            running = len(threads) - self.stop_count
+            while running < count:
+                # Start threads.
+                while thread_no in threads:
+                    thread_no = thread_no + 1
+                threads[thread_no] = 1
+                running += 1
+
+                thread_data = Bunch()
+                thread_data.broker_token = self.broker_token
+                thread_data.broker_push_addr = self.broker_push_addr
+                thread_data.broker_pull_addr = self.broker_pull_addr
+                thread_data.broker_sub_addr = self.broker_sub_addr
+                thread_data.sec_config = self.sec_config
+                
+                # Each thread gets its own copy of the initial configuration ..
+                thread_data = deepcopy(thread_data)
+                
+                # .. though some things are OK to be shared among multiple threads.
+                thread_data.zmq_context = self.zmq_context
+                thread_data.broker_pull_handler = self.pull_handler
+                
+                start_new_thread(self.handlerThread, (thread_no, thread_data))
+                
+                thread_no = thread_no + 1
+            if running > count:
+                # Stop threads.
+                to_stop = running - count
+                self.stop_count += to_stop
+                for n in range(to_stop):
+                    self.queue.put(None)
+                    running -= 1
+        finally:
+            mlock.release()
+            
+    def handlerThread(self, thread_no, thread_data):
+        """ Mostly copy & paste from the base classes except for the part
+        that passes the arguments to the thread.
+        """
+        _local = local()
+        _local.store = _WorkerStore()
+        
+        # We're in a new thread so we can start the broker client now.
+        _local.broker_client = BrokerClient()
+        _local.broker_client.name = 'parallel/thread'
+        _local.broker_client.token = thread_data.broker_token
+        _local.broker_client.zmq_context = thread_data.zmq_context
+        _local.broker_client.push_addr = thread_data.broker_push_addr
+        _local.broker_client.pull_addr = thread_data.broker_pull_addr
+        _local.broker_client.sub_addr = thread_data.broker_sub_addr
+        _local.broker_client.on_pull_handler = thread_data.broker_pull_handler
+        _local.broker_client.on_sub_handler = _local.store.on_broker_msg
+        _local.broker_client.init()
+        _local.broker_client.start()
+        
+        threads = self.threads
+        try:
+            while threads.get(thread_no):
+                task = self.queue.get()
+                if task is None:
+                    # Special value: kill this thread.
+                    break
+                try:
+                    task.service(_local)
+                except Exception, e:
+                    logger.error('Exception during task {0}'.format(
+                        format_exc(e)))
+        finally:
+            mlock = self.thread_mgmt_lock
+            mlock.acquire()
+            try:
+                self.stop_count -= 1
+                try: del threads[thread_no]
+                except KeyError: pass
+            finally:
+                mlock.release()
+                
+# ##############################################################################
 
 class _HTTPTask(HTTPTask):
     """ An HTTP task which knows how to use ZMQ sockets.
@@ -84,108 +243,3 @@ class _HTTPServerChannel(HTTPServerChannel):
                 # propagate the exception, but keep executing tasks
                 self.server.addTask(self)
                 raise
-        
-class _TaskDispatcher(ThreadedTaskDispatcher):
-    """ A task dispatcher which knows how to pass custom arguments down to
-    the worker threads.
-    """
-    def __init__(self, pull_handler, sub_handler, broker_token, 
-                 zmq_context, broker_push_addr, broker_pull_addr, broker_sub_addr):
-        super(_TaskDispatcher, self).__init__()
-        self.pull_handler = pull_handler
-        self.sub_handler = sub_handler
-        self.broker_token = broker_token
-        self.zmq_context = zmq_context
-        self.broker_push_addr = broker_push_addr
-        self.broker_pull_addr = broker_pull_addr
-        self.broker_sub_addr = broker_sub_addr
-        
-    def setThreadCount(self, count):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-        mlock = self.thread_mgmt_lock
-        mlock.acquire()
-        try:
-            threads = self.threads
-            thread_no = 0
-            running = len(threads) - self.stop_count
-            while running < count:
-                # Start threads.
-                while thread_no in threads:
-                    thread_no = thread_no + 1
-                threads[thread_no] = 1
-                running += 1
-
-                thread_data = Bunch()
-                thread_data.broker_token = self.broker_token
-                thread_data.broker_push_addr = self.broker_push_addr
-                thread_data.broker_pull_addr = self.broker_pull_addr
-                thread_data.broker_sub_addr = self.broker_sub_addr
-                
-                # Each thread gets its own copy of the initial configuration ..
-                thread_data = deepcopy(thread_data)
-                
-                # .. though some things are OK to be shared among multiple threads.
-                thread_data.zmq_context = self.zmq_context
-                thread_data.broker_pull_handler = self.pull_handler
-                
-                start_new_thread(self.handlerThread, (thread_no, thread_data))
-                
-                thread_no = thread_no + 1
-            if running > count:
-                # Stop threads.
-                to_stop = running - count
-                self.stop_count += to_stop
-                for n in range(to_stop):
-                    self.queue.put(None)
-                    running -= 1
-        finally:
-            mlock.release()
-            
-    def handlerThread(self, thread_no, thread_data):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-        _local = local()
-        _local.message_handler = BrokerMessageReceiver()
-        
-        def _on_sub_message_handler(msg, args):
-            """ Invoked for each message sent through the ZeroMQ SUB socket.
-            """
-            logger.error(str([msg, args, _local]))
-        
-        # We're in a new thread so we can start the broker client now.
-        _local.broker_client = BrokerClient()
-        _local.broker_client.name = 'parallel/thread'
-        _local.broker_client.token = thread_data.broker_token
-        _local.broker_client.zmq_context = thread_data.zmq_context
-        _local.broker_client.push_addr = thread_data.broker_push_addr
-        _local.broker_client.pull_addr = thread_data.broker_pull_addr
-        _local.broker_client.sub_addr = thread_data.broker_sub_addr
-        _local.broker_client.on_pull_handler = thread_data.broker_pull_handler
-        _local.broker_client.on_sub_handler = _on_sub_message_handler
-        _local.broker_client.init()
-        _local.broker_client.start()
-        
-        threads = self.threads
-        try:
-            while threads.get(thread_no):
-                task = self.queue.get()
-                if task is None:
-                    # Special value: kill this thread.
-                    break
-                try:
-                    task.service(_local)
-                except Exception, e:
-                    logger.error('Exception during task {0}'.format(
-                        format_exc(e)))
-        finally:
-            mlock = self.thread_mgmt_lock
-            mlock.acquire()
-            try:
-                self.stop_count -= 1
-                try: del threads[thread_no]
-                except KeyError: pass
-            finally:
-                mlock.release()

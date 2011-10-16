@@ -39,7 +39,7 @@ class BrokerMessageReceiver(object):
     to handle the messages in a Zato-specific way.
     """
     
-    def on_broker_pull_msg(self, msg, args):
+    def on_broker_msg(self, msg, *args):
         """ Receives a configuration message, parses its JSON contents and invokes
         an appropriate handler, the one indicated by the msg's 'action' key so
         if the action is '1000' then self.on_config_SCHEDULER_CREATE
