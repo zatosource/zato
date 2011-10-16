@@ -55,11 +55,11 @@ def soap(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.cluster = Element('cluster')
-        zato_message.cluster.id = cluster_id
+        zato_message.data = Element('data')
+        zato_message.data.cluster_id = cluster_id
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 
+                'zato:channel.soap.get-list', zato_message)
 
-        _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
-                "zato:channel.soap.get-list", zato_message)
 
         '''zato_message = Element("{%s}zato_message" % zato_namespace)
 

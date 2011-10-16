@@ -20,9 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from zato.common.odb.model import(Cluster, CronStyleJob, HTTPBasicAuth, 
-        IntervalBasedJob, Job,  Service, TechnicalAccount)
+        IntervalBasedJob, Job,  Service, ChannelURLDefinition, TechnicalAccount)
 
 def job_list(session, cluster_id):
+    """ All the scheduler's jobs defined in the ODB.
+    """
     return session.query(Job.id, Job.name, Job.is_active,
         Job.job_type, Job.start_date,  Job.extra,
         Service.name.label('service_name'), Service.id.label('service_id'),
@@ -38,13 +40,26 @@ def job_list(session, cluster_id):
             all()
 
 def basic_auth_list(session, cluster_id):
+    """ All the HTTP Basic Auth definitions.
+    """
     return session.query(HTTPBasicAuth).\
         filter(Cluster.id==cluster_id).\
         order_by('http_basic_auth_def.name').\
         all()
 
 def tech_acc_list(session, cluster_id):
+    """ All the technical accounts.
+    """
     return session.query(TechnicalAccount).\
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
+        all()
+
+def soap_channel_list(session, cluster_id):
+    """ All the SOAP channels.
+    """
+    return session.query(ChannelURLDefinition).\
+        filter(Cluster.id==cluster_id).\
+        filter(ChannelURLDefinition.url_type=='soap').\
+        order_by(ChannelURLDefinition.url_pattern).\
         all()
