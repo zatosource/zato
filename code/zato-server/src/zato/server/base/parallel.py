@@ -115,7 +115,7 @@ class ZatoHTTPListener(HTTPServer):
         """ Handles all security-related aspects of an incoming HTTP message
         handling. Calls other concrete security methods as appropriate.
         """
-        sec_def, sec_def_type = url_data['sec_def'], url_data['sec_def_type']
+        sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.type
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
         getattr(self, handler_name)(sec_def, request_data, body, headers)
