@@ -33,8 +33,10 @@ from zato.common.broker_message import code_to_name, MESSAGE
 
 logger = logging.getLogger(__name__)
 
-class BaseServer(object):
-    """ A base class upon which singleton and parallel servers are created.
+class BrokerMessageReceiver(object):
+    """ A class that knows how to handle messages received from the broker.
+    It doesn't really belong to the zato-broker's namespace because it is free
+    to handle the messages in a Zato-specific way.
     """
     
     def on_broker_pull_msg(self, msg, args):

@@ -39,7 +39,7 @@ from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.util import TRACE1, zmq_names
 from zato.common.odb import create_pool
-from zato.server.base import BaseServer
+from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
 from zato.server.channel.soap import server_soap_error
 
@@ -175,7 +175,7 @@ class ZatoHTTPListener(HTTPServer):
         task.write(response)
 
 
-class ParallelServer(BaseServer):
+class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb=None, singleton_server=None, broker_client=None,
                  basic_auth_store=None):

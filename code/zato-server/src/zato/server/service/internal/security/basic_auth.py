@@ -107,6 +107,12 @@ class Create(AdminService):
                 session.rollback()
                 
                 raise 
+            else:
+                broker_client = kwargs['thread_ctx'].broker_client
+                if params['is_active']:
+                    params['action'] = SECURITY.BASIC_AUTH_CREATE
+                    params['password'] = uuid4().hex
+                    broker_client.send_json(params)
             
             return ZATO_OK, etree.tostring(auth_elem)
 
