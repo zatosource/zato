@@ -19,23 +19,35 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from contextlib import closing
+
 # lxml
 from lxml import etree
 from lxml.objectify import Element
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
-from zato.server.service.internal import AdminService
+from zato.common.odb.model import ChannelURLDefinition, Cluster
+from zato.common.odb.query import soap_channel_list
+from zato.server.service.internal import _get_params, AdminService
 
-class GetChannelList(AdminService):
+class GetList(AdminService):
     """ Returns a list of SOAP channels defined.
     """
     def handle(self, *args, **kwargs):
-
-        channel_list = Element("channel_list")
-        channels = self.server.soap_channel_store.channels
-
-        for channel_name in channels:
-            pass
-
-        return ZATO_OK, etree.tostring(channel_list)
+        
+        with closing(self.server.odb.session()) as session:
+            
+            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+            definition_list = Element('definition_list')
+            definitions = soap_channel_list(session, params['cluster_id'])
+            
+            for definition in definitions:
+    
+                #definition_elem = Element('definition')                
+                #definition_list.append(definition_elem)
+                
+                pass
+    
+            return ZATO_OK, etree.tostring(definition_list)
