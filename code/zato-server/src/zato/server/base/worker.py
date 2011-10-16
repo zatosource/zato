@@ -54,45 +54,97 @@ class _WorkerStore(BrokerMessageReceiver):
     access by worker threads.
     """
     def __init__(self):
-        self._basic_auth = Bunch()
-        self._tech_acc = Bunch()
-        self._wss = Bunch()
-        self._basic_auth_lock = RLock()
-        self._tech_acc_lock = RLock()
-        self._wss_lock = RLock()
+        self.basic_auth = Bunch()
+        self.tech_acc = Bunch()
+        self.wss = Bunch()
+        self.url_sec = Bunch()
         
-    def basic_auth(self, name):
+        self.basic_auth_lock = RLock()
+        self.tech_acc_lock = RLock()
+        self.wss_lock = RLock()
+        self.url_sec_lock = RLock()
+        
+    def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition
         of the given name.
         """
-        with self._basic_auth_lock:
-            return self._basic_auth[name]
+        with self.basic_auth_lock:
+            return self.basic_auth.get(Name)
 
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        with self._basic_auth_lock:
-            self._basic_auth[msg.name] = msg
+        with self.basic_auth_lock:
+            self.basic_auth[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
-        with self._basic_auth_lock:
-            del self._basic_auth[msg.old_name]
-            self._basic_auth[msg.name] = msg
+        with self.basic_auth_lock:
+            del self.basic_auth[msg.old_name]
+            self.basic_auth[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
-        with self._basic_auth_lock:
-            del self._basic_auth[msg.name]
+        with self.basic_auth_lock:
+            del self.basic_auth[msg.name]
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
-        with self._basic_auth_lock:
-            self._basic_auth[msg.name]['password'] = msg.password
+        with self.basic_auth_lock:
+            self.basic_auth[msg.name]['password'] = msg.password
             
+    def tech_acc(self, name):
+        """ Returns the configuration of the technical account of the given name.
+        """
+        with self.tech_acc_lock:
+            return self.tech_acc[name]
+
+# ##############################################################################
+
+    def tech_acc_get(self, name):
+        """ Returns the configuration of the technical account of the given name.
+        """
+        with self.tech_acc_lock:
+            return self.tech_acc.get(name)
+
+    def on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
+        """ Creates a new technical account.
+        """
+        with self.tech_acc_lock:
+            self.tech_acc[msg.name] = msg
+        
+    def on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
+        """ Updates an existing technical account.
+        """
+        with self.tech_acc_lock:
+            del self.tech_acc[msg.old_name]
+            self.tech_acc[msg.name] = msg
+        
+    def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
+        """ Deletes a technical account.
+        """
+        with self.tech_acc_lock:
+            del self.tech_acc[msg.name]
+        
+    def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes the password of a technical account.
+        """
+        with self.tech_acc_lock:
+            # The message's 'password' attribute already takes the salt 
+            # into account (pun intended ;-))
+            self.tech_acc[msg.name]['password'] = msg.password
+            
+# ##############################################################################
+
+    def url_sec_get(self, url):
+        """ Returns the configuration of the given URL
+        """
+        with self.url_sec_lock:
+            return self.url_sec.get(url)
+
 # ##############################################################################
             
 class _TaskDispatcher(ThreadedTaskDispatcher):
@@ -162,6 +214,9 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         """
         _local = local()
         _local.store = _WorkerStore()
+        _local.store.basic_auth = thread_data.sec_config.basic_auth
+        _local.store.tech_acc = thread_data.sec_config.tech_acc
+        _local.store.url_sec = thread_data.sec_config.url_sec
         
         # We're in a new thread so we can start the broker client now.
         _local.broker_client = BrokerClient()

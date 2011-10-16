@@ -35,6 +35,7 @@ from lxml.objectify import Element
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
+from zato.common.odb.query import basic_auth_list
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
@@ -47,10 +48,7 @@ class GetList(AdminService):
         
         with closing(self.server.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = session.query(HTTPBasicAuth).\
-                filter(Cluster.id==params['cluster_id']).\
-                order_by('http_basic_auth_def.name').\
-                all()
+            definitions = basic_auth_list(session, params['cluster_id'])
     
             for definition in definitions:
     
