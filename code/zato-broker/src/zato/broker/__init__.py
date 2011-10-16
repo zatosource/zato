@@ -42,6 +42,11 @@ class SocketData(object):
         self.pull = pull
         self.push = push
         self.pub = pub
+        
+    def __repr__(self):
+        return '<[{0}] at [{1}], name [{2}], pull [{3}], push [{4}], pub [{5}]>'.format(
+            self.__class__.__name__, hex(id(self)), self.name, self.pull, 
+            self.push, self.pub)
 
 class BaseBroker(object):
     def __init__(self, *socket_data):
@@ -57,21 +62,24 @@ class BaseBroker(object):
         """
         
         for item in self.socket_data:
-            sock_pull = self.context.socket(zmq.PULL)
-            sock_pull.bind(item.pull)
-            
-            sock_push = self.context.socket(zmq.PUSH)
-            sock_push.bind(item.push)
-            
+            logger.debug('Item [{0}]'.format(item))
             self.sockets[item.name] = Bunch()
-            self.sockets[item.name].pull = sock_pull
-            self.sockets[item.name].push = sock_push
+            
+            if item.push:
+                sock_push = self.context.socket(zmq.PUSH)
+                sock_push.bind(item.push)
+                self.sockets[item.name].push = sock_push
+            
+            if item.pull:
+                sock_pull = self.context.socket(zmq.PULL)
+                sock_pull.bind(item.pull)
+                self.sockets[item.name].pull = sock_pull
             
             if item.pub:
                 sock_pub = self.context.socket(zmq.PUB)
                 sock_pub.bind(item.pub)
                 self.sockets[item.name].pub = sock_pub
-            
+                
             self.pull_sockets.append(sock_pull)
             self.poller.register(sock_pull, zmq.POLLIN)
         

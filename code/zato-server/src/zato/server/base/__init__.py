@@ -31,11 +31,13 @@ from bunch import Bunch
 # Zato
 from zato.common.broker_message import code_to_name, MESSAGE
 
+logger = logging.getLogger(__name__)
+
 class BaseServer(object):
     """ A base class upon which singleton and parallel servers are created.
     """
     
-    def on_broker_msg(self, msg, args):
+    def on_broker_pull_msg(self, msg, args):
         """ Receives a configuration message, parses its JSON contents and invokes
         an appropriate handler, the one indicated by the msg's 'action' key so
         if the action is '1000' then self.on_config_SCHEDULER_CREATE
@@ -44,14 +46,17 @@ class BaseServer(object):
         of all actions).
         """
         
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug('Got message [{0}]'.format(msg))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug('Got message [{0}]'.format(msg))
             
         msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
         msg = loads(msg[MESSAGE.PAYLOAD_START:])
         msg = Bunch(msg)
         
         action = code_to_name[msg['action']]
-        handler = 'on_broker_msg_{0}'.format(action)
+        handler = 'on_broker_pull_msg_{0}'.format(action)
         handler = getattr(self, handler)
-        handler(msg, args)
+        if args:
+            handler(msg, args)
+        else:
+            handler(msg)

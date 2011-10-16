@@ -31,17 +31,15 @@ class BrokerClient(_BrokerClient):
     """ A ZeroMQ broker client which knows how to subscribe to messages and push
     the messages onto the broker.
     """
-    def __init__(self, name, token, zmq_context, push_address, pull_address, 
-                 on_message_handler=None, message_handler_args=None):
-        super(BrokerClient, self).__init__(name, zmq_context, push_address, pull_address, 
-                    on_message_handler, message_handler_args)
-        self.token = token
+    def __init__(self, **kwargs):
+        super(BrokerClient, self).__init__(**kwargs)
+        self.token = kwargs.get('token')
         
-    def send(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_THREAD):
+    def send(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL):
         msg = '{0}{1}{2}'.format(msg_type, self.token, msg)
         return self._push.send(msg)
         
-    def send_json(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_THREAD):
+    def send_json(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL):
         msg = dumps(msg)
         return self.send(msg, msg_type)
         

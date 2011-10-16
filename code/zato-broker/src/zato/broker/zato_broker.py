@@ -38,8 +38,8 @@ logger = getLogger(__name__)
 CONFIG_MESSAGE_PREFIX = 'ZATO_CONFIG'
 
 msg_socket = {
-    MESSAGE_TYPE.TO_PARALLEL: 'parallel',
-    MESSAGE_TYPE.TO_PARALLEL_THREAD: 'parallel',
+    MESSAGE_TYPE.TO_PARALLEL_PULL: 'parallel/pull',
+    MESSAGE_TYPE.TO_PARALLEL_SUB: 'parallel/sub',
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
 }
 
@@ -51,6 +51,8 @@ log_invalid_tokens = config['log_invalid_tokens']
 
 class Broker(BaseBroker):
     def on_message(self, msg):
+        
+        print(msg)
         
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Got message [{0}]'.format(msg))
@@ -75,17 +77,20 @@ class Broker(BaseBroker):
                     err_msg += ', token [{0}]'.format(token)
                 logger.error(err_msg)
                 raise Exception(err_msg)
-            
-            if msg_type == MESSAGE_TYPE.TO_PARALLEL:
-                socket = self.sockets[msg_socket[msg_type]].pub
-            else:
+
+            if msg_type == MESSAGE_TYPE.TO_SINGLETON:
                 socket = self.sockets[msg_socket[msg_type]].push
+            else:
+                if msg_type == MESSAGE_TYPE.TO_PARALLEL_PULL:
+                    socket = self.sockets[msg_socket[msg_type]].push
+                else:
+                    socket = self.sockets[msg_socket[msg_type]].pub
             
             # We don't want the subscribers to know what the original token was.
             msg = bytes(msg_shadowed)
         else:
             # User-defined messages always go to parallel servers.
-            socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL]].push
+            socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL_PULL]].push
         
         socket.send(msg)
         

@@ -104,10 +104,6 @@ ZATO_WARNING = "ZATO_WARNING"
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 
-# Names of components as they're used by ZeroMQ sockets.
-ZATO_PARALLEL_SERVER = '/zato/parallel'
-ZATO_SINGLETON_SERVER = '/zato/singleton'
-
 # Status of a server's join request
 ZATO_JOIN_REQUEST_ACCEPTED = 'ACCEPTED'
 

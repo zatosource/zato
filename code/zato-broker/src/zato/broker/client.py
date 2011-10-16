@@ -39,15 +39,18 @@ class ZMQPullSub(object):
     thread and invokes the handler on each incoming message.
     """
     
-    def __init__(self, name, zmq_context, pull_address, sub_address, 
-                 on_message_handler,  keep_running=True, message_handler_args=None):
+    def __init__(self, name, zmq_context, pull_addr, sub_addr, 
+                 on_pull_sub_handler=None,  pull_handler_args=None,
+                 on_sub_handler=None,  sub_handler_args=None, keep_running=True):
         self.name = name
         self.zmq_context = zmq_context
-        self.pull_address = pull_address
-        self.sub_address = sub_address
-        self.on_message_handler = on_message_handler
-        self.message_handler_args = message_handler_args
+        self.pull_addr = pull_addr
+        self.sub_addr = sub_addr
         self.keep_running = keep_running
+        self.on_pull_sub_handler = on_pull_sub_handler
+        self.pull_handler_args = pull_handler_args
+        self.on_sub_handler = on_sub_handler
+        self.sub_handler_args = sub_handler_args
         self.pull_socket = None
         self.sub_socket = None
 
@@ -75,38 +78,44 @@ class ZMQPullSub(object):
         
         poller = zmq.Poller()
         
-        if self.pull_address:
+        if self.pull_addr:
             self.pull_socket = self.zmq_context.socket(zmq.PULL)
             self.pull_socket.setsockopt(zmq.LINGER, 0)
-            self.pull_socket.connect(self.pull_address)
+            self.pull_socket.connect(self.pull_addr)
             poller.register(self.pull_socket, zmq.POLLIN)
             
             logger.debug('Starting PULL [{0}/{1}]'.format(
-                self.name, self.pull_address))
+                self.name, self.pull_addr))
             
-        if self.sub_address:
+        if self.sub_addr:
             self.sub_socket = self.zmq_context.socket(zmq.SUB)
             self.sub_socket.setsockopt(zmq.LINGER, 0)
-            self.sub_socket.connect(self.sub_address)
+            self.sub_socket.connect(self.sub_addr)
             self.sub_socket.setsockopt(zmq.SUBSCRIBE, b'')
             poller.register(self.sub_socket, zmq.POLLIN)
             
             logger.debug('Starting SUB [{0}/{1}]'.format(
-                self.name, self.sub_address))
+                self.name, self.sub_addr))
             
-        _socks = self.pull_socket), self.sub_socket)
+        _socks = [(name, sock) for (name, sock) in 
+                  [('pull', self.pull_socket), ('sub', self.sub_socket)] if sock]
+        del sock
+        
+        _handlers_args = {
+            self.pull_socket: (self.on_pull_sub_handler, self.pull_handler_args),
+            self.sub_socket: (self.on_sub_handler, self.sub_handler_args)}
         
         while self.keep_running:
             try:
                 poll_socks = dict(poller.poll())
-                for id, sock in _socks:
+                for sock_name, sock in _socks:
                     if poll_socks.get(sock) == zmq.POLLIN:
                         msg = sock.recv()
             except Exception, e:
                 # It's OK and needs not to disturb the user so log it only
                 # in the DEBUG level.
                 if isinstance(e, zmq.ZMQError) and e.errno == zmq.ETERM:
-                    msg = '[{0}] Caught a zmq.ETERM {1}, quitting'.format(
+                    msg = '[{0}] Caught a zmq.ETERM [{1}], quitting'.format(
                         self.name, format_exc(e))
                     meth = logger.debug
                 else:
@@ -117,15 +126,16 @@ class ZMQPullSub(object):
                 meth(msg)
                 self.close()
             else:
-                self.on_before_msg_handler(msg, self.message_handler_args)
+                self.on_before_msg_handler(msg, self.pull_handler_args)
                 try:
                     e = None
-                    self.on_message_handler(msg, self.message_handler_args)
+                    handler, args = _handlers_args[sock]
+                    handler(msg, args)
                 except Exception, e:
-                    msg = '[{0}] Could not invoke the message handler, msg [{1}] e [{2}]'
-                    logger.error(msg.format(self.name, msg, format_exc(e)))
+                    msg = '[{0}] Could not invoke the message handler, msg [{1}] sock_name [{2}] e [{3}]'
+                    logger.error(msg.format(self.name, msg, sock_name, format_exc(e)))
                     
-                self.on_after_msg_handler(msg, e, self.message_handler_args)
+                self.on_after_msg_handler(msg, e, self.pull_handler_args)
                 
 class ZMQPush(object):
     """ Sends messages to ZeroMQ using a PUSH socket.
@@ -157,24 +167,45 @@ class BrokerClient(object):
     """ A ZeroMQ broker client which knows how to subscribe to messages and push
     the messages onto the broker.
     """
-    def __init__(self, name, zmq_context, push_address, pull_address, 
-                 sub_address,  on_message_handler=None, message_handler_args=None):
-        self._push = ZMQPush(name, zmq_context, push_address)
-        self._pull = ZMQPullSub(name, zmq_context, pull_address, sub_address,
-                                on_message_handler, True,  message_handler_args)
+    def __init__(self, init=False, **kwargs):
+        self.zmq_context = kwargs.get('zmq_context')
+        self.name = kwargs.get('name')
+        self.push_addr = kwargs.get('push_addr')
+        self.pull_addr = kwargs.get('pull_addr')
+        self.sub_addr = kwargs.get('sub_addr')
+        self.on_pull_handler = kwargs.get('on_pull_handler')
+        self.pull_handler_args = kwargs.get('pull_handler_args')
+        self.on_sub_handler = kwargs.get('on_sub_handler')
+        self.sub_handler_args = kwargs.get('sub_handler_args')
+
+        if init:
+            self.init()
+            
+    def init(self):
+        self._pull_sub = ZMQPullSub(self.name, self.zmq_context, self.pull_addr, 
+            self.sub_addr, self.on_pull_handler, self.pull_handler_args,
+            self.on_sub_handler, self.sub_handler_args)
         
-    def set_message_handler(self, handler):
-        self._pull.on_message_handler = handler
+        self._push = ZMQPush(self.name, self.zmq_context, self.push_addr)
         
-    def set_message_handler_args(self, args):
-        self._pull.message_handler_args = args
+    def set_pull_handler(self, handler):
+        self._pull_sub.on_pull_handler = handler
+        
+    def set_pull_handler_args(self, args):
+        self._pull_sub.pull_handler_args = args
+        
+    def set_sub_handler(self, handler):
+        self._pull_sub.on_sub_handler = handler
+        
+    def set_sub_handler_args(self, args):
+        self._pull_sub.sub_handler_args = args
     
-    def start_subscriber(self):
-        self._pull.start()
+    def start(self):
+        self._pull_sub.start()
     
     def send(self, msg):
         return self._push.send(msg)
     
     def close(self):
         self._push.close()
-        self._pull.close()
+        self._pull_sub.close()

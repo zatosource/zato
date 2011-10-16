@@ -21,7 +21,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from copy import deepcopy
 from thread import start_new_thread
+from threading import local
 from traceback import format_exc
 
 # zope.server
@@ -39,7 +41,7 @@ from zato.broker.zato_client import BrokerClient
 logger = logging.getLogger(__name__)
 
 class _HTTPTask(HTTPTask):
-    """ An HTTP task which knows how to uses ZMQ sockets.
+    """ An HTTP task which knows how to use ZMQ sockets.
     """
     def service(self, thread_data):
         try:
@@ -84,12 +86,13 @@ class _HTTPServerChannel(HTTPServerChannel):
         
 class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
-    the newly created threads.
+    the worker threads.
     """
-    def __init__(self, message_handler, broker_token, zmq_context, 
-            broker_push_addr, broker_pull_addr, broker_sub_addr):
+    def __init__(self, pull_handler, sub_handler, broker_token, 
+                 zmq_context, broker_push_addr, broker_pull_addr, broker_sub_addr):
         super(_TaskDispatcher, self).__init__()
-        self.message_handler = message_handler
+        self.pull_handler = pull_handler
+        self.sub_handler = sub_handler
         self.broker_token = broker_token
         self.zmq_context = zmq_context
         self.broker_push_addr = broker_push_addr
@@ -113,15 +116,18 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 threads[thread_no] = 1
                 running += 1
 
-                # It's safe to pass ZMQ contexts between threads.
-                thread_data = Bunch({
-                    'message_handler': self.message_handler,
-                    'broker_token':self.broker_token,
-                    'zmq_context': self.zmq_context,
-                    'broker_push_addr': self.broker_push_addr,
-                    'broker_pull_addr': self.broker_pull_addr,
-                    'broker_sub_addr': self.broker_sub_addr,
-                })
+                thread_data = Bunch()
+                thread_data.broker_token = self.broker_token
+                thread_data.broker_push_addr = self.broker_push_addr
+                thread_data.broker_pull_addr = self.broker_pull_addr
+                thread_data.broker_sub_addr = self.broker_sub_addr
+                
+                # Each thread gets its own copy of the initial configuration ..
+                thread_data = deepcopy(thread_data)
+                
+                # .. though some things are OK to be shared among multiple threads.
+                thread_data.zmq_context = self.zmq_context
+                thread_data.broker_pull_handler = self.pull_handler
                 
                 start_new_thread(self.handlerThread, (thread_no, thread_data))
                 
@@ -140,18 +146,25 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
         """
-
-        # We're in a new thread now so we can start the broker client though note
-        # that the message handler will be assigned to it later on.
-        thread_data.broker_client = BrokerClient('parallel/thread', self.broker_token,
-                thread_data.zmq_context, thread_data.broker_push_addr, 
-                thread_data.broker_pull_addr, self.broker_sub_addr,
-                self.message_handler)
+        _local = local()
         
-        args = Bunch({'broker_client': thread_data.broker_client})
-        thread_data.broker_client.set_message_handler_args(args)
+        def _on_sub_message_handler(msg, args):
+            """ Invoked for each message sent through the ZeroMQ SUB socket.
+            """
+            logger.error(str([msg, args, _local]))
         
-        thread_data.broker_client.start_subscriber()
+        # We're in a new thread so we can start the broker client now.
+        _local.broker_client = BrokerClient()
+        _local.broker_client.name = 'parallel/thread'
+        _local.broker_client.token = thread_data.broker_token
+        _local.broker_client.zmq_context = thread_data.zmq_context
+        _local.broker_client.push_addr = thread_data.broker_push_addr
+        _local.broker_client.pull_addr = thread_data.broker_pull_addr
+        _local.broker_client.sub_addr = thread_data.broker_sub_addr
+        _local.broker_client.on_pull_handler = thread_data.broker_pull_handler
+        _local.broker_client.on_sub_handler = _on_sub_message_handler
+        _local.broker_client.init()
+        _local.broker_client.start()
         
         threads = self.threads
         try:
@@ -161,7 +174,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                     # Special value: kill this thread.
                     break
                 try:
-                    task.service(thread_data)
+                    task.service(_local)
                 except Exception, e:
                     logger.error('Exception during task {0}'.format(
                         format_exc(e)))

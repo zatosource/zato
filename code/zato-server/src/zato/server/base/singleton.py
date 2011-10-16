@@ -75,10 +75,15 @@ class SingletonServer(BaseServer):
         # Initialize scheduler.
         self.scheduler.singleton = self
         
-        self.broker_client = BrokerClient('singleton', self.broker_token, 
-            self.zmq_context, self.broker_push_addr,  self.broker_pull_addr, 
-            None, self.on_broker_msg)
-        self.broker_client.start_subscriber()
+        self.broker_client = BrokerClient()
+        self.broker_client.name = 'singleton'
+        self.broker_client.token = self.broker_token
+        self.broker_client.zmq_context = self.zmq_context
+        self.broker_client.push_addr = self.broker_push_addr
+        self.broker_client.pull_addr = self.broker_pull_addr
+        self.broker_client.on_pull_handler = self.on_broker_pull_msg
+        self.broker_client.init()
+        self.broker_client.start()
         
         '''
         # Start the pickup monitor.
@@ -89,16 +94,16 @@ class SingletonServer(BaseServer):
         
 ################################################################################
 
-    def on_broker_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
+    def on_broker_pull_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
         self.scheduler.create_edit('create', msg)
         
-    def on_broker_msg_SCHEDULER_EDIT(self, msg, *ignored_args):
+    def on_broker_pull_msg_SCHEDULER_EDIT(self, msg, *ignored_args):
         self.scheduler.create_edit('edit', msg)
         
-    def on_broker_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
+    def on_broker_pull_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
         self.scheduler.delete(msg)
         
-    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
+    def on_broker_pull_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
         self.scheduler.execute(msg)
 
 ################################################################################
