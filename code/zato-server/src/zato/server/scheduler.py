@@ -30,7 +30,7 @@ from apscheduler.scheduler import Scheduler as APScheduler
 
 # Zato 
 from zato.common import scheduler_date_time_format
-from zato.common.broker_message import SCHEDULER
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class Scheduler(object):
         """
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name,
                'service': service, 'extra':extra}
-        self.singleton.broker_client.send_json(msg)
+        self.singleton.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Job executed, name [{0}], service [{1}], extra [{2}]'.format(
@@ -96,9 +96,14 @@ class Scheduler(object):
         """ Schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
+        weeks = job_data.weeks if job_data.weeks else 0
+        days = job_data.days if job_data.days else 0
+        hours = job_data.hours if job_data.hours else 0
+        minutes = job_data.minutes if job_data.minutes else 0
+        seconds = job_data.seconds if job_data.seconds else 0
         self._sched.add_interval_job(self._on_job_execution, 
-            job_data.weeks, job_data.days, job_data.hours, job_data.minutes, 
-            job_data.seconds, start_date, [job_data.name, job_data.service, job_data.extra], 
+            weeks, days, hours, minutes,  seconds, start_date, 
+            [job_data.name, job_data.service, job_data.extra], 
             name=job_data.name, max_runs=job_data.repeats)
         
         logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))

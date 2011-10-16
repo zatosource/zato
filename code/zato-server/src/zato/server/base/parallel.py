@@ -36,11 +36,11 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
-     ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP)
+     ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.util import TRACE1, zmq_names
 from zato.common.odb import create_pool
 from zato.server.base import BaseServer
-from zato.server.base._overridden import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
+from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
 from zato.server.channel.soap import server_soap_error
 
 def wrap_error_message(url_type, msg):
@@ -72,11 +72,6 @@ class ZatoHTTPListener(HTTPServer):
         self.broker_client = broker_client
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
-        
-    def _on_broker_msg(self, msg):
-        """ Passes the message on to a parallel server.
-        """
-        self.server._on_broker_msg(msg)
 
     def _handle_security_tech_account(self, sec_def, request_data, body, headers):
         """ Handles the 'tech-account' security config type.
@@ -182,7 +177,8 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BaseServer):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb=None, singleton_server=None, broker_client=None):
+                 odb=None, singleton_server=None, broker_client=None,
+                 basic_auth_store=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -190,6 +186,7 @@ class ParallelServer(BaseServer):
         self.odb = odb
         self.singleton_server = singleton_server
         self.broker_client = broker_client
+        self.basic_auth_store = basic_auth_store
         
         self.zmq_items = {}
         
@@ -238,10 +235,10 @@ class ParallelServer(BaseServer):
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
                     
-        self.broker_client = BrokerClient('parallel', self.broker_token, 
+        '''self.broker_client = BrokerClient('parallel', self.broker_token, 
             self.zmq_context, self.broker_push_addr, None,
-            self.broker_sub_addr, self.on_broker_msg)
-        self.broker_client.start_subscriber()
+            self.broker_sub_addr, self.on_broker_pull_msg)
+        self.broker_client.start_subscriber()'''
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -275,10 +272,10 @@ class ParallelServer(BaseServer):
         
     def run_forever(self):
 
-        task_dispatcher = _TaskDispatcher(self.on_broker_msg, self.broker_token, 
+        task_dispatcher = _TaskDispatcher(self.on_broker_pull_msg, 1, self.broker_token, 
             self.zmq_context,  self.broker_push_addr, self.broker_pull_addr,
-            None)
-        task_dispatcher.setThreadCount(60)
+            self.broker_sub_addr)
+        task_dispatcher.setThreadCount(4)
 
         self.logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 
@@ -305,7 +302,7 @@ class ParallelServer(BaseServer):
 
 # ##############################################################################
 
-    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, args):
+    def on_broker_pull_msg_SCHEDULER_EXECUTE(self, msg, args=None):
 
         service_info = self.service_store.services[msg.service]
         class_ = service_info['service_class']
@@ -319,3 +316,5 @@ class ParallelServer(BaseServer):
             msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
             self.logger.debug(str(msg))
             
+    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg):
+        self.basic_auth_store.create(msg)
