@@ -19,8 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from zato.common.odb.model import(Cluster, CronStyleJob, IntervalBasedJob, Job, 
-        Service)
+from zato.common.odb.model import(Cluster, CronStyleJob, HTTPBasicAuth, 
+        IntervalBasedJob, Job,  Service, TechnicalAccount)
 
 def job_list(session, cluster_id):
     return session.query(Job.id, Job.name, Job.is_active,
@@ -36,3 +36,15 @@ def job_list(session, cluster_id):
             filter(Job.service_id==Service.id).\
             order_by('job.name').\
             all()
+
+def basic_auth_list(session, cluster_id):
+    return session.query(HTTPBasicAuth).\
+        filter(Cluster.id==cluster_id).\
+        order_by('http_basic_auth_def.name').\
+        all()
+
+def tech_acc_list(session, cluster_id):
+    return session.query(TechnicalAccount).\
+        order_by(TechnicalAccount.name).\
+        filter(Cluster.id==cluster_id).\
+        all()

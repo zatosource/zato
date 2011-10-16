@@ -135,8 +135,8 @@ class ZatoHTTPListener(HTTPServer):
             body = task.request_data.getBodyStream().getvalue()
             headers = task.request_data.headers
             
-            if task.request_data.uri in self.server.url_security:
-                url_data = self.server.url_security[task.request_data.uri]
+            url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
+            if url_data:
                 url_type = url_data['url_type']
                 
                 self.handle_security(url_data, task.request_data, body, headers)
@@ -178,16 +178,14 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb=None, singleton_server=None, broker_client=None,
-                 basic_auth_store=None):
+                 odb=None, singleton_server=None, sec_config=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
         self.odb = odb
         self.singleton_server = singleton_server
-        self.broker_client = broker_client
-        self.basic_auth_store = basic_auth_store
+        self.sec_config = sec_config
         
         self.zmq_items = {}
         
@@ -197,10 +195,6 @@ class ParallelServer(BrokerMessageReceiver):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
-        
-        # Security configuration of HTTP URLs.
-        self.url_security = self.odb.get_url_security(server)
-        self.logger.log(logging.DEBUG, 'url_security=[{0}]'.format(self.url_security))
         
         self.broker_token = server.cluster.broker_token
         self.broker_push_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
@@ -236,10 +230,32 @@ class ParallelServer(BrokerMessageReceiver):
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
                     
-        '''self.broker_client = BrokerClient('parallel', self.broker_token, 
-            self.zmq_context, self.broker_push_addr, None,
-            self.broker_sub_addr, self.on_broker_pull_msg)
-        self.broker_client.start_subscriber()'''
+        self.sec_config = Bunch()
+        
+        # HTTP Basic Auth
+        ba_config = Bunch()
+        for item in self.odb.get_basic_auth_list(server.cluster.id):
+            ba_config[item.name] = Bunch()
+            ba_config[item.name].is_active = item.is_active
+            ba_config[item.name].username = item.username
+            ba_config[item.name].domain = item.domain
+            ba_config[item.name].password = item.password
+            
+        # Technical accounts
+        ta_config = Bunch()
+        for item in self.odb.get_tech_acc_list(server.cluster.id):
+            ta_config[item.name] = Bunch()
+            ta_config[item.name].is_active = item.is_active
+            ta_config[item.name].name = item.name
+            ta_config[item.name].password = item.password
+            ta_config[item.name].salt = item.salt
+            
+        # Security configuration of HTTP URLs.
+        url_sec = self.odb.get_url_security(server)
+        
+        self.sec_config.basic_auth = ba_config
+        self.sec_config.tech_acc = ta_config
+        self.sec_config.url_sec = url_sec
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -273,14 +289,9 @@ class ParallelServer(BrokerMessageReceiver):
         
     def run_forever(self):
         
-        sec_config = Bunch()
-        
-        # HTTP Basic Auth
-        #hba_config = self.odb.get_job_list(self, cluster_id):
-
         task_dispatcher = _TaskDispatcher(self.on_broker_msg, 1, self.broker_token, 
             self.zmq_context,  self.broker_push_addr, self.broker_pull_addr,
-            self.broker_sub_addr, sec_config)
+            self.broker_sub_addr, self.sec_config)
         task_dispatcher.setThreadCount(4)
 
         self.logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))

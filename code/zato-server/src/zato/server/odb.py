@@ -27,11 +27,14 @@ from traceback import format_exc
 from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
 from sqlalchemy.exc import IntegrityError
 
+# Bunch
+from bunch import bunchify
+
 # Zato
 from zato.common.odb.model import ChannelURLDefinition, ChannelURLSecurity, \
      Cluster, DeployedService, SecurityDefinition, Server, Service, \
      TechnicalAccount
-from zato.common.odb.query import job_list
+from zato.common.odb.query import basic_auth_list, job_list, tech_acc_list
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -191,3 +194,13 @@ class ODBManager(object):
         """ Returns a list of jobs defined on the given cluster .
         """
         return job_list(self._session, cluster_id)
+    
+    def get_basic_auth_list(self, cluster_id):
+        """ Returns a list of HTTP Basic Auth definitions existing on the given cluster .
+        """
+        return basic_auth_list(self._session, cluster_id)
+    
+    def get_tech_acc_list(self, cluster_id):
+        """ Returns a list of technical accounts existing on the given cluster .
+        """
+        return tech_acc_list(self._session, cluster_id)
