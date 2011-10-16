@@ -37,6 +37,7 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
+from zato.server.base import BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         that passes the arguments to the thread.
         """
         _local = local()
+        _local.message_handler = BrokerMessageReceiver()
         
         def _on_sub_message_handler(msg, args):
             """ Invoked for each message sent through the ZeroMQ SUB socket.

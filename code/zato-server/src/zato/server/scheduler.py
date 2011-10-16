@@ -61,7 +61,7 @@ class Scheduler(object):
         """
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name,
                'service': service, 'extra':extra}
-        self.singleton.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+        self.singleton.broker_client.send_json(msg)
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Job executed, name [{0}], service [{1}], extra [{2}]'.format(

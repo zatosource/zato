@@ -40,14 +40,14 @@ class ZMQPullSub(object):
     """
     
     def __init__(self, name, zmq_context, pull_addr, sub_addr, 
-                 on_pull_sub_handler=None,  pull_handler_args=None,
+                 on_pull_handler=None,  pull_handler_args=None,
                  on_sub_handler=None,  sub_handler_args=None, keep_running=True):
         self.name = name
         self.zmq_context = zmq_context
         self.pull_addr = pull_addr
         self.sub_addr = sub_addr
         self.keep_running = keep_running
-        self.on_pull_sub_handler = on_pull_sub_handler
+        self.on_pull_handler = on_pull_handler
         self.pull_handler_args = pull_handler_args
         self.on_sub_handler = on_sub_handler
         self.sub_handler_args = sub_handler_args
@@ -102,7 +102,7 @@ class ZMQPullSub(object):
         del sock
         
         _handlers_args = {
-            self.pull_socket: (self.on_pull_sub_handler, self.pull_handler_args),
+            self.pull_socket: (self.on_pull_handler, self.pull_handler_args),
             self.sub_socket: (self.on_sub_handler, self.sub_handler_args)}
         
         while self.keep_running:
@@ -111,31 +111,40 @@ class ZMQPullSub(object):
                 for sock_name, sock in _socks:
                     if poll_socks.get(sock) == zmq.POLLIN:
                         msg = sock.recv()
+                        try:
+                            e = None
+                            args = None
+                            
+                            # A pre-hook, if any..
+                            self.on_before_msg_handler(msg, self.pull_handler_args)
+                            
+                            # .. the actual handler ..
+                            handler, args = _handlers_args[sock]
+                            args = (args, sock_name)
+                            handler(msg, args)
+                        except Exception, e:
+                            msg = '[{0}] Could not invoke the message handler, msg [{1}] sock_name [{2}] e [{3}]'
+                            logger.error(msg.format(self.name, msg, sock_name, format_exc(e)))
+                        finally:
+                            # .. an after-hook, if any..
+                            self.on_after_msg_handler(msg, args, e)
+                        
             except Exception, e:
                 # It's OK and needs not to disturb the user so log it only
                 # in the DEBUG level.
                 if isinstance(e, zmq.ZMQError) and e.errno == zmq.ETERM:
                     msg = '[{0}] Caught a zmq.ETERM [{1}], quitting'.format(
                         self.name, format_exc(e))
-                    meth = logger.debug
+                    log_meth = logger.debug
                 else:
                     msg = '[{0}] Caught an exception [{1}], quitting.'.format(
                         self.name, format_exc(e))
-                    meth = logger.error
+                    log_meth = logger.error
                     
-                meth(msg)
+                log_meth(msg)
                 self.close()
-            else:
-                self.on_before_msg_handler(msg, self.pull_handler_args)
-                try:
-                    e = None
-                    handler, args = _handlers_args[sock]
-                    handler(msg, args)
-                except Exception, e:
-                    msg = '[{0}] Could not invoke the message handler, msg [{1}] sock_name [{2}] e [{3}]'
-                    logger.error(msg.format(self.name, msg, sock_name, format_exc(e)))
                     
-                self.on_after_msg_handler(msg, e, self.pull_handler_args)
+                
                 
 class ZMQPush(object):
     """ Sends messages to ZeroMQ using a PUSH socket.

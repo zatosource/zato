@@ -41,9 +41,9 @@ from zato.broker.zato_client import BrokerClient
 from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
      ZATO_ERROR, ZATO_OK, ZatoException
 from zato.common.util import TRACE1, zmq_names
-from zato.server.base import BaseServer
+from zato.server.base import BrokerMessageReceiver
 
-class SingletonServer(BaseServer):
+class SingletonServer(BrokerMessageReceiver):
     """ A server of which one instance only may be running in a Zato container.
     Holds and processes data which can't be made parallel, such as scheduler,
     hot-deployment or on-disk configuration management.
