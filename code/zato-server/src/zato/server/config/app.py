@@ -128,7 +128,7 @@ class ZatoContext(PythonConfig):
             'zato:service.get-details':'zato.server.service.internal.service.GetServiceDetails',
 
             # SOAP channels
-            'zato:channel.soap.get-list':'zato.server.service.internal.soap.GetList',
+            'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
             
             # Technical accounts
             'zato:security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',

@@ -45,9 +45,12 @@ class GetList(AdminService):
             
             for definition in definitions:
     
-                #definition_elem = Element('definition')                
-                #definition_list.append(definition_elem)
+                definition_elem = Element('definition')
+                definition_elem.id = definition.id
+                definition_elem.url_pattern = definition.url_pattern
+                definition_elem.is_internal = definition.is_internal
                 
-                pass
+                
+                definition_list.append(definition_elem)
     
             return ZATO_OK, etree.tostring(definition_list)
