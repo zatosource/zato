@@ -38,7 +38,7 @@ from bunch import Bunch
 from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
-from zato.common.util import new_req_id, TRACE1, zmq_names
+from zato.common.util import new_rid, TRACE1, zmq_names
 from zato.common.odb import create_pool
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
@@ -46,11 +46,11 @@ from zato.server.channel.soap import server_soap_error
 
 logger = logging.getLogger(__name__)
 
-def wrap_error_message(req_id, url_type, msg):
+def wrap_error_message(rid, url_type, msg):
     """ Wraps an error message in a transport-specific envelope.
     """
     if url_type == ZATO_URL_TYPE_SOAP:
-        return server_soap_error(req_id, msg)
+        return server_soap_error(rid, msg)
     
     # Let's return the message as-is if we don't have any specific envelope
     # to use.
@@ -74,7 +74,7 @@ class ZatoHTTPListener(HTTPServer):
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
 
-    def _handle_security_tech_account(self, req_id, sec_def, request_data, body, headers):
+    def _handle_security_tech_account(self, rid, sec_def, request_data, body, headers):
         """ Handles the 'tech-account' security config type.
         """
         zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
@@ -83,7 +83,7 @@ class ZatoHTTPListener(HTTPServer):
             if not headers.get(header, None):
                 msg = ("[{0}] The header [{1}] doesn't exist or is empty, URI=[{2}, "
                       "headers=[{3}]]").\
-                        format(req_id, header, request_data.uri, headers)
+                        format(rid, header, request_data.uri, headers)
                 logger.error(msg)
                 raise HTTPException(httplib.FORBIDDEN, msg)
 
@@ -95,30 +95,30 @@ class ZatoHTTPListener(HTTPServer):
         msg_template = '[{0}] The {1} is incorrect, URI=[{2}], X_ZATO_USER=[{3}]'
 
         if headers['X_ZATO_USER'] != sec_def.name:
-            logger.error(msg_template.format(req_id, 'username', 
+            logger.error(msg_template.format(rid, 'username', 
                         request_data.uri, headers['X_ZATO_USER']))
             raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format(req_id, 'username or password', request_data.uri, 
+                    format(rid, 'username or password', request_data.uri, 
                            headers['X_ZATO_USER']))
         
         incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
         
         if incoming_password != sec_def.password:
-            logger.error(msg_template.format(req_id, 'password', request_data.uri, 
+            logger.error(msg_template.format(rid, 'password', request_data.uri, 
                               headers['X_ZATO_USER']))
             raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format(req_id, 'username or password', request_data.uri, 
+                    format(rid, 'username or password', request_data.uri, 
                            headers['X_ZATO_USER']))
         
         
-    def handle_security(self, req_id, url_data, request_data, body, headers):
+    def handle_security(self, rid, url_data, request_data, body, headers):
         """ Handles all security-related aspects of an incoming HTTP message
         handling. Calls other concrete security methods as appropriate.
         """
         sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.type
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-        getattr(self, handler_name)(req_id, sec_def, request_data, body, headers)
+        getattr(self, handler_name)(rid, sec_def, request_data, body, headers)
             
     def executeRequest(self, task, thread_ctx):
         """ Handles incoming HTTP requests. Each request is being handled by one
@@ -129,7 +129,7 @@ class ZatoHTTPListener(HTTPServer):
         # later on, if we don't stumble upon an exception, we may learn that
         # it is for instance, a SOAP URL.
         url_type = None
-        req_id = new_req_id()
+        rid = new_rid()
         
         try:
             # Collect necessary request data.
@@ -140,7 +140,7 @@ class ZatoHTTPListener(HTTPServer):
             if url_data:
                 url_type = url_data['url_type']
                 
-                self.handle_security(req_id, url_data, task.request_data, body, headers)
+                self.handle_security(rid, url_data, task.request_data, body, headers)
                 
                 # TODO: Shadow out any passwords that may be contained in HTTP
                 # headers or in the message itself. Of course, that only applies
@@ -149,21 +149,21 @@ class ZatoHTTPListener(HTTPServer):
             else:
                 msg = ("The URL [{0}] doesn't exist or has no security "
                       "configuration assigned").format(task.request_data.uri)
-                logger.warn(msg, rid=req_id)
+                logger.warn(msg, rid)
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
-            response = self.server.soap_handler.handle(req_id, body, headers, thread_ctx)
+            response = self.server.soap_handler.handle(rid, body, headers, thread_ctx)
 
         except HTTPException, e:
             task.setResponseStatus(e.status, e.reason)
-            response = wrap_error_message(req_id, url_type, e.reason)
+            response = wrap_error_message(rid, url_type, e.reason)
             
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)
-            logger.error('[{0}] Exception caught [{1}]'.format(req_id, tb))
-            response = wrap_error_message(req_id, url_type, tb)
+            logger.error('[{0}] Exception caught [{1}]'.format(rid, tb))
+            response = wrap_error_message(rid, url_type, tb)
 
         if url_type == ZATO_URL_TYPE_SOAP:
             content_type = 'text/xml'
