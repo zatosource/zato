@@ -68,6 +68,25 @@ def index(req):
     create_form = DefinitionForm()
     edit_form = DefinitionForm(prefix='edit')
 
+    if cluster_id and req.method == 'GET':
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.cluster_id = cluster_id
+
+        _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
+                'zato:channel.soap.get-list', zato_message)
+
+        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
+            for definition_elem in zato_message.data.definition_list.definition:
+
+                id = definition_elem.id.text
+                url_pattern = definition_elem.url_pattern.text
+                is_internal = is_boolean(definition_elem.is_internal.text)
+
+                items.append(ChannelURLDefinition(id, url_pattern, 
+                                'soap', is_internal))
 
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
