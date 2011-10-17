@@ -28,6 +28,7 @@ from hashlib import sha1, sha256
 from itertools import ifilter
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint
+from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
 from threading import Thread
@@ -44,6 +45,7 @@ from bunch import Bunch
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
 from zato.common.broker_message import ZMQ_SOCKET
+from zato.common.log_message import RID_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -245,3 +247,12 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
 
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
+
+def new_req_id():
+    """ Returns a new 64-bit request identifier. It's *not* safe to use the ID
+    for any cryptographical purposes, it's only meant to be used as a conveniently
+    formatted ticket attached to each of the requests processed by Zato servers.
+    """
+    
+    # The number below (24) needs to be kept in sync with zato.common.log_message.RID_LENGTH
+    return '{0:0>24}'.format(getrandbits(64))
