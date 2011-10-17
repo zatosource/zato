@@ -248,7 +248,7 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
 
-def new_req_id():
+def new_rid():
     """ Returns a new 64-bit request identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.

@@ -20,23 +20,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from functools import partial
 from logging import Logger
 
 # Zato
 from zato.common.log_message import NULL_CNO, NULL_RID
 
+def wrapper(name):
+    def _log(self, msg, rid=NULL_RID, cno=NULL_CNO, *args, **kwargs):
+        def _invoke(name, self, msg):
+            return Logger.__dict__[name](self, msg, extra={'rid':rid, 'cno':cno})
+        return _invoke(name, self, msg)
+    return _log
+
 class ZatoLogger(Logger):
     """ A custom subclass which turns parameters not understood otherwise
-    into an 'extra' dictionary of the base class.
+    into an 'extra' dictionary passed on to the base class.
     """
-    def info(self, msg, rid=NULL_RID, cno=NULL_CNO, *args, **kwargs):
-        return Logger.info(self, msg, extra={'rid':rid, 'cno':cno})
-        
-    def warn(self, msg, rid, cno, *args, **kwargs):
-        return super(ZatoLogger, self).warn(msg, extra={'rid':rid, 'cno':cno})
+    debug = wrapper('debug')
+    info = wrapper('info')
+    warning = wrapper('warning')
+    error = wrapper('error')
     
-    #def debug
-    #info
-    #warning
-    #warn = warning
-    #log
+    # Alias
+    warn = warning
