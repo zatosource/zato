@@ -67,6 +67,34 @@ def index(req):
     
     create_form = DefinitionForm()
     edit_form = DefinitionForm(prefix='edit')
+    
+    from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
+            HTTPBasicAuth, SecurityDefinition, TechnicalAccount, WSSDefinition)
+    
+    definitions = req.odb.query(ChannelURLDefinition.id,
+        ChannelURLDefinition.url_pattern,
+        SecurityDefinition.security_def_type.label('sec_def_type'),
+        HTTPBasicAuth.id.label('basic_auth_id'),
+        HTTPBasicAuth.name.label('basic_auth_name'),
+        TechnicalAccount.id.label('tech_acc_id'),
+        TechnicalAccount.name.label('tech_acc_name'),
+        WSSDefinition.id.label('wss_id'),
+        WSSDefinition.name.label('wss_name'),
+        ).\
+            outerjoin(ChannelURLSecurity, 
+                      ChannelURLSecurity.channel_url_def_id==ChannelURLDefinition.id).\
+            outerjoin(SecurityDefinition, 
+                      SecurityDefinition.id==ChannelURLSecurity.security_def_id).\
+            outerjoin(HTTPBasicAuth, 
+                      HTTPBasicAuth.security_def_id==SecurityDefinition.id).\
+            outerjoin(TechnicalAccount, 
+                      TechnicalAccount.security_def_id==SecurityDefinition.id).\
+            outerjoin(WSSDefinition, 
+                      WSSDefinition.security_def_id==SecurityDefinition.id).\
+            order_by(ChannelURLDefinition.url_pattern)
+    
+    print(definitions)
+    print(definitions.all())
 
     if cluster_id and req.method == 'GET':
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
