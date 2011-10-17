@@ -13,16 +13,30 @@
     <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/cookie/cookie-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
 
+    {% comment %} Validation framework {% endcomment %}
+    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
+    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+
+    {% comment %} Scriptaculous effects {% endcomment %}
+    <script type="text/javascript" src="/static/js/effects.js"></script>
+
+    {% comment %} String formatting {% endcomment %}
+    <script type="text/javascript" src="/static/js/stringformat.js"></script>
+    
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} Scheduler JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/channel/soap.js"></script>
+    {% comment %} SOAP channels {% endcomment %}
+    <script type="text/javascript" src="/static/js/channels/soap.js"></script>
 
     </script>
 
@@ -34,6 +48,8 @@
 {% if not zato_clusters %}
     <p>
     There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
+    <br/><br/>
     </p>
 {% else %}
 
@@ -46,42 +62,43 @@
 
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show channels" />
+        <input type="submit" value="Show definitions" />
     </form>
 
 
     {% if cluster_id %}
 
         <br/>
-
-        <input type="hidden" id="cluster_server_id" value="{{ cluster_id }}" />
-
-        {% if services %}
-            <a id="copy_selected" name="copy_selected" href="#">Copy selected</a>
-            <a id="paste_config" name="paste_config" href="#">Paste config</a>
-        {% endif %}
-
-
+        <a href="javascript:create('{{ cluster_id }}')" class="common">Create a new SOAP channel</a>
         <br/><br/>
 
         <script type="text/javascript">
         YAHOO.util.Event.addListener(window, "load", function() {
             YAHOO.example.EnhanceFromMarkup = function() {
                 data_column_defs = [
-                    {key:"channel_selection", label:"", sortable:false},
-                    {key:"channel_data", label:"Channel", sortable:true},
+                    {key:"id", label:"id", hidden:true},
+                    {key:"selection", label:"", sortable:false},
+                    {key:"url_pattern", label:"url_pattern", hidden:true},
+                    {key:"definition_text", label:"Channel", sortable:true},
+                    {key:"edit", label:"&nbsp;", sortable:false},
+                    {key:"delete", label:"&nbsp;", sortable:false},
                 ];
 
                 data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
                 data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
                 data_ds.responseSchema = {
-                    fields: [{key:"channel_selection"},
-                            {key:"channel_data"},
+                    fields: [
+                            {key:"id"},
+                            {key:"selection"},
+                            {key:"url_pattern"},
+                            {key:"definition_text"},
+                            {key:"edit"},
+                            {key:"delete"},
                     ]
                 };
 
                 data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
-                        {sortedBy:{key:"channel_data",dir:"desc"}}
+                        {sortedBy:{key:"url_pattern",dir:"desc"}}
                 );
 
                 return {
@@ -92,7 +109,38 @@
 
         });
         </script>
-
+        
+        <div id="create-div" class="yui-pe-content">
+            <div class="hd">Create a new SOAP channel</div>
+            <div class="bd">
+                <form action="{% url channel-soap-create %}" method="post" id="create-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">URL</td>
+                            <td>{{ create_form.url_pattern }}</td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+        
+        <div id="edit-div" class="yui-pe-content">
+            <div class="hd">Edit the SOAP channel</div>
+            <div class="bd">
+                <form action="{% url channel-soap-edit %}" method="post" id="edit-form">
+                    <table class="form-data" border="0">
+                        <tr>
+                            <td style="vertical-align:middle">URL</td>
+                            <td>{{ edit_form.url_pattern }}</td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+        
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -100,25 +148,23 @@
                     <tr>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                {% for service in services %}
+                {% for item in items %}
 
                     <tr>
-                        <td>
-                            <input type="checkbox" />
-                        </td>
-                        <td>
-                                <a href="/zato/service/details/{{ server_id }}/{{ service.name }}/" class="common">{{ service.name }}</a>
-                            <br/>
-                            <span style="font-size:11px;">
-                                SOAP: 1.1,
-                                URL path: /soap/adapter/crm,
-                                security:
-                                <a href="#" style="color:#282828;text-decoration:none">CRM-WS-SECURITY (user: crmuser1)</a></span>
-                        </td>
+                        <td>{{ item.id }}</td>
+                        <td><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.name }}</td>
+                        <td><a href="javascript:edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:delete_('{{ item.id }}')">Delete</a></td>
                     </tr>
                 {% endfor %}
 
@@ -126,8 +172,8 @@
             </table>
         </div>
 
-    {% endif %} {% comment %}server_id{% endcomment %}
+    {% endif %} {% comment %}cluster_id{% endcomment %}
 
-{% endif %}{% comment %}not zato_servers{% endcomment %}
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

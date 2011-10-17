@@ -36,12 +36,13 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
+from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.channel.soap import DefinitionForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
-from zato.admin.web import invoke_admin_service
 from zato.common.odb.model import Cluster, ChannelURLDefinition
+from zato.common.util import pprint, TRACE1
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +53,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data = Element('data')
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.username = params[prefix + 'username']
-    zato_message.data.domain = params[prefix + 'domain']
+    zato_message.data.url_pattern = params[prefix + 'url_pattern']
 
     return zato_message
 
@@ -69,28 +67,7 @@ def index(req):
     
     create_form = DefinitionForm()
     edit_form = DefinitionForm(prefix='edit')
-    change_password_form = ChangePasswordForm()
 
-    if cluster_id and req.method == 'GET':
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
-
-        _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
-                'zato:security.basic-auth.get-list', zato_message)
-
-        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
-            for definition_elem in zato_message.data.definition_list.definition:
-
-                id = definition_elem.id.text
-                name = definition_elem.name.text
-                is_active = is_boolean(definition_elem.is_active.text)
-                username = definition_elem.username.text
-                domain = definition_elem.domain.text
-
-                items.append(HTTPBasicAuth(id, name, is_active, username, domain))
 
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
@@ -98,14 +75,13 @@ def index(req):
         'items':items,
         'create_form': create_form,
         'edit_form': edit_form,
-        'change_password_form': change_password_form
         }
 
     # TODO: Should really be done by a decorator.
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)
 
-    return render_to_response('zato/security/basic-auth.html', return_data)
+    return render_to_response('zato/channel/soap.html', return_data)
 
 @meth_allowed('POST')
 def edit(req):

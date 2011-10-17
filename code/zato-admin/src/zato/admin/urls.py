@@ -25,8 +25,9 @@ from django.contrib.auth.views import login
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import main, cluster, service, servers, scheduler, channel, \
-     load_balancer
+from zato.admin.web.views import(cluster, load_balancer, main, scheduler, 
+    service, servers)
+from zato.admin.web.views.channel import soap
 from zato.admin.web.views.pool import sql
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
@@ -74,7 +75,9 @@ urlpatterns = patterns('',
     url(r'^zato/service/details/(?P<server_id>\d*)/(?P<service_name>.*)/$', service.details, name='service-details'),
 
     # Channels.
-    url(r'^zato/channels/soap/$', channel.soap, name='channel-soap'),
+    url(r'^zato/channel/soap/$', soap.index, name='channel-soap'),
+    url(r'^zato/channel/soap/create/$', basic_auth.create, name='channel-soap-create'),
+    url(r'^zato/channel/soap/edit/$', basic_auth.edit, name='channel-soap-edit'),
 
     # Security..
 
