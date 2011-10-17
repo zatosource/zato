@@ -29,9 +29,6 @@ from httplib import HTTPConnection
 # lxml
 from lxml import etree, objectify
 
-# SQLAlchemy
-from sqlalchemy.orm import sessionmaker
-
 # Spring Python
 from springpython.config import ApplicationContextAware
 from springpython.context import InitializingObject
@@ -46,11 +43,12 @@ from zato.server.service.internal import AdminService
 soap_doc = Template("""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>$body</soap:Body></soap:Envelope>""")
 zato_message = Template("""
 <zato_message xmlns="http://gefira.pl/zato">
-    <error_code>$error_code</error_code>
-    <error_details>$error_details</error_details>
     <data>$data</data>
-    <envelope>
-    </envelope>
+    <zato_env>
+        <result>$result</result>
+        <req_id>$req_id</req_id>
+        <details>$details</details>
+    </zato_env>
 </zato_message>""")
 
 # Returned if there has been any exception caught.
@@ -62,13 +60,11 @@ soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
    <SOAP-ENV:Body>
      <SOAP-ENV:Fault>
      <faultcode>SOAP-ENV:$faultcode</faultcode>
-     <faultstring>$faultstring</faultstring>
+     <faultstring>[$req_id]
+$faultstring</faultstring>
       </SOAP-ENV:Fault>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>""")
-
-Session = sessionmaker(autoflush=False)
-
 
 # TODO: Clean it up, it's not needed anymore
 soap_pool = SOAPPool("http://localhost:17080/soap")
@@ -92,11 +88,13 @@ def get_body_payload(body):
 
     return body_payload
 
-def client_soap_error(faultstring):
-    return soap_error.safe_substitute(faultcode="Client", faultstring=faultstring)
+def client_soap_error(req_id, faultstring):
+    return soap_error.safe_substitute(faultcode='Client', 
+        req_id=req_id, faultstring=faultstring)
 
-def server_soap_error(faultstring):
-    return soap_error.safe_substitute(faultcode="Server", faultstring=faultstring)
+def server_soap_error(req_id, faultstring):
+    return soap_error.safe_substitute(faultcode='Server',
+        req_id=req_id, faultstring=faultstring)
 
 class ClientSOAPException(ZatoException):
     pass
@@ -124,40 +122,46 @@ class SOAPMessageHandler(ApplicationContextAware):
         self.crypto_manager = crypto_manager
         self.wss_store = wss_store
 
-    def handle(self, request, headers, thread_ctx):
+    def handle(self, req_id, request, headers, thread_ctx):
         try:
-            self.logger.debug("request=[{0}] headers=[{1}]".format(request, headers))
+            self.logger.debug("[{0}] request=[{1}] headers=[{2}]".format(req_id,
+                request, headers))
 
             # HTTP headers are all uppercased at this point.
             soap_action = headers.get('SOAPACTION')
 
             if not soap_action:
-                return client_soap_error('Client did not send a SOAPAction header')
+                return client_soap_error(req_id, 'Client did not send a SOAPAction header')
 
             # SOAP clients may send an empty header, i.e. SOAPAction: "",
             # as opposed to not sending the header at all.
             soap_action = soap_action.lstrip('"').rstrip('"')
 
             if not soap_action:
-                return client_soap_error('Client sent an empty SOAPAction header')
+                return client_soap_error(req_id, 'Client sent an empty SOAPAction header')
 
             service_class_name = self.soap_config.get(soap_action)
-            self.logger.debug('service_class_name=[{0}]'.format(service_class_name))
+            self.logger.debug('[{0}] service_class_name=[{1}]'.format(req_id,
+                service_class_name))
 
             if not service_class_name:
-                return client_soap_error('Unrecognized SOAPAction [{0}]'.format(soap_action))
+                return client_soap_error('[{0}] Unrecognized SOAPAction [{1}]'.format(req_id,
+                    soap_action))
 
-            self.logger.log(TRACE1, 'service_store.services=[{0}]'.format(self.service_store.services))
+            self.logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(req_id,
+                self.service_store.services))
             service_data = self.service_store.services.get(service_class_name)
 
             if not service_data:
-                return server_soap_error('No service could handle SOAPAction [{0}]'.format(soap_action))
+                return server_soap_error('[{0}] No service could handle SOAPAction [{1}]'.format(
+                    req_id, soap_action))
 
             soap = objectify.fromstring(request)
             body = soap_body_xpath(soap)
 
             if not body:
-                return client_soap_error('Client did not send the [{0}] element'.format(body_path))
+                return client_soap_error('[{0}] Client did not send the [{1}] element'.format(
+                    req_id, body_path))
 
             if self.wss_store.needs_wss(service_class_name):
                 # Will raise an exception if anything goes wrong.
@@ -179,36 +183,39 @@ class SOAPMessageHandler(ApplicationContextAware):
             if isinstance(service_instance, AdminService):
 
                 if self.logger.isEnabledFor(TRACE1):
-                    self.logger.log(TRACE1, 'len(service_response)=[{0}]'.format(len(service_response)))
+                    self.logger.log(TRACE1, '[{0}] len(service_response)=[{1}]'.format(
+                        req_id, len(service_response)))
                     for item in service_response:
-                        self.logger.log(TRACE1, 'service_response item=[{0}]'.format(item))
+                        self.logger.log(TRACE1, '[{0}] service_response item=[{1}]'.format(
+                            req_id, item))
 
-                error_code, rest = service_response
-                if error_code == ZATO_OK:
-                    error_details = ''
+                result, rest = service_response
+                if result == ZATO_OK:
+                    details = ''
                     data = rest
                 else:
-                    error_details = rest
+                    details = rest
                     data = ''
                     
-                response = zato_message.safe_substitute(error_code=error_code,
-                                error_details=error_details, data=data)
+                response = zato_message.safe_substitute(req_id=req_id,
+                    result=result, details=details, data=data)
             else:
                 response = service_response
 
             response = soap_doc.safe_substitute(body=response)
 
-            self.logger.debug('Returning response=[{0}]'.format(response))
+            self.logger.debug('[{0}] Returning response=[{1}]'.format(
+                req_id, response))
             return response
 
         except ClientSecurityException, e:
             # TODO: Rethink if any errors may be logged here.
-            msg = escape(format_exc())
+            msg = '[{0}] [{1}]'.format(req_id, escape(format_exc()))
             self.logger.error(msg)
-            return client_soap_error(e.args[0])
+            return client_soap_error(req_id, e.args[0])
 
         except Exception, e:
             # TODO: Rethink if any errors may be logged here.
-            msg = escape(format_exc())
+            msg = '[{0}] [{1}]'.format(req_id, escape(format_exc()))
             self.logger.error(msg)
-            return server_soap_error(msg)
+            return server_soap_error(req_id, msg)

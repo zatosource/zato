@@ -19,8 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Setting the customer logger must come first.
+import logging
+from zato.server.log import ZatoLogger
+logging.setLoggerClass(ZatoLogger)
+
 # stdlib
-import logging, os, sys
+import os, sys
 import logging.config
 
 # ConfigObj
@@ -51,7 +56,6 @@ def run(host, port, base_dir, start_singleton):
     # Configure the logging first, before configuring the actual server.
     logging.addLevelName('TRACE1', TRACE1)
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
-    logger = logging.getLogger('')
 
     config = ConfigObj(os.path.join(repo_location, 'server.conf'))
 

@@ -81,8 +81,8 @@ wsse_username_token_objectify = "{%s}UsernameToken" % wsse_namespace
 zato_data_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:data"
 zato_data_xpath = etree.XPath(zato_data_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
 
-zato_error_code_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:error_code"
-zato_error_code_path_xpath = etree.XPath(zato_error_code_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
+zato_result_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:zato_env/zato:result"
+zato_result_path_xpath = etree.XPath(zato_result_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
 
 scheduler_date_time_format = "%Y-%m-%d %H:%M:%S"
 
