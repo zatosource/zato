@@ -161,8 +161,17 @@
                     <tr>
                         <td>{{ item.id }}</td>
                         <td><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
-                        <td>{{ item.name }}</td>
+                        <td>{{ item.url_pattern }}</td>
+                        <td>URL: {{ item.url_pattern }}
+                        <br/>
+                        Security: HTTP Basic Auth 
+                            <a class="common" 
+                                href="{% url security-basic-auth %}?cluster={{ cluster_id }}&amp;name={{ item.sec_def_name }}">CRM-PROD</a>
+                        <a class="hint" href="#">(remove)</a>
+                        <br/>
+                        Services: 14
+                        <a class="hint" href="#">(load)</a>
+                        </td>
                         <td><a href="javascript:edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:delete_('{{ item.id }}')">Delete</a></td>
                     </tr>
