@@ -262,7 +262,8 @@ class ServiceStore(InitializingObject):
         # Import internal services here to avoid circular dependencies.
         from zato.server.service import internal
         from zato.server.service.internal import AdminService
-        from zato.server.service.internal import sql, scheduler, service, soap
+        from zato.server.service.internal import sql, scheduler, service
+        from zato.server.service.internal.channel import soap
         from zato.server.service.internal.security import basic_auth, \
              tech_account, wss
 
