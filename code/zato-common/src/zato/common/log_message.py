@@ -28,5 +28,5 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Needs to be kept in sync with zato.common.util.new_req_id
 RID_LENGTH = 24
 
-NULL_CNO = '0000.0000'
+NULL_LMC = '0000.0000'
 NULL_RID = '0' * RID_LENGTH
