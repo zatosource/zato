@@ -24,12 +24,12 @@ from functools import partial
 from logging import Logger
 
 # Zato
-from zato.common.log_message import NULL_CNO, NULL_RID
+from zato.common.log_message import NULL_LMC, NULL_RID
 
 def wrapper(name):
-    def _log(self, msg, rid=NULL_RID, cno=NULL_CNO, *args, **kwargs):
+    def _log(self, msg, rid=NULL_RID, lmc=NULL_LMC, *args, **kwargs):
         def _invoke(name, self, msg):
-            return Logger.__dict__[name](self, msg, extra={'rid':rid, 'cno':cno})
+            return Logger.__dict__[name](self, msg, extra={'rid':rid, 'lmc':lmc})
         return _invoke(name, self, msg)
     return _log
 
