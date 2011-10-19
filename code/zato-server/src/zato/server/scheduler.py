@@ -34,8 +34,6 @@ from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(level=logging.DEBUG)
-
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
         return datetime.strptime(job_data.start_date, scheduler_date_time_format)
