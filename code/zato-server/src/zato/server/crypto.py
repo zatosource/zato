@@ -32,12 +32,13 @@ from M2Crypto import RSA, BIO
 # Zato
 from zato.common.util import decrypt, encrypt, sign
 
+logger = logging.getLogger(__name__)
+
 class CryptoManager(object):
     """ Responsible for management of the server's crypto material.
     """
     def __init__(self, priv_key_location=None, pub_key_location=None, 
                  priv_key=None, pub_key=None):
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
         
         self.priv_key_location = priv_key_location
         self.pub_key_location = pub_key_location

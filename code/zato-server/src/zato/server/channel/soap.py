@@ -69,6 +69,8 @@ $faultstring</faultstring>
 # TODO: Clean it up, it's not needed anymore
 soap_pool = SOAPPool("http://localhost:17080/soap")
 
+logger = logging.getLogger(__name__)
+
 def soap_invoke(url, postdata, soap_action):
     headers = {"content-type": "text/xml", "SOAPAction": soap_action}
     payload = soap_doc.safe_substitute(body=postdata)
@@ -106,7 +108,6 @@ class SOAPChannelStore(object):
     def __init__(self, channels={}, config=None):
         self.channels = channels
         self.config = config
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
 
 class SOAPConfig(dict):
     pass
@@ -115,8 +116,6 @@ class SOAPMessageHandler(ApplicationContextAware):
 
     def __init__(self, soap_config=None, service_store=None, crypto_manager=None,
                  wss_store=None):
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
-
         self.soap_config = soap_config
         self.service_store = service_store
         self.crypto_manager = crypto_manager
@@ -124,7 +123,7 @@ class SOAPMessageHandler(ApplicationContextAware):
 
     def handle(self, req_id, request, headers, thread_ctx):
         try:
-            self.logger.debug("[{0}] request=[{1}] headers=[{2}]".format(req_id,
+            logger.debug("[{0}] request=[{1}] headers=[{2}]".format(req_id,
                 request, headers))
 
             # HTTP headers are all uppercased at this point.
@@ -141,14 +140,14 @@ class SOAPMessageHandler(ApplicationContextAware):
                 return client_soap_error(req_id, 'Client sent an empty SOAPAction header')
 
             service_class_name = self.soap_config.get(soap_action)
-            self.logger.debug('[{0}] service_class_name=[{1}]'.format(req_id,
+            logger.debug('[{0}] service_class_name=[{1}]'.format(req_id,
                 service_class_name))
 
             if not service_class_name:
                 return client_soap_error('[{0}] Unrecognized SOAPAction [{1}]'.format(req_id,
                     soap_action))
 
-            self.logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(req_id,
+            logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(req_id,
                 self.service_store.services))
             service_data = self.service_store.services.get(service_class_name)
 
@@ -182,11 +181,11 @@ class SOAPMessageHandler(ApplicationContextAware):
             # public key.
             if isinstance(service_instance, AdminService):
 
-                if self.logger.isEnabledFor(TRACE1):
-                    self.logger.log(TRACE1, '[{0}] len(service_response)=[{1}]'.format(
+                if logger.isEnabledFor(TRACE1):
+                    logger.log(TRACE1, '[{0}] len(service_response)=[{1}]'.format(
                         req_id, len(service_response)))
                     for item in service_response:
-                        self.logger.log(TRACE1, '[{0}] service_response item=[{1}]'.format(
+                        logger.log(TRACE1, '[{0}] service_response item=[{1}]'.format(
                             req_id, item))
 
                 result, rest = service_response
@@ -204,18 +203,18 @@ class SOAPMessageHandler(ApplicationContextAware):
 
             response = soap_doc.safe_substitute(body=response)
 
-            self.logger.debug('[{0}] Returning response=[{1}]'.format(
+            logger.debug('[{0}] Returning response=[{1}]'.format(
                 req_id, response))
             return response
 
         except ClientSecurityException, e:
             # TODO: Rethink if any errors may be logged here.
             msg = '[{0}] [{1}]'.format(req_id, escape(format_exc()))
-            self.logger.error(msg)
+            logger.error(msg)
             return client_soap_error(req_id, e.args[0])
 
         except Exception, e:
             # TODO: Rethink if any errors may be logged here.
             msg = '[{0}] [{1}]'.format(req_id, escape(format_exc()))
-            self.logger.error(msg)
+            logger.error(msg)
             return server_soap_error(req_id, msg)

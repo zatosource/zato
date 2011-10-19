@@ -33,13 +33,14 @@ from bzrlib.workingtree import WorkingTree
 # Zato
 from zato.common.util import pprint
 
+logger = logging.getLogger(__name__)
+
 class RepoManager(object):
     def __init__(self, repo_location=None, sql_pool_list_location=None,
                  job_list_location=None):
         self.repo_location = repo_location
         self.sql_pool_list_location = sql_pool_list_location
         self.job_list_location = job_list_location
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
 
     def ensure_repo_consistency(self):
         """ Makes sure the self.repo_location directory is a Bazaar branch.
@@ -49,29 +50,29 @@ class RepoManager(object):
         try:
             BzrDir.open(self.repo_location)
         except bzrlib.errors.NotBranchError, e:
-            self.logger.info("Location [%s] is not a Bazaar branch. Will turn it into one." % self.repo_location)
+            logger.info("Location [%s] is not a Bazaar branch. Will turn it into one." % self.repo_location)
             BzrDir.create_branch_convenience(self.repo_location)
 
         self.tree = WorkingTree.open(self.repo_location)
         delta = self.tree.changes_from(self.tree.basis_tree(), want_unversioned=True)
 
-        self.logger.debug("tree [%s]" % self.tree)
-        self.logger.debug("delta [%s]" % delta)
+        logger.debug("tree [%s]" % self.tree)
+        logger.debug("delta [%s]" % delta)
 
         for file_info in delta.unversioned:
-            self.logger.debug("unversioned [%s]" % (file_info,))
+            logger.debug("unversioned [%s]" % (file_info,))
             file_name = file_info[0]
             self.tree.add(file_name)
 
         if delta.unversioned:
             self.tree.commit("Added new unversioned files.")
         else:
-            self.logger.debug("No unversioned files found.")
+            logger.debug("No unversioned files found.")
 
         if delta.modified:
             self.tree.commit("Committed modified files.")
         else:
-            self.logger.debug("No modified files found.")
+            logger.debug("No modified files found.")
 
     def _update(self, top_level_elem, elems, location, before_commit_msg, commit_msg,
                 after_commit_msg):
@@ -95,13 +96,13 @@ class RepoManager(object):
         data_pprinted = pprint(data)
         output = dump(data, Dumper=Dumper, default_flow_style=False)
 
-        self.logger.debug(before_commit_msg)
-        self.logger.debug("data_pprinted=[%s], output=[%s], location=[%s]" % (data_pprinted, output, location))
+        logger.debug(before_commit_msg)
+        logger.debug("data_pprinted=[%s], output=[%s], location=[%s]" % (data_pprinted, output, location))
 
         open(location, "w").write(output)
         self.tree.commit(commit_msg)
 
-        self.logger.debug(after_commit_msg)
+        logger.debug(after_commit_msg)
 
     def update_sql_pool_list(self, pool_list):
         self._update("sql_pool_list", pool_list, self.sql_pool_list_location,
