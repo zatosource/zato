@@ -27,10 +27,14 @@ from traceback import format_exc
 from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
 from sqlalchemy.exc import IntegrityError
 
+# Bunch
+from bunch import Bunch
+
 # Zato
-from zato.common.odb.model import ChannelURLDefinition, ChannelURLSecurity, \
-     Cluster, DeployedService, SecurityDefinition, Server, Service, \
-     TechnicalAccount
+from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
+     Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server, 
+     Service, TechnicalAccount, WSSDefinition)
+from zato.common.odb.query import basic_auth_list, job_list, tech_acc_list
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -52,6 +56,9 @@ class ODBManager(object):
         
     def session(self):
         return self._Session()
+    
+    def close(self):
+        self._session.close()
         
     '''
     def query(self, *args, **kwargs):
@@ -113,7 +120,9 @@ class ODBManager(object):
         
         # What DB class to fetch depending on the string value of the security type.
         sec_type_db_class = {
-            'tech-account': TechnicalAccount
+            'tech-account': TechnicalAccount,
+            'basic_auth': HTTPBasicAuth,
+            'wss': WSSDefinition
             }
         
         result = {}
@@ -137,9 +146,28 @@ class ODBManager(object):
                     filter(db_class.security_def_id==sec_def_id).\
                     one()
             
-            result[url_pattern] = {'sec_def':sec_def, 'sec_def_type':sec_def_type,
-                                   'url_type':url_type}
+            result[url_pattern] = Bunch()
+            result[url_pattern].url_type = url_type
+            result[url_pattern].sec_def = Bunch()
+            result[url_pattern].sec_def.type = sec_def_type            
             
+            if sec_def_type == 'tech-account':
+                result[url_pattern].sec_def.name = sec_def.name
+                result[url_pattern].sec_def.password = sec_def.password
+                result[url_pattern].sec_def.salt = sec_def.salt
+            elif sec_def_type == 'basic_auth':
+                result[url_pattern].sec_def.name = sec_def.name
+                result[url_pattern].sec_def.password = sec_def.password
+                result[url_pattern].sec_def.domain = sec_def.domain
+            elif sec_def_type == 'wss':
+                result[url_pattern].sec_def.username = sec_def.username
+                result[url_pattern].sec_def.password = sec_def.password
+                result[url_pattern].sec_def.password_type = sec_def.password_type
+                result[url_pattern].sec_def.reject_empty_nonce_ts = sec_def.reject_empty_nonce_ts
+                result[url_pattern].sec_def.reject_stale_username = sec_def.reject_stale_username
+                result[url_pattern].sec_def.expiry_limit = sec_def.expiry_limit
+                result[url_pattern].sec_def.nonce_freshness = sec_def.nonce_freshness
+                
         return result
     
     def add_service(self, name, impl_name, is_internal, deployment_time, details):
@@ -182,3 +210,18 @@ class ODBManager(object):
             msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
+            
+    def get_job_list(self, cluster_id):
+        """ Returns a list of jobs defined on the given cluster .
+        """
+        return job_list(self._session, cluster_id)
+    
+    def get_basic_auth_list(self, cluster_id):
+        """ Returns a list of HTTP Basic Auth definitions existing on the given cluster .
+        """
+        return basic_auth_list(self._session, cluster_id)
+    
+    def get_tech_acc_list(self, cluster_id):
+        """ Returns a list of technical accounts existing on the given cluster .
+        """
+        return tech_acc_list(self._session, cluster_id)

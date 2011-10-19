@@ -34,7 +34,7 @@ import urllib3
 # Zato
 from zato.common.util import TRACE1
 from zato.common import soap_doc, soap_fault_xpath, ZATO_ERROR, ZATO_OK
-from zato.common import ZatoException, zato_data_xpath, zato_error_code_path_xpath
+from zato.common import ZatoException, zato_data_xpath, zato_result_path_xpath
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +73,8 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
                        has been returned in the response. Will raise a ZatoException if it hasn't
                        and 'needs_config_key' is True.
     """
-    url = 'https://{0}:{1}'.format(cluster.sec_server_host, cluster.sec_server_port)
-    logger.log(TRACE1, 'About to invoke admin service url=[{0}]'.format(url))
+    url = 'http://{0}:{1}'.format(cluster.lb_host, cluster.lb_port)
+    logger.log(TRACE1, 'About to invoke the admin service url=[{0}]'.format(url))
     pool = SOAPPool(url)
     soap_response = pool.invoke('/zato/soap', soap_action, soap_body, headers)
 
@@ -99,9 +99,9 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
     logger.log(TRACE1, "zato_message=[%s]" % etree.tostring(zato_message))
 
     # We have a payload but hadn't there been any errors at the server's side?
-    zato_error_code = zato_error_code_path_xpath(response)
-    if zato_error_code[0] != ZATO_OK:
-        logger.log(TRACE1, "zato_error_code=[%s]" % zato_error_code)
+    zato_result = zato_result_path_xpath(response)
+    if zato_result[0] != ZATO_OK:
+        logger.log(TRACE1, "zato_result=[%s]" % zato_result)
         raise ZatoException(soap_response)
 
     # Check whether the key has been received, if one has been requested.

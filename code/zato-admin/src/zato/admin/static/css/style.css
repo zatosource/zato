@@ -1,4 +1,3 @@
-
 h2.zato {
     font-size:150%;
     padding:10px;
@@ -20,7 +19,7 @@ h2.zato {
 }
 
 /*
-    Overridden YUI styles.
+Overridden YUI styles.
 */
 
 .yui-dt table {
@@ -124,8 +123,8 @@ html {
     cursor: pointer;
 }
 
-span.form_hint {
-    font-size:smaller; 
+.form_hint {
+    font-size:smaller;
     color:#666666
 }
 

@@ -82,18 +82,18 @@ class Cluster(Base):
     odb_user = Column(String(200), nullable=False)
     odb_db_name = Column(String(200), nullable=False)
     odb_schema = Column(String(200), nullable=True)
-    zeromq_host = Column(String(200), nullable=False)
-    zeromq_port = Column(Integer(), nullable=False)
+    broker_host = Column(String(200), nullable=False)
+    broker_start_port = Column(Integer(), nullable=False)
+    broker_token = Column(String(32), nullable=False)
     lb_host = Column(String(200), nullable=False)
     lb_agent_port = Column(Integer(), nullable=False)
-    sec_server_host = Column(String(200), nullable=False)
-    sec_server_port = Column(Integer(), nullable=False)
+    lb_port = Column(Integer(), nullable=False)
 
     def __init__(self, id=None, name=None, description=None, odb_type=None,
                  odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
-                 odb_schema=None, zeromq_host=None, zeromq_port=None,
-                 lb_host=None, lb_agent_port=None,
-                 sec_server_host=None, sec_server_port=None):
+                 odb_schema=None, broker_host=None, broker_start_port=None,
+                 broker_token=None, lb_host=None, lb_agent_port=None, 
+                 lb_port=None):
         self.id = id
         self.name = name
         self.description = description
@@ -103,12 +103,12 @@ class Cluster(Base):
         self.odb_user = odb_user
         self.odb_db_name = odb_db_name
         self.odb_schema = odb_schema
-        self.zeromq_host = zeromq_host
-        self.zeromq_port = zeromq_port
+        self.broker_host = broker_host
+        self.broker_start_port = broker_start_port
+        self.broker_token = broker_token
         self.lb_host = lb_host
         self.lb_agent_port = lb_agent_port
-        self.sec_server_host = sec_server_host
-        self.sec_server_port = sec_server_port
+        self.lb_port = lb_port
 
     def __repr__(self):
         return make_repr(self)
@@ -295,60 +295,6 @@ class HTTPBasicAuth(Base):
 
     def __repr__(self):
         return make_repr(self)
-    
-class SSLAuth(Base):
-    """ An SSL/TLS-based auth definition.
-    """
-    __tablename__ = 'ssl_auth_def'
-    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
-
-    id = Column(Integer,  Sequence('ssl_def_id_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('ssl_defs', order_by=name))
-    
-    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
-                             nullable=True)
-    security_def = relationship(SecurityDefinition, backref=backref('ssl_auth_def', 
-                                    order_by=name, uselist=False))
-
-    def __init__(self, id=None, name=None, is_active=None, cluster=None,
-                 definition_text=''):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.cluster = cluster
-        self.definition_text = definition_text # Not used by the database
-
-    def __repr__(self):
-        return make_repr(self)
-    
-class SSLAuthItem(Base):
-    """ A particular key/value pair of a given SSL/TLS-based auth definition.
-    """
-    __tablename__ = 'ssl_auth_def_item'
-    __table_args__ = (UniqueConstraint('def_id', 'field', 'value'), {})
-    
-    id = Column(Integer,  Sequence('ssl_def_item_id_seq'), primary_key=True)
-    field = Column(String(200), nullable=False)
-    operator = Column(String(20), nullable=False)
-    value = Column(String(200), nullable=False)
-    
-    def_id = Column(Integer, ForeignKey('ssl_auth_def.id', ondelete='CASCADE'),
-                    nullable=False)
-    def_ = relationship(SSLAuth, backref=backref('items', order_by=field,
-                    cascade='all, delete, delete-orphan', single_parent=True))
-    
-    def __init__(self, id=None, field=None, operator=None, value=None, def_=None):
-        self.id = id
-        self.field = field
-        self.operator = operator
-        self.value = value
-        self.def_ = def_
-
-################################################################################
 
 class TechnicalAccount(Base):
     """ Stores information about technical accounts, used for instance by Zato

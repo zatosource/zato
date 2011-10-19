@@ -36,10 +36,9 @@ from sqlalchemy.orm import sessionmaker
 from M2Crypto import RSA
 
 # Zato
-from zato.cli import ZatoCommand, common_odb_opts, zeromq_opts, create_odb, \
+from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, ca_create_security_server, create_security_server, \
-     create_server, create_zato_admin
+     ca_create_zato_admin, create_server, create_zato_admin
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.odb import engine_def, ping_queries
 from zato.common.odb.model import *
@@ -58,7 +57,7 @@ class Quickstart(ZatoCommand):
         super(Quickstart, self).__init__()
         self.target_dir = target_dir
 
-    opts = deepcopy(common_odb_opts) + deepcopy(zeromq_opts)
+    opts = deepcopy(common_odb_opts) + deepcopy(broker_opts)
     description = "Quickly sets up a working Zato environment."
     
     def get_next_id(self, session, class_, like_attr, like_value, order_by, split_by):
@@ -103,16 +102,10 @@ class Quickstart(ZatoCommand):
                                        '#')
             cluster_name = 'ZatoQuickstartCluster-#{next_id}'.format(next_id=next_id)
 
-            # TODO: ZeroMQ
-            print("TODO: Pinging ZeroMQ..")
-            print("TODO: Ping OK\n")
-
-            
             ca_dir = os.path.abspath(os.path.join(self.target_dir, "./ca"))
             lb_dir = os.path.abspath(os.path.join(self.target_dir, "./load-balancer"))
             server_dir = os.path.abspath(os.path.join(self.target_dir, "./server"))
             zato_admin_dir = os.path.abspath(os.path.join(self.target_dir, "./zato-admin"))
-            security_server_dir = os.path.abspath(os.path.join(self.target_dir, "./security-server"))
 
             # Create the CA.
             os.mkdir(ca_dir)
@@ -122,15 +115,6 @@ class Quickstart(ZatoCommand):
             lb_format_args = ca_create_lb_agent.CreateLBAgent(ca_dir).execute(args)
             server_format_args = ca_create_server.CreateServer(ca_dir).execute(args)
             zato_admin_format_args = ca_create_zato_admin.CreateZatoAdmin(ca_dir).execute(args)
-            security_server_format_args = ca_create_security_server.CreateSecurityServer(ca_dir).execute(args)
-
-            # Create the security server.
-            create_security_server.CreateSecurityServer(security_server_dir).execute(args)
-
-            # .. copy the security server's crypto material over to its directory.
-            shutil.copy2(security_server_format_args['priv_key_name'], os.path.join(security_server_dir, 'security-server-priv-key.pem'))
-            shutil.copy2(security_server_format_args['cert_name'], os.path.join(security_server_dir, 'security-server-cert.pem'))
-            shutil.copy2(os.path.join(ca_dir, 'ca-material/ca-cert.pem'), os.path.join(security_server_dir, 'ca-chain.pem'))
 
             # Create the LB agent.
             os.mkdir(lb_dir)
@@ -186,10 +170,9 @@ class Quickstart(ZatoCommand):
             cluster = Cluster(None, cluster_name,
                               'An automatically generated quickstart cluster',
                               args.odb_type, args.odb_host, args.odb_port, args.odb_user,
-                              args.odb_dbname, args.odb_schema, args.zeromq_host,
-                              args.zeromq_port, 
-                              'localhost', 20151, 
-                              'localhost', 15100)
+                              args.odb_dbname, args.odb_schema, args.broker_host,
+                              args.broker_start_port, '01234567890123456789012345678901',
+                              'localhost', 20151,  11223)
             
             #
             # Server

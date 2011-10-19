@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at gefira.pl>
+Copyright (C) 2011 Dariusz Suchojad <dsuch at gefira.pl>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,9 +17,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# A place for storing all the defaults values.
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-zato_admin_host = "127.0.0.1"
-zato_admin_port = 8183
+# The constants below don't use the Bunch class because we don't need to iterate
+# over them at all.
 
-http_plain_server_port = 17010
+# CNO stands for the 'code number'.
+# RID stands for the 'code number'.
+
+# Needs to be kept in sync with zato.common.util.new_req_id
+RID_LENGTH = 24
+
+NULL_LMC = '0000.0000'
+NULL_RID = '0' * RID_LENGTH

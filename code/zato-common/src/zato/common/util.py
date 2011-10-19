@@ -28,6 +28,7 @@ from hashlib import sha1, sha256
 from itertools import ifilter
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint
+from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
 from threading import Thread
@@ -43,7 +44,8 @@ from bunch import Bunch
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER
+from zato.common.broker_message import ZMQ_SOCKET
+from zato.common.log_message import RID_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -68,62 +70,6 @@ def zmq_inproc_name(component):
     """
     return 'inproc://zato/{0}'.format(component)
 
-class ZMQPull(object):
-    
-    def __init__(self, name, zmq_context, on_message_handler, keep_running=True):
-        self.name = name
-        self.on_message_handler = on_message_handler
-        self.keep_running = keep_running
-        self.socket_type = zmq.PULL
-        
-        self.socket = zmq_context.socket(self.socket_type)
-        self.socket.bind(name)
-
-    def start(self):
-        Thread(args=(self.socket,), target=self.listen).start()
-        
-    def stop(self, socket=None):
-        self.keep_running = False
-        if socket:
-            socket.close()
-    
-    def listen(self, socket):
-        logger.debug('Starting [{0}]/[{1}]'.format(self.__class__.__name__, self.name))
-        
-        while self.keep_running:
-            try:
-                msg = socket.recv()
-            except zmq.ZMQError, e:
-                msg = 'Caught ZMQError [{0}], quitting.'.format(e.strerror)
-                logger.warn(msg)
-                self.stop(socket)
-            else:
-                if msg == 'ZATO;STOP':
-                    self.stop(socket)
-                else:
-                    self.on_message_handler(msg)
-                
-class ZMQPush(object):
-    def __init__(self, name, zmq_context):
-        self.name = name
-        self.zmq_context = zmq_context
-        self.socket_type = zmq.PUSH 
-        
-        self.socket = self.zmq_context.socket(self.socket_type)
-        self.socket.connect(self.name)
-        
-    def send(self, msg):
-        try:
-            self.socket.send(msg)
-        except zmq.ZMQError, e:
-            msg = 'Caught ZMQError [{0}], continuing anyway.'.format(e.strerror)
-            logger.warn(msg)
-        
-    def stop(self):
-        msg = 'Stopping [{0}/{1}]'.format(self.name, self.socket_type)
-        logger.info(msg)
-        self.socket.close()
-        
 zmq_names = Bunch()
 zmq_names.inproc = Bunch()
 
@@ -301,3 +247,12 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
 
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
+
+def new_rid():
+    """ Returns a new 64-bit request identifier. It's *not* safe to use the ID
+    for any cryptographical purposes, it's only meant to be used as a conveniently
+    formatted ticket attached to each of the requests processed by Zato servers.
+    """
+    
+    # The number below (24) needs to be kept in sync with zato.common.log_message.RID_LENGTH
+    return '{0:0>24}'.format(getrandbits(64))

@@ -81,3 +81,7 @@ function update_user_message(is_success, response, user_message_elem,
         YAHOO.widget.alert.dlg.render(document.body);
     });
 })();
+
+function to_bool(item) {
+    return new String(item).toLowerCase() == "true";
+}

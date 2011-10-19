@@ -41,7 +41,7 @@ WSS.prototype.boolean_html = function(attr) {
 }
 
 WSS.prototype.boolean_html_reject = function(attr) {
-    return attr ? "Reject": "Allow";
+    return attr ? "Yes": "No";
 }
 
 // Dumps properties in a form suitable for creating a new data table row.
@@ -51,17 +51,20 @@ WSS.prototype.to_record = function() {
     record["selection"] = "<input type='checkbox' />";
     record["name"] = this.name;
     record["is_active"] = this.boolean_html(this.is_active);
+    record["is_active_text"] = this.boolean_html(this.is_active);
     record["username"] = this.username;
     record["password_type_raw"] = this.password_type_raw;
     record["password_type"] = this.password_type;
-    record["reject_empty_nonce_ts"] = this.boolean_html_reject(this.reject_empty_nonce_ts);
-    record["reject_stale_username"] = this.boolean_html_reject(this.reject_stale_username);
+    record["reject_empty_nonce_ts"] = this.reject_empty_nonce_ts;
+    record["reject_empty_nonce_ts_text"] = this.boolean_html_reject(this.reject_empty_nonce_ts);
+    record["reject_stale_username"] = this.reject_stale_username;
+    record["reject_stale_username_text"] = this.boolean_html_reject(this.reject_stale_username);
     record["expiry_limit"] = this.expiry_limit;
     record["nonce_freshness"] = this.nonce_freshness;
     
-    record["edit"] = String.format("<a href=\"javascript:wss_edit('{0}')\">Edit</a>", this.id);
-    record["change_password"] = String.format("<a href=\"javascript:wss_change_password('{0}')\">Change password</a>", this.id);
-    record["delete"] = String.format("<a href=\"javascript:wss_delete('{0}')\">Delete</a>", this.id);
+    record["edit"] = String.format("<a href=\"javascript:edit('{0}')\">Edit</a>", this.id);
+    record["change_password"] = String.format("<a href=\"javascript:change_password('{0}')\">Change password</a>", this.id);
+    record["delete"] = String.format("<a href=\"javascript:delete_('{0}')\">Delete</a>", this.id);
 
     return record;
 };
@@ -76,11 +79,14 @@ WSS.prototype.add_row = function(wss, data_dt) {
     added_record.setData("wss_id", wss.id);
     added_record.setData("name", wss.name);
     added_record.setData("is_active", wss.is_active);
+    added_record.setData("is_active_text", wss.boolean_html(wss.is_active));
     added_record.setData("username", wss.username);
     added_record.setData("password_type", wss.password_type);
     added_record.setData("password_type_raw", wss.password_type_raw);
     added_record.setData("reject_empty_nonce_ts", wss.reject_empty_nonce_ts);
+    added_record.setData("reject_empty_nonce_ts_text", wss.boolean_html_reject(wss.reject_empty_nonce_ts));
     added_record.setData("reject_stale_username", wss.reject_stale_username);
+    added_record.setData("reject_stale_username_text", wss.boolean_html_reject(wss.reject_stale_username));
     added_record.setData("expiry_limit", wss.expiry_limit);
     added_record.setData("nonce_freshness", wss.nonce_freshness);
 
@@ -200,19 +206,22 @@ function setup_edit_dialog() {
             var record = records[x];
             var wss_id = record.getData("wss_id");
             if(wss_id && wss_id == $("id_edit-wss_id").value) {
-
-                var is_active = $F("id_edit-is_active") ? "Yes": "No";
-                var reject_empty_nonce_ts = $F("id_edit-reject_empty_nonce_ts") ? "Reject": "Allow";
-                var reject_stale_username = $F("id_edit-reject_stale_username") ? "Reject": "Allow";
+            
+                var is_active = $F("id_edit-is_active") == 'on';
+                var reject_empty_nonce_ts = $F("id_edit-reject_empty_nonce_ts") == 'on';
+                var reject_stale_username = $F("id_edit-reject_stale_username") == 'on';
 
                 var password_type = $('id_edit-password_type')[$('id_edit-password_type').selectedIndex].text;
                 
                 record.setData("name", $("id_edit-name").value);
                 record.setData("is_active", is_active);
+                record.setData("is_active_text", is_active ? "Yes": "No");
                 record.setData("password_type", password_type);
                 record.setData("username", $("id_edit-username").value);
                 record.setData("reject_empty_nonce_ts", reject_empty_nonce_ts);
+                record.setData("reject_empty_nonce_ts_text", reject_empty_nonce_ts ? "Yes": "No");
                 record.setData("reject_stale_username", reject_stale_username);
+                record.setData("reject_stale_username_text", reject_stale_username ? "Yes": "No");
                 record.setData("expiry_limit", $("id_edit-expiry_limit").value);
                 record.setData("nonce_freshness", $("id_edit-nonce_freshness").value);
                 
@@ -404,7 +413,7 @@ function wss_create(cluster_id) {
     create_dialog.show();
 }
 
-function wss_edit(wss_id) {
+function edit(wss_id) {
 
     // Set up the form validation if necessary.
     if(typeof edit_validation == "undefined") {
@@ -420,9 +429,9 @@ function wss_edit(wss_id) {
         var wss_id_record = record.getData("wss_id");
         if(wss_id_record && wss_id_record == wss_id) {
         
-            is_active = record.getData("is_active") == 'Yes' ? 'on' : ''
-            reject_empty_nonce_ts = record.getData("reject_empty_nonce_ts") == 'Reject' ? 'on' : ''
-            reject_stale_username = record.getData("reject_stale_username") == 'Reject' ? 'on' : ''
+            is_active = to_bool(record.getData("is_active"));
+            reject_empty_nonce_ts = to_bool(record.getData("reject_empty_nonce_ts"));
+            reject_stale_username = to_bool(record.getData("reject_stale_username"));
             
             $("id_edit-wss_id").value = record.getData("wss_id");
             $("id_edit-name").value = record.getData("name");
@@ -439,7 +448,7 @@ function wss_edit(wss_id) {
     edit_dialog.show();
 }
 
-function wss_change_password(wss_id) {
+function change_password(wss_id) {
 
     // Set up the form validation if necessary.
     if(typeof change_password_validation == "undefined") {
@@ -467,7 +476,7 @@ function wss_change_password(wss_id) {
     change_password_dialog.show();
 }
 
-function wss_delete(wss_id) {
+function delete_(wss_id) {
 
     current_delete_id = wss_id;
     
