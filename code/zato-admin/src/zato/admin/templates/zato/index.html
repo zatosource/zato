@@ -37,30 +37,67 @@
         <div id="hd">
             <div id="console-header"><a id="logo-link" href="/"><h1>Zato</h1></a></div>
             <div id="menu">
-<ul class="sf-menu">
-<li><a href="#">Clusters</a>
-    <ul><li>zzz</li></ul>
+<ul class="sf-menu" >
+<li><span class="like-a">Clusters &darr;</span>
+    <ul>
+        <li><a href="#">Show all</a></li>
+        <li><a href="#">Logging</a></li>
+        <li><a href="#">API invoker</a></li>
+    </ul>
 </li>
 <li><a href="#">Servers</a></li>
 <li><a href="#">Services</a></li>
-<li><a href="#">Security</a></li>
-<li><a href="#">Channels</a></li>
-<li><a href="#">Connection pools</a></li>
+<li><span class="like-a">Security &darr;</a>
+    <ul>
+        <li><a href="{% url security-basic-auth %}">HTTP Basic Auth</a></li>
+        <li><a href="{% url security-tech-account %}">Technical accounts</a></li>
+        <li><a href="{% url security-wss %}">WS-Security</a></li>
+    </ul>
+</li>
+<li><span class="like-a">Channels &darr;</a>
+    <ul>
+        <li><a href="#">AMQP</a></li>
+        <li><a href="#">JMS</a></li>
+        <li><a href="#">Plain HTTP</a></li>
+        <li><a href="#">REST</a></li>
+        <li><a href="#">SOAP</a></li>
+        <li><a href="#">ZeroMQ</a></li>
+    </ul>
+</li>
+<li><span class="like-a">Connection pools &darr;</a>
+    <ul>
+        <li><a href="#">AMQP</a></li>
+        <li><a href="#">FTP</a></li>
+        <li><a href="{% url channel-soap %}">SOAP</a></li>
+        <li><a href="#">REST</a></li>
+        <li><a href="#">SOAP</a></li>
+        <li><a href="{% url pool-sql %}">SQL</a></li>
+        <li><a href="#">ZeroMQ</a></li>
+    </ul>
+</li>
+<li><a href="#">Key/value DB &darr;</a>
+    <ul>
+        <li><a href="#">Cache</a></li>
+        <li><a href="#">Dictionaries</a></li>
+        <li><a href="#">Run-time data</a></li>
+    </ul>
+</li>
 <li><a href="#">Schedulers</a></li>
-<li><a href="#">Cache</a></li>
-<li><a href="#">Dictionaries</a></li>
-<li><a href="#">Run-time data</a></li>
-<li><a href="#">Monitoring</a></li>
-<li><a href="#">Statistics</a></li>
-<!-- <li><a href="#">Logging</a></li>
-<li><a href="#">API invoker</a></li>
--->
-<li><a href="#">Import/export</a></li>
-<li><a href="#" class="ignore"></a></li>
+<li><a href="#">Business events</a></li>
+<li><a href="#">Charts</a></li>
+<li><span class="like-a">Import/export &darr;</a>
+    <ul>
+        <li><a href="#">Import from file</a></li>
+        <li><a href="#">Export selected</a></li>
+    </ul>
+</li>
+</ul>
+
+<ul class="sf-menu" style="float:right">
 <li><a href="#">Docs</a></li>
 <li><a href="#">Suggest a feature</a></li>
 <li><a href="#">Community</a></li>
-<li><a href="#">Get involved</a></li>
+<li><a style="margin-right:5px" href="#">Get involved</a></li>
 
 </ul>
 <br style="clear:left"/>
@@ -70,93 +107,7 @@
             <div id="yui-main">
                 <div class="yui-b">{% block content %}{% endblock %}</div>
             </div>
-            <div class="yui-b">
-
-
-<!--
-             <div id="zato_nav_menu" class="yuimenu">
-                    <div class="bd">
-                        <ul class="first-of-type">
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url cluster %}">Clusters</a>
-                            </li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url servers %}">Servers</a>
-                            </li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url service %}">Services</a>
-                            </li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Security</a>
-                                <div class="yuimenu">
-                                    <div class="bd">
-                                        <ul>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url security-basic-auth %}">HTTP Basic Auth</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url security-tech-account %}">Technical accounts</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url security-wss %}">WS-Security</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Channels</a>
-                                <div class="yuimenu">
-                                    <div class="bd">
-                                        <ul>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">AMQP</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">JMS</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Plain HTTP</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url channel-soap %}">SOAP</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">ZeroMQ</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Connection pools</a>
-                                <div class="yuimenu">
-                                    <div class="bd">
-                                        <ul>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">AMQP</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">FTP</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">JMS</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Plain HTTP</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">REST</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">SOAP</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url pool-sql %}">SQL</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">ZeroMQ</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="{% url scheduler %}">Schedulers</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Cache</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Dictionaries</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Run-time data</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Monitoring</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Statistics</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Logging</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">API invoker</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Import/export</a>
-                                <div class="yuimenu">
-                                    <div class="bd">
-                                        <ul>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Import from file</a></li>
-                                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">Export selected</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel" href="#">My account</a>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Documentation online</a></li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Suggest a feature</a></li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Community</a></li>
-                            <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Get involved</a></li>
-                        </ul>
-                    </div>
-                </div>
-
-            </div>
-
--->
-
-
         </div>
-        <div id="footer"><p>ZatoAdmin</p></div>
     </div>
 
 </body>
