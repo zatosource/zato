@@ -1,69 +1,120 @@
+ 
+/* 
+# ##############################################################################
+Reset start
+http://meyerweb.com/eric/thoughts/2007/05/01/reset-reloaded/
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, font, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	outline: 0;
+	font-weight: inherit;
+	font-style: inherit;
+	font-size: 100%;
+	font-family: inherit;
+	vertical-align: baseline;
+}
+/* remember to define focus styles! */
+:focus {
+	outline: 0;
+}
+body {
+	line-height: 1;
+	color: black;
+	background: #f3f3f3;
+}
+ol, ul {
+	list-style: none;
+}
+/* tables still need 'cellspacing="0"' in the markup */
+table {
+	border-collapse: separate;
+	border-spacing: 0;
+}
+caption, th, td {
+	text-align: left;
+	font-weight: normal;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: "";
+}
+blockquote, q {
+	quotes: "" "";
+}
+
+/*
+Reset end
+# ##############################################################################
+*/
+
 h2.zato {
     font-size:150%;
-    padding:10px;
-    xpadding-top:0px;
     margin-bottom:20px;
     color: #333b74;
     border-bottom:1px dotted #767676
 }
 
 #console-header {
-    background-color:#454555
+    background-color:#0e0e0e;
+	border-bottom:1px solid #3a3a3a
 }
 
 #console-header h1{
     font-size:150%;
     padding:6px;
-    color:#f0e0f0;
-    font-weight:600
+    color:#eee;
+    font-weight:600;
+	font-family:sans-serif
 }
 
-/*
-Overridden YUI styles.
-*/
-
-.yui-dt table {
-    width: 100%;
-    font-size:11px;
+#menu {
+    background-color:#363636;
+	border-bottom:1px solid #f0f0f0
 }
 
-tr.yui-dt-odd td {
-    background-color:#d3d3d3 !important;
-    border-bottom:1px solid #b6b6b6
+#menu ul {
+    float: left;
+	font-size:11px;
+	font-family: sans-serif
+}
+ 
+#menu ul li{
+    display: inline;
+}
+ 
+#menu ul li a {
+    float: left; 
+	text-decoration: none;
+    color: white;
+    padding: 10.5px	5px;
+	padding-bottom: 0;
+	border-right:1px solid #3a3a3a;
+	border-bottom: 9px solid #363636
+}
+ 
+#menu ul li a:visited {
+    color: white;
+}
+ 
+#menu ul li a:hover, #menu ul li .current{
+    border-bottom: 9px solid #999
 }
 
-tr.yui-dt-even td {
-    border-bottom:1px solid #b6b6b6
+#menu ul li a.ignore:hover{
+    border-bottom: 9px solid #363636
 }
 
 
-.yui-dt table a, a.common {
-    color: #333377;
-    font-family: arial,helvetica,clean,sans-serif;
-    font-style:italic
-}
-
-.yui-dt table a:hover, a.common:hover {
-    background-color: #e0e030;
-    color:#000033;
-    text-decoration:underline
-}
-
-th.yui-dt-hidden, tr.yui-dt-odd .yui-dt-hidden, tr.yui-dt-even .yui-dt-hidden {
-    display:none;
-}
-
-#hd {
-    padding:0px;
-    margin:0px;
-    margin-bottom:6px;
-    border-top: 6px solid #c0c0f0;
-    border-bottom: 6px solid #7070a0;
-}
-
-html {
-    background-color:#d6d6c0;
-}
 
 .form-data{
     width:100%

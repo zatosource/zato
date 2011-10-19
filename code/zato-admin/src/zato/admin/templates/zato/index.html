@@ -1,80 +1,70 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!doctype html>
 <html>
 <head>
-    <title>ZatoAdmin</title>
+    <title>Zato</title>
 
-    {% comment %} YUI {% endcomment %}
-    <link rel="stylesheet" type="text/css" href="/static/yui/build/fonts/fonts.css">
-    <link rel="stylesheet" type="text/css" href="/static/yui/build/reset/reset.css">
-    <link rel="stylesheet" type="text/css" href="/static/yui/build/grids/grids.css">
-    <link rel="stylesheet" type="text/css" href="/static/yui/build/assets/skins/sam/skin.css">
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.min.js"></script>
+    
+    
+    <script src="/static/superfish/js/superfish.js"></script> 
+    
+    <script>
+    
+    $(document).ready(function(){ 
+        $("ul.sf-menu").superfish(); 
+    }); 
+    
+    </script>
+
     
     {% block extra_css %}{% endblock %}
+
+<link rel="stylesheet" media="screen" href="/static/superfish/css/superfish.css" /> 
 
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 
-    <script type="text/javascript" src="/static/yui/build/yahoo-dom-event/yahoo-dom-event.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container_core-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/menu/menu-min.js"></script>
 
-    {% block extra_js %}{% endblock %}
-
-
-        <style type="text/css">
-            #zato_nav_menu {
-                position: static;
-            }
-
-            /*
-                For IE 6: trigger "haslayout" for the anchor elements in the root Menu by
-                setting the "zoom" property to 1.  This ensures that the selected state of
-                MenuItems doesn't get dropped when the user mouses off of the text node of
-                the anchor element that represents a MenuItem's text label.
-            */
-            #zato_nav_menu .yuimenuitemlabel {
-                _zoom: 1;
-                cursor:pointer;
-            }
-
-            #zato_nav_menu .yuimenu .yuimenuitemlabel {
-                _zoom: normal;
-            }
-        </style>
-
-        <script type="text/javascript">
-
-            /*
-                 Initialize and render the Menu when its elements are ready
-                 to be scripted.
-            */
-            YAHOO.util.Event.onContentReady("zato_nav_menu", function () {
-
-                /*
-                     Instantiate a Menu:  The first argument passed to the
-                     constructor is the id of the element in the page
-                     representing the Menu; the second is an object literal
-                     of configuration properties.
-                */
-                var zato_menu = new YAHOO.widget.Menu("zato_nav_menu", {
-                    position: "static", hidedelay: 750, lazyload: true});
-
-                /*
-                     Call the "render" method with no arguments since the
-                     markup for this Menu instance already exists in the page.
-                */
-                zato_menu.render();
-            });
-
-        </script>
+    {% block extra_js %}
+    
+    
+    {% endblock %}
 
 
 </head>
-<body class="yui-skin-sam">
-
-    <div id="doc3" class="yui-t1">
+<body><div>
         <div id="hd">
-            <div id="console-header"><a id="logo-link" href="/"><h1>ZatoAdmin</h1></a></div>
+            <div id="console-header"><a id="logo-link" href="/"><h1>Zato</h1></a></div>
+            <div id="menu">
+<ul class="sf-menu">
+<li><a href="#">Clusters</a>
+    <ul><li>zzz</li></ul>
+</li>
+<li><a href="#">Servers</a></li>
+<li><a href="#">Services</a></li>
+<li><a href="#">Security</a></li>
+<li><a href="#">Channels</a></li>
+<li><a href="#">Connection pools</a></li>
+<li><a href="#">Schedulers</a></li>
+<li><a href="#">Cache</a></li>
+<li><a href="#">Dictionaries</a></li>
+<li><a href="#">Run-time data</a></li>
+<li><a href="#">Monitoring</a></li>
+<li><a href="#">Statistics</a></li>
+<!-- <li><a href="#">Logging</a></li>
+<li><a href="#">API invoker</a></li>
+-->
+<li><a href="#">Import/export</a></li>
+<li><a href="#" class="ignore"></a></li>
+<li><a href="#">Docs</a></li>
+<li><a href="#">Suggest a feature</a></li>
+<li><a href="#">Community</a></li>
+<li><a href="#">Get involved</a></li>
+
+</ul>
+<br style="clear:left"/>
+            </div>
         </div>
         <div id="bd">
             <div id="yui-main">
@@ -82,6 +72,8 @@
             </div>
             <div class="yui-b">
 
+
+<!--
              <div id="zato_nav_menu" class="yuimenu">
                     <div class="bd">
                         <ul class="first-of-type">
@@ -154,12 +146,13 @@
                             <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Suggest a feature</a></li>
                             <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Community</a></li>
                             <li class="yuimenuitem"><a class="yuimenuitemlabel community" href="#">Get involved</a></li>
-                            </li>
                         </ul>
                     </div>
                 </div>
 
             </div>
+
+-->
 
 
         </div>

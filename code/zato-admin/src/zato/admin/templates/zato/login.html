@@ -10,21 +10,11 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
-
-    <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/login.js"></script>
-
-    </script>
-
 
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Hello, please enter your username and password</h1>
+<h2 class="zato">Hello, please enter your username and password</h2>
 
 <div class="item-details">
 
@@ -33,7 +23,7 @@
         <div class="yui-pe-content">
             <div class="bd">
                 <form method="post" action="{% url django.contrib.auth.views.login %}">
-                    <table class="form-data" border="0">
+                    <table class="form-data" border="">
                         <tr>
                             <td style="width:7%">
                                 Username
