@@ -85,9 +85,9 @@
 		hoverClass	: 'sfHover',
 		pathClass	: 'overideThisToUse',
 		pathLevels	: 1,
-		delay		: 800,
+		delay		: 50,
 		animation	: {opacity:'show'},
-		speed		: 'normal',
+		speed		: 'fast',
 		autoArrows	: true,
 		dropShadows : true,
 		disableHI	: false,		// true disables hoverIntent detection

@@ -16,53 +16,44 @@
 {% block content %}
 <h2 class="zato">Hello, please enter your username and password</h2>
 
-<div class="item-details">
+<div class="bd">
+    <form method="post" action="{% url django.contrib.auth.views.login %}">
+        <table class="form-data" border="">
+            <tr>
+                <td style="width:7%">
+                    Username
+                </td>
+                <td>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        {{ form.username.errors.as_text }}
+                    {% else %}
+                        {% if form.errors %}
+                        Your username and password didn't match. Please try again.
+                        {% endif %}
+                    {% endif %}
 
-    <div class="item-details-body">
-
-        <div class="yui-pe-content">
-            <div class="bd">
-                <form method="post" action="{% url django.contrib.auth.views.login %}">
-                    <table class="form-data" border="">
-                        <tr>
-                            <td style="width:7%">
-                                Username
-                            </td>
-                            <td>
-                                {{ form.username }}
-                                {% if form.username.errors %}
-                                    {{ form.username.errors.as_text }}
-                                {% else %}
-                                    {% if form.errors %}
-                                    Your username and password didn't match. Please try again.
-                                    {% endif %}
-                                {% endif %}
-
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                Password
-                            </td>
-                            <td>
-                                {{ form.password }}
-                                {% if form.password.errors %}
-                                    {{ form.password.errors.as_text }}
-                                {% endif %}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:left">
-                                <button id="login" type="submit">Log in</button>
-                                <input type="hidden" name="next" value="{{ next }}" />
-                            </td>
-                        </tr>
-                    </table>
-                </form>
-            </div>
-        </div>
-    </div>
-
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Password
+                </td>
+                <td>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        {{ form.password.errors.as_text }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="text-align:left">
+                    <button id="login" type="submit">Log in</button>
+                    <input type="hidden" name="next" value="{{ next }}" />
+                </td>
+            </tr>
+        </table>
+    </form>
 </div>
 
 
