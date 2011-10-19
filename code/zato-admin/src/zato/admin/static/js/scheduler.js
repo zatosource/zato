@@ -33,7 +33,8 @@ Job.prototype.to_record = function() {
     var record = new Array();
 	record['selection'] = '<input type="checkbox" />';
     record['name'] = this.name;
-    record['is_active'] = this.boolean_html(this.is_active);
+	record['is_active'] = this.is_active;
+    record['is_active_text'] = this.boolean_html(this.is_active);
 	record['job_type'] = this.job_type;
     record['job_type_friendly'] = friendly_names.get(this.job_type);
     record['definition_text'] = this.definition_text;
@@ -55,6 +56,7 @@ Job.prototype.add_row = function(object, data_dt) {
     added_record.setData('id', object.id);
     added_record.setData('name', object.name);
     added_record.setData('is_active', object.is_active);
+	added_record.setData('is_active_text', object.boolean_html(object.is_active));
 	added_record.setData('start_date', object.start_date);
     added_record.setData('job_type', object.job_type);
 	added_record.setData('job_type_friendly', friendly_names.get(object.job_type));
@@ -290,8 +292,22 @@ function setup_create_dialog_interval_based() {
         object.definition_text = json.definition_text;
 		object.start_date = $('id_create-interval_based-start_date').value;
 		object.extra = $('id_create-interval_based-extra').value;
+		object.weeks = $('id_create-interval_based-weeks').value;
+		object.days = $('id_create-interval_based-days').value;
+		object.hours = $('id_create-interval_based-hours').value;
+		object.minutes = $('id_create-interval_based-minutes').value;
+		object.seconds = $('id_create-interval_based-seconds').value;
+		object.repeats = $('id_create-interval_based-repeats').value;
 		
-        object.add_row(object, data_dt);
+		var record = object.add_row(object, data_dt);
+		
+		record.setData('weeks', object.weeks);
+		record.setData('days', object.days);
+		record.setData('hours', object.hours);
+		record.setData('minutes', object.minutes);
+		record.setData('seconds', object.seconds);
+		record.setData('repeats', object.repeats);
+		
         create_interval_based_dialog.hide();
         $('create-form-interval_based').reset();
         create_interval_based_validation.reset();
@@ -420,7 +436,7 @@ function edit(job_type, job_id) {
 		var id = record.getData('id');
 		if(id && id == job_id) {
 		
-			var is_active = record.getData('is_active') ? 'on' : ''
+			var is_active = to_bool(record.getData('is_active'));
 
 			$(prefix + 'id').value = record.getData('id');
 			$(prefix + 'name').value = record.getData('name');
@@ -484,7 +500,8 @@ function setup_edit_dialog_one_time() {
 			if(id && id == object.id) {
 
 				record.setData('name', object.name);
-				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('is_active', object.is_active);
+				record.setData('is_active_text', object.boolean_html(object.is_active));
 				record.setData('service_text', object.service_text());
 				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
@@ -554,6 +571,12 @@ function setup_edit_dialog_interval_based() {
         object.service = $('id_edit-interval_based-service').value;
 		object.extra = $('id_edit-interval_based-extra').value;
         object.definition_text = json.definition_text;
+		object.weeks = $('id_edit-interval_based-weeks').value;
+		object.days = $('id_edit-interval_based-days').value;
+		object.hours = $('id_edit-interval_based-hours').value;
+		object.minutes = $('id_edit-interval_based-minutes').value;
+		object.seconds = $('id_edit-interval_based-seconds').value;
+		object.repeats = $('id_edit-interval_based-repeats').value;
 		
 		edit_interval_based_dialog.hide();
 		$('edit-form-interval_based').reset();
@@ -566,10 +589,17 @@ function setup_edit_dialog_interval_based() {
 			if(id && id == object.id) {
 
 				record.setData('name', object.name);
-				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('is_active', object.is_active);
+				record.setData('is_active_text', object.boolean_html(object.is_active));
 				record.setData('service_text', object.service_text());
 				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
+				record.setData('weeks', object.weeks);
+				record.setData('days', object.days);
+				record.setData('hours', object.hours);
+				record.setData('minutes', object.minutes);
+				record.setData('seconds', object.seconds);
+				record.setData('repeats', object.repeats);
 				
 				data_dt.render();
 			}
@@ -649,7 +679,8 @@ function setup_edit_dialog_cron_style() {
 			if(id && id == object.id) {
 
 				record.setData('name', object.name);
-				record.setData('is_active', object.is_active ? 'Yes': 'No');
+				record.setData('is_active', object.is_active);
+				record.setData('is_active_text', object.boolean_html(object.is_active));
 				record.setData('service_text', object.service_text());
 				record.setData('extra', object.extra);
 				record.setData('definition_text', object.definition_text);
@@ -782,6 +813,29 @@ function delete_(id) {
     delete_dialog.setBody(String.format('Are you sure you want to delete the job [{0}]?', current_delete_name));
     delete_dialog.show();
     
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+
+function execute(id) {
+
+    var on_success = function(o) {
+        update_user_message(true, 'Request submitted, check the logs for details');
+    };
+
+    var on_failure = function(o) {
+        update_user_message(false, o.responseText);
+    }
+
+    var callback = {
+        success: on_success,
+        failure: on_failure,
+    };
+
+	var url = String.format('./execute/{0}/cluster/{1}/', id, $('cluster_id').value);
+
+	YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get('csrftoken'));
+	var transaction = YAHOO.util.Connect.asyncRequest('POST', url, callback);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -22,38 +22,35 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import asyncore, httplib, json, logging, socket, time
 from hashlib import sha256
-from thread import start_new_thread
 from threading import Thread
 from traceback import format_exc
 
-# Zope
+# zope.server
 from zope.server.http.httpserver import HTTPServer
-from zope.server.http.httpserverchannel import HTTPServerChannel
-from zope.server.http.httptask import HTTPTask
-from zope.server.serverchannelbase import task_lock
-from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # ZeroMQ
 import zmq
 
-# Spring Python
-from springpython.util import synchronized
+# Bunch
+from bunch import Bunch
 
 # Zato
-from zato.common import ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED, \
-     ZATO_OK, ZATO_PARALLEL_SERVER, ZATO_SINGLETON_SERVER, ZATO_URL_TYPE_SOAP
-from zato.common.util import TRACE1, zmq_names, ZMQPull, ZMQPush
+from zato.broker.zato_client import BrokerClient
+from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
+     ZATO_OK, ZATO_URL_TYPE_SOAP)
+from zato.common.util import new_rid, TRACE1, zmq_names
 from zato.common.odb import create_pool
-from zato.server.base import BaseServer, IPCMessage
+from zato.server.base import BrokerMessageReceiver
+from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
 from zato.server.channel.soap import server_soap_error
 
 logger = logging.getLogger(__name__)
 
-def wrap_error_message(url_type, msg):
+def wrap_error_message(rid, url_type, msg):
     """ Wraps an error message in a transport-specific envelope.
     """
     if url_type == ZATO_URL_TYPE_SOAP:
-        return server_soap_error(msg)
+        return server_soap_error(rid, msg)
     
     # Let's return the message as-is if we don't have any specific envelope
     # to use.
@@ -67,138 +64,27 @@ class HTTPException(Exception):
         self.status = status
         self.reason = reason
         
-class _HTTPTask(HTTPTask):
-    """ An HTTP task which knows how to uses ZMQ sockets.
-    """
-    def service(self, thread_data):
-        try:
-            try:
-                self.start()
-                self.channel.server.executeRequest(self, thread_data)
-                self.finish()
-            except socket.error:
-                self.close_on_finish = 1
-                if self.channel.adj.log_socket_errors:
-                    raise
-        finally:
-            if self.close_on_finish:
-                self.channel.close_when_done()
-                
-class _HTTPServerChannel(HTTPServerChannel):
-    """ A subclass which uses Zato's own _HTTPTasks.
-    """
-    task_class = _HTTPTask
-    
-    def service(self, thread_data):
-        """Execute all pending tasks"""
-        while True:
-            task = None
-            task_lock.acquire()
-            try:
-                if self.tasks:
-                    task = self.tasks.pop(0)
-                else:
-                    # No more tasks
-                    self.running_tasks = False
-                    self.set_async()
-                    break
-            finally:
-                task_lock.release()
-            try:
-                task.service(thread_data)
-            except:
-                # propagate the exception, but keep executing tasks
-                self.server.addTask(self)
-                raise
-        
-class _TaskDispatcher(ThreadedTaskDispatcher):
-    """ A task dispatcher which knows how to pass custom arguments down to
-    the newly created threads.
-    """
-    def __init__(self, zmq_context):
-        super(_TaskDispatcher, self).__init__()
-        self.zmq_context = zmq_context
-        
-    def _thread_data(self):
-        return self.zmq_context
-    
-    def setThreadCount(self, count):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-        mlock = self.thread_mgmt_lock
-        mlock.acquire()
-        try:
-            threads = self.threads
-            thread_no = 0
-            running = len(threads) - self.stop_count
-            while running < count:
-                # Start threads.
-                while thread_no in threads:
-                    thread_no = thread_no + 1
-                threads[thread_no] = 1
-                running += 1
-                thread_data = self._thread_data()
-                start_new_thread(self.handlerThread, (thread_no, thread_data))
-                thread_no = thread_no + 1
-            if running > count:
-                # Stop threads.
-                to_stop = running - count
-                self.stop_count += to_stop
-                for n in range(to_stop):
-                    self.queue.put(None)
-                    running -= 1
-        finally:
-            mlock.release()
-            
-    def handlerThread(self, thread_no, thread_data):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-        threads = self.threads
-        try:
-            while threads.get(thread_no):
-                task = self.queue.get()
-                if task is None:
-                    # Special value: kill this thread.
-                    break
-                try:
-                    task.service(thread_data)
-                except Exception, e:
-                    logger.error('Exception during task {0}'.format(
-                        format_exc(e)))
-        finally:
-            mlock = self.thread_mgmt_lock
-            mlock.acquire()
-            try:
-                self.stop_count -= 1
-                try: del threads[thread_no]
-                except KeyError: pass
-            finally:
-                mlock.release()
-            
 class ZatoHTTPListener(HTTPServer):
     
     channel_class = _HTTPServerChannel
     
-    def __init__(self, server, task_dispatcher):
-        self.logger = logging.getLogger("%s.%s" % (__name__, 
-                                                   self.__class__.__name__))
+    def __init__(self, server, task_dispatcher, broker_client=None):
         self.server = server
+        self.broker_client = broker_client
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
 
-    def _handle_security_tech_account(self, sec_def, request_data, body, headers):
+    def _handle_security_tech_account(self, rid, sec_def, request_data, body, headers):
         """ Handles the 'tech-account' security config type.
         """
         zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
         
         for header in zato_headers:
             if not headers.get(header, None):
-                msg = ("The header [{0}] doesn't exist or is empty, URI=[{1}, "
-                      "headers=[{2}]]").\
-                        format(header, request_data.uri, headers)
-                self.logger.error(msg)
+                msg = ("[{0}] The header [{1}] doesn't exist or is empty, URI=[{2}, "
+                      "headers=[{3}]]").\
+                        format(rid, header, request_data.uri, headers)
+                logger.error(msg)
                 raise HTTPException(httplib.FORBIDDEN, msg)
 
         # Note that both checks below send a different message to the client 
@@ -206,35 +92,35 @@ class ZatoHTTPListener(HTTPServer):
         # bad-behaving users what really went wrong (that of course assumes 
         # they can't access the logs).
 
-        msg_template = 'The {0} is incorrect, URI=[{1}], X_ZATO_USER=[{2}]'
+        msg_template = '[{0}] The {1} is incorrect, URI=[{2}], X_ZATO_USER=[{3}]'
 
         if headers['X_ZATO_USER'] != sec_def.name:
-            self.logger.error(msg_template.format('username', request_data.uri, 
-                              headers['X_ZATO_USER']))
+            logger.error(msg_template.format(rid, 'username', 
+                        request_data.uri, headers['X_ZATO_USER']))
             raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format('username or password', request_data.uri, 
+                    format(rid, 'username or password', request_data.uri, 
                            headers['X_ZATO_USER']))
         
         incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
         
         if incoming_password != sec_def.password:
-            self.logger.error(msg_template.format('password', request_data.uri, 
+            logger.error(msg_template.format(rid, 'password', request_data.uri, 
                               headers['X_ZATO_USER']))
             raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format('username or password', request_data.uri, 
+                    format(rid, 'username or password', request_data.uri, 
                            headers['X_ZATO_USER']))
         
         
-    def handle_security(self, url_data, request_data, body, headers):
+    def handle_security(self, rid, url_data, request_data, body, headers):
         """ Handles all security-related aspects of an incoming HTTP message
         handling. Calls other concrete security methods as appropriate.
         """
-        sec_def, sec_def_type = url_data['sec_def'], url_data['sec_def_type']
+        sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.type
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-        getattr(self, handler_name)(sec_def, request_data, body, headers)
+        getattr(self, handler_name)(rid, sec_def, request_data, body, headers)
             
-    def executeRequest(self, task, task_data):
+    def executeRequest(self, task, thread_ctx):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
@@ -243,17 +129,18 @@ class ZatoHTTPListener(HTTPServer):
         # later on, if we don't stumble upon an exception, we may learn that
         # it is for instance, a SOAP URL.
         url_type = None
-
+        rid = new_rid()
+        
         try:
             # Collect necessary request data.
             body = task.request_data.getBodyStream().getvalue()
             headers = task.request_data.headers
             
-            if task.request_data.uri in self.server.url_security:
-                url_data = self.server.url_security[task.request_data.uri]
+            url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
+            if url_data:
                 url_type = url_data['url_type']
                 
-                self.handle_security(url_data, task.request_data, body, headers)
+                self.handle_security(rid, url_data, task.request_data, body, headers)
                 
                 # TODO: Shadow out any passwords that may be contained in HTTP
                 # headers or in the message itself. Of course, that only applies
@@ -262,22 +149,21 @@ class ZatoHTTPListener(HTTPServer):
             else:
                 msg = ("The URL [{0}] doesn't exist or has no security "
                       "configuration assigned").format(task.request_data.uri)
-                self.logger.error(msg)
+                logger.warn(msg, rid)
                 raise HTTPException(httplib.NOT_FOUND, msg)
 
             # Fetch the response.
-            #response = '<?xml version="1.0" encoding="utf-8"?><axx />' 
-            response = self.server.soap_handler.handle(body, headers)
+            response = self.server.soap_handler.handle(rid, body, headers, thread_ctx)
 
         except HTTPException, e:
             task.setResponseStatus(e.status, e.reason)
-            response = wrap_error_message(url_type, e.reason)
+            response = wrap_error_message(rid, url_type, e.reason)
             
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)
-            self.logger.error('Exception caught [{0}]'.format(tb))
-            response = wrap_error_message(url_type, tb)
+            logger.error('[{0}] Exception caught [{1}]'.format(rid, tb))
+            response = wrap_error_message(rid, url_type, tb)
 
         if url_type == ZATO_URL_TYPE_SOAP:
             content_type = 'text/xml'
@@ -291,65 +177,86 @@ class ZatoHTTPListener(HTTPServer):
         task.write(response)
 
 
-class ParallelServer(object):
+class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb_manager=None, singleton_server=None):
+                 odb=None, singleton_server=None, sec_config=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
-        self.odb_manager = odb_manager
+        self.odb = odb
         self.singleton_server = singleton_server
+        self.sec_config = sec_config
         
         self.zmq_items = {}
         
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
+        logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
         
-        # Security configuration of HTTP URLs.
-        self.url_security = self.odb.get_url_security(server)
-        self.logger.log(logging.DEBUG, 'url_security=[{0}]'.format(self.url_security))
-        
-        # All of the ZeroMQ sockets need to be created in the main thread.
+        self.broker_token = server.cluster.broker_token
+        self.broker_push_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PUSH)
+        self.broker_pull_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PULL)
+        self.broker_sub_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_SUB)
         
         if self.singleton_server:
-
-            # Singleton -> Parallel (pull)
-            name = zmq_names.inproc.singleton_to_parallel
-            pull_sing_to_para = ZMQPull(name, self.zmq_context, self.on_inproc_message_handler)
-            pull_sing_to_para.start()
-            self.zmq_items[name] = pull_sing_to_para
-            
-            # Parallel -> Singleton (pull)
-            name = zmq_names.inproc.parallel_to_singleton
-            pull_para_to_sing = ZMQPull(name, self.zmq_context, self.singleton_server.on_inproc_message_handler)
-            pull_para_to_sing.start()
-            self.zmq_items[name] = pull_para_to_sing
-            
-            # So that the .bind call in ZMQPull's above has enough time.
-            # TODO: Make it a configurable option.
-            time.sleep(0.05)
-            
-            # Parallel (push) -> Singleton
-            name = zmq_names.inproc.parallel_to_singleton
-            push_para_to_sing = ZMQPush(name, self.zmq_context)
-            self.zmq_items[name] = push_para_to_sing
-            
-            # Singleton (push) -> Parallel
-            name = zmq_names.inproc.singleton_to_parallel
-            push_sing_to_para = ZMQPush(name, self.zmq_context)
-            self.zmq_items[name] = push_sing_to_para
             
             self.service_store.read_internal_services()
             
-            Thread(target=self.singleton_server.run).start()
+            kwargs={'zmq_context':self.zmq_context,
+            'broker_host': server.cluster.broker_host,
+            'broker_push_port': server.cluster.broker_start_port + PORTS.BROKER_SINGLETON_PUSH,
+            'broker_pull_port': server.cluster.broker_start_port + PORTS.BROKER_SINGLETON_PULL,
+            'broker_token':self.broker_token,
+                    }
+            Thread(target=self.singleton_server.run, kwargs=kwargs).start()
     
     def _after_init_accepted(self, server):
-        pass
+        if self.singleton_server:
+            for(_, name, is_active, job_type, start_date, extra, service,\
+                _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
+                    in self.odb.get_job_list(server.cluster.id):
+                if is_active:
+                    job_data = Bunch({'name':name, 'is_active':is_active, 
+                        'job_type':job_type, 'start_date':start_date, 
+                        'extra':extra, 'service':service,  'weeks':weeks, 
+                        'days':days, 'hours':hours, 'minutes':minutes, 
+                        'seconds':seconds,  'repeats':repeats, 
+                        'cron_definition':cron_definition})
+                    self.singleton_server.scheduler.create_edit('create', job_data)
+                    
+        self.sec_config = Bunch()
+        
+        # HTTP Basic Auth
+        ba_config = Bunch()
+        for item in self.odb.get_basic_auth_list(server.cluster.id):
+            ba_config[item.name] = Bunch()
+            ba_config[item.name].is_active = item.is_active
+            ba_config[item.name].username = item.username
+            ba_config[item.name].domain = item.domain
+            ba_config[item.name].password = item.password
+            
+        # Technical accounts
+        ta_config = Bunch()
+        for item in self.odb.get_tech_acc_list(server.cluster.id):
+            ta_config[item.name] = Bunch()
+            ta_config[item.name].is_active = item.is_active
+            ta_config[item.name].name = item.name
+            ta_config[item.name].password = item.password
+            ta_config[item.name].salt = item.salt
+            
+        # Security configuration of HTTP URLs.
+        url_sec = self.odb.get_url_security(server)
+        
+        self.sec_config.basic_auth = ba_config
+        self.sec_config.tech_acc = ta_config
+        self.sec_config.url_sec = url_sec
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -373,7 +280,7 @@ class ParallelServer(object):
             self._after_init_accepted(server)
         else:
             msg = 'Server has not been accepted, last_join_status=[{0}]'
-            self.logger.warn(msg.format(server.last_join_status))
+            logger.warn(msg.format(server.last_join_status))
             
             self._after_init_non_accepted(server)
         
@@ -382,10 +289,13 @@ class ParallelServer(object):
         """
         
     def run_forever(self):
-        task_dispatcher = _TaskDispatcher(self.zmq_context)
-        task_dispatcher.setThreadCount(20)
+        
+        task_dispatcher = _TaskDispatcher(self.on_broker_msg, 1, self.broker_token, 
+            self.zmq_context,  self.broker_push_addr, self.broker_pull_addr,
+            self.broker_sub_addr, self.sec_config)
+        task_dispatcher.setThreadCount(4)
 
-        self.logger.debug("host=[{0}], port=[{1}]".format(self.host, self.port))
+        logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 
         ZatoHTTPListener(self, task_dispatcher)
 
@@ -394,82 +304,33 @@ class ParallelServer(object):
                 asyncore.poll(5)
 
         except KeyboardInterrupt:
-            self.logger.info("Shutting down.")
+            logger.info("Shutting down.")
             
             # ZeroMQ
             for zmq_item in self.zmq_items.values():
-                zmq_item.stop()
+                zmq_item.close()
+                
+
+            if self.singleton_server:
+                self.singleton_server.broker_client.close()
                 
             self.zmq_context.term()
-            
-            # Zope
+            self.odb.close()
             task_dispatcher.shutdown()
 
-    def send_config_request(self, command, data=None, timeout=None):
-        """ Sends a synchronous IPC request to the SingletonServer.
-        """
-        request = self._create_ipc_config_request(command, data)
-        return self._send_config_request(request, self.partner_request_queues.values()[0], timeout)
+# ##############################################################################
 
-################################################################################
+    def on_broker_pull_msg_SCHEDULER_EXECUTE(self, msg, args=None):
 
-    def _on_config_sql(self, msg):
-        """ A common method for handling all SQL connection pools-related config
-        requests. Must always be called from within a concrete, synchronized,
-        configuration handler (such as _on_config_EDIT_SQL_CONNECTION_POOL etc.)
-        """
-        command = msg.command
-        params = json.loads(msg.params["data"])
-
-        command_handler = getattr(self.sql_pool, "_on_config_" + command)
-        command_handler(params)
-
-        return ZATO_OK, ""
-
-    @synchronized()
-    def _on_config_EDIT_SQL_CONNECTION_POOL(self, msg):
-        """ Updates all of SQL connection pool's parameters, except for
-        the password.
-        """
-        return self._on_config_sql(msg)
-
-    @synchronized()
-    def _on_config_CREATE_SQL_CONNECTION_POOL(self, msg):
-        """ Creates a new SQL connection pool with no password set.
-        """
-        return self._on_config_sql(msg)
-
-    @synchronized()
-    def _on_config_DELETE_SQL_CONNECTION_POOL(self, msg):
-        """ Deletes an SQL connection pool.
-        """
-        return self._on_config_sql(msg)
-
-    @synchronized()
-    def _on_config_CHANGE_PASSWORD_SQL_CONNECTION_POOL(self, msg):
-        """ Deletes an SQL connection pool.
-        """
-        return self._on_config_sql(msg)
-
-################################################################################
-
-    @synchronized()
-    def _on_config_LOAD_EGG_SERVICES(self, msg):
-        """ Loads Zato services from a given .egg distribution and makes them
-        available for immediate use.
-        """
-        egg_path = json.loads(msg.params["data"])
-        self.service_store.import_services_from_egg(egg_path, self)
-
-        return ZATO_OK, ""
-
-################################################################################
-
-    @synchronized()
-    def _on_config_ADD_TO_WSS_NONCE_CACHE(self, msg):
-        wsse_nonce, recycle_time = json.loads(msg.params["data"])
-
-        # Note that the method is already synchronized.
-        self.wss_nonce_cache[wsse_nonce] = recycle_time
-
-        return ZATO_OK, ""
+        service_info = self.service_store.services[msg.service]
+        class_ = service_info['service_class']
+        instance = class_()
+        instance.server = self
+        
+        response = instance.handle(payload=msg.extra, raw_request=msg, 
+                    channel='scheduler_job', thread_ctx=args)
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
+            logger.debug(str(msg))
+            

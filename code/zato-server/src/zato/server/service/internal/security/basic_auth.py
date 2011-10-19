@@ -33,7 +33,9 @@ from lxml.objectify import Element
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
+from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
+from zato.common.odb.query import basic_auth_list
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
@@ -46,10 +48,7 @@ class GetList(AdminService):
         
         with closing(self.server.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = session.query(HTTPBasicAuth).\
-                filter(Cluster.id==params['cluster_id']).\
-                order_by('name').\
-                all()
+            definitions = basic_auth_list(session, params['cluster_id'])
     
             for definition in definitions:
     
@@ -106,6 +105,11 @@ class Create(AdminService):
                 session.rollback()
                 
                 raise 
+            else:
+                params['action'] = SECURITY.BASIC_AUTH_CREATE
+                params['password'] = uuid4().hex
+                kwargs['thread_ctx'].broker_client.send_json(params, 
+                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, etree.tostring(auth_elem)
 
@@ -136,6 +140,7 @@ class Edit(AdminService):
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(name))
                 
                 definition = session.query(HTTPBasicAuth).filter_by(id=def_id).one()
+                old_name = definition.name
                 
                 definition.name = name
                 definition.is_active = new_params['is_active']
@@ -151,6 +156,11 @@ class Edit(AdminService):
                 session.rollback()
                 
                 raise 
+            else:
+                new_params['action'] = SECURITY.BASIC_AUTH_EDIT
+                new_params['old_name'] = old_name
+                kwargs['thread_ctx'].broker_client.send_json(new_params, 
+                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
             return ZATO_OK, ''
     
@@ -192,6 +202,12 @@ class ChangePassword(AdminService):
                 session.rollback()
                 
                 raise 
+            else:
+                params['action'] = SECURITY.BASIC_AUTH_CHANGE_PASSWORD
+                params['name'] = auth.name
+                params['password'] = auth.password
+                kwargs['thread_ctx'].broker_client.send_json(params, 
+                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, ''
     
@@ -220,6 +236,11 @@ class Delete(AdminService):
                 session.rollback()
                 
                 raise
+            else:
+                params['action'] = SECURITY.BASIC_AUTH_DELETE
+                params['name'] = auth.name
+                kwargs['thread_ctx'].broker_client.send_json(params, 
+                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, ''
     

@@ -34,6 +34,7 @@ from validate import is_boolean
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.odb.model import Cluster, TechnicalAccount
+from zato.common.odb.query import tech_acc_list
 from zato.common.util import TRACE1, tech_account_password
 from zato.server.service.internal import _get_params, AdminService
 
@@ -46,16 +47,11 @@ class GetList(AdminService):
         with closing(self.server.odb.session()) as session:
             definition_list = Element('definition_list')
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-            
-            q = session.query(TechnicalAccount).\
-                        order_by(TechnicalAccount.name).\
-                        filter(Cluster.id==params['cluster_id']).\
-                        all()
-    
-            for definition in q:
+
+            definitions = tech_acc_list(session, params['cluster_id'])            
+            for definition in definitions:
     
                 definition_elem = Element('definition')
-                
                 definition_elem.id = definition.id
                 definition_elem.name = definition.name
                 definition_elem.is_active = definition.is_active

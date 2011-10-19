@@ -47,7 +47,7 @@ class GetList(AdminService):
             definition_list = Element('definition_list')
             definitions = session.query(WSSDefinition).\
                 filter(Cluster.id==params['cluster_id']).\
-                order_by('name').\
+                order_by('wss_def.name').\
                 all()
     
             for definition in definitions:

@@ -199,8 +199,6 @@ class ServiceStore(InitializingObject):
         self.service_store_config = service_store_config
         self.odb = odb
 
-        self.logger = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
-
     def read_service_store_config(self, location):
         data = load(open(location), Loader=Loader)
         self.service_store_config = data['services']
@@ -214,7 +212,7 @@ class ServiceStore(InitializingObject):
         except Exception:
             msg = 'Error while invoking [%s] on service [%s] ' \
                 ' e=[%s]' % (hook_name, service_name, format_exc())
-            self.logger.error(msg)
+            logger.error(msg)
 
     @synchronized()
     def import_services_from_egg(self, egg_path, parallel_server):
@@ -225,7 +223,7 @@ class ServiceStore(InitializingObject):
         """
 
         services = _visit_egg(egg_path, names_only=False)
-        self.logger.debug('services to import [%s]' % services)
+        logger.debug('services to import [%s]' % services)
 
         for service_name in services:
             if service_name in self.services:
@@ -253,22 +251,23 @@ class ServiceStore(InitializingObject):
 
             msg = 'Service [%s] imported, parallel_server=[%s], egg_path=[%s]' % (
                 service_name, parallel_server, egg_path)
-            self.logger.info(msg)
+            logger.info(msg)
 
-        self.logger.debug('Services after an import [%s]' % self.services)
+        logger.debug('Services after an import [%s]' % self.services)
 
     def read_internal_services(self):
 
         # Import internal services here to avoid circular dependencies.
         from zato.server.service import internal
         from zato.server.service.internal import AdminService
-        from zato.server.service.internal import sql, scheduler, service, soap
+        from zato.server.service.internal import sql, scheduler, service
+        from zato.server.service.internal.channel import soap
         from zato.server.service.internal.security import basic_auth, \
-             ssl, tech_account, wss
+             tech_account, wss
 
         # XXX: The list would be better read from the IoC container
         modules = [internal, sql, scheduler, service, soap, wss, tech_account, 
-                   basic_auth, ssl]
+                   basic_auth]
 
         # Read all definitions of Zato's own internal services.
         for mod in modules:
@@ -292,10 +291,10 @@ class ServiceStore(InitializingObject):
                             
                 except TypeError, e:
                     # Ignore non-class objects passed in to issubclass
-                    self.logger.log(TRACE1, 'Ignoring exception, name=[%s], item=[%s], e=[%s]' % (
+                    logger.log(TRACE1, 'Ignoring exception, name=[%s], item=[%s], e=[%s]' % (
                         name, item, format_exc()))
 
-        self.logger.debug('Internal services read=[%s]' % self.services)
+        logger.debug('Internal services read=[%s]' % self.services)
 
 
 class EggServiceImporter(object):
@@ -305,7 +304,6 @@ class EggServiceImporter(object):
         self.work_dir = work_dir
         self.service_store_config = service_store_config
         self.config_repo_manager = config_repo_manager
-        self.logger = logging.getLogger('%s.%s' % (__name__, self.__class__.__name__))
 
     @synchronized()
     def import_services(self, original_egg_path, singleton_server):
@@ -324,7 +322,7 @@ class EggServiceImporter(object):
         tmp_egg_path = os.path.join(tmp_dir, os.path.basename(original_egg_path))
 
         msg = '.egg moved from [%s] to [%s]' % (original_egg_path, tmp_egg_path)
-        self.logger.debug(msg)
+        logger.debug(msg)
 
         # 2) See if it defines any services ..
         services = _visit_egg(tmp_egg_path, names_only=True)
@@ -338,16 +336,16 @@ class EggServiceImporter(object):
             shutil.move(tmp_egg_path, target_dir)
 
             msg = '.egg moved from [%s] to [%s]' % (tmp_egg_path, target_dir)
-            self.logger.debug(msg)
+            logger.debug(msg)
 
             target_egg_path = os.path.join(target_dir, os.path.basename(original_egg_path))
 
             # 2b) .. update configuration ..
             for service in services:
 
-                if self.logger.isEnabledFor(logging.DEBUG):
+                if logger.isEnabledFor(logging.DEBUG):
                     msg = 'About to update configuration, services found=[%s]' % sorted(services)
-                    self.logger.debug(msg)
+                    logger.debug(msg)
 
                     for service in services:
                         if service in self.service_store_config:
@@ -356,7 +354,7 @@ class EggServiceImporter(object):
                         else:
                             text = 'will be added'
                         msg = 'Service [%s] %s, egg=[%s]' % (service, text, target_egg_path)
-                        self.logger.debug(msg)
+                        logger.debug(msg)
 
                 data = {'egg_path': target_egg_path}
                 self.service_store_config[service] = data
@@ -369,4 +367,4 @@ class EggServiceImporter(object):
 
         # 3) .. and clean up the temporary location.
         shutil.rmtree(tmp_dir)
-        self.logger.log(TRACE1, 'tmp_dir [%s] removed' % tmp_dir)
+        logger.log(TRACE1, 'tmp_dir [%s] removed' % tmp_dir)

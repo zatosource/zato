@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at gefira.pl>
+Copyright (C) 2011 Dariusz Suchojad <dsuch at gefira.pl>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,23 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
+# Django
+from django import forms
 
-# Zato
-from zato.common import ZatoException, ZATO_OK
-from zato.server.service.internal import AdminService
-
-class GetChannelList(AdminService):
-    """ Returns a list of SOAP channels defined.
-    """
-    def handle(self, *args, **kwargs):
-
-        channel_list = Element("channel_list")
-        channels = self.server.soap_channel_store.channels
-
-        for channel_name in channels:
-            pass
-
-        return ZATO_OK, etree.tostring(channel_list)
+class DefinitionForm(forms.Form):
+    id = forms.CharField(widget=forms.HiddenInput())
+    url_pattern = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:90%"}))

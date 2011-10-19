@@ -292,135 +292,141 @@ def _execute(server_address, params):
 
 @meth_allowed('GET', 'POST')
 def index(req):
-    jobs = []
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
-
-    # Build a list of schedulers for a given Zato cluster.
-    if cluster_id and req.method == 'GET':
-
-        # We have a server to pick the schedulers from, try to invoke it now.
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 
-                'zato:scheduler.job.get-list', zato_message)
-        
-        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
-            for job_elem in zato_message.data.definition_list.definition:
-                
-                id = job_elem.id.text
-                name = job_elem.name.text
-                is_active = is_boolean(job_elem.is_active.text)
-                job_type = job_elem.job_type.text
-                start_date = job_elem.start_date.text
-                service_name = job_elem.service_name.text
-                extra = job_elem.extra.text if job_elem.extra.text else ''
-                job_type_friendly = job_type_friendly_names[job_type]
-                
-                job = Job(id, name, is_active, job_type, start_date,
-                          extra, service_name=service_name, 
-                          job_type_friendly=job_type_friendly)
-                
-                if job_type == 'one_time':
-                    definition_text=_one_time_job_def(start_date)
+    
+    try:
+        jobs = []
+        zato_clusters = req.odb.query(Cluster).order_by('name').all()
+        choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
+        cluster_id = req.GET.get('cluster')
+    
+        # Build a list of schedulers for a given Zato cluster.
+        if cluster_id and req.method == 'GET':
+    
+            # We have a server to pick the schedulers from, try to invoke it now.
+            cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+            zato_message = Element('{%s}zato_message' % zato_namespace)
+            zato_message.data = Element('data')
+            zato_message.data.cluster_id = cluster_id
+            _, zato_message, soap_response  = invoke_admin_service(cluster, 
+                    'zato:scheduler.job.get-list', zato_message)
+            
+            if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
+                for job_elem in zato_message.data.definition_list.definition:
                     
-                elif job_type == 'interval_based':
-                    definition_text = _interval_based_job_def(
-                        _get_start_date(job_elem.start_date, scheduler_date_time_format),
-                            job_elem.repeats, job_elem.weeks, job_elem.days,
-                            job_elem.hours, job_elem.minutes, job_elem.seconds)
+                    id = job_elem.id.text
+                    name = job_elem.name.text
+                    is_active = is_boolean(job_elem.is_active.text)
+                    job_type = job_elem.job_type.text
+                    start_date = job_elem.start_date.text
+                    service_name = job_elem.service_name.text
+                    extra = job_elem.extra.text if job_elem.extra.text else ''
+                    job_type_friendly = job_type_friendly_names[job_type]
                     
-                    weeks = job_elem.weeks.text if job_elem.weeks.text else ''
-                    days = job_elem.days.text if job_elem.days.text else ''
-                    hours = job_elem.hours.text if job_elem.hours.text else ''
-                    minutes = job_elem.minutes.text if job_elem.minutes.text else ''
-                    seconds = job_elem.seconds.text if job_elem.seconds.text else ''
-                    repeats = job_elem.repeats.text if job_elem.repeats.text else ''
+                    job = Job(id, name, is_active, job_type, start_date,
+                              extra, service_name=service_name, 
+                              job_type_friendly=job_type_friendly)
                     
-                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
-                                        seconds, repeats)
-                    job.interval_based = ib_job
-                    
-                elif job_type == 'cron_style':
-                    cron_definition = (job_elem.cron_definition.text if job_elem.cron_definition.text else '')
-                    definition_text=_cron_style_job_def(start_date,  cron_definition)
-                    
-                    cs_job = CronStyleJob(None, None, cron_definition)
-                    job.cron_style = cs_job
-                    
-                else:
-                    msg = 'Unrecognized job type, name=[{0}], type=[{1}]'.format(name, job_type)
-                    logger.error(msg)
-                    raise ZatoException(msg)
-
-                job.definition_text = definition_text
-                jobs.append(job)
-        else:
-            logger.info('No jobs found, soap_response=[%s]'.format(soap_response))
-
-    if req.method == 'POST':
-
-        action = req.POST.get('zato_action', '')
-        if not action:
-            msg = 'req.POST contains no [zato_action] parameter.'
-            logger.error(msg)
-            return HttpResponseServerError(msg)
-
-        job_type = req.POST.get('job_type', '')
-        if action != 'execute' and not job_type:
-            msg = 'req.POST contains no [job_type] parameter.'
-            logger.error(msg)
-            return HttpResponseServerError(msg)
-
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
-
-        # Try to match the action and a job type with an action handler..
-        handler_name = '_' + action
-        if action != 'execute':
-            handler_name += '_' + job_type
-
-        handler = globals().get(handler_name)
-        if not handler:
-            msg = ('No handler found for action [{0}], job_type=[{1}], '
-                   'req.POST=[{2}], req.GET=[{3}].'.format(action, job_type,
-                      pprint(req.POST), pprint(req.GET)))
-
-            logger.error(msg)
-            return HttpResponseServerError(msg)
-
-        # .. invoke the action handler.
-        try:
-            response = handler(cluster, req.POST)
-            response = response if response else ''
-            return HttpResponse(response, mimetype='application/javascript')
-        except Exception, e:
-            msg = ('Could not invoke action [%s], job_type=[%s], e=[%s]'
-                   'req.POST=[%s], req.GET=[%s]') % (action, job_type,
-                      format_exc(), pprint(req.POST), pprint(req.GET))
-
-            logger.error(msg)
-            return HttpResponseServerError(msg)
-
-    # TODO: Log the data returned here.
-    logger.log(TRACE1, 'Returning render_to_response.')
-
-    return render_to_response('zato/scheduler.html',
-        {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
-        'jobs':jobs, 
-        'cluster_id':cluster_id,
-        'friendly_names':job_type_friendly_names.items(),
-        'create_one_time_form':OneTimeSchedulerJobForm(prefix=create_one_time_prefix),
-        'create_interval_based_form':IntervalBasedSchedulerJobForm(prefix=create_interval_based_prefix),
-        'create_cron_style_form':CronStyleSchedulerJobForm(prefix=create_cron_style_prefix),
-        'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
-        'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
-        'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
-        })
+                    if job_type == 'one_time':
+                        definition_text=_one_time_job_def(start_date)
+                        
+                    elif job_type == 'interval_based':
+                        definition_text = _interval_based_job_def(
+                            _get_start_date(job_elem.start_date, scheduler_date_time_format),
+                                job_elem.repeats, job_elem.weeks, job_elem.days,
+                                job_elem.hours, job_elem.minutes, job_elem.seconds)
+                        
+                        weeks = job_elem.weeks.text if job_elem.weeks.text else ''
+                        days = job_elem.days.text if job_elem.days.text else ''
+                        hours = job_elem.hours.text if job_elem.hours.text else ''
+                        minutes = job_elem.minutes.text if job_elem.minutes.text else ''
+                        seconds = job_elem.seconds.text if job_elem.seconds.text else ''
+                        repeats = job_elem.repeats.text if job_elem.repeats.text else ''
+                        
+                        ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
+                                            seconds, repeats)
+                        job.interval_based = ib_job
+                        
+                    elif job_type == 'cron_style':
+                        cron_definition = (job_elem.cron_definition.text if job_elem.cron_definition.text else '')
+                        definition_text=_cron_style_job_def(start_date,  cron_definition)
+                        
+                        cs_job = CronStyleJob(None, None, cron_definition)
+                        job.cron_style = cs_job
+                        
+                    else:
+                        msg = 'Unrecognized job type, name=[{0}], type=[{1}]'.format(name, job_type)
+                        logger.error(msg)
+                        raise ZatoException(msg)
+    
+                    job.definition_text = definition_text
+                    jobs.append(job)
+            else:
+                logger.info('No jobs found, soap_response=[{0}]'.format(soap_response))
+    
+        if req.method == 'POST':
+    
+            action = req.POST.get('zato_action', '')
+            if not action:
+                msg = 'req.POST contains no [zato_action] parameter.'
+                logger.error(msg)
+                return HttpResponseServerError(msg)
+    
+            job_type = req.POST.get('job_type', '')
+            if action != 'execute' and not job_type:
+                msg = 'req.POST contains no [job_type] parameter.'
+                logger.error(msg)
+                return HttpResponseServerError(msg)
+    
+            cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    
+            # Try to match the action and a job type with an action handler..
+            handler_name = '_' + action
+            if action != 'execute':
+                handler_name += '_' + job_type
+    
+            handler = globals().get(handler_name)
+            if not handler:
+                msg = ('No handler found for action [{0}], job_type=[{1}], '
+                       'req.POST=[{2}], req.GET=[{3}].'.format(action, job_type,
+                          pprint(req.POST), pprint(req.GET)))
+    
+                logger.error(msg)
+                return HttpResponseServerError(msg)
+    
+            # .. invoke the action handler.
+            try:
+                response = handler(cluster, req.POST)
+                response = response if response else ''
+                return HttpResponse(response, mimetype='application/javascript')
+            except Exception, e:
+                msg = ('Could not invoke action [%s], job_type=[%s], e=[%s]'
+                       'req.POST=[%s], req.GET=[%s]') % (action, job_type,
+                          format_exc(), pprint(req.POST), pprint(req.GET))
+    
+                logger.error(msg)
+                return HttpResponseServerError(msg)
+    
+        # TODO: Log the data returned here.
+        logger.log(TRACE1, 'Returning render_to_response.')
+    
+        return render_to_response('zato/scheduler.html',
+            {'zato_clusters':zato_clusters,
+            'cluster_id':cluster_id,
+            'choose_cluster_form':choose_cluster_form,
+            'jobs':jobs, 
+            'cluster_id':cluster_id,
+            'friendly_names':job_type_friendly_names.items(),
+            'create_one_time_form':OneTimeSchedulerJobForm(prefix=create_one_time_prefix),
+            'create_interval_based_form':IntervalBasedSchedulerJobForm(prefix=create_interval_based_prefix),
+            'create_cron_style_form':CronStyleSchedulerJobForm(prefix=create_cron_style_prefix),
+            'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
+            'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
+            'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
+            })
+    except Exception, e:
+        msg = '<pre>Could not invoke the method, e=[{0}]</pre>'.format(format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 @meth_allowed('POST')
 def delete(req, job_id, cluster_id):
@@ -436,6 +442,27 @@ def delete(req, job_id, cluster_id):
 
     except Exception, e:
         msg = 'Could not delete the job. job_id=[{0}], cluster_id=[{1}], e=[{2}]'.format(
+            job_id, cluster_id, format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        # 200 OK
+        return HttpResponse()
+    
+@meth_allowed('POST')
+def execute(req, job_id, cluster_id):
+    """ Executes a scheduler's job.
+    """
+    try:
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = job_id
+
+        invoke_admin_service(cluster, 'zato:scheduler.job.execute', zato_message)
+
+    except Exception, e:
+        msg = 'Could not execute the job. job_id=[{0}], cluster_id=[{1}], e=[{2}]'.format(
             job_id, cluster_id, format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)

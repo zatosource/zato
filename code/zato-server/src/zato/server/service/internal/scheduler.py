@@ -34,9 +34,10 @@ from validate import is_boolean
 # Zato
 from zato.common import path, scheduler_date_time_format, \
      scheduler_date_time_format, ZatoException, ZATO_OK, zato_path
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
-from zato.common.util import pprint, TRACE1
+from zato.common.odb.query import job_list
 from zato.server.service.internal import _get_params, AdminService
 
 PREDEFINED_CRON_DEFINITIONS = {
@@ -58,7 +59,7 @@ def _get_interval_based_start_date(payload):
 
     return str(start_date)
 
-def _create_edit(action, payload, logger, session):
+def _create_edit(action, payload, logger, session, broker_client):
     """ Creating and updating a job requires a series of very similar steps
     so they've been all put here and depending on the 'action' parameter 
     (be it 'create'/'edit') some additional operations are performed.
@@ -118,6 +119,7 @@ def _create_edit(action, payload, logger, session):
                   cluster_id=cluster_id, service=service)
     else:
         job = session.query(Job).filter_by(id=job_id).one()
+        old_name = job.name
         job.name = name
         job.is_active = is_active
         job.start_date = start_date
@@ -130,9 +132,9 @@ def _create_edit(action, payload, logger, session):
 
         if job_type == 'interval_based':
             request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats']
-            params = _get_params(payload, request_params, 'data.', default_value='')
+            ib_params = _get_params(payload, request_params, 'data.', default_value='')
 
-            if not any(params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
+            if not any(ib_params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
                 msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given."
                 logger.error(msg)
                 raise ZatoException(msg)
@@ -143,15 +145,15 @@ def _create_edit(action, payload, logger, session):
                 ib_job = session.query(IntervalBasedJob).filter_by(
                     id=job.interval_based.id).one()
 
-            for param, value in params.items():
+            for param, value in ib_params.items():
                 if value:
                     setattr(ib_job, param, value)
             
             session.add(ib_job)
             
         elif job_type == 'cron_style':
-            params = _get_params(payload, ['cron_definition'], 'data.')
-            cron_definition = params['cron_definition'].strip()
+            cs_params = _get_params(payload, ['cron_definition'], 'data.')
+            cron_definition = cs_params['cron_definition'].strip()
             
             if cron_definition.startswith('@'):
                 if not cron_definition in PREDEFINED_CRON_DEFINITIONS:
@@ -183,7 +185,28 @@ def _create_edit(action, payload, logger, session):
             session.add(cs_job)
 
         # We can commit it all now.
-        session.commit()            
+        session.commit()
+        
+        # Now send it to the broker, but only if the job is active.
+        if is_active:
+            msg_action = SCHEDULER.CREATE if action == 'create' else SCHEDULER.EDIT
+            msg = {'action': msg_action, 'job_type': job_type,
+                   'is_active':is_active, 'start_date':start_date,
+                   'extra':extra, 'service': service_name, 'name': name
+                   }
+            if action == 'edit':
+                msg['old_name'] = old_name
+
+            if job_type == 'interval_based':
+                for param, value in ib_params.items():
+                    msg[param] = int(value) if value else 0
+            elif job_type == 'cron_style':
+                msg['cron_definition'] = cron_definition
+        else:
+            msg = {'action': SCHEDULER.DELETE, 'name': name}
+            
+        broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+        
             
     except Exception, e:
         session.rollback()
@@ -210,25 +233,13 @@ class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     def handle(self, *args, **kwargs):
+        
         with closing(self.server.odb.session()) as session:
             
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
+            definitions = job_list(session, params['cluster_id'])
             
-            definitions = session.query(Job.id, Job.name, Job.is_active,
-                Job.job_type, Job.start_date,  Job.extra,
-                Service.name.label('service_name'), Service.id.label('service_id'),
-                IntervalBasedJob.weeks, IntervalBasedJob.days,
-                IntervalBasedJob.hours, IntervalBasedJob.minutes, 
-                IntervalBasedJob.seconds, IntervalBasedJob.repeats,
-                CronStyleJob.cron_definition).\
-                    outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
-                    outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
-                    filter(Cluster.id==params['cluster_id']).\
-                    filter(Job.service_id==Service.id).\
-                    order_by('job.name').\
-                    all()
-    
             for definition in definitions:
     
                 definition_elem = Element('definition')
@@ -237,19 +248,17 @@ class GetList(AdminService):
                 definition_elem.is_active = definition.is_active
                 definition_elem.job_type = definition.job_type
                 definition_elem.start_date = definition.start_date
-                definition_elem.extra = definition.extra
+                definition_elem.extra = definition.extra.decode('utf-8')
                 definition_elem.service_id = definition.service_id
-                definition_elem.service_name = definition.service_name
+                definition_elem.service_name = definition.service_name.decode('utf-8')
                 definition_elem.weeks = definition.weeks if definition.weeks else ''
                 definition_elem.days = definition.days if definition.days else ''
                 definition_elem.hours = definition.hours if definition.hours else ''
                 definition_elem.minutes = definition.minutes if definition.minutes else ''
                 definition_elem.seconds = definition.seconds if definition.seconds else ''
                 definition_elem.repeats = definition.repeats if definition.repeats else ''
-                definition_elem.cron_definition = (definition.cron_definition if 
+                definition_elem.cron_definition = (definition.cron_definition.decode('utf-8') if 
                     definition.cron_definition else '')
-                
-                print(repr((definition.name, definition.cron_definition)))
                 
                 definition_list.append(definition_elem)
     
@@ -259,15 +268,17 @@ class Create(AdminService):
     """ Creates a new scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        return _create_edit('create', kwargs.get('payload'), self.logger, 
-                            self.server.odb.session())
+        with closing(self.server.odb.session()) as session:
+            return _create_edit('create', kwargs.get('payload'), self.logger, 
+                session, kwargs['thread_ctx'].broker_client)
         
 class Edit(AdminService):
     """ Update a new scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        return _create_edit('edit', kwargs.get('payload'), self.logger, 
-                            self.server.odb.session())
+        with closing(self.server.odb.session()) as session:
+            return _create_edit('edit', kwargs.get('payload'), self.logger, 
+                session, kwargs['thread_ctx'].broker_client)
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
@@ -287,6 +298,10 @@ class Delete(AdminService):
                 
                 session.delete(job)
                 session.commit()
+
+                msg = {'action': SCHEDULER.DELETE, 'name': job.name}
+                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+                
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the job, e=[{e}]'.format(e=format_exc(e))
@@ -295,3 +310,32 @@ class Delete(AdminService):
                 raise
             
             return ZATO_OK, ''
+
+class Execute(AdminService):
+    """ Executes a scheduler's job.
+    """
+    def handle(self, *args, **kwargs):
+        with closing(self.server.odb.session()) as session:
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['id']
+                params = _get_params(payload, request_params, 'data.')
+                
+                id = params['id']
+                
+                job = session.query(Job).\
+                    filter(Job.id==id).\
+                    one()
+                
+                msg = {'action': SCHEDULER.EXECUTE, 'name': job.name}
+                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+                
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not execute the job, e=[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+                
+                raise
+            
+            return ZATO_OK, ''
+        

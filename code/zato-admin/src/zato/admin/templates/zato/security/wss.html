@@ -14,14 +14,13 @@
     <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/dragdrop/dragdrop-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/cookie/cookie-min.js"></script>
+    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
 
     {% comment %} Validation framework {% endcomment %}
     <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
@@ -81,11 +80,14 @@
                     {key:"password_type_raw", label:"password_type_raw", hidden:true},
                     {key:"selection", label:"", sortable:false},
                     {key:"name", label:"Name", sortable:true},
-                    {key:"is_active", label:"Active", sortable:true},
+                    {key:"is_active", label:"is_active", hidden:true},
+                    {key:"is_active_text", label:"Active", sortable:true},
                     {key:"username", label:"Username", sortable:true},
                     {key:"password_type", label:"Password type", sortable:true},
-                    {key:"reject_empty_nonce_ts", label:"Empty nonce TS", sortable:true},
-                    {key:"reject_stale_username", label:"Stale username", sortable:true},
+                    {key:"reject_empty_nonce_ts", label:"reject_empty_nonce_ts", hidden:true},
+                    {key:"reject_empty_nonce_ts_text", label:"Reject empty TS", sortable:true},
+                    {key:"reject_stale_username", label:"reject_stale_username", hidden:true},
+                    {key:"reject_stale_username_text", label:"Reject stale users", sortable:true},
                     {key:"expiry_limit", label:"Expiry (s)", sortable:true},
                     {key:"nonce_freshness", label:"Freshness (s)", sortable:true},
                     {key:"edit", label:"&nbsp;", sortable:false},
@@ -102,10 +104,13 @@
                             {key:"selection"},
                             {key:"name"},
                             {key:"is_active"},
+                            {key:"is_active_text"},
                             {key:"username"},
                             {key:"password_type"},
                             {key:"reject_empty_nonce_ts"},
+                            {key:"reject_empty_nonce_ts_text"},
                             {key:"reject_stale_username"},
+                            {key:"reject_stale_username_text"},
                             {key:"expiry_limit"},
                             {key:"nonce_freshness"},
                             {key:"edit"},
@@ -246,6 +251,20 @@
                     <tr>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                     </tr>
                 </thead>
 
@@ -257,16 +276,19 @@
                         <td>{{ wss.password_type_raw }}</td>
                         <td><input type="checkbox" /></td>
                         <td>{{ wss.name }}</td>
-                        <td>{% if wss.is_active %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ wss.is_active }}</td>
+                        <td>{{ wss.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ wss.username }}</td>
                         <td>{{ wss.password_type }}</td>
-                        <td>{% if wss.reject_empty_nonce_ts %}Reject{% else %}Allow{% endif %}</td>
-                        <td>{% if wss.reject_stale_username %}Reject{% else %}Allow{% endif %}</td>
+                        <td>{{ wss.reject_empty_nonce_ts }}</td>
+                        <td>{{ wss.reject_empty_nonce_ts|yesno:"Yes,No" }}</td>
+                        <td>{{ wss.reject_stale_username }}</td>
+                        <td>{{ wss.reject_stale_username|yesno:"Yes,No" }}</td>
                         <td>{{ wss.expiry_limit }}</td>
                         <td>{{ wss.nonce_freshness }}</td>
-                        <td><a href="javascript:wss_edit('{{ wss.id }}')">Edit</a></td>
-                        <td><a href="javascript:wss_change_password('{{ wss.id }}')">Change password</a></td>
-                        <td><a href="javascript:wss_delete('{{ wss.id }}')">Delete</a></td>
+                        <td><a href="javascript:edit('{{ wss.id }}')">Edit</a></td>
+                        <td><a href="javascript:change_password('{{ wss.id }}')">Change password</a></td>
+                        <td><a href="javascript:delete_('{{ wss.id }}')">Delete</a></td>
                     </tr>
                 {% endfor %}
 

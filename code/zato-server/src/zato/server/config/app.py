@@ -39,7 +39,8 @@ from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.pool.sql import SQLConnectionPool, SQLConnectionPool
 from zato.server.repo import RepoManager
-#from zato.server.scheduler import Scheduler
+from zato.server.scheduler import Scheduler
+from zato.server.security.basic_auth import Store as BasicAuthStore
 from zato.server.security.wss import WSSUsernameTokenProfileStore
 from zato.server.service.store import EggServiceImporter, ServiceStore
 
@@ -127,7 +128,7 @@ class ZatoContext(PythonConfig):
             'zato:service.get-details':'zato.server.service.internal.service.GetServiceDetails',
 
             # SOAP channels
-            'zato:channel.soap.get-list':'zato.server.service.internal.soap.GetChannelList',
+            'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
             
             # Technical accounts
             'zato:security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
@@ -150,13 +151,6 @@ class ZatoContext(PythonConfig):
             'zato:security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
             'zato:security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
             'zato:security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
-            
-            # SSL/TLS
-            'zato:security.ssl.get':'zato.server.service.internal.security.ssl.Get',
-            'zato:security.ssl.get-list':'zato.server.service.internal.security.ssl.GetList',
-            'zato:security.ssl.create':'zato.server.service.internal.security.ssl.Create',
-            'zato:security.ssl.edit':'zato.server.service.internal.security.ssl.Edit',
-            'zato:security.ssl.delete':'zato.server.service.internal.security.ssl.Delete',
         }
 
     @Object
@@ -170,7 +164,7 @@ class ZatoContext(PythonConfig):
         return handler
 
     # #######################################################
-    # WS-Security
+    # Security
 
     @Object
     def wss_nonce_cache(self):
@@ -194,6 +188,10 @@ class ZatoContext(PythonConfig):
 
         return store
     
+    @Object
+    def basic_auth_store(self):
+        return BasicAuthStore()
+    
     # #######################################################
     # ODB (Operational Database)
     
@@ -211,6 +209,7 @@ class ZatoContext(PythonConfig):
         server.odb = self.odb_manager()
         server.soap_handler = self.soap_message_handler()
         server.service_store = self.service_store()
+        server.basic_auth_store = self.basic_auth_store()
 
         # Regular objects.
         #server.sql_pool = self.sql_pool()
@@ -225,7 +224,7 @@ class ZatoContext(PythonConfig):
         server = SingletonServer()
         server.pickup = self.pickup()
         server.config_repo_manager = self.config_repo_manager()
-        #server.scheduler = self.scheduler()
+        server.scheduler = self.scheduler()
         server.config_queue = multiprocessing.Queue()
 
         return server
@@ -235,10 +234,7 @@ class ZatoContext(PythonConfig):
 
     @Object
     def scheduler(self):
-        '''scheduler = Scheduler()
-        scheduler.config_repo_manager = self.config_repo_manager()
-
-        return scheduler'''
+        return Scheduler()
 
     # #######################################################
     # SQL connection pools management

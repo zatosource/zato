@@ -81,8 +81,8 @@ wsse_username_token_objectify = "{%s}UsernameToken" % wsse_namespace
 zato_data_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:data"
 zato_data_xpath = etree.XPath(zato_data_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
 
-zato_error_code_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:error_code"
-zato_error_code_path_xpath = etree.XPath(zato_error_code_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
+zato_result_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:zato_env/zato:result"
+zato_result_path_xpath = etree.XPath(zato_result_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
 
 scheduler_date_time_format = "%Y-%m-%d %H:%M:%S"
 
@@ -104,10 +104,6 @@ ZATO_WARNING = "ZATO_WARNING"
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 
-# Names of components as they're used by ZeroMQ sockets.
-ZATO_PARALLEL_SERVER = '/zato/parallel'
-ZATO_SINGLETON_SERVER = '/zato/singleton'
-
 # Status of a server's join request
 ZATO_JOIN_REQUEST_ACCEPTED = 'ACCEPTED'
 
@@ -127,6 +123,16 @@ ZATO_FIELD_OPERATORS = {
     'is-equal-to': '==',
     'is-not-equal-to': '!=',
     }
+
+# How much various ZeroMQ ports are shifted with regards to the base port
+# configured for the cluster. The direction of ports reflected in the names 
+# is always assumed to be from the broker to clients.
+PORTS = Bunch()
+PORTS.BROKER_PARALLEL_PUSH = 0
+PORTS.BROKER_PARALLEL_PULL = 1
+PORTS.BROKER_PARALLEL_SUB = 2
+PORTS.BROKER_SINGLETON_PUSH = 50
+PORTS.BROKER_SINGLETON_PULL = 51
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):
