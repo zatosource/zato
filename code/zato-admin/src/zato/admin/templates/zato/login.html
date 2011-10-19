@@ -14,10 +14,11 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Hello, please enter your username and password</h2>
 
-<div class="bd">
-    <form method="post" action="{% url django.contrib.auth.views.login %}">
+<h2 class="zato">Please enter your username and password</h2>
+
+<div style="width:45%;margin: 0px auto -1px auto;padding-top:20px">
+    <form method="post" action="{% url django.contrib.auth.views.login %}" style="width:100%">
         <table class="form-data" border="">
             <tr>
                 <td style="width:7%">

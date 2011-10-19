@@ -59,8 +59,9 @@ Reset end
 
 h2.zato {
     font-size:150%;
-    margin-bottom:20px;
-    color: #333b74;
+	padding:10px;
+	padding-left:4px;
+    color: #222;
     border-bottom:1px dotted #767676
 }
 
@@ -159,16 +160,16 @@ span.like-a {
 
 
 .form-data{
-    width:100%
+    width:100%;
+	border:1px solid #ddd;
+	padding:10px;
+	background-color:#eee;
 }
 
 .form-data td {
     border:none;
-    border-bottom:1px solid #999999;
-    border-top:1px solid #999999;
     padding:4px;
     padding-right:12px;
-    background-color:#e0e0e0;
 }
 
 #footer {
