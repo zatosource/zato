@@ -16,7 +16,7 @@ purchase processing, supporting marketing campaings, core banking and many
 similar activities that form a backbone of an enterprise.
 
 .. image:: _images/three-layer-arch.png
-   :alt: 
+   :alt:
 
 
 Zato can serve as either an ESB or an application server and a successful implementation
@@ -38,7 +38,7 @@ to:
 * create reusable services
 * transform messages between different formats
 * orchestrate the services of multiple autonomous systems
-* send and receive messages across many transports available, using either 
+* send and receive messages across many transports available, using either
   synchronous or asynchronous methods
 * log, audit and monitor messages flowing through using an advanced
   search engine
@@ -57,6 +57,7 @@ regardless of its origin and programming language used. The transports include:
 
 * the ubiquitous HTTP(S) protocol
 * FTP(S)
+* AMQP
 * ActiveMQ
 * WebSphere MQ
 * ZeroMQ
@@ -69,18 +70,18 @@ Web admin
 =========
 
 Zato has a slick and powerful web admin application for administrator to manage
-the environments. Web admin allow one to perform routine, planned as well as 
+the environments. Web admin allow one to perform routine, planned as well as
 ad hoc activities, such as deploying services, configuring security, access channels,
 browsing the messages and more.
 
 .. image:: _images/webadmin1.jpg
-   :alt: 
+   :alt:
 
 Zato, the open-source project
 =============================
 
-Zato is licensed under a commercial-friendly ZZZ license and is not only 
-software but also an open-source project promoting open collaboration through 
+Zato is licensed under a commercial-friendly ZZZ license and is not only
+software but also an open-source project promoting open collaboration through
 peer production and unrestricted exchange of ideas between developers
-and users. *Everyone* is strongly encouraged to take part in the project and 
+and users. *Everyone* is strongly encouraged to take part in the project and
 help build better world through nicer, faster, easier and more reliable software!
