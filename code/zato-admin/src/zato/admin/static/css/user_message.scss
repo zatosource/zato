@@ -1,0 +1,27 @@
+.user-message {
+    padding:6px;
+    border-style:dotted;
+    color:#333333;
+    text-align:left;
+}
+
+.user-message-success {
+    border-color:#333333;
+    border-width:1px;
+    background-color:#bbdd55;
+}
+
+.user-message-failure {
+    border-color:red;
+    border-width:2px;
+    background-color:#eeee33;
+}
+
+.error-message {
+    background-color:#ffccbb;
+    padding:6px;
+    margin-bottom:12px;
+    border:1px dotted #999999;
+    font-weight:600;
+    color:#993333
+}
