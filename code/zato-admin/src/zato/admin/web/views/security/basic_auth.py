@@ -27,6 +27,7 @@ from traceback import format_exc
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 # lxml
 from lxml import etree
@@ -106,7 +107,8 @@ def index(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)
 
-    return render_to_response('zato/security/basic-auth.html', return_data)
+    return render_to_response('zato/security/basic-auth.html', return_data,
+                              context_instance=RequestContext(req))
 
 @meth_allowed('POST')
 def edit(req):

@@ -20,16 +20,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
+from django.contrib.auth import logout as _logout
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 # Zato
 from zato.admin.web.views import meth_allowed
 
-@meth_allowed("GET")
+@meth_allowed('GET')
 def index_redirect(req):
-    return HttpResponseRedirect("/zato")
+    return HttpResponseRedirect('/zato')
 
-@meth_allowed("GET")
+@meth_allowed('GET')
 def index(req):
-    return render_to_response("zato/index.html")
+    return render_to_response('zato/index.html',
+                              context_instance=RequestContext(req))
+@meth_allowed('GET')
+def logout(req):
+    _logout(req)
+    return index_redirect(req)
+
+@meth_allowed('GET')
+def my_account(req):
+    pass

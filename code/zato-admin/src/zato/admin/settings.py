@@ -79,9 +79,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.csrf.CsrfResponseMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'zato.admin.middleware.RequireLoginMiddleware',
-    'zato.admin.middleware.SQLAlchemyMiddleware',
-    #'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'zato.admin.middleware.ZatoMiddleware',
 )
 
 ROOT_URLCONF = 'zato.admin.urls'
@@ -99,19 +97,6 @@ INSTALLED_APPS = (
     'debug_toolbar',
     'zato.admin.web',
 )
-
-DEBUG_TOOLBAR_PANELS = (
-    'debug_toolbar.panels.version.VersionDebugPanel',
-    'debug_toolbar.panels.timer.TimerDebugPanel',
-    'debug_toolbar.panels.headers.HeaderDebugPanel',
-    'debug_toolbar.panels.request_vars.RequestVarsDebugPanel',
-    'debug_toolbar.panels.sql.SQLDebugPanel',
-    'debug_toolbar.panels.cache.CacheDebugPanel',
-    'debug_toolbar.panels.logger.LoggingPanel',
-)
-
-DEBUG_TOOLBAR_CONFIG = {}
-DEBUG_TOOLBAR_CONFIG['INTERCEPT_REDIRECTS'] = False
 
 # A list of prefixes pointing to resources (such as CSS or JS) which may be
 # accessed by anonymous users

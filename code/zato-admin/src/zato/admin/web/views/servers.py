@@ -28,6 +28,7 @@ from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 # Zato
 from zato.admin.web.forms.servers import RegisterServerForm, EditServerForm
@@ -120,7 +121,7 @@ def index(req):
         "zato_servers":zato_servers,
         "success_message":success_message,
         "error_message":error_message
-    })
+    }, context_instance=RequestContext(req))
 
 @meth_allowed("POST")
 def status(req, server_id):
