@@ -1,0 +1,21 @@
+#main-menu {
+    background-color:#363636;
+	border-bottom:3px solid #aaa
+}
+
+#main-menu ul, span.like-a {
+    float: left;
+	font-size:11px;
+	font-family: sans-serif
+}
+ 
+#main-menu ul li, span.like-a{
+    display: inline;
+}
+ 
+#main-menu ul li a, span.like-a {
+    float: left; 
+	text-decoration: none;
+    color: white;
+    padding: 10.5px	5px;
+}
