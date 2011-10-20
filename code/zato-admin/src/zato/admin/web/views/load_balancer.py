@@ -149,7 +149,8 @@ def remote_command(req, cluster_id):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, "Returning render_to_response [%s]" % return_data)
 
-    return render_to_response("zato/load_balancer/remote_command.html", return_data)
+    return render_to_response("zato/load_balancer/remote_command.html", return_data,
+                              context_instance=RequestContext(req))
 
 @meth_allowed("GET")
 def manage(req, cluster_id):

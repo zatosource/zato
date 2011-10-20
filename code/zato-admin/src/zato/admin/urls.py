@@ -34,15 +34,12 @@ from zato.admin.web.views.security import basic_auth, tech_account, wss
 
 urlpatterns = patterns('',
 
-    # Auth
+    # Main URLs
     (r'^accounts/login/$', login, {'template_name': 'zato/login.html'}),
-
-
-    # Redirect to the main page.
     (r'^$', main.index_redirect),
-
-    # Main page.
     url(r'^zato/$', main.index, name='main-page'),
+    url(r'^logout/$', main.logout, name='logout'),
+    url(r'^accounts/self$', main.my_account, name='accounts-self'),
 
     # Clusters.
     url(r'^zato/cluster/$', cluster.index, name='cluster'),

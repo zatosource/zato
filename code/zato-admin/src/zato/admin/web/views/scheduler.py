@@ -35,6 +35,7 @@ from traceback import format_exc
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 # lxml
 from lxml import etree
@@ -422,7 +423,7 @@ def index(req):
             'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
             'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
-            })
+            }, context_instance=RequestContext(req))
     except Exception, e:
         msg = '<pre>Could not invoke the method, e=[{0}]</pre>'.format(format_exc(e))
         logger.error(msg)

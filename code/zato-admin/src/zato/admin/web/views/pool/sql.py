@@ -29,6 +29,7 @@ from traceback import format_exc
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response
 from django.http import HttpResponse, HttpResponseServerError
+from django.template import RequestContext
 
 # lxml
 from lxml import etree
@@ -244,7 +245,7 @@ def index(req):
             "create_form":SQLConnectionPoolForm(),
             "engine_friendly_name": engine_friendly_name.items(),
             "change_password_form":ChangePasswordForm()
-        })
+        }, context_instance=RequestContext(req))
 
 @meth_allowed("POST")
 def ping(req):
@@ -258,7 +259,9 @@ def ping(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return render_to_response("zato/pool/sql-ping-ok.html", {"response_time":"%.3f" % response_time})
+        return render_to_response("zato/pool/sql-ping-ok.html", 
+                                  {"response_time":"%.3f" % response_time},
+                                  context_instance=RequestContext(req))
 
 @meth_allowed("POST")
 def delete(req):

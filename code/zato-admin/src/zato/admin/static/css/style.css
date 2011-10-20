@@ -20,13 +20,16 @@ table, caption, tbody, tfoot, thead, tr, th, td {
 	font-weight: inherit;
 	font-style: inherit;
 	font-size: 100%;
-	font-family: inherit;
+	font-family: sans-serif;
 	vertical-align: baseline;
 }
 /* remember to define focus styles! */
 :focus {
 	outline: 0;
 }
+
+html {overflow-y: scroll;}
+
 body {
 	line-height: 1;
 	color: black;
@@ -58,11 +61,12 @@ Reset end
 */
 
 h2.zato {
-    font-size:150%;
+    font-size:80%;
 	padding:10px;
 	padding-left:4px;
     color: #222;
-    border-bottom:1px dotted #767676
+    border-bottom:1px dotted #767676;
+	text-shadow: 1px 1px 0 #ccc
 }
 
 #console-header {
@@ -70,12 +74,21 @@ h2.zato {
 	border-bottom:3px solid #222
 }
 
-#console-header h1{
+#logo{
     font-size:150%;
     padding:5px;
     color:#eee;
     font-weight:600;
-	font-family:sans-serif
+	font-family:sans-serif;
+	text-shadow: 2px 2px 0 #333;
+}
+
+#logout {
+	color:#fff;
+	float:right;
+	font-size:11px;
+	padding-top:6px;
+	padding-right:7.5px;
 }
 
 #menu {
@@ -98,6 +111,19 @@ h2.zato {
 	text-decoration: none;
     color: white;
     padding: 10.5px	5px;
+}
+
+a {
+    color: #fff;
+    font-family: arial,helvetica,clean,sans-serif;
+	text-decoration:none;
+	padding:3px
+}
+
+a:hover {
+    background-color: #e0e030;
+    color:#000033;
+    text-decoration:none
 }
 
 
@@ -161,9 +187,9 @@ span.like-a {
 
 .form-data{
     width:100%;
-	border:1px solid #ddd;
+	border:1px solid #c3c3c3;
 	padding:10px;
-	background-color:#eee;
+	background-color:#e3e3e3;
 }
 
 .form-data td {

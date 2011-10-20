@@ -28,19 +28,6 @@ from django.http import HttpResponseRedirect
 from zato.admin.settings import SASession
 
 
-class SQLAlchemyMiddleware(object):
-    """ Makes each Django view have an access to an 'odb' attribute of the
-    request object. The attribute is an SQLAlchemy session to the database
-    defined in app's settings.py
-    """
-
-    def process_request(self, req):
-        req.odb = SASession()
-
-    #def process_response(self, req, resp):
-    #    print(333, SASession())
-    #    return resp
-
 # Code below is taken from http://djangosnippets.org/snippets/136/
 # Slightly modified for Zato's purposes.
 
@@ -73,7 +60,7 @@ class SQLAlchemyMiddleware(object):
 # POSSIBILITY OF SUCH DAMAGE.
 ###
 
-class RequireLoginMiddleware(object):
+class ZatoMiddleware(object):
     """
     Require Login middleware. If enabled, each Django-powered page will
     require authentication.
@@ -95,3 +82,9 @@ class RequireLoginMiddleware(object):
                 return login(req)
             else:
                 return HttpResponseRedirect("%s?next=%s" % (self.require_login_path, req.path))
+            
+        # Makes each Django view have an access to an 'odb' attribute of the
+        # request object. The attribute is an SQLAlchemy session to the database
+        # defined in app's settings.py
+        req.odb = SASession()
+            
