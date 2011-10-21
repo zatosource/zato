@@ -60,10 +60,16 @@
         <br/><br/>
     {% endif %}
 
+    <div class="prompt">
+    {% if not cluster_id %}
+        Choose a cluster to manage SOAP channels
+    {% endif %}
+
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show definitions" />
+        <input type="submit" value="Show channels" />
     </form>
+    </div>
 
 
     {% if cluster_id %}

@@ -46,14 +46,16 @@
 
     <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
 
+    <div class="prompt">
     {% if not cluster_id %}
-        <div class="prompt">Choose a cluster to manage scheduler jobs</div>
+        Choose a cluster to manage scheduler jobs
     {% endif %}
 
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
         <input type="submit" value="Show jobs" />
     </form>
+    </div>
 
     {% if cluster_id %}
 

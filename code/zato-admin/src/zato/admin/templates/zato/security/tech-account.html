@@ -53,15 +53,16 @@
 
     <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
 
+    <div class="prompt">
     {% if not cluster_id %}
-        Choose a cluster to manage technical accounts.
-        <br/><br/>
+        Choose a cluster to manage technical accounts
     {% endif %}
 
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
         <input type="submit" value="Show accounts" />
     </form>
+    </div>
     
     {% if accounts %}
 
