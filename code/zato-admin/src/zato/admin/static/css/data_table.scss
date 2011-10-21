@@ -31,3 +31,43 @@
     }
     
 }
+
+.form-data{
+    width:100%;
+	border:1px solid #666;
+	padding:10px;
+	font-size:12px;
+	background-color:#ccc;
+	color:#000;
+	text-shadow: 1px 1px 0 #eee;
+}
+
+.form-data td {
+    border:none;
+    padding:4px;
+    padding-right:12px;
+}
+
+
+.ui-dialog-titlebar {
+    padding:10px;
+    background-color:#999;
+	font-size:13px;
+	border:1px solid #666;
+	border-bottom:none;
+	text-align:left;
+	text-shadow: 1px 1px 0 #aaa;
+}
+
+.form_hint {
+    font-size:smaller;
+    color:#333
+}
+
+.ui-icon-closethick {
+	display:none
+}
+
+.ui-dialog-buttonset {
+	text-align:right;
+}

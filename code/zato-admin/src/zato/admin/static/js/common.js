@@ -1,3 +1,49 @@
+(function($){
+if ({}.__proto__){
+    // mozilla  & webkit expose the prototype chain directly
+    $.namespace = function(n){
+        var names=n.split('.');
+        var f=$.fn;
+        for(var i=0;i<names.length;i++) {
+            var name=names[i];
+            if(!f[name]) {
+                f[name] = function namespace() { // insert this function in the prototype chain
+                    this.__proto__ = arguments.callee;
+                    return this;
+                };
+                f[name].__proto__ = f;
+            }
+            f=f[name];
+        }
+    };
+    $.fn.$ = function(){
+        this.__proto__ = $.fn;
+        return this;
+    };
+}else{
+    // every other browser; need to copy methods
+    $.namespace = function(n){
+        var names=n.split('.');
+        var f=$.fn;
+        for(var i=0;i<names.length;i++) {
+            var name=names[i];
+            if(!f[name]) {
+                f[name] = function namespace() { return this.extend(arguments.callee); };
+            }
+            f=f[name];
+        }
+    };
+    $.fn.$ = function() { // slow but restores the default namespace
+        var len = this.length;
+        this.extend($.fn);
+        this.length = len; // $.fn has length = 0, which messes everything up
+        return this;
+    };
+}
+})(jQuery);
+
+$.namespace('zato');
+$.namespace('zato.data_table');
 
 //
 // A simple function for returning a random string.
@@ -42,4 +88,28 @@ function update_user_message(is_success, response, user_message_elem,
 
 function to_bool(item) {
     return new String(item).toLowerCase() == "true";
+}
+
+$.fn.zato.data_table.data = {}
+
+$.fn.zato.data_table.parse = function(class_) {
+
+	var rows = $('#data-table tr').not('[class="ignore"]');
+	var columns = $.fn.zato.data_table.get_columns();
+	
+	$.each(rows, function(row_idx, row) {
+		var instance = new class_()
+		var tds = $(row).find('td');
+		$.each(tds, function(td_idx, td) {
+		
+			var attr_name = columns[td_idx];
+			var attr_value = $(td).text().trim();
+
+			// Don't bother with ignored attributes.
+			if(attr_name[0] != '_') {
+				instance[attr_name] = attr_value;
+			}
+		});
+		$.fn.zato.data_table.data[instance.id] = instance;
+	});
 }
