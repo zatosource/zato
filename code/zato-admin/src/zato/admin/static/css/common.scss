@@ -5,7 +5,6 @@ h2.zato {
 	padding-left:4px;
     color: #222;
     border-bottom:1px dotted #767676;
-	text-shadow: 1px 1px 0 #ccc
 }
 
 div.prompt {
@@ -19,16 +18,25 @@ div.prompt form {
 }
 
 a {
-    color: #fff;
+    color: #000;
     font-family: arial,helvetica,clean,sans-serif;
-	text-decoration:none;
-	padding:3px
+	text-decoration:underline;
+	padding:3px;
 }
 
 a:hover {
     background-color: #e0e030;
     color:#000033;
     text-decoration:none
+}
+
+a.top {
+	color: #fff;
+	text-shadow: none
+}
+
+a.top:hover {
+	color: #000;
 }
 
 
@@ -65,4 +73,10 @@ a:hover {
 .form_hint {
     font-size:smaller;
     color:#666666
+}
+
+
+#markup {
+	width:99%;
+	text-align: center;
 }

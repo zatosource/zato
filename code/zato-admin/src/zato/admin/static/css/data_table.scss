@@ -1,0 +1,33 @@
+#data-table {
+    width:100%;
+    margin-top: 8px;
+    margin-left: 4px;
+    border:1px solid #ccc;  
+    font-size:12px;
+
+    a {
+        font-size:12px;
+    }
+
+    tr.odd {
+        background-color:#fff;
+    }
+    
+    tr.even {
+        background-color:#e8e8e8;
+    }
+    
+    td, th {
+        padding:6px
+    }
+    
+    th {
+        background-color:#ccc;
+        font-size:11px;
+    }
+    
+    td {
+        vertical-align:base
+    }
+    
+}

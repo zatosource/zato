@@ -40,8 +40,8 @@
             <div id="console-header"><span id="logo">Zato</span>
             {% if user.is_authenticated %}
                 <span id="logout">
-                    <a href="{% url accounts-self %}">My account</a>
-                    <a href="{% url logout %}">Log out ({{ user.username }})</a>
+                    <a class="top" href="{% url accounts-self %}">My account</a>
+                    <a class="top"  href="{% url logout %}">Log out ({{ user.username }})</a>
                 </span>
             {% endif %}
             </div>
