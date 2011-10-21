@@ -55,15 +55,16 @@
 
     <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
 
+    <div class="prompt">
     {% if not cluster_id %}
-        Choose a cluster to manage HTTP Basic Auth definitions.
-        <br/><br/>
+        Choose a cluster to manage HTTP Basic Auth definitions
     {% endif %}
 
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
         <input type="submit" value="Show definitions" />
     </form>
+    </div>
 
 
     {% if cluster_id %}
