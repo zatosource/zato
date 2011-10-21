@@ -61,12 +61,13 @@
 
         <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
 
-        <br/>
+
+    <div style="padding:4px;font-size:12px">
         Create a new job:
             <a href="javascript:create('one_time')" class="common">one-time</a>, 
             <a href="javascript:create('interval_based')" class="common">interval-based</a>, 
             <a href="javascript:create('cron_style')" class="common">cron-style</a>
-        <br/><br/>
+    </div>
 
 
         <div id="markup">
@@ -75,38 +76,23 @@
 
                     <tr>
                         <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Job type</a></th>
+                        <th>Definition</th>
+                        <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                    </tr>
+
                 </thead>
 
                 <tbody>
                 {% for job in jobs %}
-
-                    <tr>
-                        <td>{{ job.id }}</td>
+                
+                    <tr class="{% cycle 'odd' 'even' %}">
                         <td><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
-                        <td>{{ job.is_active }}</td>
                         <td>{{ job.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition_text|safe }}</td>
@@ -114,18 +100,6 @@
                         <td><a href="javascript:execute({{ job.id }})">Execute</a></td>
                         <td><a href="javascript:edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
                         <td><a href="javascript:delete_({{ job.id }});">Delete</a></td>
-                        <td>{{ job.start_date }}</td>
-                        <td>{{ job.service_name }}</td>
-                        <td>{{ job.extra }}</td>
-                        <td>{{ job.interval_based.weeks }}</td>
-                        <td>{{ job.interval_based.days }}</td>
-                        <td>{{ job.interval_based.hours }}</td>
-                        <td>{{ job.interval_based.minutes }}</td>
-                        <td>{{ job.interval_based.seconds }}</td>
-                        <td>{{ job.interval_based.repeats }}</td>
-                        <td>{{ job.cron_style.cron_definition }}</td>
-                        <td>{{ job.job_type }}</td>
-                        
                     </tr>
                 {% endfor %}
 
