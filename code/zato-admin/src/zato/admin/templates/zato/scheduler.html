@@ -16,19 +16,41 @@
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
-
-    {% comment %} Scheduler JS {% endcomment %}
-    <script type="text/javascript" src="/static/js/scheduler.js"></script>
-
-    {% comment %} Build a list of job types' friendly names {% endcomment %}
-    <script type="text/javascript">
-        //var friendly_names = new Hash();
+    
+    <script>
+    //var friendly_names = new Hash();
 
     {% comment %}
         {% for name, friendly_name in friendly_names%}
             friendly_names.set('{{ name }}', '{{ friendly_name }}');
         {% endfor %}
     {% endcomment %}
+    
+    
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_selection',
+            'name',
+            '_is_active',
+            '_job_type',
+            '_definition_text',
+            'service',
+            '_execute',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'job_type',
+        ]
+    }
+    
+    
+    </script>
+
+    {% comment %} Scheduler JS {% endcomment %}
+    <script type="text/javascript" src="/static/js/scheduler.js"></script>
+
+    <script type="text/javascript">
     </script>
 
 {% endblock %}
@@ -64,9 +86,9 @@
 
     <div style="padding:4px;font-size:12px">
         Create a new job:
-            <a href="javascript:create('one_time')" class="common">one-time</a>, 
-            <a href="javascript:create('interval_based')" class="common">interval-based</a>, 
-            <a href="javascript:create('cron_style')" class="common">cron-style</a>
+            <a href="javascript:$.fn.zato.create('one_time')" class="common">one-time</a>, 
+            <a href="javascript:$.fn.zato.create('interval_based')" class="common">interval-based</a>, 
+            <a href="javascript:$.fn.zato.create('cron_style')" class="common">cron-style</a>
     </div>
 
 
@@ -74,7 +96,7 @@
             <table id="data-table">
                 <thead>
 
-                    <tr>
+                    <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
@@ -84,6 +106,9 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                 </thead>
 
@@ -97,9 +122,12 @@
                         <td>{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition_text|safe }}</td>
                         <td><a href="{% url service %}?service={{ job.service_name }}">{{ job.service_name }}</a></td>
-                        <td><a href="javascript:execute({{ job.id }})">Execute</a></td>
-                        <td><a href="javascript:edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
-                        <td><a href="javascript:delete_({{ job.id }});">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.execute({{ job.id }})">Execute</a></td>
+                        <td><a href="javascript:$.fn.zato.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.delete_({{ job.id }});">Delete</a></td>
+                        <td class='ignore'>{{ job.id }}</td>
+                        <td class='ignore'>{{ job.is_active }}</td>
+                        <td class='ignore'>{{ job.job_type }}</td>
                     </tr>
                 {% endfor %}
 
@@ -107,13 +135,10 @@
             </table>
         </div>
 
-<!--
-
-        <div id="create-one_time" class="yui-pe-content">
-            <div class="hd">Create a one-time job</div>
+        <div id="create-one_time" class='data-popup ignore'>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-one_time">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -157,12 +182,13 @@
                 </form>
             </div>
         </div>
-        
-        <div id="edit-one_time" class="yui-pe-content">
+
+
+        <div id="edit-one_time" class='data-popup ignore'>
             <div class="hd">Edit a one-time job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -208,11 +234,11 @@
             </div>
         </div>
         
-        <div id="create-interval_based" class="yui-pe-content">
+        <div id="create-interval_based" class='data-popup ignore'>
             <div class="hd">Create an interval-based job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -287,11 +313,11 @@
             </div>
         </div>
         
-        <div id="edit-interval_based" class="yui-pe-content">
+        <div id="edit-interval_based" class='data-popup ignore'>
             <div class="hd">Edit an interval-based job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -367,11 +393,11 @@
             </div>
         </div>
         
-        <div id="create-cron_style" class="yui-pe-content">
+        <div id="create-cron_style" class='data-popup ignore'>
             <div class="hd">Create an cron-style job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-cron_style">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -423,11 +449,11 @@
             </div>
         </div>
         
-        <div id="edit-cron_style" class="yui-pe-content">
+        <div id="edit-cron_style" class='data-popup ignore'>
             <div class="hd">Edit a cron-style job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-cron_style">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
 
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -480,7 +506,6 @@
             </div>
         </div>
         
-        -->
         
     {% endif %} {% comment %}cluster_id{% endcomment %}
 

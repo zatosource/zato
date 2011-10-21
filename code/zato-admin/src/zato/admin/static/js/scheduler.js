@@ -1,10 +1,47 @@
 
+$.fn.zato.data_table.Job = new Class({
+	toString: function() {
+		var s = '<Job id:{0} name:{1} is_active:{2} job_type:{3} service:{4}>';
+		return String.format(s, this.id, this.name, this.is_active, this.job_type,
+			this.service);
+	}
+});
 
-$(document).ready(function() 
-    { 
+$(document).ready(function() { 
         $('#data-table').tablesorter(); 
-    } 
-); 
+		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
+
+		$('#create-one_time').dialog({
+			autoOpen: false,
+			width: '40em',
+			buttons: [
+				{
+					text: "OK",
+					click: function() { $(this).dialog("close");}
+				},
+				{
+					text: "Cancel",
+					click: function() { $(this).dialog("close");}
+				},
+			]
+		});
+		
+}); 
+
+$.fn.zato.create = function(job_type) {
+
+	//var div = $('#create-' + job_type);
+	//div.removeClass('ignore');
+
+	$('.ui-dialog-titlebar').text('Create a one-time job');
+	
+	$('#create-one_time').dialog('open');
+}
+
+$.fn.zato.execute = function(id) {
+	alert($.fn.zato.data_table.data[id]);
+}
+
 
 /*
 

@@ -40,19 +40,6 @@ a.top:hover {
 }
 
 
-.form-data{
-    width:100%;
-	border:1px solid #c3c3c3;
-	padding:10px;
-	background-color:#e3e3e3;
-}
-
-.form-data td {
-    border:none;
-    padding:4px;
-    padding-right:12px;
-}
-
 #footer {
     border-top:1px solid #999999;
     border-bottom:1px solid #999999;
@@ -70,13 +57,11 @@ a.top:hover {
     cursor: pointer;
 }
 
-.form_hint {
-    font-size:smaller;
-    color:#666666
-}
-
-
 #markup {
 	width:99%;
 	text-align: center;
+}
+
+th.ignore, td.ignore, div.ignore {
+	display:none
 }
