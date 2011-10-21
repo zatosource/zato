@@ -11,34 +11,48 @@ $(document).ready(function() {
         $('#data-table').tablesorter(); 
 		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
 
-		$('#create-one_time').dialog({
-			autoOpen: false,
-			width: '40em',
-			buttons: [
-				{
-					text: "OK",
-					click: function() { $(this).dialog("close");}
-				},
-				{
-					text: "Cancel",
-					click: function() { $(this).dialog("close");}
-				},
-			]
-		});
+		var job_types = ['one_time', 'interval_based', 'cron_style'];
+		var actions = ['create', 'edit'];
 		
+		$.each(job_types, function(ignored, job_type) {
+			$.each(actions, function(ignored, action) {
+				$('#'+ action +'-'+ job_type).dialog({
+					autoOpen: false,
+					width: '40em',
+				});
+			});
+		});
 }); 
 
-$.fn.zato.create = function(job_type) {
-
-	//var div = $('#create-' + job_type);
-	//div.removeClass('ignore');
-
-	$('.ui-dialog-titlebar').text('Create a one-time job');
-	
-	$('#create-one_time').dialog('open');
+$.fn.zato.scheduler.on_ok = function(action, job_type) {
 }
 
-$.fn.zato.execute = function(id) {
+$.fn.zato.scheduler.titles = {
+	'one_time': 'a one-time',
+	'interval_based': 'an interval-based',
+	'cron_style': 'a cron-style',
+}
+
+$.fn.zato.scheduler._create_edit = function(action, job_type) {
+
+	var div = $('#'+ action +'-'+ job_type);
+	var title = String.format('{0} {1} job', 
+		action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
+
+	
+	div.prev().text(title); // prev() is a .ui-dialog-titlebar
+	div.dialog('open');
+}
+
+$.fn.zato.scheduler.create = function(job_type) {
+	$.fn.zato.scheduler._create_edit('create', job_type);
+}
+
+$.fn.zato.scheduler.edit = function(job_type, id) {
+	$.fn.zato.scheduler._create_edit('edit', job_type);
+}
+
+$.fn.zato.scheduler.execute = function(id) {
 	alert($.fn.zato.data_table.data[id]);
 }
 
