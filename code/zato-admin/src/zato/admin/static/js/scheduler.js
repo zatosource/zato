@@ -1,4 +1,13 @@
 
+
+$(document).ready(function() 
+    { 
+        $('#data-table').tablesorter(); 
+    } 
+); 
+
+/*
+
 // A base class for representing a scheduler's job.
 var Job = Class.create({
     initialize: function(record) {
@@ -866,3 +875,4 @@ YAHOO.util.Event.onDOMReady(function() {
 	});
     setup_delete_dialog();
 });
+*/
