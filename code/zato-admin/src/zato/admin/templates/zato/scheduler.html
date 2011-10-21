@@ -86,9 +86,9 @@
 
     <div style="padding:4px;font-size:12px">
         Create a new job:
-            <a href="javascript:$.fn.zato.create('one_time')" class="common">one-time</a>, 
-            <a href="javascript:$.fn.zato.create('interval_based')" class="common">interval-based</a>, 
-            <a href="javascript:$.fn.zato.create('cron_style')" class="common">cron-style</a>
+            <a href="javascript:$.fn.zato.scheduler.create('one_time')" class="common">one-time</a>, 
+            <a href="javascript:$.fn.zato.scheduler.create('interval_based')" class="common">interval-based</a>, 
+            <a href="javascript:$.fn.zato.scheduler.create('cron_style')" class="common">cron-style</a>
     </div>
 
 
@@ -122,9 +122,9 @@
                         <td>{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition_text|safe }}</td>
                         <td><a href="{% url service %}?service={{ job.service_name }}">{{ job.service_name }}</a></td>
-                        <td><a href="javascript:$.fn.zato.execute({{ job.id }})">Execute</a></td>
-                        <td><a href="javascript:$.fn.zato.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.delete_({{ job.id }});">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.execute({{ job.id }})">Execute</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.scheduler.delete_({{ job.id }});">Delete</a></td>
                         <td class='ignore'>{{ job.id }}</td>
                         <td class='ignore'>{{ job.is_active }}</td>
                         <td class='ignore'>{{ job.job_type }}</td>
@@ -146,7 +146,7 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
+                            <td style="vertical-align:middle">Active</td>
                             <td>{{ create_one_time_form.is_active }}</td>
                         </tr>
 
@@ -173,6 +173,13 @@
                             <td style="vertical-align:middle">Extra data</td>
                             <td>{{ create_one_time_form.extra }}</td>
                         </tr>
+                        
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button>Cancel</button>
+                            </td>
+                        </tr>
 
                     </table>
 
@@ -185,7 +192,6 @@
 
 
         <div id="edit-one_time" class='data-popup ignore'>
-            <div class="hd">Edit a one-time job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-one_time">
                     <table class="form-data">
@@ -196,7 +202,7 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
+                            <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_one_time_form.is_active }}</td>
                         </tr>
 
@@ -235,7 +241,6 @@
         </div>
         
         <div id="create-interval_based" class='data-popup ignore'>
-            <div class="hd">Create an interval-based job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-interval_based">
                     <table class="form-data">
@@ -246,7 +251,7 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
+                            <td style="vertical-align:middle">Active</td>
                             <td>{{ create_interval_based_form.is_active }}</td>
                         </tr>
 
@@ -314,7 +319,6 @@
         </div>
         
         <div id="edit-interval_based" class='data-popup ignore'>
-            <div class="hd">Edit an interval-based job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-interval_based">
                     <table class="form-data">
@@ -325,7 +329,7 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
+                            <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_interval_based_form.is_active }}</td>
                         </tr>
 
@@ -394,7 +398,6 @@
         </div>
         
         <div id="create-cron_style" class='data-popup ignore'>
-            <div class="hd">Create an cron-style job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-cron_style">
                     <table class="form-data">
@@ -405,7 +408,7 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
+                            <td style="vertical-align:middle">Active</td>
                             <td>{{ create_cron_style_form.is_active }}</td>
                         </tr>
 
@@ -450,7 +453,6 @@
         </div>
         
         <div id="edit-cron_style" class='data-popup ignore'>
-            <div class="hd">Edit a cron-style job</div>
             <div class="bd">
                 <form action=".?cluster={{ cluster_id }}" method="post" id="edit-form-cron_style">
                     <table class="form-data">
@@ -461,7 +463,7 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
+                            <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_cron_style_form.is_active }}</td>
                         </tr>
 

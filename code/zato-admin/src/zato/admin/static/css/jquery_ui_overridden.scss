@@ -1,17 +1,13 @@
 
 .ui-dialog-titlebar {
     padding:10px;
-    background-color:#999;
+    background-color:#333;
 	font-size:13px;
 	border:1px solid #666;
 	border-bottom:none;
 	text-align:left;
-	text-shadow: 1px 1px 0 #aaa;
-}
-
-.form_hint {
-    font-size:smaller;
-    color:#333
+	color:#eee;
+	text-shadow: 1px 1px 0 #000;
 }
 
 .ui-icon-closethick {
@@ -20,4 +16,12 @@
 
 .ui-dialog-buttonset {
 	text-align:right;
+}
+
+.ui-icon-closethick {
+	display:none
+}
+
+.ui-widget {
+	box-shadow: 1px 1px 10px #000;
 }

@@ -44,6 +44,7 @@ if ({}.__proto__){
 
 $.namespace('zato');
 $.namespace('zato.data_table');
+$.namespace('zato.scheduler');
 
 //
 // A simple function for returning a random string.
@@ -88,6 +89,10 @@ function update_user_message(is_success, response, user_message_elem,
 
 function to_bool(item) {
     return new String(item).toLowerCase() == "true";
+}
+
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
 }
 
 $.fn.zato.data_table.data = {}
