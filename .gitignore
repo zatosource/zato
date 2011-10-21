@@ -12,3 +12,4 @@ docs/sphinx/2/docs/_build/
 *.pyc
 *.pyo
 *.egg-info*
+code/zato-admin/src/zato/admin/static/css/.sass-cache/
