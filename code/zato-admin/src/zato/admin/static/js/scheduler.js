@@ -12,12 +12,12 @@ $.fn.zato.data_table.Job = new Class({
 $(document).ready(function() { 
         $('#data-table').tablesorter(); 
 		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
+		
 		var actions = ['create', 'edit'];
+		var job_types = ['one_time', 'interval_based', 'cron_style'];
 
 		/* Dynamically prepare pop-up windows.
 		*/
-		var job_types = ['one_time', 'interval_based', 'cron_style'];
-		
 		$.each(job_types, function(ignored, job_type) {
 			$.each(actions, function(ignored, action) {
 				$('#'+ action +'-'+ job_type).dialog({
@@ -53,6 +53,16 @@ $(document).ready(function() {
 				$(form_id).bValidator();
 			});
 		});
+		
+		$.each(job_types, function(ignored, job_type) {
+			$.each(actions, function(ignored, action) {
+				$('#'+ action +'-'+ job_type).submit(function() {
+					$.fn.zato.scheduler.data_table.on_submit(action, job_type);
+					return false;
+				});
+			});
+		});
+		//$.fn.zato.scheduler.on_ok);
 }); 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -72,7 +82,7 @@ $.fn.zato.scheduler.data_table.form_info = function(button) {
 	}
 }
 
-$.fn.zato.scheduler.data_table.close = function(button) {
+$.fn.zato.scheduler.data_table._clear = function(button) {
 
 	/* Clear out the values and close the dialog.
 	*/
@@ -82,10 +92,14 @@ $.fn.zato.scheduler.data_table.close = function(button) {
 	var parts = form_info['form_id'].split('form-');
 	var div_id = parts[0] + parts[1];
 	$(div_id).dialog('close');
-	
 }
 
-$.fn.zato.scheduler.on_ok = function(action, job_type) {
+$.fn.zato.scheduler.data_table.close = function(button) {
+	$.fn.zato.scheduler.data_table._clear(button);
+}
+
+$.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
+	alert(action +':'+ job_type);
 }
 
 $.fn.zato.scheduler._create_edit = function(action, job_type) {
@@ -94,7 +108,6 @@ $.fn.zato.scheduler._create_edit = function(action, job_type) {
 	var title = String.format('{0} {1} job', 
 		action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
 
-	
 	div.prev().text(title); // prev() is a .ui-dialog-titlebar
 	div.dialog('open');
 }
