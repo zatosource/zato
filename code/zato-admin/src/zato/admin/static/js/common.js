@@ -1,3 +1,7 @@
+//
+// Namespaces
+//
+
 (function($){
 if ({}.__proto__){
     // mozilla  & webkit expose the prototype chain directly
@@ -47,56 +51,10 @@ $.namespace('zato.data_table');
 $.namespace('zato.scheduler');
 
 //
-// A simple function for returning a random string.
+// Data table
 //
-function get_random_string() {
-    var elems = '1234567890qwertyuiopasdfghjklzxcvbnm'.split('');
-    var s = "";
-    var length = 32;
-
-    for(var i = 0; i < length; i++) {
-        s += elems[Math.floor(Math.random() * elems.length)];
-    }
-    return s;
-}
-
-//
-// A utility function for providing a feedback to the user.
-//
-function update_user_message(is_success, response, user_message_elem,
-                                user_message_container_elem) {
-
-    if(!user_message_elem)
-        user_message_elem = "user-message";
-
-    if(!user_message_container_elem)
-        user_message_container_elem = "user-message-div";
-
-    var css_class_name = "user-message ";
-
-    if(is_success) {
-        css_class_name += "user-message-success"
-    }
-    else {
-        css_class_name += "user-message-failure"
-    };
-
-    $(user_message_elem).className = css_class_name;
-    $(user_message_elem).innerHTML = new String(response).escapeHTML();
-    Effect.Fade(user_message_container_elem, {duration: 0.4, from:1.0, to:0.1, queue:"start"}),
-    Effect.Appear(user_message_container_elem, {duration: 0.4, queue:"end"});
-}
-
-function to_bool(item) {
-    return new String(item).toLowerCase() == "true";
-}
-
-String.prototype.capitalize = function() {
-    return this.charAt(0).toUpperCase() + this.slice(1);
-}
 
 $.fn.zato.data_table.data = {}
-
 $.fn.zato.data_table.parse = function(class_) {
 
 	var rows = $('#data-table tr').not('[class="ignore"]');
@@ -117,4 +75,95 @@ $.fn.zato.data_table.parse = function(class_) {
 		});
 		$.fn.zato.data_table.data[instance.id] = instance;
 	});
+}
+
+$.fn.zato.data_table.cleanup = function(form_id) {
+
+	/* Clear out the values and close the dialog.
+	*/
+	
+	$(form_id).each(function() {
+	  this.reset();
+	});
+	
+	var parts = form_id.split('form-');
+	var div_id = parts[0] + parts[1];
+	$(div_id).dialog('close');
+}
+
+$.fn.zato.data_table.dialog_div = function(action, job_type) {
+	return $('#'+ action +'-'+ job_type);
+}
+
+$.fn.zato.data_table.form_info = function(button) {
+	var form = $(button).closest('form');
+	var form_id = form.attr('id');
+	return {
+		'form': form,
+		'form_id': '#' + form_id,
+	}
+}
+
+$.fn.zato.data_table.close = function(button) {
+	var form_info = $.fn.zato.data_table.form_info(button);
+	$.fn.zato.data_table.cleanup(form_info['form_id']);
+}
+
+$.fn.zato.data_table._on_submit_complete = function(data, status) {
+
+	var pre = $('#user-message');
+	var text = '';
+	var css_class = ''
+	
+	if(status == 'success') {
+		var response = $.parseJSON(data.responseText);
+		text = response.message; 
+		css_class = 'user-message-success';
+	}
+	else {
+		text = data.responseText; 
+		css_class = 'user-message-failure';
+	}
+
+	pre.addClass(css_class);
+	pre.text(text);
+	
+	var div = $('#user-message-div');
+	div.fadeOut(100, function() {
+		div.fadeIn(250);
+	});			
+}
+
+$.fn.zato.data_table._on_submit = function(form, callback) {
+
+	$.ajax({
+		type: 'POST',
+		url: form.attr('action'),
+		data: form.serialize(),
+		dataType: 'json',
+		complete: callback
+	});
+}
+
+//
+// Misc
+//
+$.fn.zato.get_random_string = function() {
+    var elems = '1234567890qwertyuiopasdfghjklzxcvbnm'.split('');
+    var s = "";
+    var length = 32;
+
+    for(var i = 0; i < length; i++) {
+        s += elems[Math.floor(Math.random() * elems.length)];
+    }
+    return s;
+}
+
+$.fn.zato.to_bool = function(item) {
+	var s = new String(item).toLowerCase();
+    return(s == "true" || s == 'on'); // 'on' too because it may be a form's field
+}
+
+String.prototype.capitalize = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
 }
