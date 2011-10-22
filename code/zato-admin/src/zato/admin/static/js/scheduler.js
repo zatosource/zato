@@ -54,6 +54,9 @@ $(document).ready(function() {
 			});
 		});
 		
+		/* Assign form submition handlers.
+		*/
+		
 		$.each(job_types, function(ignored, job_type) {
 			$.each(actions, function(ignored, action) {
 				$('#'+ action +'-'+ job_type).submit(function() {
@@ -82,24 +85,61 @@ $.fn.zato.scheduler.data_table.form_info = function(button) {
 	}
 }
 
-$.fn.zato.scheduler.data_table._clear = function(button) {
+$.fn.zato.scheduler.data_table._clear = function(form_id) {
 
 	/* Clear out the values and close the dialog.
 	*/
-
-	var form_info = $.fn.zato.scheduler.data_table.form_info(button);
-	$(form_info['form_id'])[0].reset();
-	var parts = form_info['form_id'].split('form-');
+	
+	$(form_id)[0].reset();
+	var parts = form_id.split('form-');
 	var div_id = parts[0] + parts[1];
 	$(div_id).dialog('close');
 }
 
 $.fn.zato.scheduler.data_table.close = function(button) {
-	$.fn.zato.scheduler.data_table._clear(button);
+	var form_info = $.fn.zato.scheduler.data_table.form_info(button);
+	$.fn.zato.scheduler.data_table._clear(form_info['form_id']);
+}
+
+$.fn.zato.scheduler.data_table._on_submit_complete = function(xhr, status) {
+	var pre = $('#user-message');
+	var text = '';
+	var css_class = ''
+	
+	if(status == 'success') {
+		var response = $.parseJSON(xhr.responseText);
+		text = response.message; 
+		css_class = 'user-message-success';
+	}
+	else {
+		text = xhr.responseText; 
+		css_class = 'user-message-failure';
+	}
+
+	pre.addClass(css_class);
+	pre.text(text);
+	
+	var div = $('#user-message-div');
+	div.fadeOut(100, function() {
+		div.fadeIn(250);
+	});			
+}
+
+$.fn.zato.scheduler.data_table.on_submit_complete = function(xhr, status) {
+	return $.fn.zato.scheduler.data_table._on_submit_complete(xhr, status);
 }
 
 $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
-	alert(action +':'+ job_type);
+	var form = $('#' + action +'-form-'+ job_type);
+
+	$.ajax({
+		type: 'POST',
+		url: form.attr('action'),
+		data: form.serialize(),
+		dataType: 'json',
+		complete: $.fn.zato.scheduler.data_table.on_submit_complete,
+	});
+	
 }
 
 $.fn.zato.scheduler._create_edit = function(action, job_type) {
