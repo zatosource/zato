@@ -10,6 +10,9 @@ $.fn.zato.data_table.Job = new Class({
 });
 
 $(document).ready(function() { 
+
+		$('#id_create-one_time-start_date').datetimepicker();
+
         $('#data-table').tablesorter(); 
 		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
 		
