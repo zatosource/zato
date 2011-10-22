@@ -65,7 +65,6 @@ $(document).ready(function() {
 				});
 			});
 		});
-		//$.fn.zato.scheduler.on_ok);
 }); 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -74,6 +73,10 @@ $.fn.zato.scheduler.titles = {
 	'one_time': 'a one-time',
 	'interval_based': 'an interval-based',
 	'cron_style': 'a cron-style',
+}
+
+$.fn.zato.scheduler.data_table.dialog_div = function(action, job_type) {
+	return $('#'+ action +'-'+ job_type);
 }
 
 $.fn.zato.scheduler.data_table.form_info = function(button) {
@@ -90,9 +93,12 @@ $.fn.zato.scheduler.data_table._clear = function(form_id) {
 	/* Clear out the values and close the dialog.
 	*/
 	
-	$(form_id)[0].reset();
+	$(form_id).each(function() {
+	  this.reset();
+	});
+	
 	var parts = form_id.split('form-');
-	var div_id = parts[0] + parts[1];
+	var div_id = '#' + parts[0] + parts[1];
 	$(div_id).dialog('close');
 }
 
@@ -101,32 +107,32 @@ $.fn.zato.scheduler.data_table.close = function(button) {
 	$.fn.zato.scheduler.data_table._clear(form_info['form_id']);
 }
 
-$.fn.zato.scheduler.data_table._on_submit_complete = function(xhr, status) {
+$.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, 
+	action, job_type) {
+
 	var pre = $('#user-message');
 	var text = '';
 	var css_class = ''
 	
 	if(status == 'success') {
-		var response = $.parseJSON(xhr.responseText);
+		var response = $.parseJSON(data.responseText);
 		text = response.message; 
 		css_class = 'user-message-success';
 	}
 	else {
-		text = xhr.responseText; 
+		text = data.responseText; 
 		css_class = 'user-message-failure';
 	}
 
 	pre.addClass(css_class);
 	pre.text(text);
 	
+	$.fn.zato.scheduler.data_table._clear(action +'-form-'+ job_type);
+	
 	var div = $('#user-message-div');
 	div.fadeOut(100, function() {
 		div.fadeIn(250);
 	});			
-}
-
-$.fn.zato.scheduler.data_table.on_submit_complete = function(xhr, status) {
-	return $.fn.zato.scheduler.data_table._on_submit_complete(xhr, status);
 }
 
 $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
@@ -137,17 +143,20 @@ $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
 		url: form.attr('action'),
 		data: form.serialize(),
 		dataType: 'json',
-		complete: $.fn.zato.scheduler.data_table.on_submit_complete,
+		complete: function(data, status) {
+			return $.fn.zato.scheduler.data_table.on_submit_complete(data, 
+				status, action, job_type);
+		}
 	});
 	
 }
 
 $.fn.zato.scheduler._create_edit = function(action, job_type) {
 
-	var div = $('#'+ action +'-'+ job_type);
 	var title = String.format('{0} {1} job', 
 		action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
 
+	var div = $.fn.zato.scheduler.data_table.dialog_div(action, job_type);
 	div.prev().text(title); // prev() is a .ui-dialog-titlebar
 	div.dialog('open');
 }
