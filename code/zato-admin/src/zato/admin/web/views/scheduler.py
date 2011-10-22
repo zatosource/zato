@@ -114,6 +114,15 @@ def _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, se
 
     return buf.getvalue()
 
+def _get_success_message(action, job_type, job_name):
+
+    msg = 'Successfully {0} the {1} job [{2}]'
+    verb = 'created' if action == 'create' else 'updated'
+    job_type = job_type.replace('_', '-')
+    
+    return msg.format(verb, job_type, job_name)
+        
+
 def _cron_style_job_def(start_date, cron_definition):
     start_date = _get_start_date(start_date, scheduler_date_time_format)
 
@@ -184,8 +193,8 @@ def _create_one_time(cluster, params):
     new_id = zato_message.data.job.id.text
     logger.debug('Successfully created a one_time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
-    return dumps({'id': new_id, 
-            'definition_text':_one_time_job_def(params['create-one_time-start_date'])})
+    return {'id': new_id, 
+            'definition_text':_one_time_job_def(params['create-one_time-start_date'])}
 
 def _create_interval_based(cluster, params):
     """ Creates an interval_based scheduler job.
@@ -210,7 +219,7 @@ def _create_interval_based(cluster, params):
     definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, 
                                          minutes, seconds)
 
-    return dumps({'id': new_id, 'definition_text':definition})
+    return {'id': new_id, 'definition_text':definition}
 
 def _create_cron_style(cluster, params):
     """ Creates a cron_style scheduler job.
@@ -223,10 +232,10 @@ def _create_cron_style(cluster, params):
     cron_definition = zato_message.data.job.cron_definition.text
     logger.debug('Successfully created a cron_style job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
-    return dumps({'id': new_id, 
+    return {'id': new_id, 
             'definition_text':_cron_style_job_def(
                 params['create-cron_style-start_date'], cron_definition),
-            'cron_definition': cron_definition})
+            'cron_definition': cron_definition}
 
 def _edit_one_time(cluster, params):
     """ Updates a one_time scheduler job.
@@ -237,7 +246,7 @@ def _edit_one_time(cluster, params):
     _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', zato_message)
     logger.debug('Successfully updated a one_time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
-    return dumps({'definition_text':_one_time_job_def(params['edit-one_time-start_date'])})
+    return {'definition_text':_one_time_job_def(params['edit-one_time-start_date'])}
 
 def _edit_interval_based(cluster, params):
     """ Creates an interval_based scheduler job.
@@ -261,7 +270,7 @@ def _edit_interval_based(cluster, params):
     definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, 
                                          minutes, seconds)
 
-    return dumps({'definition_text':definition})
+    return {'definition_text':definition}
 
 def _edit_cron_style(cluster, params):
     """ Creates an cron_style scheduler job.
@@ -277,7 +286,7 @@ def _edit_cron_style(cluster, params):
                                  scheduler_date_time_format)
     definition = _cron_style_job_def(start_date, cron_definition)
 
-    return dumps({'definition_text':definition, 'cron_definition': cron_definition})
+    return {'definition_text':definition, 'cron_definition': cron_definition}
 
 def _execute(server_address, params):
     """ Submits a request for an execution of a job.
@@ -365,7 +374,7 @@ def index(req):
                 logger.info('No jobs found, soap_response=[{0}]'.format(soap_response))
     
         if req.method == 'POST':
-    
+
             action = req.POST.get('zato_action', '')
             if not action:
                 msg = 'req.POST contains no [zato_action] parameter.'
@@ -378,6 +387,8 @@ def index(req):
                 logger.error(msg)
                 return HttpResponseServerError(msg)
     
+            
+            job_name = req.POST['{0}-{1}-name'.format(action, job_type)]
             cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
     
             # Try to match the action and a job type with an action handler..
@@ -398,6 +409,9 @@ def index(req):
             try:
                 response = handler(cluster, req.POST)
                 response = response if response else ''
+                if response:
+                    response['message'] = _get_success_message(action, job_type, job_name)
+                    response = dumps(response)
                 return HttpResponse(response, mimetype='application/javascript')
             except Exception, e:
                 msg = ('Could not invoke action [%s], job_type=[%s], e=[%s]'
