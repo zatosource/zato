@@ -12,11 +12,11 @@ $.fn.zato.data_table.Job = new Class({
 $(document).ready(function() { 
         $('#data-table').tablesorter(); 
 		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
+		var actions = ['create', 'edit'];
 
 		/* Dynamically prepare pop-up windows.
 		*/
 		var job_types = ['one_time', 'interval_based', 'cron_style'];
-		var actions = ['create', 'edit'];
 		
 		$.each(job_types, function(ignored, job_type) {
 			$.each(actions, function(ignored, action) {
@@ -30,9 +30,29 @@ $(document).ready(function() {
 		/* Prepare the validators here so that it's all still a valid HTML
 		   even with bValidator's custom attributes.
 		*/
-		$('#id_create-one_time-name').attr('data-bvalidator', 'required');
-		$('#id_create-one_time-name').attr('data-bvalidator-msg', 'This is a required field');
-		$('#create-form-one_time').bValidator();
+
+		var one_time_attrs = ['name', 'start_date', 'service'];		
+		var interval_based_attrs = ['name', 'start_date', 'service'];
+		var cron_style_attrs = ['name', 'start_date', 'cron_definition', 'service'];
+
+		var job_types_dict = {
+			'one_time':one_time_attrs,
+			'interval_based':interval_based_attrs,
+			'cron_style':cron_style_attrs
+		};
+		
+		$.each(actions, function(ignored, action) {
+			$.each(_.keys(job_types_dict), function(ignored, job_type) {
+				var attrs = job_types_dict[job_type];
+				$.each(attrs, function(ignored, attr) {
+					var field_id = String.format('#id_{0}-{1}-{2}', action, job_type, attr)
+					$(field_id).attr('data-bvalidator', 'required');
+					$(field_id).attr('data-bvalidator-msg', 'This is a required field');
+				});
+				var form_id = String.format('#{0}-form-{1}', action, job_type)
+				$(form_id).bValidator();
+			});
+		});
 }); 
 
 // /////////////////////////////////////////////////////////////////////////////
