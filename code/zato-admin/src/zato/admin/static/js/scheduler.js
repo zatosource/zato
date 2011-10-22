@@ -1,4 +1,6 @@
 
+// /////////////////////////////////////////////////////////////////////////////
+
 $.fn.zato.data_table.Job = new Class({
 	toString: function() {
 		var s = '<Job id:{0} name:{1} is_active:{2} job_type:{3} service:{4}>';
@@ -24,13 +26,23 @@ $(document).ready(function() {
 		});
 }); 
 
-$.fn.zato.scheduler.on_ok = function(action, job_type) {
-}
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.scheduler.titles = {
 	'one_time': 'a one-time',
 	'interval_based': 'an interval-based',
 	'cron_style': 'a cron-style',
+}
+
+$.fn.zato.scheduler.data_table.close = function(button) {
+	var form_id = $(button).closest('form').attr('id');
+	var parts = form_id.split('form-');
+	var div_id = '#' + parts[0] + parts[1];
+	$(div_id).dialog('close');
+	
+}
+
+$.fn.zato.scheduler.on_ok = function(action, job_type) {
 }
 
 $.fn.zato.scheduler._create_edit = function(action, job_type) {
