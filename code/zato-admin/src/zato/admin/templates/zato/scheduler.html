@@ -29,6 +29,7 @@
     
     $.fn.zato.data_table.get_columns = function() {
         return [
+            '_numbering',
             '_selection',
             'name',
             '_is_active',
@@ -98,6 +99,7 @@
 
                     <tr class='ignore'>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Job type</a></th>
@@ -116,6 +118,7 @@
                 {% for job in jobs %}
                 
                     <tr class="{% cycle 'odd' 'even' %}">
+                        <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
                         <td>{{ job.is_active|yesno:"Yes,No" }}</td>

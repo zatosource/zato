@@ -1,10 +1,12 @@
 #data-table {
     width:100%;
     margin-top: 8px;
-    margin-left: 4px;
+    margin-left: 5%;
     border:1px solid #ccc;  
     font-size:12px;
 	margin-bottom:80px;
+	
+	counter-reset: data_table_counter;
 
     a {
         font-size:12px;
@@ -30,6 +32,11 @@
     td {
         vertical-align:base
     }
+	
+	td.numbering:before { 
+		content: counter(data_table_counter);
+		counter-increment: data_table_counter;
+	}
     
 }
 

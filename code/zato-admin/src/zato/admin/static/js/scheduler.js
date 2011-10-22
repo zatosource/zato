@@ -98,7 +98,7 @@ $.fn.zato.scheduler.data_table._clear = function(form_id) {
 	});
 	
 	var parts = form_id.split('form-');
-	var div_id = '#' + parts[0] + parts[1];
+	var div_id = parts[0] + parts[1];
 	$(div_id).dialog('close');
 }
 
@@ -127,7 +127,8 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status,
 	pre.addClass(css_class);
 	pre.text(text);
 	
-	$.fn.zato.scheduler.data_table._clear(action +'-form-'+ job_type);
+	$.fn.zato.scheduler.data_table._clear('#'+ action +'-form-'+ job_type);
+	$('#data-table > tbody:last').prepend($.fn.zato.scheduler.new_row(data));
 	
 	var div = $('#user-message-div');
 	div.fadeOut(100, function() {
@@ -159,6 +160,10 @@ $.fn.zato.scheduler._create_edit = function(action, job_type) {
 	var div = $.fn.zato.scheduler.data_table.dialog_div(action, job_type);
 	div.prev().text(title); // prev() is a .ui-dialog-titlebar
 	div.dialog('open');
+}
+
+$.fn.zato.scheduler.new_row = function(data) {
+	return '<tr><td colspan="13" class="numbering">111</td></tr>';
 }
 
 $.fn.zato.scheduler.create = function(job_type) {
