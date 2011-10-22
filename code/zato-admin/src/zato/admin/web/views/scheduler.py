@@ -94,7 +94,7 @@ def _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, se
             buf.write(' Execute once.')
         elif repeats == 2:
             buf.write(' Repeat twice.')
-        # .. my hand is itching to add the 'repeats thrice.' here ;-)
+        # .. my hand is itching to add 'repeats thrice.' here ;-)
         elif repeats > 2:
             buf.write(' Repeat ')
             buf.write(str(repeats))
