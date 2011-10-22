@@ -18,14 +18,11 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
     
     <script>
-    //var friendly_names = new Hash();
+    var friendly_names = new Object();
 
-    {% comment %}
-        {% for name, friendly_name in friendly_names%}
-            friendly_names.set('{{ name }}', '{{ friendly_name }}');
-        {% endfor %}
-    {% endcomment %}
-    
+    {% for name, friendly_name in friendly_names%}
+        friendly_names['{{ name }}'] = '{{ friendly_name }}';
+    {% endfor %}
     
     $.fn.zato.data_table.get_columns = function() {
         return [
@@ -180,7 +177,7 @@
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.scheduler.data_table.close(this)'>Cancel</button>
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
 
@@ -236,7 +233,7 @@
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.scheduler.data_table.close(this)'>Cancel</button>
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
 
@@ -322,7 +319,7 @@
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.scheduler.data_table.close(this)'>Cancel</button>
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
 
@@ -407,7 +404,7 @@
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.scheduler.data_table.close(this)'>Cancel</button>
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
 
@@ -470,7 +467,7 @@
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.scheduler.data_table.close(this)'>Cancel</button>
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
 
@@ -532,7 +529,7 @@
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.scheduler.data_table.close(this)'>Cancel</button>
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
 
