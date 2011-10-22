@@ -13,6 +13,8 @@ $(document).ready(function() {
         $('#data-table').tablesorter(); 
 		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
 
+		/* Dynamically prepare pop-up windows.
+		*/
 		var job_types = ['one_time', 'interval_based', 'cron_style'];
 		var actions = ['create', 'edit'];
 		
@@ -24,6 +26,13 @@ $(document).ready(function() {
 				});
 			});
 		});
+		
+		/* Prepare the validators here so that it's all still a valid HTML
+		   even with bValidator's custom attributes.
+		*/
+		$('#id_create-one_time-name').attr('data-bvalidator', 'required');
+		$('#id_create-one_time-name').attr('data-bvalidator-msg', 'This is a required field');
+		$('#create-form-one_time').bValidator();
 }); 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -34,10 +43,24 @@ $.fn.zato.scheduler.titles = {
 	'cron_style': 'a cron-style',
 }
 
+$.fn.zato.scheduler.data_table.form_info = function(button) {
+	var form = $(button).closest('form');
+	var form_id = form.attr('id');
+	return {
+		'form': form,
+		'form_id': '#' + form_id,
+	}
+}
+
 $.fn.zato.scheduler.data_table.close = function(button) {
-	var form_id = $(button).closest('form').attr('id');
-	var parts = form_id.split('form-');
-	var div_id = '#' + parts[0] + parts[1];
+
+	/* Clear out the values and close the dialog.
+	*/
+
+	var form_info = $.fn.zato.scheduler.data_table.form_info(button);
+	$(form_info['form_id'])[0].reset();
+	var parts = form_info['form_id'].split('form-');
+	var div_id = parts[0] + parts[1];
 	$(div_id).dialog('close');
 	
 }
