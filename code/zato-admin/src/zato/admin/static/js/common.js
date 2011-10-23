@@ -50,6 +50,27 @@ $.namespace('zato');
 $.namespace('zato.data_table');
 $.namespace('zato.scheduler');
 
+$.fn.zato.user_message = function(is_success, msg) {
+	var pre = $('#user-message');
+	var new_css_class = ''
+	
+	if(is_success) {
+		css_class = 'user-message-success';
+	}
+	else {
+		css_class = 'user-message-failure';
+	}
+
+	pre.removeClass('user-message-success').
+		removeClass('user-message-failure').addClass(css_class);
+	pre.text(msg);
+	
+	var div = $('#user-message-div');
+	div.fadeOut(100, function() {
+		div.fadeIn(250);
+	});		
+}
+
 //
 // Data table
 //
@@ -111,27 +132,17 @@ $.fn.zato.data_table.close = function(button) {
 
 $.fn.zato.data_table._on_submit_complete = function(data, status) {
 
-	var pre = $('#user-message');
-	var text = '';
-	var css_class = ''
+	var msg = '';
+	var success = status == 'success';
 	
-	if(status == 'success') {
+	if(success) {
 		var response = $.parseJSON(data.responseText);
-		text = response.message; 
-		css_class = 'user-message-success';
+		msg = response.message; 
 	}
 	else {
-		text = data.responseText; 
-		css_class = 'user-message-failure';
+		msg = data.responseText; 
 	}
-
-	pre.addClass(css_class);
-	pre.text(text);
-	
-	var div = $('#user-message-div');
-	div.fadeOut(100, function() {
-		div.fadeIn(250);
-	});			
+	$.fn.zato.user_message(success, msg);
 }
 
 $.fn.zato.data_table._on_submit = function(form, callback) {
