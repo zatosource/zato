@@ -1,7 +1,10 @@
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
-    <link rel="stylesheet" type="text/css" href="/static/css/calendar_date_select/blue.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/anytimec.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/date_time_picker.css">
+</style>
+    
 {% endblock %}
 
 {% block extra_js %}
@@ -9,7 +12,7 @@
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/anytimec.js"></script>
 
     
     {% comment %} String formatting {% endcomment %}

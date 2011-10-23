@@ -11,22 +11,32 @@ $.fn.zato.data_table.Job = new Class({
 
 $(document).ready(function() { 
 
-		$('#id_create-one_time-start_date').datetimepicker();
-
         $('#data-table').tablesorter(); 
 		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
 		
 		var actions = ['create', 'edit'];
 		var job_types = ['one_time', 'interval_based', 'cron_style'];
 
-		/* Dynamically prepare pop-up windows.
+		/* Dynamically prepare pop-up windows and date-time pickers.
 		*/
 		$.each(job_types, function(ignored, job_type) {
 			$.each(actions, function(ignored, action) {
-				$('#'+ action +'-'+ job_type).dialog({
+				var div_id = String.format('#{0}-{1}', action, job_type);
+				var picker_id = String.format('id_{0}-{1}-start_date', action, job_type);
+
+				// Pop-up				
+				$(div_id).dialog({
 					autoOpen: false,
 					width: '40em',
 				});
+				
+				// Picker
+				AnyTime.picker(picker_id,
+					{format: '%Y-%m-%d %T', 
+					firstDOW: 1, // Weeks start on Monday
+					}
+				);
+				
 			});
 		});
 		
