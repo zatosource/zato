@@ -171,7 +171,27 @@ $.fn.zato.scheduler.create = function(job_type) {
 }
 
 $.fn.zato.scheduler.execute = function(id) {
-	alert($.fn.zato.data_table.data[id]);
+
+	var callback = function(data, status) {
+		var success = status == 'success';
+		if(success) {
+			msg = 'Request submitted, check the server logs for details'; 
+		}
+		else {
+			msg = data.responseText; 
+		}
+		$.fn.zato.user_message(success, msg);
+	}
+
+	var url = String.format('./execute/{0}/cluster/{1}/', id, $('#cluster_id').val());
+
+	$.ajax({
+		type: 'POST',
+		url: url,
+		data: '',
+		headers: {'X-CSRFToken': $.cookie('csrftoken')},
+		complete: callback
+	});
 }
 
 $.fn.zato.scheduler.edit = function(job_type, id) {
