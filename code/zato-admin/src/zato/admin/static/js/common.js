@@ -50,6 +50,16 @@ $.namespace('zato');
 $.namespace('zato.data_table');
 $.namespace('zato.scheduler');
 
+$.fn.zato.post = function(url, callback) {
+	$.ajax({
+		type: 'POST',
+		url: url,
+		data: '',
+		headers: {'X-CSRFToken': $.cookie('csrftoken')},
+		complete: callback
+	});
+}
+
 $.fn.zato.user_message = function(is_success, msg) {
 	var pre = $('#user-message');
 	var new_css_class = ''

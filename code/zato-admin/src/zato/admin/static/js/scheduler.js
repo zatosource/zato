@@ -184,14 +184,8 @@ $.fn.zato.scheduler.execute = function(id) {
 	}
 
 	var url = String.format('./execute/{0}/cluster/{1}/', id, $('#cluster_id').val());
+	$.fn.zato.post(url, callback);
 
-	$.ajax({
-		type: 'POST',
-		url: url,
-		data: '',
-		headers: {'X-CSRFToken': $.cookie('csrftoken')},
-		complete: callback
-	});
 }
 
 $.fn.zato.scheduler.edit = function(job_type, id) {
@@ -199,7 +193,38 @@ $.fn.zato.scheduler.edit = function(job_type, id) {
 }
 
 $.fn.zato.scheduler.delete_ = function(id) {
-	alert($.fn.zato.data_table.data[id]);
+
+	var job = $.fn.zato.data_table.data[id];
+	
+	alert(job);
+
+	var _callback = function(data, status) {
+		var success = status == 'success';
+		if(success) {
+
+			var pattern = String.format("td:contains('job_id:{0}')", job.id);
+			alert($(pattern));
+		
+			$.fn.zato.data_table.data[job.id] = null;
+			msg = String.format('Job {0} deleted', job.name);
+		}
+		else {
+			msg = data.responseText; 
+		}
+		$.fn.zato.user_message(success, msg);
+	}
+	
+	var callback = function(ok) {
+		if(ok) {
+			var url = String.format('./delete/{0}/cluster/{1}/', id, $('#cluster_id').val());
+			$.fn.zato.post(url, _callback);
+			return false;
+		}
+	}
+
+	var q = String.format('Are you sure you want to delete the job <b>{0}</b>?', job.name);
+	jConfirm(q, 'Please confirm', callback);
+	//alert($.fn.zato.data_table.data[id]);
 }
 
 
