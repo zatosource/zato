@@ -98,15 +98,17 @@ $.fn.zato.data_table.parse = function(class_) {
 	});
 }
 
+$.fn.zato.data_table.reset_form = function(form_id) {
+	$(form_id).each(function() {
+	  this.reset();
+	});
+}
+
 $.fn.zato.data_table.cleanup = function(form_id) {
 
 	/* Clear out the values and close the dialog.
 	*/
-	
-	$(form_id).each(function() {
-	  this.reset();
-	});
-	
+	$.fn.zato.data_table.reset_form(form_id);
 	var parts = form_id.split('form-');
 	var div_id = parts[0] + parts[1];
 	$(div_id).dialog('close');
