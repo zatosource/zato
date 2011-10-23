@@ -1,0 +1,16 @@
+
+.AnyTime-pkr {
+    z-index: 9999
+}
+
+.AnyTime-pkr .AnyTime-x-btn {
+    background-color: transparent;
+    border: 1px solid #999;
+    color: #666;
+    cursor: default;
+    float: right;
+    margin: 0.3em;
+    text-align: center;
+    width: 1.5em;
+    border-radius: 0 0 0 0;
+}
