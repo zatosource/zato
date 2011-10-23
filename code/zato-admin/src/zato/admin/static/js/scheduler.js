@@ -21,6 +21,7 @@ $(document).ready(function() {
 		*/
 		$.each(job_types, function(ignored, job_type) {
 			$.each(actions, function(ignored, action) {
+				var form_id = String.format('#{0}-form-{1}', action, job_type);
 				var div_id = String.format('#{0}-{1}', action, job_type);
 				var picker_id = String.format('id_{0}-{1}-start_date', action, job_type);
 
@@ -28,6 +29,9 @@ $(document).ready(function() {
 				$(div_id).dialog({
 					autoOpen: false,
 					width: '40em',
+					close: function(e, ui) {
+						$.fn.zato.data_table.reset_form(form_id);
+					}
 				});
 				
 				// Picker
