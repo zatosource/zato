@@ -79,7 +79,12 @@ class Scheduler(object):
         
         handler = '{0}_{1}'.format(action, job_data.job_type)
         handler = getattr(self, handler)
-        handler(job_data)
+        
+        try:
+            handler(job_data)
+        except Exception, e:
+            msg = 'Caught exception [{0}]'.format(format_exc(e))
+            logger.error(msg)
         
     def create_one_time(self, job_data):
         """ Schedules the execution of a one-time job.
