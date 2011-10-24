@@ -1,15 +1,21 @@
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
-    <style type="text/css">
-        .yui-pe .yui-pe-content {
-            display:none;
+    <style type='text/css'>
+        table.form-data input {
+            width:100%
         }
     </style>
 
 {% endblock %}
 
 {% block extra_js %}
+
+    <script type='text/javascript'>
+        $(document).ready(function() { 
+            $('#id_username').focus();
+        });
+    </script>
 
 {% endblock %}
 
