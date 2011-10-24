@@ -97,14 +97,22 @@ $.fn.zato.scheduler.titles = {
 $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, 
 	action, job_type) {
 
-	if(action == 'create') {
-		$('#data-table > tbody:last').prepend($.fn.zato.scheduler.data_table.new_row(data, action, job_type));
-	}
-	else {
+	if(status == 'success') {
+		var json = $.parseJSON(data.responseText);
+		var include_tr = true ? action == 'create' : false;
+		var row = $.fn.zato.scheduler.data_table.add_row(json, action, job_type, include_tr);
+		if(action == 'create') {
+			$('#data-table > tbody:last').prepend(row);
+		}
+		else {
+			var tr = $('#tr_'+ json.id).html(row);
+			tr.addClass('updated');
+		}	
 	}
 
 	$.fn.zato.data_table._on_submit_complete(data, status);
 	$.fn.zato.data_table.cleanup('#'+ action +'-form-'+ job_type);
+
 }
 
 $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
@@ -157,26 +165,13 @@ $.fn.zato.scheduler.data_table.service_text = function(service) {
     return String.format('<a href="/zato/service/?service={0}">{1}</a>', service, service);
 }
 
-$.fn.zato.scheduler.data_table.new_row = function(data, action, job_type) {
-
-	var data = $.parseJSON(data.responseText);
-	var job = new $.fn.zato.data_table.Job();
-	var form = $(String.format('#{0}-form-{1}', action, job_type));
-	var prefix = String.format('{0}-{1}-', action, job_type);
-	var name = null;
+$.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
+    var row = '';
 	
-	$.each(form.serializeArray(), function(idx, elem) {
-		if(elem.name.indexOf(prefix) === 0) {
-			name = elem.name.replace(prefix, '');
-			job[name] = elem.value;
-		}
-	})
+	if(include_tr) {
+		row += String.format("<tr id='tr_{0}' class='updated'>", job.id);
+	}
 	
-	job.id = data.id;
-	job.is_active = $.fn.zato.to_bool(job.is_active);
-	job.job_type = job_type;
-	
-    var row = '<tr>';
 	row += "<td class='numbering'>&nbsp;</td>";
 	row += "<td><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', job.name);
@@ -185,7 +180,7 @@ $.fn.zato.scheduler.data_table.new_row = function(data, action, job_type) {
 	row += String.format('<td>{0}</td>', data.definition_text);
 	row += String.format('<td>{0}</td>', $.fn.zato.scheduler.data_table.service_text(job.service));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.execute({0})'>Execute</a>", job.id));
-	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job_type, job.id));
+	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.delete_({0});'>Delete</a>", job.id));
 	row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
 	row += String.format("<td class='ignore'>{0}</td>", job.is_active);
@@ -209,11 +204,33 @@ $.fn.zato.scheduler.data_table.new_row = function(data, action, job_type) {
 	row += String.format("<td class='ignore'>{0}</td>", repeats);
 	row += String.format("<td class='ignore'>{0}</td>", cron_definition);
 	
-	row += '</tr>';
+	if(include_tr) {
+		row += '</tr>';
+	}
+	
+	return row;
+}
+
+$.fn.zato.scheduler.data_table.add_row = function(data, action, job_type, include_tr) {
+
+	var job = new $.fn.zato.data_table.Job();
+	var form = $(String.format('#{0}-form-{1}', action, job_type));
+	var prefix = String.format('{0}-{1}-', action, job_type);
+	var name = null;
+	
+	$.each(form.serializeArray(), function(idx, elem) {
+		if(elem.name.indexOf(prefix) === 0) {
+			name = elem.name.replace(prefix, '');
+			job[name] = elem.value;
+		}
+	})
+	
+	job.id = data.id;
+	job.is_active = $.fn.zato.to_bool(job.is_active);
+	job.job_type = job_type;
 	
 	$.fn.zato.data_table.data[job.id] = job;
-
-	return row;
+	return $.fn.zato.scheduler.data_table.new_row(job, data, include_tr);
 }
 
 $.fn.zato.scheduler.create = function(job_type) {
