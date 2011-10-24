@@ -246,7 +246,7 @@ def _edit_one_time(cluster, params):
     _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', zato_message)
     logger.debug('Successfully updated a one_time job, cluster.id=[{0}], params=[{1}]'.format(cluster.id, params))
 
-    return {'definition_text':_one_time_job_def(params['edit-one_time-start_date'])}
+    return {'definition_text':_one_time_job_def(params['edit-one_time-start_date']), 'id':params['edit-one_time-id']}
 
 def _edit_interval_based(cluster, params):
     """ Creates an interval_based scheduler job.
@@ -270,7 +270,7 @@ def _edit_interval_based(cluster, params):
     definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, 
                                          minutes, seconds)
 
-    return {'definition_text':definition}
+    return {'definition_text':definition, 'id':params['edit-interval_based-id']}
 
 def _edit_cron_style(cluster, params):
     """ Creates an cron_style scheduler job.
@@ -286,7 +286,7 @@ def _edit_cron_style(cluster, params):
                                  scheduler_date_time_format)
     definition = _cron_style_job_def(start_date, cron_definition)
 
-    return {'definition_text':definition, 'cron_definition': cron_definition}
+    return {'definition_text':definition, 'cron_definition': cron_definition, 'id':params['edit-cron_style-id']}
 
 def _execute(server_address, params):
     """ Submits a request for an execution of a job.
