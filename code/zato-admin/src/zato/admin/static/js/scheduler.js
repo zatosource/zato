@@ -196,16 +196,13 @@ $.fn.zato.scheduler.delete_ = function(id) {
 
 	var job = $.fn.zato.data_table.data[id];
 	
-	alert(job);
-
 	var _callback = function(data, status) {
 		var success = status == 'success';
 		if(success) {
 
-			var pattern = String.format("td:contains('job_id:{0}')", job.id);
-			alert($(pattern));
-		
+			$('td.job_id_'+ job.id).parent().remove();
 			$.fn.zato.data_table.data[job.id] = null;
+			
 			msg = String.format('Job {0} deleted', job.name);
 		}
 		else {
@@ -221,10 +218,8 @@ $.fn.zato.scheduler.delete_ = function(id) {
 			return false;
 		}
 	}
-
 	var q = String.format('Are you sure you want to delete the job <b>{0}</b>?', job.name);
 	jConfirm(q, 'Please confirm', callback);
-	//alert($.fn.zato.data_table.data[id]);
 }
 
 
