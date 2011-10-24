@@ -130,7 +130,7 @@
                         <td><a href="javascript:$.fn.zato.scheduler.execute({{ job.id }})">Execute</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.delete_({{ job.id }});">Delete</a></td>
-                        <td class='ignore'>job_id:{{ job.id }}</td>
+                        <td class='ignore job_id_{{ job.id }}'>{{ job.id }}</td>
                         <td class='ignore'>{{ job.is_active }}</td>
                         <td class='ignore'>{{ job.job_type }}</td>
                     </tr>
