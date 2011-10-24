@@ -155,8 +155,8 @@ $.fn.zato.scheduler.data_table.new_row = function(data, action, job_type) {
 	row += String.format('<td>{0}</td>', $.fn.zato.scheduler.data_table.service_text(job.service));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.execute({0})'>Execute</a>", job.id));
 	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job_type, job.id));
-	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.delete_({0})'>Delete</a>", job.id));
-	row += String.format("<td class='ignore'>{0}</td>", job.id);
+	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.delete_({0});'>Delete</a>", job.id));
+	row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
 	row += String.format("<td class='ignore'>{0}</td>", job.is_active);
 	row += String.format("<td class='ignore'>{0}</td>", job.job_type);
 	row += '</tr>';
