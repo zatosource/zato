@@ -97,9 +97,13 @@ $.fn.zato.scheduler.titles = {
 $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status, 
 	action, job_type) {
 
+	if(action == 'create') {
+		$('#data-table > tbody:last').prepend($.fn.zato.scheduler.data_table.new_row(data, action, job_type));
+	}
+	else {
+	}
+
 	$.fn.zato.data_table._on_submit_complete(data, status);
-	$('#data-table > tbody:last').prepend(
-		$.fn.zato.scheduler.data_table.new_row(data, action, job_type));
 	$.fn.zato.data_table.cleanup('#'+ action +'-form-'+ job_type);
 }
 
@@ -112,10 +116,36 @@ $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
 	return $.fn.zato.data_table._on_submit(form, callback);
 }
 
-$.fn.zato.scheduler._create_edit = function(action, job_type) {
+$.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 
 	var title = String.format('{0} {1} job', 
 		action.capitalize(), $.fn.zato.scheduler.titles[job_type]);
+		
+	if(action == 'edit') {
+
+		var form = $('#' + action +'-form-'+ job_type);
+		var name_prefix = String.format('{0}-{1}-', action, job_type);
+		var id_prefix = '#id_' + name_prefix
+		var job = $.fn.zato.data_table.data[id];
+		var _dir = $.fn.zato.dir(job);
+		var name = '';
+
+		$.each(form.serializeArray(), function(idx, elem) {
+			if(elem.name.indexOf(name_prefix) === 0) {
+				name = elem.name.replace(name_prefix, '');
+				if(name in job) {
+					if(name != 'is_active') {
+						$(id_prefix + name).val(job[name]);
+					}
+				}
+			}
+		})
+
+		//var form_fields = $(':text', 'textarea', form);
+		//$.each(form_fields, function(ignored, field) {
+		//	alert(field);
+		//});
+	}
 
 	var div = $.fn.zato.data_table.dialog_div(action, job_type);
 	div.prev().text(title); // prev() is a .ui-dialog-titlebar
@@ -167,7 +197,7 @@ $.fn.zato.scheduler.data_table.new_row = function(data, action, job_type) {
 }
 
 $.fn.zato.scheduler.create = function(job_type) {
-	$.fn.zato.scheduler._create_edit('create', job_type);
+	$.fn.zato.scheduler._create_edit('create', job_type, null);
 }
 
 $.fn.zato.scheduler.execute = function(id) {
@@ -189,7 +219,7 @@ $.fn.zato.scheduler.execute = function(id) {
 }
 
 $.fn.zato.scheduler.edit = function(job_type, id) {
-	$.fn.zato.scheduler._create_edit('edit', job_type);
+	$.fn.zato.scheduler._create_edit('edit', job_type, id);
 }
 
 $.fn.zato.scheduler.delete_ = function(id) {

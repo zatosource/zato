@@ -44,10 +44,16 @@
             'id',
             'is_active',
             'job_type',
+            'start_date',
+            'weeks',
+            'days',
+            'hours',
+            'minutes',
+            'seconds',
+            'repeats',
+            'cron_definition'
         ]
     }
-    
-    
     </script>
 
     {% comment %} Scheduler JS {% endcomment %}
@@ -98,7 +104,6 @@
         <div id="markup">
             <table id="data-table">
                 <thead>
-
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -113,7 +118,14 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -133,6 +145,14 @@
                         <td class='ignore job_id_{{ job.id }}'>{{ job.id }}</td>
                         <td class='ignore'>{{ job.is_active }}</td>
                         <td class='ignore'>{{ job.job_type }}</td>
+                        <td class='ignore'>{{ job.start_date }}</td>
+                        <td class='ignore'>{{ job.interval_based.weeks }}</td>
+                        <td class='ignore'>{{ job.interval_based.days }}</td>
+                        <td class='ignore'>{{ job.interval_based.hours }}</td>
+                        <td class='ignore'>{{ job.interval_based.minutes }}</td>
+                        <td class='ignore'>{{ job.interval_based.seconds }}</td>
+                        <td class='ignore'>{{ job.interval_based.repeats }}</td>
+                        <td class='ignore'>{{ job.cron_style.cron_definition }}</td>
                     </tr>
                 {% endfor %}
 
