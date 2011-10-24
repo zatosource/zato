@@ -134,17 +134,18 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 			if(elem.name.indexOf(name_prefix) === 0) {
 				name = elem.name.replace(name_prefix, '');
 				if(name in job) {
-					if(name != 'is_active') {
-						$(id_prefix + name).val(job[name]);
+					var form_elem = $(id_prefix + name);
+					if($.fn.zato.like_bool(job[name])) {
+						var bool_value = $.fn.zato.to_bool(job[name]);
+						form_elem.attr('checked', bool_value);
+					}
+					else {
+						form_elem.val(job[name]);
 					}
 				}
 			}
 		})
 
-		//var form_fields = $(':text', 'textarea', form);
-		//$.each(form_fields, function(ignored, field) {
-		//	alert(field);
-		//});
 	}
 
 	var div = $.fn.zato.data_table.dialog_div(action, job_type);

@@ -187,6 +187,11 @@ $.fn.zato.to_bool = function(item) {
     return(s == "true" || s == 'on'); // 'on' too because it may be a form's field
 }
 
+$.fn.zato.like_bool = function(item) {
+	var s = new String(item).toLowerCase();
+    return(s == "true" || s == 'false' || s == 'on'); // 'on' too because it may be a form's field
+}
+
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
