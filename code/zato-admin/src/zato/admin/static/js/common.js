@@ -190,3 +190,13 @@ $.fn.zato.to_bool = function(item) {
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
+
+
+$.fn.zato.dir = function (item) {
+    out = [];
+    for(attr in item) {
+		out.push(attr);
+    }
+    out.sort();
+    return out;
+}
