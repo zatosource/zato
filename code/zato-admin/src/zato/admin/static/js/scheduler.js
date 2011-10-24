@@ -190,6 +190,25 @@ $.fn.zato.scheduler.data_table.new_row = function(data, action, job_type) {
 	row += String.format("<td class='ignore job_id_{0}'>{0}</td>", job.id);
 	row += String.format("<td class='ignore'>{0}</td>", job.is_active);
 	row += String.format("<td class='ignore'>{0}</td>", job.job_type);
+	row += String.format("<td class='ignore'>{0}</td>", job.start_date);
+	row += String.format("<td class='ignore'>{0}</td>", job.extra);
+
+	weeks = job.weeks ? 'weeks' in job : '';
+	days = job.days ? 'days' in job : '';
+	hours = job.hours ? 'hours' in job : '';
+	minutes = job.minutes ? 'minutes' in job : '';
+	seconds = job.seconds ? 'seconds' in job : '';
+	repeats = job.repeats ? 'repeats' in job : '';
+	cron_definition = job.cron_definition ? 'cron_definition' in job : '';
+	
+	row += String.format("<td class='ignore'>{0}</td>", weeks);
+	row += String.format("<td class='ignore'>{0}</td>", days);
+	row += String.format("<td class='ignore'>{0}</td>", hours);
+	row += String.format("<td class='ignore'>{0}</td>", minutes);
+	row += String.format("<td class='ignore'>{0}</td>", seconds);
+	row += String.format("<td class='ignore'>{0}</td>", repeats);
+	row += String.format("<td class='ignore'>{0}</td>", cron_definition);
+	
 	row += '</tr>';
 	
 	$.fn.zato.data_table.data[job.id] = job;
