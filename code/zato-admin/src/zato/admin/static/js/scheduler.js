@@ -11,79 +11,79 @@ $.fn.zato.data_table.Job = new Class({
 
 $(document).ready(function() { 
 
-        $('#data-table').tablesorter(); 
-		$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
-		
-		var actions = ['create', 'edit'];
-		var job_types = ['one_time', 'interval_based', 'cron_style'];
+	$('#data-table').tablesorter(); 
+	$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
+	
+	var actions = ['create', 'edit'];
+	var job_types = ['one_time', 'interval_based', 'cron_style'];
 
-		/* Dynamically prepare pop-up windows and date-time pickers.
-		*/
-		$.each(job_types, function(ignored, job_type) {
-			$.each(actions, function(ignored, action) {
-				var form_id = String.format('#{0}-form-{1}', action, job_type);
-				var div_id = String.format('#{0}-{1}', action, job_type);
-				var picker_id = String.format('id_{0}-{1}-start_date', action, job_type);
-
-				// Pop-up				
-				$(div_id).dialog({
-					autoOpen: false,
-					width: '40em',
-					close: function(e, ui) {
-						$.fn.zato.data_table.reset_form(form_id);
-					}
-				});
-				
-				// Picker
-				AnyTime.picker(picker_id,
-					{format: '%Y-%m-%d %T', 
-					firstDOW: 1, // Weeks start on Monday
-					}
-				);
-				
-			});
-		});
-		
-		/* Prepare the validators here so that it's all still a valid HTML
-		   even with bValidator's custom attributes.
-		*/
-
-		var one_time_attrs = ['name', 'start_date', 'service'];		
-		var interval_based_attrs = ['name', 'start_date', 'service'];
-		var cron_style_attrs = ['name', 'start_date', 'cron_definition', 'service'];
-
-		var job_types_dict = {
-			'one_time':one_time_attrs,
-			'interval_based':interval_based_attrs,
-			'cron_style':cron_style_attrs
-		};
-		
-		var field_id = null;
-		
+	/* Dynamically prepare pop-up windows and date-time pickers.
+	*/
+	$.each(job_types, function(ignored, job_type) {
 		$.each(actions, function(ignored, action) {
-			$.each(_.keys(job_types_dict), function(ignored, job_type) {
-				var attrs = job_types_dict[job_type];
-				$.each(attrs, function(ignored, attr) {
-					field_id = String.format('#id_{0}-{1}-{2}', action, job_type, attr)
-					$(field_id).attr('data-bvalidator', 'required');
-					$(field_id).attr('data-bvalidator-msg', 'This is a required field');
-				});
-				var form_id = String.format('#{0}-form-{1}', action, job_type)
-				$(form_id).bValidator();
+			var form_id = String.format('#{0}-form-{1}', action, job_type);
+			var div_id = String.format('#{0}-{1}', action, job_type);
+			var picker_id = String.format('id_{0}-{1}-start_date', action, job_type);
+
+			// Pop-up				
+			$(div_id).dialog({
+				autoOpen: false,
+				width: '40em',
+				close: function(e, ui) {
+					$.fn.zato.data_table.reset_form(form_id);
+				}
+			});
+			
+			// Picker
+			AnyTime.picker(picker_id,
+				{format: '%Y-%m-%d %T', 
+				firstDOW: 1, // Weeks start on Monday
+				}
+			);
+			
+		});
+	});
+	
+	/* Prepare the validators here so that it's all still a valid HTML
+	   even with bValidator's custom attributes.
+	*/
+
+	var one_time_attrs = ['name', 'start_date', 'service'];		
+	var interval_based_attrs = ['name', 'start_date', 'service'];
+	var cron_style_attrs = ['name', 'start_date', 'cron_definition', 'service'];
+
+	var job_types_dict = {
+		'one_time':one_time_attrs,
+		'interval_based':interval_based_attrs,
+		'cron_style':cron_style_attrs
+	};
+	
+	var field_id = null;
+	
+	$.each(actions, function(ignored, action) {
+		$.each(_.keys(job_types_dict), function(ignored, job_type) {
+			var attrs = job_types_dict[job_type];
+			$.each(attrs, function(ignored, attr) {
+				field_id = String.format('#id_{0}-{1}-{2}', action, job_type, attr)
+				$(field_id).attr('data-bvalidator', 'required');
+				$(field_id).attr('data-bvalidator-msg', 'This is a required field');
+			});
+			var form_id = String.format('#{0}-form-{1}', action, job_type)
+			$(form_id).bValidator();
+		});
+	});
+	
+	/* Assign form submition handlers.
+	*/
+	
+	$.each(job_types, function(ignored, job_type) {
+		$.each(actions, function(ignored, action) {
+			$('#'+ action +'-'+ job_type).submit(function() {
+				$.fn.zato.scheduler.data_table.on_submit(action, job_type);
+				return false;
 			});
 		});
-		
-		/* Assign form submition handlers.
-		*/
-		
-		$.each(job_types, function(ignored, job_type) {
-			$.each(actions, function(ignored, action) {
-				$('#'+ action +'-'+ job_type).submit(function() {
-					$.fn.zato.scheduler.data_table.on_submit(action, job_type);
-					return false;
-				});
-			});
-		});
+	});
 }); 
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -112,7 +112,6 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status,
 
 	$.fn.zato.data_table._on_submit_complete(data, status);
 	$.fn.zato.data_table.cleanup('#'+ action +'-form-'+ job_type);
-
 }
 
 $.fn.zato.scheduler.data_table.on_submit = function(action, job_type) {
@@ -156,7 +155,7 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 
 	}
 
-	var div = $.fn.zato.data_table.dialog_div(action, job_type);
+	var div = $('#'+ action +'-'+ job_type);
 	div.prev().text(title); // prev() is a .ui-dialog-titlebar
 	div.dialog('open');
 }

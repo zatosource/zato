@@ -49,6 +49,8 @@ if ({}.__proto__){
 $.namespace('zato');
 $.namespace('zato.data_table');
 $.namespace('zato.scheduler');
+$.namespace('zato.security');
+$.namespace('zato.security.basic_auth');
 
 $.fn.zato.post = function(url, callback) {
 	$.ajax({
@@ -119,13 +121,17 @@ $.fn.zato.data_table.cleanup = function(form_id) {
 	/* Clear out the values and close the dialog.
 	*/
 	$.fn.zato.data_table.reset_form(form_id);
+	var div_id = '';
 	var parts = form_id.split('form-');
-	var div_id = parts[0] + parts[1];
+	
+	if(parts == form_id) {
+		parts = form_id.split('form');
+		div_id = parts[0].replace('-', '') + '-div';
+	}
+	else {
+		div_id = parts[0] + parts[1];
+	}
 	$(div_id).dialog('close');
-}
-
-$.fn.zato.data_table.dialog_div = function(action, job_type) {
-	return $('#'+ action +'-'+ job_type);
 }
 
 $.fn.zato.data_table.form_info = function(button) {
