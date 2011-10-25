@@ -39,7 +39,8 @@
 
 
 </head>
-<body><div>
+<body>
+    <div>
         <div id="hd">
             <div id="console-header"><span id="logo">Zato</span>
             {% if user.is_authenticated %}
@@ -49,80 +50,86 @@
                 </span>
             {% endif %}
             </div>
+
+            {% if user.is_authenticated %}            
+            
             <div id="main-menu">
-<ul class="sf-menu" >
-<li><span class="like-a">Clusters &darr;</span>
-    <ul>
-        <li><a href="{% url cluster %}">Show all</a></li>
-        <li><a href="#">Logging</a></li>
-        <li><a href="#">API invoker</a></li>
-    </ul>
-</li>
-<li><a href="#">Servers</a></li>
-<li><a href="#">Services</a></li>
-<li><span class="like-a">Security &darr;</span>
-    <ul>
-        <li><a href="{% url security-basic-auth %}">HTTP Basic Auth</a></li>
-        <li><a href="{% url security-tech-account %}">Technical accounts</a></li>
-        <li><a href="{% url security-wss %}">WS-Security</a></li>
-    </ul>
-</li>
-<li><span class="like-a">Channels &darr;</span>
-    <ul>
-        <li><a href="#">AMQP</a></li>
-        <li><a href="#">JMS</a></li>
-        <li><a href="#">Plain HTTP</a></li>
-        <li><a href="#">REST</a></li>
-        <li><a href="#">SOAP</a></li>
-        <li><a href="#">ZeroMQ</a></li>
-    </ul>
-</li>
-<li><span class="like-a">Connection pools &darr;</span>
-    <ul>
-        <li><a href="#">AMQP</a></li>
-        <li><a href="#">FTP</a></li>
-        <li><a href="#">JMS</a></li>
-        <li><a href="{% url channel-soap %}">SOAP</a></li>
-        <li><a href="#">REST</a></li>
-        <li><a href="#">SOAP</a></li>
-        <li><a href="{% url pool-sql %}">SQL</a></li>
-        <li><a href="#">ZeroMQ</a></li>
-    </ul>
-</li>
-<li><a href="#">Key/value DB &darr;</a>
-    <ul>
-        <li><a href="#">Cache</a></li>
-        <li><a href="#">Dictionaries</a></li>
-        <li><a href="#">Run-time data</a></li>
-    </ul>
-</li>
-<li><a href="{% url scheduler %}">Schedulers</a></li>
-<li><a href="#">Business events</a></li>
-<li><a href="#">Charts</a></li>
-<li><span class="like-a">Import/export &darr;</span>
-    <ul>
-        <li><a href="#">Import from file</a></li>
-        <li><a href="#">Export selected</a></li>
-    </ul>
-</li>
-</ul>
+                <ul class="sf-menu" >
+                <li><span class="like-a">Clusters &darr;</span>
+                    <ul>
+                        <li><a href="{% url cluster %}">Show all</a></li>
+                        <li><a href="#">Logging</a></li>
+                        <li><a href="#">API invoker</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Servers</a></li>
+                <li><a href="#">Services</a></li>
+                <li><span class="like-a">Security &darr;</span>
+                    <ul>
+                        <li><a href="{% url security-basic-auth %}">HTTP Basic Auth</a></li>
+                        <li><a href="{% url security-tech-account %}">Technical accounts</a></li>
+                        <li><a href="{% url security-wss %}">WS-Security</a></li>
+                    </ul>
+                </li>
+                <li><span class="like-a">Channels &darr;</span>
+                    <ul>
+                        <li><a href="#">AMQP</a></li>
+                        <li><a href="#">JMS</a></li>
+                        <li><a href="#">Plain HTTP</a></li>
+                        <li><a href="#">REST</a></li>
+                        <li><a href="#">SOAP</a></li>
+                        <li><a href="#">ZeroMQ</a></li>
+                    </ul>
+                </li>
+                <li><span class="like-a">Connection pools &darr;</span>
+                    <ul>
+                        <li><a href="#">AMQP</a></li>
+                        <li><a href="#">FTP</a></li>
+                        <li><a href="#">JMS</a></li>
+                        <li><a href="{% url channel-soap %}">SOAP</a></li>
+                        <li><a href="#">REST</a></li>
+                        <li><a href="#">SOAP</a></li>
+                        <li><a href="{% url pool-sql %}">SQL</a></li>
+                        <li><a href="#">ZeroMQ</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Key/value DB &darr;</a>
+                    <ul>
+                        <li><a href="#">Cache</a></li>
+                        <li><a href="#">Dictionaries</a></li>
+                        <li><a href="#">Run-time data</a></li>
+                    </ul>
+                </li>
+                <li><a href="{% url scheduler %}">Schedulers</a></li>
+                <li><a href="#">Business events</a></li>
+                <li><a href="#">Charts</a></li>
+                <li><span class="like-a">Import/export &darr;</span>
+                    <ul>
+                        <li><a href="#">Import from file</a></li>
+                        <li><a href="#">Export selected</a></li>
+                    </ul>
+                </li>
+                </ul>
 
-<ul class="sf-menu" style="float:right">
-<li><a href="#">Docs</a></li>
-<li><a href="#">Suggest a feature</a></li>
-<li><a href="#">Community</a></li>
-<li><a style="margin-right:5px" href="#">Get involved</a></li>
-
-</ul>
-<br style="clear:left"/>
+                <ul class="sf-menu" style="float:right">
+                <li><a href="#">Docs</a></li>
+                <li><a href="#">Suggest a feature</a></li>
+                <li><a href="#">Community</a></li>
+                <li><a style="margin-right:5px" href="#">Get involved</a></li>
+                
+                </ul>
+                <br style="clear:left"/>
             </div>
         </div>
+
+        {% endif %}        
+        
         <div id="bd">
-            <div id="yui-main">
-                <div class="yui-b">{% block content %}{% endblock %}</div>
-            </div>
+        <div id="yui-main">
+            <div class="yui-b">{% block content %}{% endblock %}</div>
         </div>
     </div>
+</div>
 
 </body>
 </html>
