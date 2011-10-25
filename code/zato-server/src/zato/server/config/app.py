@@ -40,7 +40,6 @@ from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.pool.sql import SQLConnectionPool, SQLConnectionPool
 from zato.server.repo import RepoManager
 from zato.server.scheduler import Scheduler
-from zato.server.security.basic_auth import Store as BasicAuthStore
 from zato.server.security.wss import WSSUsernameTokenProfileStore
 from zato.server.service.store import EggServiceImporter, ServiceStore
 
@@ -188,10 +187,6 @@ class ZatoContext(PythonConfig):
 
         return store
     
-    @Object
-    def basic_auth_store(self):
-        return BasicAuthStore()
-    
     # #######################################################
     # ODB (Operational Database)
     
@@ -209,7 +204,6 @@ class ZatoContext(PythonConfig):
         server.odb = self.odb_manager()
         server.soap_handler = self.soap_message_handler()
         server.service_store = self.service_store()
-        server.basic_auth_store = self.basic_auth_store()
 
         # Regular objects.
         #server.sql_pool = self.sql_pool()
