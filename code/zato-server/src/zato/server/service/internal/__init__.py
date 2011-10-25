@@ -57,7 +57,8 @@ def _get_params(payload, request_params, path_prefix="", default_value=ZATO_NO_D
         if default_value != ZATO_NO_DEFAULT_VALUE and not value:
             value = default_value
         else:
-            value = unicode(value)
+            if value is not None:
+                value = unicode(value)
 
         # Should the value be of a specific type?
         if force_type and param in force_type_params:

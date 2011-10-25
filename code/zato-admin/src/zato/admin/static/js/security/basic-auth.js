@@ -1,6 +1,151 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
+$.fn.zato.data_table.BasicAuth = new Class({
+	toString: function() {
+		var s = '<BasicAuth id:{0} name:{1} is_active:{2} username:{3} domain:{4}>';
+		return String.format(s, this.id, this.name, this.is_active, this.username,
+			this.domain);
+	}
+});
+
+$(document).ready(function() { 
+	$('#data-table').tablesorter(); 
+	$.fn.zato.data_table.parse($.fn.zato.data_table.BasicAuth);
+	
+	var actions = ['create', 'edit'];
+
+	/* Dynamically prepare pop-up windows.
+	*/
+	$.each(actions, function(ignored, action) {
+		var form_id = String.format('#{0}-form', action);
+		var div_id = String.format('#{0}-div', action);
+
+		// Pop-up				
+		$(div_id).dialog({
+			autoOpen: false,
+			width: '40em',
+			close: function(e, ui) {
+				$.fn.zato.data_table.reset_form(form_id);
+			}
+		});
+	});
+	
+	/* Prepare the validators here so that it's all still a valid HTML
+	   even with bValidator's custom attributes.
+	*/
+
+	var attrs = ['name', 'username', 'domain'];		
+	var field_id = '';
+	var form_id = '';
+	
+	$.each(['', 'edit'], function(ignored, action) {
+		$.each(attrs, function(ignored, attr) {
+			if(action) {
+				field_id = String.format('#id_{0}', attr);
+			}
+			else {
+				field_id = String.format('#id_{0}-{1}', action, attr);
+			}
+			
+			$(field_id).attr('data-bvalidator', 'required');
+			$(field_id).attr('data-bvalidator-msg', 'This is a required field');
+		});
+		
+		// Doh, not exactly the cleanest approach.
+		if(action) {
+			form_id = '#edit-form';
+		}
+		else {
+			form_id = '#create-form';
+		}
+		$(form_id).bValidator();
+	});
+
+	/* Assign form submition handlers.
+	*/
+	
+	$.each(actions, function(ignored, action) {
+		$('#'+ action +'-form').submit(function() {
+			$.fn.zato.scheduler.data_table.on_submit(action);
+			return false;
+		});
+	});
+})
+
+$.fn.zato.security.basic_auth._create_edit = function(action) {
+
+	var title = 'Create a new HTTP Basic Auth definition';
+		
+	if(action == 'edit') {
+
+		var form = $('#' + action +'-form-'+ job_type);
+		var name_prefix = String.format('{0}-{1}-', action, job_type);
+		var id_prefix = '#id_' + name_prefix
+		var job = $.fn.zato.data_table.data[id];
+		var _dir = $.fn.zato.dir(job);
+		var name = '';
+
+		$.each(form.serializeArray(), function(idx, elem) {
+			if(elem.name.indexOf(name_prefix) === 0) {
+				name = elem.name.replace(name_prefix, '');
+				if(name in job) {
+					var form_elem = $(id_prefix + name);
+					if($.fn.zato.like_bool(job[name])) {
+						var bool_value = $.fn.zato.to_bool(job[name]);
+						form_elem.attr('checked', bool_value);
+					}
+					else {
+						form_elem.val(job[name]);
+					}
+				}
+			}
+		})
+
+	}
+
+	var div = $(String.format('#{0}-div', action));
+	div.prev().text(title); // prev() is a .ui-dialog-titlebar
+	div.dialog('open');
+}
+
+$.fn.zato.security.basic_auth.create = function() {
+	$.fn.zato.security.basic_auth._create_edit('create');
+}
+
+$.fn.zato.security.basic_auth.data_table.on_submit_complete = function(data, status, 
+	action, job_type) {
+
+	if(status == 'success') {
+		var json = $.parseJSON(data.responseText);
+		var include_tr = true ? action == 'create' : false;
+		var row = $.fn.zato.security.basic_auth.data_table.add_row(json, action, job_type, include_tr);
+		if(action == 'create') {
+			$('#data-table > tbody:last').prepend(row);
+		}
+		else {
+			var tr = $('#tr_'+ json.id).html(row);
+			tr.addClass('updated');
+		}	
+	}
+
+	$.fn.zato.data_table._on_submit_complete(data, status);
+	$.fn.zato.data_table.cleanup('#'+ action +'-form-'+ job_type);
+}
+
+$.fn.zato.security.basic_auth.data_table.on_submit = function(action) {
+	var form = $('#' + action +'-form');
+	var callback = function(data, status) {
+			return $.fn.zato.scheduler.data_table.on_submit_complete(data, 
+				status, action, job_type);
+		}
+	return $.fn.zato.data_table._on_submit(form, callback);
+}
+
+/*
+
+// /////////////////////////////////////////////////////////////////////////////
+
 // A base class for representing an HTTP Basic Auth definition
 var HTTPBasicAuth = Class.create({
     initialize: function() {
@@ -454,3 +599,5 @@ YAHOO.util.Event.onDOMReady(function() {
     setup_change_password_dialog();
     setup_delete_dialog();
 });
+
+*/

@@ -8,16 +8,11 @@
 
 {% block extra_js %}
 
-
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" src="/static/jquery/anytimec.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-
-    
-    {% comment %} String formatting {% endcomment %}
-    <script type="text/javascript" src="/static/js/stringformat.js"></script>
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -91,7 +86,7 @@
         <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
 
 
-    <div style="padding:4px;font-size:12px">
+    <div class='page_prompt'>
         Create a new job:
             <a href="javascript:$.fn.zato.scheduler.create('one_time')" class="common">one-time</a>, 
             <a href="javascript:$.fn.zato.scheduler.create('interval_based')" class="common">interval-based</a>, 
