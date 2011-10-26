@@ -47,6 +47,11 @@ from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
 
+def _get_edit_create_response(zato_message, action, name):
+    return_data = {'id': zato_message.data.basic_auth.id.text,
+                   'message': 'Successfully {0} the definition [{1}]'.format(action, name)}
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
@@ -127,7 +132,7 @@ def edit(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return HttpResponse()
+        return _get_edit_create_response(zato_message, 'updated', req.POST['edit-name'])
 
 @meth_allowed('POST')
 def create(req):
@@ -144,8 +149,7 @@ def create(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return_data = {'pk': zato_message.data.basic_auth.id.text}
-        return HttpResponse(dumps(return_data), mimetype='application/javascript')
+        return _get_edit_create_response(zato_message, 'created', req.POST['name'])
     
 @meth_allowed('POST')
 def change_password(req):
