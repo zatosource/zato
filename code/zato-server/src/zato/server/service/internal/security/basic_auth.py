@@ -139,6 +139,8 @@ class Edit(AdminService):
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(name))
                 
+                auth_elem = Element('basic_auth')
+                
                 definition = session.query(HTTPBasicAuth).filter_by(id=def_id).one()
                 old_name = definition.name
                 
@@ -149,6 +151,8 @@ class Edit(AdminService):
     
                 session.add(definition)
                 session.commit()
+                
+                auth_elem.id = definition.id
                 
             except Exception, e:
                 msg = "Could not update the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
@@ -162,7 +166,7 @@ class Edit(AdminService):
                 kwargs['thread_ctx'].broker_client.send_json(new_params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
-            return ZATO_OK, ''
+            return ZATO_OK, etree.tostring(auth_elem)
     
 class ChangePassword(AdminService):
     """ Changes the password of an HTTP Basic Auth definition.
