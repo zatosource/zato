@@ -243,6 +243,37 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 	});
 }
 
+$.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, 
+	confirm_pattern) {
+
+	var job = $.fn.zato.data_table.data[id];
+	
+	var _callback = function(data, status) {
+		var success = status == 'success';
+		if(success) {
+
+			$(td_prefix + job.id).parent().remove();
+			$.fn.zato.data_table.data[job.id] = null;
+			
+			msg = String.format(success_pattern, job.name);
+		}
+		else {
+			msg = data.responseText; 
+		}
+		$.fn.zato.user_message(success, msg);
+	}
+	
+	var callback = function(ok) {
+		if(ok) {
+			var url = String.format('./delete/{0}/cluster/{1}/', id, $('#cluster_id').val());
+			$.fn.zato.post(url, _callback);
+			return false;
+		}
+	}
+	var q = String.format(confirm_pattern, job.name);
+	jConfirm(q, 'Please confirm', callback);
+}
+
 //
 // Misc
 //
