@@ -47,10 +47,12 @@ if ({}.__proto__){
 })(jQuery);
 
 $.namespace('zato');
+$.namespace('zato.form');
 $.namespace('zato.data_table');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
+
 
 $.fn.zato.post = function(url, callback) {
 	$.ajax({
@@ -81,6 +83,73 @@ $.fn.zato.user_message = function(is_success, msg) {
 	div.fadeOut(100, function() {
 		div.fadeIn(250);
 	});		
+}
+
+//
+// Forms
+//
+
+/* Unlike jQuery's serializeArray, the function below simply returns all the
+   fields, regardless of whether they're disabled, checked or not etc. */
+$.fn.zato.form.serialize = function(form) {
+
+	var out = {}
+	var name = '';
+	var value = '';
+
+	var fields = $(':input, textarea', form);
+	$.each(fields, function(idx, elem) {
+		elem = $(elem);
+		name = elem.attr('name');
+		if(name) {
+			value = elem.val();
+			if(elem.attr('type') == 'checkbox') {
+				value = $.fn.zato.to_bool(value);
+			}
+			out[name] = value;
+		}
+	});
+	return out;
+}
+
+
+/* Takes a form (ID or a jQuery object), a business object and populates the
+form with values read off the object. The 'name' and 'id' attributes of the
+form's fields may use custom prefixes that will be taken into account.
+*/
+$.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
+
+	if(_.isUndefined(name_prefix)) {
+		name_prefix = '';
+	}
+	
+	if(_.isUndefined(id_prefix)) {
+		id_prefix = '';
+	}
+
+	var name = '';
+	var value = '';
+	var form_elem = null;	
+	var fields = $.fn.zato.form.serialize(form);
+	
+	for(field_name in fields) {
+		if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
+			field_name = field_name.replace(name_prefix, '');
+			for(item_attr in instance) {
+				if(item_attr == field_name) {
+					value = instance[item_attr];
+					form_elem = $(id_prefix + field_name);
+					if($.fn.zato.like_bool(value)) {
+						form_elem.prop('checked', $.fn.zato.to_bool(value));
+					}
+					else {
+						form_elem.val(value);
+					}
+				}
+			}
+		}
+	}
+	
 }
 
 //

@@ -85,30 +85,9 @@ $.fn.zato.security.basic_auth._create_edit = function(action, id) {
 		var form = $('#' + action +'-form');
 		var name_prefix = action + '-';
 		var id_prefix = '#id_' + name_prefix
-		var item = $.fn.zato.data_table.data[id];
-		var _dir = $.fn.zato.dir(item);
-		var name = '';
+		var instance = $.fn.zato.data_table.data[id];
 		
-		alert(item);
-		
-		$.each(form.serializeArray(), function(idx, elem) {
-			if(elem.name.indexOf(name_prefix) === 0 || elem.name == 'id') {
-				name = elem.name.replace(name_prefix, '');
-				if(name in item) {
-					var form_elem = $(id_prefix + name);
-					if($.fn.zato.like_bool(item[name])) {
-						var bool_value = $.fn.zato.to_bool(item[name]);
-						alert(name +':'+ bool_value);
-						form_elem.attr('checked', bool_value);
-					}
-					else {
-						alert(name +'::'+ item[name]);
-						form_elem.val(item[name]);
-					}
-				}
-			}
-		})
-
+		$.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
 	}
 
 	var div = $(String.format('#{0}-div', action));
