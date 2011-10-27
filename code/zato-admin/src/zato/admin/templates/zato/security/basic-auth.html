@@ -96,7 +96,7 @@
                         <td>{% if item.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{{ item.username }}</td>
                         <td>{{ item.domain }}</td>
-                        <td><a href="javascript:$.fn.zato.security.basic_auth.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.security.basic_auth.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.basic_auth.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -175,9 +175,9 @@
             </div>
         </div>
         
-        <div id="change-password" class='data-popup ignore'>
+        <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url security-basic-auth-change-password %}" method="post" id="change-password-form">
+                <form action="{% url security-basic-auth-change-password %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -191,7 +191,7 @@
                             <td style="vertical-align:middle">Confirm password</td>
                             <td>{{ change_password_form.password2 }} 
                                 <input type="hidden" id="id_change_password-id" name="id" />
-                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>
                         </tr>
                         <tr>
