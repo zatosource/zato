@@ -105,8 +105,8 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status,
 			$('#data-table > tbody:last').prepend(row);
 		}
 		else {
-			var tr = $('#tr_'+ json.id).html(row);
-			tr.addClass('updated');
+			var tr = $.fn.zato.data_table.row_updated(json.id);
+			tr.html(row);
 		}	
 	}
 

@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
 from traceback import format_exc
 
 # Django
@@ -124,4 +125,4 @@ def change_password(req, service_name):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return HttpResponse()
+        return HttpResponse(dumps({'message':'Password updated'}))
