@@ -243,8 +243,7 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 	});
 }
 
-$.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, 
-	confirm_pattern) {
+$.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern) {
 
 	var job = $.fn.zato.data_table.data[id];
 	
@@ -276,10 +275,16 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern,
 
 $.fn.zato.data_table.on_change_password_submit = function() {
 
-	if($('#change_password-form').data('bValidator').isValid()) {
+	var form = $('#change_password-form');
+	if(form.data('bValidator').isValid()) {
+		var _callback = function(data, status) {
+			var success = status == 'success';
+			$.fn.zato.user_message(success, data.responseText);
+		}	
+		
+		$.fn.zato.data_table._on_submit(form, _callback);
 		$('#change_password-div').dialog('close');
 	}	
-	
 }
 
 $.fn.zato.data_table.change_password = function(id) {
