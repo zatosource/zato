@@ -133,25 +133,9 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 		var form = $('#' + action +'-form-'+ job_type);
 		var name_prefix = String.format('{0}-{1}-', action, job_type);
 		var id_prefix = '#id_' + name_prefix
-		var job = $.fn.zato.data_table.data[id];
-		var _dir = $.fn.zato.dir(job);
-		var name = '';
+		var instance = $.fn.zato.data_table.data[id];
 
-		$.each(form.serializeArray(), function(idx, elem) {
-			if(elem.name.indexOf(name_prefix) === 0) {
-				name = elem.name.replace(name_prefix, '');
-				if(name in job) {
-					var form_elem = $(id_prefix + name);
-					if($.fn.zato.like_bool(job[name])) {
-						var bool_value = $.fn.zato.to_bool(job[name]);
-						form_elem.attr('checked', bool_value);
-					}
-					else {
-						form_elem.val(job[name]);
-					}
-				}
-			}
-		})
+		$.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
 
 	}
 
