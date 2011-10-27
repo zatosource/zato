@@ -253,7 +253,7 @@ $.fn.zato.scheduler.delete_ = function(id) {
 			$('td.job_id_'+ job.id).parent().remove();
 			$.fn.zato.data_table.data[job.id] = null;
 			
-			msg = String.format('Job {0} deleted', job.name);
+			msg = String.format('Job [{0}] deleted', job.name);
 		}
 		else {
 			msg = data.responseText; 
@@ -268,6 +268,6 @@ $.fn.zato.scheduler.delete_ = function(id) {
 			return false;
 		}
 	}
-	var q = String.format('Are you sure you want to delete the job <b>{0}</b>?', job.name);
+	var q = String.format('Are you sure you want to delete the job [{0}]?', job.name);
 	jConfirm(q, 'Please confirm', callback);
 }
