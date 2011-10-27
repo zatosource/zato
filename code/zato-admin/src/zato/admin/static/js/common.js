@@ -157,6 +157,14 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 //
 
 $.fn.zato.data_table.data = {}
+
+$.fn.zato.data_table.row_updated = function(id) {
+	var tr = $('#tr_'+ id)
+	tr.addClass('updated');
+	
+	return tr;
+}
+
 $.fn.zato.data_table.parse = function(class_) {
 
 	var rows = $('#data-table tr').not('[class="ignore"]');
@@ -278,12 +286,14 @@ $.fn.zato.data_table.on_change_password_submit = function() {
 	var form = $('#change_password-form');
 	if(form.data('bValidator').isValid()) {
 		var _callback = function(data, status) {
-			var success = status == 'success';
-			$.fn.zato.user_message(success, data.responseText);
+			$.fn.zato.data_table.row_updated($('#id_change_password-id').val());
+			$.fn.zato.data_table._on_submit_complete(data, status);
 		}	
 		
 		$.fn.zato.data_table._on_submit(form, _callback);
 		$('#change_password-div').dialog('close');
+		
+		return false;
 	}	
 }
 
@@ -303,6 +313,8 @@ $.fn.zato.data_table.change_password = function(id) {
 
 $.fn.zato.data_table.setup_change_password = function() {
 
+	var form_id = '#change_password-form';
+
 	$('#change_password-div').dialog({
 		autoOpen: false,
 		width: '40em',
@@ -313,7 +325,8 @@ $.fn.zato.data_table.setup_change_password = function() {
 
 	var change_password_form = $('#change_password-form');
 	
-	change_password_form.submit(function() {
+	change_password_form.submit(function(e) {
+		e.preventDefault();
 		$.fn.zato.data_table.on_change_password_submit();
 		return false;
 	});
