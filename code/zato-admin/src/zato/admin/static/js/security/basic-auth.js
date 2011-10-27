@@ -82,9 +82,9 @@ $.fn.zato.security.basic_auth._create_edit = function(action, id) {
 		
 	if(action == 'edit') {
 
-		var form = $('#' + action +'-form');
+		var form = $(String.format('#{0}-form', action));
 		var name_prefix = action + '-';
-		var id_prefix = '#id_' + name_prefix
+		var id_prefix = String.format('#id_{0}', name_prefix);
 		var instance = $.fn.zato.data_table.data[id];
 		
 		$.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
