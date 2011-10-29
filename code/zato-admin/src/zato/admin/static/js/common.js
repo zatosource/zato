@@ -52,6 +52,7 @@ $.namespace('zato.data_table');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
+$.namespace('zato.security.tech_account');
 
 
 $.fn.zato.post = function(url, callback) {

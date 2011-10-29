@@ -1,57 +1,53 @@
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
-    <style type="text/css">
-        .yui-pe .yui-pe-content {
-            display:none;
-        }
-    </style>
-
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
 {% block extra_js %}
-    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/cookie/cookie-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/animation/animation-min.js"></script>
 
-    {% comment %} Validation framework {% endcomment %}
-    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
-    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
-    {% comment %} Scriptaculous effects {% endcomment %}
-    <script type="text/javascript" src="/static/js/effects.js"></script>
-
-    {% comment %} String formatting {% endcomment %}
-    <script type="text/javascript" src="/static/js/stringformat.js"></script>
-    
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} Tech account JS {% endcomment %}
+    {% comment %} HTTP Basic Auth {% endcomment %}
     <script type="text/javascript" src="/static/js/security/tech-account.js"></script>
 
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            '_change_password',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+        ]
+    }
     </script>
 
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Technical accounts</h1>
+<h2 class="zato">Technical accounts</h2>
 
 {% if not zato_clusters %}
     <p>
     There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
+    <br/><br/>
     </p>
 {% else %}
 
-    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
     <div class="prompt">
     {% if not cluster_id %}
@@ -64,59 +60,67 @@
     </form>
     </div>
     
-    {% if accounts %}
+    {% if items %}
 
-        <br/>
-            <a href="javascript:tech_account_create('{{ cluster_id }}')" class="common">Create a new technical account</a>
-        <br/>
-        <br/>
+        <div class='page_prompt'>
+            <a href="javascript:$.fn.zato.security.tech_account.create()">Create a new technical account</a>
+        </div>
         
-        <div id="delete-container"></div>
-        
-        <div id="create-tech-account" class="yui-pe-content">
-            <div class="hd">Create a new technical account</div>
+        <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url security-tech-account-create %}" method="post" id="create-form">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Is active</td>
-                            <td>{{ create_form.is_active }} <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" /></td>
+                            <td>{{ create_form.is_active }}</td>
                         </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>                        
                     </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
         
-        <div id="edit-tech-account" class="yui-pe-content">
-            <div class="hd">Edit the technical account</div>
+        <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url security-tech-account-edit %}" method="post" id="edit-form">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Is active</td>
-                            <td>{{ edit_form.is_active }} 
-                                <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="" />
-                                <input type="hidden" id="id_edit-tech_account_id" name="tech_account_id" value="" />
-                            </td>
+                            <td>{{ edit_form.is_active }} </td>
                         </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>                        
+                        
                     </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
         
-        <div id="change-password-tech-account" class="yui-pe-content">
-            <div class="hd">Change the technical account's password</div>
+        <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url security-tech-account-change-password %}" method="post" id="change-password-form">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
                             <td id="change-password-name"></td>
@@ -132,94 +136,47 @@
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" />
                             </td>
                         </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                        
                     </table>
                 </form>
             </div>
         </div>
 
-        <script type="text/javascript">
-        YAHOO.util.Event.addListener(window, "load", function() {
-            YAHOO.example.EnhanceFromMarkup = function() {
-                data_column_defs = [
-                    {key:"tech_account_id", label:"tech_account_id", hidden:true},
-                    {key:"selection", label:"", sortable:false},
-                    {key:"name", label:"Name", sortable:true},
-                    {key:"is_active", label:"Is active", sortable:true},
-                    {key:"edit", label:"&nbsp;", sortable:false},
-                    {key:"change_password", label:"&nbsp;", sortable:false},
-                    {key:"delete", label:"&nbsp;", sortable:false},
-                ];
-
-                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
-                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
-                data_ds.responseSchema = {
-                    fields: [
-                            {key:"tech_account_id"},
-                            {key:"selection"},
-                            {key:"name"},
-                            {key:"is_active"},
-                            {key:"edit"},
-                            {key:"change_password"},
-                            {key:"delete"},
-                    ]
-                };
-
-                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
-                        {sortedBy:{key:"name",dir:"desc"}}
-                );
-
-                return {
-                    oDS: data_ds,
-                    oDT: data_dt
-                };
-            }();
-
-        });
-        </script>
-
         <div id="markup">
             <table id="data-table">
                 <thead>
-
-                    <tr>
+                    <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                    </tr>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
-                {% for account in accounts %}
+                {% for item in items %}
 
-                    <tr>
-                        <td>{{ account.id }}</td>
-                        <td>
-                            <input type="checkbox" />
-                        </td>
-                        
-                        <td>
-                            {{ account.name }}
-                        </td>
-                        
-                        <td>
-                            {% if account.is_active %}
-                            Yes
-                            {% else %}
-                            No
-                            {% endif %}
-                        </td>
-                        
-                        <td>    
-                            <a href="javascript:tech_account_edit('{{ account.id }}')">Edit</a>
-                        </td>
-                        
-                        <td>    
-                            <a href="javascript:tech_account_change_password('{{ account.id }}')">Change password</a>
-                        </td>
-                        
-                        <td>    
-                            <a href="javascript:tech_account_delete('{{ account.id }}')">Delete</a>
-                        </td>
-                        
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{% if item.is_active %}Yes{% else %}No{% endif %}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.security.tech_account.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.security.tech_account.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
                     </tr>
                 {% endfor %}
 
@@ -227,7 +184,7 @@
             </table>
         </div>
 
-    {% endif %} {% comment %}accounts{% endcomment %}
+    {% endif %} {% comment %}items{% endcomment %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 

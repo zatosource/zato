@@ -35,6 +35,9 @@ from lxml.objectify import Element
 # Validate
 from validate import is_boolean
 
+# anyjson
+from anyjson import dumps
+
 # Zato
 from zato.admin.settings import TECH_ACCOUNT_NAME
 from zato.admin.web import invoke_admin_service
@@ -49,12 +52,17 @@ from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
 
+def _get_edit_create_response(zato_message, action, name):
+    return_data = {'id': zato_message.data.tech_account.id.text,
+                   'message': 'Successfully {0} the technical account [{1}]'.format(action, name)}
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+
 @meth_allowed('GET')
 def index(req):
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
     choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
     cluster_id = req.GET.get('cluster')
-    accounts = []
+    items = []
     
     create_form = CreateTechnicalAccountForm()
     edit_form = EditTechnicalAccountForm(prefix='edit')
@@ -80,13 +88,13 @@ def index(req):
                 is_active = is_boolean(definition_elem.is_active.text)
                 
                 account = TechnicalAccount(id, name, is_active=is_active)
-                accounts.append(account)
+                items.append(account)
                 
 
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,
-        'accounts':accounts,
+        'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
         'change_password_form':change_password_form
@@ -123,7 +131,7 @@ def create(req):
         return HttpResponseServerError(msg)
     else:
         # 200 OK
-        return HttpResponse(str(zato_message.data.tech_account.id))
+        return _get_edit_create_response(zato_message, 'created', req.POST['name'])
 
 @meth_allowed('GET')
 def get_by_id(req, tech_account_id, cluster_id):
@@ -157,9 +165,9 @@ def edit(req):
     
     prefix = 'edit-'
 
-    cluster_id = req.POST.get('cluster_id')
-    tech_account_id = req.POST.get('tech_account_id')
-    name = req.POST.get(prefix + 'name')
+    cluster_id = req.POST['cluster_id']
+    tech_account_id = req.POST['id']
+    name = req.POST[prefix + 'name']
     is_active = req.POST.get(prefix + 'is_active')
     is_active = True if is_active else False
     
@@ -181,7 +189,7 @@ def edit(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return HttpResponse()
+        return _get_edit_create_response(zato_message, 'updated', name)
 
 @meth_allowed('POST')
 def change_password(req):
