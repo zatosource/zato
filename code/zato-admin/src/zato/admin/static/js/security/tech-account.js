@@ -1,442 +1,188 @@
-// A base class for representing a technical account
-var TechnicalAccount = Class.create({
-    initialize: function() {
-        this.cluster_id = null;
-        this.name = null;
-        this.is_active = null;
 
-    }
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.data_table.TechAccount = new Class({
+	toString: function() {
+		var s = '<TechAccount id:{0} name:{1} is_active:{2}>';
+		return String.format(s, this.id ? this.id : '(none)', 
+								this.name ? this.name : '(none)', 
+								this.is_active ? this.is_active : '(none)');
+	}
 });
 
-// A nicer toString.
-TechnicalAccount.prototype.toString = function() {
-    return "<TechnicalAccount\
- cluster_id=[" + this.cluster_id + "]\
- name=[" + this.name + "]\
- is_active=[" + this.is_active + "]\
->";
-};
+$(document).ready(function() { 
+	$('#data-table').tablesorter(); 
+	$.fn.zato.data_table.parse($.fn.zato.data_table.TechAccount);
+	
+	var actions = ['create', 'edit'];
 
-// Dumps properties in a form suitable for creating a new data table row.
-TechnicalAccount.prototype.to_record = function() {
-    var record = new Array();
-    
-    record["selection"] = "<input type='checkbox' />";
-    record["name"] = this.name;
-    record["is_active"] = this.is_active_html();
-    
-    record["edit"] = String.format("<a href=\"javascript:tech_account_edit('{0}')\">Edit</a>", this.id);
-    record["change_password"] = String.format("<a href=\"javascript:tech_account_change_password('{0}')\">Change password</a>", this.id);
-    record["delete"] = String.format("<a href=\"javascript:tech_account_delete('{0}')\">Delete</a>", this.id);
+	/* Dynamically prepare pop-up windows.
+	*/
+	$.each(actions, function(ignored, action) {
+		var form_id = String.format('#{0}-form', action);
+		var div_id = String.format('#{0}-div', action);
 
-    return record;
-};
+		// Pop-up				
+		$(div_id).dialog({
+			autoOpen: false,
+			width: '40em',
+			height: '10em',
+			close: function(e, ui) {
+				$.fn.zato.data_table.reset_form(form_id);
+			}
+		});
+	});
+	
+	// Change password pop-up
+	$.fn.zato.data_table.setup_change_password();
+	
+	/* Prepare the validators here so that it's all still a valid HTML
+	   even with bValidator's custom attributes.
+	*/
 
-TechnicalAccount.prototype.is_active_html = function() {
-    return this.is_active ? "Yes": "No";
+	var attrs = ['name'];		
+	var field_id = '';
+	var form_id = '';
+	
+	$.each(['', 'edit'], function(ignored, action) {
+		$.each(attrs, function(ignored, attr) {
+			if(action) {
+				field_id = String.format('#id_{0}', attr);
+			}
+			else {
+				field_id = String.format('#id_{0}-{1}', action, attr);
+			}
+			
+			$(field_id).attr('data-bvalidator', 'required');
+			$(field_id).attr('data-bvalidator-msg', 'This is a required field');
+		});
+		
+		// Doh, not exactly the cleanest approach.
+		if(action) {
+			form_id = '#edit-form';
+		}
+		else {
+			form_id = '#create-form';
+		}
+		$(form_id).bValidator();
+	});
+
+	/* Assign form submition handlers.
+	*/
+	
+	$.each(actions, function(ignored, action) {
+		$('#'+ action +'-form').submit(function() {
+			$.fn.zato.scheduler.data_table.on_submit(action);
+			return false;
+		});
+	});
+})
+
+
+$.fn.zato.security.tech_account._create_edit = function(action, id) {
+
+	var title = 'Create a new technical account';
+		
+	if(action == 'edit') {
+
+		var form = $(String.format('#{0}-form', action));
+		var name_prefix = action + '-';
+		var id_prefix = String.format('#id_{0}', name_prefix);
+		var instance = $.fn.zato.data_table.data[id];
+		
+		$.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
+	}
+
+	var div = $(String.format('#{0}-div', action));
+	div.prev().text(title); // prev() is a .ui-dialog-titlebar
+	div.dialog('open');
 }
 
-// /////////////////////////////////////////////////////////////////////////////
-
-TechnicalAccount.prototype.add_row = function(tech_account, data_dt) {
-
-    var add_at_idx = 0;
-    data_dt.addRow(tech_account.to_record(), add_at_idx);
-    
-    var added_record = data_dt.getRecord(add_at_idx);
-    
-    added_record.setData("tech_account_id", tech_account.id);
-    added_record.setData("name", tech_account.name);
-    added_record.setData("is_active", tech_account.is_active_html());
-
+$.fn.zato.security.tech_account.create = function() {
+	$.fn.zato.security.tech_account._create_edit('create');
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// create
-////////////////////////////////////////////////////////////////////////////////
-function create_cleanup() {
-    create_validation.reset();
-    $("create-form").reset();
+$.fn.zato.security.tech_account.edit = function(id) {
+	$.fn.zato.security.tech_account._create_edit('edit', id);
 }
 
-function setup_create_dialog() {
+$.fn.zato.security.tech_account.data_table.on_submit_complete = function(data, status, 
+	action) {
 
-    var on_create_submit = function() {
-        if(create_validation.validate()) {
-            // Submit the form if no errors have been found on the UI side.
-            this.submit();
-            create_validation.reset();
-        }
-    };
+	if(status == 'success') {
+		var json = $.parseJSON(data.responseText);
+		var include_tr = true ? action == 'create' : false;
+		var row = $.fn.zato.security.tech_account.data_table.add_row(json, action, include_tr);
+		if(action == 'create') {
+			$('#data-table > tbody:last').prepend(row);
+		}
+		else {
+			var tr = $('#tr_'+ json.id).html(row);
+			tr.addClass('updated');
+		}	
+	}
 
-    var on_create_cancel = function() {
-        this.cancel();
-        create_cleanup();
-    };
-
-    var on_create_success = function(o) {
-
-        var tech_account = new TechnicalAccount();
-        
-        tech_account.id = o.responseText;
-        tech_account.cluster_id = $("id_cluster").value;
-        tech_account.name = $("id_name").value;
-        tech_account.is_active = $F("id_is_active") == "on";
-        tech_account.add_row(tech_account, data_dt);
-        
-        // Hide the dialog and confirm the changes have been saved.
-        create_dialog.hide();
-
-        update_user_message(true, "Succesfully created a new technical account, don't forget to update its password now");
-
-        // Cleanup after work.
-        create_cleanup();
-
-    };
-
-    var on_create_failure = function(o) {
-        create_cleanup();
-        update_user_message(false, o.responseText);
-        create_dialog.hide();
-    };
-
-    // Remove progressively enhanced content class, just before creating the module.
-    YAHOO.util.Dom.removeClass("create-tech-account", "yui-pe-content");
-
-    // Instantiate the dialog.
-    create_dialog = new YAHOO.widget.Dialog("create-tech-account",
-                            { width: "39em",
-                              fixedcenter: true,
-                              visible: false,
-                              draggable: true,
-                              postmethod: "async",
-                              hideaftersubmit: false,
-                              constraintoviewport: true,
-                              buttons: [{text:"Submit", handler:on_create_submit},
-                                        {text:"Cancel", handler:on_create_cancel, isDefault:true}]
-                            });
-
-    create_dialog.callback.success = on_create_success;
-    create_dialog.callback.failure = on_create_failure;
-
-    // Render the dialog.
-    create_dialog.render();
+	$.fn.zato.data_table._on_submit_complete(data, status);
+	$.fn.zato.data_table.cleanup('#'+ action +'-form');
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// edit
-////////////////////////////////////////////////////////////////////////////////
-function edit_cleanup() {
-    edit_validation.reset();
-    $("edit-form").reset();
+$.fn.zato.security.tech_account.data_table.on_submit = function(action) {
+	var form = $('#' + action +'-form');
+	var callback = function(data, status) {
+			return $.fn.zato.scheduler.data_table.on_submit_complete(data, 
+				status, action);
+		}
+	return $.fn.zato.data_table._on_submit(form, callback);
 }
 
-function setup_edit_dialog() {
-
-    var on_edit_submit = function() {
-        if(edit_validation.validate()) {
-            // Submit the form if no errors have been found on the UI side.
-            this.submit();
-            edit_validation.reset();
-        }
-    };
-
-    var on_edit_cancel = function() {
-        this.cancel();
-        edit_cleanup();
-    };
-
-    var on_edit_success = function(o) {
-
-        edit_dialog.hide();
-        
-        var records = data_dt.getRecordSet().getRecords();
-        for (x=0; x < records.length; x++) {
-            var record = records[x];
-            var tech_account_id = record.getData("tech_account_id");
-            if(tech_account_id && tech_account_id == $("id_edit-tech_account_id").value) {
-
-                var is_active = $F("id_edit-is_active") ? "Yes": "No";
-                
-                record.setData("name", $("id_edit-name").value);
-                record.setData("is_active", is_active);
-                
-                data_dt.render();
-            }
-        }
-
-        update_user_message(true, "Succesfully updated the technical account");
-
-        // Cleanup after work.
-        edit_cleanup();
-
-    };
-
-    var on_edit_failure = function(o) {
-        edit_cleanup();
-        update_user_message(false, o.responseText);
-        edit_dialog.hide();
-    };
-
-    // Remove progressively enhanced content class, just before creating the module.
-    YAHOO.util.Dom.removeClass("edit-tech-account", "yui-pe-content");
-
-    // Instantiate the dialog.
-    edit_dialog = new YAHOO.widget.Dialog("edit-tech-account",
-                            { width: "39em",
-                              fixedcenter: true,
-                              visible: false,
-                              draggable: true,
-                              postmethod: "async",
-                              hideaftersubmit: false,
-                              constraintoviewport: true,
-                              buttons: [{text:"Submit", handler:on_edit_submit},
-                                        {text:"Cancel", handler:on_edit_cancel, isDefault:true}]
-                            });
-
-    edit_dialog.callback.success = on_edit_success;
-    edit_dialog.callback.failure = on_edit_failure;
-
-    // Render the dialog.
-    edit_dialog.render();
+$.fn.zato.security.tech_account.data_table.new_row = function(item, data, include_tr) {
+    var row = '';
+	
+	if(include_tr) {
+		row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+	}
+	
+	row += "<td class='numbering'>&nbsp;</td>";
+	row += "<td><input type='checkbox' /></td>";
+	row += String.format('<td>{0}</td>', item.name);
+	row += String.format('<td>{0}</td>', item.is_active ? 'Yes' : 'No');
+	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
+	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.tech_account.edit('{0}')\">Edit</a>", item.id));
+	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.tech_account.delete_({0});'>Delete</a>", item.id));
+	row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+	row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+	
+	if(include_tr) {
+		row += '</tr>';
+	}
+	
+	return row;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// change_password
-////////////////////////////////////////////////////////////////////////////////
-function change_password_cleanup() {
-    change_password_validation.reset();
-    $("change-password-form").reset();
+$.fn.zato.security.tech_account.data_table.add_row = function(data, action, include_tr) {
+
+	var item = new $.fn.zato.data_table.TechAccount();
+	var form = $(String.format('#{0}-form', action));
+	var prefix = action + '-';
+	var name = '';
+	var _columns = $.fn.zato.data_table.get_columns();
+	
+	$.each(form.serializeArray(), function(idx, elem) {
+		name = elem.name.replace(prefix, '');
+		item[name] = elem.value;
+	})
+	if(!item.id) {
+		item.id = data.id;
+	}
+	
+	item.is_active = $.fn.zato.to_bool(item.is_active);
+	
+	$.fn.zato.data_table.data[item.id] = item;
+	return $.fn.zato.security.tech_account.data_table.new_row(item, data, include_tr);
 }
 
-function setup_change_password_dialog() {
-
-    var on_change_password_submit = function() {
-        if(change_password_validation.validate()) {
-            // Submit the form if no errors have been found on the UI side.
-            this.submit();
-            change_password_validation.reset();
-        }
-    };
-
-    var on_change_password_cancel = function() {
-        this.cancel();
-        change_password_cleanup();
-    };
-
-    var on_change_password_success = function(o) {
-
-        change_password_dialog.hide();
-        update_user_message(true, "Succesfully updated the password");
-
-        // Cleanup after work.
-        change_password_cleanup();
-
-    };
-
-    var on_change_password_failure = function(o) {
-        change_password_cleanup();
-        update_user_message(false, o.responseText);
-        change_password_dialog.hide();
-    };
-
-    // Remove progressively enhanced content class, just before creating the module.
-    YAHOO.util.Dom.removeClass("change-password-tech-account", "yui-pe-content");
-
-    // Instantiate the dialog.
-    change_password_dialog = new YAHOO.widget.Dialog("change-password-tech-account",
-                            { width: "39em",
-                              fixedcenter: true,
-                              visible: false,
-                              draggable: true,
-                              postmethod: "async",
-                              hideaftersubmit: false,
-                              constraintoviewport: true,
-                              buttons: [{text:"Submit", handler:on_change_password_submit},
-                                        {text:"Cancel", handler:on_change_password_cancel, isDefault:true}]
-                            });
-
-    change_password_dialog.callback.success = on_change_password_success;
-    change_password_dialog.callback.failure = on_change_password_failure;
-
-    // Render the dialog.
-    change_password_dialog.render();
+$.fn.zato.security.tech_account.delete_ = function(id) {
+	$.fn.zato.data_table.delete_(id, 'td.item_id_', 
+		'Technical account [{0}] deleted', 
+		'Are you sure you want to delete the technical account [{0}]?');
 }
-
-// /////////////////////////////////////////////////////////////////////////////
-
-function setup_delete_dialog() {
-
-    var on_success = function(o) {
-        msg = "Successfully deleted the technical account [" + current_tech_account_delete_name + "]";
-
-        // Delete the row..
-        
-        var records = data_dt.getRecordSet().getRecords();
-        for (x=0; x < records.length; x++) {
-            var record = records[x];
-            var tech_account_id_record = record.getData("tech_account_id");
-            if(tech_account_id_record && current_tech_account_delete_id == tech_account_id_record) {
-                data_dt.deleteRow(x);
-                break;
-            }
-        }
-
-
-        // .. and confirm everything went fine.
-        update_user_message(true, msg);
-    };
-
-    var on_failure = function(o) {
-        update_user_message(false, o.responseText);
-    }
-
-    var callback = {
-        success: on_success,
-        failure: on_failure,
-    };
-
-    var on_yes = function() {
-
-        var url = String.format("./delete/{0}/cluster/{1}/", current_tech_account_delete_id, $("cluster_id").value);
-
-        YAHOO.util.Connect.initHeader('X-CSRFToken', YAHOO.util.Cookie.get("csrftoken"));
-        var transaction = YAHOO.util.Connect.asyncRequest("POST", url, callback);
-
-        this.hide();
-    };
-
-    var on_no = function() {
-        this.hide();
-    };
-
-    delete_dialog = new YAHOO.widget.SimpleDialog("delete_dialog", {
-        width: "36em",
-        effect:{
-            effect: YAHOO.widget.ContainerEffect.FADE,
-            duration: 0.10
-        },
-        fixedcenter: true,
-        modal: false,
-        visible: false,
-        draggable: true
-    });
-
-    delete_dialog.setHeader("Are you sure?");
-    delete_dialog.cfg.setProperty("icon", YAHOO.widget.SimpleDialog.ICON_WARN);
-
-    var delete_buttons = [
-        {text: "Yes", handler: on_yes},
-        {text:"Cancel", handler: on_no, isDefault:true}
-    ];
-
-    delete_dialog.cfg.queueProperty("buttons", delete_buttons);
-    delete_dialog.render(document.body);
-
-};
-
-function tech_account_create(cluster_id) {
-
-    // Set up the form validation if necessary.
-    if(typeof create_validation == "undefined") {
-        create_validation = new Validation("create-form");
-    }
-    create_validation.reset();
-    create_dialog.show();
-}
-
-function tech_account_edit(tech_account_id) {
-
-    // Set up the form validation if necessary.
-    if(typeof edit_validation == "undefined") {
-        edit_validation = new Validation("edit-form");
-    }
-    edit_validation.reset();
-
-    // Get the account's details from DB.
-
-    var on_get_tech_account_success = function(o) {
-        
-        var json = YAHOO.lang.JSON.parse(o.responseText);
-        var tech_account = json[0].fields;
-
-        $("id_edit-tech_account_id").value = json[0].pk;
-        $("id_edit-name").value = tech_account.name;
-        $("id_edit-cluster_id").value = $("cluster_id").value;
-
-        var checkbox_value = tech_account.is_active ? 'on': '';
-        $("id_edit-is_active").setValue(checkbox_value);
-
-        edit_dialog.show();
-    };
-
-    var on_get_tech_account_failure = function(o) {
-        update_user_message(false, o.responseText);
-    }
-
-    var callback = {
-        success: on_get_tech_account_success,
-        failure: on_get_tech_account_failure,
-    };
-    
-    var url = String.format("./get/by-id/{0}/cluster/{1}/", tech_account_id, $("cluster_id").value);
-    YAHOO.util.Connect.asyncRequest("GET",  url, callback);
-}
-
-function tech_account_change_password(tech_account_id) {
-
-    // Set up the form validation if necessary.
-    if(typeof change_password_validation == "undefined") {
-        change_password_validation = new Validation("change-password-form");
-
-        Validation.add("validate-password-confirm", "Passwords need to be the same",
-                       {equalToField:"id_password1"});
-        
-    }
-    change_password_validation.reset();
-
-    var records = data_dt.getRecordSet().getRecords();
-    for (x=0; x < records.length; x++) {
-        var record = records[x];
-        var tech_account_id_record = record.getData("tech_account_id");
-        if(tech_account_id_record && tech_account_id == tech_account_id_record) {
-            $("change-password-name").update(record.getData("name"));
-            break;
-        }
-    }
-    
-    $("id_change_password-tech_account_id").setValue(tech_account_id);
-    $("id_change_password-cluster_id").value = $("cluster_id").value;
-    
-    change_password_dialog.show();
-}
-
-function tech_account_delete(tech_account_id) {
-
-    // Doh, a couple of global ones (this one below and 'current_tech_account_delete_name'
-    // in the 'for' loop).
-    current_tech_account_delete_id = tech_account_id;
-    
-    var records = data_dt.getRecordSet().getRecords();
-    for (x=0; x < records.length; x++) {
-        var record = records[x];
-        var tech_account_id_record = record.getData("tech_account_id");
-        if(tech_account_id_record && tech_account_id == tech_account_id_record) {
-            current_tech_account_delete_name = record.getData("name").strip();
-            break;
-        }
-    }
-
-    delete_dialog.setBody(String.format("Are you sure you want to delete the technical account [{0}]", current_tech_account_delete_name));
-    delete_dialog.show();
-    
-}
-
-// /////////////////////////////////////////////////////////////////////////////
-
-YAHOO.util.Event.onDOMReady(function() {
-    setup_create_dialog();
-    setup_edit_dialog();
-    setup_change_password_dialog();
-    setup_delete_dialog();
-});

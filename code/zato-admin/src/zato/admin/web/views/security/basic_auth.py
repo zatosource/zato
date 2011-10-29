@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Django
@@ -35,6 +34,9 @@ from lxml.objectify import Element
 
 # Validate
 from validate import is_boolean
+
+# anyjson
+from anyjson import dumps
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm

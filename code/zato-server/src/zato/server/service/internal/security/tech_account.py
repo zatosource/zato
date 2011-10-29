@@ -156,10 +156,15 @@ class Edit(AdminService):
             
             tech_account.name = name
             tech_account.is_active = is_boolean(params['is_active'])
+
+            tech_account_elem = Element('tech_account')            
             
             try:
                 session.add(tech_account)
                 session.commit()
+
+                tech_account_elem.id = tech_account.id                
+                
             except Exception, e:
                 msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
@@ -167,7 +172,7 @@ class Edit(AdminService):
                 
                 raise 
             
-            return ZATO_OK, ''
+            return ZATO_OK, etree.tostring(tech_account_elem)
     
 class ChangePassword(AdminService):
     """ Changes the password of a technical account.
