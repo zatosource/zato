@@ -153,9 +153,9 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 	
 }
 
-//
-// Data table
-//
+// /////////////////////////////////////////////////////////////////////////////
+// Data table begin
+// /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.data_table.data = {}
 
@@ -166,13 +166,13 @@ $.fn.zato.data_table.row_updated = function(id) {
 	return tr;
 }
 
-$.fn.zato.data_table.parse = function(class_) {
+$.fn.zato.data_table.parse = function() {
 
 	var rows = $('#data-table tr').not('[class="ignore"]');
 	var columns = $.fn.zato.data_table.get_columns();
 	
 	$.each(rows, function(row_idx, row) {
-		var instance = new class_()
+		var instance = new $.fn.zato.data_table.class_()
 		var tds = $(row).find('td');
 		$.each(tds, function(td_idx, td) {
 		
@@ -339,8 +339,145 @@ $.fn.zato.data_table.setup_change_password = function() {
     $('#id_password2').attr('data-bvalidator-msg', 'This is a required field');
 	
 	change_password_form.bValidator();
-	
 }
+
+$.fn.zato.data_table._create_edit = function(action, title, id) {
+
+	if(action == 'edit') {
+
+		var form = $(String.format('#{0}-form', action));
+		var name_prefix = action + '-';
+		var id_prefix = String.format('#id_{0}', name_prefix);
+		var instance = $.fn.zato.data_table.data[id];
+		
+		$.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
+	}
+
+	var div = $(String.format('#{0}-div', action));
+	div.prev().text(title); // prev() is a .ui-dialog-titlebar
+	div.dialog('open');
+}
+
+$.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) {
+
+	var item = new $.fn.zato.data_table.class_();
+	var form = $(String.format('#{0}-form', action));
+	var prefix = action + '-';
+	var name = '';
+	var _columns = $.fn.zato.data_table.get_columns();
+	
+	$.each(form.serializeArray(), function(idx, elem) {
+		name = elem.name.replace(prefix, '');
+		item[name] = elem.value;
+	})
+	if(!item.id) {
+		item.id = data.id;
+	}
+	
+	item.is_active = $.fn.zato.to_bool(item.is_active);
+	
+	$.fn.zato.data_table.data[item.id] = item;
+	return new_row_func(item, data, include_tr);
+}
+
+$.fn.zato.data_table.setup_forms = function(attrs) {
+	var actions = ['create', 'edit'];
+
+	/* Dynamically prepare pop-up windows.
+	*/
+	$.each(actions, function(ignored, action) {
+		var form_id = String.format('#{0}-form', action);
+		var div_id = String.format('#{0}-div', action);
+
+		// Pop-up				
+		$(div_id).dialog({
+			autoOpen: false,
+			width: '40em',
+			height: '10em',
+			close: function(e, ui) {
+				$.fn.zato.data_table.reset_form(form_id);
+			}
+		});
+	});
+	
+	// Change password pop-up
+	$.fn.zato.data_table.setup_change_password();
+	
+	/* Prepare the validators here so that it's all still a valid HTML
+	   even with bValidator's custom attributes.
+	*/
+
+	var field_id = '';
+	var form_id = '';
+	
+	$.each(['', 'edit'], function(ignored, action) {
+		$.each(attrs, function(ignored, attr) {
+			if(action) {
+				field_id = String.format('#id_{0}', attr);
+			}
+			else {
+				field_id = String.format('#id_{0}-{1}', action, attr);
+			}
+			
+			$(field_id).attr('data-bvalidator', 'required');
+			$(field_id).attr('data-bvalidator-msg', 'This is a required field');
+		});
+		
+		// Doh, not exactly the cleanest approach.
+		if(action) {
+			form_id = '#edit-form';
+		}
+		else {
+			form_id = '#create-form';
+		}
+		$(form_id).bValidator();
+	});
+
+	/* Assign form submition handlers.
+	*/
+	
+	$.each(actions, function(ignored, action) {
+		$('#'+ action +'-form').submit(function() {
+			$.fn.zato.data_table.on_submit(action);
+			return false;
+		});
+	});
+}
+
+$.fn.zato.data_table.on_submit = function(action) {
+	var form = $('#' + action +'-form');
+	var callback = function(data, status) {
+			return $.fn.zato.data_table.on_submit_complete(data, 
+				status, action);
+		}
+	return $.fn.zato.data_table._on_submit(form, callback);
+}
+
+$.fn.zato.data_table.on_submit_complete = function(data, status, 
+	action) {
+
+	if(status == 'success') {
+		var json = $.parseJSON(data.responseText);
+		var include_tr = true ? action == 'create' : false;
+		var row = $.fn.zato.security.tech_account.data_table.add_row(json, 
+			action, $.fn.zato.data_table.new_row_func, include_tr);
+		if(action == 'create') {
+			$('#data-table > tbody:last').prepend(row);
+		}
+		else {
+			var tr = $('#tr_'+ json.id).html(row);
+			tr.addClass('updated');
+		}	
+	}
+
+	$.fn.zato.data_table._on_submit_complete(data, status);
+	$.fn.zato.data_table.cleanup('#'+ action +'-form');
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// Data table end
+// /////////////////////////////////////////////////////////////////////////////
+
 
 //
 // Misc
