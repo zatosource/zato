@@ -49,6 +49,14 @@ from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
 
+def _edit_create_response(zato_message, action, name, json_only=True):
+    return_data = {'id': zato_message.data.wss.id.text,
+                   'message': 'Successfully {0} the WS-Security [{1}]'.format(action, name)}
+    if json_only:
+        return return_data
+    
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
@@ -73,7 +81,7 @@ def index(req):
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
     choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
     cluster_id = req.GET.get('cluster')
-    definitions = []
+    items = []
     
     create_form = DefinitionForm()
     edit_form = DefinitionForm(prefix='edit')
@@ -107,12 +115,12 @@ def index(req):
                         password_type, reject_empty_nonce_ts, reject_stale_username,
                         expiry_limit, nonce_freshness, password_type_raw=password_type_raw)
 
-                definitions.append(wss)
+                items.append(wss)
 
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,
-        'definitions':definitions,
+        'items':items,
         'create_form': create_form,
         'edit_form': edit_form,
         'change_password_form': change_password_form
@@ -153,19 +161,27 @@ def create(req):
 
         _, zato_message, soap_response = invoke_admin_service(cluster,
                             'zato:security.wss.create', zato_message)
-    except Exception, e:
-        msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        return_data = {'pk': zato_message.data.wss.id.text,
+
+        return_data = {}
+            
+        """
+            'pk': zato_message.data.wss.id.text,
          'fields': 
              {
                  'password_type_raw':req.POST['password_type'],
                  'password_type':ZATO_WSS_PASSWORD_TYPES[req.POST['password_type']]
               }
          }
-        return HttpResponse(dumps(return_data), mimetype='application/javascript')
+         """
+        response_msg = _edit_create_response(zato_message, 'created', req.POST['name'])
+        return_data.update(**response_msg)
+        return HttpResponse(dumps(return_data), mimetype='application/javascript')        
+        
+    except Exception, e:
+        msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
     
 @meth_allowed('POST')
 def change_password(req):
