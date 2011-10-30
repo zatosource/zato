@@ -3,10 +3,12 @@
 
 $.fn.zato.data_table.WSS = new Class({
 	toString: function() {
-		var s = '<WSS id:{0} name:{1} is_active:{2}>';
+		var s = '<WSS id:{0} name:{1} is_active:{2} reject_empty_nonce_ts:{3}">';
 		return String.format(s, this.id ? this.id : '(none)', 
 								this.name ? this.name : '(none)', 
-								this.is_active ? this.is_active : '(none)');
+								this.is_active ? this.is_active : '(none)',
+								this.reject_empty_nonce_ts ? this.reject_empty_nonce_ts : '(none)'
+								);
 	}
 });
 
@@ -29,7 +31,11 @@ $.fn.zato.security.wss.edit = function(id) {
 }
 
 $.fn.zato.security.wss.data_table.new_row = function(item, data, include_tr) {
+
     var row = '';
+	
+	item.reject_empty_nonce_ts = $.fn.zato.to_bool(item.reject_empty_nonce_ts);
+	item.reject_stale_username = $.fn.zato.to_bool(item.reject_stale_username);
 	
 	if(include_tr) {
 		row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
@@ -39,20 +45,20 @@ $.fn.zato.security.wss.data_table.new_row = function(item, data, include_tr) {
 	row += "<td><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', item.name);
 	row += String.format('<td>{0}</td>', item.is_active ? 'Yes' : 'No');
-	row += String.format('<td>{0}</td>', '');
-	row += String.format('<td>{0}</td>', '');
-	row += String.format('<td>{0}</td>', '');
-	row += String.format('<td>{0}</td>', '');
-	row += String.format('<td>{0}</td>', '');
-	row += String.format('<td>{0}</td>', '');
+	row += String.format('<td>{0}</td>', item.username);
+	row += String.format('<td>{0}</td>', data.password_type);
+	row += String.format('<td>{0}</td>', item.reject_empty_nonce_ts ? 'Yes' : 'No');
+	row += String.format('<td>{0}</td>', item.reject_stale_username ? 'Yes' : 'No');
+	row += String.format('<td>{0}</td>', item.expiry_limit);
+	row += String.format('<td>{0}</td>', item.nonce_freshness);
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
 	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.wss.edit('{0}')\">Edit</a>", item.id));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.wss.delete_({0});'>Delete</a>", item.id));
 	row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 	row += String.format("<td class='ignore'>{0}</td>", item.is_active);
-	row += String.format("<td class='ignore'>{0}</td>", '');
-	row += String.format("<td class='ignore'>{0}</td>", '');
-	row += String.format("<td class='ignore'>{0}</td>", '');
+	row += String.format("<td class='ignore'>{0}</td>", data.password_type_raw);
+	row += String.format("<td class='ignore'>{0}</td>", item.reject_empty_nonce_ts);
+	row += String.format("<td class='ignore'>{0}</td>", item.reject_stale_username);
 	
 	if(include_tr) {
 		row += '</tr>';

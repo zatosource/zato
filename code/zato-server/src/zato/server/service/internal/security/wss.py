@@ -141,21 +141,25 @@ class Edit(AdminService):
             
             if existing_one:
                 raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
+            
+            wss_elem = Element('wss')
     
             try:
-                definition = session.query(WSSDefinition).filter_by(id=def_id).one()
+                wss = session.query(WSSDefinition).filter_by(id=def_id).one()
                 
-                definition.name = name
-                definition.is_active = new_params['is_active']
-                definition.username = new_params['username']
-                definition.password_type = new_params['password_type']
-                definition.reject_empty_nonce_ts = new_params['reject_empty_nonce_ts']
-                definition.reject_stale_username = new_params['reject_stale_username']
-                definition.expiry_limit = new_params['expiry_limit']
-                definition.nonce_freshness = new_params['nonce_freshness']
+                wss.name = name
+                wss.is_active = new_params['is_active']
+                wss.username = new_params['username']
+                wss.password_type = new_params['password_type']
+                wss.reject_empty_nonce_ts = new_params['reject_empty_nonce_ts']
+                wss.reject_stale_username = new_params['reject_stale_username']
+                wss.expiry_limit = new_params['expiry_limit']
+                wss.nonce_freshness = new_params['nonce_freshness']
     
-                session.add(definition)
+                session.add(wss)
                 session.commit()
+                
+                wss_elem.id = wss.id
                 
             except Exception, e:
                 msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
@@ -164,7 +168,7 @@ class Edit(AdminService):
                 
                 raise 
     
-            return ZATO_OK, ''
+            return ZATO_OK, etree.tostring(wss_elem)
     
 class ChangePassword(AdminService):
     """ Changes the password of a WS-Security definition.
