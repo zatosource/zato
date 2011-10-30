@@ -49,11 +49,11 @@ from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
 
-def _edit_create_response(zato_message, action, name, json_only=True):
+def _edit_create_response(zato_message, action, name, password_type):
     return_data = {'id': zato_message.data.wss.id.text,
-                   'message': 'Successfully {0} the WS-Security [{1}]'.format(action, name)}
-    if json_only:
-        return return_data
+        'message': 'Successfully {0} the WS-Security definition [{1}]'.format(action, name),
+        'password_type_raw':password_type,
+        'password_type':ZATO_WSS_PASSWORD_TYPES[password_type]}
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -62,7 +62,7 @@ def _get_edit_create_message(params, prefix=''):
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
-    zato_message.data.id = params.get('wss_id')
+    zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
@@ -144,12 +144,14 @@ def edit(req):
 
         _, zato_message, soap_response = invoke_admin_service(cluster,
                                     'zato:security.wss.edit', zato_message)
+
+        return _edit_create_response(zato_message, 'updated', 
+            req.POST['edit-name'], req.POST['edit-password_type'])
+        
     except Exception, e:
         msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    else:
-        return HttpResponse()
 
 @meth_allowed('POST')
 def create(req):
@@ -162,20 +164,8 @@ def create(req):
         _, zato_message, soap_response = invoke_admin_service(cluster,
                             'zato:security.wss.create', zato_message)
 
-        return_data = {}
-            
-        """
-            'pk': zato_message.data.wss.id.text,
-         'fields': 
-             {
-                 'password_type_raw':req.POST['password_type'],
-                 'password_type':ZATO_WSS_PASSWORD_TYPES[req.POST['password_type']]
-              }
-         }
-         """
-        response_msg = _edit_create_response(zato_message, 'created', req.POST['name'])
-        return_data.update(**response_msg)
-        return HttpResponse(dumps(return_data), mimetype='application/javascript')        
+        return _edit_create_response(zato_message, 'created', 
+            req.POST['name'], req.POST['password_type'])
         
     except Exception, e:
         msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
