@@ -17,7 +17,7 @@ $(document).ready(function() {
 	$.fn.zato.data_table.class_ = $.fn.zato.data_table.WSS;
 	$.fn.zato.data_table.new_row_func = $.fn.zato.security.wss.data_table.new_row;
 	$.fn.zato.data_table.parse();
-	$.fn.zato.data_table.setup_forms(['name']);
+	$.fn.zato.data_table.setup_forms(['name', 'username', 'expiry_limit', 'nonce_freshness']);
 })
 
 $.fn.zato.security.wss.create = function() {
