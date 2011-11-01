@@ -24,12 +24,14 @@ from json import dumps
 
 # SQLAlchemy
 from sqlalchemy import Table, Column, Integer, String, DateTime, MetaData, \
-     ForeignKey, Sequence, Boolean, LargeBinary, UniqueConstraint, Enum
+     ForeignKey, Sequence, Boolean, LargeBinary, UniqueConstraint, Enum, \
+     SmallInteger
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 
 # Zato
 from zato.common.util import make_repr, object_attrs
+from zato.common.odb import AMQP_DEFAULT_PRIORITY
 
 Base = declarative_base()
 
@@ -541,5 +543,52 @@ class CronStyleJob(Base):
         self.id = id
         self.job = job
         self.cron_definition = cron_definition
+
+################################################################################
+
+class ConnDef(Base):
+    """ A connection to an external resource that is likely to get reused across
+    channels and outgoing connections.
+    """
+    __tablename__ = 'conn_def'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    
+    id = Column(Integer,  Sequence('conn_def_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    def_type = Column(String(10), nullable=False)
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('conn_defs', order_by=name))
+    
+    def __init__(self, id=None, name=None, def_type=None):
+        self.id = id
+        self.name = name
+        self.def_type = def_type
+
+class ConnDefAMQP(Base):
+    """ An AMQP connection.
+    """
+    __tablename__ = 'conn_def_amqp'
+    
+    id = Column(Integer,  Sequence('conn_def_amqp_seq'), primary_key=True)
+    host = Column(String(200), nullable=False)
+    port = Column(Integer(), nullable=False)
+    vhost = Column(String(200), nullable=False)
+    username = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    frame_max = Column(Integer(), nullable=False)
+    content_type = Column(String(200), nullable=True)
+    content_encoding = Column(String(200), nullable=True)
+    delivery_mode = Column(SmallInteger(), nullable=False)
+    priority = Column(SmallInteger(), server_default=AMQP_DEFAULT_PRIORITY, nullable=False)
+    expiration = Column(Integer(), nullable=True)
+    user_id = Column(String(200), nullable=True)
+    app_id = Column(String(200), nullable=True)
+    heartbeat = Column(Boolean(), nullable=False)
+    
+    conn_def_id = Column(Integer, ForeignKey('conn_def.id', ondelete='CASCADE'), nullable=False)
+    conn_def = relationship(ConnDef, backref=backref('amqp', uselist=False,
+                    cascade='all, delete, delete-orphan', single_parent=True))
+
 
 ################################################################################
