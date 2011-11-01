@@ -29,6 +29,8 @@ from sqlalchemy.sql import text
 
 logger = logging.getLogger(__name__)
 
+AMQP_DEFAULT_PRIORITY = 5
+
 # TODO: Handle extra parameters.
 engine_def = '{engine}://{user}:{password}@{host}/{db_name}'
 
