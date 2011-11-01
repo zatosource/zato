@@ -12,6 +12,7 @@ $.fn.zato.data_table.Job = new Class({
 $(document).ready(function() { 
 
 	$('#data-table').tablesorter(); 
+	$.fn.zato.data_table.class_ = $.fn.zato.data_table.Job;
 	$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
 	
 	var actions = ['create', 'edit'];

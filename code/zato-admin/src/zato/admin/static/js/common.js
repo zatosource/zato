@@ -171,7 +171,7 @@ $.fn.zato.data_table.parse = function() {
 
 	var rows = $('#data-table tr').not('[class="ignore"]');
 	var columns = $.fn.zato.data_table.get_columns();
-	
+
 	$.each(rows, function(row_idx, row) {
 		var instance = new $.fn.zato.data_table.class_()
 		var tds = $(row).find('td');
@@ -255,16 +255,16 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern) {
 
-	var job = $.fn.zato.data_table.data[id];
+	var instance = $.fn.zato.data_table.data[id];
 	
 	var _callback = function(data, status) {
 		var success = status == 'success';
 		if(success) {
 
-			$(td_prefix + job.id).parent().remove();
-			$.fn.zato.data_table.data[job.id] = null;
+			$(td_prefix + instance.id).parent().remove();
+			$.fn.zato.data_table.data[instance.id] = null;
 			
-			msg = String.format(success_pattern, job.name);
+			msg = String.format(success_pattern, instance.name);
 		}
 		else {
 			msg = data.responseText; 
@@ -279,7 +279,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 			return false;
 		}
 	}
-	var q = String.format(confirm_pattern, job.name);
+	var q = String.format(confirm_pattern, instance.name);
 	jConfirm(q, 'Please confirm', callback);
 }
 
