@@ -139,6 +139,41 @@ class _WorkerStore(BrokerMessageReceiver):
             
 # ##############################################################################
 
+    def wss_get(self, name):
+        """ Returns the configuration of the WSS definition of the given name.
+        """
+        with self.wss_lock:
+            return self.wss.get(name)
+
+    def on_broker_pull_msg_SECURITY_WSS_CREATE(self, msg, *args):
+        """ Creates a new WS-Security definition.
+        """
+        with self.wss_lock:
+            self.wss[msg.name] = msg
+        
+    def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
+        """ Updates an existing WS-Security definition.
+        """
+        with self.wss_lock:
+            del self.wss[msg.old_name]
+            self.wss[msg.name] = msg
+        
+    def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
+        """ Deletes a WS-Security definition.
+        """
+        with self.wss_lock:
+            del self.wss[msg.name]
+        
+    def on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes the password of a WS-Security definition.
+        """
+        with self.wss_lock:
+            # The message's 'password' attribute already takes the salt 
+            # into account.
+            self.wss[msg.name]['password'] = msg.password
+            
+# ##############################################################################
+
     def url_sec_get(self, url):
         """ Returns the configuration of the given URL
         """
