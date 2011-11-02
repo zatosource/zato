@@ -28,6 +28,7 @@ from zato.admin import settings
 from zato.admin.web.views import(cluster, load_balancer, main, scheduler, 
     service, servers)
 from zato.admin.web.views.channel import soap
+from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.pool import sql
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
@@ -112,6 +113,16 @@ urlpatterns = patterns('',
     url(r'^zato/scheduler/get-definition/(?P<start_date>.*)/(?P<repeat>.*)/'
         '(?P<weeks>.*)/(?P<days>.*)/(?P<hours>.*)/(?P<minutes>.*)/(?P<seconds>.*)/$',
         scheduler.get_definition, name='scheduler-job-get-definition'),
+
+    # Definitions
+    
+    # .. AMQP
+    url(r'^zato/definition/amqp/$', def_amqp.index, name='def-amqp'),
+    url(r'^zato/definition/amqp/create/$', def_amqp.create, name='def-amqp-create'),
+    url(r'^zato/definition/amqp/edit/$', def_amqp.edit, name='def-amqp-edit'),
+    url(r'^zato/definition/amqp/change-password/$', def_amqp.change_password, name='def-amqp-change-password'),
+    url(r'^zato/definition/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_amqp.delete, name='def-amqp-delete'),
+    
 )
 
 if settings.DEBUG:

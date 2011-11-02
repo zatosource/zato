@@ -47,8 +47,10 @@ if ({}.__proto__){
 })(jQuery);
 
 $.namespace('zato');
-$.namespace('zato.form');
 $.namespace('zato.data_table');
+$.namespace('zato.definition');
+$.namespace('zato.definition.amqp');
+$.namespace('zato.form');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');

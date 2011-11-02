@@ -19,8 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from zato.common.odb.model import(Cluster, CronStyleJob, HTTPBasicAuth, 
-        IntervalBasedJob, Job,  Service, ChannelURLDefinition, TechnicalAccount)
+from zato.common.odb.model import(ChannelURLDefinition, Cluster, ConnDef, 
+    ConnDefAMQP, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  Service,
+    TechnicalAccount)
 
 def job_list(session, cluster_id):
     """ All the scheduler's jobs defined in the ODB.
@@ -56,10 +57,23 @@ def tech_acc_list(session, cluster_id):
         all()
 
 def soap_channel_list(session, cluster_id):
-    """ All the SOAP channels.
+    """ SOAP channels.
     """
     return session.query(ChannelURLDefinition).\
         filter(Cluster.id==cluster_id).\
         filter(ChannelURLDefinition.url_type=='soap').\
         order_by(ChannelURLDefinition.url_pattern).\
+        all()
+
+def amqp_def_list(session, cluster_id):
+    """ AMQP connection definitions.
+    """
+    return session.query(ConnDef.name, ConnDefAMQP.id, ConnDefAMQP.host,
+                         ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
+                         ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
+        filter(Cluster.id==ConnDef.cluster_id).\
+        filter(ConnDef.id==ConnDefAMQP.def_id).\
+        filter(ConnDef.def_type=='amqp').\
+        filter(Cluster.id==cluster_id).\
+        order_by(ConnDef.name).\
         all()
