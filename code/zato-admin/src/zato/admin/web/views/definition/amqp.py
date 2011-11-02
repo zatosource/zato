@@ -105,7 +105,7 @@ def index(req):
                 vhost = definition_elem.vhost.text
                 username = definition_elem.username.text
                 frame_max = definition_elem.frame_max.text
-                heartbeat = definition_elem.heartbeat.text
+                heartbeat = is_boolean(definition_elem.heartbeat.text)
                 
                 def_ = ConnDef(None, name)
                 def_amqp =  ConnDefAMQP(id, host, port, vhost, username, None, frame_max, heartbeat)
@@ -210,22 +210,20 @@ def change_password(req):
     return _change_password(req, 'zato:security.tech-account.change-password')
     
 @meth_allowed('POST')
-def delete(req, tech_account_id, cluster_id):
+def delete(req, id, cluster_id):
     
     cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
-        zato_message.data.tech_account_id = tech_account_id
-        zato_message.data.zato_admin_tech_account_name = TECH_ACCOUNT_NAME
+        zato_message.data.id = id
         
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.tech-account.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.delete', zato_message)
+        
+        return HttpResponse()
     
     except Exception, e:
         msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    else:
-        return HttpResponse()
