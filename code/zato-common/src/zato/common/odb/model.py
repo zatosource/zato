@@ -560,10 +560,11 @@ class ConnDef(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
     cluster = relationship(Cluster, backref=backref('conn_defs', order_by=name))
     
-    def __init__(self, id=None, name=None, def_type=None):
+    def __init__(self, id=None, name=None, def_type=None, cluster_id=None):
         self.id = id
         self.name = name
         self.def_type = def_type
+        self.cluster_id = cluster_id
 
 class ConnDefAMQP(Base):
     """ An AMQP connection.
@@ -577,18 +578,29 @@ class ConnDefAMQP(Base):
     username = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
     frame_max = Column(Integer(), nullable=False)
-    content_type = Column(String(200), nullable=True)
-    content_encoding = Column(String(200), nullable=True)
-    delivery_mode = Column(SmallInteger(), nullable=False)
-    priority = Column(SmallInteger(), server_default=AMQP_DEFAULT_PRIORITY, nullable=False)
-    expiration = Column(Integer(), nullable=True)
-    user_id = Column(String(200), nullable=True)
-    app_id = Column(String(200), nullable=True)
     heartbeat = Column(Boolean(), nullable=False)
     
-    conn_def_id = Column(Integer, ForeignKey('conn_def.id', ondelete='CASCADE'), nullable=False)
-    conn_def = relationship(ConnDef, backref=backref('amqp', uselist=False,
+    #content_type = Column(String(200), nullable=True)
+    #content_encoding = Column(String(200), nullable=True)
+    #delivery_mode = Column(SmallInteger(), nullable=False)
+    #priority = Column(SmallInteger(), server_default=str(AMQP_DEFAULT_PRIORITY), nullable=False)
+    #expiration = Column(Integer(), nullable=True)
+    #user_id = Column(String(200), nullable=True)
+    #app_id = Column(String(200), nullable=True)
+    
+    def_id = Column(Integer, ForeignKey('conn_def.id', ondelete='CASCADE'), nullable=False)
+    def_ = relationship(ConnDef, backref=backref('amqp', uselist=False,
                     cascade='all, delete, delete-orphan', single_parent=True))
-
+    
+    def __init__(self, id=None, host=None, port=None, vhost=None,  username=None, 
+                 password=None, frame_max=None, heartbeat=None):
+        self.id = id
+        self.host = host
+        self.port = port
+        self.vhost = vhost
+        self.username = username
+        self.password = password
+        self.frame_max = frame_max
+        self.heartbeat = heartbeat
 
 ################################################################################

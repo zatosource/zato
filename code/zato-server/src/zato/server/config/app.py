@@ -150,6 +150,13 @@ class ZatoContext(PythonConfig):
             'zato:security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
             'zato:security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
             'zato:security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
+            
+            # Definitions - AMQP
+            'zato:definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
+            'zato:definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
+            #'zato:definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
+            #'zato:definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
+            #'zato:definition.amqp.delete':'zato.server.service.internal.definition.amqp.Delete',
         }
 
     @Object

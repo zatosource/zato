@@ -144,7 +144,7 @@ class SOAPMessageHandler(ApplicationContextAware):
                 service_class_name))
 
             if not service_class_name:
-                return client_soap_error('[{0}] Unrecognized SOAPAction [{1}]'.format(req_id,
+                return client_soap_error(req_id, '[{0}] Unrecognized SOAPAction [{1}]'.format(req_id,
                     soap_action))
 
             logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(req_id,
@@ -152,7 +152,7 @@ class SOAPMessageHandler(ApplicationContextAware):
             service_data = self.service_store.services.get(service_class_name)
 
             if not service_data:
-                return server_soap_error('[{0}] No service could handle SOAPAction [{1}]'.format(
+                return server_soap_error(req_id, '[{0}] No service could handle SOAPAction [{1}]'.format(
                     req_id, soap_action))
 
             soap = objectify.fromstring(request)
