@@ -114,3 +114,35 @@ class Create(AdminService):
             
             return ZATO_OK, etree.tostring(created_elem)
         
+class Delete(AdminService):
+    """ Deletes an AMQP definition.
+    """
+    def handle(self, *args, **kwargs):
+        with closing(self.server.odb.session()) as session:
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['id']
+                params = _get_params(payload, request_params, 'data.')
+                
+                id = params['id']
+                
+                def_ = session.query(ConnDef).\
+                    filter(ConnDef.id==ConnDefAMQP.def_id).\
+                    filter(ConnDefAMQP.id==id).\
+                    one()
+                
+                session.delete(def_)
+                session.commit()
+
+                msg = {'action': DEFINITION.AMQP_DELETE, 'name': def_.name}
+                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+                
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not delete the AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+                
+                raise
+            
+            return ZATO_OK, ''
+        
