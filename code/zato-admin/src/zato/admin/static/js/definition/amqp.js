@@ -17,7 +17,7 @@ $(document).ready(function() {
 	$.fn.zato.data_table.new_row_func = $.fn.zato.definition.amqp.data_table.new_row;
 	$.fn.zato.data_table.parse();
 	$.fn.zato.data_table.setup_forms(['name', 'host', 'port', 'vhost', 'username',
-		'frame_max', 'heartbeat']);
+		'frame_max']);
 })
 
 $.fn.zato.definition.amqp.create = function() {
@@ -38,11 +38,17 @@ $.fn.zato.definition.amqp.data_table.new_row = function(item, data, include_tr) 
 	row += "<td class='numbering'>&nbsp;</td>";
 	row += "<td><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', item.name);
+	row += String.format('<td>{0}</td>', item.host);
+	row += String.format('<td>{0}</td>', item.port);
+	row += String.format('<td>{0}</td>', item.vhost);
+	row += String.format('<td>{0}</td>', item.username);
+	row += String.format('<td>{0}</td>', item.frame_max);
+	row += String.format('<td>{0}</td>', item.heartbeat ? 'Yes' : 'No');
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
 	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.definition.amqp.edit('{0}')\">Edit</a>", item.id));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.definition.amqp.delete_({0});'>Delete</a>", item.id));
 	row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-	row += String.format("<td class='ignore'>{0}</td>", item.is_active);
+	row += String.format("<td class='ignore'>{0}</td>", item.heartbeat);
 	
 	if(include_tr) {
 		row += '</tr>';
@@ -53,6 +59,6 @@ $.fn.zato.definition.amqp.data_table.new_row = function(item, data, include_tr) 
 
 $.fn.zato.definition.amqp.delete_ = function(id) {
 	$.fn.zato.data_table.delete_(id, 'td.item_id_', 
-		'Technical account [{0}] deleted', 
-		'Are you sure you want to delete the technical account [{0}]?');
+		'AMQP definition [{0}] deleted', 
+		'Are you sure you want to delete the AMQP definition [{0}]?');
 }
