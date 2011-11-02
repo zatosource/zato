@@ -123,8 +123,8 @@
                 </thead>
 
                 <tbody>
+                {% if jobs %}
                 {% for job in jobs %}
-                
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ job.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
@@ -150,6 +150,11 @@
                         <td class='ignore'>{{ job.cron_style.cron_definition }}</td>
                     </tr>
                 {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan='22'>No results</td>
+                    </tr>
+                {% endif %}
 
                 </tbody>
             </table>

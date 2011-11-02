@@ -202,8 +202,6 @@
         </div>
     {% endif %}
     
-    {% if items %}
-
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -225,8 +223,8 @@
                 </thead>
 
                 <tbody>
+                {% if items %}
                 {% for item in items %}
-
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
@@ -244,12 +242,16 @@
                         <td class='ignore'>{{ item.heartbeat }}</td>
                     </tr>
                 {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan='14'>No results</td>
+                    </tr>
+                {% endif %}
 
                 </tbody>
             </table>
         </div>
 
-    {% endif %} {% comment %}items{% endcomment %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 

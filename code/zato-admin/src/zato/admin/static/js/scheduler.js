@@ -103,6 +103,12 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status,
 		var include_tr = true ? action == 'create' : false;
 		var row = $.fn.zato.scheduler.data_table.add_row(json, action, job_type, include_tr);
 		if(action == 'create') {
+		
+			// 1 - Header
+			// 2 - The 'No results' information that needs to be removed
+			if($('#data-table tr').length == 2) {
+				$('#data-table tr:last').remove();
+			}
 			$('#data-table > tbody:last').prepend(row);
 		}
 		else {
