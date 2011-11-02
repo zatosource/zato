@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from zato.common.odb.model import(ChannelURLDefinition, Cluster, ConnDef, 
     ConnDefAMQP, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  Service,
-    TechnicalAccount)
+    TechnicalAccount, WSSDefinition)
 
 def job_list(session, cluster_id):
     """ All the scheduler's jobs defined in the ODB.
@@ -54,6 +54,14 @@ def tech_acc_list(session, cluster_id):
     return session.query(TechnicalAccount).\
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
+        all()
+
+def wss_list(session, cluster_id):
+    """ All the WS-Security definitions.
+    """
+    return session.query(WSSDefinition).\
+        filter(Cluster.id==cluster_id).\
+        order_by('wss_def.name').\
         all()
 
 def soap_channel_list(session, cluster_id):
