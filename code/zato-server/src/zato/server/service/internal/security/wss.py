@@ -35,6 +35,7 @@ from lxml.objectify import Element
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, WSSDefinition
+from zato.common.odb.query import wss_list
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
@@ -46,10 +47,7 @@ class GetList(AdminService):
         with closing(self.server.odb.session()) as session:
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
-            definitions = session.query(WSSDefinition).\
-                filter(Cluster.id==params['cluster_id']).\
-                order_by('wss_def.name').\
-                all()
+            definitions = wss_list(session, params['cluster_id'])
     
             for definition in definitions:
     
@@ -96,10 +94,11 @@ class Create(AdminService):
                 raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
             
             wss_elem = Element('wss')
+            password = uuid4().hex
     
             try:
                 wss = WSSDefinition(None, name, params['is_active'], params['username'], 
-                                    uuid4().hex,  params['password_type'],
+                                    password, params['password_type'],
                                     params['reject_empty_nonce_ts'], 
                                     params['reject_stale_username'], params['expiry_limit'], 
                                     params['nonce_freshness'], cluster)
@@ -115,6 +114,11 @@ class Create(AdminService):
                 session.rollback()
                 
                 raise 
+            else:
+                params['action'] = SECURITY.WSS_CREATE
+                params['password'] = password
+                kwargs['thread_ctx'].broker_client.send_json(params, 
+                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, etree.tostring(wss_elem)
 
@@ -147,6 +151,7 @@ class Edit(AdminService):
     
             try:
                 wss = session.query(WSSDefinition).filter_by(id=def_id).one()
+                old_name = wss.name
                 
                 wss.name = name
                 wss.is_active = new_params['is_active']
@@ -168,6 +173,10 @@ class Edit(AdminService):
                 session.rollback()
                 
                 raise 
+            else:
+                new_params['action'] = SECURITY.WSS_EDIT
+                new_params['old_name'] = old_name
+                kwargs['thread_ctx'].broker_client.send_json(new_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
             return ZATO_OK, etree.tostring(wss_elem)
     
@@ -206,5 +215,9 @@ class Delete(AdminService):
                 session.rollback()
                 
                 raise
+            else:
+                params['action'] = SECURITY.WSS_DELETE
+                params['name'] = wss.name
+                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, ''

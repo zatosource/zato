@@ -251,6 +251,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         _local.store = _WorkerStore()
         _local.store.basic_auth = thread_data.sec_config.basic_auth
         _local.store.tech_acc = thread_data.sec_config.tech_acc
+        _local.store.wss = thread_data.sec_config.wss
         _local.store.url_sec = thread_data.sec_config.url_sec
         
         # We're in a new thread so we can start the broker client now.

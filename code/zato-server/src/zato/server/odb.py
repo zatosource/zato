@@ -34,7 +34,8 @@ from bunch import Bunch
 from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
      Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server, 
      Service, TechnicalAccount, WSSDefinition)
-from zato.common.odb.query import basic_auth_list, job_list, tech_acc_list
+from zato.common.odb.query import(basic_auth_list, job_list, tech_acc_list,
+     wss_list)
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -225,3 +226,8 @@ class ODBManager(object):
         """ Returns a list of technical accounts existing on the given cluster .
         """
         return tech_acc_list(self._session, cluster_id)
+    
+    def get_wss_list(self, cluster_id):
+        """ Returns a list of WS-Security definitions on the given cluster .
+        """
+        return wss_list(self._session, cluster_id)

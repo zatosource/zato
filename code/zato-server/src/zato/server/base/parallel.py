@@ -251,11 +251,24 @@ class ParallelServer(BrokerMessageReceiver):
             ta_config[item.name].password = item.password
             ta_config[item.name].salt = item.salt
             
+        wss_config = Bunch()
+        for item in self.odb.get_wss_list(server.cluster.id):
+            wss_config[item.name] = Bunch()
+            wss_config[item.name].is_active = item.is_active
+            wss_config[item.name].username = item.username
+            wss_config[item.name].password = item.password
+            wss_config[item.name].password_type = item.password_type
+            wss_config[item.name].reject_empty_nonce_ts = item.reject_empty_nonce_ts
+            wss_config[item.name].reject_stale_username = item.reject_stale_username
+            wss_config[item.name].expiry_limit = item.expiry_limit
+            wss_config[item.name].nonce_freshness = item.nonce_freshness
+            
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)
         
         self.sec_config.basic_auth = ba_config
         self.sec_config.tech_acc = ta_config
+        self.sec_config.wss = wss_config
         self.sec_config.url_sec = url_sec
     
     def _after_init_non_accepted(self, server):
