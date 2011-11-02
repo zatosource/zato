@@ -33,9 +33,10 @@ from lxml.objectify import Element
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
+from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.util import TRACE1
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
@@ -170,46 +171,15 @@ class Edit(AdminService):
     
             return ZATO_OK, etree.tostring(wss_elem)
     
-class ChangePassword(AdminService):
+class ChangePassword(ChangePasswordBase):
     """ Changes the password of a WS-Security definition.
     """
     def handle(self, *args, **kwargs):
-        
-        with closing(self.server.odb.session()) as session:
-            try:
-                payload = kwargs.get('payload')
-                request_params = ['id', 'password1', 'password2']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                password1 = params.get('password1')
-                password2 = params.get('password2')
-                
-                if not password1:
-                    raise Exception('Password must not be empty')
-                
-                if not password2:
-                    raise Exception('Password must be repeated')
-                
-                if password1 != password2:
-                    raise Exception('Passwords need to be the same')
-                
-                wss = session.query(WSSDefinition).\
-                    filter(WSSDefinition.id==id).\
-                    one()
-                
-                wss.password = password1
+        def _auth(instance, password):
+            instance.password = password
             
-                session.add(wss)
-                session.commit()
-            except Exception, e:
-                msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
-                self.logger.error(msg)
-                session.rollback()
-                
-                raise 
-            
-            return ZATO_OK, ''
+        return self._handle(WSSDefinition, _auth, 
+                            SECURITY.WSS_CHANGE_PASSWORD, **kwargs)
     
 class Delete(AdminService):
     """ Deletes a WS-Security definition.

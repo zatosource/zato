@@ -33,10 +33,11 @@ from validate import is_boolean
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
+from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common.odb.query import tech_acc_list
 from zato.common.util import TRACE1, tech_account_password
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
@@ -174,48 +175,17 @@ class Edit(AdminService):
             
             return ZATO_OK, etree.tostring(tech_account_elem)
     
-class ChangePassword(AdminService):
+class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
     """
     def handle(self, *args, **kwargs):
-        
-        with closing(self.server.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['id', 'password1', 'password2']
-            params = _get_params(payload, request_params, 'data.')
-            
-            id = params['id']
-            password1 = params.get('password1')
-            password2 = params.get('password2')
-            
-            if not password1:
-                raise Exception('Password must not be empty')
-            
-            if not password2:
-                raise Exception('Password must be repeated')
-            
-            if password1 != password2:
-                raise Exception('Passwords need to be the same')
-            
-            tech_account = session.query(TechnicalAccount).\
-                filter(TechnicalAccount.id==id).\
-                one()
-            
+        def _auth(instance, password):
             salt = uuid4().hex
-            tech_account.password = tech_account_password(password1, salt)
-            tech_account.salt = salt
-            
-            try:
-                session.add(tech_account)
-                session.commit()
-            except Exception, e:
-                msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
-                self.logger.error(msg)
-                session.rollback()
-                
-                raise 
-            
-            return ZATO_OK, ''
+            instance.password = tech_account_password(password, salt)
+            instance.salt = salt
+
+        return self._handle(TechnicalAccount, _auth, 
+                            SECURITY.TECH_ACC_CHANGE_PASSWORD, **kwargs)
     
 class Delete(AdminService):
     """ Deletes a technical account.

@@ -37,7 +37,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
 from zato.common.util import TRACE1
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
@@ -168,53 +168,16 @@ class Edit(AdminService):
     
             return ZATO_OK, etree.tostring(auth_elem)
     
-class ChangePassword(AdminService):
+class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """
     def handle(self, *args, **kwargs):
-        
-        with closing(self.server.odb.session()) as session:
-            try:
-                payload = kwargs.get('payload')
-                request_params = ['id', 'password1', 'password2']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                password1 = params.get('password1')
-                password2 = params.get('password2')
-                
-                if not password1:
-                    raise Exception('Password must not be empty')
-                
-                if not password2:
-                    raise Exception('Password must be repeated')
-                
-                if password1 != password2:
-                    raise Exception('Passwords need to be the same')
-                
-                auth = session.query(HTTPBasicAuth).\
-                    filter(HTTPBasicAuth.id==id).\
-                    one()
-                
-                auth.password = password1
+        def _auth(instance, password):
+            instance.password = password
             
-                session.add(auth)
-                session.commit()
-            except Exception, e:
-                msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
-                self.logger.error(msg)
-                session.rollback()
-                
-                raise 
-            else:
-                params['action'] = SECURITY.BASIC_AUTH_CHANGE_PASSWORD
-                params['name'] = auth.name
-                params['password'] = auth.password
-                kwargs['thread_ctx'].broker_client.send_json(params, 
-                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
-            
-            return ZATO_OK, ''
-    
+        return self._handle(HTTPBasicAuth, _auth, 
+                            SECURITY.BASIC_AUTH_CHANGE_PASSWORD, **kwargs)
+
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
