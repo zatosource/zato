@@ -266,6 +266,11 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 			$(td_prefix + instance.id).parent().remove();
 			$.fn.zato.data_table.data[instance.id] = null;
 			
+			if($('#data-table tr').length == 1) {
+				var row = '<tr><td>No results</td></tr>';
+				$('#data-table > tbody:last').prepend(row);
+			}
+			
 			msg = String.format(success_pattern, instance.name);
 		}
 		else {
@@ -464,6 +469,13 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 		var include_tr = true ? action == 'create' : false;
 		var row = $.fn.zato.security.tech_account.data_table.add_row(json, 
 			action, $.fn.zato.data_table.new_row_func, include_tr);
+
+		// 1 - Header
+		// 2 - The 'No results' information that needs to be removed
+		if($('#data-table tr').length == 2) {
+			$('#data-table tr:last').remove();
+		}
+			
 		if(action == 'create') {
 			$('#data-table > tbody:last').prepend(row);
 		}

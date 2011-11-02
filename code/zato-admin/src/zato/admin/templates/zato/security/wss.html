@@ -233,8 +233,8 @@
                 </thead>
 
                 <tbody>
+                {% if items %}
                 {% for item in items %}
-
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
@@ -256,6 +256,11 @@
                         <td class='ignore'>{{ item.reject_stale_username }}</td>
                     </tr>
                 {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan='18'>No results</td>
+                    </tr>
+                {% endif %}
 
                 </tbody>
             </table>
