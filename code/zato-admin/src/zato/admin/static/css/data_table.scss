@@ -21,7 +21,11 @@
     }
 	
     tr.updated {
-        background-color:#f7f089
+        background-color: $attention
+    }
+	
+    tr.attention td {
+        border-bottom:1px solid #a9a244;
     }
     
     td, th {
@@ -79,4 +83,8 @@
 .form_hint {
     font-size:smaller;
     color:#333
+}
+
+.attention {
+	background-color: $attention;
 }
