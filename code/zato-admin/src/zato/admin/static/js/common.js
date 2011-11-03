@@ -47,6 +47,7 @@ if ({}.__proto__){
 })(jQuery);
 
 $.namespace('zato');
+$.namespace('zato.cluster');
 $.namespace('zato.data_table');
 $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');

@@ -23,15 +23,28 @@
         return [
             '_numbering',
             '_selection',
-            'name',
-            '_is_active',
-            'username',
-            'domain',
-            '_change_password',
+            '_cluster',
+            '_addresses',
             '_edit',
             '_delete',
+            '_manage_lb',
+            '_add_remove_servers',
+            
             'id',
-            'is_active',
+            'name',
+            'description',
+            'odb_engine',
+            
+            'odb_host',
+            'odb_port',
+            'odb_db_name',
+            'odb_user',
+            'odb_schema',
+            'lb_host',
+            'lb_agent_port',
+            'broker_host',
+            'broker_start_port',
+            'broker_token',
         ]
     }
     </script>
@@ -48,147 +61,6 @@
         <a href="javascript:$.fn.zato.cluster.create()">Create a new cluster</a>
     </div>
 
-    <div id="create-div" class='data-popup ignore'>
-        <div class="bd">
-            <form action="{% url cluster-create %}" method="post" id="create-form">
-                <table class="form-data">
-                    <tr>
-                        <td style="vertical-align:middle">Name</td>
-                        <td colspan="5">{{ create_form.name }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">Description</td>
-                        <td colspan="5">{{ create_form.description }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">ODB type</td>
-                        <td>{{ create_form.odb_engine }}</td>
-                        <td style="vertical-align:middle">ODB host</td>
-                        <td>{{ create_form.odb_host }}</td>
-                        <td style="vertical-align:middle">ODB port</td>
-                        <td>{{ create_form.odb_port }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">ODB user</td>
-                        <td>{{ create_form.odb_user }}</td>
-                        <td style="vertical-align:middle">ODB name</td>
-                        <td>{{ create_form.odb_db_name }}</td>
-                        <td style="vertical-align:middle">ODB schema (optional)</td>
-                        <td>{{ create_form.odb_schema }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
-                        <td>{{ create_form.amqp_host }}</td>
-                        <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
-                        <td>{{ create_form.amqp_port }}</td>
-                        <td style="vertical-align:middle">RabbitMQ user</td>
-                        <td>{{ create_form.amqp_user }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle; width:12%">LB host</td>
-                        <td>{{ create_form.lb_host }}</td>
-                        <td style="vertical-align:middle">LB agent port</td>
-                        <td>{{ create_form.lb_agent_port }}</td>
-                        <td colspan="2"></td>
-                    </tr>
-                </table>
-            </form>
-        </div>
-    </div>
-
-    <div id="edit-div" class='data-popup ignore'>
-        <div class="bd">
-            <form action="{% url cluster-edit %}" method="post" id="edit-form">
-                <table class="form-data">
-                    <tr>
-                        <td style="vertical-align:middle">Name</td>
-                        <td colspan="5">{{ edit_form.name }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">Description</td>
-                        <td colspan="5">{{ edit_form.description }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">ODB type</td>
-                        <td>{{ edit_form.odb_engine }}</td>
-                        <td style="vertical-align:middle">ODB host</td>
-                        <td>{{ edit_form.odb_host }}</td>
-                        <td style="vertical-align:middle">ODB port</td>
-                        <td>{{ edit_form.odb_port }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">ODB user</td>
-                        <td>{{ edit_form.odb_user }}</td>
-                        <td style="vertical-align:middle">ODB name</td>
-                        <td>{{ edit_form.odb_db_name }}</td>
-                        <td style="vertical-align:middle">ODB schema (optional)</td>
-                        <td>{{ edit_form.odb_schema }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
-                        <td>{{ edit_form.amqp_host }}</td>
-                        <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
-                        <td>{{ edit_form.amqp_port }}</td>
-                        <td style="vertical-align:middle">RabbitMQ user</td>
-                        <td>{{ edit_form.amqp_user }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle; width:12%">LB host</td>
-                        <td>{{ edit_form.lb_host }}</td>
-                        <td style="vertical-align:middle">LB agent port</td>
-                        <td>{{ edit_form.lb_agent_port }}</td>
-                        <td colspan="2"></td>
-                    </tr>
-                </table>
-                <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-            </form>
-        </div>
-    </div>
-
-    <!--
-
-        <div id="delete-cluster" class="yui-pe-content">
-            <div class="hd">Delete cluster</div>
-            <div class="bd">
-                <form action="{% url cluster-delete %}" method="post" id="delete-form">
-                    <table class="form-data">
-                        <tr>
-                            <td>
-                            Are you sure you want to delete the cluster
-                            <span id="delete-name" style="font-weight:bolder"></span>?
-                            <br/>
-
-                            Note that only the cluster will be deleted, all the related objects -
-                            such as servers or load-balancer configuration -
-                            will be left intact.
-                            <br/><br/>
-
-                            Type YES (all uppercase) to delete the cluster:
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                {{ delete_form.answer }}
-                                {{ delete_form.cluster_id }}
-                            </td>
-                        </tr>
-                    </table>
-                </form>
-            </div>
-        </div>
-        
-    -->
-
     <div id="markup">
         <table id="data-table">
             <thead>
@@ -202,6 +74,21 @@
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
+                    
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
                 </tr>
             </thead>
 
@@ -274,10 +161,10 @@
 
                     </td>
                     <td>
-                        <a href="javascript:item_edit('{{ item.id }}')">Edit</a>
+                        <a href="javascript:$.fn.zato.cluster.edit('{{ item.id }}')">Edit</a>
                     </td>
                     <td>
-                        <a href="javascript:item_delete('{{ item.id }}')">Delete</a>
+                        <a href="javascript:$.fn.zato.cluster.delete_('{{ item.id }}')">Delete</a>
                     </td>
                     <td>
                         {% if item.lb_config %}
@@ -290,6 +177,22 @@
                         {% endif %}
                         
                     </td>
+                    <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                    
+                    <td class='ignore'>{{ item.name }}</td>
+                    <td class='ignore'>{{ item.description|default_if_none:'' }}</td>
+                    <td class='ignore'>{{ item.odb_engine }}</td>
+                    
+                    <td class='ignore'>{{ item.odb_host }}</td>
+                    <td class='ignore'>{{ item.odb_port }}</td>
+                    <td class='ignore'>{{ item.odb_db_name }}</td>
+                    <td class='ignore'>{{ item.odb_user }}</td>
+                    <td class='ignore'>{{ item.odb_schema|default_if_none:'' }}</td>
+                    <td class='ignore'>{{ item.lb_host }}</td>
+                    <td class='ignore'>{{ item.lb_agent_port }}</td>
+                    <td class='ignore'>{{ item.broker_host }}</td>
+                    <td class='ignore'>{{ item.broker_start_port }}</td>
+                    <td class='ignore'>{{ item.broker_token }}</td>
                 </tr>
             {% endfor %}
 
@@ -297,5 +200,149 @@
         </table>
     </div>
 
+    <div id="create-div" class='data-popup ignore'>
+        <div class="bd">
+            <form action="{% url cluster-create %}" method="post" id="create-form">
+                <table class="form-data">
+                    <tr>
+                        <td style="vertical-align:middle;width:15%">Name</td>
+                        <td colspan="5">{{ create_form.name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">Description</td>
+                        <td colspan="5">{{ create_form.description }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">ODB type</td>
+                        <td>{{ create_form.odb_engine }}</td>
+                        <td style="vertical-align:middle">ODB host</td>
+                        <td>{{ create_form.odb_host }}</td>
+                        <td style="vertical-align:middle">ODB port</td>
+                        <td>{{ create_form.odb_port }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">ODB name</td>
+                        <td>{{ create_form.odb_db_name }}</td>
+                        <td style="vertical-align:middle">ODB user</td>
+                        <td>{{ create_form.odb_user }}</td>
+                        <td style="vertical-align:middle">ODB schema</td>
+                        <td>{{ create_form.odb_schema }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">LB host</td>
+                        <td colspan='2'>{{ create_form.lb_host }}</td>
+                        <td style="vertical-align:middle">LB agent port</td>
+                        <td colspan='2'>{{ create_form.lb_agent_port }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">Broker host</td>
+                        <td colspan='2'>{{ create_form.broker_host }}</td>
+                        <td style="vertical-align:middle">Broker starting port</td>
+                        <td colspan='2'>{{ create_form.broker_start_port }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">Broker token<br/>(will be echoed)</td>
+                        <td colspan='5' style="vertical-align:middle">{{ create_form.broker_token }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align:right">
+                            <input type="submit" value="OK" />
+                            <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-div" class='data-popup ignore'>
+        <div class="bd">
+            <form action="{% url cluster-edit %}" method="post" id="edit-form">
+                <table class="form-data">
+                    <tr>
+                        <td style="vertical-align:middle;width:15%">Name</td>
+                        <td colspan="5">{{ edit_form.name }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">Description</td>
+                        <td colspan="5">{{ edit_form.description }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">ODB type</td>
+                        <td>{{ edit_form.odb_engine }}</td>
+                        <td style="vertical-align:middle">ODB host</td>
+                        <td>{{ edit_form.odb_host }}</td>
+                        <td style="vertical-align:middle">ODB port</td>
+                        <td>{{ edit_form.odb_port }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">ODB name</td>
+                        <td>{{ edit_form.odb_db_name }}</td>
+                        <td style="vertical-align:middle">ODB user</td>
+                        <td>{{ edit_form.odb_user }}</td>
+                        <td style="vertical-align:middle">ODB schema</td>
+                        <td>{{ edit_form.odb_schema }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">LB host</td>
+                        <td colspan='2'>{{ edit_form.lb_host }}</td>
+                        <td style="vertical-align:middle">LB agent port</td>
+                        <td colspan='2'>{{ edit_form.lb_agent_port }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">Broker host</td>
+                        <td colspan='2'>{{ edit_form.broker_host }}</td>
+                        <td style="vertical-align:middle">Broker starting port</td>
+                        <td colspan='2'>{{ edit_form.broker_start_port }}</td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:middle">Broker token<br/>(will be echoed)</td>
+                        <td colspan='5' style="vertical-align:middle">{{ edit_form.broker_token }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="6" style="text-align:right">
+                            <input type="submit" value="OK" />
+                            <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                        </td>
+                    </tr>
+                </table>
+                <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+            </form>
+        </div>
+    </div>
+
+    <!--
+
+        <div id="delete-cluster" class="yui-pe-content">
+            <div class="hd">Delete cluster</div>
+            <div class="bd">
+                <form action="{% url cluster-delete %}" method="post" id="delete-form">
+                    <table class="form-data">
+                        <tr>
+                            <td>
+                            Are you sure you want to delete the cluster
+                            <span id="delete-name" style="font-weight:bolder"></span>?
+                            <br/>
+
+                            Note that only the cluster will be deleted, all the related objects -
+                            such as servers or load-balancer configuration -
+                            will be left intact.
+                            <br/><br/>
+
+                            Type YES (all uppercase) to delete the cluster:
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                {{ delete_form.answer }}
+                                {{ delete_form.cluster_id }}
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+        
+    -->
 
 {% endblock %}
