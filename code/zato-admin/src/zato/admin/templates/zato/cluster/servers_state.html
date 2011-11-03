@@ -1,16 +1,16 @@
-                    {% if cluster.all_down %}
-                        <br/>
-                        <span class="server-state all-down">All servers are down</span>
-                    {% endif %}
+{% if not item.all_up %}
+    <br/>
+    All servers are down
+{% endif %}
 
-                    {% if cluster.some_down %}
-                        <br/>
-                        <span class="server-state some-down">Some servers are DOWN</span>
-                    {% endif %}
+{% if item.some_down %}
+    <br/>
+    Some servers are DOWN
+{% endif %}
 
-                    {% if cluster.some_maint %}
-                        {% if not cluster.some_down %}
-                            <br/>
-                        {% endif %}
-                        <span class="server-state some-maint">Some servers are in MAINT</span>
-                    {% endif %}
+{% if item.some_maint %}
+    {% if not item.some_down %}
+        <br/>
+    {% endif %}
+    Some servers are in MAINT
+{% endif %}
