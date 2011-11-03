@@ -48,123 +48,120 @@
         <a href="javascript:$.fn.zato.cluster.create()">Create a new cluster</a>
     </div>
 
+    <div id="create-div" class='data-popup ignore'>
+        <div class="bd">
+            <form action="{% url cluster-create %}" method="post" id="create-form">
+                <table class="form-data">
+                    <tr>
+                        <td style="vertical-align:middle">Name</td>
+                        <td colspan="5">{{ create_form.name }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">Description</td>
+                        <td colspan="5">{{ create_form.description }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">ODB type</td>
+                        <td>{{ create_form.odb_engine }}</td>
+                        <td style="vertical-align:middle">ODB host</td>
+                        <td>{{ create_form.odb_host }}</td>
+                        <td style="vertical-align:middle">ODB port</td>
+                        <td>{{ create_form.odb_port }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">ODB user</td>
+                        <td>{{ create_form.odb_user }}</td>
+                        <td style="vertical-align:middle">ODB name</td>
+                        <td>{{ create_form.odb_db_name }}</td>
+                        <td style="vertical-align:middle">ODB schema (optional)</td>
+                        <td>{{ create_form.odb_schema }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
+                        <td>{{ create_form.amqp_host }}</td>
+                        <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
+                        <td>{{ create_form.amqp_port }}</td>
+                        <td style="vertical-align:middle">RabbitMQ user</td>
+                        <td>{{ create_form.amqp_user }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle; width:12%">LB host</td>
+                        <td>{{ create_form.lb_host }}</td>
+                        <td style="vertical-align:middle">LB agent port</td>
+                        <td>{{ create_form.lb_agent_port }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+    </div>
+
+    <div id="edit-div" class='data-popup ignore'>
+        <div class="bd">
+            <form action="{% url cluster-edit %}" method="post" id="edit-form">
+                <table class="form-data">
+                    <tr>
+                        <td style="vertical-align:middle">Name</td>
+                        <td colspan="5">{{ edit_form.name }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">Description</td>
+                        <td colspan="5">{{ edit_form.description }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">ODB type</td>
+                        <td>{{ edit_form.odb_engine }}</td>
+                        <td style="vertical-align:middle">ODB host</td>
+                        <td>{{ edit_form.odb_host }}</td>
+                        <td style="vertical-align:middle">ODB port</td>
+                        <td>{{ edit_form.odb_port }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle">ODB user</td>
+                        <td>{{ edit_form.odb_user }}</td>
+                        <td style="vertical-align:middle">ODB name</td>
+                        <td>{{ edit_form.odb_db_name }}</td>
+                        <td style="vertical-align:middle">ODB schema (optional)</td>
+                        <td>{{ edit_form.odb_schema }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
+                        <td>{{ edit_form.amqp_host }}</td>
+                        <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
+                        <td>{{ edit_form.amqp_port }}</td>
+                        <td style="vertical-align:middle">RabbitMQ user</td>
+                        <td>{{ edit_form.amqp_user }}</td>
+                    </tr>
+
+                    <tr>
+                        <td style="vertical-align:middle; width:12%">LB host</td>
+                        <td>{{ edit_form.lb_host }}</td>
+                        <td style="vertical-align:middle">LB agent port</td>
+                        <td>{{ edit_form.lb_agent_port }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </table>
+                <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+            </form>
+        </div>
+    </div>
 
     <!--
-
-        <div id="create-cluster" class="yui-pe-content">
-            <div class="hd">Create a new cluster</div>
-            <div class="bd">
-                <form action="{% url cluster-create %}" method="post" id="create-form">
-                    <table class="form-data" border="0">
-                        <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td colspan="5">{{ create_form.name }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Description</td>
-                            <td colspan="5">{{ create_form.description }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">ODB type</td>
-                            <td>{{ create_form.odb_engine }}</td>
-                            <td style="vertical-align:middle">ODB host</td>
-                            <td>{{ create_form.odb_host }}</td>
-                            <td style="vertical-align:middle">ODB port</td>
-                            <td>{{ create_form.odb_port }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">ODB user</td>
-                            <td>{{ create_form.odb_user }}</td>
-                            <td style="vertical-align:middle">ODB name</td>
-                            <td>{{ create_form.odb_db_name }}</td>
-                            <td style="vertical-align:middle">ODB schema (optional)</td>
-                            <td>{{ create_form.odb_schema }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
-                            <td>{{ create_form.amqp_host }}</td>
-                            <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
-                            <td>{{ create_form.amqp_port }}</td>
-                            <td style="vertical-align:middle">RabbitMQ user</td>
-                            <td>{{ create_form.amqp_user }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">LB host</td>
-                            <td>{{ create_form.lb_host }}</td>
-                            <td style="vertical-align:middle">LB agent port</td>
-                            <td>{{ create_form.lb_agent_port }}</td>
-                            <td colspan="2"></td>
-                        </tr>
-                    </table>
-                </form>
-            </div>
-        </div>
-
-        <div id="edit-cluster" class="yui-pe-content">
-            <div class="hd">Edit cluster</div>
-            <div class="bd">
-                <form action="{% url cluster-edit %}" method="post" id="edit-form">
-                    <table class="form-data" border="0">
-                        <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td colspan="5">{{ edit_form.name }}<input type="hidden" name="cluster_id" id="id_edit-cluster_id" /> </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">Description</td>
-                            <td colspan="5">{{ edit_form.description }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">ODB type</td>
-                            <td>{{ edit_form.odb_engine }}</td>
-                            <td style="vertical-align:middle">ODB host</td>
-                            <td>{{ edit_form.odb_host }}</td>
-                            <td style="vertical-align:middle">ODB port</td>
-                            <td>{{ edit_form.odb_port }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle">ODB user</td>
-                            <td>{{ edit_form.odb_user }}</td>
-                            <td style="vertical-align:middle">ODB name</td>
-                            <td>{{ edit_form.odb_db_name }}</td>
-                            <td style="vertical-align:middle">ODB schema (optional)</td>
-                            <td>{{ edit_form.odb_schema }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">RabbitMQ host</td>
-                            <td>{{ edit_form.amqp_host }}</td>
-                            <td style="vertical-align:middle; width:12%">RabbitMQ port</td>
-                            <td>{{ edit_form.amqp_port }}</td>
-                            <td style="vertical-align:middle">RabbitMQ user</td>
-                            <td>{{ edit_form.amqp_user }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">LB host</td>
-                            <td>{{ edit_form.lb_host }}</td>
-                            <td style="vertical-align:middle">LB agent port</td>
-                            <td>{{ edit_form.lb_agent_port }}</td>
-                            <td colspan="2"></td>
-                        </tr>
-
-                    </table>
-                </form>
-            </div>
-        </div>
 
         <div id="delete-cluster" class="yui-pe-content">
             <div class="hd">Delete cluster</div>
             <div class="bd">
                 <form action="{% url cluster-delete %}" method="post" id="delete-form">
-                    <table class="form-data" border="0">
+                    <table class="form-data">
                         <tr>
                             <td>
                             Are you sure you want to delete the cluster
@@ -212,7 +209,7 @@
             {% for item in clusters %}
 
                 <tr 
-                    class="{% if not item.lb_config %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
+                    class="{% if not item.lb_config or not item.all_up %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
                     
                     id='tr_{{ item.id }}'>
                     
@@ -229,8 +226,11 @@
                     <br/>
                     Could not fetch the load balancer's configuration
                     {% endif %}
+                    
 
-                    {% include "zato/cluster/servers_state.html" %}
+                    {% if item.lb_config %}
+                        {% include "zato/cluster/servers_state.html" %}
+                    {% endif %}
 
                     </td>
                     <td>
@@ -241,7 +241,7 @@
                         http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}
                         </a>
                     {% else %}
-                        <span style='font-style:italic'>(Could not contact the LB)</span>
+                        Could not fetch the load balancer's configuration
                     {% endif %}
 
                     <br/>

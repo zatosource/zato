@@ -74,13 +74,17 @@ def meth_allowed(*meths):
 
 def set_servers_state(cluster, client):
     """ Assignes 3 flags to the cluster indicating whether load-balancer
-    believes the servers are DOWN or in the MAINT mode.
+    believes the servers are UP, DOWN or in the MAINT mode.
     """
     servers_state = client.get_servers_state()
 
     up = []
     down = []
     maint = []
+    
+    cluster.some_down = False
+    cluster.some_maint = False
+    cluster.all_up = False
     
     # Note: currently we support only the 'http_plain' access_type.
     for access_type in("http_plain",):
@@ -91,14 +95,16 @@ def set_servers_state(cluster, client):
     # Do we have any servers at all?
     if any((up, down, maint)):
         if not(up or maint) and down:
-            cluster.all_down = True
+            cluster.all_up = True
         else:
-            cluster.all_down = False
             if down:
                 cluster.some_down = True
             if maint:
                 cluster.some_maint = True
-
+                
+            # We know not all are down so maybe all are up?
+            if not(cluster.some_down or cluster.some_maint):
+                cluster.all_up = True
 
 def change_password(req, service_name):
     
