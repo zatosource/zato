@@ -1,59 +1,55 @@
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
-    <style type="text/css">
-        .yui-pe .yui-pe-content {
-            display:none;
-        }
-    </style>
-
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
 {% block extra_js %}
-    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
 
-    {% comment %} Validation framework {% endcomment %}
-    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
-    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
-
-    {% comment %} Scriptaculous effects {% endcomment %}
-    <script type="text/javascript" src="/static/js/effects.js"></script>
-
-    {% comment %} Build a list of engines' friendly names {% endcomment %}
-    <script type="text/javascript">
-
-        var engine_friendly_name = new Hash();
-
-        {% for name, friendly_name in engine_friendly_name%}
-            engine_friendly_name.set('{{ name }}', '{{ friendly_name }}');
-        {% endfor %}
-
-    </script>
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} Clusters JS {% endcomment %}
+    {% comment %} HTTP Basic Auth {% endcomment %}
     <script type="text/javascript" src="/static/js/cluster.js"></script>
+
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'username',
+            'domain',
+            '_change_password',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+        ]
+    }
+    </script>
 
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Clusters</h1>
+<h2 class="zato">Clusters</h2>
 
 
-    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-            <a href="javascript:cluster_create()" class="common">Create a new cluster</a>
-        <br/>
+    <div class='page_prompt'>
+        <a href="javascript:$.fn.zato.cluster.create()">Create a new cluster</a>
+    </div>
+
+
+    <!--
 
         <div id="create-cluster" class="yui-pe-content">
             <div class="hd">Create a new cluster</div>
@@ -193,49 +189,18 @@
                 </form>
             </div>
         </div>
+        
+    -->
 
-        <script type="text/javascript">
-        YAHOO.util.Event.addListener(window, "load", function() {
-            YAHOO.example.EnhanceFromMarkup = function() {
-                data_column_defs = [
-                    {key:"cluster_id", label:"cluster_id", hidden:true},
-                    {key:"cluster", label:"Cluster", sortable:true},
-                    {key:"servers", label:"Servers", sortable:false},
-                    {key:"addresses", label:"Addresses", sortable:true},
-                    {key:"edit_manage", label:"", sortable:false},
-                ];
-
-                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
-                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
-                data_ds.responseSchema = {
-                    fields: [{key:"cluster_id"},
-                            {key:"cluster"},
-                            {key:"servers"},
-                            {key:"addresses"},
-                            {key:"edit_manage"},
-                    ]
-                };
-
-                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
-                        {sortedBy:{key:"cluster",dir:"desc"}}
-                );
-
-                return {
-                    oDS: data_ds,
-                    oDT: data_dt
-                };
-            }();
-        });
-        </script>
-
-
-    <br/>
     <div id="markup">
         <table id="data-table">
             <thead>
 
                 <tr>
                     <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>Cluster</th>
+                    <th>Addresses</th>
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
                     <th>&nbsp;</th>
@@ -244,84 +209,86 @@
             </thead>
 
             <tbody>
-            {% for cluster in clusters %}
+            {% for item in clusters %}
 
-                <tr>
-                    <td>{{ cluster.id }}</td>
-                    <td><a href="javascript:cluster_manage('{{ cluster.id }}')">{{ cluster.name }}</a>
+                <tr 
+                    class="{% if not item.lb_config %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
+                    
+                    id='tr_{{ item.id }}'>
+                    
+                    <td class='numbering'>&nbsp;</td>
+                    <td><input type="checkbox" /></td>
+                    <td>{{ item.name }}
 
-                    {% if cluster.description %}
+                    {% if item.description %}
                         <br/>
-                        <span style="font-size:80%"><pre>{{ cluster.description }}</pre></span>
+                        <pre>{{ item.description }}</pre>
+                    {% endif %}
+                    
+                    {% if not item.lb_config %}
+                    <br/>
+                    Could not fetch the load balancer's configuration
                     {% endif %}
 
                     {% include "zato/cluster/servers_state.html" %}
 
                     </td>
-                    <td></td>
                     <td>
-                    <span style="font-size:90%">
 
+                    {% if item.lb_config %}
                     HTTP:
-                    {% if cluster.lb_config %}
-                        <a href="http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}">
-                        http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}
+                        <a href="http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}">
+                        http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}
                         </a>
                     {% else %}
-                        Could not fetch config
+                        <span style='font-style:italic'>(Could not contact the LB)</span>
                     {% endif %}
 
                     <br/>
-                    HTTPS:
-                    <a href="https://{{ cluster.sec_server_host}}:{{ cluster.sec_server_port}}">
-                    https://{{ cluster.sec_server_host}}:{{ cluster.sec_server_port}}
-                    </a>
-
-
-                    <br/>
+                    {% if item.lb_config %}
                     LB XML-RPC agent:
-                        <a href="https://{{ cluster.lb_host }}:{{ cluster.lb_agent_port }}/RPC2">
-                        https://{{ cluster.lb_host }}:{{ cluster.lb_agent_port }}/RPC2
+                        <a href="https://{{ item.lb_host }}:{{ item.lb_agent_port }}/RPC2">
+                        https://{{ item.lb_host }}:{{ item.lb_agent_port }}/RPC2
                         </a>
+                    {% endif %}
 
                     <br/>
+                    {% if item.lb_config %}
                     LB stats:
-                    {% if cluster.lb_config %}
-                        {% if cluster.lb_config.defaults.stats_uri %}
-                            <a href="http://{{ cluster.lb_host }}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.defaults.stats_uri }}">
-                            http://{{ cluster.lb_host }}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.defaults.stats_uri }}
+                        {% if item.lb_config.defaults.stats_uri %}
+                            <a href="http://{{ item.lb_host }}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.defaults.stats_uri }}">
+                            http://{{ item.lb_host }}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.defaults.stats_uri }}
                             </a>
                         {% else %}
                             URL not configured
                         {% endif %}
-                    {% else %}
-                        Could not fetch config
                     {% endif %}
 
                     <br/>
+                    {% if item.lb_config %}
                     LB HTTP health-check:
-                    {% if cluster.lb_config %}
-                        <a href="http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.frontend.front_http_plain.monitor_uri }}">
-                        http://{{ cluster.lb_config.frontend.front_http_plain.bind.address}}:{{ cluster.lb_config.frontend.front_http_plain.bind.port}}{{ cluster.lb_config.frontend.front_http_plain.monitor_uri }}
+                        <a href="http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.frontend.front_http_plain.monitor_uri }}">
+                        http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.frontend.front_http_plain.monitor_uri }}
                         </a>
-                    {% else %}
-                        Could not fetch config
                     {% endif %}
 
                     </td>
                     <td>
-                        <a href="javascript:cluster_edit('{{ cluster.id }}')">Edit cluster</a>
-
-                        {% if cluster.lb_config %}
-                            <br/>
-                            <a href="{% url lb-manage cluster.id %}">Manage load balancer</a>
+                        <a href="javascript:item_edit('{{ item.id }}')">Edit</a>
+                    </td>
+                    <td>
+                        <a href="javascript:item_delete('{{ item.id }}')">Delete</a>
+                    </td>
+                    <td>
+                        {% if item.lb_config %}
+                            <a href="{% url lb-manage item.id %}">Manage load balancer</a>
                         {% endif %}
-
-                        <br/>
-                        <a href="javascript:cluster_add_remove_servers('{{ cluster.id }}')">Add/remove servers</a>
-
-                        <br/>
-                        <a href="javascript:cluster_delete('{{ cluster.id }}')">Delete cluster</a>
+                    </td>
+                    <td>
+                        {% if item.lb_config %}
+                            <a href="javascript:item_add_remove_servers('{{ item.id }}')">Add/remove servers</a>
+                        {% endif %}
+                        
                     </td>
                 </tr>
             {% endfor %}
