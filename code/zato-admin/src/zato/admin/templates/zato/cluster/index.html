@@ -89,6 +89,7 @@
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
+                    <th class='ignore'>&nbsp;</th>
                 </tr>
             </thead>
 
@@ -230,9 +231,11 @@
                     </tr>
                     <tr>
                         <td style="vertical-align:middle">LB host</td>
-                        <td colspan='2'>{{ create_form.lb_host }}</td>
+                        <td>{{ create_form.lb_host }}</td>
+                        <td style="vertical-align:middle">LB port</td>
+                        <td>{{ create_form.lb_port }}</td>
                         <td style="vertical-align:middle">LB agent port</td>
-                        <td colspan='2'>{{ create_form.lb_agent_port }}</td>
+                        <td>{{ create_form.lb_agent_port }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:middle">Broker host</td>

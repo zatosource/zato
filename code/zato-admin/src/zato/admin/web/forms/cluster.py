@@ -45,7 +45,8 @@ class CreateClusterForm(forms.Form):
     odb_schema = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}), required=False)
 
     lb_host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    lb_agent_port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
+    lb_port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    lb_agent_port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
 
     broker_host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     broker_start_port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
