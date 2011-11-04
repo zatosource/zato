@@ -256,7 +256,8 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 	});
 }
 
-$.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern) {
+$.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
+						use_cluster) {
 
 	var instance = $.fn.zato.data_table.data[id];
 	
@@ -282,7 +283,10 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 	
 	var callback = function(ok) {
 		if(ok) {
-			var url = String.format('./delete/{0}/cluster/{1}/', id, $('#cluster_id').val());
+			var url = String.format('./delete/{0}/', id);
+			if(use_cluster) {
+				url = url + String.format('cluster/{1}/', $('#cluster_id').val());
+			}
 			$.fn.zato.post(url, _callback);
 			return false;
 		}
