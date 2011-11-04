@@ -41,6 +41,7 @@
             'odb_user',
             'odb_schema',
             'lb_host',
+            'lb_port',
             'lb_agent_port',
             'broker_host',
             'broker_start_port',
@@ -79,6 +80,7 @@
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     
+                    <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
@@ -156,6 +158,7 @@
                     <td class='ignore'>{{ item.odb_user }}</td>
                     <td class='ignore'>{{ item.odb_schema|default_if_none:'' }}</td>
                     <td class='ignore'>{{ item.lb_host }}</td>
+                    <td class='ignore'>{{ item.lb_port }}</td>
                     <td class='ignore'>{{ item.lb_agent_port }}</td>
                     <td class='ignore'>{{ item.broker_host }}</td>
                     <td class='ignore'>{{ item.broker_start_port }}</td>
@@ -220,7 +223,6 @@
                         </td>
                     </tr>
                 </table>
-                <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
             </form>
         </div>
     </div>
@@ -255,9 +257,11 @@
                     </tr>
                     <tr>
                         <td style="vertical-align:middle">LB host</td>
-                        <td colspan='2'>{{ edit_form.lb_host }}</td>
+                        <td>{{ edit_form.lb_host }}</td>
+                        <td style="vertical-align:middle">LB port</td>
+                        <td>{{ edit_form.lb_port }}</td>
                         <td style="vertical-align:middle">LB agent port</td>
-                        <td colspan='2'>{{ edit_form.lb_agent_port }}</td>
+                        <td>{{ edit_form.lb_agent_port }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:middle">Broker host</td>
@@ -276,7 +280,6 @@
                         </td>
                     </tr>
                 </table>
-                <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 <input type="hidden" id="id_edit-id" name="id" />
             </form>
         </div>

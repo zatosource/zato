@@ -69,54 +69,49 @@ def _edit_create_response(item, verb):
 def _create_edit(req, verb, item, form_class, prefix=''):
 
     join = '-' if prefix else ''
-    form = form_class(req.POST, prefix=prefix)
 
     try:
-        if form.is_valid():
-            for s in whitespace:
-                if s in req.POST[prefix + join + 'name']:
-                    return HttpResponseServerError('Cluster name must not contain whitespace.')
+        for s in whitespace:
+            if s in req.POST[prefix + join + 'name']:
+                return HttpResponseServerError('Cluster name must not contain whitespace.')
 
-            description = req.POST[prefix + join + 'description'].strip()
-            description = description if description else None
+        description = req.POST[prefix + join + 'description'].strip()
+        description = description if description else None
 
-            item.name = req.POST[prefix + join + 'name'].strip()
-            item.description = description
-            item.odb_type = req.POST[prefix + join + 'odb_engine'].strip()
-            item.odb_host = req.POST[prefix + join + 'odb_host'].strip()
-            item.odb_port = req.POST[prefix + join + 'odb_port'].strip()
-            item.odb_user = req.POST[prefix + join + 'odb_user'].strip()
-            item.odb_db_name = req.POST[prefix + join + 'odb_db_name'].strip()
-            item.odb_schema = req.POST[prefix + join + 'odb_schema'].strip()
-            item.lb_host = req.POST[prefix + join + 'lb_host'].strip()
-            item.lb_port = req.POST[prefix + join + 'lb_port'].strip()
-            item.lb_agent_port = req.POST[prefix + join + 'lb_agent_port'].strip()
-            item.broker_host = req.POST[prefix + join + 'broker_host'].strip()
-            item.broker_start_port = req.POST[prefix + join + 'broker_start_port'].strip()
-            item.broker_token = req.POST[prefix + join + 'broker_token'].strip()
+        item.name = req.POST[prefix + join + 'name'].strip()
+        item.description = description
+        item.odb_type = req.POST[prefix + join + 'odb_engine'].strip()
+        item.odb_host = req.POST[prefix + join + 'odb_host'].strip()
+        item.odb_port = req.POST[prefix + join + 'odb_port'].strip()
+        item.odb_user = req.POST[prefix + join + 'odb_user'].strip()
+        item.odb_db_name = req.POST[prefix + join + 'odb_db_name'].strip()
+        item.odb_schema = req.POST[prefix + join + 'odb_schema'].strip()
+        item.lb_host = req.POST[prefix + join + 'lb_host'].strip()
+        item.lb_port = req.POST[prefix + join + 'lb_port'].strip()
+        item.lb_agent_port = req.POST[prefix + join + 'lb_agent_port'].strip()
+        item.broker_host = req.POST[prefix + join + 'broker_host'].strip()
+        item.broker_start_port = req.POST[prefix + join + 'broker_start_port'].strip()
+        item.broker_token = req.POST[prefix + join + 'broker_token'].strip()
 
-            try:
-                req.odb.add(item)
-                req.odb.commit()
-                
-                try:
-                    item.lb_config = get_lb_client(item).get_config()
-                except Exception, e:
-                    item.lb_config = None
-                    msg = "Exception caught while fetching the load balancer's config, e=[{0}]".format(format_exc(e))
-                    logger.error(msg)                    
-                
-                return _edit_create_response(item, verb)
+        try:
+            req.odb.add(item)
+            req.odb.commit()
             
+            try:
+                item.lb_config = get_lb_client(item).get_config()
             except Exception, e:
-                msg = 'Exception caught, e=[{0}]'.format(format_exc(e))
-                logger.error(msg)
+                item.lb_config = None
+                msg = "Exception caught while fetching the load balancer's config, e=[{0}]".format(format_exc(e))
+                logger.error(msg)                    
+            
+            return _edit_create_response(item, verb)
+        
+        except Exception, e:
+            msg = 'Exception caught, e=[{0}]'.format(format_exc(e))
+            logger.error(msg)
 
-                return HttpResponseServerError(msg)
+            return HttpResponseServerError(msg)
 
-        else:
-            logger.error('form.errors=[%s]' % form.errors)
-            return HttpResponseServerError('Invalid data submitted, req.POST=[%s]' % req.POST)
     except Exception, e:
         req.odb.rollback()
         return HttpResponseServerError(str(format_exc(e)))
@@ -169,7 +164,7 @@ def create(req):
 @meth_allowed('POST')
 def edit(req):
     return _create_edit(req, 'updated', 
-        req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).one(), EditClusterForm, 'edit')
+        req.odb.query(Cluster).filter_by(id=req.POST['id']).one(), EditClusterForm, 'edit')
 
 def _get(req, **filter):
     cluster = req.odb.query(Cluster).filter_by(**filter).one()
