@@ -51,11 +51,18 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(item, verb):
+    if item.lb_config:
+        has_lb_config = True
+        addresses = loader.render_to_string('zato/cluster/addresses.html', {'item':item})
+    else:
+        has_lb_config = False
+        addresses = ''
+
     return_data = {
         'id': item.id,
         'message': 'Successfully {0} the cluster [{1}]'.format(verb, item.name),
-        'addresses': loader.render_to_string('zato/cluster/addresses.html', {'item':item}),
-        'has_lb_config': hasattr(item, 'lb_config') and item.lb_config
+        'addresses': addresses,
+        'has_lb_config': has_lb_config
         }
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
