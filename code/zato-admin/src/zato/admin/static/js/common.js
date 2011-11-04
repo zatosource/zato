@@ -383,7 +383,9 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 		item.id = data.id;
 	}
 	
-	item.is_active = $.fn.zato.to_bool(item.is_active);
+	if(item.is_active) {
+		item.is_active = $.fn.zato.to_bool(item.is_active);
+	}
 	
 	$.fn.zato.data_table.data[item.id] = item;
 	return new_row_func(item, data, include_tr);
@@ -468,8 +470,7 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 	if(status == 'success') {
 		var json = $.parseJSON(data.responseText);
 		var include_tr = true ? action == 'create' : false;
-		var row = $.fn.zato.security.tech_account.data_table.add_row(json, 
-			action, $.fn.zato.data_table.new_row_func, include_tr);
+		var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
 
 		// 1 - Header
 		// 2 - The 'No results' information that needs to be removed
