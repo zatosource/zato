@@ -43,7 +43,7 @@ $.fn.zato.cluster.data_table.new_row = function(item, data, include_tr) {
 		name_desc += '<br/><pre>' + item.description + '</pre>';
 	}
 	if(!data.has_lb_config) {
-		name_desc += "<br/> Could not fetch the load balancer's configuration";
+		name_desc += "<br/><br/>Could not fetch the load balancer's configuration";
 	}
 	
 	var manage_lb = '';
