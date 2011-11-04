@@ -32,19 +32,36 @@ $.fn.zato.cluster.edit = function(id) {
 
 $.fn.zato.cluster.data_table.new_row = function(item, data, include_tr) {
     var row = '';
+
 	
 	if(include_tr) {
-		row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+		row += String.format("<tr id='tr_{0}' class='updated attention'>", item.id);
+	}
+	
+	var name_desc = item.name;
+	if(item.description) {
+		name_desc += '<br/><pre>' + item.description + '</pre>';
+	}
+	if(!data.has_lb_config) {
+		name_desc += "<br/> Could not fetch the load balancer's configuration";
+	}
+	
+	var manage_lb = '';
+	var servers = '';
+	
+	if(data.has_lb_config) {
+		manage_lb = String.format("<a href='/zato/load-balancer/manage/cluster/{0}/'>Manage load balancer</a>", data.id);
+		servers = String.format("<a href='javascript:$.fn.zato.cluster.add_remove_servers({0})'>Add/remove servers</a>", item.id);
 	}
 	
 	row += "<td class='numbering'>&nbsp;</td>";
 	row += "<td><input type='checkbox' /></td>";
-	row += String.format('<td>{0}</td>', item.name);
-	row += String.format('<td>{0}</td>', '');//item.is_active ? 'Yes' : 'No');
-	row += String.format('<td>{0}</td>', '');//item.username);
-	row += String.format('<td>{0}</td>', '');//item.domain);
-	row += String.format('<td>{0}</td>', '');//String.format("<a href='javascript:$.fn.zato.cluster.edit({0})'>Edit</a>", item.id));
+	row += String.format('<td>{0}</td>', name_desc);
+	row += String.format('<td>{0}</td>', data.addresses);
+	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cluster.edit({0})'>Edit</a>", item.id));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cluster.delete_({0});'>Delete</a>", item.id));
+	row += String.format('<td>{0}</td>', manage_lb);
+	row += String.format('<td>{0}</td>', servers);
 	row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 	row += String.format("<td class='ignore'>{0}</td>", '');
 	

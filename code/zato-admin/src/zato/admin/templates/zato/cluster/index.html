@@ -111,8 +111,7 @@
                     {% endif %}
                     
                     {% if not item.lb_config %}
-                    <br/>
-                    Could not fetch the load balancer's configuration
+                    <br/> Could not fetch the load balancer's configuration
                     {% endif %}
                     
 
@@ -122,42 +121,9 @@
 
                     </td>
                     <td>
-
+                    
                     {% if item.lb_config %}
-                    HTTP:
-                        <a href="http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}">
-                        http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}
-                        </a>
-                    {% else %}
-                        Could not fetch the load balancer's configuration
-                    {% endif %}
-
-                    <br/>
-                    {% if item.lb_config %}
-                    LB XML-RPC agent:
-                        <a href="https://{{ item.lb_host }}:{{ item.lb_agent_port }}/RPC2">
-                        https://{{ item.lb_host }}:{{ item.lb_agent_port }}/RPC2
-                        </a>
-                    {% endif %}
-
-                    <br/>
-                    {% if item.lb_config %}
-                    LB stats:
-                        {% if item.lb_config.defaults.stats_uri %}
-                            <a href="http://{{ item.lb_host }}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.defaults.stats_uri }}">
-                            http://{{ item.lb_host }}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.defaults.stats_uri }}
-                            </a>
-                        {% else %}
-                            URL not configured
-                        {% endif %}
-                    {% endif %}
-
-                    <br/>
-                    {% if item.lb_config %}
-                    LB HTTP health-check:
-                        <a href="http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.frontend.front_http_plain.monitor_uri }}">
-                        http://{{ item.lb_config.frontend.front_http_plain.bind.address}}:{{ item.lb_config.frontend.front_http_plain.bind.port}}{{ item.lb_config.frontend.front_http_plain.monitor_uri }}
-                        </a>
+                        {% include "zato/cluster/addresses.html" %}
                     {% endif %}
 
                     </td>
@@ -174,7 +140,7 @@
                     </td>
                     <td>
                         {% if item.lb_config %}
-                            <a href="javascript:item_add_remove_servers('{{ item.id }}')">Add/remove servers</a>
+                            <a href="javascript:$.fn.zato.cluster.add_remove_servers('{{ item.id }}')">Add/remove servers</a>
                         {% endif %}
                         
                     </td>
@@ -315,39 +281,5 @@
             </form>
         </div>
     </div>
-
-    <!--
-
-        <div id="delete-cluster" class="yui-pe-content">
-            <div class="hd">Delete cluster</div>
-            <div class="bd">
-                <form action="{% url cluster-delete %}" method="post" id="delete-form">
-                    <table class="form-data">
-                        <tr>
-                            <td>
-                            Are you sure you want to delete the cluster
-                            <span id="delete-name" style="font-weight:bolder"></span>?
-                            <br/>
-
-                            Note that only the cluster will be deleted, all the related objects -
-                            such as servers or load-balancer configuration -
-                            will be left intact.
-                            <br/><br/>
-
-                            Type YES (all uppercase) to delete the cluster:
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                {{ delete_form.answer }}
-                                {{ delete_form.cluster_id }}
-                            </td>
-                        </tr>
-                    </table>
-                </form>
-            </div>
-        </div>
-        
-    -->
 
 {% endblock %}

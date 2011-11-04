@@ -52,12 +52,12 @@ urlpatterns = patterns('',
     url(r'^zato/cluster/get/by-name/(?P<cluster_name>.*)/$', cluster.get_by_name, name='cluster-get-by-name'),
 
     # Load balancer
-    url(r'^zato/load-balancer/get-addresses/cluster/(?P<cluster_id>.*)$', load_balancer.get_addresses, name='lb-get-addresses'),
+    url(r'^zato/load-balancer/get-addresses/cluster/(?P<cluster_id>.*)/$', load_balancer.get_addresses, name='lb-get-addresses'),
     url(r'^zato/load-balancer/manage/cluster/(?P<cluster_id>\d+)/validate-save/$', load_balancer.validate_save, name='lb-manage-validate-save'),
-    url(r'^zato/load-balancer/manage/cluster/(?P<cluster_id>.*)$', load_balancer.manage, name='lb-manage'),
+    url(r'^zato/load-balancer/manage/cluster/(?P<cluster_id>.*)/$', load_balancer.manage, name='lb-manage'),
     url(r'^zato/load-balancer/manage/source-code/cluster/(?P<cluster_id>.*)/validate-save$', load_balancer.validate_save_source_code, name='lb-manage-source-code-validate-save'),
-    url(r'^zato/load-balancer/manage/source-code/cluster/(?P<cluster_id>.*)$', load_balancer.manage_source_code, name='lb-manage-source-code'),
-    url(r'^zato/load-balancer/remote-command/(?P<cluster_id>.*)$', load_balancer.remote_command, name='lb-remote-command'),
+    url(r'^zato/load-balancer/manage/source-code/cluster/(?P<cluster_id>.*)/$', load_balancer.manage_source_code, name='lb-manage-source-code'),
+    url(r'^zato/load-balancer/remote-command/(?P<cluster_id>.*)/$', load_balancer.remote_command, name='lb-remote-command'),
 
     # TODO: 'servers' should be 'server'
 

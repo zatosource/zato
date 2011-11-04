@@ -70,5 +70,6 @@ $.fn.zato.security.wss.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.security.wss.delete_ = function(id) {
 	$.fn.zato.data_table.delete_(id, 'td.item_id_', 
 		'WS-Security definition [{0}] deleted', 
-		'Are you sure you want to delete the WS-Security definition [{0}]?');
+		'Are you sure you want to delete the WS-Security definition [{0}]?',
+		true);
 }
