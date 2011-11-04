@@ -285,7 +285,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 		if(ok) {
 			var url = String.format('./delete/{0}/', id);
 			if(use_cluster) {
-				url = url + String.format('cluster/{1}/', $('#cluster_id').val());
+				url = url + String.format('cluster/{0}/', $('#cluster_id').val());
 			}
 			$.fn.zato.post(url, _callback);
 			return false;

@@ -31,7 +31,7 @@ from django.core.urlresolvers import reverse
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.template import loader, RequestContext
 
 # SQLAlchemy
 from sqlalchemy import create_engine
@@ -50,12 +50,16 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
-def _edit_create_response(id, verb, name):
-    return_data = {'id': id,
-                   'message': 'Successfully {0} the cluster [{1}]'.format(verb, name)}
+def _edit_create_response(item, verb):
+    return_data = {
+        'id': item.id,
+        'message': 'Successfully {0} the cluster [{1}]'.format(verb, item.name),
+        'addresses': loader.render_to_string('zato/cluster/addresses.html', {'item':item}),
+        'has_lb_config': hasattr(item, 'lb_config') and item.lb_config
+        }
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-def _create_edit(req, verb, cluster, form_class, prefix=''):
+def _create_edit(req, verb, item, form_class, prefix=''):
 
     join = '-' if prefix else ''
     form = form_class(req.POST, prefix=prefix)
@@ -69,31 +73,39 @@ def _create_edit(req, verb, cluster, form_class, prefix=''):
             description = req.POST[prefix + join + 'description'].strip()
             description = description if description else None
 
-            cluster.name = req.POST[prefix + join + 'name'].strip()
-            cluster.description = description
-            cluster.odb_type = req.POST[prefix + join + 'odb_engine'].strip()
-            cluster.odb_host = req.POST[prefix + join + 'odb_host'].strip()
-            cluster.odb_port = req.POST[prefix + join + 'odb_port'].strip()
-            cluster.odb_user = req.POST[prefix + join + 'odb_user'].strip()
-            cluster.odb_db_name = req.POST[prefix + join + 'odb_db_name'].strip()
-            cluster.odb_schema = req.POST[prefix + join + 'odb_schema'].strip()
-            cluster.lb_host = req.POST[prefix + join + 'lb_host'].strip()
-            cluster.lb_port = req.POST[prefix + join + 'lb_port'].strip()
-            cluster.lb_agent_port = req.POST[prefix + join + 'lb_agent_port'].strip()
-            cluster.broker_host = req.POST[prefix + join + 'broker_host'].strip()
-            cluster.broker_start_port = req.POST[prefix + join + 'broker_start_port'].strip()
-            cluster.broker_token = req.POST[prefix + join + 'broker_token'].strip()
+            item.name = req.POST[prefix + join + 'name'].strip()
+            item.description = description
+            item.odb_type = req.POST[prefix + join + 'odb_engine'].strip()
+            item.odb_host = req.POST[prefix + join + 'odb_host'].strip()
+            item.odb_port = req.POST[prefix + join + 'odb_port'].strip()
+            item.odb_user = req.POST[prefix + join + 'odb_user'].strip()
+            item.odb_db_name = req.POST[prefix + join + 'odb_db_name'].strip()
+            item.odb_schema = req.POST[prefix + join + 'odb_schema'].strip()
+            item.lb_host = req.POST[prefix + join + 'lb_host'].strip()
+            item.lb_port = req.POST[prefix + join + 'lb_port'].strip()
+            item.lb_agent_port = req.POST[prefix + join + 'lb_agent_port'].strip()
+            item.broker_host = req.POST[prefix + join + 'broker_host'].strip()
+            item.broker_start_port = req.POST[prefix + join + 'broker_start_port'].strip()
+            item.broker_token = req.POST[prefix + join + 'broker_token'].strip()
 
             try:
-                req.odb.add(cluster)
+                req.odb.add(item)
                 req.odb.commit()
-            except IntegrityError, e:
-                msg = 'Cluster name [{0}] is not unique'.format(cluster.name)
-                logger.error(msg + ', e=[{0}], cluster=[{1!r}]'.format(format_exc(e), cluster))
+                
+                try:
+                    item.lb_config = get_lb_client(item).get_config()
+                except Exception, e:
+                    item.lb_config = None
+                    msg = "Exception caught while fetching the load balancer's config, e=[{0}]".format(format_exc(e))
+                    logger.error(msg)                    
+                
+                return _edit_create_response(item, verb)
+            
+            except Exception, e:
+                msg = 'Exception caught, e=[{0}]'.format(format_exc(e))
+                logger.error(msg)
 
                 return HttpResponseServerError(msg)
-
-            return _edit_create_response(cluster.id, verb, cluster.name)
 
         else:
             logger.error('form.errors=[%s]' % form.errors)
