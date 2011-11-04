@@ -186,21 +186,13 @@ def get_servers_state(req, cluster_id):
                               context_instance=RequestContext(req))
 
 @meth_allowed('POST')
-def delete(req):
-
-    prefix = 'delete'
-    form = DeleteClusterForm(req.POST, prefix=prefix)
+def delete(req, cluster_id):
 
     try:
-        if form.is_valid():
-            cluster = req.odb.query(Cluster).filter_by(id=req.POST[prefix + '-' + 'cluster_id']).one()
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
 
-            req.odb.delete(cluster)
-            req.odb.commit()
-        else:
-            msg = 'Could not delete the cluster, req.POST=[{post}], errors=[{errors}]'.format(
-                post=req.POST, errors=form._errors.items())
-            raise Exception(msg)
+        req.odb.delete(cluster)
+        req.odb.commit()
 
     except Exception, e:
         msg = 'Could not delete the cluster, e=[{e}]'.format(e=format_exc(e))
