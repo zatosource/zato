@@ -133,9 +133,9 @@ class Server(Base):
     
     odb_token = Column(String(32), nullable=False)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('servers', order_by=name))
-
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('servers', order_by=name, cascade='all, delete, delete-orphan'))
+    
     def __init__(self, id=None, name=None, cluster=None, odb_token=None,
                  last_join_status=None, last_join_mod_date=None, last_join_mod_by=None):
         self.id = id
@@ -163,9 +163,9 @@ class ChannelURLSecurity(Base):
     channel_url_def = relationship('ChannelURLDefinition', 
                         backref=backref('channel_url_security', uselist=False))
     
-    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=False)
+    security_def_id = Column(Integer, ForeignKey('security_def.id', ondelete='CASCADE'), nullable=False)
     security_def = relationship('SecurityDefinition', 
-                    backref=backref('channel_url_security_defs', order_by=id))
+                    backref=backref('channel_url_security_defs', order_by=id, cascade='all, delete, delete-orphan'))
     
     def __init__(self, channel_url_def, security_def):
         self.channel_url_def = channel_url_def
@@ -201,8 +201,8 @@ class ChannelURLDefinition(Base):
     url_type = Column(String(45), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=url_pattern))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=url_pattern, cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, url_pattern=None, url_type=None, is_internal=None,
                  cluster=None):
@@ -235,14 +235,12 @@ class WSSDefinition(Base):
     
     is_active = Column(Boolean(), nullable=False)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('wss_defs', order_by=name))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('wss_defs', order_by=name, cascade='all, delete, delete-orphan'))
     
-    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
-                             nullable=True)
-    security_def = relationship(SecurityDefinition, backref=backref('wss_def', 
-                                                    order_by=name, uselist=False))
-
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
+    security_def = relationship(SecurityDefinition, backref=backref('wss_def', order_by=name, uselist=False, cascade='all, delete, delete-orphan'))
+    
     def __init__(self, id=None, name=None, is_active=None, username=None, 
                  password=None, password_type=None, reject_empty_nonce_ts=None, 
                  reject_stale_username=None, expiry_limit=None, 
@@ -277,14 +275,12 @@ class HTTPBasicAuth(Base):
     
     is_active = Column(Boolean(), nullable=False)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_basic_auth_defs', order_by=name))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('http_basic_auth_defs', order_by=name, cascade='all, delete, delete-orphan'))
     
-    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
-                             nullable=True)
-    security_def = relationship(SecurityDefinition, backref=backref('http_basic_auth_def', 
-                                                    order_by=name, uselist=False))
-
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
+    security_def = relationship(SecurityDefinition, backref=backref('http_basic_auth_def', order_by=name, uselist=False))
+    
     def __init__(self, id=None, name=None, is_active=None, username=None, 
                  domain=None, password=None, cluster=None):
         self.id = id
@@ -311,13 +307,11 @@ class TechnicalAccount(Base):
     salt = Column(String(32), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     
-    security_def_id = Column(Integer, ForeignKey('security_def.id'), 
-                             nullable=True)
-    security_def = relationship(SecurityDefinition, 
-                backref=backref('tech_account', order_by=id, uselist=False))
+    security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
+    security_def = relationship(SecurityDefinition, backref=backref('tech_account', order_by=id, uselist=False))
     
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('tech_accounts', order_by=name))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('tech_accounts', order_by=name, cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, password=None, salt=None, 
                  is_active=None, security_def=None, expected_password=None,
@@ -352,9 +346,9 @@ class SQLConnectionPool(Base):
     port = Column(Integer(), nullable=False)
     pool_size = Column(Integer(), nullable=False)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name))
-
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
+    
     def __init__(self, id=None, name=None, db_name=None, user=None, engine=None,
                  extra=None, host=None, port=None, pool_size=None, cluster=None):
         self.id = id
@@ -380,12 +374,12 @@ class SQLConnectionPoolPassword(Base):
     password = Column(LargeBinary(200000), server_default='not-set-yet', nullable=False)
     server_key_hash = Column(LargeBinary(200000), server_default='not-set-yet', nullable=False)
 
-    server_id = Column(Integer, ForeignKey('server.id'), nullable=False)
-    server = relationship(Server, backref=backref('sql_pool_passwords', order_by=id))
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False)
+    server = relationship(Server, backref=backref('sql_pool_passwords', order_by=id, cascade='all, delete, delete-orphan'))
 
-    sql_pool_id = Column(Integer, ForeignKey('sql_pool.id'), nullable=False)
-    sql_pool = relationship(SQLConnectionPool, backref=backref('sql_pool_passwords', order_by=id))
-
+    sql_pool_id = Column(Integer, ForeignKey('sql_pool.id', ondelete='CASCADE'), nullable=False)
+    sql_pool = relationship(SQLConnectionPool, backref=backref('sql_pool_passwords', order_by=id, cascade='all, delete, delete-orphan'))
+    
     def __init__(self, id=None, password=None, server_key_hash=None, server_id=None,
                  server=None, sql_pool_id=None, sql_pool=None):
         self.id = id
@@ -414,8 +408,8 @@ class Service(Base):
     impl_name = Column(String(2000), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
     
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('services', order_by=name))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, impl_name=None, is_internal=None, 
                  is_active=None, cluster=None):
@@ -435,15 +429,11 @@ class DeployedService(Base):
     deployment_time = Column(DateTime(), nullable=False)
     details = Column(String(2000), nullable=False)
 
-    server_id = Column(Integer, ForeignKey('server.id'), nullable=False,
-                       primary_key=True)
-    server = relationship(Server, backref=backref('deployed_services', 
-                                                order_by=deployment_time))
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=True)
+    server = relationship(Server, backref=backref('deployed_services', order_by=deployment_time, cascade='all, delete, delete-orphan'))
     
-    service_id = Column(Integer, ForeignKey('service.id'), nullable=False,
-                        primary_key=True)
-    service = relationship(Service, backref=backref('deployment_data', 
-                                                order_by=deployment_time))
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False, primary_key=True)
+    service = relationship(Service, backref=backref('deployment_data', order_by=deployment_time, cascade='all, delete, delete-orphan'))
     
     def __init__(self, deployment_time, details, server, service):
         self.deployment_time = deployment_time
@@ -468,12 +458,12 @@ class Job(Base):
     start_date = Column(DateTime(), nullable=False)
     extra = Column(LargeBinary(400000), nullable=True)
     
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('jobs', order_by=name))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
     
-    service_id = Column(Integer, ForeignKey('service.id'), nullable=False)
-    service = relationship(Service, backref=backref('jobs', order_by=name))
-
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship(Service, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
+    
     def __init__(self, id=None, name=None, is_active=None, job_type=None, 
                  start_date=None, extra=None, cluster=None, cluster_id=None,
                  service=None, service_id=None, service_name=None, interval_based=None, 
@@ -511,8 +501,7 @@ class IntervalBasedJob(Base):
     repeats = Column(Integer, nullable=True)
     
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
-    job = relationship(Job, backref=backref('interval_based', uselist=False,
-                    cascade='all, delete, delete-orphan', single_parent=True))
+    job = relationship(Job, backref=backref('interval_based', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
     
     def __init__(self, id=None, job=None, weeks=None, days=None, hours=None,
                  minutes=None, seconds=None, repeats=None, definition_text=None):
@@ -536,8 +525,7 @@ class CronStyleJob(Base):
     cron_definition = Column(String(4000), nullable=False)
     
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
-    job = relationship(Job, backref=backref('cron_style', uselist=False,
-                    cascade='all, delete, delete-orphan', single_parent=True))
+    job = relationship(Job, backref=backref('cron_style', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
     
     def __init__(self, id=None, job=None, cron_definition=None):
         self.id = id
@@ -557,8 +545,8 @@ class ConnDef(Base):
     name = Column(String(200), nullable=False)
     def_type = Column(String(10), nullable=False)
     
-    cluster_id = Column(Integer, ForeignKey('cluster.id'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('conn_defs', order_by=name))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, def_type=None, cluster_id=None):
         self.id = id
@@ -589,8 +577,7 @@ class ConnDefAMQP(Base):
     #app_id = Column(String(200), nullable=True)
     
     def_id = Column(Integer, ForeignKey('conn_def.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDef, backref=backref('amqp', uselist=False,
-                    cascade='all, delete, delete-orphan', single_parent=True))
+    def_ = relationship(ConnDef, backref=backref('amqp', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
     
     def __init__(self, id=None, host=None, port=None, vhost=None,  username=None, 
                  password=None, frame_max=None, heartbeat=None):
