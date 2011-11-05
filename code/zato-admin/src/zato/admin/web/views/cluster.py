@@ -130,25 +130,25 @@ def index(req):
     create_form = CreateClusterForm(initial=initial)
     delete_form = DeleteClusterForm(prefix='delete')
 
-    clusters = req.odb.query(Cluster).order_by('name').all()
-    for cluster in clusters:
-        client = get_lb_client(cluster)
+    items = req.odb.query(Cluster).order_by('name').all()
+    for item in items:
+        client = get_lb_client(item)
 
         try:
             lb_config = client.get_config()
-            cluster.lb_config = lb_config
+            item.lb_config = lb_config
 
             # Assign the flags indicating whether servers are DOWN or in the MAINT mode.
-            set_servers_state(cluster, client)
+            set_servers_state(item, client)
 
         except Exception, e:
             msg = 'Could not invoke agent, client=[{client!r}], e=[{e}]'.format(client=client,
                                                                 e=format_exc(e))
             logger.error(msg)
-            cluster.lb_config = None
+            item.lb_config = None
 
     return_data = {'create_form':create_form, 'delete_form':delete_form,
-                   'edit_form':EditClusterForm(prefix='edit'), 'clusters':clusters}
+                   'edit_form':EditClusterForm(prefix='edit'), 'items':items}
 
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)

@@ -98,7 +98,7 @@
             <tbody>
             
             {% if items %}
-            {% for item in clusters %}
+            {% for item in items %}
                 <tr 
                     class="{% if not item.lb_config or not item.all_up %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
                         id='tr_{{ item.id }}'>
