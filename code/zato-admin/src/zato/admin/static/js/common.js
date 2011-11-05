@@ -180,7 +180,7 @@ $.fn.zato.data_table.parse = function() {
 
 	var rows = $('#data-table tr').not('[class="ignore"]');
 	var columns = $.fn.zato.data_table.get_columns();
-
+	
 	$.each(rows, function(row_idx, row) {
 		var instance = new $.fn.zato.data_table.class_()
 		var tds = $(row).find('td');
@@ -196,6 +196,10 @@ $.fn.zato.data_table.parse = function() {
 		});
 		$.fn.zato.data_table.data[instance.id] = instance;
 	});
+
+	if(_.size($.fn.zato.data_table.data) <= 1) {
+		$('#data-table').data('is_empty', true);
+	}
 }
 
 $.fn.zato.data_table.reset_form = function(form_id) {
@@ -277,6 +281,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 			if($('#data-table tr').length == 1) {
 				var row = '<tr><td>No results</td></tr>';
 				$('#data-table > tbody:last').prepend(row);
+				$('#data-table').data('is_empty', true);
 			}
 			
 			msg = String.format(success_pattern, instance.name);
@@ -482,13 +487,12 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 		var include_tr = true ? action == 'create' : false;
 		var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
 
-		// 1 - Header
-		// 2 - The 'No results' information that needs to be removed
-		if($('#data-table tr').length == 2) {
+		if($('#data-table').data('is_empty')) {
 			$('#data-table tr:last').remove();
 		}
 			
 		if(action == 'create') {
+			$('#data-table').data('is_empty', false);
 			$('#data-table > tbody:last').prepend(row);
 		}
 		else {
