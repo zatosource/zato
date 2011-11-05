@@ -74,7 +74,7 @@ def _get_start_date(start_date, start_date_format):
 
     strp = strptime(str(start_date), start_date_format)
     return datetime(year=strp.tm_year, month=strp.tm_mon, day=strp.tm_mday,
-                       hour=strp.tm_hour, minute=strp.tm_min)
+                       hour=strp.tm_hour, minute=strp.tm_min, second=strp.tm_sec)
 
 def _one_time_job_def(start_date):
     start_date = _get_start_date(start_date, scheduler_date_time_format)
