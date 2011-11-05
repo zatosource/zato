@@ -197,7 +197,7 @@ $.fn.zato.data_table.parse = function() {
 		$.fn.zato.data_table.data[instance.id] = instance;
 	});
 
-	if(_.size($.fn.zato.data_table.data) <= 1) {
+	if(_.size($.fn.zato.data_table.data) < 1) {
 		$('#data-table').data('is_empty', true);
 	}
 }
