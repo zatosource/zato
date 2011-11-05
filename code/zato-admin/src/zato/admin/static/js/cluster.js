@@ -74,8 +74,11 @@ $.fn.zato.cluster.data_table.new_row = function(item, data, include_tr) {
 }
 
 $.fn.zato.cluster.delete_ = function(id) {
+	var confirm_pattern = 'Are you sure you want to <b>delete</b> the cluster <b>[{0}]</b>?';
+	confirm_pattern += '<br/><br/>This is <b>an irreversible action</b>, the whole cluster';
+	confirm_pattern += ', including any configuration associated with it will be deleted.';
+	confirm_pattern += '<br/><br/>Please type {1} (all uppercase) to proceed.';
+	
 	$.fn.zato.data_table.delete_(id, 'td.item_id_', 
-		'Cluster [{0}] deleted', 
-		'Are you sure you want to delete the cluster [{0}]?',
-		false);
+		'Cluster [{0}] deleted',  confirm_pattern, false, 'GO AHEAD');
 }
