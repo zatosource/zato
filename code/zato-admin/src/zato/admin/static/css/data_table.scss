@@ -2,6 +2,7 @@
     width:100%;
     margin-top: 8px;
     margin-left: 5%;
+	margin-right: 5%;
     border:1px solid #ccc;  
     font-size:12px;
 	margin-bottom:80px;
@@ -39,6 +40,10 @@
     
     td {
         vertical-align:base
+    }
+	
+    td.inline_header {
+        background-color:#d0d0d0
     }
 	
 	td.numbering:before { 

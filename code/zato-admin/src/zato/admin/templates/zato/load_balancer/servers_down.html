@@ -1,7 +1,7 @@
 {% if servers_state.DOWN.http_plain %}
         <table style="width:100%;margin-top:4px">
             <tr>
-                <td style="background-color:#c0c0dd;width:20%">DOWN plain HTTP</td>
+                <td style="width:5%" class='inline_header'>DOWN</td>
                 <td>
                     {% for server in servers_state.DOWN.http_plain %}
                         {{ server }}{% if not forloop.last %}, {% endif %}
