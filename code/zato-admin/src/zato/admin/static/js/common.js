@@ -267,7 +267,7 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 }
 
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
-						use_cluster) {
+						append_cluster, confirm_challenge) {
 
 	var instance = $.fn.zato.data_table.data[id];
 	
@@ -295,15 +295,24 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 	var callback = function(ok) {
 		if(ok) {
 			var url = String.format('./delete/{0}/', id);
-			if(use_cluster) {
+			if(append_cluster) {
 				url = url + String.format('cluster/{0}/', $('#cluster_id').val());
 			}
 			$.fn.zato.post(url, _callback);
 			return false;
 		}
 	}
-	var q = String.format(confirm_pattern, instance.name);
-	jConfirm(q, 'Please confirm', callback);
+	if(confirm_challenge) {
+		var q = String.format(confirm_pattern, instance.name, confirm_challenge);
+		jPrompt(q, "I'd rather not", 'Please confirm', function(r) {
+			var ok = r == confirm_challenge;
+			callback(ok);
+		});
+	}
+	else {
+		var q = String.format(confirm_pattern, instance.name);
+		jConfirm(q, 'Please confirm', callback);
+	}
 }
 
 $.fn.zato.data_table.on_change_password_submit = function() {
