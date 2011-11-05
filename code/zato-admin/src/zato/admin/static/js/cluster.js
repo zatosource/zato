@@ -51,7 +51,7 @@ $.fn.zato.cluster.data_table.new_row = function(item, data, include_tr) {
 	var servers = '';
 	
 	if(data.has_lb_config) {
-		manage_lb = String.format("<a href='/zato/load-balancer/manage/cluster/{0}/'>Manage load balancer</a>", data.id);
+		manage_lb = String.format("<a href='/zato/load-balancer/manage/cluster/{0}/'>Load balancer</a>", data.id);
 		servers = String.format("<a href='javascript:$.fn.zato.cluster.add_remove_servers({0})'>Add/remove servers</a>", item.id);
 	}
 	
