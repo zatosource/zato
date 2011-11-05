@@ -3,9 +3,10 @@
 
 $.fn.zato.data_table.Cluster = new Class({
 	toString: function() {
-		var s = '<Cluster id:{0} name:{1}>';
+		var s = '<Cluster id:{0} name:{1} odb_type:{2}>';
 		return String.format(s, this.id ? this.id : '(none)', 
-								this.name ? this.name : '(none)');
+								this.name ? this.name : '(none)',
+								this.odb_type ? this.odb_type : '(none)');
 	}
 });
 

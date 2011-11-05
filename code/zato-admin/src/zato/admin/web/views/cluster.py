@@ -80,7 +80,7 @@ def _create_edit(req, verb, item, form_class, prefix=''):
 
         item.name = req.POST[prefix + join + 'name'].strip()
         item.description = description
-        item.odb_type = req.POST[prefix + join + 'odb_engine'].strip()
+        item.odb_type = req.POST[prefix + join + 'odb_type'].strip()
         item.odb_host = req.POST[prefix + join + 'odb_host'].strip()
         item.odb_port = req.POST[prefix + join + 'odb_port'].strip()
         item.odb_user = req.POST[prefix + join + 'odb_user'].strip()
@@ -121,7 +121,7 @@ def _create_edit(req, verb, item, form_class, prefix=''):
 def index(req):
 
     initial = {}
-    initial['odb_engine'] = sqlalchemy_django_engine[DATABASE_ENGINE]
+    initial['odb_type'] = sqlalchemy_django_engine[DATABASE_ENGINE]
     initial['odb_host'] = DATABASE_HOST
     initial['odb_port'] = DATABASE_PORT
     initial['odb_user'] = DATABASE_USER

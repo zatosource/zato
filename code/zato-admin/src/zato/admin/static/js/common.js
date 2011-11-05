@@ -134,7 +134,8 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 
 	var name = '';
 	var value = '';
-	var form_elem = null;	
+	var form_elem_name = null;
+	var form_elem = null;
 	var fields = $.fn.zato.form.serialize(form);
 	
 	for(field_name in fields) {
@@ -143,9 +144,14 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 			for(item_attr in instance) {
 				if(item_attr == field_name) {
 					value = instance[item_attr];
-					form_elem = $(id_prefix + field_name);
+					form_elem_name = id_prefix + field_name;
+					form_elem = $(form_elem_name);
 					if($.fn.zato.like_bool(value)) {
 						form_elem.prop('checked', $.fn.zato.to_bool(value));
+					}
+					else if(form_elem.is('select')) {
+						var option = $(String.format("{0} option[value='{1}']", form_elem_name, value));
+						option.attr('selected', 'selected');
 					}
 					else {
 						form_elem.val(value);
