@@ -42,11 +42,10 @@
 <h2 class="zato">HTTP Basic Auth</h2>
 
 {% if not zato_clusters %}
-    <p>
+    <div class='page_prompt'>
     There aren't any Zato clusters registered with this ZatoAdmin instance.
-    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
-    <br/><br/>
-    </p>
+    <a href="{% url cluster %}" class="common">Click here</a> to create a new cluster first.
+    </div>
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
