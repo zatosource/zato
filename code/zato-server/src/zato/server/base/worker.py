@@ -58,11 +58,15 @@ class _WorkerStore(BrokerMessageReceiver):
         self.tech_acc = Bunch()
         self.wss = Bunch()
         self.url_sec = Bunch()
+        self.amqp_def = Bunch()
         
         self.basic_auth_lock = RLock()
         self.tech_acc_lock = RLock()
         self.wss_lock = RLock()
         self.url_sec_lock = RLock()
+        self.amqp_def_lock = RLock()
+
+# ##############################################################################        
         
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition
@@ -95,12 +99,6 @@ class _WorkerStore(BrokerMessageReceiver):
         """
         with self.basic_auth_lock:
             self.basic_auth[msg.name]['password'] = msg.password
-            
-    def tech_acc(self, name):
-        """ Returns the configuration of the technical account of the given name.
-        """
-        with self.tech_acc_lock:
-            return self.tech_acc[name]
 
 # ##############################################################################
 
@@ -181,6 +179,39 @@ class _WorkerStore(BrokerMessageReceiver):
             return self.url_sec.get(url)
 
 # ##############################################################################
+
+    def amqp_def_get(self, name):
+        """ Returns the configuration of the AMQP definition of the given name.
+        """
+        #with self.amqp_def_lock:
+        #    return self.amqp_def.get(name)
+
+    def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
+        """ Creates a new AMQP definition.
+        """
+        #with self.amqp_def_lock:
+        #    self.amqp_def[msg.name] = msg
+        
+    def on_broker_pull_msg_DEFINITION_AMQP_EDIT(self, msg, *args):
+        """ Updates an existing AMQP definition.
+        """
+        #with self.amqp_def_lock:
+        #    del self.amqp_def[msg.old_name]
+        #    self.amqp_def[msg.name] = msg
+        
+    def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
+        """ Deletes an AMQP definition.
+        """
+        #with self.amqp_def_lock:
+        #    del self.amqp_def[msg.name]
+        
+    def on_broker_pull_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes the password of an AMQP definition.
+        """
+        #with self.amqp_def_lock:
+        #    self.amqp_def[msg.name]['password'] = msg.password
+            
+# ##############################################################################
             
 class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
@@ -253,6 +284,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         _local.store.tech_acc = thread_data.sec_config.tech_acc
         _local.store.wss = thread_data.sec_config.wss
         _local.store.url_sec = thread_data.sec_config.url_sec
+        _local.store.amqp_def = thread_data.sec_config.amqp_def
         
         # We're in a new thread so we can start the broker client now.
         _local.broker_client = BrokerClient()
@@ -334,3 +366,4 @@ class _HTTPServerChannel(HTTPServerChannel):
                 # propagate the exception, but keep executing tasks
                 self.server.addTask(self)
                 raise
+            

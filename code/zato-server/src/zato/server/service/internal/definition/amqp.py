@@ -64,7 +64,6 @@ class GetList(AdminService):
     
             return ZATO_OK, etree.tostring(definition_list)
         
-        
 class Create(AdminService):
     """ Creates a new AMQP definition.
     """
@@ -105,14 +104,81 @@ class Create(AdminService):
                 
                 created_elem.id = def_.id
                 
+                params['action'] = DEFINITION.AMQP_CREATE
+                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
+                
+                return ZATO_OK, etree.tostring(created_elem)
+                
             except Exception, e:
                 msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
+
+class Edit(AdminService):
+    """ Creates a new AMQP definition.
+    """
+    def handle(self, *args, **kwargs):
+        
+        with closing(self.server.odb.session()) as session:
+            payload = kwargs.get('payload')
+            request_params = ['id', 'cluster_id', 'name', 'host', 'port', 
+                'vhost',  'username', 'frame_max', 'heartbeat']
             
-            return ZATO_OK, etree.tostring(created_elem)
+            params = _get_params(payload, request_params, 'data.')
+            
+            id = params['id']
+            name = params['name']
+            
+            cluster_id = params['cluster_id']
+            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
+            
+            password = uuid4().hex
+            
+            # Let's see if we already have an account of that name before committing
+            # any stuff into the database.
+            existing_one = session.query(ConnDef, ConnDefAMQP).\
+                filter(ConnDef.id==ConnDefAMQP.def_id).\
+                filter(ConnDef.cluster_id==Cluster.id).\
+                filter(ConnDef.def_type=='amqp').\
+                filter(ConnDefAMQP.id != id).\
+                filter(ConnDef.name==name).first()
+            
+            if existing_one:
+                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
+            
+            def_amqp_elem = Element('def_amqp')
+            
+            try:
+                
+                def_amqp = session.query(ConnDefAMQP).filter_by(id=id).one()
+                old_name = def_amqp.def_.name
+                def_amqp.def_.name = name
+                def_amqp.host = params['host']
+                def_amqp.port = params['port']
+                def_amqp.vhost = params['vhost']
+                def_amqp.username = params['username']
+                def_amqp.frame_max = params['frame_max']
+                def_amqp.heartbeat = params['heartbeat']
+                
+                session.add(def_amqp)
+                session.commit()
+                
+                def_amqp_elem.id = def_amqp.id
+                
+                params['action'] = DEFINITION.AMQP_EDIT
+                params['old_name'] = old_name
+                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
+                
+                return ZATO_OK, etree.tostring(def_amqp_elem)
+                
+            except Exception, e:
+                msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+                
+                raise         
         
 class Delete(AdminService):
     """ Deletes an AMQP definition.
