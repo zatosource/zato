@@ -13,7 +13,7 @@ $(document).ready(function() {
 
 	$('#data-table').tablesorter(); 
 	$.fn.zato.data_table.class_ = $.fn.zato.data_table.Job;
-	$.fn.zato.data_table.parse($.fn.zato.data_table.Job);
+	$.fn.zato.data_table.parse();
 	
 	var actions = ['create', 'edit'];
 	var job_types = ['one_time', 'interval_based', 'cron_style'];
@@ -104,11 +104,11 @@ $.fn.zato.scheduler.data_table.on_submit_complete = function(data, status,
 		var row = $.fn.zato.scheduler.data_table.add_row(json, action, job_type, include_tr);
 		if(action == 'create') {
 		
-			// 1 - Header
-			// 2 - The 'No results' information that needs to be removed
-			if($('#data-table tr').length == 2) {
+			if($('#data-table').data('is_empty')) {
 				$('#data-table tr:last').remove();
 			}
+			
+			$('#data-table').data('is_empty', false);
 			$('#data-table > tbody:last').prepend(row);
 		}
 		else {
