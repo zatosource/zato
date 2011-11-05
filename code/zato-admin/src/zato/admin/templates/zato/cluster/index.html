@@ -96,12 +96,12 @@
             </thead>
 
             <tbody>
+            
+            {% if items %}
             {% for item in clusters %}
-
                 <tr 
                     class="{% if not item.lb_config or not item.all_up %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
-                    
-                    id='tr_{{ item.id }}'>
+                        id='tr_{{ item.id }}'>
                     
                     <td class='numbering'>&nbsp;</td>
                     <td><input type="checkbox" /></td>
@@ -165,6 +165,11 @@
                     <td class='ignore'>{{ item.broker_token }}</td>
                 </tr>
             {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan='23'>No results</td>
+                </tr>
+            {% endif %}
 
             </tbody>
         </table>
