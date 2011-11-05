@@ -37,7 +37,7 @@ class CreateClusterForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     description = forms.CharField(widget=forms.Textarea(), required=False)
 
-    odb_engine = forms.ChoiceField(widget=forms.Select())
+    odb_type = forms.ChoiceField(widget=forms.Select())
     odb_host = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     odb_port = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     odb_db_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
@@ -54,16 +54,16 @@ class CreateClusterForm(forms.Form):
 
     def __init__(self, post_data=None, initial={}, prefix=None):
         super(CreateClusterForm, self).__init__(post_data, initial=initial, prefix=prefix)
-        self.fields['odb_engine'].choices = []
+        self.fields['odb_type'].choices = []
 
         # Sort engines by their friendly name.
         engines = sorted(odb_engine_friendly_name.iteritems(), key=itemgetter(1))
 
         for engine, friendly_name in engines:
-            self.fields['odb_engine'].choices.append([engine, friendly_name])
+            self.fields['odb_type'].choices.append([engine, friendly_name])
 
-        if 'odb_engine' in initial:
-            self.base_fields['odb_engine'].initial = initial['odb_engine']
+        if 'odb_type' in initial:
+            self.base_fields['odb_type'].initial = initial['odb_type']
 
     def __repr__(self):
         return make_repr(self)

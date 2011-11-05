@@ -33,7 +33,7 @@
             'id',
             'name',
             'description',
-            'odb_engine',
+            'odb_type',
             
             'odb_host',
             'odb_port',
@@ -79,8 +79,8 @@
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
-                    
                     <th class='ignore'>&nbsp;</th>
+                    
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
@@ -146,11 +146,11 @@
                         {% endif %}
                         
                     </td>
-                    <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     
+                    <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     <td class='ignore'>{{ item.name }}</td>
                     <td class='ignore'>{{ item.description|default_if_none:'' }}</td>
-                    <td class='ignore'>{{ item.odb_engine }}</td>
+                    <td class='ignore'>{{ item.odb_type }}</td>
                     
                     <td class='ignore'>{{ item.odb_host }}</td>
                     <td class='ignore'>{{ item.odb_port }}</td>
@@ -184,7 +184,7 @@
                     </tr>
                     <tr>
                         <td style="vertical-align:middle">ODB type</td>
-                        <td>{{ create_form.odb_engine }}</td>
+                        <td>{{ create_form.odb_type }}</td>
                         <td style="vertical-align:middle">ODB host</td>
                         <td>{{ create_form.odb_host }}</td>
                         <td style="vertical-align:middle">ODB port</td>
@@ -241,7 +241,7 @@
                     </tr>
                     <tr>
                         <td style="vertical-align:middle">ODB type</td>
-                        <td>{{ edit_form.odb_engine }}</td>
+                        <td>{{ edit_form.odb_type }}</td>
                         <td style="vertical-align:middle">ODB host</td>
                         <td>{{ edit_form.odb_host }}</td>
                         <td style="vertical-align:middle">ODB port</td>
