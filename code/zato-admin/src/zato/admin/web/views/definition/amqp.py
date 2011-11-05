@@ -146,64 +146,22 @@ def create(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-
-@meth_allowed('GET')
-def get_by_id(req, tech_account_id, cluster_id):
-    
-    try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.tech_account_id = tech_account_id
-        
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.tech-account.get-by-id', zato_message)
-        
-    except Exception, e:
-        msg = "Could not fetch the technical account, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        tech_account = TechnicalAccount()
-        tech_account_elem = zato_message.data.tech_account
-        
-        tech_account.id = tech_account_elem.id.text
-        tech_account.name = tech_account_elem.name.text
-        tech_account.is_active = is_boolean(tech_account_elem.is_active.text)
-
-        return HttpResponse(tech_account.to_json(), mimetype='application/javascript')
     
 @meth_allowed('POST')
 def edit(req):
     
-    prefix = 'edit-'
-
-    cluster_id = req.POST['cluster_id']
-    tech_account_id = req.POST['id']
-    name = req.POST[prefix + 'name']
-    is_active = req.POST.get(prefix + 'is_active')
-    is_active = True if is_active else False
+    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
     
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
-        zato_message.data.tech_account_id = tech_account_id
-        zato_message.data.name = name
-        zato_message.data.is_active = is_active
+        zato_message = _get_edit_create_message(req.POST, 'edit-')
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.edit', zato_message)
+
+        return _edit_create_response(zato_message, 'updated', req.POST['edit-name'])        
         
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.tech-account.edit', zato_message)
-    
     except Exception, e:
-        msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    else:
-        return _edit_create_response(zato_message, 'updated', name)
 
 @meth_allowed('POST')
 def change_password(req):
