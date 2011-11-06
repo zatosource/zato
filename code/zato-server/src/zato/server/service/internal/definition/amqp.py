@@ -35,7 +35,7 @@ from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDef, ConnDefAMQP
 from zato.common.odb.query import amqp_def_list
 from zato.common.util import TRACE1
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
@@ -212,3 +212,17 @@ class Delete(AdminService):
             
             return ZATO_OK, ''
         
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of an HTTP Basic Auth definition.
+    """
+    def handle(self, *args, **kwargs):
+        
+        def _auth(instance, password):
+            instance.password = password
+            
+        def _name(instance):
+            return instance.def_.name
+            
+        return self._handle(ConnDefAMQP, _auth, 
+                            DEFINITION.AMQP_CHANGE_PASSWORD, _name, **kwargs)
+    
