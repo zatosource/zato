@@ -40,7 +40,7 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
-from zato.admin.web.forms.security.basic_auth import DefinitionForm
+from zato.admin.web.forms.security.basic_auth import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
 from zato.admin.web import invoke_admin_service
@@ -76,8 +76,8 @@ def index(req):
     cluster_id = req.GET.get('cluster')
     items = []
     
-    create_form = DefinitionForm()
-    edit_form = DefinitionForm(prefix='edit')
+    create_form = CreateForm()
+    edit_form = EditForm(prefix='edit')
     change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':

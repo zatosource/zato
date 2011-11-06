@@ -39,7 +39,7 @@ from validate import is_boolean
 # Zato
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.server_model import WSSUsernameTokenDefinition
-from zato.admin.web.forms.security.wss import DefinitionForm
+from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common import zato_namespace, zato_path, ZatoException, \
      ZATO_NOT_GIVEN, ZATO_WSS_PASSWORD_TYPES
@@ -83,8 +83,8 @@ def index(req):
     cluster_id = req.GET.get('cluster')
     items = []
     
-    create_form = DefinitionForm()
-    edit_form = DefinitionForm(prefix='edit')
+    create_form = CreateForm()
+    edit_form = EditForm(prefix='edit')
     change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':

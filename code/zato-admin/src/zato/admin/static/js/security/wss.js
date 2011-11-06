@@ -34,6 +34,7 @@ $.fn.zato.security.wss.data_table.new_row = function(item, data, include_tr) {
 
     var row = '';
 	
+	item.is_active = $.fn.zato.to_bool(item.is_active);
 	item.reject_empty_nonce_ts = $.fn.zato.to_bool(item.reject_empty_nonce_ts);
 	item.reject_stale_username = $.fn.zato.to_bool(item.reject_stale_username);
 	
