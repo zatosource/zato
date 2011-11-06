@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# pika
+from pika.spec import FRAME_MAX_SIZE, PORT
+
 # Django
 from django import forms
 
@@ -29,10 +32,10 @@ from zato.common.util import make_repr
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
-    port = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
-    vhost = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
+    port = forms.CharField(initial=PORT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
+    vhost = forms.CharField(initial='/', widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
-    frame_max = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
+    frame_max = forms.CharField(initial=FRAME_MAX_SIZE, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
     heartbeat = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':''}))
 
     def __repr__(self):
