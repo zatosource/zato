@@ -165,7 +165,7 @@ def edit(req):
 
 @meth_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato:security.tech-account.change-password')
+    return _change_password(req, 'zato:definition.amqp.change-password')
     
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
