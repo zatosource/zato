@@ -147,7 +147,12 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 					form_elem_name = id_prefix + field_name;
 					form_elem = $(form_elem_name);
 					if($.fn.zato.like_bool(value)) {
-						form_elem.prop('checked', $.fn.zato.to_bool(value));
+						if($.fn.zato.to_bool(value)) {
+							form_elem.attr('checked', 'checked');
+						}
+						else {
+							form_elem.removeAttr('checked');
+						}
 					}
 					else if(form_elem.is('select')) {
 						var option = $(String.format("{0} option[value='{1}']", form_elem_name, value));
@@ -203,8 +208,14 @@ $.fn.zato.data_table.parse = function() {
 }
 
 $.fn.zato.data_table.reset_form = function(form_id) {
-	$(form_id).each(function() {
+	var form = $(form_id);
+	
+	form.each(function() {
 	  this.reset();
+	});
+	
+	$(':checkbox', form).each(function(idx, elem) {
+		$(elem).removeAttr('checked');
 	});
 }
 
@@ -304,7 +315,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 	}
 	if(confirm_challenge) {
 		var q = String.format(confirm_pattern, instance.name, confirm_challenge);
-		jPrompt(q, "I'd rather not", 'Please confirm', function(r) {
+		jPrompt(q, "I'd rather not to", 'Please confirm', function(r) {
 			var ok = r == confirm_challenge;
 			callback(ok);
 		});

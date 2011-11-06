@@ -43,8 +43,7 @@ from zato.admin.settings import TECH_ACCOUNT_NAME
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
-from zato.admin.web.forms.security.tech_account import \
-     CreateTechnicalAccountForm, EditTechnicalAccountForm
+from zato.admin.web.forms.security.tech_account import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
@@ -64,8 +63,8 @@ def index(req):
     cluster_id = req.GET.get('cluster')
     items = []
     
-    create_form = CreateTechnicalAccountForm()
-    edit_form = EditTechnicalAccountForm(prefix='edit')
+    create_form = CreateForm()
+    edit_form = EditForm(prefix='edit')
     change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':
