@@ -60,5 +60,6 @@ $.fn.zato.definition.amqp.data_table.new_row = function(item, data, include_tr) 
 $.fn.zato.definition.amqp.delete_ = function(id) {
 	$.fn.zato.data_table.delete_(id, 'td.item_id_', 
 		'AMQP definition [{0}] deleted', 
-		'Are you sure you want to delete the AMQP definition [{0}]?');
+		'Are you sure you want to delete the AMQP definition [{0}]?',
+		true);
 }

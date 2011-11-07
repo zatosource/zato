@@ -98,7 +98,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
-                        <td>{{ item.def_.name }}</td>
+                        <td>{{ item.name }}</td>
                         <td>{{ item.host }}</td>
                         <td>{{ item.port }}</td>
                         <td>{{ item.vhost }}</td>
@@ -113,7 +113,7 @@
                     </tr>
                 {% endfor %}
                 {% else %}
-                    <tr>
+                    <tr class='ignore'>
                         <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}

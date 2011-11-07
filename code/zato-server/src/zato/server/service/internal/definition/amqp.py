@@ -32,7 +32,7 @@ from lxml.objectify import Element
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
-from zato.common.odb.model import Cluster, ConnDef, ConnDefAMQP
+from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common.odb.query import amqp_def_list
 from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
@@ -84,10 +84,11 @@ class Create(AdminService):
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
-            existing_one = session.query(ConnDef).\
-                filter(ConnDef.cluster_id==Cluster.id).\
-                filter(ConnDef.def_type=='amqp').\
-                filter(ConnDef.name==name).first()
+            existing_one = session.query(ConnDefAMQP).\
+                filter(ConnDefAMQP.cluster_id==Cluster.id).\
+                filter(ConnDefAMQP.def_type=='amqp').\
+                filter(ConnDefAMQP.name==name).\
+                first()
             
             if existing_one:
                 raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
@@ -95,10 +96,9 @@ class Create(AdminService):
             created_elem = Element('def_amqp')
             
             try:
-                def_ = ConnDef(None, name, 'amqp', cluster_id)
-                def_amqp = ConnDefAMQP(None, params['host'], params['port'], params['vhost'], 
-                    params['username'], password, params['frame_max'], params['heartbeat'])
-                def_.amqp = def_amqp
+                def_ = ConnDefAMQP(None, name, 'amqp', params['host'], params['port'], params['vhost'], 
+                    params['username'], password, params['frame_max'], params['heartbeat'],
+                    cluster_id)
                 session.add(def_)
                 session.commit()
                 
@@ -138,12 +138,12 @@ class Edit(AdminService):
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
-            existing_one = session.query(ConnDef, ConnDefAMQP).\
-                filter(ConnDef.id==ConnDefAMQP.def_id).\
-                filter(ConnDef.cluster_id==Cluster.id).\
-                filter(ConnDef.def_type=='amqp').\
+            existing_one = session.query(ConnDefAMQP).\
+                filter(ConnDefAMQP.cluster_id==Cluster.id).\
+                filter(ConnDefAMQP.def_type=='amqp').\
                 filter(ConnDefAMQP.id != id).\
-                filter(ConnDef.name==name).first()
+                filter(ConnDefAMQP.name==name).\
+                first()
             
             if existing_one:
                 raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
@@ -153,8 +153,8 @@ class Edit(AdminService):
             try:
                 
                 def_amqp = session.query(ConnDefAMQP).filter_by(id=id).one()
-                old_name = def_amqp.def_.name
-                def_amqp.def_.name = name
+                old_name = def_amqp.name
+                def_amqp.name = name
                 def_amqp.host = params['host']
                 def_amqp.port = params['port']
                 def_amqp.vhost = params['vhost']
@@ -192,8 +192,7 @@ class Delete(AdminService):
                 
                 id = params['id']
                 
-                def_ = session.query(ConnDef).\
-                    filter(ConnDef.id==ConnDefAMQP.def_id).\
+                def_ = session.query(ConnDefAMQP).\
                     filter(ConnDefAMQP.id==id).\
                     one()
                 

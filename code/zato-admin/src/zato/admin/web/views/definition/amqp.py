@@ -44,7 +44,7 @@ from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common.odb.model import Cluster, ConnDef, ConnDefAMQP
+from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
 from zato.common.util import TRACE1, to_form
 
@@ -107,9 +107,7 @@ def index(req):
                 frame_max = definition_elem.frame_max.text
                 heartbeat = is_boolean(definition_elem.heartbeat.text)
                 
-                def_ = ConnDef(None, name)
-                def_amqp =  ConnDefAMQP(id, host, port, vhost, username, None, frame_max, heartbeat)
-                def_amqp.def_ = def_
+                def_amqp =  ConnDefAMQP(id, name, 'amqp', host, port, vhost, username, None, frame_max, heartbeat)
                 
                 items.append(def_amqp)
                 
