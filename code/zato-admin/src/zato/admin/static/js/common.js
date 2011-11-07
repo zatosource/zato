@@ -52,6 +52,8 @@ $.namespace('zato.data_table');
 $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
 $.namespace('zato.form');
+$.namespace('zato.outgoing');
+$.namespace('zato.outgoing.amqp');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');

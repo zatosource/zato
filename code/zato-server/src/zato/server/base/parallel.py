@@ -264,7 +264,7 @@ class ParallelServer(BrokerMessageReceiver):
             wss_config[item.name].nonce_freshness = item.nonce_freshness
             
         amqp_def_config = Bunch()
-        for item in self.odb.get_amqp_def_list(server.cluster.id):
+        for item in self.odb.get_def_amqp_list(server.cluster.id):
             amqp_def_config[item.name] = Bunch()
             
         # Security configuration of HTTP URLs.

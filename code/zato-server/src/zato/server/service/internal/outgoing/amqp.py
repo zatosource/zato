@@ -35,9 +35,9 @@ from lxml.objectify import Element
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefAMQP
-from zato.common.odb.query import def_amqp_list
+from zato.common.odb.query import out_amqp_list
 from zato.common.util import TRACE1
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
@@ -47,24 +47,24 @@ class GetList(AdminService):
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
         with closing(self.server.odb.session()) as session:
-            definition_list = Element('definition_list')
-            definitions = def_amqp_list(session, params['cluster_id'])
+            items = Element('items')
+            db_items = out_amqp_list(session, params['cluster_id'])
     
-            for definition in definitions:
+            for db_item in db_items:
     
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.host = definition.host
-                definition_elem.port = definition.port
-                definition_elem.vhost = definition.vhost
-                definition_elem.username = definition.username
-                definition_elem.frame_max = definition.frame_max
-                definition_elem.heartbeat = definition.heartbeat
+                item = Element('item')
+                item.id = db_item.id
+                item.name = db_item.name
+                '''item.host = db_item.host
+                item.port = db_item.port
+                item.vhost = db_item.vhost
+                item.username = db_item.username
+                item.frame_max = db_item.frame_max
+                item.heartbeat = db_item.heartbeat'''
     
-                definition_list.append(definition_elem)
+                items.append(item)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            return ZATO_OK, etree.tostring(items)
         
 class Create(AdminService):
     """ Creates a new AMQP definition.
@@ -212,15 +212,3 @@ class Delete(AdminService):
                 raise
             
             return ZATO_OK, ''
-        
-class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an HTTP Basic Auth definition.
-    """
-    def handle(self, *args, **kwargs):
-        
-        def _auth(instance, password):
-            instance.password = password
-            
-        return self._handle(ConnDefAMQP, _auth, 
-                            DEFINITION.AMQP_CHANGE_PASSWORD, **kwargs)
-    

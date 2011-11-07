@@ -72,3 +72,10 @@ job_type_friendly_names = {
     'interval_based': 'interval-based',
     'cron_style': 'cron-style',
 }
+
+
+# Maps AMQP delivery modes to UI-friendly names
+amqp_delivery_friendly_name = {
+    1:'Non-persistent',
+    2:'Persistent',
+}

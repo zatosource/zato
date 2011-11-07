@@ -15,7 +15,7 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/definition/amqp.js"></script>
+    <script type="text/javascript" src="/static/js/outgoing/amqp.js"></script>
 
 
     <script>
@@ -24,17 +24,18 @@
             '_numbering',
             '_selection',
             'name',
-            'host',
-            'port',
-            'vhost',
-            'username',
-            'frame_max',
-            '_heartbeat',
-            '_change_password',
+            '_is_active',
+            '_delivery_mode',
+            'priority',
+            'content_type',
+            'encoding',
+            'expiration',
+            'user_id',
+            'app_id',
             '_edit',
             '_delete',
             'id',
-            'heartbeat'
+            'delivery_mode'
         ]
     }
     </script>
@@ -68,7 +69,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.definition.amqp.create()">Create a new outgoing AMQP connection</a>
+            <a href="javascript:$.fn.zato.outgoing.amqp.create()">Create a new outgoing AMQP connection</a>
         </div>
         
 
@@ -79,13 +80,14 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">Host</a></th>
-                        <th><a href="#">Port</a></th>
-                        <th><a href="#">Virtual host</a></th>
-                        <th><a href="#">Username</a></th>
-                        <th><a href="#">Max frame size</a></th>
-                        <th><a href="#">Send heartbeats</a></th>
-                        <th>&nbsp;</th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Delivery mode</a></th>
+                        <th><a href="#">Priority</a></th>
+                        <th><a href="#">Content type</a></th>
+                        <th><a href="#">Encoding</a></th>
+                        <th><a href="#">Expiration (ms)</a></th>
+                        <th><a href="#">User ID</a></th>
+                        <th><a href="#">App ID</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -98,23 +100,25 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
-                        <td>{{ item.def_.name }}</td>
-                        <td>{{ item.host }}</td>
-                        <td>{{ item.port }}</td>
-                        <td>{{ item.vhost }}</td>
-                        <td>{{ item.username }}</td>
-                        <td>{{ item.frame_max }}</td>
-                        <td>{% if item.heartbeat %}Yes{% else %}No{% endif %}</td>
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
-                        <td><a href="javascript:$.fn.zato.definition.amqp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.definition.amqp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:"Yes,No"  }}</td>
+                        <td>{{ item.delivery_mode_text }}</td>
+                        <td>{{ item.priority }}</td>
+                        <td>{{ item.content_type }}</td>
+                        <td>{{ item.encoding }}</td>
+                        <td>{{ item.expiration }}</td>
+                        <td>{{ item.user_id }}</td>
+                        <td>{{ item.app_id }}</td>
+                        
+                        <td><a href="javascript:$.fn.zato.outgoing.amqp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.amqp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.heartbeat }}</td>
+                        <td class='ignore'>{{ item.delivery_mode }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan='14'>No results</td>
+                        <td colspan='15'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -129,40 +133,55 @@
                     <table class="form-data">
     
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                     
                         <tr>
-                            <td style="vertical-align:middle">Host</td>
-                            <td>{{ create_form.host }}</td>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_form.is_active }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td>{{ create_form.port }}</td>
+                            <td style="vertical-align:middle">Definition</td>
+                            <td>{{ create_form.def_id }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Virtual host</td>
-                            <td>{{ create_form.vhost }}</td>
+                            <td style="vertical-align:middle">Delivery mode</td>
+                            <td>{{ create_form.delivery_mode }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
-                            <td>{{ create_form.username }}</td>
+                            <td style="vertical-align:middle">Priority</td>
+                            <td>{{ create_form.priority }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Max frame size</td>
-                            <td>{{ create_form.frame_max }}</td>
+                            <td style="vertical-align:middle">Content type</td>
+                            <td>{{ create_form.content_type }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Send heartbeats</td>
-                            <td>{{ create_form.heartbeat }}</td>
+                            <td style="vertical-align:middle">Encoding</td>
+                            <td>{{ create_form.content_encoding }}</td>
                         </tr>
-    
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Expiration (ms)</td>
+                            <td>{{ create_form.expiration }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">User ID</td>
+                            <td>{{ create_form.user_id }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">App ID</td>
+                            <td>{{ create_form.app_id }}</td>
+                        </tr>
+                        
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
