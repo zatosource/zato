@@ -27,7 +27,7 @@ from sqlalchemy import Table, Column, Integer, String, DateTime, MetaData, \
      ForeignKey, Sequence, Boolean, LargeBinary, UniqueConstraint, Enum, \
      SmallInteger
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import backref, relationship, validates
 
 # Zato
 from zato.common.util import make_repr, object_attrs
@@ -572,41 +572,46 @@ class ConnDefAMQP(Base):
 
 ################################################################################
 
-'''class OutgoingAMQP(Base):
+class OutgoingAMQP(Base):
     """ An outgoing AMQP connection.
     """
-    __tablename__ = 'conn_def_amqp'
+    __tablename__ = 'out_amqp'
     
     id = Column(Integer,  Sequence('conn_def_amqp_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    host = Column(String(200), nullable=False)
-    port = Column(Integer(), nullable=False)
-    vhost = Column(String(200), nullable=False)
-    username = Column(String(200), nullable=False)
-    password = Column(String(200), nullable=False)
-    frame_max = Column(Integer(), nullable=False)
-    heartbeat = Column(Boolean(), nullable=False)
     
-    #content_type = Column(String(200), nullable=True)
-    #content_encoding = Column(String(200), nullable=True)
-    #delivery_mode = Column(SmallInteger(), nullable=False)
-    #priority = Column(SmallInteger(), server_default=str(AMQP_DEFAULT_PRIORITY), nullable=False)
-    #expiration = Column(Integer(), nullable=True)
-    #user_id = Column(String(200), nullable=True)
-    #app_id = Column(String(200), nullable=True)
+    delivery_mode = Column(SmallInteger(), nullable=False)
+    priority = Column(SmallInteger(), server_default=str(AMQP_DEFAULT_PRIORITY), nullable=False)
     
-    def_id = Column(Integer, ForeignKey('conn_def.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDef, backref=backref('amqp', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
+    content_type = Column(String(200), nullable=True)
+    content_encoding = Column(String(200), nullable=True)
+    expiration = Column(Integer(), nullable=True)
+    user_id = Column(String(200), nullable=True)
+    app_id = Column(String(200), nullable=True)
     
-    def __init__(self, id=None, host=None, port=None, vhost=None,  username=None, 
-                 password=None, frame_max=None, heartbeat=None):
+    def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
+    def_ = relationship(ConnDefAMQP, backref=backref('out_amqps', cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, is_active=None, delivery_mode=None,
+                 priority=None, content_type=None, content_encoding=None, 
+                 expiration=None, user_id=None, app_id=None, def_id=None,
+                 delivery_mode_text=None):
         self.id = id
-        self.host = host
-        self.port = port
-        self.vhost = vhost
-        self.username = username
-        self.password = password
-        self.frame_max = frame_max
-        self.heartbeat = heartbeat'''
+        self.name = name
+        self.is_active = is_active
+        self.delivery_mode = delivery_mode
+        self.priority = priority
+        self.content_type = content_type
+        self.content_encoding = content_encoding
+        self.expiration = expiration
+        self.user_id = user_id
+        self.app_id = app_id
+        self.delivery_mode_text = delivery_mode_text # Not used by the DB
+        
+    @validates('priority')
+    def validate_priority(self, key, priority):
+        assert priority >= 0 and priority <= 9
+        return priority
         
 ################################################################################

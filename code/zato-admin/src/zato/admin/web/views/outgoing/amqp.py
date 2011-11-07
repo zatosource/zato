@@ -40,15 +40,25 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.views import change_password as _change_password
-from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
+from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.outgoing.amqp import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common.odb.model import Cluster, ConnDefAMQP
+from zato.common.odb.model import Cluster, OutgoingAMQP
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
+
+def _get_def_ids(cluster):
+    out = {}
+    
+    zato_message = Element('{%s}zato_message' % zato_namespace)
+    zato_message.data = Element('data')
+    zato_message.data.cluster_id = cluster.id        
+    _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-list', zato_message)
+        
+    return out
+        
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
@@ -81,37 +91,37 @@ def index(req):
     
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
-    change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':
         
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         
+        def_ids = _get_def_ids(cluster)
+        create_form.set_def_id(def_ids)
+        edit_form.set_def_id(def_ids)
+
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
         zato_message.data.cluster_id = cluster_id
         
-        _, zato_message, soap_response  = invoke_admin_service(cluster,
-                'zato:definition.amqp.get-list', zato_message)
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.amqp.get-list', zato_message)
         
-        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
+        if zato_path('data.items.item').get_from(zato_message) is not None:
             
-            for definition_elem in zato_message.data.definition_list.definition:
+            for msg_item in zato_message.data.items.item:
                 
-                id = definition_elem.id.text
-                name = definition_elem.name.text
-                host = definition_elem.host.text
-                port = definition_elem.port.text
-                vhost = definition_elem.vhost.text
-                username = definition_elem.username.text
-                frame_max = definition_elem.frame_max.text
-                heartbeat = is_boolean(definition_elem.heartbeat.text)
+                id = msg_item.id.text
+                name = msg_item.name.text
                 
-                def_ = ConnDef(None, name)
-                def_amqp =  ConnDefAMQP(id, host, port, vhost, username, None, frame_max, heartbeat)
-                def_amqp.def_ = def_
+                '''host = msg_item.host.text
+                port = msg_item.port.text
+                vhost = msg_item.vhost.text
+                username = msg_item.username.text
+                frame_max = msg_item.frame_max.text
+                heartbeat = is_boolean(msg_item.heartbeat.text)'''
                 
-                items.append(def_amqp)
+                item =  OutgoingAMQP(id, name)#, 'amqp', host, port, vhost, username, None, frame_max, heartbeat)
+                items.append(item)
                 
 
     return_data = {'zato_clusters':zato_clusters,
@@ -120,7 +130,6 @@ def index(req):
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
-        'change_password_form':change_password_form
         }
     
     # TODO: Should really be done by a decorator.
