@@ -534,32 +534,51 @@ class CronStyleJob(Base):
 
 ################################################################################
 
-class ConnDef(Base):
-    """ A connection to an external resource that is likely to get reused across
-    channels and outgoing connections.
+class ConnDefAMQP(Base):
+    """ An AMQP connection definition.
     """
-    __tablename__ = 'conn_def'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __tablename__ = 'conn_def_amqp'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id', 'def_type'), {})
     
-    id = Column(Integer,  Sequence('conn_def_seq'), primary_key=True)
+    id = Column(Integer,  Sequence('conn_def_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     def_type = Column(String(10), nullable=False)
     
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
+    host = Column(String(200), nullable=False)
+    port = Column(Integer(), nullable=False)
+    vhost = Column(String(200), nullable=False)
+    username = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    frame_max = Column(Integer(), nullable=False)
+    heartbeat = Column(Boolean(), nullable=False)
     
-    def __init__(self, id=None, name=None, def_type=None, cluster_id=None):
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('amqp_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, def_type=None, host=None, port=None, 
+                 vhost=None,  username=None,  password=None, frame_max=None, 
+                 heartbeat=None, cluster_id=None):
         self.id = id
         self.name = name
         self.def_type = def_type
+        self.host = host
+        self.port = port
+        self.vhost = vhost
+        self.username = username
+        self.password = password
+        self.frame_max = frame_max
+        self.heartbeat = heartbeat
         self.cluster_id = cluster_id
 
-class ConnDefAMQP(Base):
-    """ An AMQP connection.
+################################################################################
+
+'''class OutgoingAMQP(Base):
+    """ An outgoing AMQP connection.
     """
     __tablename__ = 'conn_def_amqp'
     
     id = Column(Integer,  Sequence('conn_def_amqp_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
     host = Column(String(200), nullable=False)
     port = Column(Integer(), nullable=False)
     vhost = Column(String(200), nullable=False)
@@ -588,6 +607,6 @@ class ConnDefAMQP(Base):
         self.username = username
         self.password = password
         self.frame_max = frame_max
-        self.heartbeat = heartbeat
-
+        self.heartbeat = heartbeat'''
+        
 ################################################################################

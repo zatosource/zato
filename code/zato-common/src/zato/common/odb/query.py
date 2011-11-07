@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from zato.common.odb.model import(ChannelURLDefinition, Cluster, ConnDef, 
-    ConnDefAMQP, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  Service,
-    TechnicalAccount, WSSDefinition)
+from zato.common.odb.model import(ChannelURLDefinition, Cluster, ConnDefAMQP, 
+    CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  Service, TechnicalAccount, 
+    WSSDefinition)
 
 def job_list(session, cluster_id):
     """ All the scheduler's jobs defined in the ODB.
@@ -76,12 +76,11 @@ def soap_channel_list(session, cluster_id):
 def amqp_def_list(session, cluster_id):
     """ AMQP connection definitions.
     """
-    return session.query(ConnDef.name, ConnDefAMQP.id, ConnDefAMQP.host,
+    return session.query(ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
                          ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
                          ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
-        filter(Cluster.id==ConnDef.cluster_id).\
-        filter(ConnDef.id==ConnDefAMQP.def_id).\
-        filter(ConnDef.def_type=='amqp').\
+        filter(Cluster.id==ConnDefAMQP.cluster_id).\
+        filter(ConnDefAMQP.def_type=='amqp').\
         filter(Cluster.id==cluster_id).\
-        order_by(ConnDef.name).\
+        order_by(ConnDefAMQP.name).\
         all()
