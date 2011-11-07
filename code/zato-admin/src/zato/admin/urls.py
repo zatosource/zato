@@ -29,6 +29,7 @@ from zato.admin.web.views import(cluster, load_balancer, main, scheduler,
     service, servers)
 from zato.admin.web.views.channel import soap
 from zato.admin.web.views.definition import amqp as def_amqp
+from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.pool import sql
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
@@ -122,6 +123,14 @@ urlpatterns = patterns('',
     url(r'^zato/definition/amqp/edit/$', def_amqp.edit, name='def-amqp-edit'),
     url(r'^zato/definition/amqp/change-password/$', def_amqp.change_password, name='def-amqp-change-password'),
     url(r'^zato/definition/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_amqp.delete, name='def-amqp-delete'),
+    
+    # Outgoing connections
+    
+    # .. AMQP
+    url(r'^zato/outgoing/amqp/$', out_amqp.index, name='out-amqp'),
+    url(r'^zato/outgoing/amqp/create/$', out_amqp.create, name='out-amqp-create'),
+    url(r'^zato/outgoing/amqp/edit/$', out_amqp.edit, name='out-amqp-edit'),
+    url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_amqp.delete, name='out-amqp-delete'),
     
 )
 
