@@ -3,9 +3,11 @@
 
 $.fn.zato.data_table.OutgoingAMQP = new Class({
 	toString: function() {
-		var s = '<OutgoingAMQP id:{0} name:{1} is_active:{2}>';
+		var s = '<OutgoingAMQP id:{0} name:{1} is_active:{2} def_id:{3}>';
 		return String.format(s, this.id ? this.id : '(none)', 
-								this.name ? this.name : '(none)');
+								this.name ? this.name : '(none)',
+								this.is_active ? this.is_active : '(none)',
+								this.def_id ? this.def_id : '(none)');
 	}
 });
 

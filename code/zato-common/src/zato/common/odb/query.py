@@ -104,7 +104,8 @@ def out_amqp_list(session, cluster_id):
                          OutgoingAMQP.delivery_mode, OutgoingAMQP.priority, 
                          OutgoingAMQP.content_type, OutgoingAMQP.content_encoding, 
                          OutgoingAMQP.expiration, OutgoingAMQP.user_id, 
-                         OutgoingAMQP.app_id, ConnDefAMQP.name.label('def_name')).\
+                         OutgoingAMQP.app_id, ConnDefAMQP.name.label('def_name'),
+                         ConnDefAMQP.id.label('def_id')).\
         filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
         filter(ConnDefAMQP.id==OutgoingAMQP.def_id).\
         filter(Cluster.id==cluster_id).\

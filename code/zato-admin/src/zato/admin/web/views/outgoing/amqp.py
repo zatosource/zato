@@ -143,10 +143,11 @@ def index(req):
                 app_id = msg_item.app_id.text
                 delivery_mode_text = amqp_delivery_friendly_name[delivery_mode]
                 def_name = msg_item.def_name.text
+                def_id = msg_item.def_id.text
                 
                 item =  OutgoingAMQP(id, name, is_active, delivery_mode, priority,
                     content_type, content_encoding, expiration, user_id, app_id,
-                    None, delivery_mode_text, def_name)
+                    def_id, delivery_mode_text, def_name)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,

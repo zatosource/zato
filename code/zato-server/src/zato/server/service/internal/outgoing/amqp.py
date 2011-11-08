@@ -63,6 +63,7 @@ class GetList(AdminService):
                 item.user_id = db_item.user_id
                 item.app_id = db_item.app_id
                 item.def_name = db_item.def_name
+                item.def_id = db_item.def_id
     
                 item_list.append(item)
     
