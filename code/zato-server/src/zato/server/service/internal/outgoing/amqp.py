@@ -123,7 +123,7 @@ class Create(AdminService):
                 created_elem.id = item.id
                 
                 core_params['action'] = OUTGOING.AMQP_CREATE
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
+                kwargs['thread_ctx'].broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
