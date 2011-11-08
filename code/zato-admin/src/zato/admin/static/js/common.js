@@ -216,9 +216,11 @@ $.fn.zato.data_table.reset_form = function(form_id) {
 	  this.reset();
 	});
 	
-	$(':checkbox', form).each(function(idx, elem) {
-		$(elem).removeAttr('checked');
-	});
+	if(form_id != '#create-form') {
+		$(':checkbox', form).each(function(idx, elem) {
+			$(elem).removeAttr('checked');
+		});
+	}
 }
 
 $.fn.zato.data_table.cleanup = function(form_id) {
