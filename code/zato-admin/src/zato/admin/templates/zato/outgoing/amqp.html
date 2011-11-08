@@ -25,6 +25,7 @@
             '_selection',
             'name',
             '_is_active',
+            '_def_name',
             '_delivery_mode',
             'priority',
             'content_type',
@@ -35,6 +36,7 @@
             '_edit',
             '_delete',
             'id',
+            'is_active',
             'delivery_mode'
         ]
     }
@@ -81,6 +83,7 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Definition</a></th>
                         <th><a href="#">Delivery mode</a></th>
                         <th><a href="#">Priority</a></th>
                         <th><a href="#">Content type</a></th>
@@ -90,6 +93,7 @@
                         <th><a href="#">App ID</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
@@ -102,6 +106,7 @@
                         <td><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.def_name }}</td>
                         <td>{{ item.delivery_mode_text|default_if_none:'' }}</td>
                         <td>{{ item.priority|default_if_none:'' }}</td>
                         <td>{{ item.content_type|default_if_none:'' }}</td>
@@ -113,6 +118,7 @@
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.amqp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.delivery_mode }}</td>
                     </tr>
                 {% endfor %}

@@ -153,6 +153,7 @@ class ZatoContext(PythonConfig):
             
             # Definitions - AMQP
             'zato:definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
+            'zato:definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
             'zato:definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
             'zato:definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
             'zato:definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',

@@ -596,7 +596,7 @@ class OutgoingAMQP(Base):
     def __init__(self, id=None, name=None, is_active=None, delivery_mode=None,
                  priority=None, content_type=None, content_encoding=None, 
                  expiration=None, user_id=None, app_id=None, def_id=None,
-                 delivery_mode_text=None):
+                 delivery_mode_text=None, def_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -608,5 +608,6 @@ class OutgoingAMQP(Base):
         self.user_id = user_id
         self.app_id = app_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
+        self.def_name = def_name # Not used by the DB
         
 ################################################################################

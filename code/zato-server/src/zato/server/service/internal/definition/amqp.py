@@ -66,6 +66,34 @@ class GetList(AdminService):
     
             return ZATO_OK, etree.tostring(definition_list)
         
+class GetByID(AdminService):
+    """ Returns a particular AMQP definition
+    """
+    def handle(self, *args, **kwargs):
+        
+        params = _get_params(kwargs.get('payload'), ['id'], 'data.')
+        
+        with closing(self.server.odb.session()) as session:
+
+            definition = session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
+                ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
+                ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
+                filter(ConnDefAMQP.id==params['id']).\
+                one()            
+            
+            definition_elem = Element('definition')
+            
+            definition_elem.id = definition.id
+            definition_elem.name = definition.name
+            definition_elem.host = definition.host
+            definition_elem.port = definition.port
+            definition_elem.vhost = definition.vhost
+            definition_elem.username = definition.username
+            definition_elem.frame_max = definition.frame_max
+            definition_elem.heartbeat = definition.heartbeat
+    
+            return ZATO_OK, etree.tostring(definition_elem)
+        
 class Create(AdminService):
     """ Creates a new AMQP definition.
     """
