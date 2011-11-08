@@ -69,6 +69,11 @@ DEFINITION.AMQP_EDIT = b'10501'
 DEFINITION.AMQP_DELETE = b'10502'
 DEFINITION.AMQP_CHANGE_PASSWORD = b'10503'
 
+OUTGOING = Bunch()
+OUTGOING.AMQP_CREATE = b'10600'
+OUTGOING.AMQP_EDIT = b'10601'
+OUTGOING.AMQP_DELETE = b'10602'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

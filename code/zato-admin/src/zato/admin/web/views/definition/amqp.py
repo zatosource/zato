@@ -157,7 +157,7 @@ def edit(req):
         return _edit_create_response(zato_message, 'updated', req.POST['edit-name'])        
         
     except Exception, e:
-        msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not update an AMQP definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -180,6 +180,6 @@ def delete(req, id, cluster_id):
         return HttpResponse()
     
     except Exception, e:
-        msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not delete the AMQP definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)

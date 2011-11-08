@@ -119,7 +119,7 @@ class Create(AdminService):
                 raise 
 
 class Edit(AdminService):
-    """ Creates a new AMQP definition.
+    """ Updates an AMQP definition.
     """
     def handle(self, *args, **kwargs):
         
