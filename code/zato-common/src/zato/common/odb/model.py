@@ -607,6 +607,7 @@ class OutgoingAMQP(Base):
         self.expiration = expiration
         self.user_id = user_id
         self.app_id = app_id
+        self.def_id = def_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
         
