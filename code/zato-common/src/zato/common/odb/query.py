@@ -100,9 +100,13 @@ def amqp_def_list(session, cluster_id):
 def out_amqp_list(session, cluster_id):
     """ Outgoing AMQP connections
     """
-    return session.query(OutgoingAMQP).\
+    return session.query(OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active, 
+                         OutgoingAMQP.delivery_mode, OutgoingAMQP.priority, 
+                         OutgoingAMQP.content_type, OutgoingAMQP.content_encoding, 
+                         OutgoingAMQP.expiration, OutgoingAMQP.user_id, 
+                         OutgoingAMQP.app_id, ConnDefAMQP.name.label('def_name')).\
         filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
-        filter(ConnDefAMQP.cluster_id==Cluster.id).\
+        filter(ConnDefAMQP.id==OutgoingAMQP.def_id).\
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingAMQP.name).\
         all()

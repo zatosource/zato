@@ -62,6 +62,7 @@ class GetList(AdminService):
                 item.expiration = db_item.expiration
                 item.user_id = db_item.user_id
                 item.app_id = db_item.app_id
+                item.def_name = db_item.def_name
     
                 item_list.append(item)
     
@@ -185,7 +186,7 @@ class Edit(AdminService):
                 
                 def_amqp_elem.id = def_amqp.id
                 
-                params['action'] = DEFINITION.AMQP_EDIT
+                params['action'] = OUTGOING.AMQP_EDIT
                 params['old_name'] = old_name
                 kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
@@ -199,7 +200,7 @@ class Edit(AdminService):
                 raise         
         
 class Delete(AdminService):
-    """ Deletes an AMQP definition.
+    """ Deletes an outgoing AMQP connection.
     """
     def handle(self, *args, **kwargs):
         with closing(self.server.odb.session()) as session:
@@ -210,19 +211,19 @@ class Delete(AdminService):
                 
                 id = params['id']
                 
-                def_ = session.query(ConnDefAMQP).\
-                    filter(ConnDefAMQP.id==id).\
+                def_ = session.query(OutgoingAMQP).\
+                    filter(OutgoingAMQP.id==id).\
                     one()
                 
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.AMQP_DELETE, 'name': def_.name}
+                msg = {'action': OUTGOING.AMQP_DELETE, 'name': def_.name}
                 kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the outgoing AMQP connection, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise
