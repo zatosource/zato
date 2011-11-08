@@ -39,6 +39,7 @@ from validate import is_boolean
 from anyjson import dumps
 
 # Zato
+from zato.admin.settings import amqp_delivery_friendly_name
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.outgoing.amqp import CreateForm, EditForm
@@ -91,7 +92,7 @@ def _get_edit_create_message(params, prefix=''):
     return zato_message
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.def_amqp.id.text,
+    return_data = {'id': zato_message.data.out_amqp.id.text,
                    'message': 'Successfully {0} the AMQP definition [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -126,17 +127,19 @@ def index(req):
                 id = msg_item.id.text
                 name = msg_item.name.text
                 is_active = is_boolean(msg_item.is_active.text)
-                delivery_mode = msg_item.delivery_mode.text
+                delivery_mode = int(msg_item.delivery_mode.text)
                 priority = msg_item.priority.text
                 content_type = msg_item.content_type.text
                 content_encoding = msg_item.content_encoding.text
                 expiration = msg_item.expiration.text
                 user_id = msg_item.user_id.text
                 app_id = msg_item.app_id.text
+                delivery_mode_text = amqp_delivery_friendly_name[delivery_mode]
                 
-                item =  OutgoingAMQP(id, name, is_active)
+                item =  OutgoingAMQP(id, name, is_active, delivery_mode, priority,
+                    content_type, content_encoding, expiration, user_id, app_id,
+                    None, delivery_mode_text)
                 items.append(item)
-                
 
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
