@@ -56,6 +56,15 @@ def _get_def_ids(cluster):
     zato_message.data = Element('data')
     zato_message.data.cluster_id = cluster.id        
     _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-list', zato_message)
+    
+    if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
+        
+        for definition_elem in zato_message.data.definition_list.definition:
+            
+            id = definition_elem.id.text
+            name = definition_elem.name.text
+            
+            out[id] = name
         
     return out
         
@@ -68,12 +77,16 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
-    zato_message.data.host = params[prefix + 'host']
-    zato_message.data.port = params[prefix + 'port']
-    zato_message.data.vhost = params[prefix + 'vhost']
-    zato_message.data.username = params[prefix + 'username']
-    zato_message.data.frame_max = params[prefix + 'frame_max']
-    zato_message.data.heartbeat = bool(params.get(prefix + 'heartbeat'))
+    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.data.def_id = params[prefix + 'def_id']
+    zato_message.data.delivery_mode = params[prefix + 'delivery_mode']
+    zato_message.data.priority = params[prefix + 'priority']
+    
+    zato_message.data.content_type = params.get(prefix + 'content_type')
+    zato_message.data.content_encoding = params.get(prefix + 'content_encoding')
+    zato_message.data.expiration = params.get(prefix + 'expiration')
+    zato_message.data.user_id = params.get(prefix + 'user_id')
+    zato_message.data.app_id = params.get(prefix + 'app_id')
 
     return zato_message
 
@@ -106,21 +119,22 @@ def index(req):
         
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.amqp.get-list', zato_message)
         
-        if zato_path('data.items.item').get_from(zato_message) is not None:
+        if zato_path('data.item_list.item').get_from(zato_message) is not None:
             
-            for msg_item in zato_message.data.items.item:
+            for msg_item in zato_message.data.item_list.item:
                 
                 id = msg_item.id.text
                 name = msg_item.name.text
+                is_active = is_boolean(msg_item.is_active.text)
+                delivery_mode = msg_item.delivery_mode.text
+                priority = msg_item.priority.text
+                content_type = msg_item.content_type.text
+                content_encoding = msg_item.content_encoding.text
+                expiration = msg_item.expiration.text
+                user_id = msg_item.user_id.text
+                app_id = msg_item.app_id.text
                 
-                '''host = msg_item.host.text
-                port = msg_item.port.text
-                vhost = msg_item.vhost.text
-                username = msg_item.username.text
-                frame_max = msg_item.frame_max.text
-                heartbeat = is_boolean(msg_item.heartbeat.text)'''
-                
-                item =  OutgoingAMQP(id, name)#, 'amqp', host, port, vhost, username, None, frame_max, heartbeat)
+                item =  OutgoingAMQP(id, name, is_active)
                 items.append(item)
                 
 
@@ -146,12 +160,12 @@ def create(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.create', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.amqp.create', zato_message)
 
         return _edit_create_response(zato_message, 'created', req.POST['name'])        
         
     except Exception, e:
-        msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not create an outgoing AMQP connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -163,18 +177,14 @@ def edit(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.edit', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.amqp.edit', zato_message)
 
         return _edit_create_response(zato_message, 'updated', req.POST['edit-name'])        
         
     except Exception, e:
-        msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not update the outgoing AMQP connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-
-@meth_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato:definition.amqp.change-password')
     
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
@@ -186,11 +196,11 @@ def delete(req, id, cluster_id):
         zato_message.data = Element('data')
         zato_message.data.id = id
         
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.amqp.delete', zato_message)
         
         return HttpResponse()
     
     except Exception, e:
-        msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not delete the outgoing AMQP connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)

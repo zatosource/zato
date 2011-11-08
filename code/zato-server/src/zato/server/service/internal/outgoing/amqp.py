@@ -33,21 +33,20 @@ from lxml.objectify import Element
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
-from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
-from zato.common.odb.model import Cluster, ConnDefAMQP
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.odb.model import Cluster, ConnDefAMQP, OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
-from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
-    """ Returns a list of AMQP definitions available.
+    """ Returns a list of outgoing AMQP connections.
     """
     def handle(self, *args, **kwargs):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
         with closing(self.server.odb.session()) as session:
-            items = Element('items')
+            item_list = Element('item_list')
             db_items = out_amqp_list(session, params['cluster_id'])
     
             for db_item in db_items:
@@ -55,71 +54,88 @@ class GetList(AdminService):
                 item = Element('item')
                 item.id = db_item.id
                 item.name = db_item.name
-                '''item.host = db_item.host
-                item.port = db_item.port
-                item.vhost = db_item.vhost
-                item.username = db_item.username
-                item.frame_max = db_item.frame_max
-                item.heartbeat = db_item.heartbeat'''
+                item.is_active = db_item.is_active
+                item.delivery_mode = db_item.delivery_mode
+                item.priority = db_item.priority
+                item.content_type = db_item.content_type
+                item.content_encoding = db_item.content_encoding
+                item.expiration = db_item.expiration
+                item.user_id = db_item.user_id
+                item.app_id = db_item.app_id
     
-                items.append(item)
+                item_list.append(item)
     
-            return ZATO_OK, etree.tostring(items)
+            return ZATO_OK, etree.tostring(item_list)
         
 class Create(AdminService):
-    """ Creates a new AMQP definition.
+    """ Creates a new outgoing AMQP connection.
     """
     def handle(self, *args, **kwargs):
         
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'name', 'host', 'port', 'vhost', 
-                'username', 'frame_max', 'heartbeat']
             
-            params = _get_params(payload, request_params, 'data.')
-            name = params['name']
+            core_params = ['cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority']
+            core_params = _get_params(payload, core_params, 'data.')
             
-            cluster_id = params['cluster_id']
+            optional_params = ['content_type', 'content_encoding', 'expiration', 'user_id', 'app_id']
+            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
+        
+            priority = int(core_params['priority'])
+        
+            if not(priority >= 0 and priority <= 9):
+                msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(priority))
+                raise ValueError(msg)
+            
+            name = core_params['name']
+            cluster_id = core_params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
-            password = uuid4().hex
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
-            existing_one = session.query(ConnDefAMQP).\
-                filter(ConnDefAMQP.cluster_id==Cluster.id).\
-                filter(ConnDefAMQP.def_type=='amqp').\
-                filter(ConnDefAMQP.name==name).\
+            existing_one = session.query(OutgoingAMQP.id).\
+                filter(ConnDefAMQP.cluster_id==cluster_id).\
+                filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
+                filter(OutgoingAMQP.name==name).\
                 first()
             
             if existing_one:
-                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing AMQP connection[{0}] already exists on this cluster'.format(name))
             
-            created_elem = Element('def_amqp')
+            created_elem = Element('out_amqp')
             
             try:
-                def_ = ConnDefAMQP(None, name, 'amqp', params['host'], params['port'], params['vhost'], 
-                    params['username'], password, params['frame_max'], params['heartbeat'],
-                    cluster_id)
-                session.add(def_)
+                item = OutgoingAMQP()
+                item.name = core_params['name']
+                item.is_active = core_params['is_active']
+                item.def_id = core_params['def_id']
+                item.delivery_mode = core_params['delivery_mode']
+                item.priority = core_params['priority']
+                item.content_type = optional_params['content_type']
+                item.content_encoding = optional_params['content_encoding'] 
+                item.expiration = optional_params['expiration']
+                item.user_id = optional_params['user_id']
+                item.app_id = optional_params['app_id']
+                
+                session.add(item)
                 session.commit()
                 
-                created_elem.id = def_.id
+                created_elem.id = item.id
                 
-                params['action'] = DEFINITION.AMQP_CREATE
+                core_params['action'] = OUTGOING.AMQP_CREATE
                 kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
             except Exception, e:
-                msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+                msg = "Could not create an outgoing AMQP connection, e=[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
 
 class Edit(AdminService):
-    """ Creates a new AMQP definition.
+    """ Updates an outgoing AMQP connection.
     """
     def handle(self, *args, **kwargs):
         

@@ -27,7 +27,7 @@ from sqlalchemy import Table, Column, Integer, String, DateTime, MetaData, \
      ForeignKey, Sequence, Boolean, LargeBinary, UniqueConstraint, Enum, \
      SmallInteger
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, relationship, validates
+from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common.util import make_repr, object_attrs
@@ -608,10 +608,5 @@ class OutgoingAMQP(Base):
         self.user_id = user_id
         self.app_id = app_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
-        
-    @validates('priority')
-    def validate_priority(self, key, priority):
-        assert priority >= 0 and priority <= 9
-        return priority
         
 ################################################################################
