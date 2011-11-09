@@ -179,14 +179,14 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb=None, singleton_server=None, sec_config=None):
+                 odb=None, singleton_server=None, worker_config=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
         self.odb = odb
         self.singleton_server = singleton_server
-        self.sec_config = sec_config
+        self.worker_config = worker_config
         
         self.zmq_items = {}
         
@@ -231,7 +231,7 @@ class ParallelServer(BrokerMessageReceiver):
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
                     
-        self.sec_config = Bunch()
+        self.worker_config = Bunch()
         
         # HTTP Basic Auth
         ba_config = Bunch()
@@ -262,6 +262,19 @@ class ParallelServer(BrokerMessageReceiver):
             wss_config[item.name].reject_stale_username = item.reject_stale_username
             wss_config[item.name].expiry_limit = item.expiry_limit
             wss_config[item.name].nonce_freshness = item.nonce_freshness
+
+        def_amqp_config = Bunch()
+        for item in self.odb.get_def_amqp_list(server.cluster.id):
+            def_amqp_config[item.name] = Bunch()
+            def_amqp_config[item.name].id = item.id
+            def_amqp_config[item.name].name = item.name
+            def_amqp_config[item.name].host = str(item.host)
+            def_amqp_config[item.name].port = item.port
+            def_amqp_config[item.name].vhost = item.vhost
+            def_amqp_config[item.name].username = item.username
+            def_amqp_config[item.name].frame_max = item.frame_max
+            def_amqp_config[item.name].heartbeat = item.heartbeat
+            def_amqp_config[item.name].password = item.password
             
         out_amqp_config = Bunch()
         for item in self.odb.get_out_amqp_list(server.cluster.id):
@@ -276,17 +289,17 @@ class ParallelServer(BrokerMessageReceiver):
             out_amqp_config[item.name].expiration = item.expiration
             out_amqp_config[item.name].user_id = item.user_id
             out_amqp_config[item.name].app_id = item.app_id
-            
-        logger.error(str(out_amqp_config))
+            out_amqp_config[item.name].def_name = item.def_name
             
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)
         
-        self.sec_config.basic_auth = ba_config
-        self.sec_config.tech_acc = ta_config
-        self.sec_config.wss = wss_config
-        self.sec_config.url_sec = url_sec
-        self.sec_config.out_amqp = out_amqp_config
+        self.worker_config.basic_auth = ba_config
+        self.worker_config.tech_acc = ta_config
+        self.worker_config.wss = wss_config
+        self.worker_config.url_sec = url_sec
+        self.worker_config.out_amqp = out_amqp_config
+        self.worker_config.def_amqp = def_amqp_config
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -322,7 +335,7 @@ class ParallelServer(BrokerMessageReceiver):
         
         task_dispatcher = _TaskDispatcher(self.on_broker_msg, 1, self.broker_token, 
             self.zmq_context,  self.broker_push_addr, self.broker_pull_addr,
-            self.broker_sub_addr, self.sec_config)
+            self.broker_sub_addr, self.worker_config)
         task_dispatcher.setThreadCount(4)
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
