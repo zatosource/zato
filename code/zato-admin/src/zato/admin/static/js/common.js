@@ -216,7 +216,7 @@ $.fn.zato.data_table.reset_form = function(form_id) {
 	  this.reset();
 	});
 	
-	if(form_id != '#create-form') {
+	if(!($.fn.zato.startswith(form_id, '#create'))) {
 		$(':checkbox', form).each(function(idx, elem) {
 			$(elem).removeAttr('checked');
 		});
@@ -565,11 +565,15 @@ String.prototype.capitalize = function() {
 }
 
 
-$.fn.zato.dir = function (item) {
+$.fn.zato.dir = function(item) {
     out = [];
     for(attr in item) {
 		out.push(attr);
     }
     out.sort();
     return out;
+}
+
+$.fn.zato.startswith = function(s, prefix) {
+    return s.indexOf(prefix) === 0;
 }
