@@ -88,8 +88,7 @@ def _get_edit_create_message(params, prefix=''):
 
     return zato_message
 
-def _edit_create_response(id, action, name, delivery_mode_text, 
-        cluster, def_id):
+def _edit_create_response(cluster, verb, id, name, delivery_mode_text, def_id):
 
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
@@ -98,9 +97,11 @@ def _edit_create_response(id, action, name, delivery_mode_text,
     _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-by-id', zato_message)    
     
     return_data = {'id': id,
-                   'message': 'Successfully {0} the AMQP definition [{1}]'.format(action, name),
-                   'delivery_mode_text': delivery_mode_text
+                   'message': 'Successfully {0} the AMQP definition [{1}]'.format(verb, name),
+                   'delivery_mode_text': delivery_mode_text,
+                   'def_name': zato_message.data.definition.name.text
                 }
+    
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @meth_allowed('GET')
@@ -175,8 +176,8 @@ def create(req):
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.amqp.create', zato_message)
         delivery_mode_text = amqp_delivery_friendly_name[int(req.POST['delivery_mode'])]
 
-        return _edit_create_response(zato_message.data.out_amqp.id.text, 
-            'created', req.POST['name'], delivery_mode_text, cluster, req.POST['def_id'])
+        return _edit_create_response(cluster, 'created', zato_message.data.out_amqp.id.text, 
+            req.POST['name'], delivery_mode_text, req.POST['def_id'])
     except Exception, e:
         msg = "Could not create an outgoing AMQP connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
@@ -193,7 +194,8 @@ def edit(req):
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.amqp.edit', zato_message)
         delivery_mode_text = amqp_delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
 
-        return _edit_create_response(zato_message, 'updated', req.POST['edit-name'])        
+        return _edit_create_response(cluster, 'updated', req.POST['id'], req.POST['edit-name'],
+                                     delivery_mode_text, req.POST['edit-def_id'])
         
     except Exception, e:
         msg = "Could not update the outgoing AMQP connection, e=[{e}]".format(e=format_exc(e))
