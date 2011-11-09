@@ -120,6 +120,7 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
+        print(kwargs['thread_ctx'].out_amqp)
         return ZATO_OK, ''
 
 class ChangePasswordBase(AdminService):

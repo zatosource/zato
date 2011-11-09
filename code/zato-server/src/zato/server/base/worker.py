@@ -20,10 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, socket
+import logging, socket, time
 from copy import deepcopy
 from thread import start_new_thread
-from threading import local, RLock
+from threading import local, RLock, Thread
 from traceback import format_exc
 
 # zope.server
@@ -33,6 +33,9 @@ from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Pika
+from pika import BasicProperties
+from pika.adapters import SelectConnection
+from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
 
 # Bunch
@@ -43,6 +46,22 @@ from zato.broker.zato_client import BrokerClient
 from zato.server.base import BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
+
+class _AMQPPublisher(object):
+    def __init__(self, conn_params):
+        self.conn_params = conn_params
+        
+    def _on_connected(self, conn):
+        conn.channel(self._on_channel_open)
+        print(4444444444444444444444, conn)
+        
+    def _on_channel_open(self, channel):
+        #self.out_amqp[out_attrs.name].channel = channel
+        pass
+        
+    def _run(self):
+        conn = SelectConnection(self.conn_params, self._on_connected)
+        conn.ioloop.start()
 
 class _WorkerStore(BrokerMessageReceiver):
     """ Each worker thread has its own configuration store. The store is assigned
@@ -71,16 +90,30 @@ class _WorkerStore(BrokerMessageReceiver):
         self.def_amqp_lock = RLock()
         self.out_amqp_lock = RLock()
         
-        self._setup_out_amqp()
-
 # ##############################################################################        
 
-    def _setup_out_amqp(self):
-
+    def _setup_amqp(self):
+        """ Sets up AMQP channels and outgoing connections on startup.
+        """
         with self.out_amqp_lock:
             with self.def_amqp_lock:
-                for name, attrs in self.out_amqp.items():
-                    logger.error(str(name))
+                for def_name, def_attrs in self.def_amqp.items():
+                    for out_name, out_attrs in self.out_amqp.items():
+                        if def_name == out_attrs.def_name:
+                            
+                            credentials = PlainCredentials(def_attrs.username, def_attrs.password)
+                            conn_params = ConnectionParameters(def_attrs.host,
+                                def_attrs.port, def_attrs.vhost, credentials,
+                                frame_max=def_attrs.frame_max, heartbeat=def_attrs.heartbeat)
+
+                            try:
+                                publisher = _AMQPPublisher(conn_params)
+                                Thread(target=publisher._run).start()
+                            except socket.error, e:
+                                msg = 'Could not establish a connection to {0}:{1}{2} ({3}), e=[{4}]'.format(
+                                    def_attrs.host, def_attrs.port, def_attrs.vhost, def_attrs.name,
+                                    format_exc(e))
+                                logger.error(msg)
 
 # ##############################################################################        
         
@@ -262,7 +295,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     """
     def __init__(self, pull_handler, sub_handler, broker_token, 
                  zmq_context, broker_push_addr, broker_pull_addr, broker_sub_addr,
-                 sec_config):
+                 worker_config):
         super(_TaskDispatcher, self).__init__()
         self.pull_handler = pull_handler
         self.sub_handler = sub_handler
@@ -271,7 +304,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         self.broker_push_addr = broker_push_addr
         self.broker_pull_addr = broker_pull_addr
         self.broker_sub_addr = broker_sub_addr
-        self.sec_config = sec_config
+        self.worker_config = worker_config
         
     def setThreadCount(self, count):
         """ Mostly copy & paste from the base classes except for the part
@@ -295,7 +328,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 thread_data.broker_push_addr = self.broker_push_addr
                 thread_data.broker_pull_addr = self.broker_pull_addr
                 thread_data.broker_sub_addr = self.broker_sub_addr
-                thread_data.sec_config = self.sec_config
+                thread_data.worker_config = self.worker_config
                 
                 # Each thread gets its own copy of the initial configuration ..
                 thread_data = deepcopy(thread_data)
@@ -323,13 +356,17 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         """
         _local = local()
         _local.store = _WorkerStore()
-        _local.store.basic_auth = thread_data.sec_config.basic_auth
-        _local.store.tech_acc = thread_data.sec_config.tech_acc
-        _local.store.wss = thread_data.sec_config.wss
-        _local.store.url_sec = thread_data.sec_config.url_sec
-        _local.store.out_amqp = thread_data.sec_config.out_amqp
+        _local.store.basic_auth = thread_data.worker_config.basic_auth
+        _local.store.tech_acc = thread_data.worker_config.tech_acc
+        _local.store.wss = thread_data.worker_config.wss
+        _local.store.url_sec = thread_data.worker_config.url_sec
+        _local.store.def_amqp = thread_data.worker_config.def_amqp
+        _local.store.out_amqp = thread_data.worker_config.out_amqp
         
-        # We're in a new thread so we can start the broker client now.
+        # We're in a new thread so we can start new thread-specific clients.
+        
+        _local.store._setup_amqp()
+        
         _local.broker_client = BrokerClient()
         _local.broker_client.name = 'parallel/thread'
         _local.broker_client.token = thread_data.broker_token

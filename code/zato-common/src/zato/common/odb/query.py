@@ -78,19 +78,8 @@ def def_amqp_list(session, cluster_id):
     """
     return session.query(ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
                          ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
-                         ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
-        filter(Cluster.id==ConnDefAMQP.cluster_id).\
-        filter(ConnDefAMQP.def_type=='amqp').\
-        filter(Cluster.id==cluster_id).\
-        order_by(ConnDefAMQP.name).\
-        all()
-
-def amqp_def_list(session, cluster_id):
-    """ AMQP connection definitions.
-    """
-    return session.query(ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
-                         ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
-                         ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
+                         ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat,
+                         ConnDefAMQP.password).\
         filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(ConnDefAMQP.def_type=='amqp').\
         filter(Cluster.id==cluster_id).\
