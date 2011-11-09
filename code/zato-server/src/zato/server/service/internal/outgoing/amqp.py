@@ -91,7 +91,6 @@ class Create(AdminService):
             
             name = core_params['name']
             cluster_id = core_params['cluster_id']
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
@@ -143,62 +142,69 @@ class Edit(AdminService):
         
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
-            request_params = ['id', 'cluster_id', 'name', 'host', 'port', 
-                'vhost',  'username', 'frame_max', 'heartbeat']
+
+            core_params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority']
+            core_params = _get_params(payload, core_params, 'data.')
             
-            params = _get_params(payload, request_params, 'data.')
+            optional_params = ['content_type', 'content_encoding', 'expiration', 'user_id', 'app_id']
+            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
+        
+            priority = int(core_params['priority'])
+        
+            if not(priority >= 0 and priority <= 9):
+                msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(priority))
+                raise ValueError(msg)
             
-            id = params['id']
-            name = params['name']
-            
-            cluster_id = params['cluster_id']
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
-            password = uuid4().hex
+            id = core_params['id']
+            name = core_params['name']
+            cluster_id = core_params['cluster_id']
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
-            existing_one = session.query(ConnDefAMQP).\
-                filter(ConnDefAMQP.cluster_id==Cluster.id).\
-                filter(ConnDefAMQP.def_type=='amqp').\
-                filter(ConnDefAMQP.id != id).\
-                filter(ConnDefAMQP.name==name).\
+            existing_one = session.query(OutgoingAMQP.id).\
+                filter(ConnDefAMQP.cluster_id==cluster_id).\
+                filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
+                filter(OutgoingAMQP.name==name).\
+                filter(OutgoingAMQP.id!=id).\
                 first()
             
             if existing_one:
-                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing AMQP connection [{0}] already exists on this cluster'.format(name))
             
-            def_amqp_elem = Element('def_amqp')
+            xml_item = Element('out_amqp')
             
             try:
                 
-                def_amqp = session.query(ConnDefAMQP).filter_by(id=id).one()
-                old_name = def_amqp.name
-                def_amqp.name = name
-                def_amqp.host = params['host']
-                def_amqp.port = params['port']
-                def_amqp.vhost = params['vhost']
-                def_amqp.username = params['username']
-                def_amqp.frame_max = params['frame_max']
-                def_amqp.heartbeat = params['heartbeat']
+                item = session.query(OutgoingAMQP).filter_by(id=id).one()
+                old_name = item.name
+                item.name = name
+                item.is_active = core_params['is_active']
+                item.def_id = core_params['def_id']
+                item.delivery_mode = core_params['delivery_mode']
+                item.priority = core_params['priority']
+                item.content_type = optional_params['content_type']
+                item.content_encoding = optional_params['content_encoding']
+                item.expiration = optional_params['expiration']
+                item.user_id = optional_params['user_id']
+                item.app_id = optional_params['app_id']
                 
-                session.add(def_amqp)
+                session.add(item)
                 session.commit()
                 
-                def_amqp_elem.id = def_amqp.id
+                xml_item.id = item.id
                 
-                params['action'] = OUTGOING.AMQP_EDIT
-                params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
+                core_params['action'] = OUTGOING.AMQP_EDIT
+                core_params['old_name'] = old_name
+                kwargs['thread_ctx'].broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
-                return ZATO_OK, etree.tostring(def_amqp_elem)
+                return ZATO_OK, etree.tostring(xml_item)
                 
             except Exception, e:
                 msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
-                raise         
+                raise  
         
 class Delete(AdminService):
     """ Deletes an outgoing AMQP connection.
