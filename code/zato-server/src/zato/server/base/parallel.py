@@ -263,9 +263,21 @@ class ParallelServer(BrokerMessageReceiver):
             wss_config[item.name].expiry_limit = item.expiry_limit
             wss_config[item.name].nonce_freshness = item.nonce_freshness
             
-        amqp_def_config = Bunch()
-        for item in self.odb.get_def_amqp_list(server.cluster.id):
-            amqp_def_config[item.name] = Bunch()
+        out_amqp_config = Bunch()
+        for item in self.odb.get_out_amqp_list(server.cluster.id):
+            out_amqp_config[item.name] = Bunch()
+            out_amqp_config[item.name].id = item.id
+            out_amqp_config[item.name].name = item.name
+            out_amqp_config[item.name].is_active = item.is_active
+            out_amqp_config[item.name].delivery_mode = item.delivery_mode
+            out_amqp_config[item.name].priority = item.priority
+            out_amqp_config[item.name].content_type = item.content_type
+            out_amqp_config[item.name].content_encoding = item.content_encoding
+            out_amqp_config[item.name].expiration = item.expiration
+            out_amqp_config[item.name].user_id = item.user_id
+            out_amqp_config[item.name].app_id = item.app_id
+            
+        logger.error(str(out_amqp_config))
             
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)
@@ -274,7 +286,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.sec_config.tech_acc = ta_config
         self.sec_config.wss = wss_config
         self.sec_config.url_sec = url_sec
-        self.sec_config.amqp_def = amqp_def_config
+        self.sec_config.out_amqp = out_amqp_config
     
     def _after_init_non_accepted(self, server):
         pass    

@@ -32,6 +32,9 @@ from zope.server.http.httptask import HTTPTask
 from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
+# Pika
+from pika.credentials import PlainCredentials
+
 # Bunch
 from bunch import Bunch
 
@@ -58,13 +61,26 @@ class _WorkerStore(BrokerMessageReceiver):
         self.tech_acc = Bunch()
         self.wss = Bunch()
         self.url_sec = Bunch()
-        self.amqp_def = Bunch()
+        self.def_amqp = Bunch()
+        self.out_amqp = Bunch()
         
         self.basic_auth_lock = RLock()
         self.tech_acc_lock = RLock()
         self.wss_lock = RLock()
         self.url_sec_lock = RLock()
-        self.amqp_def_lock = RLock()
+        self.def_amqp_lock = RLock()
+        self.out_amqp_lock = RLock()
+        
+        self._setup_out_amqp()
+
+# ##############################################################################        
+
+    def _setup_out_amqp(self):
+
+        with self.out_amqp_lock:
+            with self.def_amqp_lock:
+                for name, attrs in self.out_amqp.items():
+                    logger.error(str(name))
 
 # ##############################################################################        
         
@@ -180,37 +196,64 @@ class _WorkerStore(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def amqp_def_get(self, name):
+    def def_amqp_get(self, name):
         """ Returns the configuration of the AMQP definition of the given name.
         """
-        #with self.amqp_def_lock:
-        #    return self.amqp_def.get(name)
+        #with self.def_amqp_lock:
+        #    return self.def_amqp.get(name)
 
     def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
         """ Creates a new AMQP definition.
         """
-        #with self.amqp_def_lock:
-        #    self.amqp_def[msg.name] = msg
+        #with self.def_amqp_lock:
+        #    self.def_amqp[msg.name] = msg
         
     def on_broker_pull_msg_DEFINITION_AMQP_EDIT(self, msg, *args):
         """ Updates an existing AMQP definition.
         """
-        #with self.amqp_def_lock:
-        #    del self.amqp_def[msg.old_name]
-        #    self.amqp_def[msg.name] = msg
+        #with self.def_amqp_lock:
+        #    del self.def_amqp[msg.old_name]
+        #    self.def_amqp[msg.name] = msg
         
     def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
         """ Deletes an AMQP definition.
         """
-        #with self.amqp_def_lock:
-        #    del self.amqp_def[msg.name]
+        #with self.def_amqp_lock:
+        #    del self.def_amqp[msg.name]
         
     def on_broker_pull_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of an AMQP definition.
         """
-        #with self.amqp_def_lock:
-        #    self.amqp_def[msg.name]['password'] = msg.password
+        #with self.def_amqp_lock:
+        #    self.def_amqp[msg.name]['password'] = msg.password
             
+# ##############################################################################
+
+    def out_amqp_get(self, name):
+        """ Returns the configuration of an outgoing AMQP connection.
+        """
+        #with self.out_amqp_lock:
+        #    return self.out_amqp.get(name)
+
+    def on_broker_pull_msg_OUTGOING_AMQP_CREATE(self, msg, *args):
+        """ Creates a new outgoing AMQP connection.
+        """
+        #with self.out_amqp_lock:
+        #    self.out_amqp[msg.name] = msg
+        
+    def on_broker_pull_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
+        """ Updates an outgoing AMQP connection.
+        """
+        #with self.out_amqp_lock:
+        #    del self.out_amqp[msg.old_name]
+        #    self.out_amqp[msg.name] = msg
+        
+    def on_broker_pull_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
+        """ Deletes an outgoing AMQP connection.
+        """
+        #with self.out_amqp_lock:
+        #    del self.out_amqp[msg.name]
+        
 # ##############################################################################
             
 class _TaskDispatcher(ThreadedTaskDispatcher):
@@ -284,7 +327,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         _local.store.tech_acc = thread_data.sec_config.tech_acc
         _local.store.wss = thread_data.sec_config.wss
         _local.store.url_sec = thread_data.sec_config.url_sec
-        _local.store.amqp_def = thread_data.sec_config.amqp_def
+        _local.store.out_amqp = thread_data.sec_config.out_amqp
         
         # We're in a new thread so we can start the broker client now.
         _local.broker_client = BrokerClient()
