@@ -21,6 +21,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from threading import RLock, Thread
+
+# Pika
+from pika import BasicProperties
+from pika.adapters import SelectConnection
+from pika.connection import ConnectionParameters
+from pika.credentials import PlainCredentials
 
 # anyjson
 from anyjson import loads
@@ -29,6 +36,7 @@ from anyjson import loads
 from bunch import Bunch
 
 # Zato
+from zato.broker.zato_client import BrokerClient
 from zato.common.broker_message import code_to_name, MESSAGE
 
 logger = logging.getLogger(__name__)
@@ -62,3 +70,4 @@ class BrokerMessageReceiver(object):
             handler(msg, args)
         else:
             handler(msg)
+            

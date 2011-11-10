@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import asyncore, httplib, json, logging, socket, time
+from copy import deepcopy
 from hashlib import sha256
 from threading import Thread
 from traceback import format_exc
@@ -41,7 +42,7 @@ from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
 from zato.common.util import new_rid, TRACE1, zmq_names
 from zato.common.odb import create_pool
 from zato.server.base import BrokerMessageReceiver
-from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher
+from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
 from zato.server.channel.soap import server_soap_error
 
 logger = logging.getLogger(__name__)
@@ -233,6 +234,14 @@ class ParallelServer(BrokerMessageReceiver):
                     
         self.worker_config = Bunch()
         
+        # Broker client
+        self.worker_config.broker_config = Bunch()
+        self.worker_config.broker_config.broker_token = self.broker_token
+        self.worker_config.broker_config.zmq_context = self.zmq_context
+        self.worker_config.broker_config.broker_push_addr = self.broker_push_addr
+        self.worker_config.broker_config.broker_pull_addr = self.broker_pull_addr
+        self.worker_config.broker_config.broker_sub_addr = self.broker_sub_addr
+        
         # HTTP Basic Auth
         ba_config = Bunch()
         for item in self.odb.get_basic_auth_list(server.cluster.id):
@@ -300,6 +309,13 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.url_sec = url_sec
         self.worker_config.out_amqp = out_amqp_config
         self.worker_config.def_amqp = def_amqp_config
+        
+        self.worker_store = WorkerStore(deepcopy(self.worker_config))
+        
+        # It's OK to share these two across threads.
+        self.worker_store.thread_data.broker_pull_handler = self.on_broker_msg
+        self.worker_store.thread_data.zmq_context = self.zmq_context
+        self.worker_store._init()
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -333,9 +349,7 @@ class ParallelServer(BrokerMessageReceiver):
         
     def run_forever(self):
         
-        task_dispatcher = _TaskDispatcher(self.on_broker_msg, 1, self.broker_token, 
-            self.zmq_context,  self.broker_push_addr, self.broker_pull_addr,
-            self.broker_sub_addr, self.worker_config)
+        task_dispatcher = _TaskDispatcher(self.worker_config, self.on_broker_msg, self.zmq_context)
         task_dispatcher.setThreadCount(4)
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
@@ -353,7 +367,6 @@ class ParallelServer(BrokerMessageReceiver):
             for zmq_item in self.zmq_items.values():
                 zmq_item.close()
                 
-
             if self.singleton_server:
                 self.singleton_server.broker_client.close()
                 
@@ -363,15 +376,14 @@ class ParallelServer(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def on_broker_pull_msg_SCHEDULER_EXECUTE(self, msg, args=None):
+    def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
 
         service_info = self.service_store.services[msg.service]
         class_ = service_info['service_class']
         instance = class_()
         instance.server = self
         
-        response = instance.handle(payload=msg.extra, raw_request=msg, 
-                    channel='scheduler_job', thread_ctx=args)
+        response = instance.handle(payload=msg.extra, raw_request=msg, channel='scheduler_job', thread_ctx=self.worker_store)
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
