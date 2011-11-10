@@ -43,6 +43,7 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
+from zato.common import ConnectionException
 from zato.common.util import TRACE1
 from zato.server.base import BrokerMessageReceiver
 
@@ -55,21 +56,30 @@ class _AMQPPublisher(object):
         self.out_name = out_name
         self.properties = properties
         self.conn = None
+        self.channel = None
+        
+    def _conn_info(self):
+        return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
+            self.conn_params.port, self.conn_params.virtual_host, self.out_name)
         
     def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
-        properties = properties if properties else self.properties
-        self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
-        if(logger.isEnabledFor(TRACE1)):
-            log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
-            logger.log(TRACE1, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
+        if self.channel:
+            properties = properties if properties else self.properties
+            self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
+            if(logger.isEnabledFor(TRACE1)):
+                log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
+                logger.log(TRACE1, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
+        else:
+            msg = "Can't publish, don't have a channel for {0}".format(self._conn_info())
+            logger.error(msg)
+            raise ConnectionException(msg)
         
     def _on_connected(self, conn):
         conn.channel(self._on_channel_open)
         
     def _on_channel_open(self, channel):
         self.channel = channel
-        msg = 'Got a channel for {0}:{1}{2} ({3})'.format(self.conn_params.host, 
-            self.conn_params.port, self.conn_params.virtual_host, self.out_name)
+        msg = 'Got a channel for {0}'.format(self._conn_info())
         logger.debug(msg)
         
     def _run(self):

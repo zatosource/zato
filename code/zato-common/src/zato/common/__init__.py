@@ -164,8 +164,12 @@ class zato_path(path):
 class ZatoException(Exception):
     """ Base class for all Zato custom exceptions.
     """
-
+    
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems
     on the client side, such as invalid username or password.
+    """
+    
+class ConnectionException(ZatoException):
+    """ Encountered a problem with an external connections, such as to AMQP brokers.
     """
