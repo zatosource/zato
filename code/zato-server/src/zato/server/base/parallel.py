@@ -309,13 +309,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.url_sec = url_sec
         self.worker_config.out_amqp = out_amqp_config
         self.worker_config.def_amqp = def_amqp_config
-        
-        self.worker_store = WorkerStore(deepcopy(self.worker_config))
-        
-        # It's OK to share these two across threads.
-        self.worker_store.thread_data.broker_pull_handler = self.on_broker_msg
-        self.worker_store.thread_data.zmq_context = self.zmq_context
-        self.worker_store._init()
     
     def _after_init_non_accepted(self, server):
         pass    
@@ -349,7 +342,7 @@ class ParallelServer(BrokerMessageReceiver):
         
     def run_forever(self):
         
-        task_dispatcher = _TaskDispatcher(self.worker_config, self.on_broker_msg, self.zmq_context)
+        task_dispatcher = _TaskDispatcher(self, self.worker_config, self.on_broker_msg, self.zmq_context)
         task_dispatcher.setThreadCount(4)
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
@@ -376,16 +369,5 @@ class ParallelServer(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
 
-        service_info = self.service_store.services[msg.service]
-        class_ = service_info['service_class']
-        instance = class_()
-        instance.server = self
-        
-        response = instance.handle(payload=msg.extra, raw_request=msg, channel='scheduler_job', thread_ctx=self.worker_store)
-        
-        if logger.isEnabledFor(logging.DEBUG):
-            msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
-            logger.debug(str(msg))
             

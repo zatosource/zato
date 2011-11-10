@@ -57,12 +57,11 @@ class Scheduler(object):
         the actual execution request to the broker so it can be picked up by
         one of the parallel server's broker clients.
         """
-        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name,
-               'service': service, 'extra':extra}
+        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'extra':extra}
         self.singleton.broker_client.send_json(msg)
         
         if logger.isEnabledFor(logging.DEBUG):
-            msg = 'Job executed, name [{0}], service [{1}], extra [{2}]'.format(
+            msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(
                 name, service, extra)
             logger.debug(msg)
 
