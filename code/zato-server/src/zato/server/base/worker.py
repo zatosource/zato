@@ -71,8 +71,7 @@ class _AMQPPublisher(object):
                 self.conn = SelectConnection(self.conn_params, self._on_connected)
                 self.conn.ioloop.start()
             except KeyboardInterrupt:
-                conn.close()
-                conn.ioloop.start()
+                self.close()
         except socket.error, e:
             msg = 'Could not establish a connection to {0}:{1}{2} ({3}/{4}), e=[{5}]'.format(
                 self.conn_params.host, self.conn_params.port, self.conn_params.virtual_host, 
@@ -119,14 +118,13 @@ class WorkerStore(BrokerMessageReceiver):
 
     def _setup_broker_client(self):
         self.broker_client = BrokerClient()
-        self.broker_client.name = 'parallel/thread2'
+        self.broker_client.name = 'parallel/thread'
         self.broker_client.token = self.thread_data.broker_config.broker_token
         self.broker_client.zmq_context = self.thread_data.broker_config.zmq_context
         self.broker_client.push_addr = self.thread_data.broker_config.broker_push_addr
         self.broker_client.pull_addr = self.thread_data.broker_config.broker_pull_addr
         self.broker_client.sub_addr = self.thread_data.broker_config.broker_sub_addr
-        self.broker_client.on_pull_handler = self.thread_data.broker_pull_handler
-        self.broker_client.on_sub_handler = self.on_broker_msg
+        self.broker_client.on_pull_handler = self.on_broker_msg
         self.broker_client.init()
         self.broker_client.start()
         
@@ -322,13 +320,29 @@ class WorkerStore(BrokerMessageReceiver):
         #    del self.out_amqp[msg.name]
         
 # ##############################################################################
+
+    def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
+
+        service_info = self.thread_data.server.service_store.services[msg.service]
+        class_ = service_info['service_class']
+        instance = class_()
+        instance.server = self.thread_data.server
+        
+        response = instance.handle(payload=msg.extra, raw_request=msg, channel='scheduler_job', thread_ctx=self)
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
+            logger.debug(str(msg))
+            
+# ##############################################################################
             
 class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the worker threads.
     """
-    def __init__(self, worker_config, pull_handler, zmq_context):
+    def __init__(self, server, worker_config, pull_handler, zmq_context):
         super(_TaskDispatcher, self).__init__()
+        self.server = server
         self.worker_config = worker_config
         self.pull_handler = pull_handler
         self.zmq_context = zmq_context
@@ -353,9 +367,12 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 # Each thread gets its own copy of the initial configuration ..
                 thread_data = deepcopy(self.worker_config)
                 
-                # .. though some things are OK to be shared among multiple threads.
+                # .. though the ZMQ context is OK to be shared among multiple threads.
                 thread_data.zmq_context = self.zmq_context
-                thread_data.broker_pull_handler = self.pull_handler
+                
+                # .. be careful with this, it's a reference to the main ParallelServer
+                # this thread is running on.
+                thread_data.server = self.server
                 
                 start_new_thread(self.handlerThread, (thread_no, thread_data))
                 
@@ -379,8 +396,6 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         
         # We're in a new thread so we can start new thread-specific clients.
         _local.store._init()
-        
-        _local.broker_client = _local.store.broker_client
         
         threads = self.threads
         try:
