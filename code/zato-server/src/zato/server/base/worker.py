@@ -48,22 +48,42 @@ from zato.server.base import BrokerMessageReceiver
 logger = logging.getLogger(__name__)
 
 class _AMQPPublisher(object):
-    def __init__(self, conn_params):
+    def __init__(self, conn_params, def_name, out_name):
         self.conn_params = conn_params
+        self.def_name = def_name
+        self.out_name = out_name
+        
+    def publish(self, msg, exchange, routing_key):
+        self.channel.basic_channel(exchange, routing_key, msg)
         
     def _on_connected(self, conn):
         conn.channel(self._on_channel_open)
-        print(4444444444444444444444, conn)
         
     def _on_channel_open(self, channel):
-        #self.out_amqp[out_attrs.name].channel = channel
-        pass
+        self.channel = channel
+        msg = 'Got a channel for {0}:{1}{2} ({3}/{4})'.format(self.conn_params.host, 
+            self.conn_params.port, self.conn_params.virtual_host, self.def_name, self.out_name)
+        logger.debug(msg)
         
     def _run(self):
-        conn = SelectConnection(self.conn_params, self._on_connected)
-        conn.ioloop.start()
+        try:
+            try:
+                self.conn = SelectConnection(self.conn_params, self._on_connected)
+                self.conn.ioloop.start()
+            except KeyboardInterrupt:
+                conn.close()
+                conn.ioloop.start()
+        except socket.error, e:
+            msg = 'Could not establish a connection to {0}:{1}{2} ({3}/{4}), e=[{5}]'.format(
+                self.conn_params.host, self.conn_params.port, self.conn_params.virtual_host, 
+                self.def_name, self.out_name, format_exc(e))
+            logger.error(msg)
+            
+    def close(self):
+        self.conn.close()
+        self.conn.ioloop.start()
 
-class _WorkerStore(BrokerMessageReceiver):
+class WorkerStore(BrokerMessageReceiver):
     """ Each worker thread has its own configuration store. The store is assigned
     to the thread's threading.local variable. All the methods assume the data's
     being already validated and sanitized by one of Zato's internal services.
@@ -75,13 +95,16 @@ class _WorkerStore(BrokerMessageReceiver):
     because configuration updates are extremaly rare when compared to regular
     access by worker threads.
     """
-    def __init__(self):
-        self.basic_auth = Bunch()
-        self.tech_acc = Bunch()
-        self.wss = Bunch()
-        self.url_sec = Bunch()
-        self.def_amqp = Bunch()
-        self.out_amqp = Bunch()
+    def __init__(self, thread_data):
+
+        self.thread_data = thread_data
+        
+        self.basic_auth = self.thread_data.basic_auth
+        self.tech_acc = self.thread_data.tech_acc
+        self.wss = self.thread_data.wss
+        self.url_sec = self.thread_data.url_sec
+        self.def_amqp = self.thread_data.def_amqp
+        self.out_amqp = self.thread_data.out_amqp
         
         self.basic_auth_lock = RLock()
         self.tech_acc_lock = RLock()
@@ -90,8 +113,23 @@ class _WorkerStore(BrokerMessageReceiver):
         self.def_amqp_lock = RLock()
         self.out_amqp_lock = RLock()
         
-# ##############################################################################        
+    def _init(self):
+        self._setup_amqp()
+        self._setup_broker_client()
 
+    def _setup_broker_client(self):
+        self.broker_client = BrokerClient()
+        self.broker_client.name = 'parallel/thread2'
+        self.broker_client.token = self.thread_data.broker_config.broker_token
+        self.broker_client.zmq_context = self.thread_data.broker_config.zmq_context
+        self.broker_client.push_addr = self.thread_data.broker_config.broker_push_addr
+        self.broker_client.pull_addr = self.thread_data.broker_config.broker_pull_addr
+        self.broker_client.sub_addr = self.thread_data.broker_config.broker_sub_addr
+        self.broker_client.on_pull_handler = self.thread_data.broker_pull_handler
+        self.broker_client.on_sub_handler = self.on_broker_msg
+        self.broker_client.init()
+        self.broker_client.start()
+        
     def _setup_amqp(self):
         """ Sets up AMQP channels and outgoing connections on startup.
         """
@@ -106,14 +144,10 @@ class _WorkerStore(BrokerMessageReceiver):
                                 def_attrs.port, def_attrs.vhost, credentials,
                                 frame_max=def_attrs.frame_max, heartbeat=def_attrs.heartbeat)
 
-                            try:
-                                publisher = _AMQPPublisher(conn_params)
-                                Thread(target=publisher._run).start()
-                            except socket.error, e:
-                                msg = 'Could not establish a connection to {0}:{1}{2} ({3}), e=[{4}]'.format(
-                                    def_attrs.host, def_attrs.port, def_attrs.vhost, def_attrs.name,
-                                    format_exc(e))
-                                logger.error(msg)
+                            publisher = _AMQPPublisher(conn_params, def_name, out_attrs.name)
+                            Thread(target=publisher._run).start()
+                            
+                            self.out_amqp[out_name].publisher = publisher
 
 # ##############################################################################        
         
@@ -293,18 +327,11 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the worker threads.
     """
-    def __init__(self, pull_handler, sub_handler, broker_token, 
-                 zmq_context, broker_push_addr, broker_pull_addr, broker_sub_addr,
-                 worker_config):
+    def __init__(self, worker_config, pull_handler, zmq_context):
         super(_TaskDispatcher, self).__init__()
-        self.pull_handler = pull_handler
-        self.sub_handler = sub_handler
-        self.broker_token = broker_token
-        self.zmq_context = zmq_context
-        self.broker_push_addr = broker_push_addr
-        self.broker_pull_addr = broker_pull_addr
-        self.broker_sub_addr = broker_sub_addr
         self.worker_config = worker_config
+        self.pull_handler = pull_handler
+        self.zmq_context = zmq_context
         
     def setThreadCount(self, count):
         """ Mostly copy & paste from the base classes except for the part
@@ -323,15 +350,8 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 threads[thread_no] = 1
                 running += 1
 
-                thread_data = Bunch()
-                thread_data.broker_token = self.broker_token
-                thread_data.broker_push_addr = self.broker_push_addr
-                thread_data.broker_pull_addr = self.broker_pull_addr
-                thread_data.broker_sub_addr = self.broker_sub_addr
-                thread_data.worker_config = self.worker_config
-                
                 # Each thread gets its own copy of the initial configuration ..
-                thread_data = deepcopy(thread_data)
+                thread_data = deepcopy(self.worker_config)
                 
                 # .. though some things are OK to be shared among multiple threads.
                 thread_data.zmq_context = self.zmq_context
@@ -355,29 +375,12 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         that passes the arguments to the thread.
         """
         _local = local()
-        _local.store = _WorkerStore()
-        _local.store.basic_auth = thread_data.worker_config.basic_auth
-        _local.store.tech_acc = thread_data.worker_config.tech_acc
-        _local.store.wss = thread_data.worker_config.wss
-        _local.store.url_sec = thread_data.worker_config.url_sec
-        _local.store.def_amqp = thread_data.worker_config.def_amqp
-        _local.store.out_amqp = thread_data.worker_config.out_amqp
+        _local.store = WorkerStore(thread_data)
         
         # We're in a new thread so we can start new thread-specific clients.
+        _local.store._init()
         
-        _local.store._setup_amqp()
-        
-        _local.broker_client = BrokerClient()
-        _local.broker_client.name = 'parallel/thread'
-        _local.broker_client.token = thread_data.broker_token
-        _local.broker_client.zmq_context = thread_data.zmq_context
-        _local.broker_client.push_addr = thread_data.broker_push_addr
-        _local.broker_client.pull_addr = thread_data.broker_pull_addr
-        _local.broker_client.sub_addr = thread_data.broker_sub_addr
-        _local.broker_client.on_pull_handler = thread_data.broker_pull_handler
-        _local.broker_client.on_sub_handler = _local.store.on_broker_msg
-        _local.broker_client.init()
-        _local.broker_client.start()
+        _local.broker_client = _local.store.broker_client
         
         threads = self.threads
         try:
