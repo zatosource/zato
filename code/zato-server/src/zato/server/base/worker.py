@@ -43,6 +43,7 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
+from zato.common.util import TRACE1
 from zato.server.base import BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,10 @@ class _AMQPPublisher(object):
         self.out_name = out_name
         
     def publish(self, msg, exchange, routing_key):
-        self.channel.basic_channel(exchange, routing_key, msg)
+        self.channel.basic_publish(exchange, routing_key, msg)
+        if(logger.isEnabledFor(TRACE1)):
+            log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}]'
+            logger.log(TRACE1, log_msg.format(msg, exchange, routing_key))
         
     def _on_connected(self, conn):
         conn.channel(self._on_channel_open)
@@ -297,8 +301,8 @@ class WorkerStore(BrokerMessageReceiver):
     def out_amqp_get(self, name):
         """ Returns the configuration of an outgoing AMQP connection.
         """
-        #with self.out_amqp_lock:
-        #    return self.out_amqp.get(name)
+        with self.out_amqp_lock:
+            return self.out_amqp.get(name)
 
     def on_broker_pull_msg_OUTGOING_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection.
@@ -396,6 +400,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         
         # We're in a new thread so we can start new thread-specific clients.
         _local.store._init()
+        _local.broker_client = _local.store.broker_client
         
         threads = self.threads
         try:
