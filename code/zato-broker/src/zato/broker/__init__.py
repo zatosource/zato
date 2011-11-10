@@ -72,6 +72,7 @@ class BaseBroker(object):
             
             if item.pull:
                 sock_pull = self.context.socket(zmq.PULL)
+                sock_pull.setsockopt(zmq.LINGER, 0)
                 sock_pull.bind(item.pull)
                 self.sockets[item.name].pull = sock_pull
             
@@ -92,6 +93,7 @@ class BaseBroker(object):
                     if socks.get(sock) == zmq.POLLIN:
                         msg = sock.recv()
                         self.on_message(msg)
+                        print(22, msg)
             except Exception, e:
                 msg = 'Exception caught [{0}]'.format(format_exc(e))
                 logger.error(msg)
