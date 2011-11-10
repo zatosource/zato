@@ -97,7 +97,7 @@ def _edit_create_response(cluster, verb, id, name, delivery_mode_text, def_id):
     _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-by-id', zato_message)    
     
     return_data = {'id': id,
-                   'message': 'Successfully {0} the AMQP definition [{1}]'.format(verb, name),
+                   'message': 'Successfully {0} the outgoing AMQP connection [{1}]'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
                    'def_name': zato_message.data.definition.name.text
                 }

@@ -31,6 +31,9 @@ from sqlalchemy.orm.query import orm_exc
 from lxml import etree
 from lxml.objectify import Element
 
+# validate
+from validate import is_boolean
+
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
@@ -106,6 +109,11 @@ class Create(AdminService):
             created_elem = Element('out_amqp')
             
             try:
+
+                core_params['delivery_mode'] = int(core_params['delivery_mode'])
+                core_params['priority'] = int(core_params['priority'])
+                core_params['is_active'] = is_boolean(core_params['is_active'])
+                
                 item = OutgoingAMQP()
                 item.name = core_params['name']
                 item.is_active = core_params['is_active']
@@ -124,6 +132,7 @@ class Create(AdminService):
                 created_elem.id = item.id
                 
                 core_params['action'] = OUTGOING.AMQP_CREATE
+                core_params.update(optional_params)
                 kwargs['thread_ctx'].broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
                 return ZATO_OK, etree.tostring(created_elem)
@@ -175,6 +184,10 @@ class Edit(AdminService):
             
             try:
                 
+                core_params['delivery_mode'] = int(core_params['delivery_mode'])
+                core_params['priority'] = int(core_params['priority'])
+                core_params['is_active'] = is_boolean(core_params['is_active'])
+                
                 item = session.query(OutgoingAMQP).filter_by(id=id).one()
                 old_name = item.name
                 item.name = name
@@ -195,6 +208,7 @@ class Edit(AdminService):
                 
                 core_params['action'] = OUTGOING.AMQP_EDIT
                 core_params['old_name'] = old_name
+                core_params.update(optional_params)
                 kwargs['thread_ctx'].broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
                 return ZATO_OK, etree.tostring(xml_item)
