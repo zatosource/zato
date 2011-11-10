@@ -49,13 +49,15 @@ from zato.server.base import BrokerMessageReceiver
 logger = logging.getLogger(__name__)
 
 class _AMQPPublisher(object):
-    def __init__(self, conn_params, def_name, out_name):
+    def __init__(self, conn_params, def_name, out_name, properties):
         self.conn_params = conn_params
         self.def_name = def_name
         self.out_name = out_name
+        self.properties = properties
         
-    def publish(self, msg, exchange, routing_key):
-        self.channel.basic_publish(exchange, routing_key, msg)
+    def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
+        properties = properties if properties else self.properties
+        self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
         if(logger.isEnabledFor(TRACE1)):
             log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}]'
             logger.log(TRACE1, log_msg.format(msg, exchange, routing_key))
@@ -141,12 +143,21 @@ class WorkerStore(BrokerMessageReceiver):
                     for out_name, out_attrs in self.out_amqp.items():
                         if def_name == out_attrs.def_name:
                             
+                            # Connection credentials
                             credentials = PlainCredentials(def_attrs.username, def_attrs.password)
+                            
+                            # Connection parameters
                             conn_params = ConnectionParameters(def_attrs.host,
                                 def_attrs.port, def_attrs.vhost, credentials,
                                 frame_max=def_attrs.frame_max, heartbeat=def_attrs.heartbeat)
+                            
+                            # Default properties for published messages
+                            properties = BasicProperties(content_type=out_attrs.content_type, 
+                                content_encoding=out_attrs.content_encoding, delivery_mode=out_attrs.delivery_mode, 
+                                priority=out_attrs.priority, expiration=out_attrs.expiration, 
+                                user_id=out_attrs.user_id, app_id=out_attrs.app_id)
 
-                            publisher = _AMQPPublisher(conn_params, def_name, out_attrs.name)
+                            publisher = _AMQPPublisher(conn_params, def_name, out_attrs.name, properties)
                             Thread(target=publisher._run).start()
                             
                             self.out_amqp[out_name].publisher = publisher
