@@ -274,16 +274,16 @@ class ParallelServer(BrokerMessageReceiver):
 
         def_amqp_config = Bunch()
         for item in self.odb.get_def_amqp_list(server.cluster.id):
-            def_amqp_config[item.name] = Bunch()
-            def_amqp_config[item.name].id = item.id
-            def_amqp_config[item.name].name = item.name
-            def_amqp_config[item.name].host = str(item.host)
-            def_amqp_config[item.name].port = item.port
-            def_amqp_config[item.name].vhost = item.vhost
-            def_amqp_config[item.name].username = item.username
-            def_amqp_config[item.name].frame_max = item.frame_max
-            def_amqp_config[item.name].heartbeat = item.heartbeat
-            def_amqp_config[item.name].password = item.password
+            id = str(item.id)
+            def_amqp_config[id] = Bunch()
+            def_amqp_config[id].name = item.name
+            def_amqp_config[id].host = str(item.host)
+            def_amqp_config[id].port = item.port
+            def_amqp_config[id].vhost = item.vhost
+            def_amqp_config[id].username = item.username
+            def_amqp_config[id].frame_max = item.frame_max
+            def_amqp_config[id].heartbeat = item.heartbeat
+            def_amqp_config[id].password = item.password
             
         out_amqp_config = Bunch()
         for item in self.odb.get_out_amqp_list(server.cluster.id):
@@ -299,6 +299,7 @@ class ParallelServer(BrokerMessageReceiver):
             out_amqp_config[item.name].user_id = item.user_id
             out_amqp_config[item.name].app_id = item.app_id
             out_amqp_config[item.name].def_name = item.def_name
+            out_amqp_config[item.name].def_id = str(item.def_id)
             
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)
@@ -309,7 +310,8 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.url_sec = url_sec
         self.worker_config.out_amqp = out_amqp_config
         self.worker_config.def_amqp = def_amqp_config
-    
+        
+        
     def _after_init_non_accepted(self, server):
         pass    
         

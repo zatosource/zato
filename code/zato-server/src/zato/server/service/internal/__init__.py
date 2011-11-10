@@ -120,6 +120,9 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
+        item = kwargs['thread_ctx'].out_amqp_get('CRM out AMQP').publisher
+        item.publish('zzzz', 'zato.direct', '')
+        
         return ZATO_OK, ''
 
 class ChangePasswordBase(AdminService):
