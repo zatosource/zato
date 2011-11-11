@@ -64,11 +64,16 @@ class _AMQPPublisher(object):
         
     def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
         if self.channel:
-            properties = properties if properties else self.properties
-            self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
-            if(logger.isEnabledFor(TRACE1)):
-                log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
-                logger.log(TRACE1, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
+            if self.conn.is_open:
+                properties = properties if properties else self.properties
+                self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
+                if(logger.isEnabledFor(TRACE1)):
+                    log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
+                    logger.log(TRACE1, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
+            else:
+                msg = "Can't publish, the connection for {0} is not open".format(self._conn_info())
+                logger.error(msg)
+                raise ConnectionException(msg)
         else:
             msg = "Can't publish, don't have a channel for {0}".format(self._conn_info())
             logger.error(msg)
