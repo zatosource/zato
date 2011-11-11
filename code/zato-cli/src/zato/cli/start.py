@@ -77,7 +77,7 @@ Examples:
             # If we have a socket of that name then we already have a running
             # server, in which case we refrain from starting new processes now.
             if os.path.exists(socket_name):
-                msg = '\nServer at {0} is already running.\n'.format(self.component_dir)
+                msg = '\nServer at {0} is already running\n'.format(self.component_dir)
                 print(msg)
                 return
 
@@ -100,7 +100,7 @@ Examples:
             self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                                 logfile_path_prefix, program)
 
-        print('\nZato server at {0} has been started.\n'.format(self.component_dir))
+        print('\nZato server at {0} has been started\n'.format(self.component_dir))
 
     def _on_lb(self):
 
@@ -126,7 +126,7 @@ Examples:
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                             logfile_path_prefix, program)
 
-        print('\nZato load balancer and agent started at {0}.\n'.format(self.component_dir))
+        print('\nZato load balancer and agent started at {0}\n'.format(self.component_dir))
 
     def _on_zato_admin(self):
 
@@ -139,14 +139,28 @@ Examples:
         open('./.zato-admin.pid', 'w').write(str(os.getpid()))
 
         zato_admin_main(config['host'], config['port'])
+        
+    def _on_broker(self):
+        config_path = os.path.join(self.config_dir, 'repo', 'broker.conf')
 
-    def _on_security_server(self):
-        prepare_config(self.component_dir, True)
-        zdaemon_conf_name = os.path.join(self.component_dir, 'zdaemon.conf')
-        self._execute_zdaemon_command(['zdaemon', '-C', zdaemon_conf_name, 'start'])
+        zdaemon_conf_name = 'zdaemon-broker.conf'
+        socket_prefix = 'broker'
+        program = 'python -m zato.broker.main {0}'.format(config_path)
+        logfile_path_prefix = 'zdaemon-broker'
+        
+        socket_name = 'broker.sock'
+        socket_name = os.path.join(self.config_dir, 'zdaemon', socket_name)
+        
+        if os.path.exists(socket_name):
+            msg = '\nBroker at {0} is already running\n'.format(self.component_dir)
+            print(msg)
+            return
 
-        print('\nZato security server started at {0}.\n'.format(self.component_dir))
-
+        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
+                            logfile_path_prefix, program)
+        
+        print('\nBroker started at {0}\n'.format(self.component_dir))
+        
 def main(target_dir):
     Start(target_dir).run()
 

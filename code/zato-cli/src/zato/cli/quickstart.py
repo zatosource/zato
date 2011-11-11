@@ -38,7 +38,7 @@ from M2Crypto import RSA
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, create_server, create_zato_admin
+     ca_create_zato_admin, create_broker, create_server, create_zato_admin
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.odb import engine_def, ping_queries
 from zato.common.odb.model import *
@@ -86,14 +86,14 @@ class Quickstart(ZatoCommand):
             # database, one that hasn't been used with Zato yet.
             create_odb.CreateODB().execute(args)
 
-            args.cluster_name = "ZatoQuickstart"
-            args.server_name = "ZatoServer"
+            args.cluster_name = 'ZatoQuickstart'
+            args.server_name = 'ZatoServer'
             
             engine = self._get_engine(args)
 
-            print("\nPinging database..")
+            print('\nPinging database..')
             engine.execute(ping_queries[args.odb_type])
-            print("Ping OK\n")
+            print('Ping OK\n')
             
             session = self._get_session(engine)
 
@@ -102,29 +102,33 @@ class Quickstart(ZatoCommand):
                                        '#')
             cluster_name = 'ZatoQuickstartCluster-#{next_id}'.format(next_id=next_id)
 
-            ca_dir = os.path.abspath(os.path.join(self.target_dir, "./ca"))
-            lb_dir = os.path.abspath(os.path.join(self.target_dir, "./load-balancer"))
-            server_dir = os.path.abspath(os.path.join(self.target_dir, "./server"))
-            zato_admin_dir = os.path.abspath(os.path.join(self.target_dir, "./zato-admin"))
+            ca_dir = os.path.abspath(os.path.join(self.target_dir, './ca'))
+            lb_dir = os.path.abspath(os.path.join(self.target_dir, './load-balancer'))
+            server_dir = os.path.abspath(os.path.join(self.target_dir, './server'))
+            zato_admin_dir = os.path.abspath(os.path.join(self.target_dir, './zato-admin'))
+            broker_dir = os.path.abspath(os.path.join(self.target_dir, './broker'))
 
             # Create the CA.
             os.mkdir(ca_dir)
             ca_create_ca.CreateCA(ca_dir).execute(args)
+            
+            # Create the broker
+            cb = create_broker.CreateBroker(broker_dir)
+            cb.execute(args)
 
-            # Create crypto stuff for each component
+            # Create crypto stuff for each component (but not for the broker)
             lb_format_args = ca_create_lb_agent.CreateLBAgent(ca_dir).execute(args)
             server_format_args = ca_create_server.CreateServer(ca_dir).execute(args)
             zato_admin_format_args = ca_create_zato_admin.CreateZatoAdmin(ca_dir).execute(args)
 
-            # Create the LB agent.
+            # Create the LB agent
             os.mkdir(lb_dir)
             create_lb.CreateLoadBalancer(lb_dir).execute(args)
 
             # .. copy the LB agent's crypto material over to its directory
-            shutil.copy2(lb_format_args["priv_key_name"], os.path.join(lb_dir, 'config', "lba-priv-key.pem"))
-            shutil.copy2(lb_format_args["cert_name"], os.path.join(lb_dir, 'config', "lba-cert.pem"))
-            shutil.copy2(os.path.join(ca_dir, "ca-material/ca-cert.pem"), os.path.join(lb_dir, 'config', "ca-chain.pem"))
-            
+            shutil.copy2(lb_format_args['priv_key_name'], os.path.join(lb_dir, 'config', 'lba-priv-key.pem'))
+            shutil.copy2(lb_format_args['cert_name'], os.path.join(lb_dir, 'config', 'lba-cert.pem'))
+            shutil.copy2(os.path.join(ca_dir, 'ca-material/ca-cert.pem'), os.path.join(lb_dir, 'config', 'ca-chain.pem'))
             
             # Create the server
             os.mkdir(server_dir)
@@ -135,10 +139,10 @@ class Quickstart(ZatoCommand):
             # already at its place.
             cs.prepare_directories()
 
-            shutil.copy2(server_format_args["priv_key_name"], os.path.join(server_dir, "config/repo/zs-priv-key.pem"))
-            shutil.copy2(server_format_args["pub_key_name"], os.path.join(server_dir, "config/repo/zs-pub-key.pem"))
-            shutil.copy2(server_format_args["cert_name"], os.path.join(server_dir, "config/repo/zs-cert.pem"))
-            shutil.copy2(os.path.join(ca_dir, "ca-material/ca-cert.pem"), os.path.join(server_dir, "config/repo/ca-chain.pem"))
+            shutil.copy2(server_format_args['priv_key_name'], os.path.join(server_dir, 'config/repo/zs-priv-key.pem'))
+            shutil.copy2(server_format_args['pub_key_name'], os.path.join(server_dir, 'config/repo/zs-pub-key.pem'))
+            shutil.copy2(server_format_args['cert_name'], os.path.join(server_dir, 'config/repo/zs-cert.pem'))
+            shutil.copy2(os.path.join(ca_dir, 'ca-material/ca-cert.pem'), os.path.join(server_dir, 'config/repo/ca-chain.pem'))
 
             cs.execute(args)
 
@@ -154,14 +158,14 @@ class Quickstart(ZatoCommand):
             # .. copy the web admin's material over to its directory
             
             # Will be used later on.
-            priv_key_path = os.path.join(zato_admin_dir, "zato-admin-priv-key.pem")
+            priv_key_path = os.path.join(zato_admin_dir, 'zato-admin-priv-key.pem')
             
-            shutil.copy2(zato_admin_format_args["priv_key_name"], priv_key_path)
-            shutil.copy2(zato_admin_format_args["cert_name"], os.path.join(zato_admin_dir, "zato-admin-cert.pem"))
-            shutil.copy2(os.path.join(ca_dir, "ca-material/ca-cert.pem"), os.path.join(zato_admin_dir, "ca-chain.pem"))
+            shutil.copy2(zato_admin_format_args['priv_key_name'], priv_key_path)
+            shutil.copy2(zato_admin_format_args['cert_name'], os.path.join(zato_admin_dir, 'zato-admin-cert.pem'))
+            shutil.copy2(os.path.join(ca_dir, 'ca-material/ca-cert.pem'), os.path.join(zato_admin_dir, 'ca-chain.pem'))
 
 
-            print("Setting up ODB objects..")
+            print('Setting up ODB objects..')
 
 
             #
@@ -171,7 +175,7 @@ class Quickstart(ZatoCommand):
                               'An automatically generated quickstart cluster',
                               args.odb_type, args.odb_host, args.odb_port, args.odb_user,
                               args.odb_dbname, args.odb_schema, args.broker_host,
-                              args.broker_start_port, '01234567890123456789012345678901',
+                              args.broker_start_port, cb.token,
                               'localhost', 20151,  11223)
             
             #
@@ -227,7 +231,7 @@ class Quickstart(ZatoCommand):
             print('ODB objects created')
             print('')
 
-            print("Quickstart OK. You can now start the newly created Zato components.\n")
+            print('Quickstart OK. You can now start the newly created Zato components.\n')
             print("""To start the server, type 'zato start {server_dir}'.
 To start the load-balancer's agent, type 'zato start {lb_dir}'.
 To start the ZatoAdmin web console, type 'zato start {zato_admin_dir}'.

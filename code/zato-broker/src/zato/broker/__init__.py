@@ -84,7 +84,7 @@ class BaseBroker(object):
                 sock_pub.bind(item.pub)
                 self.sockets[item.name].pub = sock_pub
                 
-    def run(self):
+    def serve_forever(self):
         self.pre_run()
         while self.keep_running:
             try:

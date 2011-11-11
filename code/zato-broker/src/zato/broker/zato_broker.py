@@ -24,11 +24,8 @@ from zato.broker import BaseBroker
 from zato.common.util import TRACE1
 
 # stdlib
+import sys
 from logging import getLogger
-from urllib2 import build_opener, Request
-
-# anyjson
-from anyjson import loads
 
 # Zato
 from zato.common.broker_message import MESSAGE, MESSAGE_TYPE
@@ -45,11 +42,13 @@ msg_socket = {
 
 msg_types = msg_socket.keys()
 
-config = loads(open('./config.json').read())
-token_expected = config['token']
-log_invalid_tokens = config['log_invalid_tokens']
 
 class Broker(BaseBroker):
+    def __init__(self, token, log_invalid_tokens, *socket_data):
+        super(Broker, self).__init__(*socket_data)
+        self.token = token
+        self.log_invalid_tokens = log_invalid_tokens
+        
     def on_message(self, msg):
         
         if logger.isEnabledFor(TRACE1):
@@ -69,7 +68,7 @@ class Broker(BaseBroker):
                 raise Exception(err_msg)
             
             token = msg[MESSAGE.TOKEN_START:MESSAGE.TOKEN_END]
-            if token != token_expected:
+            if token != self.token:
                 err_msg = 'Invalid token received, msg_type [{0}]'.format(msg_type)
                 if log_invalid_tokens:
                     err_msg += ', token [{0}]'.format(token)
@@ -91,4 +90,3 @@ class Broker(BaseBroker):
             socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL_PULL]].push
         
         socket.send(msg)
-        
