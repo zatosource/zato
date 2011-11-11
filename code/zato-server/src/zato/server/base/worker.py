@@ -37,6 +37,7 @@ from pika import BasicProperties
 from pika.adapters import SelectConnection
 from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
+from pika.reconnection_strategies import SimpleReconnectionStrategy
 
 # Bunch
 from bunch import Bunch
@@ -90,7 +91,8 @@ class _AMQPPublisher(object):
     def _run(self):
         try:
             try:
-                self.conn = SelectConnection(self.conn_params, self._on_connected)
+                reconnection_strategy = SimpleReconnectionStrategy()
+                self.conn = SelectConnection(self.conn_params, self._on_connected, reconnection_strategy=reconnection_strategy)
                 self.conn.ioloop.start()
             except KeyboardInterrupt:
                 self.close()

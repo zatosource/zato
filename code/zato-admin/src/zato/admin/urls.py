@@ -123,6 +123,7 @@ urlpatterns = patterns('',
     url(r'^zato/definition/amqp/edit/$', def_amqp.edit, name='def-amqp-edit'),
     url(r'^zato/definition/amqp/change-password/$', def_amqp.change_password, name='def-amqp-change-password'),
     url(r'^zato/definition/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_amqp.delete, name='def-amqp-delete'),
+    url(r'^zato/definition/amqp/reconnect/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_amqp.reconnect, name='def-amqp-reconnect'),
     
     # Outgoing connections
     

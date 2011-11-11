@@ -41,6 +41,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
+from zato.admin.web.views import reconnect as _reconnect
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
@@ -183,3 +184,9 @@ def delete(req, id, cluster_id):
         msg = "Could not delete the AMQP definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
+    
+@meth_allowed('POST')
+def reconnect(req, id, cluster_id):
+    """ Forces a definition to reconnect.
+    """
+    return _reconnect(req, id, cluster_id, 'zato:definition.amqp.reconnect')

@@ -132,3 +132,22 @@ def change_password(req, service_name):
         return HttpResponseServerError(msg)
     else:
         return HttpResponse(dumps({'message':'Password updated'}))
+    
+def reconnect(req, id, cluster_id, service):
+    """ Forces a definition to reconnect.
+    """
+    try:
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = id
+
+        invoke_admin_service(cluster, service, zato_message)
+        
+        # 200 OK
+        return HttpResponse()
+
+    except Exception, e:
+        msg = 'Could not reconnect, id=[{0}], cluster_id=[{1}], e=[{2}]'.format(id, cluster_id, format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
