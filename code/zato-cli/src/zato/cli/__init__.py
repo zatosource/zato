@@ -36,8 +36,8 @@ from zato.common.odb import engine_def
 
 ZATO_LB_DIR = b'.zato-lb-dir'
 ZATO_ADMIN_DIR = b'.zato-admin-dir'
+ZATO_BROKER_DIR = b'.zato-broker-dir'
 ZATO_SERVER_DIR = b'.zato-server-dir'
-ZATO_SECURITY_SERVER_DIR = b'.zato-security-server-dir'
 
 _opts_odb_type = "ODB database type"
 _opts_odb_host = "ODB database host"
@@ -454,13 +454,13 @@ class ManageCommand(ZatoCommand):
 
     def _get_dispatch(self):
         return {
-            ZATO_SERVER_DIR: self._on_server,
-            ZATO_LB_DIR: self._on_lb,
             ZATO_ADMIN_DIR: self._on_zato_admin,
-            ZATO_SECURITY_SERVER_DIR: self._on_security_server,
+            ZATO_BROKER_DIR: self._on_broker,
+            ZATO_LB_DIR: self._on_lb,
+            ZATO_SERVER_DIR: self._on_server,
         }
 
-    command_files = set([ZATO_SERVER_DIR, ZATO_LB_DIR, ZATO_ADMIN_DIR, ZATO_SECURITY_SERVER_DIR])
+    command_files = set([ZATO_ADMIN_DIR, ZATO_BROKER_DIR, ZATO_LB_DIR, ZATO_SERVER_DIR])
 
     opts = [
         dict(name="component_dir", help="A directory in which the component has been installed")

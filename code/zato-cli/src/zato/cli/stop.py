@@ -27,58 +27,58 @@ from zato.cli import ManageCommand
 
 class Stop(ManageCommand):
 
-    command_name = "stop"
-    description = "Stops a Zato component"
+    command_name = 'stop'
+    description = 'Stops a Zato component'
 
     def _on_server(self):
         ports_pids = self._zdaemon_command('status')
         if not any(ports_pids.values()):
-            print('\nZato server at {0} is not running.\n'.format(self.component_dir))
+            print('\nZato server at {0} is not running\n'.format(self.component_dir))
         else:
             self._zdaemon_command('stop')
-            print('\nZato server at {0} has been stopped.\n'.format(self.component_dir))
-
-    def _on_security_server(self):
-        ports_pids = self._zdaemon_command('status', ['zdaemon*.conf'])
-        if not any(ports_pids.values()):
-            print('\nZato security server at {0} is not running.\n'.format(self.component_dir))
-        else:
-            self._zdaemon_command('stop', ['zdaemon*.conf'])
-            print('\nZato security server at {0} has been stopped.\n'.format(self.component_dir))
+            print('\nZato server at {0} has been stopped\n'.format(self.component_dir))
 
     def _on_lb(self):
         ports_pids = self._zdaemon_command('status')
         if not any(ports_pids.values()):
-            print('\nZato load balancer and agent at {0} are not running.\n'.format(self.component_dir))
+            print('\nZato load balancer and agent at {0} are not running\n'.format(self.component_dir))
         else:
             self._zdaemon_command('stop')
-            print('\nZato load balancer and agent at {0} have been stopped.\n'.format(self.component_dir))
+            print('\nZato load balancer and agent at {0} have been stopped\n'.format(self.component_dir))
 
     def _on_zato_admin(self):
-        pid_file = os.path.join(self.component_dir, ".zato-admin.pid")
+        pid_file = os.path.join(self.component_dir, '.zato-admin.pid')
         if not os.path.exists(pid_file):
-            msg = "\nDid not find the expected file {0}, quitting now.\n".format(pid_file)
+            msg = '\nDid not find the expected file {0}, quitting now\n'.format(pid_file)
             print(msg)
             sys.exit(4) # TODO: Document exit codes
 
         pid = open(pid_file).read().strip()
         if not pid:
-            msg = "\nDid not attempt to stop the ZatoAdmin instance because file {0} is empty.\n".format(pid_file)
+            msg = '\nDid not attempt to stop the ZatoAdmin instance because file {0} is empty\n'.format(pid_file)
             print(msg)
             sys.exit(5) # TODO: Document exit codes
 
         pid = int(pid)
-        msg = "Will now send SIGTERM to pid {0} (as found in the {1} file).".format(pid, pid_file)
+        msg = 'Will now send SIGTERM to pid {0} (as found in the {1} file)'.format(pid, pid_file)
         print(msg)
 
         os.kill(pid, signal.SIGTERM)
-        open(pid_file, "w").truncate()
+        open(pid_file, 'w').truncate()
 
-        print("ZatoAdmin stopped OK.")
+        print('ZatoAdmin stopped OK.')
+        
+    def _on_broker(self):
+        ports_pids = self._zdaemon_command('status')
+        if not any(ports_pids.values()):
+            print('\nBroker at {0} is not running\n'.format(self.component_dir))
+        else:
+            self._zdaemon_command('stop')
+            print('\nBroker at {0} has been stopped\n'.format(self.component_dir))
 
 
 def main(target_dir):
     Stop(target_dir).run()
 
-if __name__ == "__main__":
-    main(".")
+if __name__ == '__main__':
+    main('.')
