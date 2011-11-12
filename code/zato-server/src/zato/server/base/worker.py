@@ -396,30 +396,30 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def def_amqp_get(self, name):
+    def def_amqp_get(self, id):
         """ Returns the configuration of the AMQP definition of the given name.
         """
-        #with self.def_amqp_lock:
-        #    return self.def_amqp.get(name)
+        with self.def_amqp_lock:
+            return self.def_amqp.get(id)
         
     def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
         """ Creates a new AMQP definition.
         """
-        #with self.def_amqp_lock:
-        #    self.def_amqp[msg.name] = msg
+        with self.def_amqp_lock:
+            self.def_amqp[msg.id] = msg
         
     def on_broker_pull_msg_DEFINITION_AMQP_EDIT(self, msg, *args):
         """ Updates an existing AMQP definition.
         """
-        #with self.def_amqp_lock:
-        #    del self.def_amqp[msg.old_name]
-        #    self.def_amqp[msg.name] = msg
+        with self.def_amqp_lock:
+            del self.def_amqp[msg.old_name]
+            self.def_amqp[msg.id] = msg
         
     def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
         """ Deletes an AMQP definition.
         """
         with self.def_amqp_lock:
-            del self.def_amqp[msg.name]
+            del self.def_amqp[msg.id]
             with self.out_amqp_lock:
                 for out_name, out_attrs in self.out_amqp.items():
                     if out_attrs.def_id == msg.id:

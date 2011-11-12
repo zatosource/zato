@@ -134,6 +134,7 @@ class Create(AdminService):
                 
                 created_elem.id = def_.id
                 
+                params['id'] = def_.id
                 params['action'] = DEFINITION.AMQP_CREATE
                 kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
@@ -229,8 +230,8 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.AMQP_DELETE, 'name': def_.name}
-                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+                msg = {'action': DEFINITION.AMQP_DELETE, 'id': int(id)}
+                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
             except Exception, e:
                 session.rollback()
