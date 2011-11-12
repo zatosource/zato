@@ -283,27 +283,3 @@ class ZatoContext(PythonConfig):
                                  create_sa_engines)
 
         return pool
-
-    # #######################################################
-    # AMQP
-
-    #@Object
-    def amqp_config_connection_parameters(self):
-        host = "127.0.0.1"
-        port = 5672
-        virtual_host = "/"
-        user = "guest"
-        password = "guest"
-
-        creds = PlainCredentials(user, password)
-        conn_params = ConnectionParameters(host, port, virtual_host, creds)
-
-        return conn_params
-
-    #@Object(scope.PROTOTYPE)
-    #def amqp_config_para_client(self):
-    #    return Client(self.amqp_config_connection_parameters(), "para")
-
-    #@Object
-    #def amqp_config_single_client(self):
-    #    return Client(self.amqp_config_connection_parameters(), "single")

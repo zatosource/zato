@@ -20,8 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, socket, time
+import errno, logging, socket, time
 from copy import deepcopy
+from datetime import datetime
 from thread import start_new_thread
 from threading import local, RLock, Thread
 from traceback import format_exc
@@ -57,6 +58,12 @@ class _AMQPPublisher(object):
         self.properties = properties
         self.conn = None
         self.channel = None
+        self.connection_attempts = 1
+        self.first_connection_attempt_time = None
+        self.keep_running = True
+        self.reconnect_sleep_time = 5 # Seconds
+        self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
+            errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
         
     def _conn_info(self):
         return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
@@ -80,6 +87,18 @@ class _AMQPPublisher(object):
             raise ConnectionException(msg)
         
     def _on_connected(self, conn):
+        """ Invoked after establishing a successful connection to an AMQP broker.
+        Will report a diagnostic message regarding how many attempts there were
+        and how long it took if the connection hasn't been established straightaway.
+        """
+        
+        if self.connection_attempts > 1:
+            delta = datetime.now() - self.first_connection_attempt_time
+            msg = '(Re-)connected after {0} attempt(s), time spent {1}'.format(
+                self.connection_attempts, delta)
+            logger.warn(msg)
+            
+        self.connection_attempts = 1
         conn.channel(self._on_channel_open)
         
     def _on_channel_open(self, channel):
@@ -89,21 +108,49 @@ class _AMQPPublisher(object):
         
     def _run(self):
         try:
-            try:
-                self.start()
-            except KeyboardInterrupt:
-                self.close()
-        except socket.error, e:
-            msg = 'Could not establish a connection to {0}:{1}{2} ({3}), e=[{4}]'.format(
-                self.conn_params.host, self.conn_params.port, self.conn_params.virtual_host, 
-                self.out_name, format_exc(e))
-            logger.error(msg)
+            self.start()
+        except KeyboardInterrupt:
+            self.close()
             
-    def start(self):
+    def _start(self):
         self.conn = SelectConnection(self.conn_params, self._on_connected)
         self.conn.ioloop.start()
         
+    def start(self):
+        
+        # Set right after the publisher has been created
+        self.first_connection_attempt_time = datetime.now() 
+        
+        while self.keep_running:
+            try:
+                
+                # Actually try establishing the connection
+                self._start()
+                
+                # Set only if there was an already established connection 
+                # and we're now trying to reconnect to the broker.
+                self.first_connection_attempt_time = datetime.now()
+            except(TypeError, EnvironmentError), e:
+                # We need to catch TypeError because pika will sometimes erroneously raise
+                # it in self._start's self.conn.ioloop.start()
+                if isinstance(e, TypeError) or e.errno in self.reconnect_error_numbers:
+                    if isinstance(e, TypeError):
+                        err_info = format_exc(e)
+                    else:
+                        err_info = '{0} {1}'.format(e.errno, e.strerror)
+                    msg = 'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
+                    delta = datetime.now() - self.first_connection_attempt_time
+                    logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
+                    
+                    self.connection_attempts += 1
+                    time.sleep(self.reconnect_sleep_time)
+                else:
+                    msg = 'No connection for {0}, e=[{1}]'.format(self._conn_info(), format_exc(e))
+                    logger.error(msg)
+                    raise
+        
     def close(self):
+        self.keep_running = False
         if self.conn:
             self.conn.ioloop.stop()
             self.conn.close()
@@ -168,7 +215,8 @@ class WorkerStore(BrokerMessageReceiver):
     def _recreate_amqp_publisher(self, def_id, out_attrs):
         """ (Re-)creates an AMQP publisher and updates the related outgoing
         AMQP connection's attributes so that they point to the newly created
-        publisher.
+        publisher. The method must be called from another method, one that holds
+        onto all AMQP-related RLocks.
         """
         if 'publisher' in self.out_amqp[out_attrs.name]:
             self.out_amqp[out_attrs.name].publisher.close()
