@@ -212,16 +212,23 @@ class WorkerStore(BrokerMessageReceiver):
                         if def_id == out_attrs.def_id:
                             self._recreate_amqp_publisher(def_id, out_attrs)
                             
+    def _stop_amqp_publisher(self, out_name):
+        """ Stops the given outgoing AMQP connection's publisher. The method must 
+        be called from a method that holds onto all AMQP-related RLocks.
+        """
+        if 'publisher' in self.out_amqp[out_name]:
+            self.out_amqp[out_name].publisher.close()
+                            
     def _recreate_amqp_publisher(self, def_id, out_attrs):
         """ (Re-)creates an AMQP publisher and updates the related outgoing
         AMQP connection's attributes so that they point to the newly created
-        publisher. The method must be called from another method, one that holds
+        publisher. The method must be called from a method that holds
         onto all AMQP-related RLocks.
         """
-        if 'publisher' in self.out_amqp[out_attrs.name]:
-            self.out_amqp[out_attrs.name].publisher.close()
+        if out_attrs.name in self.out_amqp:
+            self._stop_amqp_publisher(out_attrs.name)
+            del self.out_amqp[out_attrs.name]
             
-        del self.out_amqp[out_attrs.name]
         def_attrs = self.def_amqp[def_id]
         
         vhost = def_attrs.virtual_host if 'virtual_host' in def_attrs else def_attrs.vhost
@@ -238,11 +245,14 @@ class WorkerStore(BrokerMessageReceiver):
         properties = self._amqp_basic_properties(out_attrs.content_type, 
             out_attrs.content_encoding, out_attrs.delivery_mode, out_attrs.priority, 
             out_attrs.expiration, out_attrs.user_id, out_attrs.app_id)
+
+        # An outgoing AMQP connection's properties
+        self.out_amqp[out_attrs.name] = out_attrs
         
         # An actual AMQP publisher
-        publisher = self._amqp_publisher(conn_params, def_id, out_attrs.name, properties)
-        self.out_amqp[out_attrs.name] = out_attrs
-        self.out_amqp[out_attrs.name].publisher = publisher
+        if out_attrs.is_active:
+            publisher = self._amqp_publisher(conn_params, def_id, out_attrs.name, properties)
+            self.out_amqp[out_attrs.name].publisher = publisher
         
     def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
         return ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
@@ -419,6 +429,14 @@ class WorkerStore(BrokerMessageReceiver):
         
 # ##############################################################################
 
+    def _out_amqp_create_edit(self, msg, *args):
+        """ Creates or updates an outgoing AMQP connection and its associated
+        AMQP publisher.
+        """ 
+        with self.def_amqp_lock:
+            with self.out_amqp_lock:
+                self._recreate_amqp_publisher(msg.def_id, msg)
+
     def out_amqp_get(self, name):
         """ Returns the configuration of an outgoing AMQP connection.
         """
@@ -428,17 +446,15 @@ class WorkerStore(BrokerMessageReceiver):
                 return item
 
     def on_broker_pull_msg_OUTGOING_AMQP_CREATE(self, msg, *args):
-        """ Creates a new outgoing AMQP connection.
+        """ Creates a new outgoing AMQP connection. Note that the implementation
+        is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
-        #with self.out_amqp_lock:
-        #    self.out_amqp[msg.name] = msg
+        self._out_amqp_create_edit(msg, *args)
         
     def on_broker_pull_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
         """ Updates an outgoing AMQP connection.
         """
-        with self.def_amqp_lock:
-            with self.out_amqp_lock:
-                self._recreate_amqp_publisher(msg.def_id, msg)
+        self._out_amqp_create_edit(msg, *args)
         
     def on_broker_pull_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
         """ Deletes an outgoing AMQP connection.
