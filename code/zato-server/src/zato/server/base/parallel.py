@@ -191,8 +191,6 @@ class ParallelServer(BrokerMessageReceiver):
         
         self.zmq_items = {}
         
-        logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
-        
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
