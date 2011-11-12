@@ -64,7 +64,7 @@ class _AMQPPublisher(object):
         self.reconnect_sleep_time = 5 # Seconds
         self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
             errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
-        
+
     def _conn_info(self):
         return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
             self.conn_params.port, self.conn_params.virtual_host, self.out_name)
@@ -415,10 +415,16 @@ class WorkerStore(BrokerMessageReceiver):
         #    del self.def_amqp[msg.name]
         
     def on_broker_pull_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes the password of an AMQP definition.
+        """ Changes the password of an AMQP definition and of any existing publishers
+        using this definition.
         """
-        #with self.def_amqp_lock:
-        #    self.def_amqp[msg.name]['password'] = msg.password
+        with self.def_amqp_lock:
+            self.def_amqp[msg.id]['password'] = msg.password
+            with self.out_amqp_lock:
+                for out_name, out_attrs in self.out_amqp.items():
+                    if out_attrs.def_id == msg.id:
+                        self._recreate_amqp_publisher(out_attrs.def_id, out_attrs)
+                
         
     def on_broker_pull_msg_DEFINITION_AMQP_RECONNECT(self, msg, *args):
         with self.def_amqp_lock:
