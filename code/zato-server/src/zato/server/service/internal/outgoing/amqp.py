@@ -240,7 +240,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': OUTGOING.AMQP_DELETE, 'name': def_.name}
-                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
             except Exception, e:
                 session.rollback()
