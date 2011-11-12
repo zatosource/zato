@@ -216,7 +216,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
         be called from a method that holds onto all AMQP-related RLocks.
         """
-        if 'publisher' in self.out_amqp[out_name]:
+        if self.out_amqp[out_name].publisher:
             self.out_amqp[out_name].publisher.close()
                             
     def _recreate_amqp_publisher(self, def_id, out_attrs):
@@ -459,8 +459,9 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_pull_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
         """ Deletes an outgoing AMQP connection.
         """
-        #with self.out_amqp_lock:
-        #    del self.out_amqp[msg.name]
+        with self.out_amqp_lock:
+            self._stop_amqp_publisher(msg.name)
+            del self.out_amqp[msg.name]
         
 # ##############################################################################
 

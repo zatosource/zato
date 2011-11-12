@@ -298,6 +298,7 @@ class ParallelServer(BrokerMessageReceiver):
             out_amqp_config[item.name].app_id = item.app_id
             out_amqp_config[item.name].def_name = item.def_name
             out_amqp_config[item.name].def_id = str(item.def_id)
+            out_amqp_config[item.name].publisher = None
             
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)
