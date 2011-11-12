@@ -37,7 +37,6 @@ from pika import BasicProperties
 from pika.adapters import SelectConnection
 from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
-from pika.reconnection_strategies import SimpleReconnectionStrategy
 
 # Bunch
 from bunch import Bunch
@@ -91,9 +90,7 @@ class _AMQPPublisher(object):
     def _run(self):
         try:
             try:
-                reconnection_strategy = SimpleReconnectionStrategy()
-                self.conn = SelectConnection(self.conn_params, self._on_connected, reconnection_strategy=reconnection_strategy)
-                self.conn.ioloop.start()
+                self.start()
             except KeyboardInterrupt:
                 self.close()
         except socket.error, e:
@@ -102,8 +99,13 @@ class _AMQPPublisher(object):
                 self.out_name, format_exc(e))
             logger.error(msg)
             
+    def start(self):
+        self.conn = SelectConnection(self.conn_params, self._on_connected)
+        self.conn.ioloop.start()
+        
     def close(self):
         if self.conn:
+            self.conn.ioloop.stop()
             self.conn.close()
 
 class WorkerStore(BrokerMessageReceiver):
@@ -161,18 +163,59 @@ class WorkerStore(BrokerMessageReceiver):
                 for def_id, def_attrs in self.def_amqp.items():
                     for out_name, out_attrs in self.out_amqp.items():
                         if def_id == out_attrs.def_id:
+                            self._recreate_amqp_publisher(def_id, out_attrs)
                             
-                            # Connection parameters
-                            conn_params = self._amqp_conn_params(def_attrs, def_attrs.vhost,
-                                def_attrs.username, def_attrs.password, def_attrs.heartbeat)
-                            self.def_amqp[def_id] = conn_params
-                            
-                            # Default properties for published messages
-                            properties = self._amqp_basic_properties(out_attrs)
-                            
-                            # An actual AMQP publisher
-                            publisher = self._amqp_publisher(conn_params, def_id, out_attrs.name, properties)
-                            self.out_amqp[out_name].publisher = publisher
+    def _recreate_amqp_publisher(self, def_id, out_attrs):
+        """ (Re-)creates an AMQP publisher and updates the related outgoing
+        AMQP connection's attributes so that they point to the newly created
+        publisher.
+        """
+        if 'publisher' in self.out_amqp[out_attrs.name]:
+            self.out_amqp[out_attrs.name].publisher.close()
+            
+        del self.out_amqp[out_attrs.name]
+        def_attrs = self.def_amqp[def_id]
+        
+        vhost = def_attrs.virtual_host if 'virtual_host' in def_attrs else def_attrs.vhost
+        if 'credentials' in def_attrs:
+            username = def_attrs.credentials.username
+            password = def_attrs.credentials.password
+        else:
+            username = def_attrs.username
+            password = def_attrs.password
+        
+        conn_params = self._amqp_conn_params(def_attrs, vhost, username, password, bool(def_attrs.heartbeat))
+        
+        # Default properties for published messages
+        properties = self._amqp_basic_properties(out_attrs.content_type, 
+            out_attrs.content_encoding, out_attrs.delivery_mode, out_attrs.priority, 
+            out_attrs.expiration, out_attrs.user_id, out_attrs.app_id)
+        
+        # An actual AMQP publisher
+        publisher = self._amqp_publisher(conn_params, def_id, out_attrs.name, properties)
+        self.out_amqp[out_attrs.name] = out_attrs
+        self.out_amqp[out_attrs.name].publisher = publisher
+        
+    def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
+        return ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
+            PlainCredentials(username, password),
+            frame_max=def_attrs.frame_max, heartbeat=heartbeat)
+
+    def _amqp_basic_properties(self, content_type, content_encoding, delivery_mode, priority, expiration, user_id, app_id):
+        return BasicProperties(content_type=content_type, content_encoding=content_encoding, 
+            delivery_mode=delivery_mode, priority=priority, expiration=expiration, 
+            user_id=user_id, app_id=app_id)
+
+    def _amqp_basic_properties_from_attrs(self, out_attrs):
+        return self._amqp_basic_properties(out_attrs.content_type, out_attrs.content_encoding, 
+            out_attrs.delivery_mode, out_attrs.priority, out_attrs.expiration, 
+            out_attrs.user_id, out_attrs.app_id)
+    
+    def _amqp_publisher(self, conn_params, def_id, out_name, properties):
+        publisher = _AMQPPublisher(conn_params, def_id, out_name, properties)
+        Thread(target=publisher._run).start()
+        
+        return publisher
 
 # ##############################################################################        
         
@@ -288,17 +331,12 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
-        return ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
-            PlainCredentials(username, password),
-            frame_max=def_attrs.frame_max, heartbeat=heartbeat)
-
     def def_amqp_get(self, name):
         """ Returns the configuration of the AMQP definition of the given name.
         """
         #with self.def_amqp_lock:
         #    return self.def_amqp.get(name)
-
+        
     def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
         """ Creates a new AMQP definition.
         """
@@ -323,20 +361,15 @@ class WorkerStore(BrokerMessageReceiver):
         """
         #with self.def_amqp_lock:
         #    self.def_amqp[msg.name]['password'] = msg.password
-            
-# ##############################################################################
-
-    def _amqp_basic_properties(self, out_attrs):
-        return BasicProperties(content_type=out_attrs.content_type, 
-            content_encoding=out_attrs.content_encoding, delivery_mode=out_attrs.delivery_mode, 
-            priority=out_attrs.priority, expiration=out_attrs.expiration, 
-            user_id=out_attrs.user_id, app_id=out_attrs.app_id)
-    
-    def _amqp_publisher(self, conn_params, def_id, out_name, properties):
-        publisher = _AMQPPublisher(conn_params, def_id, out_name, properties)
-        Thread(target=publisher._run).start()
         
-        return publisher
+    def on_broker_pull_msg_DEFINITION_AMQP_RECONNECT(self, msg, *args):
+        with self.def_amqp_lock:
+            with self.out_amqp_lock:
+                for out_name, out_attrs in self.out_amqp.items():
+                    if out_attrs.def_id == msg.id:
+                        self._recreate_amqp_publisher(out_attrs.def_id, out_attrs)
+        
+# ##############################################################################
 
     def out_amqp_get(self, name):
         """ Returns the configuration of an outgoing AMQP connection.
@@ -355,25 +388,9 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_pull_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
         """ Updates an outgoing AMQP connection.
         """
-        with self.out_amqp_lock:
-            with self.def_amqp_lock:
-                logger.error(str(msg))
-                self.out_amqp[msg.old_name].publisher.close()
-                del self.out_amqp[msg.old_name]
-                
-                # Connection parameters
-                def_attrs = self.def_amqp[msg.def_id]
-                conn_params = self._amqp_conn_params(def_attrs, def_attrs.virtual_host,
-                    def_attrs.credentials.username, def_attrs.credentials.password,
-                    bool(def_attrs.heartbeat))
-                
-                # Default properties for published messages
-                properties = self._amqp_basic_properties(msg)
-                
-                # An actual AMQP publisher
-                publisher = self._amqp_publisher(conn_params, msg.def_id, msg.name, properties)
-                self.out_amqp[msg.name] = msg
-                self.out_amqp[msg.name].publisher = publisher                
+        with self.def_amqp_lock:
+            with self.out_amqp_lock:
+                self._recreate_amqp_publisher(msg.def_id, msg)
         
     def on_broker_pull_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
         """ Deletes an outgoing AMQP connection.
