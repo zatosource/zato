@@ -150,10 +150,17 @@ class _AMQPPublisher(object):
                     raise
         
     def close(self):
+        if(logger.isEnabledFor(TRACE1)):
+            msg = 'About to close the publisher for {0}'.format(self._conn_info())
+            logger.log(TRACE1, msg)
+            
         self.keep_running = False
         if self.conn:
             self.conn.ioloop.stop()
             self.conn.close()
+            
+        msg = 'Closed the publisher for {0}'.format(self._conn_info())
+        logger.debug(msg)
 
 class WorkerStore(BrokerMessageReceiver):
     """ Each worker thread has its own configuration store. The store is assigned
@@ -411,8 +418,13 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
         """ Deletes an AMQP definition.
         """
-        #with self.def_amqp_lock:
-        #    del self.def_amqp[msg.name]
+        with self.def_amqp_lock:
+            del self.def_amqp[msg.name]
+            with self.out_amqp_lock:
+                for out_name, out_attrs in self.out_amqp.items():
+                    if out_attrs.def_id == msg.id:
+                        self._stop_amqp_publisher(out_name)
+                        del self.out_amqp[out_name]
         
     def on_broker_pull_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of an AMQP definition and of any existing publishers
