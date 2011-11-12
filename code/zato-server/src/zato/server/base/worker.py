@@ -94,8 +94,8 @@ class _AMQPPublisher(object):
         
         if self.connection_attempts > 1:
             delta = datetime.now() - self.first_connection_attempt_time
-            msg = '(Re-)connected after {0} attempt(s), time spent {1}'.format(
-                self.connection_attempts, delta)
+            msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
+                self._conn_info(), self.connection_attempts, delta)
             logger.warn(msg)
             
         self.connection_attempts = 1
