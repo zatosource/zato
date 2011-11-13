@@ -136,7 +136,7 @@ class ChangePasswordBase(AdminService):
                 request_params = ['id', 'password1', 'password2']
                 params = _get_params(payload, request_params, 'data.')
                 
-                id = params['id']
+                params['id'] = int(params['id'])
                 password1 = params.get('password1')
                 password2 = params.get('password2')
                 
@@ -150,7 +150,7 @@ class ChangePasswordBase(AdminService):
                     raise Exception('Passwords need to be the same')
                 
                 auth = session.query(class_).\
-                    filter(class_.id==id).\
+                    filter(class_.id==params['id']).\
                     one()
                 
                 auth_func(auth, password1)
@@ -183,7 +183,7 @@ class ReconnectBase(AdminService):
             request_params = ['id']
             params = _get_params(payload, request_params, 'data.')
             
-            msg = {'action': action, 'id': params['id']}
+            msg = {'action': action, 'id': int(params['id'])}
             kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)
             
         except Exception, e:

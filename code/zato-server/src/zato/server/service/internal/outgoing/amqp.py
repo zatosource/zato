@@ -94,6 +94,7 @@ class Create(AdminService):
             
             name = core_params['name']
             cluster_id = core_params['cluster_id']
+            core_params['def_id'] = int(core_params['def_id'])
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
@@ -167,6 +168,7 @@ class Edit(AdminService):
             id = core_params['id']
             name = core_params['name']
             cluster_id = core_params['cluster_id']
+            core_params['def_id'] = int(core_params['def_id'])
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
@@ -186,6 +188,7 @@ class Edit(AdminService):
                 
                 core_params['delivery_mode'] = int(core_params['delivery_mode'])
                 core_params['priority'] = int(core_params['priority'])
+                core_params['def_id'] = int(core_params['def_id'])
                 core_params['is_active'] = is_boolean(core_params['is_active'])
                 
                 item = session.query(OutgoingAMQP).filter_by(id=id).one()

@@ -272,16 +272,15 @@ class ParallelServer(BrokerMessageReceiver):
 
         def_amqp_config = Bunch()
         for item in self.odb.get_def_amqp_list(server.cluster.id):
-            id = str(item.id)
-            def_amqp_config[id] = Bunch()
-            def_amqp_config[id].name = item.name
-            def_amqp_config[id].host = str(item.host)
-            def_amqp_config[id].port = item.port
-            def_amqp_config[id].vhost = item.vhost
-            def_amqp_config[id].username = item.username
-            def_amqp_config[id].frame_max = item.frame_max
-            def_amqp_config[id].heartbeat = item.heartbeat
-            def_amqp_config[id].password = item.password
+            def_amqp_config[item.id] = Bunch()
+            def_amqp_config[item.id].name = item.name
+            def_amqp_config[item.id].host = str(item.host)
+            def_amqp_config[item.id].port = item.port
+            def_amqp_config[item.id].vhost = item.vhost
+            def_amqp_config[item.id].username = item.username
+            def_amqp_config[item.id].frame_max = item.frame_max
+            def_amqp_config[item.id].heartbeat = item.heartbeat
+            def_amqp_config[item.id].password = item.password
             
         out_amqp_config = Bunch()
         for item in self.odb.get_out_amqp_list(server.cluster.id):
@@ -297,7 +296,7 @@ class ParallelServer(BrokerMessageReceiver):
             out_amqp_config[item.name].user_id = item.user_id
             out_amqp_config[item.name].app_id = item.app_id
             out_amqp_config[item.name].def_name = item.def_name
-            out_amqp_config[item.name].def_id = str(item.def_id)
+            out_amqp_config[item.name].def_id = item.def_id
             out_amqp_config[item.name].publisher = None
             
         # Security configuration of HTTP URLs.
