@@ -550,7 +550,7 @@ class ConnDefAMQP(Base):
     username = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
     frame_max = Column(Integer(), nullable=False)
-    heartbeat = Column(Boolean(), nullable=False)
+    heartbeat = Column(Integer(), nullable=False)
     
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('amqp_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))

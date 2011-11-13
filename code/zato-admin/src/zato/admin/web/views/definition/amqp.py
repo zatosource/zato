@@ -106,7 +106,7 @@ def index(req):
                 vhost = definition_elem.vhost.text
                 username = definition_elem.username.text
                 frame_max = definition_elem.frame_max.text
-                heartbeat = is_boolean(definition_elem.heartbeat.text)
+                heartbeat = definition_elem.heartbeat.text
                 
                 def_amqp =  ConnDefAMQP(id, name, 'amqp', host, port, vhost, username, None, frame_max, heartbeat)
                 
