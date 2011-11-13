@@ -31,6 +31,9 @@ from sqlalchemy.orm.query import orm_exc
 from lxml import etree
 from lxml.objectify import Element
 
+# validate
+from validate import is_boolean
+
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
@@ -106,6 +109,7 @@ class Create(AdminService):
             
             params = _get_params(payload, request_params, 'data.')
             name = params['name']
+            params['heartbeat'] = is_boolean(params['heartbeat'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
@@ -134,7 +138,7 @@ class Create(AdminService):
                 
                 created_elem.id = def_.id
                 
-                params['id'] = def_.id
+                params['id'] = int(def_.id)
                 params['action'] = DEFINITION.AMQP_CREATE
                 kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
                 
@@ -198,6 +202,7 @@ class Edit(AdminService):
                 
                 def_amqp_elem.id = def_amqp.id
                 
+                params['id'] = int(params['id'])
                 params['action'] = DEFINITION.AMQP_EDIT
                 params['old_name'] = old_name
                 kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
@@ -221,7 +226,7 @@ class Delete(AdminService):
                 request_params = ['id']
                 params = _get_params(payload, request_params, 'data.')
                 
-                id = params['id']
+                id = int(params['id'])
                 
                 def_ = session.query(ConnDefAMQP).\
                     filter(ConnDefAMQP.id==id).\
@@ -230,7 +235,7 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.AMQP_DELETE, 'id': int(id)}
+                msg = {'action': DEFINITION.AMQP_DELETE, 'id': id}
                 kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
             except Exception, e:
