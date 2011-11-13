@@ -408,10 +408,6 @@ class WorkerStore(BrokerMessageReceiver):
         with self.def_amqp_lock:
             msg.host = str(msg.host)
             self.def_amqp[msg.id] = msg
-            
-        if logger.isEnabledFor(TRACE1):
-            msg = 'self.def_amqp is {0}'.format(self.def_amqp)
-            logger.log(TRACE1, msg)
         
     def on_broker_pull_msg_DEFINITION_AMQP_EDIT(self, msg, *args):
         """ Updates an existing AMQP definition.
@@ -419,10 +415,6 @@ class WorkerStore(BrokerMessageReceiver):
         with self.def_amqp_lock:
             del self.def_amqp[msg.old_name]
             self.def_amqp[msg.id] = msg
-            
-        if logger.isEnabledFor(TRACE1):
-            msg = 'self.def_amqp is {0}'.format(self.def_amqp)
-            logger.log(TRACE1, msg)
         
     def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
         """ Deletes an AMQP definition.
@@ -434,10 +426,6 @@ class WorkerStore(BrokerMessageReceiver):
                     if out_attrs.def_id == msg.id:
                         self._stop_amqp_publisher(out_name)
                         del self.out_amqp[out_name]
-                        
-        if logger.isEnabledFor(TRACE1):
-            msg = 'self.def_amqp is {0}'.format(self.def_amqp)
-            logger.log(TRACE1, msg)
         
     def on_broker_pull_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of an AMQP definition and of any existing publishers
@@ -449,11 +437,6 @@ class WorkerStore(BrokerMessageReceiver):
                 for out_name, out_attrs in self.out_amqp.items():
                     if out_attrs.def_id == msg.id:
                         self._recreate_amqp_publisher(out_attrs.def_id, out_attrs)
-                        
-        if logger.isEnabledFor(TRACE1):
-            msg = 'self.def_amqp is {0}'.format(self.def_amqp)
-            logger.log(TRACE1, msg)
-                
         
     def on_broker_pull_msg_DEFINITION_AMQP_RECONNECT(self, msg, *args):
         with self.def_amqp_lock:

@@ -109,12 +109,15 @@ class Create(AdminService):
             
             params = _get_params(payload, request_params, 'data.')
             name = params['name']
+            params['port'] = int(params['port'])
+            params['frame_max'] = int(params['frame_max'])
             params['heartbeat'] = is_boolean(params['heartbeat'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
             
             password = uuid4().hex
+            params['password'] = password
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
@@ -165,6 +168,9 @@ class Edit(AdminService):
             
             id = params['id']
             name = params['name']
+            params['port'] = int(params['port'])
+            params['frame_max'] = int(params['frame_max'])
+            params['heartbeat'] = is_boolean(params['heartbeat'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
