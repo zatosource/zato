@@ -246,7 +246,7 @@ class WorkerStore(BrokerMessageReceiver):
             username = def_attrs.username
             password = def_attrs.password
         
-        conn_params = self._amqp_conn_params(def_attrs, vhost, username, password, bool(def_attrs.heartbeat))
+        conn_params = self._amqp_conn_params(def_attrs, vhost, username, password, def_attrs.heartbeat)
         
         # Default properties for published messages
         properties = self._amqp_basic_properties(out_attrs.content_type, 
@@ -262,9 +262,15 @@ class WorkerStore(BrokerMessageReceiver):
             self.out_amqp[out_attrs.name].publisher = publisher
         
     def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
-        return ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
+        params = ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
             PlainCredentials(username, password),
-            frame_max=def_attrs.frame_max, heartbeat=heartbeat)
+            frame_max=def_attrs.frame_max)
+        
+        # heartbeat is an integer but ConnectionParameter.__init__ insists it
+        # be a boolean.
+        params.heartbeat = heartbeat
+        
+        return params
 
     def _amqp_basic_properties(self, content_type, content_encoding, delivery_mode, priority, expiration, user_id, app_id):
         return BasicProperties(content_type=content_type, content_encoding=content_encoding, 

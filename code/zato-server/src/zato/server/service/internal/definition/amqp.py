@@ -111,7 +111,7 @@ class Create(AdminService):
             name = params['name']
             params['port'] = int(params['port'])
             params['frame_max'] = int(params['frame_max'])
-            params['heartbeat'] = is_boolean(params['heartbeat'])
+            params['heartbeat'] = int(params['heartbeat'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
@@ -170,7 +170,7 @@ class Edit(AdminService):
             name = params['name']
             params['port'] = int(params['port'])
             params['frame_max'] = int(params['frame_max'])
-            params['heartbeat'] = is_boolean(params['heartbeat'])
+            params['heartbeat'] = int(params['heartbeat'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()

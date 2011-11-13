@@ -64,7 +64,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.vhost = params[prefix + 'vhost']
     zato_message.data.username = params[prefix + 'username']
     zato_message.data.frame_max = params[prefix + 'frame_max']
-    zato_message.data.heartbeat = bool(params.get(prefix + 'heartbeat'))
+    zato_message.data.heartbeat = int(params.get(prefix + 'heartbeat'))
 
     return zato_message
 
