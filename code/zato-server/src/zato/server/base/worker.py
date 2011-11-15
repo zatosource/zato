@@ -20,9 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import errno, logging, socket, time
+import errno, logging, multiprocessing, os, socket, sys, time
 from copy import deepcopy
 from datetime import datetime
+from subprocess import Popen
 from thread import start_new_thread
 from threading import local, RLock, Thread
 from traceback import format_exc
@@ -33,136 +34,18 @@ from zope.server.http.httptask import HTTPTask
 from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
-# Pika
-from pika import BasicProperties
-from pika.adapters import SelectConnection
-from pika.connection import ConnectionParameters
-from pika.credentials import PlainCredentials
-
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException
 from zato.common.util import TRACE1
-from zato.server.base import BrokerMessageReceiver
+from zato.server import amqp
+from zato.server.base import BaseWorker, BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
 
-class _AMQPPublisher(object):
-    def __init__(self, conn_params, def_name, out_name, properties):
-        self.conn_params = conn_params
-        self.def_name = def_name
-        self.out_name = out_name
-        self.properties = properties
-        self.conn = None
-        self.channel = None
-        self.connection_attempts = 1
-        self.first_connection_attempt_time = None
-        self.keep_running = True
-        self.reconnect_sleep_time = 5 # Seconds
-        self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
-            errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
-
-    def _conn_info(self):
-        return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
-            self.conn_params.port, self.conn_params.virtual_host, self.out_name)
-        
-    def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
-        if self.channel:
-            if self.conn.is_open:
-                properties = properties if properties else self.properties
-                self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
-                if(logger.isEnabledFor(TRACE1)):
-                    log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
-                    logger.log(TRACE1, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
-            else:
-                msg = "Can't publish, the connection for {0} is not open".format(self._conn_info())
-                logger.error(msg)
-                raise ConnectionException(msg)
-        else:
-            msg = "Can't publish, don't have a channel for {0}".format(self._conn_info())
-            logger.error(msg)
-            raise ConnectionException(msg)
-        
-    def _on_connected(self, conn):
-        """ Invoked after establishing a successful connection to an AMQP broker.
-        Will report a diagnostic message regarding how many attempts there were
-        and how long it took if the connection hasn't been established straightaway.
-        """
-        
-        if self.connection_attempts > 1:
-            delta = datetime.now() - self.first_connection_attempt_time
-            msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
-                self._conn_info(), self.connection_attempts, delta)
-            logger.warn(msg)
-            
-        self.connection_attempts = 1
-        conn.channel(self._on_channel_open)
-        
-    def _on_channel_open(self, channel):
-        self.channel = channel
-        msg = 'Got a channel for {0}'.format(self._conn_info())
-        logger.debug(msg)
-        
-    def _run(self):
-        try:
-            self.start()
-        except KeyboardInterrupt:
-            self.close()
-            
-    def _start(self):
-        self.conn = SelectConnection(self.conn_params, self._on_connected)
-        self.conn.ioloop.start()
-        
-    def start(self):
-        
-        # Set right after the publisher has been created
-        self.first_connection_attempt_time = datetime.now() 
-        
-        while self.keep_running:
-            try:
-                
-                # Actually try establishing the connection
-                self._start()
-                
-                # Set only if there was an already established connection 
-                # and we're now trying to reconnect to the broker.
-                self.first_connection_attempt_time = datetime.now()
-            except(TypeError, EnvironmentError), e:
-                # We need to catch TypeError because pika will sometimes erroneously raise
-                # it in self._start's self.conn.ioloop.start()
-                if isinstance(e, TypeError) or e.errno in self.reconnect_error_numbers:
-                    if isinstance(e, TypeError):
-                        err_info = format_exc(e)
-                    else:
-                        err_info = '{0} {1}'.format(e.errno, e.strerror)
-                    msg = 'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
-                    delta = datetime.now() - self.first_connection_attempt_time
-                    logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
-                    
-                    self.connection_attempts += 1
-                    time.sleep(self.reconnect_sleep_time)
-                else:
-                    msg = 'No connection for {0}, e=[{1}]'.format(self._conn_info(), format_exc(e))
-                    logger.error(msg)
-                    raise
-        
-    def close(self):
-        if(logger.isEnabledFor(TRACE1)):
-            msg = 'About to close the publisher for {0}'.format(self._conn_info())
-            logger.log(TRACE1, msg)
-            
-        self.keep_running = False
-        if self.conn:
-            self.conn.ioloop.stop()
-            self.conn.close()
-            
-        msg = 'Closed the publisher for {0}'.format(self._conn_info())
-        logger.debug(msg)
-
-class WorkerStore(BrokerMessageReceiver):
+class WorkerStore(BaseWorker):
     """ Each worker thread has its own configuration store. The store is assigned
     to the thread's threading.local variable. All the methods assume the data's
     being already validated and sanitized by one of Zato's internal services.
@@ -174,120 +57,24 @@ class WorkerStore(BrokerMessageReceiver):
     because configuration updates are extremaly rare when compared to regular
     access by worker threads.
     """
-    def __init__(self, thread_data):
+    def __init__(self, worker_data):
 
-        self.thread_data = thread_data
+        self.worker_data = worker_data
         
-        self.basic_auth = self.thread_data.basic_auth
-        self.tech_acc = self.thread_data.tech_acc
-        self.wss = self.thread_data.wss
-        self.url_sec = self.thread_data.url_sec
-        self.def_amqp = self.thread_data.def_amqp
-        self.out_amqp = self.thread_data.out_amqp
+        self.worker_data.broker_config.broker_push_addr = 'tcp://127.0.0.1:5100'
+        self.worker_data.broker_config.broker_pull_addr = 'tcp://127.0.0.1:5161'
+        self.worker_data.broker_config.broker_sub_addr = 'tcp://127.0.0.1:5102'
+        
+        self.basic_auth = self.worker_data.basic_auth
+        self.tech_acc = self.worker_data.tech_acc
+        self.wss = self.worker_data.wss
+        self.url_sec = self.worker_data.url_sec
         
         self.basic_auth_lock = RLock()
         self.tech_acc_lock = RLock()
         self.wss_lock = RLock()
         self.url_sec_lock = RLock()
-        self.def_amqp_lock = RLock()
-        self.out_amqp_lock = RLock()
         
-    def _init(self):
-        self._setup_amqp()
-        self._setup_broker_client()
-
-    def _setup_broker_client(self):
-        self.broker_client = BrokerClient()
-        self.broker_client.name = 'parallel/thread'
-        self.broker_client.token = self.thread_data.broker_config.broker_token
-        self.broker_client.zmq_context = self.thread_data.broker_config.zmq_context
-        self.broker_client.push_addr = self.thread_data.broker_config.broker_push_addr
-        self.broker_client.pull_addr = self.thread_data.broker_config.broker_pull_addr
-        self.broker_client.sub_addr = self.thread_data.broker_config.broker_sub_addr
-        self.broker_client.on_pull_handler = self.on_broker_msg
-        self.broker_client.on_sub_handler = self.on_broker_msg
-        self.broker_client.init()
-        self.broker_client.start()
-        
-    def _setup_amqp(self):
-        """ Sets up AMQP channels and outgoing connections on startup.
-        """
-        with self.out_amqp_lock:
-            with self.def_amqp_lock:
-                for def_id, def_attrs in self.def_amqp.items():
-                    for out_name, out_attrs in self.out_amqp.items():
-                        if def_id == out_attrs.def_id:
-                            self._recreate_amqp_publisher(def_id, out_attrs)
-                            
-    def _stop_amqp_publisher(self, out_name):
-        """ Stops the given outgoing AMQP connection's publisher. The method must 
-        be called from a method that holds onto all AMQP-related RLocks.
-        """
-        if self.out_amqp[out_name].publisher:
-            self.out_amqp[out_name].publisher.close()
-                            
-    def _recreate_amqp_publisher(self, def_id, out_attrs):
-        """ (Re-)creates an AMQP publisher and updates the related outgoing
-        AMQP connection's attributes so that they point to the newly created
-        publisher. The method must be called from a method that holds
-        onto all AMQP-related RLocks.
-        """
-        if out_attrs.name in self.out_amqp:
-            self._stop_amqp_publisher(out_attrs.name)
-            del self.out_amqp[out_attrs.name]
-            
-        def_attrs = self.def_amqp[def_id]
-        
-        vhost = def_attrs.virtual_host if 'virtual_host' in def_attrs else def_attrs.vhost
-        if 'credentials' in def_attrs:
-            username = def_attrs.credentials.username
-            password = def_attrs.credentials.password
-        else:
-            username = def_attrs.username
-            password = def_attrs.password
-        
-        conn_params = self._amqp_conn_params(def_attrs, vhost, username, password, def_attrs.heartbeat)
-        
-        # Default properties for published messages
-        properties = self._amqp_basic_properties(out_attrs.content_type, 
-            out_attrs.content_encoding, out_attrs.delivery_mode, out_attrs.priority, 
-            out_attrs.expiration, out_attrs.user_id, out_attrs.app_id)
-
-        # An outgoing AMQP connection's properties
-        self.out_amqp[out_attrs.name] = out_attrs
-        
-        # An actual AMQP publisher
-        if out_attrs.is_active:
-            publisher = self._amqp_publisher(conn_params, def_id, out_attrs.name, properties)
-            self.out_amqp[out_attrs.name].publisher = publisher
-        
-    def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
-        params = ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
-            PlainCredentials(username, password),
-            frame_max=def_attrs.frame_max)
-        
-        # heartbeat is an integer but ConnectionParameter.__init__ insists it
-        # be a boolean.
-        params.heartbeat = heartbeat
-        
-        return params
-
-    def _amqp_basic_properties(self, content_type, content_encoding, delivery_mode, priority, expiration, user_id, app_id):
-        return BasicProperties(content_type=content_type, content_encoding=content_encoding, 
-            delivery_mode=delivery_mode, priority=priority, expiration=expiration, 
-            user_id=user_id, app_id=app_id)
-
-    def _amqp_basic_properties_from_attrs(self, out_attrs):
-        return self._amqp_basic_properties(out_attrs.content_type, out_attrs.content_encoding, 
-            out_attrs.delivery_mode, out_attrs.priority, out_attrs.expiration, 
-            out_attrs.user_id, out_attrs.app_id)
-    
-    def _amqp_publisher(self, conn_params, def_id, out_name, properties):
-        publisher = _AMQPPublisher(conn_params, def_id, out_name, properties)
-        Thread(target=publisher._run).start()
-        
-        return publisher
-
 # ##############################################################################        
         
     def basic_auth_get(self, name):
@@ -402,105 +189,12 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def def_amqp_get(self, id):
-        """ Returns the configuration of the AMQP definition of the given name.
-        """
-        with self.def_amqp_lock:
-            return self.def_amqp.get(id)
-        
-    def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
-        """ Creates a new AMQP definition.
-        """
-        with self.def_amqp_lock:
-            msg.host = str(msg.host)
-            self.def_amqp[msg.id] = msg
-        
-    def on_broker_pull_msg_DEFINITION_AMQP_EDIT(self, msg, *args):
-        """ Updates an existing AMQP definition.
-        """
-        with self.def_amqp_lock:
-            del self.def_amqp[msg.old_name]
-            self.def_amqp[msg.id] = msg
-        
-    def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
-        """ Deletes an AMQP definition.
-        """
-        with self.def_amqp_lock:
-            del self.def_amqp[msg.id]
-            with self.out_amqp_lock:
-                for out_name, out_attrs in self.out_amqp.items():
-                    if out_attrs.def_id == msg.id:
-                        self._stop_amqp_publisher(out_name)
-                        del self.out_amqp[out_name]
-        
-    def on_broker_pull_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
-        """ Changes the password of an AMQP definition and of any existing publishers
-        using this definition.
-        """
-        with self.def_amqp_lock:
-            self.def_amqp[msg.id]['password'] = msg.password
-            with self.out_amqp_lock:
-                for out_name, out_attrs in self.out_amqp.items():
-                    if out_attrs.def_id == msg.id:
-                        self._recreate_amqp_publisher(out_attrs.def_id, out_attrs)
-        
-    def on_broker_pull_msg_DEFINITION_AMQP_RECONNECT(self, msg, *args):
-        with self.def_amqp_lock:
-            with self.out_amqp_lock:
-                for out_name, out_attrs in self.out_amqp.items():
-                    if out_attrs.def_id == msg.id:
-                        self._recreate_amqp_publisher(out_attrs.def_id, out_attrs)
-        
-# ##############################################################################
-
-    def _out_amqp_create_edit(self, msg, *args):
-        """ Creates or updates an outgoing AMQP connection and its associated
-        AMQP publisher.
-        """ 
-        with self.def_amqp_lock:
-            with self.out_amqp_lock:
-                self._recreate_amqp_publisher(msg.def_id, msg)
-
-    def out_amqp_get(self, name):
-        """ Returns the configuration of an outgoing AMQP connection.
-        """
-        with self.out_amqp_lock:
-            item = self.out_amqp.get(name)
-            if item and item.is_active:
-                return item
-
-    def on_broker_pull_msg_OUTGOING_AMQP_CREATE(self, msg, *args):
-        """ Creates a new outgoing AMQP connection. Note that the implementation
-        is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
-        """
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
-            
-        self._out_amqp_create_edit(msg, *args)
-        
-    def on_broker_pull_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
-        """ Updates an outgoing AMQP connection.
-        """
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
-            
-        self._out_amqp_create_edit(msg, *args)
-        
-    def on_broker_pull_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
-        """ Deletes an outgoing AMQP connection.
-        """
-        with self.out_amqp_lock:
-            self._stop_amqp_publisher(msg.name)
-            del self.out_amqp[msg.name]
-        
-# ##############################################################################
-
     def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
 
-        service_info = self.thread_data.server.service_store.services[msg.service]
+        service_info = self.worker_data.server.service_store.services[msg.service]
         class_ = service_info['service_class']
         instance = class_()
-        instance.server = self.thread_data.server
+        instance.server = self.worker_data.server
         
         response = instance.handle(payload=msg.extra, raw_request=msg, channel='scheduler_job', thread_ctx=self)
         
@@ -539,16 +233,16 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 running += 1
 
                 # Each thread gets its own copy of the initial configuration ..
-                thread_data = deepcopy(self.worker_config)
+                worker_data = deepcopy(self.worker_config)
                 
                 # .. though the ZMQ context is OK to be shared among multiple threads.
-                thread_data.zmq_context = self.zmq_context
+                worker_data.zmq_context = self.zmq_context
                 
                 # .. be careful with this, it's a reference to the main ParallelServer
                 # this thread is running on.
-                thread_data.server = self.server
+                worker_data.server = self.server
                 
-                start_new_thread(self.handlerThread, (thread_no, thread_data))
+                start_new_thread(self.handlerThread, (thread_no, worker_data))
                 
                 thread_no = thread_no + 1
             if running > count:
@@ -561,14 +255,24 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         finally:
             mlock.release()
             
-    def handlerThread(self, thread_no, thread_data):
+    def handlerThread(self, thread_no, worker_data):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
         """
-        _local = local()
-        _local.store = WorkerStore(thread_data)
+
+        # Believe it or not but this is the only sane way to make AMQP subprocesses 
+        # work as of now (15 XI 2011).
+        
+        amqp_file = amqp.__file__
+        if amqp_file[-1] in('c', 'o'): # Need to use the source code file
+            amqp_file = amqp_file[:-1]
+        
+        program = '{0} {1}'.format(worker_data.executable, amqp_file)    
+        Popen(program, shell=True, close_fds=True)
         
         # We're in a new thread so we can start new thread-specific clients.
+        _local = local()
+        _local.store = WorkerStore(worker_data)
         _local.store._init()
         _local.broker_client = _local.store.broker_client
         
@@ -599,11 +303,11 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
 class _HTTPTask(HTTPTask):
     """ An HTTP task which knows how to use ZMQ sockets.
     """
-    def service(self, thread_data):
+    def service(self, worker_data):
         try:
             try:
                 self.start()
-                self.channel.server.executeRequest(self, thread_data)
+                self.channel.server.executeRequest(self, worker_data)
                 self.finish()
             except socket.error:
                 self.close_on_finish = 1
@@ -618,7 +322,7 @@ class _HTTPServerChannel(HTTPServerChannel):
     """
     task_class = _HTTPTask
     
-    def service(self, thread_data):
+    def service(self, worker_data):
         """Execute all pending tasks"""
         while True:
             task = None
@@ -634,7 +338,7 @@ class _HTTPServerChannel(HTTPServerChannel):
             finally:
                 task_lock.release()
             try:
-                task.service(thread_data)
+                task.service(worker_data)
             except:
                 # propagate the exception, but keep executing tasks
                 self.server.addTask(self)
