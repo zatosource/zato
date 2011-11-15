@@ -77,14 +77,14 @@ class BaseWorker(BrokerMessageReceiver):
         self._setup_broker_client()
 
     def _setup_broker_client(self):
-        #logger.error(self.worker_data.broker_config.broker_pull_addr)
+
         self.broker_client = BrokerClient()
         self.broker_client.name = 'parallel/thread'
         self.broker_client.token = self.worker_data.broker_config.broker_token
         self.broker_client.zmq_context = self.worker_data.broker_config.zmq_context
-        self.broker_client.push_addr = self.worker_data.broker_config.broker_push_addr
-        self.broker_client.pull_addr = self.worker_data.broker_config.broker_pull_addr
-        self.broker_client.sub_addr = self.worker_data.broker_config.broker_sub_addr
+        self.broker_client.broker_push_client_pull = self.worker_data.broker_config.broker_push_client_pull
+        self.broker_client.client_push_broker_pull = self.worker_data.broker_config.client_push_broker_pull
+        self.broker_client.broker_pub_client_sub = self.worker_data.broker_config.broker_pub_client_sub
         self.broker_client.on_pull_handler = self.on_broker_msg
         self.broker_client.on_sub_handler = self.on_broker_msg
         self.broker_client.init()
