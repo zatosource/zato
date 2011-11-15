@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, httplib, json, logging, socket, time
+import asyncore, httplib, json, logging, os, socket, sys, time
 from copy import deepcopy
 from hashlib import sha256
 from threading import Thread
@@ -309,6 +309,14 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.out_amqp = out_amqp_config
         self.worker_config.def_amqp = def_amqp_config
         
+        # Worker threads spawn subprocesses in a shell and they need to use
+        # the wrapper which sets up the PYTHONPATH instead of the regular Python
+        # executable, because the executable may not have all the dependencies required.
+        # Of course, this needs to be squared away before Zato gets into any Linux 
+        # distribution but then the situation will be much simpler as we simply won't 
+        # have to patch up anything, the distro will take care of any dependencies.
+        executable_dir = os.path.dirname(sys.executable)
+        self.worker_config.executable = os.path.join(executable_dir, 'py')
         
     def _after_init_non_accepted(self, server):
         pass    
