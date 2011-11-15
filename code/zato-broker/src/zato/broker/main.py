@@ -28,6 +28,7 @@ from anyjson import loads
 # Zato
 from zato.broker import SocketData
 from zato.broker.zato_broker import Broker
+from zato.common import PORTS
 
 if __name__ == '__main__':
     config = loads(open(sys.argv[1]).read())
@@ -37,15 +38,15 @@ if __name__ == '__main__':
     host = config['host']
     start_port = config['start_port']
     
-    pull1 = 'tcp://{0}:{1}'.format(host, start_port)
-    push1 = 'tcp://{0}:{1}'.format(host, start_port+1)
-    pub1 = 'tcp://{0}:{1}'.format(host, start_port+2)
+    broker_push_worker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
+    worker_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_WORKER_THREAD_PUSH_BROKER_PULL)
+    broker_pub_worker_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
     
-    pull3 = 'tcp://{0}:{1}'.format(host, start_port+50)
-    push3 = 'tcp://{0}:{1}'.format(host, start_port+51)
+    pull3 = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_SINGLETON_PUSH)
+    push3 = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_SINGLETON_PULL)
     
-    s1 = SocketData('parallel/pull', pull1, push1)
-    s2 = SocketData('parallel/sub', None, None, pub1)
+    s1 = SocketData('worker-thread/pull-push', broker_push_worker_pull, worker_push_broker_pull)
+    s2 = SocketData('worker-thread/sub', None, None, broker_pub_worker_sub)
     s3 = SocketData('singleton', pull3, push3)
     
     Broker(token, log_invalid_tokens, s1, s2, s3).serve_forever()

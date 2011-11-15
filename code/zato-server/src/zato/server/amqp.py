@@ -176,9 +176,9 @@ class AMQPWorker(BaseWorker):
         self.worker_data.broker_config = Bunch()
         self.worker_data.broker_config.broker_token = '4df20cdbc8b142cbb6fc5745ef8e2130'
         self.worker_data.broker_config.zmq_context = zmq.Context()
-        self.worker_data.broker_config.broker_push_addr = 'tcp://127.0.0.1:5100'
-        self.worker_data.broker_config.broker_pull_addr = 'tcp://127.0.0.1:5101'
-        self.worker_data.broker_config.broker_sub_addr = 'tcp://127.0.0.1:5102'
+        self.worker_data.broker_config.broker_push_client_pull = 'tcp://127.0.0.1:5100'
+        self.worker_data.broker_config.client_push_broker_pull = 'tcp://127.0.0.1:5101'
+        self.worker_data.broker_config.broker_pub_client_sub = 'tcp://127.0.0.1:5102'
         
     def _setup_amqp(self):
         """ Sets up AMQP channels and outgoing connections on startup.

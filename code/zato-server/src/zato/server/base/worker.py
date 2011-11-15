@@ -61,10 +61,6 @@ class WorkerStore(BaseWorker):
 
         self.worker_data = worker_data
         
-        self.worker_data.broker_config.broker_push_addr = 'tcp://127.0.0.1:5100'
-        self.worker_data.broker_config.broker_pull_addr = 'tcp://127.0.0.1:5161'
-        self.worker_data.broker_config.broker_sub_addr = 'tcp://127.0.0.1:5102'
-        
         self.basic_auth = self.worker_data.basic_auth
         self.tech_acc = self.worker_data.tech_acc
         self.wss = self.worker_data.wss

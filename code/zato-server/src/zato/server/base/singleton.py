@@ -69,8 +69,8 @@ class SingletonServer(BrokerMessageReceiver):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
                 
-        self.broker_push_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_port)
-        self.broker_pull_addr = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_pull_port)
+        self.broker_broker_push_client_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_port)
+        self.broker_client_push_broker_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_pull_port)
         
         # Initialize scheduler.
         self.scheduler.singleton = self
@@ -79,8 +79,8 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client.name = 'singleton'
         self.broker_client.token = self.broker_token
         self.broker_client.zmq_context = self.zmq_context
-        self.broker_client.push_addr = self.broker_push_addr
-        self.broker_client.pull_addr = self.broker_pull_addr
+        self.broker_client.broker_push_client_pull = self.broker_broker_push_client_pull
+        self.broker_client.client_push_broker_pull = self.broker_client_push_broker_pull
         self.broker_client.on_pull_handler = self.on_broker_msg
         self.broker_client.init()
         self.broker_client.start()

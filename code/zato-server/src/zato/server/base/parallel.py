@@ -197,12 +197,12 @@ class ParallelServer(BrokerMessageReceiver):
         """
         
         self.broker_token = server.cluster.broker_token
-        self.broker_push_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PUSH)
-        self.broker_pull_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_PULL)
-        self.broker_sub_addr = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.BROKER_PARALLEL_SUB)
+        self.broker_push_worker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
+        self.worker_push_broker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_WORKER_THREAD_PUSH_BROKER_PULL)
+        self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
         
         if self.singleton_server:
             
@@ -236,9 +236,9 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.broker_config = Bunch()
         self.worker_config.broker_config.broker_token = self.broker_token
         self.worker_config.broker_config.zmq_context = self.zmq_context
-        self.worker_config.broker_config.broker_push_addr = self.broker_push_addr
-        self.worker_config.broker_config.broker_pull_addr = self.broker_pull_addr
-        self.worker_config.broker_config.broker_sub_addr = self.broker_sub_addr
+        self.worker_config.broker_config.broker_push_client_pull = self.broker_push_worker_pull
+        self.worker_config.broker_config.client_push_broker_pull = self.worker_push_broker_pull
+        self.worker_config.broker_config.broker_pub_client_sub = self.broker_pub_worker_sub
         
         # HTTP Basic Auth
         ba_config = Bunch()
@@ -351,7 +351,7 @@ class ParallelServer(BrokerMessageReceiver):
     def run_forever(self):
         
         task_dispatcher = _TaskDispatcher(self, self.worker_config, self.on_broker_msg, self.zmq_context)
-        task_dispatcher.setThreadCount(4)
+        task_dispatcher.setThreadCount(1)
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 
