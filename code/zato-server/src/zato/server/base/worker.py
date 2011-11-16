@@ -40,7 +40,6 @@ from bunch import Bunch
 # Zato
 from zato.common import ConnectionException
 from zato.common.util import TRACE1
-from zato.server import amqp
 from zato.server.base import BaseWorker, BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
@@ -256,16 +255,6 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         that passes the arguments to the thread.
         """
 
-        # Believe it or not but this is the only sane way to make AMQP subprocesses 
-        # work as of now (15 XI 2011).
-        
-        amqp_file = amqp.__file__
-        if amqp_file[-1] in('c', 'o'): # Need to use the source code file
-            amqp_file = amqp_file[:-1]
-        
-        program = '{0} {1}'.format(worker_data.executable, amqp_file)    
-        Popen(program, shell=True, close_fds=True)
-        
         # We're in a new thread so we can start new thread-specific clients.
         _local = local()
         _local.store = WorkerStore(worker_data)

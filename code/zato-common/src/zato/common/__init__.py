@@ -153,8 +153,6 @@ class path(object):
                 raise
             else:
                 return None
-        else:
-            return value
 
 class zato_path(path):
     def __init__(self, path, raise_on_not_found=False, text_only=False):

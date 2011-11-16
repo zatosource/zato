@@ -37,6 +37,7 @@ from springpython.context import ApplicationContext
 
 # Zato
 from zato.common.util import absolutize_path, TRACE1
+from zato.server import get_config
 from zato.server.config.app import ZatoContext
 
 def _get_ioc_config(location, config_class):
@@ -57,7 +58,7 @@ def run(host, port, base_dir, start_singleton):
     logging.addLevelName('TRACE1', TRACE1)
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
 
-    config = ConfigObj(os.path.join(repo_location, 'server.conf'))
+    config = get_config(repo_location)
 
     # Configure the IoC app context, including any customizations.
     app_ctx_list = [ZatoContext()]
@@ -101,6 +102,7 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.odb.odb_data = config['odb']
     parallel_server.host = host
     parallel_server.port = port
+    parallel_server.repo_location = repo_location
     
     if start_singleton:
         singleton_server = app_context.get_object('singleton_server')
