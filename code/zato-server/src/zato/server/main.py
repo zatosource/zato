@@ -29,8 +29,8 @@ import os, sys
 import logging.config
 
 # Zato
-from zato.common.util import get_config, TRACE1
-from zato.server import get_app_context, get_crypto_manager
+from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
+from zato.server.config.app import ZatoContext
 
 def run(host, port, base_dir, start_singleton):
 
@@ -41,7 +41,7 @@ def run(host, port, base_dir, start_singleton):
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
 
     config = get_config(repo_location, 'server.conf')
-    app_context = get_app_context(config)
+    app_context = get_app_context(config, ZatoContext)
     
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
 

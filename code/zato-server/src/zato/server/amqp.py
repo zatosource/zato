@@ -46,12 +46,8 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.util import get_config, TRACE1
+from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
-from zato.server.crypto import CryptoManager
-from zato.server.odb import ODBManager
-
-logging.basicConfig(level=logging.ERROR)
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +166,9 @@ class _AMQPPublisher(object):
 class ConnectorAMQP(BaseWorker):
     
     def __init__(self, repo_location=None, def_id=None):
+
+        # Imported here to avoid circular dependencies
+        from zato.server.config.app import ZatoContext
 
         self.def_id = def_id
         self.config = get_config(repo_location)
@@ -410,6 +409,11 @@ class ConnectorAMQP(BaseWorker):
 def run_connector():
     """ Invoked on the process startup.
     """
+    zzz
+    
+    logging.addLevelName('TRACE1', TRACE1)
+    logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
+    
     connector = ConnectorAMQP('', '')#os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
     connector._setup_amqp()
     connector._init()
