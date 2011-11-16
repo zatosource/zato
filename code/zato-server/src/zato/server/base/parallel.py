@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, httplib, json, logging, os, socket, sys, time
 from copy import deepcopy
 from hashlib import sha256
+from subprocess import Popen
 from threading import Thread
 from traceback import format_exc
 
@@ -40,7 +41,7 @@ from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.util import new_rid, TRACE1, zmq_names
-from zato.common.odb import create_pool
+from zato.server import amqp
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
 from zato.server.channel.soap import server_soap_error
@@ -180,7 +181,7 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb=None, singleton_server=None, worker_config=None):
+                 odb=None, singleton_server=None, worker_config=None, repo_location=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -188,6 +189,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.odb = odb
         self.singleton_server = singleton_server
         self.worker_config = worker_config
+        self.repo_location = repo_location
         
         self.zmq_items = {}
         
@@ -232,6 +234,10 @@ class ParallelServer(BrokerMessageReceiver):
                     
         self.worker_config = Bunch()
         
+        # Repo location so that AMQP subprocesses know how where to read
+        # the server's configuration from.
+        self.worker_config.repo_location = self.repo_location
+        
         # Broker client
         self.worker_config.broker_config = Bunch()
         self.worker_config.broker_config.broker_token = self.broker_token
@@ -270,35 +276,6 @@ class ParallelServer(BrokerMessageReceiver):
             wss_config[item.name].expiry_limit = item.expiry_limit
             wss_config[item.name].nonce_freshness = item.nonce_freshness
 
-        def_amqp_config = Bunch()
-        for item in self.odb.get_def_amqp_list(server.cluster.id):
-            def_amqp_config[item.id] = Bunch()
-            def_amqp_config[item.id].name = item.name
-            def_amqp_config[item.id].host = str(item.host)
-            def_amqp_config[item.id].port = item.port
-            def_amqp_config[item.id].vhost = item.vhost
-            def_amqp_config[item.id].username = item.username
-            def_amqp_config[item.id].frame_max = item.frame_max
-            def_amqp_config[item.id].heartbeat = item.heartbeat
-            def_amqp_config[item.id].password = item.password
-            
-        out_amqp_config = Bunch()
-        for item in self.odb.get_out_amqp_list(server.cluster.id):
-            out_amqp_config[item.name] = Bunch()
-            out_amqp_config[item.name].id = item.id
-            out_amqp_config[item.name].name = item.name
-            out_amqp_config[item.name].is_active = item.is_active
-            out_amqp_config[item.name].delivery_mode = item.delivery_mode
-            out_amqp_config[item.name].priority = item.priority
-            out_amqp_config[item.name].content_type = item.content_type
-            out_amqp_config[item.name].content_encoding = item.content_encoding
-            out_amqp_config[item.name].expiration = item.expiration
-            out_amqp_config[item.name].user_id = item.user_id
-            out_amqp_config[item.name].app_id = item.app_id
-            out_amqp_config[item.name].def_name = item.def_name
-            out_amqp_config[item.name].def_id = item.def_id
-            out_amqp_config[item.name].publisher = None
-            
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)
         
@@ -306,17 +283,40 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.tech_acc = ta_config
         self.worker_config.wss = wss_config
         self.worker_config.url_sec = url_sec
-        self.worker_config.out_amqp = out_amqp_config
-        self.worker_config.def_amqp = def_amqp_config
         
-        # Worker threads spawn subprocesses in a shell and they need to use
+        self._init_amqp(server)
+        
+    def _init_amqp(self, server):
+        
+        # Believe it or not but this is the only sane way to make AMQP subprocesses 
+        # work as of now (15 XI 2011).
+        
+        # Subprocesses spawned in a shell need to use
         # the wrapper which sets up the PYTHONPATH instead of the regular Python
         # executable, because the executable may not have all the dependencies required.
         # Of course, this needs to be squared away before Zato gets into any Linux 
         # distribution but then the situation will be much simpler as we simply won't 
         # have to patch up anything, the distro will take care of any dependencies.
-        executable_dir = os.path.dirname(sys.executable)
-        self.worker_config.executable = os.path.join(executable_dir, 'py')
+        executable = os.path.join(os.path.dirname(sys.executable), 'py')
+        
+        amqp_file = amqp.__file__
+        if amqp_file[-1] in('c', 'o'): # Need to use the source code file
+            amqp_file = amqp_file[:-1]
+        
+        program = '{0} {1}'.format(executable, amqp_file)    
+        
+        for item in self.odb.get_def_amqp_list(server.cluster.id):
+            
+            zato_env = {}
+            zato_env['ZATO_REPO_LOCATION'] = self.repo_location
+            zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(item.id)
+            
+            _env = os.environ
+            _env.update(zato_env)
+            
+            Popen(program, close_fds=True, shell=True, env=_env)
+            logger.debug('Started [{0}] subprocess, zato_env [{1}]'.format(
+                program, zato_env))
         
     def _after_init_non_accepted(self, server):
         pass    

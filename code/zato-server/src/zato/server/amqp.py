@@ -159,9 +159,9 @@ class _AMQPPublisher(object):
         msg = 'Closed the publisher for {0}'.format(self._conn_info())
         logger.debug(msg)
 
-class AMQPWorker(BaseWorker):
+class ConnectorAMQP(BaseWorker):
     
-    def __init__(self):
+    def __init__(self, repo_location=None, def_id=None):
         self.def_amqp = {1:Bunch({'name':'zz def', 'id':1, 'host':b'localhost', 'port':5672, 
                                   'vhost':'/zato', 'username':'zato', 'password':'zato', 'heartbeat':10, 
                                   'frame_max':123123})}
@@ -179,6 +179,41 @@ class AMQPWorker(BaseWorker):
         self.worker_data.broker_config.broker_push_client_pull = 'tcp://127.0.0.1:5100'
         self.worker_data.broker_config.client_push_broker_pull = 'tcp://127.0.0.1:5101'
         self.worker_data.broker_config.broker_pub_client_sub = 'tcp://127.0.0.1:5102'
+        
+    def _setup_odb(self):
+
+        '''
+        def_amqp_config = Bunch()
+        for item in self.odb.get_def_amqp_list(server.cluster.id):
+            def_amqp_config[item.id] = Bunch()
+            def_amqp_config[item.id].name = item.name
+            def_amqp_config[item.id].host = str(item.host)
+            def_amqp_config[item.id].port = item.port
+            def_amqp_config[item.id].vhost = item.vhost
+            def_amqp_config[item.id].username = item.username
+            def_amqp_config[item.id].frame_max = item.frame_max
+            def_amqp_config[item.id].heartbeat = item.heartbeat
+            def_amqp_config[item.id].password = item.password
+            '''
+            
+        '''
+        out_amqp_config = Bunch()
+        for item in self.odb.get_out_amqp_list(server.cluster.id):
+            out_amqp_config[item.name] = Bunch()
+            out_amqp_config[item.name].id = item.id
+            out_amqp_config[item.name].name = item.name
+            out_amqp_config[item.name].is_active = item.is_active
+            out_amqp_config[item.name].delivery_mode = item.delivery_mode
+            out_amqp_config[item.name].priority = item.priority
+            out_amqp_config[item.name].content_type = item.content_type
+            out_amqp_config[item.name].content_encoding = item.content_encoding
+            out_amqp_config[item.name].expiration = item.expiration
+            out_amqp_config[item.name].user_id = item.user_id
+            out_amqp_config[item.name].app_id = item.app_id
+            out_amqp_config[item.name].def_name = item.def_name
+            out_amqp_config[item.name].def_id = item.def_id
+            out_amqp_config[item.name].publisher = None
+            '''
         
     def _setup_amqp(self):
         """ Sets up AMQP channels and outgoing connections on startup.
@@ -354,11 +389,11 @@ class AMQPWorker(BaseWorker):
             self._stop_amqp_publisher(msg.name)
             del self.out_amqp[msg.name]
 
-def start_amqp_worker():
-    worker = AMQPWorker()
-    worker._setup_amqp()
-    worker._init()
+def start_connector():
+    connector = ConnectorAMQP()
+    connector._setup_amqp()
+    connector._init()
     
 if __name__ == '__main__':
-    start_amqp_worker()
+    start_connector()
 

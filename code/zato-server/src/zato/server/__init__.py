@@ -16,3 +16,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+import os.path
+
+# ConfigObj
+from configobj import ConfigObj
+
+def get_config(repo_location):
+    """ Returns the server's configuration.
+    """
+    return ConfigObj(os.path.join(repo_location, 'server.conf'))
