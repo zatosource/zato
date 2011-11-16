@@ -22,8 +22,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # The constants below don't use the Bunch class because we don't need to iterate
 # over them at all.
 
-# CNO stands for the 'code number'.
-# RID stands for the 'code number'.
+# LMC stands for the 'log message code'
+# RID stands for the 'request ID'
 
 # Needs to be kept in sync with zato.common.util.new_req_id
 RID_LENGTH = 24

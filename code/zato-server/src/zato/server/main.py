@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Setting the customer logger must come first.
+# Setting the custom logger must come first
 import logging
 from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
@@ -28,27 +28,9 @@ logging.setLoggerClass(ZatoLogger)
 import os, sys
 import logging.config
 
-# ConfigObj
-from configobj import ConfigObj
-
-# Spring Python
-from springpython.config import YamlConfig, XMLConfig
-from springpython.context import ApplicationContext
-
 # Zato
-from zato.common.util import absolutize_path, TRACE1
-from zato.server import get_config
-from zato.server.config.app import ZatoContext
-
-def _get_ioc_config(location, config_class):
-
-    stat = os.stat(location)
-    if stat.st_size:
-        config = config_class(location)
-    else:
-        config = None
-
-    return config
+from zato.common.util import get_config, TRACE1
+from zato.server import get_app_context, get_crypto_manager
 
 def run(host, port, base_dir, start_singleton):
 
@@ -58,44 +40,11 @@ def run(host, port, base_dir, start_singleton):
     logging.addLevelName('TRACE1', TRACE1)
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
 
-    config = get_config(repo_location)
-
-    # Configure the IoC app context, including any customizations.
-    app_ctx_list = [ZatoContext()]
-
-    custom_ctx_section = config.get('custom_context', {})
-    custom_xml_config_location = custom_ctx_section.get('custom_xml_config_location')
-    custom_yaml_config_location = custom_ctx_section.get('custom_yaml_config_location')
-
-    for location, config_class in ((custom_xml_config_location, XMLConfig),
-                            (custom_yaml_config_location, YamlConfig)):
-
-        if location:
-            ioc_config = _get_ioc_config(location, config_class)
-            if ioc_config:
-                app_ctx_list.append(ioc_config)
-
-    app_context = ApplicationContext(app_ctx_list)
-
-    crypto_manager = app_context.get_object('crypto_manager')
+    config = get_config(repo_location, 'server.conf')
+    app_context = get_app_context(config)
     
-    priv_key_location = config['crypto']['priv_key_location']
-    pub_key_location = config['crypto']['pub_key_location']
-    cert_location = config['crypto']['cert_location']
-    ca_certs_location = config['crypto']['ca_certs_location']
-    
-    priv_key_location = absolutize_path(repo_location, priv_key_location)
-    pub_key_location = absolutize_path(repo_location, pub_key_location)
-    cert_location = absolutize_path(repo_location, cert_location)
-    ca_certs_location = absolutize_path(repo_location, ca_certs_location)
-    
-    crypto_manager.priv_key_location = priv_key_location
-    crypto_manager.pub_key_location = pub_key_location
-    crypto_manager.cert_location = cert_location
-    crypto_manager.ca_certs_location = ca_certs_location
-    
-    crypto_manager.load_keys()
-    
+    crypto_manager = get_crypto_manager(repo_location, app_context, config)
+
     parallel_server = app_context.get_object('parallel_server')
     parallel_server.crypto_manager = crypto_manager
     parallel_server.odb.crypto_manager = crypto_manager
@@ -132,10 +81,6 @@ def run(host, port, base_dir, start_singleton):
     config_repo_manager.repo_location = repo_location
     config_repo_manager.job_list_location = job_list_location
     config_repo_manager.service_store_config_location = service_store_config_location
-
-    scheduler = app_context.get_object('scheduler')
-    scheduler.destroy_wait_time = int(config['scheduler']['destroy_wait_time'])
-    scheduler.read_job_list(job_list_location)
 
     work_dir = config['pickup']['work_dir']
     if not os.path.isabs(work_dir):

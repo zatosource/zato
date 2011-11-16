@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
+import logging, os
 from base64 import b64encode
 from binascii import hexlify, unhexlify
 from cStringIO import StringIO
@@ -38,6 +38,9 @@ from M2Crypto import BIO, EVP, RSA
 
 # ZeroMQ
 import zmq
+
+# ConfigObj
+from configobj import ConfigObj
 
 # Bunch
 from bunch import Bunch
@@ -64,20 +67,6 @@ security_def_type.wss_username_password = 'wss-username-password'
 
 ################################################################################
 
-def zmq_inproc_name(component):
-    """ Returns a name suitable for passing around between ZeroMQ 'inproc'
-    sockets.
-    """
-    return 'inproc://zato/{0}'.format(component)
-
-zmq_names = Bunch()
-zmq_names.inproc = Bunch()
-
-zmq_names.inproc.singleton_to_parallel = zmq_inproc_name('singleton-to-parallel')
-zmq_names.inproc.parallel_to_singleton = zmq_inproc_name('parallel-to-singleton')
-
-################################################################################
-
 def absolutize_path(base, path):
     """ Turns a path into an absolute path if it's relative to the base
     location. If the path is already an absolute path, it is returned as-is.
@@ -86,7 +75,6 @@ def absolutize_path(base, path):
         return path
     
     return abspath(join(base, path))
-    
 
 def current_host():
     return gethostname() + '/' + getfqdn()
@@ -256,3 +244,8 @@ def new_rid():
     
     # The number below (24) needs to be kept in sync with zato.common.log_message.RID_LENGTH
     return '{0:0>24}'.format(getrandbits(64))
+
+def get_config(repo_location, config_name):
+    """ Returns the configuration object.
+    """
+    return ConfigObj(os.path.join(repo_location, config_name))

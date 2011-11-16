@@ -19,6 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function
 
+# Setting the custom logger must come first
+import logging
+from zato.server.log import ZatoLogger
+logging.setLoggerClass(ZatoLogger)
+
 # stdlib
 import errno, logging, os, socket, sys, time
 from datetime import datetime
@@ -41,8 +46,7 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.util import TRACE1
-from zato.server import get_config
+from zato.common.util import get_config, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.crypto import CryptoManager
 from zato.server.odb import ODBManager
@@ -406,7 +410,7 @@ class ConnectorAMQP(BaseWorker):
 def run_connector():
     """ Invoked on the process startup.
     """
-    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
+    connector = ConnectorAMQP('', '')#os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
     connector._setup_amqp()
     connector._init()
     
@@ -438,7 +442,10 @@ def start_connector(repo_location, def_id):
     _env = os.environ
     _env.update(zato_env)
     
-    Popen(program, close_fds=True, shell=True, env=_env)
+    #Popen(program, close_fds=True, shell=True, env=_env)
+    #logger.error(program)
+    
+    Process(target=run_connector, kwargs={'repo_location':repo_location, 'def_id':def_id})
     
 if __name__ == '__main__':
     run_connector()
