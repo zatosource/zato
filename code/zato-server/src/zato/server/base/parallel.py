@@ -23,7 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, httplib, json, logging, os, socket, sys, time
 from copy import deepcopy
 from hashlib import sha256
-from subprocess import Popen
 from threading import Thread
 from traceback import format_exc
 
@@ -41,7 +40,7 @@ from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.util import new_rid, TRACE1, zmq_names
-from zato.server import amqp
+from zato.server.amqp import start_connector
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
 from zato.server.channel.soap import server_soap_error
@@ -288,35 +287,10 @@ class ParallelServer(BrokerMessageReceiver):
         
     def _init_amqp(self, server):
         
-        # Believe it or not but this is the only sane way to make AMQP subprocesses 
-        # work as of now (15 XI 2011).
-        
-        # Subprocesses spawned in a shell need to use
-        # the wrapper which sets up the PYTHONPATH instead of the regular Python
-        # executable, because the executable may not have all the dependencies required.
-        # Of course, this needs to be squared away before Zato gets into any Linux 
-        # distribution but then the situation will be much simpler as we simply won't 
-        # have to patch up anything, the distro will take care of any dependencies.
-        executable = os.path.join(os.path.dirname(sys.executable), 'py')
-        
-        amqp_file = amqp.__file__
-        if amqp_file[-1] in('c', 'o'): # Need to use the source code file
-            amqp_file = amqp_file[:-1]
-        
-        program = '{0} {1}'.format(executable, amqp_file)    
-        
         for item in self.odb.get_def_amqp_list(server.cluster.id):
-            
-            zato_env = {}
-            zato_env['ZATO_REPO_LOCATION'] = self.repo_location
-            zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(item.id)
-            
-            _env = os.environ
-            _env.update(zato_env)
-            
-            Popen(program, close_fds=True, shell=True, env=_env)
-            logger.debug('Started [{0}] subprocess, zato_env [{1}]'.format(
-                program, zato_env))
+            start_connector(self.repo_location, item.id)
+            logger.debug('Started subprocess, repo_location [{0}] item.id [{1}]'.format(
+                self.repo_location, item.id))
         
     def _after_init_non_accepted(self, server):
         pass    

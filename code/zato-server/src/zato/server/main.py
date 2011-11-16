@@ -71,9 +71,9 @@ def run(host, port, base_dir, start_singleton):
                             (custom_yaml_config_location, YamlConfig)):
 
         if location:
-            config = _get_ioc_config(location, config_class)
-            if config:
-                app_ctx_list.append(config)
+            ioc_config = _get_ioc_config(location, config_class)
+            if ioc_config:
+                app_ctx_list.append(ioc_config)
 
     app_context = ApplicationContext(app_ctx_list)
 

@@ -20,14 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function
 
 # stdlib
-import errno, logging, socket, time
+import errno, logging, os, socket, sys, time
 from datetime import datetime
 from multiprocessing import Process
+from subprocess import Popen
 from threading import RLock, Thread
 
 # Pika
 from pika import BasicProperties
-from pika.adapters import SelectConnection, TornadoConnection
+from pika.adapters import TornadoConnection
 from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
 
@@ -39,9 +40,12 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import ConnectionException
+from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.util import TRACE1
+from zato.server import get_config
 from zato.server.base import BaseWorker
+from zato.server.crypto import CryptoManager
+from zato.server.odb import ODBManager
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -162,13 +166,23 @@ class _AMQPPublisher(object):
 class ConnectorAMQP(BaseWorker):
     
     def __init__(self, repo_location=None, def_id=None):
-        self.def_amqp = {1:Bunch({'name':'zz def', 'id':1, 'host':b'localhost', 'port':5672, 
-                                  'vhost':'/zato', 'username':'zato', 'password':'zato', 'heartbeat':10, 
-                                  'frame_max':123123})}
-        self.out_amqp = {'zz out':Bunch({'def_id':1, 'name': 'zz out', 'publisher':None, 
-                                         'content_type':'', 'content_encoding':'',
-                                         'delivery_mode':1, 'priority':5, 'expiration':None,
-                                         'user_id':None, 'app_id':None, 'is_active':True})}
+
+        self.def_id = def_id
+        self.config = get_config(repo_location)
+        self.odb = ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
+        
+        #self.def_amqp = {1:Bunch({'name':'zz def', 'id':1, 'host':b'localhost', 'port':5672, 
+        #                          'vhost':'/zato', 'username':'zato', 'password':'zato', 'heartbeat':10, 
+        #                          'frame_max':123123})}
+        #self.out_amqp = {'zz out':Bunch({'def_id':1, 'name': 'zz out', 'publisher':None, 
+        #                                 'content_type':'', 'content_encoding':'',
+        #                                 'delivery_mode':1, 'priority':5, 'expiration':None,
+        #                                 'user_id':None, 'app_id':None, 'is_active':True})}
+        
+
+        self.def_amqp = {}
+        self.out_amqp = {}
+        
         self.def_amqp_lock = RLock()
         self.out_amqp_lock = RLock()
         
@@ -389,11 +403,42 @@ class ConnectorAMQP(BaseWorker):
             self._stop_amqp_publisher(msg.name)
             del self.out_amqp[msg.name]
 
-def start_connector():
-    connector = ConnectorAMQP()
+def run_connector():
+    """ Invoked on the process startup.
+    """
+    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
     connector._setup_amqp()
     connector._init()
     
+def start_connector(repo_location, def_id):
+    """ Starts a new connector process.
+    """
+    
+    # Believe it or not but this is the only sane way to make AMQP subprocesses 
+    # work as of now (15 XI 2011).
+    
+    # Subprocesses spawned in a shell need to use
+    # the wrapper which sets up the PYTHONPATH instead of the regular Python
+    # executable, because the executable may not have all the dependencies required.
+    # Of course, this needs to be squared away before Zato gets into any Linux 
+    # distribution but then the situation will be much simpler as we simply won't 
+    # have to patch up anything, the distro will take care of any dependencies.
+    executable = os.path.join(os.path.dirname(sys.executable), 'py')
+    
+    amqp_file = __file__
+    if amqp_file[-1] in('c', 'o'): # Need to use the source code file
+        amqp_file = amqp_file[:-1]
+    
+    program = '{0} {1}'.format(executable, amqp_file)
+    
+    zato_env = {}
+    zato_env['ZATO_REPO_LOCATION'] = repo_location
+    zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(def_id)
+    
+    _env = os.environ
+    _env.update(zato_env)
+    
+    Popen(program, close_fds=True, shell=True, env=_env)
+    
 if __name__ == '__main__':
-    start_connector()
-
+    run_connector()
