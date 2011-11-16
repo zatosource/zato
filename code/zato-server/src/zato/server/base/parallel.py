@@ -288,9 +288,9 @@ class ParallelServer(BrokerMessageReceiver):
     def _init_amqp(self, server):
         
         for item in self.odb.get_def_amqp_list(server.cluster.id):
-            start_connector(self.repo_location, item.id)
-            logger.debug('Started subprocess, repo_location [{0}] item.id [{1}]'.format(
-                self.repo_location, item.id))
+            start_connector(self.repo_location, item.id, server.cluster.id)
+            logger.debug('Started subprocess, repo_location [{0}] item.id [{1}] cluster_id [{2}]'.format(
+                self.repo_location, item.id, server.cluster.id))
         
     def _after_init_non_accepted(self, server):
         pass    

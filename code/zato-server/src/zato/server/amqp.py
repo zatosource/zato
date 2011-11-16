@@ -30,10 +30,11 @@ from datetime import datetime
 from multiprocessing import Process
 from subprocess import Popen
 from threading import RLock, Thread
+from traceback import format_exc
 
 # Pika
 from pika import BasicProperties
-from pika.adapters import TornadoConnection
+from pika.adapters import TornadoConnection, SelectConnection
 from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
 
@@ -49,10 +50,9 @@ from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 
-logger = logging.getLogger(__name__)
-
 class _AMQPPublisher(object):
     def __init__(self, conn_params, def_name, out_name, properties):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.conn_params = conn_params
         self.def_name = def_name
         self.out_name = out_name
@@ -65,7 +65,7 @@ class _AMQPPublisher(object):
         self.reconnect_sleep_time = 5 # Seconds
         self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
             errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
-
+        
     def _conn_info(self):
         return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
             self.conn_params.port, self.conn_params.virtual_host, self.out_name)
@@ -75,16 +75,16 @@ class _AMQPPublisher(object):
             if self.conn.is_open:
                 properties = properties if properties else self.properties
                 self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
-                if(logger.isEnabledFor(logging.DEBUG)):
+                if(self.logger.isEnabledFor(logging.DEBUG)):
                     log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
-                    logger.log(logging.DEBUG, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
+                    self.logger.log(logging.DEBUG, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
             else:
                 msg = "Can't publish, the connection for {0} is not open".format(self._conn_info())
-                logger.error(msg)
+                self.logger.error(msg)
                 raise ConnectionException(msg)
         else:
             msg = "Can't publish, don't have a channel for {0}".format(self._conn_info())
-            logger.error(msg)
+            self.logger.error(msg)
             raise ConnectionException(msg)
         
     def _on_connected(self, conn):
@@ -97,7 +97,7 @@ class _AMQPPublisher(object):
             delta = datetime.now() - self.first_connection_attempt_time
             msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
                 self._conn_info(), self.connection_attempts, delta)
-            logger.warn(msg)
+            self.logger.warn(msg)
             
         self.connection_attempts = 1
         conn.channel(self._on_channel_open)
@@ -105,7 +105,7 @@ class _AMQPPublisher(object):
     def _on_channel_open(self, channel):
         self.channel = channel
         msg = 'Got a channel for {0}'.format(self._conn_info())
-        logger.debug(msg)
+        self.logger.debug(msg)
         
     def _run(self):
         try:
@@ -141,19 +141,18 @@ class _AMQPPublisher(object):
                         err_info = '{0} {1}'.format(e.errno, e.strerror)
                     msg = 'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
                     delta = datetime.now() - self.first_connection_attempt_time
-                    logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
-                    
+                    self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
                     self.connection_attempts += 1
                     time.sleep(self.reconnect_sleep_time)
                 else:
                     msg = 'No connection for {0}, e=[{1}]'.format(self._conn_info(), format_exc(e))
-                    logger.error(msg)
+                    self.logger.error(msg)
                     raise
         
     def close(self):
         if(logger.isEnabledFor(TRACE1)):
             msg = 'About to close the publisher for {0}'.format(self._conn_info())
-            logger.log(TRACE1, msg)
+            self.logger.log(TRACE1, msg)
             
         self.keep_running = False
         if self.conn:
@@ -161,30 +160,44 @@ class _AMQPPublisher(object):
             self.conn.close()
             
         msg = 'Closed the publisher for {0}'.format(self._conn_info())
-        logger.debug(msg)
+        self.logger.debug(msg)
 
 class ConnectorAMQP(BaseWorker):
-    
-    def __init__(self, repo_location=None, def_id=None):
+    """ An AMQP connector started as a subprocess. Each connection to an AMQP
+    connector gets its own connector.
+    """
+    def __init__(self, repo_location=None, def_id=None, cluster_id=None, init=True):
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.repo_location = repo_location
+        self.def_id = def_id
+        self.cluster_id = cluster_id
+        self.odb = None
+        
+        if init:
+            self._init()
+        
+    def _init(self):
 
         # Imported here to avoid circular dependencies
         from zato.server.config.app import ZatoContext
 
-        self.def_id = def_id
-        self.config = get_config(repo_location)
-        self.odb = ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
+        config = get_config(self.repo_location, 'server.conf')
+        app_context = get_app_context(config, ZatoContext)
+        crypto_manager = get_crypto_manager(self.repo_location, app_context, config)
         
-        #self.def_amqp = {1:Bunch({'name':'zz def', 'id':1, 'host':b'localhost', 'port':5672, 
-        #                          'vhost':'/zato', 'username':'zato', 'password':'zato', 'heartbeat':10, 
-        #                          'frame_max':123123})}
-        #self.out_amqp = {'zz out':Bunch({'def_id':1, 'name': 'zz out', 'publisher':None, 
-        #                                 'content_type':'', 'content_encoding':'',
-        #                                 'delivery_mode':1, 'priority':5, 'expiration':None,
-        #                                 'user_id':None, 'app_id':None, 'is_active':True})}
+        self.odb = app_context.get_object('odb_manager')
+        self.odb.crypto_manager = crypto_manager
+        self.odb.odb_data = config['odb']
         
-
-        self.def_amqp = {}
-        self.out_amqp = {}
+        self.def_amqp = {1:Bunch({'name':'zz def', 'id':1, 'host':b'localhost', 'port':5672, 
+                                  'vhost':'/zato', 'username':'zato', 'password':'zato', 'heartbeat':10, 
+                                  'frame_max':123123})}
+        self.out_amqp = {'zz out':Bunch({'def_id':1, 'name': 'zz out', 'publisher':None, 
+                                         'content_type':'', 'content_encoding':'',
+                                         'delivery_mode':1, 'priority':5, 'expiration':None,
+                                         'user_id':None, 'app_id':None, 'is_active':True})}
+        #self.def_amqp = {}
+        #self.out_amqp = {}
         
         self.def_amqp_lock = RLock()
         self.out_amqp_lock = RLock()
@@ -240,8 +253,8 @@ class ConnectorAMQP(BaseWorker):
                 for def_id, def_attrs in self.def_amqp.items():
                     for out_name, out_attrs in self.out_amqp.items():
                         if def_id == out_attrs.def_id:
-                            logger.error(str(def_id))
                             self._recreate_amqp_publisher(def_id, out_attrs)
+                            
                             
     def _stop_amqp_publisher(self, out_name):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
@@ -284,7 +297,7 @@ class ConnectorAMQP(BaseWorker):
         if out_attrs.is_active:
             publisher = self._amqp_publisher(conn_params, def_id, out_attrs.name, properties)
             self.out_amqp[out_attrs.name].publisher = publisher
-        
+            
     def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
         params = ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
             PlainCredentials(username, password),
@@ -386,16 +399,16 @@ class ConnectorAMQP(BaseWorker):
         """ Creates a new outgoing AMQP connection. Note that the implementation
         is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
+        if self.logger.isEnabledFor(TRACE1):
+            self.logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
             
         self._out_amqp_create_edit(msg, *args)
         
     def on_broker_pull_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
         """ Updates an outgoing AMQP connection.
         """
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
+        if self.logger.isEnabledFor(TRACE1):
+            self.logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
             
         self._out_amqp_create_edit(msg, *args)
         
@@ -409,16 +422,15 @@ class ConnectorAMQP(BaseWorker):
 def run_connector():
     """ Invoked on the process startup.
     """
-    zzz
-    
     logging.addLevelName('TRACE1', TRACE1)
-    logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
+    from logging import config
+    config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
     
-    connector = ConnectorAMQP('', '')#os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
+    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'], os.environ['ZATO_CONNECTOR_AMQP_CLUSTER_ID'])
     connector._setup_amqp()
     connector._init()
     
-def start_connector(repo_location, def_id):
+def start_connector(repo_location, def_id, cluster_id):
     """ Starts a new connector process.
     """
     
@@ -442,14 +454,12 @@ def start_connector(repo_location, def_id):
     zato_env = {}
     zato_env['ZATO_REPO_LOCATION'] = repo_location
     zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(def_id)
+    zato_env['ZATO_CONNECTOR_AMQP_CLUSTER_ID'] = str(cluster_id)
     
     _env = os.environ
     _env.update(zato_env)
     
-    #Popen(program, close_fds=True, shell=True, env=_env)
-    #logger.error(program)
-    
-    Process(target=run_connector, kwargs={'repo_location':repo_location, 'def_id':def_id})
+    Popen(program, close_fds=True, shell=True, env=_env)
     
 if __name__ == '__main__':
     run_connector()

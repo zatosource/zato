@@ -42,7 +42,6 @@ def run(host, port, base_dir, start_singleton):
 
     config = get_config(repo_location, 'server.conf')
     app_context = get_app_context(config, ZatoContext)
-    
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
 
     parallel_server = app_context.get_object('parallel_server')

@@ -43,8 +43,13 @@ class Scheduler(object):
     """ The Zato's job scheduler. All of the operations assume the data's being
     first validated and sanitized by relevant Zato public API services.
     """
-    def __init__(self, singleton=None):
+    def __init__(self, singleton=None, init=False):
         self.singleton = singleton
+        
+        if init:
+            self._init()
+            
+    def _init(self):
         self._sched = APScheduler()
         self._sched.start()
         
