@@ -39,7 +39,7 @@ from bunch import Bunch
 from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
-from zato.common.util import new_rid, TRACE1, zmq_names
+from zato.common.util import new_rid, TRACE1
 from zato.server.amqp import start_connector
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
