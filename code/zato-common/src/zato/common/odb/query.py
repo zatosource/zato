@@ -73,30 +73,44 @@ def soap_channel_list(session, cluster_id):
         order_by(ChannelURLDefinition.url_pattern).\
         all()
 
-def def_amqp_list(session, cluster_id):
-    """ AMQP connection definitions.
-    """
+def _def_amqp(session, cluster_id):
     return session.query(ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
-                         ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
-                         ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat,
-                         ConnDefAMQP.password).\
+            ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
+            ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat, ConnDefAMQP.password).\
         filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(ConnDefAMQP.def_type=='amqp').\
         filter(Cluster.id==cluster_id).\
-        order_by(ConnDefAMQP.name).\
-        all()
+        order_by(ConnDefAMQP.name)
+
+def def_amqp(session, cluster_id, def_id):
+    """ A particular AMQP definition
+    """
+    return _def_amqp(session, cluster_id).\
+           filter(ConnDefAMQP.id==def_id).\
+           one()
+
+def def_amqp_list(session, cluster_id):
+    """ AMQP connection definitions.
+    """
+    return _def_amqp(session, cluster_id).all()
+
+def _out_amqp(session, cluster_id):
+    return session.query(OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active, 
+            OutgoingAMQP.delivery_mode, OutgoingAMQP.priority, OutgoingAMQP.content_type, 
+            OutgoingAMQP.content_encoding, OutgoingAMQP.expiration, OutgoingAMQP.user_id, 
+            OutgoingAMQP.app_id, ConnDefAMQP.name.label('def_name'), OutgoingAMQP.def_id).\
+        filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
+        filter(ConnDefAMQP.id==OutgoingAMQP.def_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(OutgoingAMQP.name)
+
+def out_amqp(session, cluster_id, out_id):
+    """ An outgoing AMQP connection.
+    """
+    return _out_amqp(session, cluster_id).\
+           filter(OutgoingAMQP.id==out_id).one()
 
 def out_amqp_list(session, cluster_id):
     """ Outgoing AMQP connections
     """
-    return session.query(OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active, 
-                         OutgoingAMQP.delivery_mode, OutgoingAMQP.priority, 
-                         OutgoingAMQP.content_type, OutgoingAMQP.content_encoding, 
-                         OutgoingAMQP.expiration, OutgoingAMQP.user_id, 
-                         OutgoingAMQP.app_id, ConnDefAMQP.name.label('def_name'),
-                         OutgoingAMQP.def_id).\
-        filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
-        filter(ConnDefAMQP.id==OutgoingAMQP.def_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(OutgoingAMQP.name).\
-        all()
+    return _out_amqp(session, cluster_id).all()

@@ -166,9 +166,10 @@ class ConnectorAMQP(BaseWorker):
     """ An AMQP connector started as a subprocess. Each connection to an AMQP
     connector gets its own connector.
     """
-    def __init__(self, repo_location=None, def_id=None, init=True):
+    def __init__(self, repo_location=None, out_id=None, def_id=None, init=True):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.repo_location = repo_location
+        self.out_id = out_id
         self.def_id = def_id
         self.odb = None
         
@@ -212,44 +213,40 @@ class ConnectorAMQP(BaseWorker):
         if not self.server:
             raise Exception('Server does not exist in the ODB')
 
-        for item in self.odb.get_def_amqp_list(self.server.cluster.id):
-            self.def_amqp[item.id] = Bunch()
-            self.def_amqp[item.id].name = item.name
-            self.def_amqp[item.id].id = item.id
-            self.def_amqp[item.id].host = str(item.host)
-            self.def_amqp[item.id].port = item.port
-            self.def_amqp[item.id].vhost = item.vhost
-            self.def_amqp[item.id].username = item.username
-            self.def_amqp[item.id].password = item.password
-            self.def_amqp[item.id].heartbeat = item.heartbeat
-            self.def_amqp[item.id].frame_max = item.frame_max
-            
-        for item in self.odb.get_out_amqp_list(self.server.cluster.id):
-            self.out_amqp[item.name] = Bunch()
-            self.out_amqp[item.name].id = item.id
-            self.out_amqp[item.name].name = item.name
-            self.out_amqp[item.name].is_active = item.is_active
-            self.out_amqp[item.name].delivery_mode = item.delivery_mode
-            self.out_amqp[item.name].priority = item.priority
-            self.out_amqp[item.name].content_type = item.content_type
-            self.out_amqp[item.name].content_encoding = item.content_encoding
-            self.out_amqp[item.name].expiration = item.expiration
-            self.out_amqp[item.name].user_id = item.user_id
-            self.out_amqp[item.name].app_id = item.app_id
-            self.out_amqp[item.name].def_name = item.def_name
-            self.out_amqp[item.name].def_id = item.def_id
-            self.out_amqp[item.name].publisher = None
+        item = self.odb.get_def_amqp(self.server.cluster.id, self.def_id)
+        self.def_amqp = Bunch()
+        self.def_amqp.name = item.name
+        self.def_amqp.id = item.id
+        self.def_amqp.host = str(item.host)
+        self.def_amqp.port = item.port
+        self.def_amqp.vhost = item.vhost
+        self.def_amqp.username = item.username
+        self.def_amqp.password = item.password
+        self.def_amqp.heartbeat = item.heartbeat
+        self.def_amqp.frame_max = item.frame_max
         
+        item = self.odb.get_out_amqp(self.server.cluster.id, self.out_id)
+        self.out_amqp = Bunch()
+        self.out_amqp.id = item.id
+        self.out_amqp.name = item.name
+        self.out_amqp.is_active = item.is_active
+        self.out_amqp.delivery_mode = item.delivery_mode
+        self.out_amqp.priority = item.priority
+        self.out_amqp.content_type = item.content_type
+        self.out_amqp.content_encoding = item.content_encoding
+        self.out_amqp.expiration = item.expiration
+        self.out_amqp.user_id = item.user_id
+        self.out_amqp.app_id = item.app_id
+        self.out_amqp.def_name = item.def_name
+        self.out_amqp.def_id = item.def_id
+        self.out_amqp.publisher = None
+            
     def _setup_amqp(self):
         """ Sets up AMQP channels and outgoing connections on startup.
         """
         with self.out_amqp_lock:
             with self.def_amqp_lock:
-                for def_id, def_attrs in self.def_amqp.items():
-                    for out_name, out_attrs in self.out_amqp.items():
-                        if def_id == out_attrs.def_id:
-                            self._recreate_amqp_publisher(def_id, out_attrs)
-                            
+                self._recreate_amqp_publisher(self.def_id, self.out_amqp)
                             
     def _stop_amqp_publisher(self, out_name):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
@@ -268,17 +265,15 @@ class ConnectorAMQP(BaseWorker):
             self._stop_amqp_publisher(out_attrs.name)
             del self.out_amqp[out_attrs.name]
             
-        def_attrs = self.def_amqp[def_id]
-        
-        vhost = def_attrs.virtual_host if 'virtual_host' in def_attrs else def_attrs.vhost
-        if 'credentials' in def_attrs:
-            username = def_attrs.credentials.username
-            password = def_attrs.credentials.password
+        vhost = self.def_amqp.virtual_host if 'virtual_host' in self.def_amqp else self.def_amqp.vhost
+        if 'credentials' in self.def_amqp:
+            username = self.def_amqp.credentials.username
+            password = self.def_amqp.credentials.password
         else:
-            username = def_attrs.username
-            password = def_attrs.password
+            username = self.def_amqp.username
+            password = self.def_amqp.password
         
-        conn_params = self._amqp_conn_params(def_attrs, vhost, username, password, def_attrs.heartbeat)
+        conn_params = self._amqp_conn_params(self.def_amqp, vhost, username, password, self.def_amqp.heartbeat)
         
         # Default properties for published messages
         properties = self._amqp_basic_properties(out_attrs.content_type, 
@@ -421,9 +416,10 @@ def run_connector():
     from logging import config
     config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
     
-    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
+    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], 
+        os.environ['ZATO_CONNECTOR_AMQP_OUT_ID'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
     
-def start_connector(repo_location, def_id, cluster_id):
+def start_connector_listener(repo_location, out_id, def_id):
     """ Starts a new connector process.
     """
     
@@ -446,6 +442,7 @@ def start_connector(repo_location, def_id, cluster_id):
     
     zato_env = {}
     zato_env['ZATO_REPO_LOCATION'] = repo_location
+    zato_env['ZATO_CONNECTOR_AMQP_OUT_ID'] = str(out_id)
     zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(def_id)
     
     _env = os.environ

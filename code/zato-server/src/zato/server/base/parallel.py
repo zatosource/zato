@@ -40,7 +40,7 @@ from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.util import new_rid, TRACE1
-from zato.server.amqp import start_connector
+from zato.server.amqp import start_connector_listener
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
 from zato.server.channel.soap import server_soap_error
@@ -287,10 +287,10 @@ class ParallelServer(BrokerMessageReceiver):
         
     def _init_amqp(self, server):
         
-        for item in self.odb.get_def_amqp_list(server.cluster.id):
-            start_connector(self.repo_location, item.id, server.cluster.id)
-            logger.debug('Starting AMQP connector, repo_location [{0}] item.id [{1}] cluster_id [{2}]'.format(
-                self.repo_location, item.id, server.cluster.id))
+        for item in self.odb.get_out_amqp_list(server.cluster.id):
+            start_connector_listener(self.repo_location, item.id, item.def_id)
+            logger.debug('Starting AMQP connector listener, repo_location [{0}] cluster_id [1], item.id [{1}], def_id [{2}]'.format(
+                self.repo_location, server.cluster.id, item.id, item.def_id))
         
     def _after_init_non_accepted(self, server):
         pass    
