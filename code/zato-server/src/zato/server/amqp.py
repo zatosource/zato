@@ -166,11 +166,10 @@ class ConnectorAMQP(BaseWorker):
     """ An AMQP connector started as a subprocess. Each connection to an AMQP
     connector gets its own connector.
     """
-    def __init__(self, repo_location=None, def_id=None, cluster_id=None, init=True):
+    def __init__(self, repo_location=None, def_id=None, init=True):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.repo_location = repo_location
         self.def_id = def_id
-        self.cluster_id = cluster_id
         self.odb = None
         
         if init:
@@ -189,18 +188,14 @@ class ConnectorAMQP(BaseWorker):
         self.odb.crypto_manager = crypto_manager
         self.odb.odb_data = config['odb']
         
-        self.def_amqp = {1:Bunch({'name':'zz def', 'id':1, 'host':b'localhost', 'port':5672, 
-                                  'vhost':'/zato', 'username':'zato', 'password':'zato', 'heartbeat':10, 
-                                  'frame_max':123123})}
-        self.out_amqp = {'zz out':Bunch({'def_id':1, 'name': 'zz out', 'publisher':None, 
-                                         'content_type':'', 'content_encoding':'',
-                                         'delivery_mode':1, 'priority':5, 'expiration':None,
-                                         'user_id':None, 'app_id':None, 'is_active':True})}
-        #self.def_amqp = {}
-        #self.out_amqp = {}
+        self.def_amqp = {}
+        self.out_amqp = {}
         
         self.def_amqp_lock = RLock()
         self.out_amqp_lock = RLock()
+        
+        self._setup_odb()
+        self._setup_amqp()
         
         self.worker_data = Bunch()
         self.worker_data.broker_config = Bunch()
@@ -211,39 +206,39 @@ class ConnectorAMQP(BaseWorker):
         self.worker_data.broker_config.broker_pub_client_sub = 'tcp://127.0.0.1:5102'
         
     def _setup_odb(self):
+        
+        # First let's see if the server we're running on top of exists in the ODB.
+        self.server = self.odb.fetch_server()
+        if not self.server:
+            raise Exception('Server does not exist in the ODB')
 
-        '''
-        def_amqp_config = Bunch()
-        for item in self.odb.get_def_amqp_list(server.cluster.id):
-            def_amqp_config[item.id] = Bunch()
-            def_amqp_config[item.id].name = item.name
-            def_amqp_config[item.id].host = str(item.host)
-            def_amqp_config[item.id].port = item.port
-            def_amqp_config[item.id].vhost = item.vhost
-            def_amqp_config[item.id].username = item.username
-            def_amqp_config[item.id].frame_max = item.frame_max
-            def_amqp_config[item.id].heartbeat = item.heartbeat
-            def_amqp_config[item.id].password = item.password
-            '''
+        for item in self.odb.get_def_amqp_list(self.server.cluster.id):
+            self.def_amqp[item.id] = Bunch()
+            self.def_amqp[item.id].name = item.name
+            self.def_amqp[item.id].id = item.id
+            self.def_amqp[item.id].host = str(item.host)
+            self.def_amqp[item.id].port = item.port
+            self.def_amqp[item.id].vhost = item.vhost
+            self.def_amqp[item.id].username = item.username
+            self.def_amqp[item.id].password = item.password
+            self.def_amqp[item.id].heartbeat = item.heartbeat
+            self.def_amqp[item.id].frame_max = item.frame_max
             
-        '''
-        out_amqp_config = Bunch()
-        for item in self.odb.get_out_amqp_list(server.cluster.id):
-            out_amqp_config[item.name] = Bunch()
-            out_amqp_config[item.name].id = item.id
-            out_amqp_config[item.name].name = item.name
-            out_amqp_config[item.name].is_active = item.is_active
-            out_amqp_config[item.name].delivery_mode = item.delivery_mode
-            out_amqp_config[item.name].priority = item.priority
-            out_amqp_config[item.name].content_type = item.content_type
-            out_amqp_config[item.name].content_encoding = item.content_encoding
-            out_amqp_config[item.name].expiration = item.expiration
-            out_amqp_config[item.name].user_id = item.user_id
-            out_amqp_config[item.name].app_id = item.app_id
-            out_amqp_config[item.name].def_name = item.def_name
-            out_amqp_config[item.name].def_id = item.def_id
-            out_amqp_config[item.name].publisher = None
-            '''
+        for item in self.odb.get_out_amqp_list(self.server.cluster.id):
+            self.out_amqp[item.name] = Bunch()
+            self.out_amqp[item.name].id = item.id
+            self.out_amqp[item.name].name = item.name
+            self.out_amqp[item.name].is_active = item.is_active
+            self.out_amqp[item.name].delivery_mode = item.delivery_mode
+            self.out_amqp[item.name].priority = item.priority
+            self.out_amqp[item.name].content_type = item.content_type
+            self.out_amqp[item.name].content_encoding = item.content_encoding
+            self.out_amqp[item.name].expiration = item.expiration
+            self.out_amqp[item.name].user_id = item.user_id
+            self.out_amqp[item.name].app_id = item.app_id
+            self.out_amqp[item.name].def_name = item.def_name
+            self.out_amqp[item.name].def_id = item.def_id
+            self.out_amqp[item.name].publisher = None
         
     def _setup_amqp(self):
         """ Sets up AMQP channels and outgoing connections on startup.
@@ -426,9 +421,7 @@ def run_connector():
     from logging import config
     config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
     
-    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'], os.environ['ZATO_CONNECTOR_AMQP_CLUSTER_ID'])
-    connector._setup_amqp()
-    connector._init()
+    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
     
 def start_connector(repo_location, def_id, cluster_id):
     """ Starts a new connector process.
@@ -454,7 +447,6 @@ def start_connector(repo_location, def_id, cluster_id):
     zato_env = {}
     zato_env['ZATO_REPO_LOCATION'] = repo_location
     zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(def_id)
-    zato_env['ZATO_CONNECTOR_AMQP_CLUSTER_ID'] = str(cluster_id)
     
     _env = os.environ
     _env.update(zato_env)
