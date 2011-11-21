@@ -46,7 +46,8 @@ class ODBManager(object):
     """ Manages connections to the server's Operational Database.
     """
     def __init__(self, well_known_data=None, odb_data=None, odb_config=None,
-                 crypto_manager=None, pool=None, server=None, cluster=None):
+                 crypto_manager=None, pool=None, server=None, cluster=None,
+                 init=True):
         self.well_known_data = well_known_data
         self.odb_data = odb_data
         self.odb_config = odb_data
@@ -77,7 +78,7 @@ class ODBManager(object):
     def rollback(self, *args, **kwargs):
         return self._session.rollback(*args, **kwargs)
     '''
-        
+    
     def fetch_server(self):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
         to the value pointed to by the server's .cluster attribute.
