@@ -201,7 +201,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_push_worker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
         self.worker_push_broker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.BROKER_WORKER_THREAD_PUSH_BROKER_PULL)
+                server.cluster.broker_start_port + PORTS.WORKER_THREAD_PUSH_BROKER_PULL)
         self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
         
@@ -209,10 +209,10 @@ class ParallelServer(BrokerMessageReceiver):
             
             self.service_store.read_internal_services()
             
-            kwargs={'zmq_context':self.zmq_context,
+            kwargs = {'zmq_context':self.zmq_context,
             'broker_host': server.cluster.broker_host,
-            'broker_push_port': server.cluster.broker_start_port + PORTS.BROKER_SINGLETON_PUSH,
-            'broker_pull_port': server.cluster.broker_start_port + PORTS.BROKER_SINGLETON_PULL,
+            'broker_push_port': server.cluster.broker_start_port + PORTS.BROKER_PUSH_SINGLETON_PULL,
+            'broker_pull_port': server.cluster.broker_start_port + PORTS.SINGLETON_PUSH_BROKER_PULL,
             'broker_token':self.broker_token,
                     }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
@@ -239,6 +239,7 @@ class ParallelServer(BrokerMessageReceiver):
         
         # Broker client
         self.worker_config.broker_config = Bunch()
+        self.worker_config.broker_config.name = 'worker-thread'
         self.worker_config.broker_config.broker_token = self.broker_token
         self.worker_config.broker_config.zmq_context = self.zmq_context
         self.worker_config.broker_config.broker_push_client_pull = self.broker_push_worker_pull

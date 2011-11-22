@@ -39,8 +39,6 @@ from bunch import Bunch
 from zato.broker.zato_client import BrokerClient
 from zato.common.broker_message import code_to_name, MESSAGE
 
-logger = logging.getLogger(__name__)
-
 class BrokerMessageReceiver(object):
     """ A class that knows how to handle messages received from the broker.
     It doesn't really belong to the zato-broker's namespace because it is free
@@ -56,7 +54,7 @@ class BrokerMessageReceiver(object):
         of all actions).
         """
         
-        if logger.isEnabledFor(logging.DEBUG):
+        if self.logger.isEnabledFor(logging.DEBUG):
             logger.debug('Got message [{0}]'.format(msg))
             
         msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
@@ -74,12 +72,15 @@ class BrokerMessageReceiver(object):
 class BaseWorker(BrokerMessageReceiver):
         
     def _init(self):
+        """ Initializes the instance, sets up the broker client.
+        """
         self._setup_broker_client()
 
     def _setup_broker_client(self):
-
+        """ Connects to the broker and sets up all the sockets.
+        """
         self.broker_client = BrokerClient()
-        self.broker_client.name = 'parallel/thread'
+        self.broker_client.name = self.worker_data.broker_config.name #'parallel/thread'
         self.broker_client.token = self.worker_data.broker_config.broker_token
         self.broker_client.zmq_context = self.worker_data.broker_config.zmq_context
         self.broker_client.broker_push_client_pull = self.worker_data.broker_config.broker_push_client_pull
