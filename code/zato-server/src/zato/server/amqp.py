@@ -268,7 +268,7 @@ class ConnectorAMQP(BaseWorker):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
         be called from a method that holds onto all AMQP-related RLocks.
         """
-        if self.out_amqp.publisher:
+        if self.out_amqp.publisher and self.out_amqp.publisher.conn.is_open:
             self.out_amqp.publisher.close()
                             
     def _recreate_amqp_publisher(self):
