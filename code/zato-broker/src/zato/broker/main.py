@@ -30,6 +30,10 @@ from zato.broker import SocketData
 from zato.broker.zato_broker import Broker
 from zato.common import PORTS
 
+import logging
+
+logging.basicConfig(level=5)
+
 if __name__ == '__main__':
     config = loads(open(sys.argv[1]).read())
     
@@ -39,14 +43,20 @@ if __name__ == '__main__':
     start_port = config['start_port']
     
     broker_push_worker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
-    worker_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_WORKER_THREAD_PUSH_BROKER_PULL)
+    worker_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.WORKER_THREAD_PUSH_BROKER_PULL)
+    
     broker_pub_worker_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
     
-    pull3 = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_SINGLETON_PUSH)
-    push3 = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_SINGLETON_PULL)
+    broker_push_singleton_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_SINGLETON_PULL)
+    singleton_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.SINGLETON_PUSH_BROKER_PULL)
+    
+    broker_push_connector_amqp_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_CONNECTOR_AMQP_PULL)
+    connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONNECTOR_AMQP_PUSH_BROKER_PULL)
+    broker_pub_connector_amqp_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONNECTOR_AMQP_SUB)
     
     s1 = SocketData('worker-thread/pull-push', broker_push_worker_pull, worker_push_broker_pull)
     s2 = SocketData('worker-thread/sub', None, None, broker_pub_worker_sub)
-    s3 = SocketData('singleton', pull3, push3)
+    s3 = SocketData('singleton', broker_push_singleton_pull, singleton_push_broker_pull)
+    s4 = SocketData('amqp-connector', broker_push_connector_amqp_pull, connector_amqp_push_broker_pull, broker_pub_connector_amqp_sub)
     
-    Broker(token, log_invalid_tokens, s1, s2, s3).serve_forever()
+    Broker(token, log_invalid_tokens, s1, s2, s3, s4).serve_forever()

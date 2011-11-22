@@ -35,9 +35,10 @@ logger = getLogger(__name__)
 CONFIG_MESSAGE_PREFIX = 'ZATO_CONFIG'
 
 msg_socket = {
-    MESSAGE_TYPE.TO_PARALLEL_PULL: 'parallel/pull',
-    MESSAGE_TYPE.TO_PARALLEL_SUB: 'parallel/sub',
+    MESSAGE_TYPE.TO_PARALLEL_PULL: 'worker-thread/pull-push',
+    MESSAGE_TYPE.TO_PARALLEL_SUB: 'worker-thread/sub',
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'amqp-connector',
 }
 
 msg_types = msg_socket.keys()
@@ -50,8 +51,6 @@ class Broker(BaseBroker):
         self.log_invalid_tokens = log_invalid_tokens
         
     def on_message(self, msg):
-        
-        #print(333, msg)
         
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Got message [{0}]'.format(msg))
@@ -81,14 +80,17 @@ class Broker(BaseBroker):
                 socket = self.sockets[msg_socket[msg_type]].push
             else:
                 if msg_type == MESSAGE_TYPE.TO_PARALLEL_PULL:
-                    socket = self.sockets[msg_socket[msg_type]].push
+                    _msg_socket = msg_socket[msg_type]
+                    socket = self.sockets[_msg_socket].push
                 else:
-                    socket = self.sockets[msg_socket[msg_type]].pub
+                    _msg_socket = msg_socket[msg_type]
+                    socket = self.sockets[_msg_socket].pub
             
             # We don't want the subscribers to know what the original token was.
             msg = bytes(msg_shadowed)
         else:
             # User-defined messages always go to parallel servers.
-            socket = self.sockets[msg_socket[MESSAGE_TYPE.TO_PARALLEL_PULL]].push
+            _msg_socket = msg_socket[MESSAGE_TYPE.TO_PARALLEL_PULL]
+            socket = self.sockets[_msg_socket].push
         
         socket.send(msg)

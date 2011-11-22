@@ -134,7 +134,8 @@ class Ping(AdminService):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """ 
-    def _handle(self, class_, auth_func, action, name_func=None, *args, **kwargs):
+    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB,
+                *args, **kwargs):
         
         with closing(self.server.odb.session()) as session:
             try:
@@ -169,7 +170,7 @@ class ChangePasswordBase(AdminService):
                 params['action'] = action
                 params['name'] = name
                 params['password'] = auth.password
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=msg_type)
             
                 return ZATO_OK, ''                
                 

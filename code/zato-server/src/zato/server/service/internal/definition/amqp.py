@@ -211,7 +211,7 @@ class Edit(AdminService):
                 params['id'] = int(params['id'])
                 params['action'] = DEFINITION.AMQP_EDIT
                 params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)                
+                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(def_amqp_elem)
                 
@@ -239,10 +239,11 @@ class Delete(AdminService):
                     one()
                 
                 session.delete(def_)
-                session.commit()
+                #session.commit()
+                session.rollback()
 
                 msg = {'action': DEFINITION.AMQP_DELETE, 'id': id}
-                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)
+                kwargs['thread_ctx'].broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
@@ -262,12 +263,15 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
             
         return self._handle(ConnDefAMQP, _auth, 
-                            DEFINITION.AMQP_CHANGE_PASSWORD, **kwargs)
+                            DEFINITION.AMQP_CHANGE_PASSWORD, 
+                            msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, **kwargs)
 
     
 class Reconnect(ReconnectBase):
     """ Forces an AMQP definition to reconnect.
     """
     def handle(self, *args, **kwargs):
-        return self._handle(DEFINITION.AMQP_RECONNECT, *args, **kwargs)
+        return self._handle(DEFINITION.AMQP_RECONNECT, 
+                            msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, 
+                            *args, **kwargs)
     
