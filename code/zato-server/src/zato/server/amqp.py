@@ -155,11 +155,10 @@ class _AMQPPublisher(object):
             
         self.keep_running = False
         if self.conn:
-            self.conn.ioloop.stop()
             self.conn.close()
             
         msg = 'Closed the publisher for {0}'.format(self._conn_info())
-        self.logger.error(msg)
+        self.logger.debug(msg)
 
 class ConnectorAMQP(BaseWorker):
     """ An AMQP connector started as a subprocess. Each connection to an AMQP
@@ -268,7 +267,7 @@ class ConnectorAMQP(BaseWorker):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
         be called from a method that holds onto all AMQP-related RLocks.
         """
-        if self.out_amqp.publisher and self.out_amqp.publisher.conn.is_open:
+        if self.out_amqp.publisher and self.out_amqp.publisher.conn and self.out_amqp.publisher.conn.is_open:
             self.out_amqp.publisher.close()
                             
     def _recreate_amqp_publisher(self):
@@ -323,7 +322,6 @@ class ConnectorAMQP(BaseWorker):
     def _amqp_publisher(self, conn_params, out_name, properties):
         publisher = _AMQPPublisher(conn_params, out_name, properties)
         t = Thread(target=publisher._run)
-        #t.daemon = True
         t.start()
         
         return publisher
@@ -345,7 +343,17 @@ class ConnectorAMQP(BaseWorker):
         """ Updates an existing AMQP definition.
         """
         with self.def_amqp_lock:
+            
+            password = self.def_amqp.password
             self.def_amqp = msg
+            self.def_amqp.password = password
+            self.def_amqp.host = str(self.def_amqp.host)
+            
+            with self.out_amqp_lock:
+                self._recreate_amqp_publisher()
+                if self.logger.isEnabledFor(TRACE1):
+                    log_msg = 'self.def_amqp [{0}]'.format(self.def_amqp)
+                    self.logger.log(TRACE1, log_msg)
         
     def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
         """ Deletes an AMQP definition.
