@@ -29,13 +29,12 @@
             'vhost',
             'username',
             'frame_max',
-            '_heartbeat',
+            'heartbeat',
             '_reconnect',
             '_change_password',
             '_edit',
             '_delete',
             'id',
-            'heartbeat'
         ]
     }
     </script>
@@ -91,7 +90,6 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -106,13 +104,12 @@
                         <td>{{ item.vhost }}</td>
                         <td>{{ item.username }}</td>
                         <td>{{ item.frame_max }}</td>
-                        <td>{% if item.heartbeat %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ item.heartbeat }}</td>
                         <td><a href="javascript:$.fn.zato.definition.amqp.reconnect('{{ item.id }}')">Reconnect</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.definition.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.definition.amqp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.heartbeat }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
