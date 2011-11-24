@@ -61,13 +61,24 @@ class BrokerMessageReceiver(object):
         msg = loads(msg[MESSAGE.PAYLOAD_START:])
         msg = Bunch(msg)
         
-        action = code_to_name[msg['action']]
-        handler = 'on_broker_pull_msg_{0}'.format(action)
-        handler = getattr(self, handler)
-        if args:
-            handler(msg, args)
+        if self.filter(msg):
+            action = code_to_name[msg['action']]
+            handler = 'on_broker_pull_msg_{0}'.format(action)
+            handler = getattr(self, handler)
+            if args:
+                handler(msg, args)
+            else:
+                handler(msg)
         else:
-            handler(msg)
+            if self.logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Filtered out message [{0}]'.format(msg))
+            
+    def filter(self, msg):
+        """ Subclasses may override the method in order to filter the messages
+        prior to invoking the actual message handler. Default implementation 
+        always returns True which lets the messages in.
+        """
+        return True
             
 class BaseWorker(BrokerMessageReceiver):
         
