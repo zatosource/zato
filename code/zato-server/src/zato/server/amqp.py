@@ -190,8 +190,8 @@ class ConnectorAMQP(BaseWorker):
         self.odb.crypto_manager = crypto_manager
         self.odb.odb_data = config['odb']
         
-        self.def_amqp = None
-        self.out_amqp = None
+        self.def_amqp = Bunch()
+        self.out_amqp = Bunch()
         
         self.def_amqp_lock = RLock()
         self.out_amqp_lock = RLock()
@@ -267,7 +267,7 @@ class ConnectorAMQP(BaseWorker):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
         be called from a method that holds onto all AMQP-related RLocks.
         """
-        if self.out_amqp.publisher and self.out_amqp.publisher.conn and self.out_amqp.publisher.conn.is_open:
+        if self.out_amqp.get('publisher') and self.out_amqp.publisher.conn and self.out_amqp.publisher.conn.is_open:
             self.out_amqp.publisher.close()
                             
     def _recreate_amqp_publisher(self):
@@ -384,39 +384,36 @@ class ConnectorAMQP(BaseWorker):
         """ 
         with self.def_amqp_lock:
             with self.out_amqp_lock:
-                self._recreate_amqp_publisher(msg.def_id, msg)
+                publisher = self.out_amqp.get('publisher')
+                self.out_amqp = msg
+                self.out_amqp.publisher = publisher
+                self._recreate_amqp_publisher()
 
     def out_amqp_get(self, name):
         """ Returns the configuration of an outgoing AMQP connection.
         """
         with self.out_amqp_lock:
-            item = self.out_amqp.get(name)
-            if item and item.is_active:
-                return item
+            if self.out_amqp.is_active:
+                return self.out_amqp
 
     def on_broker_pull_msg_OUTGOING_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation
         is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
-        if self.logger.isEnabledFor(TRACE1):
-            self.logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
-            
         self._out_amqp_create_edit(msg, *args)
         
     def on_broker_pull_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
-        """ Updates an outgoing AMQP connection.
+        """ Updates an outgoing AMQP connection. Note that the implementation
+        is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
-        if self.logger.isEnabledFor(TRACE1):
-            self.logger.log(TRACE1, 'self.def_amqp is {0}'.format(self.def_amqp))
-            
         self._out_amqp_create_edit(msg, *args)
         
     def on_broker_pull_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
         """ Deletes an outgoing AMQP connection.
         """
-        with self.out_amqp_lock:
-            self._stop_amqp_publisher(msg.name)
-            del self.out_amqp[msg.name]
+        with self.def_amqp_lock:
+            with self.out_amqp_lock:
+                self._stop_amqp_publisher()
 
 def run_connector():
     """ Invoked on the process startup.
