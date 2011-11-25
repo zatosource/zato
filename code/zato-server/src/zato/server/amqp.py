@@ -269,12 +269,18 @@ class ConnectorAMQP(BaseWorker):
         listener. All the listeners receive incoming each of the PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
-        if msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
+        if msg.action == OUTGOING.AMQP_PUBLISH:
+            return True
+        elif msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
             if self.out_amqp.id == msg.id:
                 return True
         elif msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
             if self.def_amqp.id == msg.id:
                 return True
+        else:
+            if self.logger.isEnabledFor(TRACE1):
+                self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
+            return False
                 
     def _stop_amqp_publisher(self):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
@@ -420,6 +426,12 @@ class ConnectorAMQP(BaseWorker):
         with self.def_amqp_lock:
             with self.out_amqp_lock:
                 self._stop_amqp_publisher()
+                
+    def on_broker_pull_msg_OUTGOING_AMQP_PUBLISH(self, msg, *args):
+        """ Publishes an AMQP message on the broker.
+        """
+        # def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
+        self.out_amqp.publisher.publish('aaa', b'zato.direct', b'')
 
 def run_connector():
     """ Invoked on the process startup.

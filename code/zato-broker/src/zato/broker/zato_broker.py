@@ -38,7 +38,8 @@ msg_socket = {
     MESSAGE_TYPE.TO_PARALLEL_PULL: 'worker-thread/pull-push',
     MESSAGE_TYPE.TO_PARALLEL_SUB: 'worker-thread/sub',
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
-    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'amqp-connector',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL: 'amqp-connector/pull-push',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'amqp-connector/sub',
 }
 
 msg_types = msg_socket.keys()
@@ -76,15 +77,15 @@ class Broker(BaseBroker):
                 logger.error(err_msg)
                 raise Exception(err_msg)
 
-            if msg_type == MESSAGE_TYPE.TO_SINGLETON:
-                socket = self.sockets[msg_socket[msg_type]].push
+            _msg_socket = msg_socket[msg_type]
+            if logger.isEnabledFor(TRACE1):
+                logger.log(TRACE1, '_msg_socket [{0}]'.format(_msg_socket))
+
+            if msg_type in(MESSAGE_TYPE.TO_SINGLETON, MESSAGE_TYPE.TO_PARALLEL_PULL, \
+                           MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL):
+                socket = self.sockets[_msg_socket].push
             else:
-                if msg_type == MESSAGE_TYPE.TO_PARALLEL_PULL:
-                    _msg_socket = msg_socket[msg_type]
-                    socket = self.sockets[_msg_socket].push
-                else:
-                    _msg_socket = msg_socket[msg_type]
-                    socket = self.sockets[_msg_socket].pub
+                socket = self.sockets[_msg_socket].pub
             
             # We don't want the subscribers to know what the original token was.
             msg = bytes(msg_shadowed)

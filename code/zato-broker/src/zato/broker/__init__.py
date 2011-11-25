@@ -66,23 +66,27 @@ class BaseBroker(object):
             self.sockets[item.name] = Bunch()
             
             if item.push:
-                sock_push = self.context.socket(zmq.PUSH)
-                sock_push.bind(item.push)
-                self.sockets[item.name].push = sock_push
-            
+                sock = self.context.socket(zmq.PUSH)
+                sock.bind(item.push)
+                self.sockets[item.name].push = sock
+                logger.debug('Binding [{0}] on behalf of [{1}] (push)'.format(sock, item.name))
+                
             if item.pull:
-                sock_pull = self.context.socket(zmq.PULL)
-                sock_pull.setsockopt(zmq.LINGER, 0)
-                sock_pull.bind(item.pull)
-                self.sockets[item.name].pull = sock_pull
+                sock = self.context.socket(zmq.PULL)
+                sock.setsockopt(zmq.LINGER, 0)
+                sock.bind(item.pull)
+                self.sockets[item.name].pull = sock
 
-                self.pull_sockets.append(sock_pull)
-                self.poller.register(sock_pull, zmq.POLLIN)                
+                self.pull_sockets.append(sock)
+                self.poller.register(sock, zmq.POLLIN)                
+                logger.debug('Binding [{0}] on behalf of [{1}] (pull)'.format(sock, item.name))
             
             if item.pub:
-                sock_pub = self.context.socket(zmq.PUB)
-                sock_pub.bind(item.pub)
-                self.sockets[item.name].pub = sock_pub
+                sock = self.context.socket(zmq.PUB)
+                sock.bind(item.pub)
+                self.sockets[item.name].pub = sock
+                logger.debug('Binding [{0}] on behalf of [{1}] (pub)'.format(sock, item.name))
+                
                 
     def serve_forever(self):
         self.pre_run()

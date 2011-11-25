@@ -57,6 +57,7 @@ if __name__ == '__main__':
     s1 = SocketData('worker-thread/pull-push', broker_push_worker_pull, worker_push_broker_pull)
     s2 = SocketData('worker-thread/sub', None, None, broker_pub_worker_sub)
     s3 = SocketData('singleton', broker_push_singleton_pull, singleton_push_broker_pull)
-    s4 = SocketData('amqp-connector', broker_push_connector_amqp_pull, connector_amqp_push_broker_pull, broker_pub_connector_amqp_sub)
+    s4 = SocketData('amqp-connector/pull-push', broker_push_connector_amqp_pull, connector_amqp_push_broker_pull)
+    s5 = SocketData('amqp-connector/sub', None, None, broker_pub_connector_amqp_sub)
     
-    Broker(token, log_invalid_tokens, s1, s2, s3, s4).serve_forever()
+    Broker(token, log_invalid_tokens, s1, s2, s3, s4, s5).serve_forever()

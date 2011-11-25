@@ -130,7 +130,7 @@ class SOAPMessageHandler(ApplicationContextAware):
             soap_action = headers.get('SOAPACTION')
 
             if not soap_action:
-                return client_soap_error(req_id, 'Client did not send a SOAPAction header')
+                return client_soap_error(req_id, 'Client did not send the SOAPAction header')
 
             # SOAP clients may send an empty header, i.e. SOAPAction: "",
             # as opposed to not sending the header at all.
@@ -171,7 +171,7 @@ class SOAPMessageHandler(ApplicationContextAware):
             service_instance = service_class()
             service_instance.server = self.app_context.get_object('parallel_server')
 
-            body_payload = get_body_payload(body)
+            body_payload = ''#get_body_payload(body)
 
             service_response = service_instance.handle(payload=body_payload,
                     raw_request=request, channel='soap', thread_ctx=thread_ctx)
