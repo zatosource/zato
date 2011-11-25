@@ -40,7 +40,7 @@ from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common.odb.query import def_amqp_list
 from zato.common.util import TRACE1
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase, ReconnectBase
+from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
