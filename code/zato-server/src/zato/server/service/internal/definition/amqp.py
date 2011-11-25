@@ -261,13 +261,3 @@ class ChangePassword(ChangePasswordBase):
         return self._handle(ConnDefAMQP, _auth, 
                             DEFINITION.AMQP_CHANGE_PASSWORD, 
                             msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, **kwargs)
-
-    
-class Reconnect(ReconnectBase):
-    """ Forces an AMQP definition to reconnect.
-    """
-    def handle(self, *args, **kwargs):
-        return self._handle(DEFINITION.AMQP_RECONNECT, 
-                            msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, 
-                            *args, **kwargs)
-    

@@ -180,25 +180,3 @@ class ChangePasswordBase(AdminService):
                 session.rollback()
                 
                 raise 
-            
-class ReconnectBase(AdminService):
-    """ A base class for reconnecting connections to external resources.
-    """ 
-    def _handle(self, action, *args, **kwargs):
-        try:
-            payload = kwargs.get('payload')
-            request_params = ['id']
-            params = _get_params(payload, request_params, 'data.')
-            
-            msg = {'action': action, 'id': int(params['id'])}
-            kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)
-            
-        except Exception, e:
-            session.rollback()
-            msg = 'Could not reconnect, e=[{e}]'.format(e=format_exc(e))
-            self.logger.error(msg)
-            
-            raise
-        
-        return ZATO_OK, ''
-        

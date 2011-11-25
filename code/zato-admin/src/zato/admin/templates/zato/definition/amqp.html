@@ -105,7 +105,6 @@
                         <td>{{ item.username }}</td>
                         <td>{{ item.frame_max }}</td>
                         <td>{{ item.heartbeat }}</td>
-                        <td><a href="javascript:$.fn.zato.definition.amqp.reconnect('{{ item.id }}')">Reconnect</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.definition.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.definition.amqp.delete_('{{ item.id }}')">Delete</a></td>

@@ -47,6 +47,7 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.broker_message import DEFINITION, OUTGOING
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 
@@ -262,7 +263,14 @@ class ConnectorAMQP(BaseWorker):
         with self.out_amqp_lock:
             with self.def_amqp_lock:
                 self._recreate_amqp_publisher()
-                            
+                
+    def filter(self, msg):
+        """ Finds out whether the incoming message actually belongs to the 
+        listener. All the listeners receive incoming each of the PUB messages 
+        and filtering out is being done here, on the client side, not in the broker.
+        """
+        self.logger.error(msg)
+                
     def _stop_amqp_publisher(self):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
         be called from a method that holds onto all AMQP-related RLocks.
@@ -370,13 +378,6 @@ class ConnectorAMQP(BaseWorker):
             self.def_amqp['password'] = msg.password
             with self.out_amqp_lock:
                 self._recreate_amqp_publisher()
-        
-    def on_broker_pull_msg_DEFINITION_AMQP_RECONNECT(self, msg, *args):
-        with self.def_amqp_lock:
-            with self.out_amqp_lock:
-                for out_name, out_attrs in self.out_amqp.items():
-                    if out_attrs.def_id == msg.id:
-                        self._recreate_amqp_publisher()
                         
     def _out_amqp_create_edit(self, msg, *args):
         """ Creates or updates an outgoing AMQP connection and its associated
