@@ -55,7 +55,7 @@ class BrokerMessageReceiver(object):
         """
         
         if self.logger.isEnabledFor(logging.DEBUG):
-            logger.debug('Got message [{0}]'.format(msg))
+            self.logger.debug('Got message [{0}]'.format(msg))
             
         msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
         msg = loads(msg[MESSAGE.PAYLOAD_START:])

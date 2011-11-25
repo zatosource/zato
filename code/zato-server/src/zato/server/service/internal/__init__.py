@@ -27,7 +27,7 @@ from urlparse import parse_qs
 
 # Zato
 from zato.common import zato_path, ZatoException, ZATO_OK
-from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.server.service import Service
 
 success_code = 0
@@ -124,10 +124,10 @@ class Ping(AdminService):
         #item.publish('zzzz', 'zato.direct', '')
 
         params = {}
-        params['action'] = DEFINITION.AMQP_CREATE
+        params['action'] = OUTGOING.AMQP_PUBLISH
+        params['body'] = 'zzz'
         
-        kwargs['thread_ctx'].broker_client.send_json(params, 
-            msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+        kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL)
         
         return ZATO_OK, ''
 
