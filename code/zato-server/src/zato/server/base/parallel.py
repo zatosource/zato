@@ -290,8 +290,6 @@ class ParallelServer(BrokerMessageReceiver):
         
         for item in self.odb.get_out_amqp_list(server.cluster.id):
             start_connector_listener(self.repo_location, item.id, item.def_id)
-            logger.debug('Starting AMQP connector listener, repo_location [{0}] cluster_id [1], item.id [{1}], def_id [{2}]'.format(
-                self.repo_location, server.cluster.id, item.id, item.def_id))
         
     def _after_init_non_accepted(self, server):
         pass    

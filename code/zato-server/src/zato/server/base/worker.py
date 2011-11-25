@@ -58,6 +58,7 @@ class WorkerStore(BaseWorker):
     """
     def __init__(self, worker_data):
 
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.worker_data = worker_data
         
         self.basic_auth = self.worker_data.basic_auth

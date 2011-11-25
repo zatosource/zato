@@ -422,8 +422,15 @@ def run_connector():
     from logging import config
     config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
     
-    connector = ConnectorAMQP(os.environ['ZATO_REPO_LOCATION'], 
-        os.environ['ZATO_CONNECTOR_AMQP_OUT_ID'], os.environ['ZATO_CONNECTOR_AMQP_DEF_ID'])
+    repo_location = os.environ['ZATO_REPO_LOCATION']
+    out_id = os.environ['ZATO_CONNECTOR_AMQP_OUT_ID']
+    def_id = os.environ['ZATO_CONNECTOR_AMQP_DEF_ID']
+    
+    connector = ConnectorAMQP(repo_location, out_id, def_id)
+    
+    logger = logging.getLogger(__name__)
+    logger.debug('Starting AMQP connector listener, repo_location [{0}], out_id [{1}], def_id [{2}]'.format(
+        repo_location, out_id, def_id))
     
 def start_connector_listener(repo_location, out_id, def_id):
     """ Starts a new connector process.
