@@ -184,6 +184,7 @@ class Edit(AdminService):
             
             try:
                 
+                core_params['id'] = int(core_params['id'])
                 core_params['delivery_mode'] = int(core_params['delivery_mode'])
                 core_params['priority'] = int(core_params['priority'])
                 core_params['def_id'] = int(core_params['def_id'])

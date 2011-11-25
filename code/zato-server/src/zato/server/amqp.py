@@ -267,9 +267,14 @@ class ConnectorAMQP(BaseWorker):
     def filter(self, msg):
         """ Finds out whether the incoming message actually belongs to the 
         listener. All the listeners receive incoming each of the PUB messages 
-        and filtering out is being done here, on the client side, not in the broker.
+        and filtering out is being performed here, on the client side, not in the broker.
         """
-        self.logger.error(msg)
+        if msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
+            if self.out_amqp.id == msg.id:
+                return True
+        elif msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
+            if self.def_amqp.id == msg.id:
+                return True
                 
     def _stop_amqp_publisher(self):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
