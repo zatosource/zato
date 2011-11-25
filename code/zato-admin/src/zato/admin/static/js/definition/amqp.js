@@ -28,24 +28,6 @@ $.fn.zato.definition.amqp.edit = function(id) {
 	$.fn.zato.data_table._create_edit('edit', 'Update the AMQP definition', id);
 }
 
-$.fn.zato.definition.amqp.reconnect = function(id) {
-
-	var callback = function(data, status) {
-		var success = status == 'success';
-		if(success) {
-			msg = 'Request submitted, check the server logs for details'; 
-		}
-		else {
-			msg = data.responseText; 
-		}
-		$.fn.zato.user_message(success, msg);
-	}
-
-	var url = String.format('./reconnect/{0}/cluster/{1}/', id, $('#cluster_id').val());
-	$.fn.zato.post(url, callback);
-
-}
-
 $.fn.zato.definition.amqp.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 	
