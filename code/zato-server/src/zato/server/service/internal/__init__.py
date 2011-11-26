@@ -120,14 +120,13 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
-        #item = kwargs['thread_ctx'].out_amqp_get('CRM out AMQP').publisher
-        #item.publish('zzzz', 'zato.direct', '')
 
-        params = {}
-        params['action'] = OUTGOING.AMQP_PUBLISH
-        params['body'] = 'zzz'
+        from pika.spec import BasicProperties
         
-        kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL)
+        bp = {}
+        bp['correlation_id'] = 'zzzz'
+        
+        self.amqp.publish('Hey there!', 'CRM out AMQP', 'zato.direct', '', bp)
         
         return ZATO_OK, ''
 
