@@ -34,9 +34,10 @@ from traceback import format_exc
 
 # Pika
 from pika import BasicProperties
-from pika.adapters import TornadoConnection, SelectConnection
+from pika.adapters import TornadoConnection
 from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
+from pika.spec import BasicProperties
 
 # ZeroMQ
 import zmq
@@ -47,11 +48,13 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.broker_message import DEFINITION, OUTGOING
+from zato.common.broker_message import DEFINITION, MESSAGE_TYPE, OUTGOING
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 
 class _AMQPPublisher(object):
+    """ An object which does an actual job of publishing the AMQP message on the broker.
+    """
     def __init__(self, conn_params, out_name, properties):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.conn_params = conn_params
@@ -160,10 +163,33 @@ class _AMQPPublisher(object):
             
         msg = 'Closed the publisher for {0}'.format(self._conn_info())
         self.logger.debug(msg)
+        
+class PublisherFacade(object):
+    """ An AMQP facade for services so they aren't aware that publishing AMQP
+    messages actually requires us to use the Zato broker underneath.
+    """
+    def __init__(self, broker_client):
+        self.broker_client = broker_client # A Zato broker client, not the AMQP one.
+    
+    def publish(self, msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
+        """ Publishes the message on the Zato broker which forwards it to one of the
+        AMQP connectors.
+        """
+        params = {}
+        params['action'] = OUTGOING.AMQP_PUBLISH
+        params['out_name'] = out_name
+        params['body'] = msg
+        params['exchange'] = bytes(exchange)
+        params['routing_key'] = bytes(routing_key)
+        params['properties'] = properties
+        params['args'] = args
+        params['kwargs'] = kwargs
+        
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL)
 
 class ConnectorAMQP(BaseWorker):
     """ An AMQP connector started as a subprocess. Each connection to an AMQP
-    connector gets its own connector.
+    broker gets its own connector.
     """
     def __init__(self, repo_location=None, out_id=None, def_id=None, init=True):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -270,7 +296,8 @@ class ConnectorAMQP(BaseWorker):
         and filtering out is being performed here, on the client side, not in the broker.
         """
         if msg.action == OUTGOING.AMQP_PUBLISH:
-            return True
+            if self.out_amqp.name == msg.out_name:
+                return True
         elif msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
             if self.out_amqp.id == msg.id:
                 return True
@@ -430,8 +457,28 @@ class ConnectorAMQP(BaseWorker):
     def on_broker_pull_msg_OUTGOING_AMQP_PUBLISH(self, msg, *args):
         """ Publishes an AMQP message on the broker.
         """
-        # def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
-        self.out_amqp.publisher.publish('aaa', b'zato.direct', b'')
+        properties = {}
+        msg_properties = msg['properties']
+        property_names = ('content_type', 'content_encoding', 'delivery_mode', 
+                          'priority', 'expiration', 'user_id', 'app_id', 
+                          'correlation_id', 'cluster_id')
+
+        for name in property_names:
+            if msg['properties']:
+                value = msg_properties.get(name) if msg_properties.get(name) else getattr(self.out_amqp, name, None)
+            else:
+                value = getattr(self.out_amqp, name, None)
+            properties[name] = value
+                
+        # Now that we've collected all the properties we need to build a pika-specific
+        # structure out of them.
+        
+        pika_properties = BasicProperties()
+        for name, value in properties.items():
+            setattr(pika_properties, name, value)
+            
+        self.out_amqp.publisher.publish(msg['body'], msg['exchange'], 
+                    msg['routing_key'], pika_properties, *msg['args'], **msg['kwargs'])
 
 def run_connector():
     """ Invoked on the process startup.

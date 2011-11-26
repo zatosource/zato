@@ -22,6 +22,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Zato
+from zato.server.amqp import PublisherFacade
+
 __all__ = ["Service"]
 
 class Service(object):
@@ -30,13 +33,20 @@ class Service(object):
     """
 
     def __init__(self, *ignored_args, **ignored_kwargs):
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.broker_client = None
+        self.channel = None
+        self.amqp = None
+        self.rid = None
+        
+    def _init(self):
+        self.amqp = PublisherFacade(self.broker_client)
 
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
-        raise NotImplementedError("Should be overridden by subclasses")
+        raise NotImplementedError('Should be overridden by subclasses')
 
     def before_handle(self, *args, **kwargs):
         """ Invoked just before the actual service receives the request data.

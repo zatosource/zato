@@ -46,7 +46,7 @@ zato_message = Template("""
     <data>$data</data>
     <zato_env>
         <result>$result</result>
-        <req_id>$req_id</req_id>
+        <rid>$rid</rid>
         <details>$details</details>
     </zato_env>
 </zato_message>""")
@@ -60,7 +60,7 @@ soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
    <SOAP-ENV:Body>
      <SOAP-ENV:Fault>
      <faultcode>SOAP-ENV:$faultcode</faultcode>
-     <faultstring>[$req_id]
+     <faultstring>[$rid]
 $faultstring</faultstring>
       </SOAP-ENV:Fault>
   </SOAP-ENV:Body>
@@ -90,13 +90,13 @@ def get_body_payload(body):
 
     return body_payload
 
-def client_soap_error(req_id, faultstring):
+def client_soap_error(rid, faultstring):
     return soap_error.safe_substitute(faultcode='Client', 
-        req_id=req_id, faultstring=faultstring)
+        rid=rid, faultstring=faultstring)
 
-def server_soap_error(req_id, faultstring):
+def server_soap_error(rid, faultstring):
     return soap_error.safe_substitute(faultcode='Server',
-        req_id=req_id, faultstring=faultstring)
+        rid=rid, faultstring=faultstring)
 
 class ClientSOAPException(ZatoException):
     pass
@@ -121,46 +121,46 @@ class SOAPMessageHandler(ApplicationContextAware):
         self.crypto_manager = crypto_manager
         self.wss_store = wss_store
 
-    def handle(self, req_id, request, headers, thread_ctx):
+    def handle(self, rid, request, headers, thread_ctx):
         try:
-            logger.debug("[{0}] request=[{1}] headers=[{2}]".format(req_id,
+            logger.debug("[{0}] request=[{1}] headers=[{2}]".format(rid,
                 request, headers))
 
             # HTTP headers are all uppercased at this point.
             soap_action = headers.get('SOAPACTION')
 
-            if not soap_action:
-                return client_soap_error(req_id, 'Client did not send the SOAPAction header')
+            #if not soap_action:
+            #    return client_soap_error(rid, 'Client did not send the SOAPAction header')
 
             # SOAP clients may send an empty header, i.e. SOAPAction: "",
             # as opposed to not sending the header at all.
-            soap_action = soap_action.lstrip('"').rstrip('"')
+            soap_action = 'zato:ping' #soap_action.lstrip('"').rstrip('"')
 
             if not soap_action:
-                return client_soap_error(req_id, 'Client sent an empty SOAPAction header')
+                return client_soap_error(rid, 'Client sent an empty SOAPAction header')
 
             service_class_name = self.soap_config.get(soap_action)
-            logger.debug('[{0}] service_class_name=[{1}]'.format(req_id,
+            logger.debug('[{0}] service_class_name=[{1}]'.format(rid,
                 service_class_name))
 
             if not service_class_name:
-                return client_soap_error(req_id, '[{0}] Unrecognized SOAPAction [{1}]'.format(req_id,
+                return client_soap_error(rid, '[{0}] Unrecognized SOAPAction [{1}]'.format(rid,
                     soap_action))
 
-            logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(req_id,
+            logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(rid,
                 self.service_store.services))
             service_data = self.service_store.services.get(service_class_name)
 
             if not service_data:
-                return server_soap_error(req_id, '[{0}] No service could handle SOAPAction [{1}]'.format(
-                    req_id, soap_action))
+                return server_soap_error(rid, '[{0}] No service could handle SOAPAction [{1}]'.format(
+                    rid, soap_action))
 
-            soap = objectify.fromstring(request)
-            body = soap_body_xpath(soap)
+            soap = ''#objectify.fromstring(request)
+            body = ''#soap_body_xpath(soap)
 
-            if not body:
-                return client_soap_error('[{0}] Client did not send the [{1}] element'.format(
-                    req_id, body_path))
+            #if not body:
+            #    return client_soap_error('[{0}] Client did not send the [{1}] element'.format(
+            #        rid, body_path))
 
             if self.wss_store.needs_wss(service_class_name):
                 # Will raise an exception if anything goes wrong.
@@ -170,6 +170,10 @@ class SOAPMessageHandler(ApplicationContextAware):
 
             service_instance = service_class()
             service_instance.server = self.app_context.get_object('parallel_server')
+            service_instance.broker_client = thread_ctx.broker_client
+            service_instance.channel = 'soap'
+            service_instance.rid = rid
+            service_instance._init()
 
             body_payload = ''#get_body_payload(body)
 
@@ -183,10 +187,10 @@ class SOAPMessageHandler(ApplicationContextAware):
 
                 if logger.isEnabledFor(TRACE1):
                     logger.log(TRACE1, '[{0}] len(service_response)=[{1}]'.format(
-                        req_id, len(service_response)))
+                        rid, len(service_response)))
                     for item in service_response:
                         logger.log(TRACE1, '[{0}] service_response item=[{1}]'.format(
-                            req_id, item))
+                            rid, item))
 
                 result, rest = service_response
                 if result == ZATO_OK:
@@ -196,7 +200,7 @@ class SOAPMessageHandler(ApplicationContextAware):
                     details = rest
                     data = ''
                     
-                response = zato_message.safe_substitute(req_id=req_id,
+                response = zato_message.safe_substitute(rid=rid,
                     result=result, details=details, data=data)
             else:
                 response = service_response
@@ -204,17 +208,17 @@ class SOAPMessageHandler(ApplicationContextAware):
             response = soap_doc.safe_substitute(body=response)
 
             logger.debug('[{0}] Returning response=[{1}]'.format(
-                req_id, response))
+                rid, response))
             return response
 
         except ClientSecurityException, e:
             # TODO: Rethink if any errors may be logged here.
-            msg = '[{0}] [{1}]'.format(req_id, escape(format_exc()))
+            msg = '[{0}] [{1}]'.format(rid, escape(format_exc()))
             logger.error(msg)
-            return client_soap_error(req_id, e.args[0])
+            return client_soap_error(rid, e.args[0])
 
         except Exception, e:
             # TODO: Rethink if any errors may be logged here.
-            msg = '[{0}] [{1}]'.format(req_id, escape(format_exc()))
+            msg = '[{0}] [{1}]'.format(rid, escape(format_exc()))
             logger.error(msg)
-            return server_soap_error(req_id, msg)
+            return server_soap_error(rid, msg)

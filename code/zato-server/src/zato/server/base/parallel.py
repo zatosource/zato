@@ -138,7 +138,7 @@ class ZatoHTTPListener(HTTPServer):
             headers = task.request_data.headers
             
             url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
-            if url_data:
+            '''if url_data:
                 url_type = url_data['url_type']
                 
                 self.handle_security(rid, url_data, task.request_data, body, headers)
@@ -152,6 +152,7 @@ class ZatoHTTPListener(HTTPServer):
                       "configuration assigned").format(task.request_data.uri)
                 logger.warn(msg, rid)
                 raise HTTPException(httplib.NOT_FOUND, msg)
+                '''
 
             # Fetch the response.
             response = self.server.soap_handler.handle(rid, body, headers, thread_ctx)
