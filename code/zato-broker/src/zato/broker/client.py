@@ -25,6 +25,7 @@ on Zato code base so they can be re-used outside of the Zato project.
 """
 
 # stdlib
+import errno
 import logging
 from threading import Thread
 from traceback import format_exc
@@ -39,12 +40,12 @@ class ZMQPullSub(object):
     thread and invokes the handler on each incoming message.
     """
     
-    def __init__(self, name, zmq_context, client_push_broker_pull, broker_pub_client_sub, 
+    def __init__(self, name, zmq_context, broker_push_client_pull, broker_pub_client_sub, 
                  on_pull_handler=None,  pull_handler_args=None,
                  on_sub_handler=None,  sub_handler_args=None, keep_running=True):
         self.name = name
         self.zmq_context = zmq_context
-        self.client_push_broker_pull = client_push_broker_pull
+        self.broker_push_client_pull = broker_push_client_pull
         self.broker_pub_client_sub = broker_pub_client_sub
         self.keep_running = keep_running
         self.on_pull_handler = on_pull_handler
@@ -67,7 +68,7 @@ class ZMQPullSub(object):
     def close(self, pull_socket=None, sub_socket=None):
         self.keep_running = False
         ps = pull_socket if pull_socket else self.pull_socket
-        ss = pull_socket if sub_socket else self.sub_socket
+        ss = sub_socket if sub_socket else self.sub_socket
         
         if ps:
             ps.close()
@@ -76,16 +77,18 @@ class ZMQPullSub(object):
     
     def listen(self):
         
+        _socks = []
         poller = zmq.Poller()
         
-        if self.client_push_broker_pull:
+        if self.broker_push_client_pull:
             self.pull_socket = self.zmq_context.socket(zmq.PULL)
             self.pull_socket.setsockopt(zmq.LINGER, 0)
-            self.pull_socket.connect(self.client_push_broker_pull)
+            self.pull_socket.connect(self.broker_push_client_pull)
             poller.register(self.pull_socket, zmq.POLLIN)
+            _socks.append(('pull', self.pull_socket))
             
             logger.debug('Starting PULL [{0}/{1}]'.format(
-                self.name, self.client_push_broker_pull))
+                self.name, self.broker_push_client_pull))
             
         if self.broker_pub_client_sub:
             self.sub_socket = self.zmq_context.socket(zmq.SUB)
@@ -93,17 +96,16 @@ class ZMQPullSub(object):
             self.sub_socket.connect(self.broker_pub_client_sub)
             self.sub_socket.setsockopt(zmq.SUBSCRIBE, b'')
             poller.register(self.sub_socket, zmq.POLLIN)
+            _socks.append(('sub', self.sub_socket))
             
             logger.debug('Starting SUB [{0}/{1}]'.format(
                 self.name, self.broker_pub_client_sub))
             
-        _socks = [(name, sock) for (name, sock) in 
-                  [('pull', self.pull_socket), ('sub', self.sub_socket)] if sock]
-        del sock
-        
-        _handlers_args = {
-            self.pull_socket: (self.on_pull_handler, self.pull_handler_args),
-            self.sub_socket: (self.on_sub_handler, self.sub_handler_args)}
+        _handlers_args = {}
+        if self.pull_socket:
+            _handlers_args[self.pull_socket] = (self.on_pull_handler, self.pull_handler_args)
+        if self.sub_socket:
+            _handlers_args[self.sub_socket] = (self.on_sub_handler, self.sub_handler_args)
         
         while self.keep_running:
             try:
@@ -132,13 +134,17 @@ class ZMQPullSub(object):
             except Exception, e:
                 # It's OK and needs not to disturb the user so log it only
                 # in the DEBUG level.
-                if isinstance(e, zmq.ZMQError) and e.errno == zmq.ETERM:
-                    msg = '[{0}] Caught a zmq.ETERM [{1}], quitting'.format(
-                        self.name, format_exc(e))
+                if isinstance(e, zmq.ZMQError) and(e.errno == zmq.ETERM or e.errno == errno.ENOTSOCK):
+                    if e.errno == zmq.ETERM:
+                        caught = 'zmq.ETERM'
+                    elif e.errno == errno.ENOTSOCK:
+                        caught = 'errno.ENOTSOCK'
+                    msg = '[{0}] Caught [{1}] [{2}], quitting'.format(self.name, caught, format_exc(e))
                     log_meth = logger.debug
                 else:
-                    msg = '[{0}] Caught an exception [{1}], quitting.'.format(
-                        self.name, format_exc(e))
+                    e_errno = getattr(e, 'errno', None)
+                    msg = '[{0}] Caught an exception [{1}], errno [{2}], quitting.'.format(
+                        self.name, e_errno, format_exc(e))
                     log_meth = logger.error
                     
                 log_meth(msg)
@@ -177,6 +183,8 @@ class BrokerClient(object):
     the messages onto the broker.
     """
     def __init__(self, init=False, **kwargs):
+        self._push = None
+        self._pull_sub = None
         self.zmq_context = kwargs.get('zmq_context')
         self.name = kwargs.get('name')
         self.broker_push_client_pull = kwargs.get('broker_push_client_pull')
@@ -191,11 +199,15 @@ class BrokerClient(object):
             self.init()
             
     def init(self):
-        self._pull_sub = ZMQPullSub(self.name, self.zmq_context, self.client_push_broker_pull, 
-            self.broker_pub_client_sub, self.on_pull_handler, self.pull_handler_args,
-            self.on_sub_handler, self.sub_handler_args)
+        if self.broker_pub_client_sub or self.broker_push_client_pull:
+            self._pull_sub = ZMQPullSub(self.name, self.zmq_context, self.broker_push_client_pull, 
+                self.broker_pub_client_sub, self.on_pull_handler, self.pull_handler_args,
+                self.on_sub_handler, self.sub_handler_args)
         
-        self._push = ZMQPush(self.name, self.zmq_context, self.broker_push_client_pull)
+        if self.client_push_broker_pull:
+            self._push = ZMQPush(self.name, self.zmq_context, self.client_push_broker_pull)
+        else:
+            logger.debug('Client [{0}] has no [client_push_broker_pull] address defined'.format(self.name))
         
     def set_pull_handler(self, handler):
         self._pull_sub.on_pull_handler = handler
@@ -210,11 +222,14 @@ class BrokerClient(object):
         self._pull_sub.sub_handler_args = args
     
     def start(self):
-        self._pull_sub.start()
+        if self._pull_sub:
+            self._pull_sub.start()
     
     def send(self, msg):
         return self._push.send(msg)
     
     def close(self):
-        self._push.close()
-        self._pull_sub.close()
+        if self._push:
+            self._push.close()
+        if self._pull_sub:
+            self._pull_sub.close()

@@ -42,6 +42,9 @@ from pika.spec import BasicProperties
 # ZeroMQ
 import zmq
 
+# psutil
+import psutil
+
 # Bunch
 from bunch import Bunch
 
@@ -295,7 +298,10 @@ class ConnectorAMQP(BaseWorker):
         listener. All the listeners receive incoming each of the PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
-        if msg.action == OUTGOING.AMQP_PUBLISH:
+        if msg.action == OUTGOING.AMQP_CLOSE:
+            if self.odb.odb_data['token'] == msg['odb_token']:
+                return True
+        elif msg.action == OUTGOING.AMQP_PUBLISH:
             if self.out_amqp.name == msg.out_name:
                 return True
         elif msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
@@ -479,6 +485,15 @@ class ConnectorAMQP(BaseWorker):
             
         self.out_amqp.publisher.publish(msg['body'], msg['exchange'], 
                     msg['routing_key'], pika_properties, *msg['args'], **msg['kwargs'])
+        
+    def on_broker_pull_msg_OUTGOING_AMQP_CLOSE(self, msg, *args):
+        """ Stops the publisher, ODB connection and exits the process.
+        """
+        self._stop_amqp_publisher()
+        self.odb.close()
+        
+        p = psutil.Process(os.getpid())
+        p.terminate()
 
 def run_connector():
     """ Invoked on the process startup.
