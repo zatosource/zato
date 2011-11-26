@@ -39,6 +39,7 @@ from bunch import Bunch
 from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import new_rid, TRACE1
 from zato.server.amqp import start_connector_listener
 from zato.server.base import BrokerMessageReceiver
@@ -138,7 +139,7 @@ class ZatoHTTPListener(HTTPServer):
             headers = task.request_data.headers
             
             url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
-            '''if url_data:
+            if url_data:
                 url_type = url_data['url_type']
                 
                 self.handle_security(rid, url_data, task.request_data, body, headers)
@@ -152,7 +153,6 @@ class ZatoHTTPListener(HTTPServer):
                       "configuration assigned").format(task.request_data.uri)
                 logger.warn(msg, rid)
                 raise HTTPException(httplib.NOT_FOUND, msg)
-                '''
 
             # Fetch the response.
             response = self.server.soap_handler.handle(rid, body, headers, thread_ctx)
@@ -191,8 +191,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config = worker_config
         self.repo_location = repo_location
         
-        self.zmq_items = {}
-        
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
@@ -200,9 +198,9 @@ class ParallelServer(BrokerMessageReceiver):
         
         self.broker_token = server.cluster.broker_token
         self.broker_push_worker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
-        self.worker_push_broker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.WORKER_THREAD_PUSH_BROKER_PULL)
+        self.worker_push_broker_pull = self.parallel_push_broker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
+                server.cluster.broker_start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
         self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
         
@@ -238,7 +236,7 @@ class ParallelServer(BrokerMessageReceiver):
         # the server's configuration from.
         self.worker_config.repo_location = self.repo_location
         
-        # Broker client
+        # The broker client for each of the worker threads.
         self.worker_config.broker_config = Bunch()
         self.worker_config.broker_config.name = 'worker-thread'
         self.worker_config.broker_config.broker_token = self.broker_token
@@ -286,6 +284,19 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.url_sec = url_sec
         
         self._init_amqp(server)
+        
+        # The parallel server's broker client. The client's used to notify
+        # all the server's AMQP subprocesses that they need to shut down.
+
+        self.broker_client = BrokerClient()
+        self.broker_client.name = 'parallel'
+        self.broker_client.token = server.cluster.broker_token
+        self.broker_client.zmq_context = self.zmq_context
+        self.broker_client.client_push_broker_pull = self.parallel_push_broker_pull
+        #self.broker_client.broker_push_client_pull = self.broker_push_worker_pull
+        
+        self.broker_client.init()
+        self.broker_client.start()
         
     def _init_amqp(self, server):
         
@@ -338,10 +349,14 @@ class ParallelServer(BrokerMessageReceiver):
         except KeyboardInterrupt:
             logger.info("Shutting down.")
             
-            # ZeroMQ
-            for zmq_item in self.zmq_items.values():
-                zmq_item.close()
-                
+            # Close all the AMQP subprocesses this server has started.
+            msg = {}
+            msg['action'] = OUTGOING.AMQP_CLOSE
+            msg['odb_token'] = self.odb.odb_data['token']
+            self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+            time.sleep(0.1)
+            self.broker_client.close()
+            
             if self.singleton_server:
                 self.singleton_server.broker_client.close()
                 

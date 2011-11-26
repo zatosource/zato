@@ -129,12 +129,12 @@ class SOAPMessageHandler(ApplicationContextAware):
             # HTTP headers are all uppercased at this point.
             soap_action = headers.get('SOAPACTION')
 
-            #if not soap_action:
-            #    return client_soap_error(rid, 'Client did not send the SOAPAction header')
+            if not soap_action:
+                return client_soap_error(rid, 'Client did not send the SOAPAction header')
 
             # SOAP clients may send an empty header, i.e. SOAPAction: "",
             # as opposed to not sending the header at all.
-            soap_action = 'zato:ping' #soap_action.lstrip('"').rstrip('"')
+            soap_action = soap_action.lstrip('"').rstrip('"')
 
             if not soap_action:
                 return client_soap_error(rid, 'Client sent an empty SOAPAction header')
@@ -155,12 +155,12 @@ class SOAPMessageHandler(ApplicationContextAware):
                 return server_soap_error(rid, '[{0}] No service could handle SOAPAction [{1}]'.format(
                     rid, soap_action))
 
-            soap = ''#objectify.fromstring(request)
-            body = ''#soap_body_xpath(soap)
+            soap = objectify.fromstring(request)
+            body = soap_body_xpath(soap)
 
-            #if not body:
-            #    return client_soap_error('[{0}] Client did not send the [{1}] element'.format(
-            #        rid, body_path))
+            if not body:
+                return client_soap_error('[{0}] Client did not send the [{1}] element'.format(
+                    rid, body_path))
 
             if self.wss_store.needs_wss(service_class_name):
                 # Will raise an exception if anything goes wrong.
@@ -175,7 +175,7 @@ class SOAPMessageHandler(ApplicationContextAware):
             service_instance.rid = rid
             service_instance._init()
 
-            body_payload = ''#get_body_payload(body)
+            body_payload = get_body_payload(body)
 
             service_response = service_instance.handle(payload=body_payload,
                     raw_request=request, channel='soap', thread_ctx=thread_ctx)
