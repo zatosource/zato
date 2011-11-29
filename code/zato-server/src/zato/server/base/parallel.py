@@ -215,6 +215,9 @@ class ParallelServer(BrokerMessageReceiver):
             'broker_token':self.broker_token,
                     }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
+            
+            # Let the scheduler fully initialize
+            time.sleep(0.2)
     
     def _after_init_accepted(self, server):
         if self.singleton_server:
