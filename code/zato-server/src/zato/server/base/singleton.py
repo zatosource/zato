@@ -50,27 +50,27 @@ class SingletonServer(BrokerMessageReceiver):
     """
     
     def __init__(self, parallel_server=None, scheduler=None, broker_token=None, 
-                 zmq_context=None, broker_host=None, broker_push_port=None, 
-                 broker_pull_port=None):
+                 zmq_context=None, broker_host=None, broker_push_singleton_pull_port=None, 
+                 singleton_push_broker_pull_port=None):
         self.parallel_server = parallel_server
         self.scheduler = scheduler
         self.broker_token = broker_token
         self.broker_host = broker_host
-        self.broker_push_port = broker_push_port
-        self.broker_pull_port = broker_pull_port
+        self.broker_push_singleton_pull_port = broker_push_singleton_pull_port
+        self.singleton_push_broker_pull_port = singleton_push_broker_pull_port
         self.zmq_context = zmq_context
 
     def run(self, *ignored_args, **kwargs):
         self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, 
                                         self.__class__.__name__, hex(id(self))))
 
-        for name in('broker_token', 'zmq_context', 'broker_host', 'broker_push_port', 
-                    'broker_pull_port'):
+        for name in('broker_token', 'zmq_context', 'broker_host', 'broker_push_singleton_pull_port', 
+                    'singleton_push_broker_pull_port'):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
                 
-        self.broker_broker_push_client_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_port)
-        self.broker_client_push_broker_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_pull_port)
+        self.broker_push_client_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_singleton_pull_port)
+        self.client_push_broker_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.singleton_push_broker_pull_port)
         
         # Initialize scheduler.
         self.scheduler.singleton = self
@@ -80,8 +80,8 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client.name = 'singleton'
         self.broker_client.token = self.broker_token
         self.broker_client.zmq_context = self.zmq_context
-        self.broker_client.broker_push_client_pull = self.broker_broker_push_client_pull
-        self.broker_client.client_push_broker_pull = self.broker_client_push_broker_pull
+        self.broker_client.broker_push_client_pull = self.broker_push_client_pull
+        self.broker_client.client_push_broker_pull = self.client_push_broker_pull
         self.broker_client.on_pull_handler = self.on_broker_msg
         self.broker_client.init()
         self.broker_client.start()
