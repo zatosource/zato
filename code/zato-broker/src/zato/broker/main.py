@@ -54,9 +54,9 @@ if __name__ == '__main__':
     connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONNECTOR_AMQP_PUSH_BROKER_PULL)
     broker_pub_connector_amqp_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONNECTOR_AMQP_SUB)
     
-    s1 = SocketData('worker-thread/pull-push', broker_push_worker_pull, worker_push_broker_pull)
+    s1 = SocketData('worker-thread/pull-push', worker_push_broker_pull, broker_push_worker_pull)
     s2 = SocketData('worker-thread/sub', None, None, broker_pub_worker_sub)
-    s3 = SocketData('singleton', broker_push_singleton_pull, singleton_push_broker_pull)
+    s3 = SocketData('singleton', singleton_push_broker_pull, broker_push_singleton_pull)
     s4 = SocketData('amqp-connector/pull-push', broker_push_connector_amqp_pull, connector_amqp_push_broker_pull)
     s5 = SocketData('amqp-connector/sub', None, None, broker_pub_connector_amqp_sub)
     
