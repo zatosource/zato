@@ -235,8 +235,7 @@ class Delete(AdminService):
                     one()
                 
                 session.delete(def_)
-                #session.commit()
-                session.rollback()
+                session.commit()
 
                 msg = {'action': DEFINITION.AMQP_DELETE, 'id': id}
                 kwargs['thread_ctx'].broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
