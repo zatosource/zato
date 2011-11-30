@@ -128,72 +128,54 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority']
-            core_params = _get_params(payload, core_params, 'data.')
+            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue']
+            params = _get_params(payload, params, 'data.')
             
-            optional_params = ['content_type', 'content_encoding', 'expiration', 'user_id', 'app_id']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-        
-            priority = int(core_params['priority'])
-        
-            if not(priority >= 0 and priority <= 9):
-                msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(priority))
-                raise ValueError(msg)
-            
-            id = core_params['id']
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            core_params['def_id'] = int(core_params['def_id'])
+            id = params['id']
+            name = params['name']
+            cluster_id = params['cluster_id']
+            params['def_id'] = int(params['def_id'])
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
-            existing_one = session.query(OutgoingAMQP.id).\
+            existing_one = session.query(ChannelAMQP.id).\
                 filter(ConnDefAMQP.cluster_id==cluster_id).\
-                filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
-                filter(OutgoingAMQP.name==name).\
-                filter(OutgoingAMQP.id!=id).\
+                filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
+                filter(ChannelAMQP.name==name).\
+                filter(ChannelAMQP.id!=id).\
                 first()
             
             if existing_one:
-                raise Exception('An outgoing AMQP connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(name))
             
-            xml_item = Element('out_amqp')
+            xml_item = Element('channel_amqp')
             
             try:
                 
-                core_params['id'] = int(core_params['id'])
-                core_params['delivery_mode'] = int(core_params['delivery_mode'])
-                core_params['priority'] = int(core_params['priority'])
-                core_params['def_id'] = int(core_params['def_id'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
+                params['id'] = int(params['id'])
+                params['def_id'] = int(params['def_id'])
+                params['is_active'] = is_boolean(params['is_active'])
                 
-                item = session.query(OutgoingAMQP).filter_by(id=id).one()
+                item = session.query(ChannelAMQP).filter_by(id=id).one()
                 old_name = item.name
                 item.name = name
-                item.is_active = core_params['is_active']
-                item.def_id = core_params['def_id']
-                item.delivery_mode = core_params['delivery_mode']
-                item.priority = core_params['priority']
-                item.content_type = optional_params['content_type']
-                item.content_encoding = optional_params['content_encoding']
-                item.expiration = optional_params['expiration']
-                item.user_id = optional_params['user_id']
-                item.app_id = optional_params['app_id']
+                item.is_active = params['is_active']
+                item.queue = params['queue']
+                item.def_id = params['def_id']
                 
                 session.add(item)
                 session.commit()
                 
                 xml_item.id = item.id
                 
-                core_params['action'] = OUTGOING.AMQP_EDIT
-                core_params['old_name'] = old_name
-                core_params.update(optional_params)
-                kwargs['thread_ctx'].broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                params['action'] = CHANNEL.AMQP_EDIT
+                params['old_name'] = old_name
+                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
             except Exception, e:
-                msg = 'Could not create an AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
