@@ -241,7 +241,7 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': OUTGOING.AMQP_DELETE, 'name': def_.name}
+                msg = {'action': OUTGOING.AMQP_DELETE, 'name': def_.name, 'id':def_.id}
                 kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
             except Exception, e:
