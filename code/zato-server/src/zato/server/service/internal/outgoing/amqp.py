@@ -216,7 +216,7 @@ class Edit(AdminService):
                 return ZATO_OK, etree.tostring(xml_item)
                 
             except Exception, e:
-                msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
