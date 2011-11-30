@@ -28,6 +28,7 @@ from zato.admin import settings
 from zato.admin.web.views import(cluster, load_balancer, main, scheduler, 
     service, servers)
 from zato.admin.web.views.channel import soap
+from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.pool import sql
@@ -131,6 +132,14 @@ urlpatterns = patterns('',
     url(r'^zato/outgoing/amqp/create/$', out_amqp.create, name='out-amqp-create'),
     url(r'^zato/outgoing/amqp/edit/$', out_amqp.edit, name='out-amqp-edit'),
     url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_amqp.delete, name='out-amqp-delete'),
+    
+    # Channels
+    
+    # .. AMQP
+    url(r'^zato/channel/amqp/$', channel_amqp.index, name='channel-amqp'),
+    url(r'^zato/channel/amqp/create/$', channel_amqp.create, name='channel-create'),
+    url(r'^zato/channel/amqp/edit/$', channel_amqp.edit, name='channel-edit'),
+    url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.delete, name='channel-delete'),
     
 )
 
