@@ -52,7 +52,6 @@ def to_json(model):
 class ZatoInstallState(Base):
     """ Contains a row for each Zato installation belonging to that particular
     ODB. For instance, installing Zato 1.0 will add a new row, installing 1.1
-    will create a new one, and so on.
     """
     __tablename__ = 'install_state'
 
@@ -577,7 +576,7 @@ class OutgoingAMQP(Base):
     """
     __tablename__ = 'out_amqp'
     
-    id = Column(Integer,  Sequence('conn_def_amqp_seq'), primary_key=True)
+    id = Column(Integer,  Sequence('out_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     
@@ -591,7 +590,7 @@ class OutgoingAMQP(Base):
     app_id = Column(String(200), nullable=True)
     
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDefAMQP, backref=backref('out_amqps', cascade='all, delete, delete-orphan'))
+    def_ = relationship(ConnDefAMQP, backref=backref('out_conns_amqp', cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, is_active=None, delivery_mode=None,
                  priority=None, content_type=None, content_encoding=None, 
@@ -612,3 +611,23 @@ class OutgoingAMQP(Base):
         self.def_name = def_name # Not used by the DB
         
 ################################################################################
+
+class ChannelAMQP(Base):
+    """ An incoming AMQP connection.
+    """
+    __tablename__ = 'channel_amqp'
+    
+    id = Column(Integer,  Sequence('channel_amqp_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    queue_name = Column(String(200), nullable=False)
+    
+    def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
+    def_ = relationship(ConnDefAMQP, backref=backref('channels_amqp', cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, is_active=None, queue_name=None, def_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.queue_name = queue_name
+        self.def_id = def_id
