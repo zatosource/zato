@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP
 from zato.common.odb.query import channel_amqp_list
-from zato.server.amqp import start_connector_listener
+#from zato.server.amqp import start_connector_listener
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
