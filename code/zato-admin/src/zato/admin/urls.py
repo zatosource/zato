@@ -137,9 +137,9 @@ urlpatterns = patterns('',
     
     # .. AMQP
     url(r'^zato/channel/amqp/$', channel_amqp.index, name='channel-amqp'),
-    url(r'^zato/channel/amqp/create/$', channel_amqp.create, name='channel-create'),
-    url(r'^zato/channel/amqp/edit/$', channel_amqp.edit, name='channel-edit'),
-    url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.delete, name='channel-delete'),
+    url(r'^zato/channel/amqp/create/$', channel_amqp.create, name='channel-amqp-create'),
+    url(r'^zato/channel/amqp/edit/$', channel_amqp.edit, name='channel-amqp-edit'),
+    url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.delete, name='channel-amqp-delete'),
     
 )
 
