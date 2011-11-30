@@ -97,7 +97,7 @@ class Create(AdminService):
             cluster_id = core_params['cluster_id']
             core_params['def_id'] = int(core_params['def_id'])
             
-            # Let's see if we already have an account of that name before committing
+            # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
             existing_one = session.query(OutgoingAMQP.id).\
                 filter(ConnDefAMQP.cluster_id==cluster_id).\
@@ -168,7 +168,7 @@ class Edit(AdminService):
             cluster_id = core_params['cluster_id']
             core_params['def_id'] = int(core_params['def_id'])
             
-            # Let's see if we already have an account of that name before committing
+            # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
             existing_one = session.query(OutgoingAMQP.id).\
                 filter(ConnDefAMQP.cluster_id==cluster_id).\
