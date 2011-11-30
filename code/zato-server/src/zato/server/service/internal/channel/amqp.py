@@ -36,7 +36,7 @@ from validate import is_boolean
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP
 from zato.common.odb.query import channel_amqp_list
 from zato.server.amqp import start_connector_listener
@@ -65,8 +65,6 @@ class GetList(AdminService):
     
                 item_list.append(item)
 
-                print(333, `db_item`)
-    
             return ZATO_OK, etree.tostring(item_list)
         
 class Create(AdminService):
@@ -195,14 +193,14 @@ class Edit(AdminService):
                 return ZATO_OK, etree.tostring(xml_item)
                 
             except Exception, e:
-                msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not create an AMQP definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise  
         
 class Delete(AdminService):
-    """ Deletes an outgoing AMQP connection.
+    """ Deletes an AMQP channel.
     """
     def handle(self, *args, **kwargs):
         with closing(self.server.odb.session()) as session:
@@ -213,19 +211,19 @@ class Delete(AdminService):
                 
                 id = params['id']
                 
-                def_ = session.query(OutgoingAMQP).\
-                    filter(OutgoingAMQP.id==id).\
+                def_ = session.query(ChannelAMQP).\
+                    filter(ChannelAMQP.id==id).\
                     one()
                 
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': OUTGOING.AMQP_DELETE, 'name': def_.name}
+                msg = {'action': CHANNEL.AMQP_DELETE, 'name': def_.name, 'id':def_.id}
                 kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing AMQP connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the AMQP channel, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise
