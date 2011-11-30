@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, ConnDefAMQP, OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
-from zato.server.amqp import start_connector_listener
+from zato.server.amqp.outgoing import start_connector as out_start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
@@ -132,7 +132,7 @@ class Create(AdminService):
                 session.commit()
                 
                 created_elem.id = item.id
-                start_connector_listener(self.server.repo_location, item.id, item.def_id)
+                out_start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
