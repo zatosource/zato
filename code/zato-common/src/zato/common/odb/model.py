@@ -620,14 +620,17 @@ class ChannelAMQP(Base):
     id = Column(Integer,  Sequence('channel_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    queue_name = Column(String(200), nullable=False)
+    queue = Column(String(200), nullable=False)
     
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefAMQP, backref=backref('channels_amqp', cascade='all, delete, delete-orphan'))
     
-    def __init__(self, id=None, name=None, is_active=None, queue_name=None, def_id=None):
+    def __init__(self, id=None, name=None, is_active=None, queue=None, def_id=None,
+                 def_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
-        self.queue_name = queue_name
+        self.queue = queue
         self.def_id = def_id
+        self.def_name = def_name # Not used by the DB
+        
