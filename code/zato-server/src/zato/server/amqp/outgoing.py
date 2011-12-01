@@ -38,7 +38,6 @@ ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_OUT_ID'
 class PublishingConnection(BaseConnection):
     """ A connection for publishing of the AMQP messages.
     """
-    
     def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
         if self.channel:
             if self.conn.is_open:
@@ -91,6 +90,25 @@ class PublishingConnector(BaseConnector):
         if init:
             self._init()
             self._setup_amqp()
+            
+    def _setup_odb(self):
+        super(PublishingConnector, self)._setup_odb()
+        
+        item = self.odb.get_out_amqp(self.server.cluster.id, self.out_id)
+        self.out_amqp = Bunch()
+        self.out_amqp.id = item.id
+        self.out_amqp.name = item.name
+        self.out_amqp.is_active = item.is_active
+        self.out_amqp.delivery_mode = item.delivery_mode
+        self.out_amqp.priority = item.priority
+        self.out_amqp.content_type = item.content_type
+        self.out_amqp.content_encoding = item.content_encoding
+        self.out_amqp.expiration = item.expiration
+        self.out_amqp.user_id = item.user_id
+        self.out_amqp.app_id = item.app_id
+        self.out_amqp.def_name = item.def_name
+        self.out_amqp.def_id = item.def_id
+        self.out_amqp.publisher = None
         
     def _setup_amqp(self):
         """ Sets up the AMQP publisher on startup.

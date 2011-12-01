@@ -41,6 +41,7 @@ from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import new_rid, TRACE1
+from zato.server.amqp.channel import start_connector as channel_start_connector
 from zato.server.amqp.outgoing import start_connector as out_start_connector
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
@@ -296,15 +297,18 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_client.token = server.cluster.broker_token
         self.broker_client.zmq_context = self.zmq_context
         self.broker_client.client_push_broker_pull = self.parallel_push_broker_pull
-        #self.broker_client.broker_push_client_pull = self.broker_push_worker_pull
         
         self.broker_client.init()
         self.broker_client.start()
         
     def _init_amqp(self, server):
-        
+        """ Starts all the AMQP subprocesses.
+        """
         for item in self.odb.get_out_amqp_list(server.cluster.id):
             out_start_connector(self.repo_location, item.id, item.def_id)
+            
+        for item in self.odb.get_channel_amqp_list(server.cluster.id):
+            channel_start_connector(self.repo_location, item.id, item.def_id)
         
     def _after_init_non_accepted(self, server):
         pass    

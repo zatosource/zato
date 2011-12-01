@@ -125,6 +125,13 @@ def _channel_amqp(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ChannelAMQP.name)
 
+def channel_amqp(session, cluster_id):
+    """ A particular AMQP channel.
+    """
+    return _channel_amqp(session, cluster_id).\
+           filter(ChannelAMQP.id==channel_id).\
+           one()
+
 def channel_amqp_list(session, cluster_id):
     """ AMQP channels.
     """
