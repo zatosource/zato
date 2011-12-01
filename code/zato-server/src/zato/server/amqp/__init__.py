@@ -236,7 +236,7 @@ def setup_logging():
     from logging import config
     config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
 
-def start_connector(repo_location, amqp_file, out_id, def_id):
+def start_connector(repo_location, amqp_file, env_item_name, def_id, item_id):
     """ Starts a new connector process.
     """
     
@@ -258,8 +258,8 @@ def start_connector(repo_location, amqp_file, out_id, def_id):
     
     zato_env = {}
     zato_env['ZATO_REPO_LOCATION'] = repo_location
-    zato_env['ZATO_CONNECTOR_AMQP_OUT_ID'] = str(out_id)
     zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(def_id)
+    zato_env[env_item_name] = str(item_id)
     
     _env = os.environ
     _env.update(zato_env)

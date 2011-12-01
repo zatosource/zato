@@ -60,6 +60,7 @@ class GetList(AdminService):
                 item.name = db_item.name
                 item.is_active = db_item.is_active
                 item.queue = db_item.queue
+                item.consumer_tag_prefix = db_item.consumer_tag_prefix
                 item.def_name = db_item.def_name
                 item.def_id = db_item.def_id
     
@@ -75,7 +76,7 @@ class Create(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
             
-            params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue', ]
+            params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix']
             params = _get_params(payload, params, 'data.')
             
             name = params['name']
@@ -103,6 +104,7 @@ class Create(AdminService):
                 item.name = params['name']
                 item.is_active = params['is_active']
                 item.queue = params['queue']
+                item.consumer_tag_prefix = params['consumer_tag_prefix']
                 item.def_id = params['def_id']
                 
                 session.add(item)
@@ -128,7 +130,7 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue']
+            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix']
             params = _get_params(payload, params, 'data.')
             
             id = params['id']
@@ -161,6 +163,7 @@ class Edit(AdminService):
                 item.name = name
                 item.is_active = params['is_active']
                 item.queue = params['queue']
+                item.consumer_tag_prefix = params['consumer_tag_prefix']
                 item.def_id = params['def_id']
                 
                 session.add(item)

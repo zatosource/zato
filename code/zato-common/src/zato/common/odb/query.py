@@ -118,7 +118,8 @@ def out_amqp_list(session, cluster_id):
 
 def _channel_amqp(session, cluster_id):
     return session.query(ChannelAMQP.id, ChannelAMQP.name, ChannelAMQP.is_active, 
-            ChannelAMQP.queue, ConnDefAMQP.name.label('def_name'), ChannelAMQP.def_id).\
+            ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix, 
+            ConnDefAMQP.name.label('def_name'), ChannelAMQP.def_id).\
         filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
         filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(Cluster.id==cluster_id).\
