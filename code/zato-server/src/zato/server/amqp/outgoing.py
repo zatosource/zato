@@ -33,9 +33,9 @@ from pika.adapters import TornadoConnection
 from bunch import Bunch
 
 # Zato
-from zato.common.broker_message import DEFINITION, MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
-from zato.server.amqp import BaseConnector, start_connector as _start_connector
+from zato.server.amqp import BaseConnector, setup_logging, start_connector as _start_connector
 
 class _AMQPPublisher(object):
     """ An object which does an actual job of publishing the AMQP message on the broker.
@@ -197,6 +197,9 @@ class PublishingConnector(BaseConnector):
         listener. All the listeners receive incoming each of the PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
+        if super(PublishingConnector, self).filter(msg):
+            return True
+        
         if msg.action == OUTGOING.AMQP_CLOSE:
             if self.odb.odb_data['token'] == msg['odb_token']:
                 return True
@@ -205,9 +208,6 @@ class PublishingConnector(BaseConnector):
                 return True
         elif msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
             if self.out_amqp.id == msg.id:
-                return True
-        elif msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
-            if self.def_amqp.id == msg.id:
                 return True
         else:
             if self.logger.isEnabledFor(TRACE1):
@@ -333,9 +333,7 @@ class PublishingConnector(BaseConnector):
 def run_connector():
     """ Invoked on the process startup.
     """
-    logging.addLevelName('TRACE1', TRACE1)
-    from logging import config
-    config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
+    setup_logging()
     
     repo_location = os.environ['ZATO_REPO_LOCATION']
     out_id = os.environ['ZATO_CONNECTOR_AMQP_OUT_ID']
