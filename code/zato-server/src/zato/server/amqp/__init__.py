@@ -58,7 +58,7 @@ class BaseConnection(object):
     """ An object which does an actual job of (re-)connecting to the the AMQP broker.
     Concrete subclasses implement either listening or publishing features.
     """
-    def __init__(self, conn_params, item_name, properties):
+    def __init__(self, conn_params, item_name, properties=None):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.conn_params = conn_params
         self.item_name = item_name
@@ -229,22 +229,6 @@ class BaseConnector(BaseWorker):
         self.def_amqp.heartbeat = item.heartbeat
         self.def_amqp.frame_max = item.frame_max
         
-        item = self.odb.get_out_amqp(self.server.cluster.id, self.out_id)
-        self.out_amqp = Bunch()
-        self.out_amqp.id = item.id
-        self.out_amqp.name = item.name
-        self.out_amqp.is_active = item.is_active
-        self.out_amqp.delivery_mode = item.delivery_mode
-        self.out_amqp.priority = item.priority
-        self.out_amqp.content_type = item.content_type
-        self.out_amqp.content_encoding = item.content_encoding
-        self.out_amqp.expiration = item.expiration
-        self.out_amqp.user_id = item.user_id
-        self.out_amqp.app_id = item.app_id
-        self.out_amqp.def_name = item.def_name
-        self.out_amqp.def_id = item.def_id
-        self.out_amqp.publisher = None
-        
     def filter(self, msg):
         """ The base class knows how to manage the AMQP definitions but not channels
         or outgoing connections.
@@ -292,14 +276,23 @@ class BaseConnector(BaseWorker):
                 with self.channel_amqp_lock:
                     self._recreate_amqp_publisher()
                 
-    def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
-        params = ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
+    def _amqp_conn_params(self):
+        
+        vhost = self.def_amqp.virtual_host if 'virtual_host' in self.def_amqp else self.def_amqp.vhost
+        if 'credentials' in self.def_amqp:
+            username = self.def_amqp.credentials.username
+            password = self.def_amqp.credentials.password
+        else:
+            username = self.def_amqp.username
+            password = self.def_amqp.password
+            
+        params = ConnectionParameters(self.def_amqp.host, self.def_amqp.port, vhost, 
             PlainCredentials(username, password),
-            frame_max=def_attrs.frame_max)
+            frame_max=self.def_amqp.frame_max)
         
         # heartbeat is an integer but ConnectionParameter.__init__ insists it
         # be a boolean.
-        params.heartbeat = heartbeat
+        params.heartbeat = self.def_amqp.heartbeat
         
         return params
 

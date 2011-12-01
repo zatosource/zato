@@ -34,8 +34,9 @@ from bunch import Bunch
 from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
      Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server, 
      Service, TechnicalAccount, WSSDefinition)
-from zato.common.odb.query import(def_amqp, def_amqp_list, basic_auth_list, 
-    job_list,  out_amqp, out_amqp_list, tech_acc_list, wss_list)
+from zato.common.odb.query import(channel_amqp, channel_amqp_list, def_amqp, 
+    def_amqp_list, basic_auth_list,  job_list,  out_amqp, out_amqp_list, tech_acc_list, 
+    wss_list)
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -252,4 +253,13 @@ class ODBManager(object):
         """ Returns a list of outgoing AMQP connections.
         """
         return out_amqp_list(self._session, cluster_id)
+
+    def get_channel_amqp(self, cluster_id, channel_id):
+        """ Returns a particular AMQP channel.
+        """
+        return channel_amqp(self._session, cluster_id, channel_id)
     
+    def get_channel_amqp_list(self, cluster_id):
+        """ Returns a list of AMQP channels.
+        """
+        return channel_amqp_list(self._session, cluster_id)
