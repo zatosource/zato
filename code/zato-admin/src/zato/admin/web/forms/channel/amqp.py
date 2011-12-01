@@ -30,6 +30,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     def_id = forms.ChoiceField(widget=forms.Select())
     queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    consumer_tag_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

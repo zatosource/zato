@@ -37,6 +37,8 @@ from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
 from zato.server.amqp import BaseConnector, setup_logging, start_connector as _start_connector
 
+ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_OUT_ID'
+
 class _AMQPPublisher(object):
     """ An object which does an actual job of publishing the AMQP message on the broker.
     """
@@ -173,10 +175,10 @@ class PublisherFacade(object):
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL)
 
 class PublishingConnector(BaseConnector):
-    """ An AMQP connector started as a subprocess. Each connection to an AMQP
+    """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP
     broker gets its own connector.
     """
-    def __init__(self, repo_location=None, out_id=None, def_id=None, init=True):
+    def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
         super(PublishingConnector, self).__init__(repo_location, def_id)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
@@ -336,17 +338,17 @@ def run_connector():
     setup_logging()
     
     repo_location = os.environ['ZATO_REPO_LOCATION']
-    out_id = os.environ['ZATO_CONNECTOR_AMQP_OUT_ID']
     def_id = os.environ['ZATO_CONNECTOR_AMQP_DEF_ID']
+    item_id = os.environ[ENV_ITEM_NAME]
     
-    connector = PublishingConnector(repo_location, out_id, def_id)
+    connector = PublishingConnector(repo_location, def_id, item_id)
     
     logger = logging.getLogger(__name__)
-    logger.debug('Starting AMQP connector listener, repo_location [{0}], out_id [{1}], def_id [{2}]'.format(
-        repo_location, out_id, def_id))
+    logger.debug('Starting AMQP connector listener, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
+        repo_location, item_id, def_id))
     
-def start_connector(repo_location, out_id, def_id):
-    _start_connector(repo_location, __file__, out_id, def_id)
+def start_connector(repo_location, item_id, def_id):
+    _start_connector(repo_location, __file__, ENV_ITEM_NAME, def_id, item_id)
     
 if __name__ == '__main__':
     run_connector()
