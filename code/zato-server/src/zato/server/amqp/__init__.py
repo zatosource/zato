@@ -47,6 +47,7 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common.broker_message import DEFINITION
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 
@@ -145,6 +146,14 @@ class BaseConnector(BaseWorker):
         self.out_amqp.def_id = item.def_id
         self.out_amqp.publisher = None
         
+    def filter(self, msg):
+        """ The base class knows how to manage the AMQP definitions but not channels
+        or outgoing connections.
+        """
+        if msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
+            if self.def_amqp.id == msg.id:
+                return True
+        
     def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
         """ Creates a new AMQP definition.
         """
@@ -181,7 +190,8 @@ class BaseConnector(BaseWorker):
         with self.def_amqp_lock:
             self.def_amqp['password'] = msg.password
             with self.out_amqp_lock:
-                self._recreate_amqp_publisher()
+                with self.channel_amqp_lock:
+                    self._recreate_amqp_publisher()
                 
     def _amqp_conn_params(self, def_attrs, vhost, username, password, heartbeat):
         params = ConnectionParameters(def_attrs.host, def_attrs.port, vhost, 
@@ -220,6 +230,11 @@ class BaseConnector(BaseWorker):
                 
                 p = psutil.Process(os.getpid())
                 p.terminate()
+                
+def setup_logging():
+    logging.addLevelName('TRACE1', TRACE1)
+    from logging import config
+    config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
 
 def start_connector(repo_location, amqp_file, out_id, def_id):
     """ Starts a new connector process.
