@@ -126,7 +126,7 @@ class Ping(AdminService):
         bp = {}
         bp['correlation_id'] = 'zzzz'
         
-        self.amqp.publish('Hey there!', 'CRM out AMQP', 'zato.direct', '', bp)
+        self.amqp.publish('Hey there!', 'CRM out AMQP', 'zato.direct2', '', bp)
         
         return ZATO_OK, ''
 
