@@ -60,10 +60,10 @@ if __name__ == '__main__':
     
     sockets = []
     
-    sockets.append(SocketData('worker-thread/pull-push', worker_push_broker_pull, broker_push_worker_pull))
+    sockets.append(SocketData('worker-thread/pull-push', broker_push_worker_pull, worker_push_broker_pull))
     sockets.append(SocketData('worker-thread/sub', None, None, broker_pub_worker_sub))
     
-    sockets.append(SocketData('singleton', singleton_push_broker_pull, broker_push_singleton_pull))
+    sockets.append(SocketData('singleton', broker_push_singleton_pull, singleton_push_broker_pull))
     
     sockets.append(SocketData('amqp-publishing-connector/pull-push', broker_push_publishing_connector_amqp_pull, publishing_connector_amqp_push_broker_pull))
     sockets.append(SocketData('amqp-publishing-connector/sub', None, None, broker_pub_publishing_connector_amqp_sub))

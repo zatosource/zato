@@ -37,16 +37,16 @@ import zmq
 logger = logging.getLogger(__name__)
 
 class SocketData(object):
-    def __init__(self, name=None, pull=None, push=None, pub=None):
+    def __init__(self, name=None, broker_push_client_pull=None, client_push_broker_pull=None, broker_pub_client_sub=None):
         self.name = name
-        self.pull = pull
-        self.push = push
-        self.pub = pub
+        self.broker_push_client_pull = broker_push_client_pull
+        self.client_push_broker_pull = client_push_broker_pull
+        self.broker_pub_client_sub = broker_pub_client_sub
         
     def __repr__(self):
-        return '<[{0}] at [{1}], name [{2}], pull [{3}], push [{4}], pub [{5}]>'.format(
-            self.__class__.__name__, hex(id(self)), self.name, self.pull, 
-            self.push, self.pub)
+        return '<[{0}] at [{1}], name [{2}], broker_push_client_pull [{3}], client_push_broker_pull [{4}], broker_pub_client_sub [{5}]>'.format(
+            self.__class__.__name__, hex(id(self)), self.name, self.broker_push_client_pull, 
+            self.client_push_broker_pull, self.broker_pub_client_sub)
 
 class BaseBroker(object):
     def __init__(self, *socket_data):
@@ -65,27 +65,27 @@ class BaseBroker(object):
             logger.debug('Item [{0}]'.format(item))
             self.sockets[item.name] = Bunch()
             
-            if item.push:
+            if item.broker_push_client_pull:
                 sock = self.context.socket(zmq.PUSH)
-                sock.bind(item.push)
+                sock.bind(item.broker_push_client_pull)
                 self.sockets[item.name].push = sock
-                logger.debug('Binding [{0}] on behalf of [{1}] (push)'.format(sock, item.name))
+                logger.debug('Binding [{0}] on behalf of [{1}] (broker_push_client_pull)'.format(sock, item.name))
                 
-            if item.pull:
+            if item.client_push_broker_pull:
                 sock = self.context.socket(zmq.PULL)
                 sock.setsockopt(zmq.LINGER, 0)
-                sock.bind(item.pull)
+                sock.bind(item.client_push_broker_pull)
                 self.sockets[item.name].pull = sock
 
                 self.pull_sockets.append(sock)
                 self.poller.register(sock, zmq.POLLIN)                
-                logger.debug('Binding [{0}] on behalf of [{1}] (pull)'.format(sock, item.name))
+                logger.debug('Binding [{0}] on behalf of [{1}] (client_push_broker_pull)'.format(sock, item.name))
             
-            if item.pub:
+            if item.broker_pub_client_sub:
                 sock = self.context.socket(zmq.PUB)
-                sock.bind(item.pub)
+                sock.bind(item.broker_pub_client_sub)
                 self.sockets[item.name].pub = sock
-                logger.debug('Binding [{0}] on behalf of [{1}] (pub)'.format(sock, item.name))
+                logger.debug('Binding [{0}] on behalf of [{1}] (broker_pub_client_sub)'.format(sock, item.name))
                 
                 
     def serve_forever(self):
