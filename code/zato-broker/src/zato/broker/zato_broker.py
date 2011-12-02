@@ -83,7 +83,8 @@ class Broker(BaseBroker):
                 logger.log(TRACE1, '_msg_socket [{0}]'.format(_msg_socket))
 
             if msg_type in(MESSAGE_TYPE.TO_SINGLETON, MESSAGE_TYPE.TO_PARALLEL_PULL, \
-                           MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL):
+                           MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL,
+                           MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL):
                 socket = self.sockets[_msg_socket].push
             else:
                 socket = self.sockets[_msg_socket].pub
