@@ -33,7 +33,7 @@ from bunch import Bunch
 # Zato
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
-from zato.common.util import TRACE1
+from zato.common.util import new_rid, TRACE1
 from zato.server.amqp import BaseConnection, BaseConnector, setup_logging, start_connector as _start_connector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_CHANNEL_ID'
@@ -101,6 +101,7 @@ class ConsumingConnector(BaseConnector):
         self.channel_amqp.is_active = item.is_active
         self.channel_amqp.queue = item.queue
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
+        self.channel_amqp.service = item.service_name
         
     def _setup_amqp(self):
         """ Sets up the AMQP listener on startup.
@@ -170,14 +171,13 @@ class ConsumingConnector(BaseConnector):
     def _on_amqp_message(self, method_frame, header_frame, body):
         """ A callback to be invoked by ConsumingConnection on each new AMQP message.
         """
-        #print(3333, method_frame, header_frame, self.channel_amqp.queue, body)
-
         params = {}
         params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED
+        params['service'] = self.channel_amqp.service
+        params['rid'] = new_rid()
+        params['payload'] = body
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
-        
-        print(body, params)
 
     def on_broker_pull_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation
