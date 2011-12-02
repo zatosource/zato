@@ -28,7 +28,7 @@ from threading import RLock, Thread
 from bunch import Bunch
 
 # Zato
-from zato.common import ConnectionException
+from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
 from zato.server.amqp import BaseConnection, BaseConnector, setup_logging, start_connector as _start_connector
@@ -86,6 +86,10 @@ class PublishingConnector(BaseConnector):
         super(PublishingConnector, self).__init__(repo_location, def_id)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
+        
+        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_AMQP_PULL
+        self.client_push_broker_pull_port = PORTS.PUBLISHING_CONNECTOR_AMQP_PUSH_BROKER_PULL
+        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_AMQP_SUB
         
         if init:
             self._init()
@@ -162,7 +166,7 @@ class PublishingConnector(BaseConnector):
             username = self.def_amqp.username
             password = self.def_amqp.password
         
-        conn_params = self._amqp_conn_params(self.def_amqp, vhost, username, password, self.def_amqp.heartbeat)
+        conn_params = self._amqp_conn_params()
         
         # Default properties for published messages
         properties = self._amqp_basic_properties(self.out_amqp.content_type, 

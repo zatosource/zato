@@ -195,13 +195,13 @@ class BaseConnector(BaseWorker):
         self.worker_data.broker_config.zmq_context = zmq.Context()
 
         broker_push_client_pull = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + PORTS.BROKER_PUSH_CONNECTOR_AMQP_PULL)
+            self.server.cluster.broker_start_port + self.broker_push_client_pull_port)
         
         client_push_broker_pull = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + PORTS.CONNECTOR_AMQP_PUSH_BROKER_PULL)
+            self.server.cluster.broker_start_port + self.client_push_broker_pull_port)
         
         broker_pub_client_sub = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + PORTS.BROKER_PUB_CONNECTOR_AMQP_SUB)
+            self.server.cluster.broker_start_port + self.broker_pub_client_sub_port)
         
         self.worker_data.broker_config.broker_push_client_pull = broker_push_client_pull
         self.worker_data.broker_config.client_push_broker_pull = client_push_broker_pull

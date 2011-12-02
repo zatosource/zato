@@ -22,14 +22,17 @@ from __future__ import absolute_import, division, print_function
 # stdlib
 import errno, logging, os, socket, sys
 from multiprocessing import Process
+from random import getrandbits
+from os import getpid
+from socket import getfqdn, gethostbyname, gethostname
 from threading import RLock, Thread
 
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.common import ConnectionException
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common import ConnectionException, PORTS
+from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
 from zato.common.util import TRACE1
 from zato.server.amqp import BaseConnection, BaseConnector, setup_logging, start_connector as _start_connector
 
@@ -38,22 +41,31 @@ ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_CHANNEL_ID'
 class ConsumingConnection(BaseConnection):
     """ A connection for consuming the AMQP messages.
     """
-    def consume(self, queue, consumer_tag_prefix):
-        if self.channel:
-            if self.conn.is_open:
-                properties = properties if properties else self.properties
-                self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
-                if(self.logger.isEnabledFor(logging.DEBUG)):
-                    log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
-                    self.logger.log(logging.DEBUG, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
-            else:
-                msg = "Can't publish, the connection for {0} is not open".format(self._conn_info())
-                self.logger.error(msg)
-                raise ConnectionException(msg)
-        else:
-            msg = "Can't publish, don't have a channel for {0}".format(self._conn_info())
-            self.logger.error(msg)
-            raise ConnectionException(msg)
+    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix):
+        super(ConsumingConnection, self).__init__(conn_params, channel_name)
+        self.queue = queue
+        self.consumer_tag_prefix = consumer_tag_prefix
+        
+    def _on_channel_open(self, channel):
+        super(ConsumingConnection, self)._on_channel_open(channel)
+        self.consume()
+        
+    def _on_basic_consume(self, channel, method_frame, header_frame, body):
+        print("Basic.Deliver %s delivery-tag %i: %s" % (header_frame.content_type, method_frame.delivery_tag, body))
+        channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+        
+    def consume(self, queue=None, consumer_tag_prefix=None):
+        _queue = queue if queue else self.queue
+        _consumer_tag_prefix = consumer_tag_prefix if consumer_tag_prefix else self.consumer_tag_prefix
+        
+        consumer_tag = '{0}:{1}:{2}:{3}:{4}'.format(
+            _consumer_tag_prefix, gethostbyname(gethostname()), getfqdn(),
+            getpid(), getrandbits(64)).ljust(72, '0')
+        
+        self.channel.basic_consume(self._on_basic_consume, queue=_queue, consumer_tag=consumer_tag)
+        self.logger.debug('Started a consumer for [{0}], queue [{1}], tag [{2}]'.format(
+            self._conn_info(), queue, consumer_tag))
+        
         
 class ConsumingConnector(BaseConnector):
     """ An AMQP consuming connector started as a subprocess. Each connection to an AMQP
@@ -63,6 +75,10 @@ class ConsumingConnector(BaseConnector):
         super(ConsumingConnector, self).__init__(repo_location, def_id)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
+        
+        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_AMQP_PULL
+        self.client_push_broker_pull_port = PORTS.CONSUMING_CONNECTOR_AMQP_PUSH_BROKER_PULL
+        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_CONSUMING_CONNECTOR_AMQP_SUB
         
         if init:
             self._init()
@@ -91,26 +107,19 @@ class ConsumingConnector(BaseConnector):
         listener. All the listeners receive incoming each of the PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
-        return True
-    
-        '''
         if super(PublishingConnector, self).filter(msg):
             return True
         
-        if msg.action == OUTGOING.AMQP_CLOSE:
+        if msg.action == CHANNEL.AMQP_CLOSE:
             if self.odb.odb_data['token'] == msg['odb_token']:
                 return True
-        elif msg.action == OUTGOING.AMQP_PUBLISH:
-            if self.out_amqp.name == msg.out_name:
-                return True
-        elif msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
-            if self.out_amqp.id == msg.id:
+        elif msg.action in(CHANNEL.AMQP_EDIT, CHANNEL.AMQP_DELETE):
+            if self.channel_amqp.id == msg.id:
                 return True
         else:
             if self.logger.isEnabledFor(TRACE1):
                 self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
-            '''
         
     def _stop_amqp_consumer(self):
         """ Stops the given AMQP consumer. The method must be called from a method 
@@ -125,15 +134,15 @@ class ConsumingConnector(BaseConnector):
         from a method that holds onto all AMQP-related RLocks.
         """
         self._stop_amqp_consumer()
-        conn_params = self._amqp_conn_params()
         
         # An actual AMQP consumer
         if self.channel_amqp.is_active:
-            consumer = self._amqp_consumer(conn_params, self.channel_amqp.name)
-            self.out_amqp.publisher = publisher
+            consumer = self._amqp_consumer()
+            self.out_amqp.consumer = consumer
             
-    def _amqp_consumer(self, conn_params, out_name):
-        consumer = ConsumingConnection(conn_params, out_name)
+    def _amqp_consumer(self):
+        consumer = ConsumingConnection(self._amqp_conn_params(), self.channel_amqp.name,
+            self.channel_amqp.queue, self.channel_amqp.consumer_tag_prefix)
         t = Thread(target=consumer._run)
         t.start()
         

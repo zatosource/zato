@@ -109,7 +109,8 @@ def out_amqp(session, cluster_id, out_id):
     """ An outgoing AMQP connection.
     """
     return _out_amqp(session, cluster_id).\
-           filter(OutgoingAMQP.id==out_id).one()
+           filter(OutgoingAMQP.id==out_id).\
+           one()
 
 def out_amqp_list(session, cluster_id):
     """ Outgoing AMQP connections.
@@ -125,7 +126,7 @@ def _channel_amqp(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ChannelAMQP.name)
 
-def channel_amqp(session, cluster_id):
+def channel_amqp(session, cluster_id, channel_id):
     """ A particular AMQP channel.
     """
     return _channel_amqp(session, cluster_id).\

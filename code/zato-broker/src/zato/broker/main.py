@@ -50,14 +50,25 @@ if __name__ == '__main__':
     broker_push_singleton_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_SINGLETON_PULL)
     singleton_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.SINGLETON_PUSH_BROKER_PULL)
     
-    broker_push_connector_amqp_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_CONNECTOR_AMQP_PULL)
-    connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONNECTOR_AMQP_PUSH_BROKER_PULL)
-    broker_pub_connector_amqp_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONNECTOR_AMQP_SUB)
+    broker_push_publishing_connector_amqp_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_AMQP_PULL)
+    publishing_connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.PUBLISHING_CONNECTOR_AMQP_PUSH_BROKER_PULL)
+    broker_pub_publishing_connector_amqp_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_AMQP_SUB)
     
-    s1 = SocketData('worker-thread/pull-push', worker_push_broker_pull, broker_push_worker_pull)
-    s2 = SocketData('worker-thread/sub', None, None, broker_pub_worker_sub)
-    s3 = SocketData('singleton', singleton_push_broker_pull, broker_push_singleton_pull)
-    s4 = SocketData('amqp-connector/pull-push', broker_push_connector_amqp_pull, connector_amqp_push_broker_pull)
-    s5 = SocketData('amqp-connector/sub', None, None, broker_pub_connector_amqp_sub)
+    broker_push_consuming_connector_amqp_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_AMQP_PULL)
+    consuming_connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONSUMING_CONNECTOR_AMQP_PUSH_BROKER_PULL)
+    broker_pub_consuming_connector_amqp_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONSUMING_CONNECTOR_AMQP_SUB)
     
-    Broker(token, log_invalid_tokens, s1, s2, s3, s4, s5).serve_forever()
+    sockets = []
+    
+    sockets.append(SocketData('worker-thread/pull-push', worker_push_broker_pull, broker_push_worker_pull))
+    sockets.append(SocketData('worker-thread/sub', None, None, broker_pub_worker_sub))
+    
+    sockets.append(SocketData('singleton', singleton_push_broker_pull, broker_push_singleton_pull))
+    
+    sockets.append(SocketData('amqp-publishing-connector/pull-push', broker_push_publishing_connector_amqp_pull, publishing_connector_amqp_push_broker_pull))
+    sockets.append(SocketData('amqp-publishing-connector/sub', None, None, broker_pub_publishing_connector_amqp_sub))
+    
+    sockets.append(SocketData('amqp-consuming-connector/pull-push', broker_push_consuming_connector_amqp_pull, consuming_connector_amqp_push_broker_pull))
+    sockets.append(SocketData('amqp-consuming-connector/sub', None, None, broker_pub_consuming_connector_amqp_sub))
+    
+    Broker(token, log_invalid_tokens, *sockets).serve_forever()

@@ -38,8 +38,9 @@ msg_socket = {
     MESSAGE_TYPE.TO_PARALLEL_PULL: 'worker-thread/pull-push',
     MESSAGE_TYPE.TO_PARALLEL_SUB: 'worker-thread/sub',
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
-    MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL: 'amqp-connector/pull-push',
-    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'amqp-connector/sub',
+    MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL: 'amqp-publishing-connector/pull-push',
+    MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL: 'amqp-consuming-connector/pull-push',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'amqp-publishing-connector/sub',
 }
 
 msg_types = msg_socket.keys()
