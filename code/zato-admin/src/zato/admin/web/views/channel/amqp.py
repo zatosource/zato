@@ -78,6 +78,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.def_id = params[prefix + 'def_id']
     zato_message.data.queue = params[prefix + 'queue']
     zato_message.data.consumer_tag_prefix = params[prefix + 'consumer_tag_prefix']
+    zato_message.data.service = params[prefix + 'service']
 
     return zato_message
 
@@ -131,10 +132,11 @@ def index(req):
                 consumer_tag_prefix = msg_item.consumer_tag_prefix.text
                 def_name = msg_item.def_name.text
                 def_id = msg_item.def_id.text
+                service_name = msg_item.service_name.text
                 
-                item =  ChannelAMQP(id, name, is_active, queue, consumer_tag_prefix, def_id, def_name)
+                item =  ChannelAMQP(id, name, is_active, queue, consumer_tag_prefix, def_id, def_name, service_name)
                 items.append(item)
-
+                
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,

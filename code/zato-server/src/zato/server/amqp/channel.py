@@ -173,7 +173,7 @@ class ConsumingConnector(BaseConnector):
         #print(3333, method_frame, header_frame, self.channel_amqp.queue, body)
 
         params = {}
-        params['action'] = 'zzz'
+        params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
         

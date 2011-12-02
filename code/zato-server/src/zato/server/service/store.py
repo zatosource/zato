@@ -213,6 +213,16 @@ class ServiceStore(InitializingObject):
             msg = 'Error while invoking [%s] on service [%s] ' \
                 ' e=[%s]' % (hook_name, service_name, format_exc())
             logger.error(msg)
+            
+    def new_instance(self, class_name):
+        """ Returns a new instance of a service of the given name.
+        """
+        return self.services[class_name]['service_class']()
+        
+    def service_data(self, class_name):
+        """ Returns all the service-related data.
+        """
+        return self.services[class_name]
 
     @synchronized()
     def import_services_from_egg(self, egg_path, parallel_server):

@@ -106,3 +106,16 @@ class Service(object):
     def after_remove_from_store(*args, **kwargs):
         """ XXX: Docs
         """
+        
+    @staticmethod
+    def update(service, server, broker_client, channel, rid, init=True):
+        """ Takes a service instance and updates it with the current request's
+        context data.
+        """
+        service.server = server
+        service.broker_client = broker_client
+        service.channel = channel
+        service.rid = rid
+        
+        if init:
+            service._init()

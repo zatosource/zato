@@ -531,6 +531,10 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 	$.fn.zato.data_table.cleanup('#'+ action +'-form');
 }
 
+$.fn.zato.data_table.service_text = function(service) {
+    return String.format('<a href="/zato/service/?service={0}">{1}</a>', service, service);
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // Data table end
 // /////////////////////////////////////////////////////////////////////////////

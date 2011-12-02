@@ -335,11 +335,7 @@ class ParallelServer(BrokerMessageReceiver):
             logger.warn(msg.format(server.last_join_status))
             
             self._after_init_non_accepted(server)
-        
-    def on_inproc_message_handler(self, msg):
-        """ Handler for incoming 'inproc' ZMQ messages.
-        """
-        
+
     def run_forever(self):
         
         task_dispatcher = _TaskDispatcher(self, self.worker_config, self.on_broker_msg, self.zmq_context)

@@ -24,6 +24,9 @@ import errno, logging, os, socket, sys
 from multiprocessing import Process
 from threading import RLock, Thread
 
+# Pika
+from pika import BasicProperties
+
 # Bunch
 from bunch import Bunch
 
@@ -76,7 +79,7 @@ class PublisherFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_PULL)
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL)
 
 class PublishingConnector(BaseConnector):
     """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP
