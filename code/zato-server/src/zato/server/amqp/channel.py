@@ -41,20 +41,27 @@ ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_CHANNEL_ID'
 class ConsumingConnection(BaseConnection):
     """ A connection for consuming the AMQP messages.
     """
-    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix):
+    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, callback):
         super(ConsumingConnection, self).__init__(conn_params, channel_name)
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
+        self.callback = callback
         
     def _on_channel_open(self, channel):
+        """ We've opened a channel to the broker.
+        """
         super(ConsumingConnection, self)._on_channel_open(channel)
         self.consume()
         
     def _on_basic_consume(self, channel, method_frame, header_frame, body):
-        print("Basic.Deliver %s delivery-tag %i: %s" % (header_frame.content_type, method_frame.delivery_tag, body))
+        """ We've got a message to be handled.
+        """
+        self.callback(method_frame, header_frame, body)
         channel.basic_ack(delivery_tag=method_frame.delivery_tag)
         
     def consume(self, queue=None, consumer_tag_prefix=None):
+        """ Starts consuming messages from the broker.
+        """
         _queue = queue if queue else self.queue
         _consumer_tag_prefix = consumer_tag_prefix if consumer_tag_prefix else self.consumer_tag_prefix
         
@@ -142,7 +149,8 @@ class ConsumingConnector(BaseConnector):
             
     def _amqp_consumer(self):
         consumer = ConsumingConnection(self._amqp_conn_params(), self.channel_amqp.name,
-            self.channel_amqp.queue, self.channel_amqp.consumer_tag_prefix)
+            self.channel_amqp.queue, self.channel_amqp.consumer_tag_prefix,
+            self._on_amqp_message)
         t = Thread(target=consumer._run)
         t.start()
         
@@ -158,6 +166,18 @@ class ConsumingConnector(BaseConnector):
                 self.channel_amqp = msg
                 self.channel_amqp.consumer = consumer
                 self._recreate_amqp_consumer()
+                
+    def _on_amqp_message(self, method_frame, header_frame, body):
+        """ A callback to be invoked by ConsumingConnection on each new AMQP message.
+        """
+        #print(3333, method_frame, header_frame, self.channel_amqp.queue, body)
+
+        params = {}
+        params['action'] = 'zzz'
+        
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+        
+        print(body, params)
 
     def on_broker_pull_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation
