@@ -185,18 +185,25 @@ class WorkerStore(BaseWorker):
 
 # ##############################################################################
 
-    def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
-
-        service_info = self.worker_data.server.service_store.services[msg.service]
-        class_ = service_info['service_class']
-        instance = class_()
-        instance.server = self.worker_data.server
+    def _on_message_invoke_service(self, msg, channel, action, args=None):
+        """ Triggered by external processes, such as AMQP or the singleton's scheduler,
+        creates a new service instance and invokes it.
+        """
+        service_instance = self.worker_data.server.service_store.new_instance(msg.service)
+        service_instance.update(service_instance, self, self.broker_client, channel, msg.rid)
         
-        response = instance.handle(payload=msg.extra, raw_request=msg, channel='scheduler_job', thread_ctx=self)
+        response = service_instance.handle(payload=msg.extra, raw_request=msg)
         
         if logger.isEnabledFor(logging.DEBUG):
-            msg = 'Invoked [{0}], response [{1}]'.format(msg.service, repr(response))
-            logger.debug(str(msg))
+            msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(
+                msg.service, channel, action, repr(response))
+            logger.debug(msg)
+
+    def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
+        return self._on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED', args)
+
+    def on_broker_pull_msg_CHANNEL_AMQP_MESSAGE_RECEIVED(self, msg, args=None):
+        return self._on_message_invoke_service(msg, 'amqp', 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
             
 # ##############################################################################
             

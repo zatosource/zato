@@ -37,7 +37,7 @@ from validate import is_boolean
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
-from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP
+from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 #from zato.server.amqp import start_connector_listener
 from zato.server.service.internal import _get_params, AdminService
@@ -61,6 +61,7 @@ class GetList(AdminService):
                 item.is_active = db_item.is_active
                 item.queue = db_item.queue
                 item.consumer_tag_prefix = db_item.consumer_tag_prefix
+                item.service_name = db_item.service_name
                 item.def_name = db_item.def_name
                 item.def_id = db_item.def_id
     
@@ -76,11 +77,13 @@ class Create(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
             
-            params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix']
+            params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue', 
+                      'consumer_tag_prefix', 'service']
             params = _get_params(payload, params, 'data.')
             
             name = params['name']
             cluster_id = params['cluster_id']
+            service_name = params['service']
             params['def_id'] = int(params['def_id'])
             
             # Let's see if we already have a channel of that name before committing
@@ -94,6 +97,16 @@ class Create(AdminService):
             if existing_one:
                 raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(name))
             
+            # Is the service's name correct?
+            service = session.query(Service).\
+                filter(Cluster.id==cluster_id).\
+                filter(Service.name==service_name).first()
+            
+            if not service:
+                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                logger.error(msg)
+                raise Exception(msg)
+            
             created_elem = Element('channel_amqp')
             
             try:
@@ -106,6 +119,7 @@ class Create(AdminService):
                 item.queue = params['queue']
                 item.consumer_tag_prefix = params['consumer_tag_prefix']
                 item.def_id = params['def_id']
+                item.service = service
                 
                 session.add(item)
                 session.commit()
@@ -130,12 +144,14 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix']
+            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 
+                      'consumer_tag_prefix', 'service']
             params = _get_params(payload, params, 'data.')
             
             id = params['id']
             name = params['name']
             cluster_id = params['cluster_id']
+            service_name = params['service']
             params['def_id'] = int(params['def_id'])
             
             # Let's see if we already have an account of that name before committing
@@ -149,6 +165,16 @@ class Edit(AdminService):
             
             if existing_one:
                 raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(name))
+            
+            # Is the service's name correct?
+            service = session.query(Service).\
+                filter(Cluster.id==cluster_id).\
+                filter(Service.name==service_name).first()
+            
+            if not service:
+                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                logger.error(msg)
+                raise Exception(msg)
             
             xml_item = Element('channel_amqp')
             
@@ -165,6 +191,7 @@ class Edit(AdminService):
                 item.queue = params['queue']
                 item.consumer_tag_prefix = params['consumer_tag_prefix']
                 item.def_id = params['def_id']
+                item.service = service
                 
                 session.add(item)
                 session.commit()

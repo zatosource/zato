@@ -139,21 +139,14 @@ class SOAPMessageHandler(ApplicationContextAware):
             if not soap_action:
                 return client_soap_error(rid, 'Client sent an empty SOAPAction header')
 
-            service_class_name = self.soap_config.get(soap_action)
-            logger.debug('[{0}] service_class_name=[{1}]'.format(rid,
-                service_class_name))
+            class_name = self.soap_config.get(soap_action)
+            logger.debug('[{0}] class_name=[{1}]'.format(rid, class_name))
 
-            if not service_class_name:
-                return client_soap_error(rid, '[{0}] Unrecognized SOAPAction [{1}]'.format(rid,
-                    soap_action))
+            if not class_name:
+                return client_soap_error(rid, '[{0}] Unrecognized SOAPAction [{1}]'.format(rid, soap_action))
 
-            logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(rid,
-                self.service_store.services))
-            service_data = self.service_store.services.get(service_class_name)
-
-            if not service_data:
-                return server_soap_error(rid, '[{0}] No service could handle SOAPAction [{1}]'.format(
-                    rid, soap_action))
+            logger.log(TRACE1, '[{0}] service_store.services=[{1}]'.format(rid, self.service_store.services))
+            service_data = self.service_store.service_data(class_name)
 
             soap = objectify.fromstring(request)
             body = soap_body_xpath(soap)
@@ -162,18 +155,13 @@ class SOAPMessageHandler(ApplicationContextAware):
                 return client_soap_error('[{0}] Client did not send the [{1}] element'.format(
                     rid, body_path))
 
-            if self.wss_store.needs_wss(service_class_name):
+            if self.wss_store.needs_wss(class_name):
                 # Will raise an exception if anything goes wrong.
-                self.wss_store.handle_request(service_class_name, service_data, soap)
+                self.wss_store.handle_request(class_name, service_data, soap)
 
-            service_class = service_data['service_class']
-
-            service_instance = service_class()
-            service_instance.server = self.app_context.get_object('parallel_server')
-            service_instance.broker_client = thread_ctx.broker_client
-            service_instance.channel = 'soap'
-            service_instance.rid = rid
-            service_instance._init()
+            service_instance = self.service_store.new_instance(class_name)
+            service_instance.update(service_instance, self.app_context.get_object('parallel_server'),
+                    thread_ctx.broker_client, 'soap', rid)
 
             body_payload = get_body_payload(body)
 

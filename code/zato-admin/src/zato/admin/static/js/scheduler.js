@@ -151,10 +151,6 @@ $.fn.zato.scheduler._create_edit = function(action, job_type, id) {
 	div.dialog('open');
 }
 
-$.fn.zato.scheduler.data_table.service_text = function(service) {
-    return String.format('<a href="/zato/service/?service={0}">{1}</a>', service, service);
-}
-
 $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
     var row = '';
 	
@@ -168,7 +164,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
 	row += String.format('<td>{0}</td>', job.is_active ? 'Yes' : 'No');
 	row += String.format('<td>{0}</td>', friendly_names[job.job_type]);
 	row += String.format('<td>{0}</td>', data.definition_text);
-	row += String.format('<td>{0}</td>', $.fn.zato.scheduler.data_table.service_text(job.service));
+	row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(job.service));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.execute({0})'>Execute</a>", job.id));
 	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.scheduler.edit('{0}', {1})\">Edit</a>", job.job_type, job.id));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.scheduler.delete_({0});'>Delete</a>", job.id));

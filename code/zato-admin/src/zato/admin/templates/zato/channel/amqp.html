@@ -28,6 +28,7 @@
             'def_name',
             'queue',
             'consumer_tag_prefix',
+            'service',
             '_edit',
             '_delete',
             'id',
@@ -81,6 +82,7 @@
                         <th><a href="#">Definition</a></th>
                         <th><a href="#">Queue</a></th>
                         <th><a href="#">Consumer tag prefix</a></th>
+                        <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -99,6 +101,7 @@
                         <td>{{ item.def_name }}</td>
                         <td>{{ item.queue }}</td>
                         <td>{{ item.consumer_tag_prefix }}</td>
+                        <td><a href="{% url service %}?service={{ item.service_name }}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -108,7 +111,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='13'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -144,6 +147,11 @@
                         <tr>
                             <td style="vertical-align:middle">Consumer tag prefix</td>
                             <td>{{ create_form.consumer_tag_prefix }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service }}</td>
                         </tr>
                         
                         <tr>
@@ -185,6 +193,11 @@
                         <tr>
                             <td style="vertical-align:middle">Consumer tag prefix</td>
                             <td>{{ edit_form.consumer_tag_prefix }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service }}</td>
                         </tr>
 
                         <tr>
