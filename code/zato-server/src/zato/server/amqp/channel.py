@@ -144,7 +144,7 @@ class ConsumingConnector(BaseConnector):
         # An actual AMQP consumer
         if self.channel_amqp.is_active:
             consumer = self._amqp_consumer()
-            self.out_amqp.consumer = consumer
+            self.channel_amqp.consumer = consumer
             
     def _amqp_consumer(self):
         consumer = ConsumingConnection(self._amqp_conn_params(), self.channel_amqp.name,
@@ -155,7 +155,7 @@ class ConsumingConnector(BaseConnector):
         
         return consumer
         
-    def _out_amqp_create_edit(self, msg, *args):
+    def _channel_amqp_create_edit(self, msg, *args):
         """ Creates or updates an outgoing AMQP connection and its associated
         AMQP consumer.
         """ 
