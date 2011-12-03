@@ -32,7 +32,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.amqp import BaseConnection, BaseConnector, setup_logging, start_connector as _start_connector
 
@@ -80,6 +80,7 @@ class ConsumingConnector(BaseConnector):
     """
     def __init__(self, repo_location=None, def_id=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, def_id)
+        self.broker_client_name = 'amqp-consuming-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         
@@ -115,12 +116,9 @@ class ConsumingConnector(BaseConnector):
         listener. All the listeners receive incoming each of the PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
-        if super(PublishingConnector, self).filter(msg):
+        if super(ConsumingConnector, self).filter(msg):
             return True
         
-        if msg.action == CHANNEL.AMQP_CLOSE:
-            if self.odb.odb_data['token'] == msg['odb_token']:
-                return True
         elif msg.action in(CHANNEL.AMQP_EDIT, CHANNEL.AMQP_DELETE):
             if self.channel_amqp.id == msg.id:
                 return True
@@ -129,7 +127,7 @@ class ConsumingConnector(BaseConnector):
                 self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
         
-    def _stop_amqp_consumer(self):
+    def _stop_amqp_connection(self):
         """ Stops the given AMQP consumer. The method must be called from a method 
         that holds onto all AMQP-related RLocks.
         """
@@ -141,7 +139,7 @@ class ConsumingConnector(BaseConnector):
         that they point to the newly created consumer. The method must be called 
         from a method that holds onto all AMQP-related RLocks.
         """
-        self._stop_amqp_consumer()
+        self._stop_amqp_connection()
         
         # An actual AMQP consumer
         if self.channel_amqp.is_active:

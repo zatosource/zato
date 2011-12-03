@@ -39,7 +39,7 @@ from bunch import Bunch
 from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import AMQP_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.amqp.channel import start_connector as channel_start_connector
 from zato.server.amqp.outgoing import start_connector as out_start_connector
@@ -350,11 +350,11 @@ class ParallelServer(BrokerMessageReceiver):
                 asyncore.poll(5)
 
         except KeyboardInterrupt:
-            logger.info("Shutting down.")
+            logger.info('Shutting down')
             
             # Close all the AMQP subprocesses this server has started.
             msg = {}
-            msg['action'] = OUTGOING.AMQP_CLOSE
+            msg['action'] = AMQP_CONNECTOR.CLOSE
             msg['odb_token'] = self.odb.odb_data['token']
             self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
             time.sleep(0.1)

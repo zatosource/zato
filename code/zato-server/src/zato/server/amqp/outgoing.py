@@ -32,7 +32,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
 from zato.common.util import TRACE1
 from zato.server.amqp import BaseConnection, BaseConnector, setup_logging, start_connector as _start_connector
 
@@ -87,6 +87,7 @@ class PublishingConnector(BaseConnector):
     """
     def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
         super(PublishingConnector, self).__init__(repo_location, def_id)
+        self.broker_client_name = 'amqp-publishing-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
         
@@ -132,9 +133,6 @@ class PublishingConnector(BaseConnector):
         if super(PublishingConnector, self).filter(msg):
             return True
         
-        if msg.action == OUTGOING.AMQP_CLOSE:
-            if self.odb.odb_data['token'] == msg['odb_token']:
-                return True
         elif msg.action == OUTGOING.AMQP_PUBLISH:
             if self.out_amqp.name == msg.out_name:
                 return True
@@ -146,7 +144,7 @@ class PublishingConnector(BaseConnector):
                 self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
         
-    def _stop_amqp_publisher(self):
+    def _stop_amqp_connection(self):
         """ Stops the given outgoing AMQP connection's publisher. The method must 
         be called from a method that holds onto all AMQP-related RLocks.
         """
@@ -159,7 +157,7 @@ class PublishingConnector(BaseConnector):
         publisher. The method must be called from a method that holds
         onto all AMQP-related RLocks.
         """
-        self._stop_amqp_publisher()
+        self._stop_amqp_connection()
             
         vhost = self.def_amqp.virtual_host if 'virtual_host' in self.def_amqp else self.def_amqp.vhost
         if 'credentials' in self.def_amqp:
@@ -256,11 +254,6 @@ class PublishingConnector(BaseConnector):
         self.out_amqp.publisher.publish(msg['body'], msg['exchange'], 
                     msg['routing_key'], pika_properties, *msg['args'], **msg['kwargs'])
         
-    def on_broker_pull_msg_OUTGOING_AMQP_CLOSE(self, msg, *args):
-        """ Stops the publisher, ODB connection and exits the process.
-        """
-        self._close()
-
 
 def run_connector():
     """ Invoked on the process startup.
