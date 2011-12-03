@@ -91,7 +91,7 @@ class BaseWorker(BrokerMessageReceiver):
         """ Connects to the broker and sets up all the sockets.
         """
         self.broker_client = BrokerClient()
-        self.broker_client.name = self.worker_data.broker_config.name #'parallel/thread'
+        self.broker_client.name = self.worker_data.broker_config.name
         self.broker_client.token = self.worker_data.broker_config.broker_token
         self.broker_client.zmq_context = self.worker_data.broker_config.zmq_context
         self.broker_client.broker_push_client_pull = self.worker_data.broker_config.broker_push_client_pull

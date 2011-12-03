@@ -50,7 +50,7 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.broker_message import DEFINITION
+from zato.common.broker_message import AMQP_CONNECTOR, DEFINITION
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 
@@ -157,6 +157,7 @@ class BaseConnector(BaseWorker):
         self.repo_location = repo_location
         self.def_id = def_id
         self.odb = None
+        self.broker_client_name = None
         
     def _init(self):
         """ Initializes all the run-time data structures, fetches configuration,
@@ -190,7 +191,7 @@ class BaseConnector(BaseWorker):
         
         self.worker_data = Bunch()
         self.worker_data.broker_config = Bunch()
-        self.worker_data.broker_config.name = 'amqp-connector'
+        self.worker_data.broker_config.name = self.broker_client_name
         self.worker_data.broker_config.broker_token = self.server.cluster.broker_token
         self.worker_data.broker_config.zmq_context = zmq.Context()
 
@@ -233,9 +234,18 @@ class BaseConnector(BaseWorker):
         """ The base class knows how to manage the AMQP definitions but not channels
         or outgoing connections.
         """
-        if msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
+        if msg.action == AMQP_CONNECTOR.CLOSE:
+            if self.odb.odb_data['token'] == msg['odb_token']:
+                return True
+            
+        elif msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
             if self.def_amqp.id == msg.id:
                 return True
+            
+    def on_broker_pull_msg_AMQP_CONNECTOR_CLOSE(self, msg, *args):
+        """ Stops the publisher, ODB connection and exits the process.
+        """
+        self._close()
         
     def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
         """ Creates a new AMQP definition.
@@ -306,7 +316,7 @@ class BaseConnector(BaseWorker):
             out_attrs.delivery_mode, out_attrs.priority, out_attrs.expiration, 
             out_attrs.user_id, out_attrs.app_id)
                 
-    def _stop_amqp_publisher(self):
+    def _stop_amqp_connection(self):
         """ Stops the publisher, a subclass needs to implement it.
         """
         raise NotImplementedError('Must be implemented by a subclass')
@@ -317,7 +327,7 @@ class BaseConnector(BaseWorker):
         """
         with self.def_amqp_lock:
             with self.out_amqp_lock:
-                self._stop_amqp_publisher()
+                self._stop_amqp_connection()
                 self.odb.close()
                 
                 p = psutil.Process(os.getpid())

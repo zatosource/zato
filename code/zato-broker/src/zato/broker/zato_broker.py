@@ -40,7 +40,7 @@ msg_socket = {
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
     MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL: 'amqp-publishing-connector/pull-push',
     MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL: 'amqp-consuming-connector/pull-push',
-    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'amqp-publishing-connector/sub',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'unused',
 }
 
 msg_types = msg_socket.keys()
@@ -77,7 +77,12 @@ class Broker(BaseBroker):
                     err_msg += ', token [{0}]'.format(token)
                 logger.error(err_msg)
                 raise Exception(err_msg)
-
+            
+            sockets = []
+            if msg_type == MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB:
+                sockets.extend((self.sockets['amqp-publishing-connector/sub'].pub,
+                           self.sockets['amqp-consuming-connector/sub'].pub))
+                
             _msg_socket = msg_socket[msg_type]
             if logger.isEnabledFor(TRACE1):
                 logger.log(TRACE1, '_msg_socket [{0}]'.format(_msg_socket))
@@ -85,15 +90,14 @@ class Broker(BaseBroker):
             if msg_type in(MESSAGE_TYPE.TO_SINGLETON, MESSAGE_TYPE.TO_PARALLEL_PULL, \
                            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL,
                            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL):
-                socket = self.sockets[_msg_socket].push
-            else:
-                socket = self.sockets[_msg_socket].pub
+                sockets.append(self.sockets[_msg_socket].push)
             
             # We don't want the subscribers to know what the original token was.
             msg = bytes(msg_shadowed)
         else:
             # User-defined messages always go to parallel servers.
             _msg_socket = msg_socket[MESSAGE_TYPE.TO_PARALLEL_PULL]
-            socket = self.sockets[_msg_socket].push
+            sockets.append(self.sockets[_msg_socket].push)
         
-        socket.send(msg)
+        for socket in sockets:
+            socket.send(msg)
