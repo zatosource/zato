@@ -361,7 +361,8 @@ class ParallelServer(BrokerMessageReceiver):
             self.broker_client.close()
             
             if self.singleton_server:
-                self.singleton_server.broker_client.close()
+                if getattr(self.singleton_server, 'broker_client', None):
+                    self.singleton_server.broker_client.close()
                 
             self.zmq_context.term()
             self.odb.close()
