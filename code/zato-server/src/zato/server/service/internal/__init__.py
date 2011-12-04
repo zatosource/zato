@@ -120,14 +120,6 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
-
-        from pika.spec import BasicProperties
-        
-        bp = {}
-        bp['correlation_id'] = 'zzzz'
-        
-        self.amqp.publish('Hey there!', 'CRM out AMQP', 'zato.direct2', '', bp)
-        
         return ZATO_OK, ''
 
 class ChangePasswordBase(AdminService):
