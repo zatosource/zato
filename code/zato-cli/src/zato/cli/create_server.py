@@ -81,7 +81,7 @@ custom_xml_config_location=
 custom_yaml_config_location=
 
 [singleton]
-initial_sleep_time=5000
+initial_sleep_time=500
 """
 
 haproxy_conf_contents = """
