@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import json, logging
 from uuid import uuid4
+from time import sleep
 from traceback import format_exc
 
 # lxml
@@ -51,7 +52,7 @@ class SingletonServer(BrokerMessageReceiver):
     
     def __init__(self, parallel_server=None, scheduler=None, broker_token=None, 
                  zmq_context=None, broker_host=None, broker_push_singleton_pull_port=None, 
-                 singleton_push_broker_pull_port=None):
+                 singleton_push_broker_pull_port=None, initial_sleep_time=None):
         self.parallel_server = parallel_server
         self.scheduler = scheduler
         self.broker_token = broker_token
@@ -59,10 +60,15 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_push_singleton_pull_port = broker_push_singleton_pull_port
         self.singleton_push_broker_pull_port = singleton_push_broker_pull_port
         self.zmq_context = zmq_context
+        self.initial_sleep_time = initial_sleep_time
 
     def run(self, *ignored_args, **kwargs):
-        self.logger = logging.getLogger('{0}.{1}:{2}'.format(__name__, 
-                                        self.__class__.__name__, hex(id(self))))
+        self.logger = logging.getLogger(self.__class__.__name__)
+        
+        # So that other moving parts - like connector subprocesses - have time
+        # to initialize before the singleton server starts the scheduler.
+        self.logger.debug('Sleeping for {0} s'.format(self.initial_sleep_time))
+        sleep(self.initial_sleep_time)
 
         for name in('broker_token', 'zmq_context', 'broker_host', 'broker_push_singleton_pull_port', 
                     'singleton_push_broker_pull_port'):

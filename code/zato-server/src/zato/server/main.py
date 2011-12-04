@@ -54,6 +54,7 @@ def run(host, port, base_dir, start_singleton):
     
     if start_singleton:
         singleton_server = app_context.get_object('singleton_server')
+        singleton_server.initial_sleep_time = int(config['singleton']['initial_sleep_time']) / 1000.
         parallel_server.singleton_server = singleton_server
         
         # Wow, this line looks weird. What it does is simply assigning a parallel

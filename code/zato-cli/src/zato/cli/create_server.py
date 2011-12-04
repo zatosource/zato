@@ -79,6 +79,9 @@ work_dir=../../work
 [custom_context]
 custom_xml_config_location=
 custom_yaml_config_location=
+
+[singleton]
+initial_sleep_time=5000
 """
 
 haproxy_conf_contents = """
