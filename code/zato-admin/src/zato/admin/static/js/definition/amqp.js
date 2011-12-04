@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.ConnDefAMQP = new Class({
 	toString: function() {
-		var s = '<ConnDefAMQP id:{0} name:{1} is_active:{2}>';
+		var s = '<ConnDefAMQP id:{0} name:{1}>';
 		return String.format(s, this.id ? this.id : '(none)', 
 								this.name ? this.name : '(none)');
 	}
