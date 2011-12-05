@@ -40,36 +40,52 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common.odb.model import Cluster, ConnDefAMQP
+from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
-from zato.common.util import TRACE1, to_form
+from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
+    '''
+    queue_manager = Column(String(200), nullable=False)
+    channel = Column(String(200), nullable=False)
+    host = Column(String(200), nullable=False)
+    listener_port = Column(Integer, nullable=False)
+    cache_open_send_queues = Column(Boolean(), nullable=False)
+    cache_open_receive_queues = Column(Boolean(), nullable=False)
+    use_shared_connections = Column(Boolean(), nullable=False)
+    dynamic_queue_template = Column(String(200), nullable=False, server_default='SYSTEM.DEFAULT.MODEL.QUEUE')
+    ssl = Column(Boolean(), nullable=False)
+    ssl_cipher_spec = Column(String(200))
+    ssl_key_repository = Column(String(200))
+    needs_mcd = Column(Boolean(), nullable=False)
+    '''
+    
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.host = params[prefix + 'host']
-    zato_message.data.port = params[prefix + 'port']
-    zato_message.data.vhost = params[prefix + 'vhost']
-    zato_message.data.username = params[prefix + 'username']
-    zato_message.data.frame_max = params[prefix + 'frame_max']
-    zato_message.data.heartbeat = int(params.get(prefix + 'heartbeat'))
+    zato_message.data.name = params[prefix + 'queue_manager']
+    zato_message.data.host = params[prefix + 'channel']
+    zato_message.data.port = int(params[prefix + 'listener_port'])
+    zato_message.data. = bool(params.get(prefix + 'cache_open_send_queues'))
+    zato_message.data. = bool(params.get(prefix + 'cache_open_receive_queues'))
+    zato_message.data. = bool(params.get(prefix + 'ssl'))
+    zato_message.data.host = params[prefix + 'ssl_cipher_spec']
+    zato_message.data.host = params[prefix + 'ssl_key_repository']
+    zato_message.data. = bool(params.get(prefix + 'needs_mcd'))
 
     return zato_message
 
 def _edit_create_response(zato_message, action, name):
     return_data = {'id': zato_message.data.def_amqp.id.text,
-                   'message': 'Successfully {0} the AMQP definition [{1}]'.format(action, name)}
+                   'message': 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @meth_allowed('GET')
@@ -140,7 +156,7 @@ def create(req):
         return _edit_create_response(zato_message, 'created', req.POST['name'])        
         
     except Exception, e:
-        msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not create a JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -157,7 +173,7 @@ def edit(req):
         return _edit_create_response(zato_message, 'updated', req.POST['edit-name'])        
         
     except Exception, e:
-        msg = "Could not update an AMQP definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not update a JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     
@@ -176,7 +192,7 @@ def delete(req, id, cluster_id):
         return HttpResponse()
     
     except Exception, e:
-        msg = "Could not delete the AMQP definition, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not delete the JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     
