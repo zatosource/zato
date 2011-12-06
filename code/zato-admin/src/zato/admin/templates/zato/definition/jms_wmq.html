@@ -36,6 +36,7 @@
             'ssl_cipher_spec',
             'ssl_key_repository',
             '_needs_mcd',
+            'max_chars_printed',
             '_edit',
             '_delete',
             'id',
@@ -99,6 +100,7 @@
                         <th><a href="#">Cipher spec</a></th>
                         <th><a href="#">Key repo</a></th>
                         <th><a href="#">MCD</a></th>
+                        <th><a href="#">Chars printed</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                 </thead>
@@ -121,6 +123,7 @@
                         <td>{{ item.ssl_cipher_spec|default_if_none:'' }}</td>
                         <td>{{ item.ssl_key_repository|default_if_none:'' }}</td>
                         <td>{{ item.needs_mcd|yesno:'Yes,No' }}</td>
+                        <td>{{ item.max_chars_printed }}</td>
                         <td><a href="javascript:$.fn.zato.definition.jms_wmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.definition.jms_wmq.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -133,7 +136,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='22'>No results</td>
+                        <td colspan='23'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -198,13 +201,18 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">SSL/TLS key repository</td>
+                            <td style="vertical-align:middle">SSL repository</td>
                             <td>{{ create_form.ssl_key_repository }}</td>
                         </tr>
                         
                         <tr>
                             <td style="vertical-align:middle">Needs MCD folder <span class='form_hint'>(set to True if working with WebSphere MQ 6.0 or older)</span></td>
                             <td>{{ create_form.needs_mcd }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Max characters printed</td>
+                            <td>{{ create_form.max_chars_printed }}</td>
                         </tr>
     
                         <tr>
@@ -275,13 +283,18 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">SSL/TLS key repository</td>
+                            <td style="vertical-align:middle">SSL key repository</td>
                             <td>{{ edit_form.ssl_key_repository }}</td>
                         </tr>
                         
                         <tr>
                             <td style="vertical-align:middle">Needs MCD folder <span class='form_hint'>(set to True if working with WebSphere MQ 6.0 or older)</span></td>
                             <td>{{ edit_form.needs_mcd }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Max characters printed</td>
+                            <td>{{ edit_form.max_chars_printed }}</td>
                         </tr>
     
                         <tr>

@@ -26,6 +26,7 @@ from operator import itemgetter
 from django import forms
 
 PORT = 1414
+MAX_CHARS = 100
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -40,6 +41,7 @@ class CreateForm(forms.Form):
     ssl_cipher_spec = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     ssl_key_repository = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     needs_mcd = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    max_chars_printed = forms.CharField(initial=MAX_CHARS, widget=forms.TextInput(attrs={'style':'width:20%'}))
 
 class EditForm(CreateForm):
     cache_open_send_queues = forms.BooleanField(required=False, widget=forms.CheckboxInput())

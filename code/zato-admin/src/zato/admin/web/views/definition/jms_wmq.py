@@ -68,6 +68,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.ssl_cipher_spec = params.get(prefix + 'ssl_cipher_spec')
     zato_message.data.ssl_key_repository = params.get(prefix + 'ssl_key_repository')
     zato_message.data.needs_mcd = bool(params.get(prefix + 'needs_mcd'))
+    zato_message.data.max_chars_printed = params[prefix + 'max_chars_printed']
 
     return zato_message
 
@@ -114,10 +115,11 @@ def index(req):
                 ssl_cipher_spec = definition_elem.ssl_cipher_spec.text
                 ssl_key_repository = definition_elem.ssl_key_repository.text
                 needs_mcd = is_boolean(definition_elem.needs_mcd.text)
+                max_chars_printed = definition_elem.max_chars_printed.text
                 
                 def_jms_wmq = ConnDefWMQ(id, name, host, port, queue_manager, channel,
                     cache_open_send_queues, cache_open_receive_queues, use_shared_connections, 
-                    ssl, ssl_cipher_spec, ssl_key_repository, needs_mcd)
+                    ssl, ssl_cipher_spec, ssl_key_repository, needs_mcd, max_chars_printed)
                 
                 items.append(def_jms_wmq)
                 
