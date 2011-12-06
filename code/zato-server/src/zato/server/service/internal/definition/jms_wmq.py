@@ -38,12 +38,12 @@ from validate import is_boolean
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
-from zato.common.odb.query import def_jms_wmq_list
+from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
 from zato.common.util import TRACE1
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
-    """ Returns a list of AMQP definitions available.
+    """ Returns a list of JMS WebSphere MQ definitions available.
     """
     def handle(self, *args, **kwargs):
         
@@ -75,19 +75,15 @@ class GetList(AdminService):
             return ZATO_OK, etree.tostring(definition_list)
         
 class GetByID(AdminService):
-    """ Returns a particular AMQP definition
+    """ Returns a particular JMS WebSphere MQ definition
     """
     def handle(self, *args, **kwargs):
         
-        params = _get_params(kwargs.get('payload'), ['id'], 'data.')
+        params = _get_params(kwargs.get('payload'), ['id', 'cluster_id'], 'data.')
         
         with closing(self.server.odb.session()) as session:
 
-            definition = session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
-                ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
-                ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
-                filter(ConnDefAMQP.id==params['id']).\
-                one()            
+            definition = def_jms_wmq(session, params['cluster_id'], params['id'])
             
             definition_elem = Element('definition')
             
@@ -95,10 +91,15 @@ class GetByID(AdminService):
             definition_elem.name = definition.name
             definition_elem.host = definition.host
             definition_elem.port = definition.port
-            definition_elem.vhost = definition.vhost
-            definition_elem.username = definition.username
-            definition_elem.frame_max = definition.frame_max
-            definition_elem.heartbeat = definition.heartbeat
+            definition_elem.queue_manager = definition.queue_manager
+            definition_elem.channel = definition.channel
+            definition_elem.cache_open_send_queues = definition.cache_open_send_queues
+            definition_elem.cache_open_receive_queues = definition.cache_open_receive_queues
+            definition_elem.use_shared_connections = definition.use_shared_connections
+            definition_elem.ssl = definition.ssl
+            definition_elem.ssl_cipher_spec = definition.ssl_cipher_spec
+            definition_elem.ssl_key_repository = definition.ssl_key_repository
+            definition_elem.needs_mcd = definition.needs_mcd
     
             return ZATO_OK, etree.tostring(definition_elem)
         
@@ -164,69 +165,83 @@ class Edit(AdminService):
         
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
-            request_params = ['id', 'cluster_id', 'name', 'host', 'port', 
-                'vhost',  'username', 'frame_max', 'heartbeat']
+            request_params = ['id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
+                'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
+                'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
+                'ssl_key_repository', 'needs_mcd']
             
             params = _get_params(payload, request_params, 'data.')
             
-            id = params['id']
+            id = int(params['id'])
             name = params['name']
             params['port'] = int(params['port'])
-            params['frame_max'] = int(params['frame_max'])
-            params['heartbeat'] = int(params['heartbeat'])
+            params['cache_open_send_queues'] = is_boolean(params['cache_open_send_queues'])
+            params['cache_open_receive_queues'] = is_boolean(params['cache_open_receive_queues'])
+            params['use_shared_connections'] = is_boolean(params['use_shared_connections'])
+            params['ssl'] = is_boolean(params['ssl'])
+            params['needs_mcd'] = is_boolean(params['needs_mcd'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
             
-            password = uuid4().hex
-            
-            # Let's see if we already have an account of that name before committing
+            # Let's see if we already have an object of that name before committing
             # any stuff into the database.
-            existing_one = session.query(ConnDefAMQP).\
-                filter(ConnDefAMQP.cluster_id==Cluster.id).\
-                filter(ConnDefAMQP.def_type=='amqp').\
-                filter(ConnDefAMQP.id != id).\
-                filter(ConnDefAMQP.name==name).\
+            existing_one = session.query(ConnDefWMQ).\
+                filter(ConnDefWMQ.cluster_id==Cluster.id).\
+                filter(ConnDefWMQ.id!=id).\
+                filter(ConnDefWMQ.name==name).\
                 first()
             
             if existing_one:
-                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(name))
             
-            def_amqp_elem = Element('def_amqp')
+            def_jms_wmq_elem = Element('def_jms_wmq')
+            
+            '''
+            ['id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
+                'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
+                'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
+                'ssl_key_repository', 'needs_mcd']
+                '''
             
             try:
                 
-                def_amqp = session.query(ConnDefAMQP).filter_by(id=id).one()
-                old_name = def_amqp.name
-                def_amqp.name = name
-                def_amqp.host = params['host']
-                def_amqp.port = params['port']
-                def_amqp.vhost = params['vhost']
-                def_amqp.username = params['username']
-                def_amqp.frame_max = params['frame_max']
-                def_amqp.heartbeat = params['heartbeat']
+                def_jms_wmq = session.query(ConnDefWMQ).filter_by(id=id).one()
+                old_name = def_jms_wmq.name
+                def_jms_wmq.name = name
+                def_jms_wmq.host = params['host']
+                def_jms_wmq.port = params['port']
+                def_jms_wmq.queue_manager = params['queue_manager']
+                def_jms_wmq.channel = params['channel']
+                def_jms_wmq.cache_open_send_queues = params['cache_open_send_queues']
+                def_jms_wmq.cache_open_receive_queues = params['cache_open_receive_queues']
+                def_jms_wmq.use_shared_connections = params['use_shared_connections']
+                def_jms_wmq.ssl = params['ssl']
+                def_jms_wmq.ssl_cipher_spec = params['ssl_cipher_spec']
+                def_jms_wmq.ssl_key_repository = params['ssl_key_repository']
+                def_jms_wmq.needs_mcd = params['needs_mcd']
                 
-                session.add(def_amqp)
+                session.add(def_jms_wmq)
                 session.commit()
                 
-                def_amqp_elem.id = def_amqp.id
+                def_jms_wmq_elem.id = def_jms_wmq.id
                 
-                params['id'] = int(params['id'])
-                params['action'] = DEFINITION.AMQP_EDIT
+                params['id'] = id
+                params['action'] = DEFINITION.JMS_WMQ_EDIT
                 params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
-                return ZATO_OK, etree.tostring(def_amqp_elem)
+                return ZATO_OK, etree.tostring(def_jms_wmq_elem)
                 
             except Exception, e:
-                msg = "Could not update the AMQP definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise         
         
 class Delete(AdminService):
-    """ Deletes an AMQP definition.
+    """ Deletes a JMS WebSphere MQ definition.
     """
     def handle(self, *args, **kwargs):
         with closing(self.server.odb.session()) as session:
@@ -249,7 +264,7 @@ class Delete(AdminService):
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise
