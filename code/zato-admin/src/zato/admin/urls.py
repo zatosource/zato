@@ -32,6 +32,7 @@ from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.outgoing import amqp as out_amqp
+from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.pool import sql
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
@@ -139,6 +140,12 @@ urlpatterns = patterns('',
     url(r'^zato/outgoing/amqp/create/$', out_amqp.create, name='out-amqp-create'),
     url(r'^zato/outgoing/amqp/edit/$', out_amqp.edit, name='out-amqp-edit'),
     url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_amqp.delete, name='out-amqp-delete'),
+    
+    # .. JMS WebSphere MQ
+    url(r'^zato/outgoing/jms-wmq/$', out_jms_wmq.index, name='out-jms-wmq'),
+    url(r'^zato/outgoing/jms-wmq/create/$', out_jms_wmq.create, name='out-jms-wmq-create'),
+    url(r'^zato/outgoing/jms-wmq/edit/$', out_jms_wmq.edit, name='out-jms-wmq-edit'),
+    url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_jms_wmq.delete, name='out-jms-wmq-delete'),
     
     # Channels
     
