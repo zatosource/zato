@@ -424,9 +424,33 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 	if(!item.id) {
 		item.id = data.id;
 	}
-	
+
+
+	/* TODO: Boolean fields should be dealt with in a generic way, without hard-coding
+	   anything like below, of course.
+	*/ 
 	if(item.is_active) {
 		item.is_active = $.fn.zato.to_bool(item.is_active);
+	}
+	
+	if(item.cache_open_send_queues) {
+		item.cache_open_send_queues = $.fn.zato.to_bool(item.cache_open_send_queues);
+	}
+	
+	if(item.cache_open_receive_queues) {
+		item.cache_open_receive_queues = $.fn.zato.to_bool(item.cache_open_receive_queues);
+	}
+	
+	if(item.use_shared_connections) {
+		item.use_shared_connections = $.fn.zato.to_bool(item.use_shared_connections);
+	}
+	
+	if(item.ssl) {
+		item.ssl = $.fn.zato.to_bool(item.ssl);
+	}
+	
+	if(item.needs_mcd) {
+		item.needs_mcd = $.fn.zato.to_bool(item.needs_mcd);
 	}
 	
 	$.fn.zato.data_table.data[item.id] = item;

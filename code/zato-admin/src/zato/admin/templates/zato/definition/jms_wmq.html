@@ -225,10 +225,10 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:40%">Name</td>
                             <td>{{ edit_form.name }}</td>
-                        </tr>    
-    
+                        </tr>
+                    
                         <tr>
                             <td style="vertical-align:middle">Host</td>
                             <td>{{ edit_form.host }}</td>
@@ -240,23 +240,48 @@
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Virtual host</td>
-                            <td>{{ edit_form.vhost }}</td>
+                            <td style="vertical-align:middle">Queue manager</td>
+                            <td>{{ edit_form.queue_manager }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
-                            <td>{{ edit_form.username }}</td>
+                            <td style="vertical-align:middle">Channel</td>
+                            <td>{{ edit_form.channel }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Max frame size <span class='form_hint'>(bytes)</span></td>
-                            <td>{{ edit_form.frame_max }}</td>
+                            <td style="vertical-align:middle">Cache open send queues</td>
+                            <td>{{ edit_form.cache_open_send_queues }}</td>
                         </tr>
                         
                         <tr>
-                            <td style="vertical-align:middle">Heartbeat interval <span class='form_hint'>(seconds)</span></td>
-                            <td>{{ edit_form.heartbeat }}</td>
+                            <td style="vertical-align:middle">Cache open receive queues</td>
+                            <td>{{ edit_form.cache_open_receive_queues }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Use shared connections <span class='form_hint'>(untick if the queue manager is on z/OS)</span></td>
+                            <td>{{ edit_form.use_shared_connections }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Use SSL</td>
+                            <td>{{ edit_form.ssl }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">SSL cipher spec <br/><span class='form_hint'>(e.g. TLS_RSA_WITH_AES_256_CBC_SHA)</td>
+                            <td>{{ edit_form.ssl_cipher_spec }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">SSL/TLS key repository</td>
+                            <td>{{ edit_form.ssl_key_repository }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Needs MCD folder <span class='form_hint'>(set to True if working with WebSphere MQ 6.0 or older)</span></td>
+                            <td>{{ edit_form.needs_mcd }}</td>
                         </tr>
     
                         <tr>
