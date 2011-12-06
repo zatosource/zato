@@ -590,6 +590,7 @@ class ConnDefWMQ(Base):
     ssl_cipher_spec = Column(String(200))
     ssl_key_repository = Column(String(200))
     needs_mcd = Column(Boolean(), nullable=False)
+    max_chars_printed = Column(Integer, nullable=False)
     
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
@@ -598,7 +599,7 @@ class ConnDefWMQ(Base):
                  queue_manager=None, channel=None, cache_open_send_queues=None,  
                  cache_open_receive_queues=None,  use_shared_connections=None, ssl=None, 
                  ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=None,
-                 cluster_id=None):
+                 max_chars_printed=None, cluster_id=None):
         self.id = id
         self.name = name
         self.host = host
@@ -612,6 +613,7 @@ class ConnDefWMQ(Base):
         self.ssl_cipher_spec = ssl_cipher_spec
         self.ssl_key_repository = ssl_key_repository
         self.needs_mcd = needs_mcd
+        self.max_chars_printed = max_chars_printed
         self.cluster_id = cluster_id
 
 ################################################################################

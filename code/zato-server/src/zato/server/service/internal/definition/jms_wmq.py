@@ -69,6 +69,7 @@ class GetList(AdminService):
                 definition_elem.ssl_cipher_spec = definition.ssl_cipher_spec
                 definition_elem.ssl_key_repository = definition.ssl_key_repository
                 definition_elem.needs_mcd = definition.needs_mcd
+                definition_elem.max_chars_printed = definition.max_chars_printed
     
                 definition_list.append(definition_elem)
     
@@ -100,6 +101,7 @@ class GetByID(AdminService):
             definition_elem.ssl_cipher_spec = definition.ssl_cipher_spec
             definition_elem.ssl_key_repository = definition.ssl_key_repository
             definition_elem.needs_mcd = definition.needs_mcd
+            definition_elem.max_chars_printed = definition.max_chars_printed
     
             return ZATO_OK, etree.tostring(definition_elem)
         
@@ -113,7 +115,7 @@ class Create(AdminService):
             request_params = ['cluster_id', 'name', 'host', 'port', 'queue_manager', 
                 'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
                 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-                'ssl_key_repository', 'needs_mcd']
+                'ssl_key_repository', 'needs_mcd', 'max_chars_printed']
             
             params = _get_params(payload, request_params, 'data.')
             name = params['name']
@@ -123,6 +125,7 @@ class Create(AdminService):
             params['use_shared_connections'] = is_boolean(params['use_shared_connections'])
             params['ssl'] = is_boolean(params['ssl'])
             params['needs_mcd'] = is_boolean(params['needs_mcd'])
+            params['max_chars_printed'] = int(params['max_chars_printed'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
@@ -143,7 +146,8 @@ class Create(AdminService):
                 def_ = ConnDefWMQ(None, name, params['host'], params['port'], params['queue_manager'], 
                     params['channel'], params['cache_open_send_queues'], params['cache_open_receive_queues'],
                     params['use_shared_connections'], params['ssl'], params['ssl_cipher_spec'], 
-                    params['ssl_key_repository'], params['needs_mcd'], cluster_id)
+                    params['ssl_key_repository'], params['needs_mcd'], params['max_chars_printed'],
+                    cluster_id)
                 session.add(def_)
                 session.commit()
                 
@@ -168,7 +172,7 @@ class Edit(AdminService):
             request_params = ['id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
                 'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
                 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-                'ssl_key_repository', 'needs_mcd']
+                'ssl_key_repository', 'needs_mcd', 'max_chars_printed']
             
             params = _get_params(payload, request_params, 'data.')
             
@@ -180,6 +184,7 @@ class Edit(AdminService):
             params['use_shared_connections'] = is_boolean(params['use_shared_connections'])
             params['ssl'] = is_boolean(params['ssl'])
             params['needs_mcd'] = is_boolean(params['needs_mcd'])
+            params['max_chars_printed'] = int(params['max_chars_printed'])
             
             cluster_id = params['cluster_id']
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
@@ -197,13 +202,6 @@ class Edit(AdminService):
             
             def_jms_wmq_elem = Element('def_jms_wmq')
             
-            '''
-            ['id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
-                'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
-                'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-                'ssl_key_repository', 'needs_mcd']
-                '''
-            
             try:
                 
                 def_jms_wmq = session.query(ConnDefWMQ).filter_by(id=id).one()
@@ -220,6 +218,7 @@ class Edit(AdminService):
                 def_jms_wmq.ssl_cipher_spec = params['ssl_cipher_spec']
                 def_jms_wmq.ssl_key_repository = params['ssl_key_repository']
                 def_jms_wmq.needs_mcd = params['needs_mcd']
+                def_jms_wmq.max_chars_printed = params['max_chars_printed']
                 
                 session.add(def_jms_wmq)
                 session.commit()
