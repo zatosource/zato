@@ -237,15 +237,15 @@ class Delete(AdminService):
                 
                 id = int(params['id'])
                 
-                def_ = session.query(ConnDefAMQP).\
-                    filter(ConnDefAMQP.id==id).\
+                def_ = session.query(ConnDefWMQ).\
+                    filter(ConnDefWMQ.id==id).\
                     one()
                 
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.AMQP_DELETE, 'id': id}
-                kwargs['thread_ctx'].broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                #msg = {'action': DEFINITION.JMS_WMQ_DELETE, 'id': id}
+                #self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
@@ -255,15 +255,4 @@ class Delete(AdminService):
                 raise
             
             return ZATO_OK, ''
-        
-class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an HTTP Basic Auth definition.
-    """
-    def handle(self, *args, **kwargs):
-        
-        def _auth(instance, password):
-            instance.password = password
-            
-        return self._handle(ConnDefAMQP, _auth, 
-                            DEFINITION.AMQP_CHANGE_PASSWORD, 
-                            msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, **kwargs)
+
