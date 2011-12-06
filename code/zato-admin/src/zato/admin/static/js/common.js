@@ -53,6 +53,7 @@ $.namespace('zato.cluster');
 $.namespace('zato.data_table');
 $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
+$.namespace('zato.definition.jms_wmq');
 $.namespace('zato.form');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');

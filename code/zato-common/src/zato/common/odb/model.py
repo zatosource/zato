@@ -578,14 +578,14 @@ class ConnDefWMQ(Base):
     id = Column(Integer,  Sequence('conn_def_wmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     
+    host = Column(String(200), nullable=False)
+    port = Column(Integer, nullable=False)
     queue_manager = Column(String(200), nullable=False)
     channel = Column(String(200), nullable=False)
-    host = Column(String(200), nullable=False)
-    listener_port = Column(Integer, nullable=False)
     cache_open_send_queues = Column(Boolean(), nullable=False)
     cache_open_receive_queues = Column(Boolean(), nullable=False)
     use_shared_connections = Column(Boolean(), nullable=False)
-    dynamic_queue_template = Column(String(200), nullable=False, server_default='SYSTEM.DEFAULT.MODEL.QUEUE')
+    dynamic_queue_template = Column(String(200), nullable=False, server_default='SYSTEM.DEFAULT.MODEL.QUEUE') # We're not actually using it yet
     ssl = Column(Boolean(), nullable=False)
     ssl_cipher_spec = Column(String(200))
     ssl_key_repository = Column(String(200))
@@ -594,15 +594,17 @@ class ConnDefWMQ(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
     
-    def __init__(self, id=None, name=None, queue_manager=None, channel=None, 
-                 listener_port=None,  cache_open_send_queues=None,  
+    def __init__(self, id=None, name=None, host=None, port=None, 
+                 queue_manager=None, channel=None, cache_open_send_queues=None,  
                  cache_open_receive_queues=None,  use_shared_connections=None, ssl=None, 
-                 ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=None):
+                 ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=None,
+                 cluster_id=None):
         self.id = id
         self.name = name
+        self.host = host
         self.queue_manager = queue_manager
         self.channel = channel
-        self.listener_port = listener_port
+        self.port = port
         self.cache_open_receive_queues = cache_open_receive_queues
         self.cache_open_send_queues = cache_open_send_queues
         self.use_shared_connections = use_shared_connections
@@ -610,6 +612,7 @@ class ConnDefWMQ(Base):
         self.ssl_cipher_spec = ssl_cipher_spec
         self.ssl_key_repository = ssl_key_repository
         self.needs_mcd = needs_mcd
+        self.cluster_id = cluster_id
 
 ################################################################################
 

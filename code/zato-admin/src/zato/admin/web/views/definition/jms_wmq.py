@@ -41,7 +41,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
-from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
+from zato.admin.web.forms.definition.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
@@ -52,39 +52,27 @@ logger = logging.getLogger(__name__)
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
-    '''
-    queue_manager = Column(String(200), nullable=False)
-    channel = Column(String(200), nullable=False)
-    host = Column(String(200), nullable=False)
-    listener_port = Column(Integer, nullable=False)
-    cache_open_send_queues = Column(Boolean(), nullable=False)
-    cache_open_receive_queues = Column(Boolean(), nullable=False)
-    use_shared_connections = Column(Boolean(), nullable=False)
-    dynamic_queue_template = Column(String(200), nullable=False, server_default='SYSTEM.DEFAULT.MODEL.QUEUE')
-    ssl = Column(Boolean(), nullable=False)
-    ssl_cipher_spec = Column(String(200))
-    ssl_key_repository = Column(String(200))
-    needs_mcd = Column(Boolean(), nullable=False)
-    '''
-    
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'queue_manager']
-    zato_message.data.host = params[prefix + 'channel']
-    zato_message.data.port = int(params[prefix + 'listener_port'])
-    zato_message.data. = bool(params.get(prefix + 'cache_open_send_queues'))
-    zato_message.data. = bool(params.get(prefix + 'cache_open_receive_queues'))
-    zato_message.data. = bool(params.get(prefix + 'ssl'))
-    zato_message.data.host = params[prefix + 'ssl_cipher_spec']
-    zato_message.data.host = params[prefix + 'ssl_key_repository']
-    zato_message.data. = bool(params.get(prefix + 'needs_mcd'))
+    zato_message.data.name = params[prefix + 'name']
+    zato_message.data.host = params[prefix + 'host']
+    zato_message.data.port = int(params[prefix + 'port'])
+    zato_message.data.queue_manager = params[prefix + 'queue_manager']
+    zato_message.data.channel = params[prefix + 'channel']
+    zato_message.data.cache_open_send_queues = bool(params.get(prefix + 'cache_open_send_queues'))
+    zato_message.data.cache_open_receive_queues = bool(params.get(prefix + 'cache_open_receive_queues'))
+    zato_message.data.use_shared_connections = bool(params.get(prefix + 'use_shared_connections'))
+    zato_message.data.ssl = bool(params.get(prefix + 'ssl'))
+    zato_message.data.ssl_cipher_spec = params.get(prefix + 'ssl_cipher_spec')
+    zato_message.data.ssl_key_repository = params.get(prefix + 'ssl_key_repository')
+    zato_message.data.needs_mcd = bool(params.get(prefix + 'needs_mcd'))
 
     return zato_message
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.def_amqp.id.text,
+    return_data = {'id': zato_message.data.def_jms_wmq.id.text,
                    'message': 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -97,7 +85,6 @@ def index(req):
     
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
-    change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':
         
@@ -108,24 +95,31 @@ def index(req):
         zato_message.data.cluster_id = cluster_id
         
         _, zato_message, soap_response  = invoke_admin_service(cluster,
-                'zato:definition.amqp.get-list', zato_message)
+                'zato:definition.jms_wmq.get-list', zato_message)
         
         if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
             
             for definition_elem in zato_message.data.definition_list.definition:
-                
+
                 id = definition_elem.id.text
                 name = definition_elem.name.text
                 host = definition_elem.host.text
                 port = definition_elem.port.text
-                vhost = definition_elem.vhost.text
-                username = definition_elem.username.text
-                frame_max = definition_elem.frame_max.text
-                heartbeat = definition_elem.heartbeat.text
+                queue_manager = definition_elem.queue_manager.text
+                channel = definition_elem.channel.text
+                cache_open_send_queues = is_boolean(definition_elem.cache_open_send_queues.text)
+                cache_open_receive_queues = is_boolean(definition_elem.cache_open_receive_queues.text)
+                use_shared_connections = is_boolean(definition_elem.use_shared_connections.text)
+                ssl = is_boolean(definition_elem.ssl.text)
+                ssl_cipher_spec = definition_elem.ssl_cipher_spec.text
+                ssl_key_repository = definition_elem.ssl_key_repository.text
+                needs_mcd = is_boolean(definition_elem.needs_mcd.text)
                 
-                def_amqp =  ConnDefAMQP(id, name, 'amqp', host, port, vhost, username, None, frame_max, heartbeat)
+                def_jms_wmq = ConnDefWMQ(id, name, host, port, queue_manager, channel,
+                    cache_open_send_queues, cache_open_receive_queues, use_shared_connections, 
+                    ssl, ssl_cipher_spec, ssl_key_repository, needs_mcd)
                 
-                items.append(def_amqp)
+                items.append(def_jms_wmq)
                 
 
     return_data = {'zato_clusters':zato_clusters,
@@ -134,14 +128,13 @@ def index(req):
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
-        'change_password_form':change_password_form
         }
     
     # TODO: Should really be done by a decorator.
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/definition/amqp.html', return_data,
+    return render_to_response('zato/definition/jms_wmq.html', return_data,
                               context_instance=RequestContext(req))
 
 @meth_allowed('POST')
@@ -151,7 +144,7 @@ def create(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.create', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.jms_wmq.create', zato_message)
 
         return _edit_create_response(zato_message, 'created', req.POST['name'])        
         
@@ -168,7 +161,7 @@ def edit(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.edit', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.jms_wmq.edit', zato_message)
 
         return _edit_create_response(zato_message, 'updated', req.POST['edit-name'])        
         
@@ -187,7 +180,7 @@ def delete(req, id, cluster_id):
         zato_message.data = Element('data')
         zato_message.data.id = id
         
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.jms_wmq.delete', zato_message)
         
         return HttpResponse()
     

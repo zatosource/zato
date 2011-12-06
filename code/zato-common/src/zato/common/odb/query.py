@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, Cluster, ConnDefAMQP, 
-    CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  OutgoingAMQP, Service, 
+    ConnDefWMQ, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  OutgoingAMQP, Service, 
     TechnicalAccount, WSSDefinition)
 
 def job_list(session, cluster_id):
@@ -93,6 +93,29 @@ def def_amqp_list(session, cluster_id):
     """ AMQP connection definitions.
     """
     return _def_amqp(session, cluster_id).all()
+
+
+def _def_jms_wmq(session, cluster_id):
+    return session.query(ConnDefWMQ.id, ConnDefWMQ.name, ConnDefWMQ.host,
+            ConnDefWMQ.port, ConnDefWMQ.queue_manager, ConnDefWMQ.channel,
+            ConnDefWMQ.cache_open_send_queues, ConnDefWMQ.cache_open_receive_queues, 
+            ConnDefWMQ.use_shared_connections, ConnDefWMQ.ssl, ConnDefWMQ.ssl_cipher_spec,
+            ConnDefWMQ.ssl_key_repository, ConnDefWMQ.needs_mcd).\
+        filter(Cluster.id==ConnDefWMQ.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(ConnDefWMQ.name)
+
+def def_jms_wmq(session, cluster_id, def_id):
+    """ A particular JMS WebSphere MQ definition
+    """
+    return _def_jms_wmq(session, cluster_id).\
+           filter(ConnDefWMQ.id==def_id).\
+           one()
+
+def def_jms_wmq_list(session, cluster_id):
+    """ JMS WebSphere MQ connection definitions.
+    """
+    return _def_jms_wmq(session, cluster_id).all()
 
 def _out_amqp(session, cluster_id):
     return session.query(OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active, 
