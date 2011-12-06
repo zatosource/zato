@@ -19,9 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, Cluster, ConnDefAMQP, 
-    ConnDefWMQ, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  OutgoingAMQP, 
-    OutgoingWMQ, Service, TechnicalAccount, WSSDefinition)
+from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, ChannelWMQ,
+    Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, 
+    Job,  OutgoingAMQP,  OutgoingWMQ, Service, TechnicalAccount, WSSDefinition)
 
 def job_list(session, cluster_id):
     """ All the scheduler's jobs defined in the ODB.
@@ -184,3 +184,25 @@ def channel_amqp_list(session, cluster_id):
     """ AMQP channels.
     """
     return _channel_amqp(session, cluster_id).all()
+
+def _channel_jms_wmq(session, cluster_id):
+    return session.query(ChannelWMQ.id, ChannelWMQ.name, ChannelWMQ.is_active, 
+            ChannelWMQ.queue, ConnDefWMQ.name.label('def_name'), ChannelWMQ.def_id,
+            Service.name.label('service_name')).\
+        filter(ChannelWMQ.def_id==ConnDefWMQ.id).\
+        filter(ChannelWMQ.service_id==Service.id).\
+        filter(Cluster.id==ConnDefWMQ.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(ChannelWMQ.name)
+
+def channel_jms_wmq(session, cluster_id, channel_id):
+    """ A particular JMS WebSphere MQ channel.
+    """
+    return _channel_jms_wmq(session, cluster_id).\
+           filter(ChannelWMQ.id==channel_id).\
+           one()
+
+def channel_jms_wmq_list(session, cluster_id):
+    """ JMS WebSphere MQ channels.
+    """
+    return _channel_jms_wmq(session, cluster_id).all()

@@ -29,6 +29,7 @@ from zato.admin.web.views import(cluster, load_balancer, main, scheduler,
     service, servers)
 from zato.admin.web.views.channel import soap
 from zato.admin.web.views.channel import amqp as channel_amqp
+from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.outgoing import amqp as out_amqp
@@ -154,6 +155,12 @@ urlpatterns = patterns('',
     url(r'^zato/channel/amqp/create/$', channel_amqp.create, name='channel-amqp-create'),
     url(r'^zato/channel/amqp/edit/$', channel_amqp.edit, name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.delete, name='channel-amqp-delete'),
+    
+    # .. AMQP
+    url(r'^zato/channel/jms-wmq/$', channel_jms_wmq.index, name='channel-jms-wmq'),
+    url(r'^zato/channel/jms-wmq/create/$', channel_jms_wmq.create, name='channel-jms-wmq-create'),
+    url(r'^zato/channel/jms-wmq/edit/$', channel_jms_wmq.edit, name='channel-jms-wmq-edit'),
+    url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_jms_wmq.delete, name='channel-jms-wmq-delete'),
     
 )
 

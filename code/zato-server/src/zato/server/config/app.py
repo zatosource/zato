@@ -166,6 +166,18 @@ class ZatoContext(PythonConfig):
             'zato:definition.jms_wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
             'zato:definition.jms_wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
             
+            # Channels - AMQP
+            'zato:channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
+            'zato:channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
+            'zato:channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
+            'zato:channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
+            
+            # Channels - JMS WebSphere MQ
+            'zato:channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
+            'zato:channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
+            'zato:channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
+            'zato:channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
+            
             # Outgoing connections - AMQP
             'zato:outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
             'zato:outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
