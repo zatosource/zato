@@ -274,13 +274,14 @@ class ServiceStore(InitializingObject):
         from zato.server.service.internal.channel import amqp as channel_amqp
         from zato.server.service.internal.channel import soap
         from zato.server.service.internal.definition import amqp as def_amqp
+        from zato.server.service.internal.definition import jms_wmq as def_jms_wmq
         from zato.server.service.internal.outgoing import amqp as out_amqp
         from zato.server.service.internal.security import basic_auth, \
              tech_account, wss
 
         # XXX: The list would be better read from the IoC container
-        modules = [channel_amqp, def_amqp, internal, out_amqp, sql, scheduler, service, soap, wss, 
-                   tech_account,  basic_auth]
+        modules = [channel_amqp, def_amqp, def_jms_wmq, internal, out_amqp, sql, 
+                   scheduler, service, soap, wss, tech_account,  basic_auth]
 
         # Read all definitions of Zato's own internal services.
         for mod in modules:
