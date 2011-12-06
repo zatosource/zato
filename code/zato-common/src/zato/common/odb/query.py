@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, Cluster, ConnDefAMQP, 
-    ConnDefWMQ, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  OutgoingAMQP, Service, 
-    TechnicalAccount, WSSDefinition)
+    ConnDefWMQ, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, Job,  OutgoingAMQP, 
+    OutgoingWMQ, Service, TechnicalAccount, WSSDefinition)
 
 def job_list(session, cluster_id):
     """ All the scheduler's jobs defined in the ODB.
@@ -139,6 +139,28 @@ def out_amqp_list(session, cluster_id):
     """ Outgoing AMQP connections.
     """
     return _out_amqp(session, cluster_id).all()
+
+def _out_jms_wmq(session, cluster_id):
+    return session.query(OutgoingWMQ.id, OutgoingWMQ.name, OutgoingWMQ.is_active, 
+            OutgoingWMQ.delivery_mode, OutgoingWMQ.priority, OutgoingWMQ.expiration, 
+            OutgoingWMQ.name.label('def_name'), OutgoingWMQ.def_id).\
+        filter(OutgoingWMQ.def_id==ConnDefWMQ.id).\
+        filter(ConnDefWMQ.id==OutgoingWMQ.def_id).\
+        filter(Cluster.id==ConnDefWMQ.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(OutgoingWMQ.name)
+
+def out_jms_wmq(session, cluster_id, out_id):
+    """ An outgoing AMQP connection.
+    """
+    return _out_jms_wmq(session, cluster_id).\
+           filter(OutgoingWMQ.id==out_id).\
+           one()
+
+def out_jms_wmq_list(session, cluster_id):
+    """ Outgoing AMQP connections.
+    """
+    return _out_jms_wmq(session, cluster_id).all()
 
 def _channel_amqp(session, cluster_id):
     return session.query(ChannelAMQP.id, ChannelAMQP.name, ChannelAMQP.is_active, 

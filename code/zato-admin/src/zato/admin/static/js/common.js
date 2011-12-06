@@ -57,6 +57,7 @@ $.namespace('zato.definition.jms_wmq');
 $.namespace('zato.form');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
+$.namespace('zato.outgoing.jms_wmq');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');

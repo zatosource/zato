@@ -39,7 +39,6 @@ from validate import is_boolean
 from anyjson import dumps
 
 # Zato
-from zato.admin.settings import amqp_delivery_friendly_name
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.channel.amqp import CreateForm, EditForm

@@ -31,7 +31,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common.util import make_repr, object_attrs
-from zato.common.odb import AMQP_DEFAULT_PRIORITY
+from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
 
@@ -657,6 +657,35 @@ class OutgoingAMQP(Base):
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
         
+class OutgoingWMQ(Base):
+    """ An outgoing WebSphere MQ connection.
+    """
+    __tablename__ = 'out_wmq'
+    
+    id = Column(Integer,  Sequence('out_wmq_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    
+    delivery_mode = Column(SmallInteger(), nullable=False)
+    priority = Column(SmallInteger(), server_default=str(WMQ_DEFAULT_PRIORITY), nullable=False)
+    expiration = Column(String(20), nullable=True)
+    
+    def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
+    def_ = relationship(ConnDefWMQ, backref=backref('out_conns_wmq', cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, is_active=None, delivery_mode=None,
+                 priority=None, expiration=None, def_id=None, delivery_mode_text=None, 
+                 def_name=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.delivery_mode = delivery_mode
+        self.priority = priority
+        self.expiration = expiration
+        self.def_id = def_id
+        self.delivery_mode_text = delivery_mode_text # Not used by the DB
+        self.def_name = def_name # Not used by the DB
+        
 ################################################################################
 
 class ChannelAMQP(Base):
@@ -688,3 +717,28 @@ class ChannelAMQP(Base):
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
         
+class ChannelWMQ(Base):
+    """ An incoming WebSphere MQ connection.
+    """
+    __tablename__ = 'channel_wmq'
+    
+    id = Column(Integer,  Sequence('channel_wmq_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    queue = Column(String(200), nullable=False)
+
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship(Service, backref=backref('wmq_channels', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
+    def_ = relationship(ConnDefWMQ, backref=backref('wmq_channels', cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, is_active=None, queue=None, 
+                 def_id=None, def_name=None, service_name=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.queue = queue
+        self.def_id = def_id
+        self.def_name = def_name # Not used by the DB
+        self.service_name = service_name # Not used by the DB
