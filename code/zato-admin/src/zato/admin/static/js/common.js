@@ -49,6 +49,7 @@ if ({}.__proto__){
 $.namespace('zato');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
+$.namespace('zato.channel.jms_wmq');
 $.namespace('zato.cluster');
 $.namespace('zato.data_table');
 $.namespace('zato.definition');

@@ -37,13 +37,13 @@ from validate import is_boolean
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
-from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
-from zato.common.odb.query import channel_amqp_list
-from zato.server.amqp.channel import start_connector
+from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
+from zato.common.odb.query import channel_jms_wmq_list
+#from zato.server.amqp.channel import start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
-    """ Returns a list of AMQP channels.
+    """ Returns a list of JMS WebSphere MQ channels.
     """
     def handle(self, *args, **kwargs):
         
@@ -51,7 +51,7 @@ class GetList(AdminService):
         
         with closing(self.server.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = channel_amqp_list(session, params['cluster_id'])
+            db_items = channel_jms_wmq_list(session, params['cluster_id'])
     
             for db_item in db_items:
     
@@ -60,7 +60,6 @@ class GetList(AdminService):
                 item.name = db_item.name
                 item.is_active = db_item.is_active
                 item.queue = db_item.queue
-                item.consumer_tag_prefix = db_item.consumer_tag_prefix
                 item.service_name = db_item.service_name
                 item.def_name = db_item.def_name
                 item.def_id = db_item.def_id
@@ -70,15 +69,14 @@ class GetList(AdminService):
             return ZATO_OK, etree.tostring(item_list)
         
 class Create(AdminService):
-    """ Creates a new AMQP channel.
+    """ Creates a new WebSphere MQ channel.
     """
     def handle(self, *args, **kwargs):
         
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
             
-            params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue', 
-                      'consumer_tag_prefix', 'service']
+            params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service']
             params = _get_params(payload, params, 'data.')
             
             name = params['name']
@@ -88,14 +86,14 @@ class Create(AdminService):
             
             # Let's see if we already have a channel of that name before committing
             # any stuff into the database.
-            existing_one = session.query(ChannelAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==cluster_id).\
-                filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
-                filter(ChannelAMQP.name==name).\
+            existing_one = session.query(ChannelWMQ.id).\
+                filter(ConnDefWMQ.cluster_id==cluster_id).\
+                filter(ChannelWMQ.def_id==ConnDefWMQ.id).\
+                filter(ChannelWMQ.name==name).\
                 first()
             
             if existing_one:
-                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(name))
+                raise Exception('A WebSphere MQ channel [{0}] already exists on this cluster'.format(name))
             
             # Is the service's name correct?
             service = session.query(Service).\
@@ -107,17 +105,16 @@ class Create(AdminService):
                 logger.error(msg)
                 raise Exception(msg)
             
-            created_elem = Element('channel_amqp')
+            created_elem = Element('channel_jms_wmq')
             
             try:
 
                 params['is_active'] = is_boolean(params['is_active'])
                 
-                item = ChannelAMQP()
+                item = ChannelWMQ()
                 item.name = params['name']
                 item.is_active = params['is_active']
                 item.queue = params['queue']
-                item.consumer_tag_prefix = params['consumer_tag_prefix']
                 item.def_id = params['def_id']
                 item.service = service
                 
@@ -125,27 +122,26 @@ class Create(AdminService):
                 session.commit()
                 
                 created_elem.id = item.id
-                start_connector(self.server.repo_location, item.id, item.def_id)
+                #start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
             except Exception, e:
-                msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create a WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
 
 class Edit(AdminService):
-    """ Updates an AMQP channel.
+    """ Updates a JMS WebSphere MQ channel.
     """
     def handle(self, *args, **kwargs):
         
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 
-                      'consumer_tag_prefix', 'service']
+            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'service']
             params = _get_params(payload, params, 'data.')
             
             id = params['id']
@@ -156,15 +152,15 @@ class Edit(AdminService):
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
-            existing_one = session.query(ChannelAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==cluster_id).\
-                filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
-                filter(ChannelAMQP.name==name).\
-                filter(ChannelAMQP.id!=id).\
+            existing_one = session.query(ChannelWMQ.id).\
+                filter(ConnDefWMQ.cluster_id==cluster_id).\
+                filter(ChannelWMQ.def_id==ConnDefWMQ.id).\
+                filter(ChannelWMQ.name==name).\
+                filter(ChannelWMQ.id!=id).\
                 first()
             
             if existing_one:
-                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(name))
+                raise Exception('A JMS WebSphere MQ channel [{0}] already exists on this cluster'.format(name))
             
             # Is the service's name correct?
             service = session.query(Service).\
@@ -175,7 +171,7 @@ class Edit(AdminService):
                 msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
                 raise Exception(msg)
             
-            xml_item = Element('channel_amqp')
+            xml_item = Element('channel_jms_wmq')
             
             try:
                 
@@ -183,12 +179,11 @@ class Edit(AdminService):
                 params['def_id'] = int(params['def_id'])
                 params['is_active'] = is_boolean(params['is_active'])
                 
-                item = session.query(ChannelAMQP).filter_by(id=id).one()
+                item = session.query(ChannelWMQ).filter_by(id=id).one()
                 old_name = item.name
                 item.name = name
                 item.is_active = params['is_active']
                 item.queue = params['queue']
-                item.consumer_tag_prefix = params['consumer_tag_prefix']
                 item.def_id = params['def_id']
                 item.service = service
                 
@@ -197,21 +192,21 @@ class Edit(AdminService):
                 
                 xml_item.id = item.id
                 
-                params['action'] = CHANNEL.AMQP_EDIT
-                params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                #params['action'] = CHANNEL.JMS_WMQ_EDIT
+                #params['old_name'] = old_name
+                #kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
             except Exception, e:
-                msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise  
         
 class Delete(AdminService):
-    """ Deletes an AMQP channel.
+    """ Deletes an JMS WebSphere MQ channel.
     """
     def handle(self, *args, **kwargs):
         with closing(self.server.odb.session()) as session:
@@ -222,19 +217,19 @@ class Delete(AdminService):
                 
                 id = params['id']
                 
-                def_ = session.query(ChannelAMQP).\
-                    filter(ChannelAMQP.id==id).\
+                def_ = session.query(ChannelWMQ).\
+                    filter(ChannelWMQ.id==id).\
                     one()
                 
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': CHANNEL.AMQP_DELETE, 'name': def_.name, 'id':def_.id}
-                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                #msg = {'action': CHANNEL.JMS_WMQ_DELETE, 'name': def_.name, 'id':def_.id}
+                #self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the AMQP channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise
