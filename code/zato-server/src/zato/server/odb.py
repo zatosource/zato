@@ -34,9 +34,10 @@ from bunch import Bunch
 from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
      Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server, 
      Service, TechnicalAccount, WSSDefinition)
-from zato.common.odb.query import(channel_amqp, channel_amqp_list, def_amqp, 
-    def_amqp_list, basic_auth_list,  job_list,  out_amqp, out_amqp_list, tech_acc_list, 
-    wss_list)
+from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
+    channel_jms_wmq_list, def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, 
+    basic_auth_list,  job_list,  out_amqp, out_amqp_list, out_jms_wmq, out_jms_wmq_list, 
+    tech_acc_list, wss_list)
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -214,10 +215,15 @@ class ODBManager(object):
             logger.error(msg)
             self._session.rollback()
             
+            
+# ##############################################################################
+            
     def get_job_list(self, cluster_id):
         """ Returns a list of jobs defined on the given cluster .
         """
         return job_list(self._session, cluster_id)
+    
+# ##############################################################################
     
     def get_basic_auth_list(self, cluster_id):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster .
@@ -233,6 +239,8 @@ class ODBManager(object):
         """ Returns a list of WS-Security definitions on the given cluster .
         """
         return wss_list(self._session, cluster_id)
+    
+# ##############################################################################
 
     def get_def_amqp(self, cluster_id, def_id):
         """ Returns an AMQP definition's details.
@@ -245,7 +253,7 @@ class ODBManager(object):
         return def_amqp_list(self._session, cluster_id)
 
     def get_out_amqp(self, cluster_id, out_id):
-        """ Returns am outgoing AMQP connection's details.
+        """ Returns an outgoing AMQP connection's details.
         """
         return out_amqp(self._session, cluster_id, out_id)
     
@@ -263,3 +271,37 @@ class ODBManager(object):
         """ Returns a list of AMQP channels.
         """
         return channel_amqp_list(self._session, cluster_id)
+    
+# ##############################################################################
+
+    def get_def_jms_wmq(self, cluster_id, def_id):
+        """ Returns an JMS WebSphere MQ definition's details.
+        """
+        return def_jms_wmq(self._session, cluster_id, def_id)
+    
+    def get_def_jms_wmq_list(self, cluster_id):
+        """ Returns a list of JMS WebSphere MQ definitions on the given cluster .
+        """
+        return def_jms_wmq_list(self._session, cluster_id)
+
+    def get_out_jms_wmq(self, cluster_id, out_id):
+        """ Returns an outgoing JMS WebSphere MQ connection's details.
+        """
+        return out_jms_wmq(self._session, cluster_id, out_id)
+    
+    def get_out_jms_wmq_list(self, cluster_id):
+        """ Returns a list of outgoing JMS WebSphere MQ connections.
+        """
+        return out_jms_wmq_list(self._session, cluster_id)
+
+    def get_channel_jms_wmq(self, cluster_id, channel_id):
+        """ Returns a particular JMS WebSphere MQ channel.
+        """
+        return channel_jms_wmq(self._session, cluster_id, channel_id)
+    
+    def get_channel_jms_wmq_list(self, cluster_id):
+        """ Returns a list of JMS WebSphere MQ channels.
+        """
+        return channel_jms_wmq_list(self._session, cluster_id)
+    
+# ##############################################################################

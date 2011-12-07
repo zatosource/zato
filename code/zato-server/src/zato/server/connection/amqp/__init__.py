@@ -272,12 +272,8 @@ class BaseAMQPConnector(BaseConnector):
                 p.terminate()
                 
     def _setup_odb(self):
+        super(BaseAMQPConnector, self)._setup_odb()
         
-        # First let's see if the server we're running on top of exists in the ODB.
-        self.server = self.odb.fetch_server()
-        if not self.server:
-            raise Exception('Server does not exist in the ODB')
-
         item = self.odb.get_def_amqp(self.server.cluster.id, self.def_id)
         self.def_amqp = Bunch()
         self.def_amqp.name = item.name

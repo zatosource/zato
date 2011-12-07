@@ -82,12 +82,12 @@ class PublisherFacade(object):
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL)
 
-class PublishingConnector(BaseAMQPConnector):
+class OutgoingConnector(BaseAMQPConnector):
     """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP
     broker gets its own connector.
     """
     def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
-        super(PublishingConnector, self).__init__(repo_location, def_id)
+        super(OutgoingConnector, self).__init__(repo_location, def_id)
         self.broker_client_name = 'amqp-publishing-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
@@ -101,7 +101,7 @@ class PublishingConnector(BaseAMQPConnector):
             self._setup_amqp()
             
     def _setup_odb(self):
-        super(PublishingConnector, self)._setup_odb()
+        super(OutgoingConnector, self)._setup_odb()
         
         item = self.odb.get_out_amqp(self.server.cluster.id, self.out_id)
         self.out_amqp = Bunch()
@@ -131,7 +131,7 @@ class PublishingConnector(BaseAMQPConnector):
         listener. All the listeners receive incoming each of the PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
-        if super(PublishingConnector, self).filter(msg):
+        if super(OutgoingConnector, self).filter(msg):
             return True
         
         elif msg.action == OUTGOING.AMQP_PUBLISH:
@@ -262,10 +262,10 @@ def run_connector():
     setup_logging()
     
     repo_location = os.environ['ZATO_REPO_LOCATION']
-    def_id = os.environ['ZATO_CONNECTOR_AMQP_DEF_ID']
+    def_id = os.environ['ZATO_CONNECTOR_DEF_ID']
     item_id = os.environ[ENV_ITEM_NAME]
     
-    connector = PublishingConnector(repo_location, def_id, item_id)
+    connector = OutgoingConnector(repo_location, def_id, item_id)
     
     logger = logging.getLogger(__name__)
     logger.debug('Starting AMQP connector listener, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(

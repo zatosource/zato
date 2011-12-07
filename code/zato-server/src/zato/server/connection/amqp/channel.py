@@ -208,7 +208,7 @@ def run_connector():
     setup_logging()
     
     repo_location = os.environ['ZATO_REPO_LOCATION']
-    def_id = os.environ['ZATO_CONNECTOR_AMQP_DEF_ID']
+    def_id = os.environ['ZATO_CONNECTOR_DEF_ID']
     item_id = os.environ[ENV_ITEM_NAME]
     
     connector = ConsumingConnector(repo_location, def_id, item_id)
