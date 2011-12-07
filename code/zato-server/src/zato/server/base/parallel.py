@@ -41,8 +41,8 @@ from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.broker_message import AMQP_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
-from zato.server.amqp.channel import start_connector as channel_start_connector
-from zato.server.amqp.outgoing import start_connector as out_start_connector
+from zato.server.connection.amqp.channel import start_connector as channel_start_connector
+from zato.server.connection.amqp.outgoing import start_connector as out_start_connector
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
 from zato.server.channel.soap import server_soap_error
@@ -369,6 +369,3 @@ class ParallelServer(BrokerMessageReceiver):
             task_dispatcher.shutdown()
 
 # ##############################################################################
-
-
-            
