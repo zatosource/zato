@@ -53,7 +53,10 @@ class BaseConnector(BaseWorker):
         raise NotImplementedError('Must be implemented by a subclass')
     
     def _setup_odb(self):
-        raise NotImplementedError('Must be implemented by a subclass')
+        # First let's see if the server we're running on top of exists in the ODB.
+        self.server = self.odb.fetch_server()
+        if not self.server:
+            raise Exception('Server does not exist in the ODB')
         
     def _init(self):
         """ Initializes all the basic run-time data structures and connects
@@ -104,7 +107,7 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     """ Starts a new connector process.
     """
     
-    # Believe it or not but this is the only sane way to make AMQP subprocesses 
+    # Believe it or not but this is the only sane way to make connector subprocesses 
     # work as of now (15 XI 2011).
     
     # Subprocesses spawned in a shell need to use
@@ -122,7 +125,7 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     
     zato_env = {}
     zato_env['ZATO_REPO_LOCATION'] = repo_location
-    zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(def_id)
+    zato_env['ZATO_CONNECTOR_DEF_ID'] = str(def_id)
     zato_env[env_item_name] = str(item_id)
     
     _env = os.environ

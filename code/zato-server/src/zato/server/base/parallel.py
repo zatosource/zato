@@ -41,8 +41,9 @@ from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
 from zato.common.broker_message import AMQP_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
-from zato.server.connection.amqp.channel import start_connector as channel_start_connector
-from zato.server.connection.amqp.outgoing import start_connector as out_start_connector
+from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
+from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
+from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
 from zato.server.channel.soap import server_soap_error
@@ -287,7 +288,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.wss = wss_config
         self.worker_config.url_sec = url_sec
         
-        self._init_amqp(server)
+        self._init_connectors(server)
         
         # The parallel server's broker client. The client's used to notify
         # all the server's AMQP subprocesses that they need to shut down.
@@ -301,15 +302,22 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_client.init()
         self.broker_client.start()
         
-    def _init_amqp(self, server):
-        """ Starts all the AMQP subprocesses.
+    def _init_connectors(self, server):
+        """ Starts all the connector subprocesses.
         """
-        for item in self.odb.get_out_amqp_list(server.cluster.id):
-            out_start_connector(self.repo_location, item.id, item.def_id)
-            
-        for item in self.odb.get_channel_amqp_list(server.cluster.id):
-            channel_start_connector(self.repo_location, item.id, item.def_id)
         
+        # AMQP - outgoing
+        #for item in self.odb.get_out_amqp_list(server.cluster.id):
+        #    amqp_out_start_connector(self.repo_location, item.id, item.def_id)
+        
+        # AMQP - channels    
+        #for item in self.odb.get_channel_amqp_list(server.cluster.id):
+        #    amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
+            
+        # JMS WMQ - outgoing
+        for item in self.odb.get_out_jms_wmq_list(server.cluster.id):
+            jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
+    
     def _after_init_non_accepted(self, server):
         pass    
         
