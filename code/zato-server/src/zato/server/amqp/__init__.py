@@ -20,12 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function
 
 # Setting the custom logger must come first
-import logging
+import logging, os
 from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
 # stdlib
-import errno, os, sys, time
+import errno, time
 from datetime import datetime
 from subprocess import Popen
 from threading import RLock
@@ -48,11 +48,10 @@ import psutil
 from bunch import Bunch
 
 # Zato
-from zato.broker.zato_client import BrokerClient
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.broker_message import AMQP_CONNECTOR, DEFINITION
-from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
-from zato.server.base import BaseWorker
+from zato.common.util import TRACE1
+from zato.server.connector import BaseConnector
 
 class BaseConnection(object):
     """ An object which does an actual job of (re-)connecting to the the AMQP broker.
@@ -150,31 +149,10 @@ class BaseConnection(object):
         msg = 'Closed the connection for {0}'.format(self._conn_info())
         self.logger.debug(msg)
 
-class BaseConnector(BaseWorker):
-    """ A base class for both AMQP channels and outgoing connectors.
+class BaseAMQPConnector(BaseConnector):
+    """ A base connector for any AMQP-related ones.
     """
-    def __init__(self, repo_location, def_id):
-        self.repo_location = repo_location
-        self.def_id = def_id
-        self.odb = None
-        self.broker_client_name = None
-        
     def _init(self):
-        """ Initializes all the run-time data structures, fetches configuration,
-        connects to the ODB and the AMQP broker.
-        """
-        
-        # Imported here to avoid circular dependencies
-        from zato.server.config.app import ZatoContext
-
-        config = get_config(self.repo_location, 'server.conf')
-        app_context = get_app_context(config, ZatoContext)
-        crypto_manager = get_crypto_manager(self.repo_location, app_context, config)
-        
-        self.odb = app_context.get_object('odb_manager')
-        self.odb.crypto_manager = crypto_manager
-        self.odb.odb_data = config['odb']
-        
         self.def_amqp = Bunch()
         self.def_amqp_lock = RLock()
         
@@ -187,49 +165,8 @@ class BaseConnector(BaseWorker):
         self.out_amqp_lock = RLock()
         self.channel_amqp_lock = RLock()
         
-        self._setup_odb()
-        
-        self.worker_data = Bunch()
-        self.worker_data.broker_config = Bunch()
-        self.worker_data.broker_config.name = self.broker_client_name
-        self.worker_data.broker_config.broker_token = self.server.cluster.broker_token
-        self.worker_data.broker_config.zmq_context = zmq.Context()
-
-        broker_push_client_pull = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + self.broker_push_client_pull_port)
-        
-        client_push_broker_pull = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + self.client_push_broker_pull_port)
-        
-        broker_pub_client_sub = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + self.broker_pub_client_sub_port)
-        
-        self.worker_data.broker_config.broker_push_client_pull = broker_push_client_pull
-        self.worker_data.broker_config.client_push_broker_pull = client_push_broker_pull
-        self.worker_data.broker_config.broker_pub_client_sub = broker_pub_client_sub
-
-        # Connects to the broker
-        super(BaseConnector, self)._init()
-        
-    def _setup_odb(self):
-        
-        # First let's see if the server we're running on top of exists in the ODB.
-        self.server = self.odb.fetch_server()
-        if not self.server:
-            raise Exception('Server does not exist in the ODB')
-
-        item = self.odb.get_def_amqp(self.server.cluster.id, self.def_id)
-        self.def_amqp = Bunch()
-        self.def_amqp.name = item.name
-        self.def_amqp.id = item.id
-        self.def_amqp.host = str(item.host)
-        self.def_amqp.port = item.port
-        self.def_amqp.vhost = item.vhost
-        self.def_amqp.username = item.username
-        self.def_amqp.password = item.password
-        self.def_amqp.heartbeat = item.heartbeat
-        self.def_amqp.frame_max = item.frame_max
-        
+        super(BaseAMQPConnector, self)._init()
+    
     def filter(self, msg):
         """ The base class knows how to manage the AMQP definitions but not channels
         or outgoing connections.
@@ -242,6 +179,7 @@ class BaseConnector(BaseWorker):
             if self.def_amqp.id == msg.id:
                 return True
             
+        
     def on_broker_pull_msg_AMQP_CONNECTOR_CLOSE(self, msg, *args):
         """ Stops the publisher, ODB connection and exits the process.
         """
@@ -333,37 +271,21 @@ class BaseConnector(BaseWorker):
                 p = psutil.Process(os.getpid())
                 p.terminate()
                 
-def setup_logging():
-    logging.addLevelName('TRACE1', TRACE1)
-    from logging import config
-    config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
+    def _setup_odb(self):
+        
+        # First let's see if the server we're running on top of exists in the ODB.
+        self.server = self.odb.fetch_server()
+        if not self.server:
+            raise Exception('Server does not exist in the ODB')
 
-def start_connector(repo_location, amqp_file, env_item_name, def_id, item_id):
-    """ Starts a new connector process.
-    """
-    
-    # Believe it or not but this is the only sane way to make AMQP subprocesses 
-    # work as of now (15 XI 2011).
-    
-    # Subprocesses spawned in a shell need to use
-    # the wrapper which sets up the PYTHONPATH instead of the regular Python
-    # executable, because the executable may not have all the dependencies required.
-    # Of course, this needs to be squared away before Zato gets into any Linux 
-    # distribution but then the situation will be much simpler as we simply won't 
-    # have to patch up anything, the distro will take care of any dependencies.
-    executable = os.path.join(os.path.dirname(sys.executable), 'py')
-    
-    if amqp_file[-1] in('c', 'o'): # Need to use the source code file
-        amqp_file = amqp_file[:-1]
-    
-    program = '{0} {1}'.format(executable, amqp_file)
-    
-    zato_env = {}
-    zato_env['ZATO_REPO_LOCATION'] = repo_location
-    zato_env['ZATO_CONNECTOR_AMQP_DEF_ID'] = str(def_id)
-    zato_env[env_item_name] = str(item_id)
-    
-    _env = os.environ
-    _env.update(zato_env)
-    
-    Popen(program, close_fds=True, shell=True, env=_env)
+        item = self.odb.get_def_amqp(self.server.cluster.id, self.def_id)
+        self.def_amqp = Bunch()
+        self.def_amqp.name = item.name
+        self.def_amqp.id = item.id
+        self.def_amqp.host = str(item.host)
+        self.def_amqp.port = item.port
+        self.def_amqp.vhost = item.vhost
+        self.def_amqp.username = item.username
+        self.def_amqp.password = item.password
+        self.def_amqp.heartbeat = item.heartbeat
+        self.def_amqp.frame_max = item.frame_max

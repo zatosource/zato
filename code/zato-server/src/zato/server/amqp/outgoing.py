@@ -34,7 +34,8 @@ from bunch import Bunch
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
 from zato.common.util import TRACE1
-from zato.server.amqp import BaseConnection, BaseConnector, setup_logging, start_connector as _start_connector
+from zato.server.amqp import BaseConnection, BaseAMQPConnector
+from zato.server.connector import setup_logging, start_connector as _start_connector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_OUT_ID'
 
@@ -81,7 +82,7 @@ class PublisherFacade(object):
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL)
 
-class PublishingConnector(BaseConnector):
+class PublishingConnector(BaseAMQPConnector):
     """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP
     broker gets its own connector.
     """
