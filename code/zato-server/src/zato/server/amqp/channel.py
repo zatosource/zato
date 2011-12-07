@@ -34,7 +34,8 @@ from bunch import Bunch
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
-from zato.server.amqp import BaseConnection, BaseConnector, setup_logging, start_connector as _start_connector
+from zato.server.amqp import BaseConnection, BaseAMQPConnector
+from zato.server.connector import setup_logging, start_connector as _start_connector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_CHANNEL_ID'
 
@@ -74,7 +75,7 @@ class ConsumingConnection(BaseConnection):
             self._conn_info(), queue, consumer_tag))
         
         
-class ConsumingConnector(BaseConnector):
+class ConsumingConnector(BaseAMQPConnector):
     """ An AMQP consuming connector started as a subprocess. Each connection to an AMQP
     broker gets its own connector.
     """
