@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.server.amqp.outgoing import PublisherFacade
+from zato.server.connection.amqp.outgoing import PublisherFacade
 
 __all__ = ["Service"]
 

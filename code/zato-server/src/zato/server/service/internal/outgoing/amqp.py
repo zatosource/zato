@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, ConnDefAMQP, OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
-from zato.server.amqp.outgoing import start_connector as out_start_connector
+from zato.server.connection.amqp.outgoing import start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
