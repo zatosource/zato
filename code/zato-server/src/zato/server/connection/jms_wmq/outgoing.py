@@ -80,6 +80,9 @@ class OutgoingConnection(BaseConnection):
     def _start(self):
         self.factory._connect()
         self._on_connected()
+        
+    def _close(self):
+        self.factory.destroy()
 
     def _keep_connecting(self, exception):
         # Assume we can always deal with JMS exception and network errors
@@ -154,8 +157,8 @@ class OutgoingConnector(BaseConnector):
         """ Stops the given outgoing connection's publisher. The method must 
         be called from a method that holds onto all related RLocks.
         """
-        if self.out.get('sender') and self.out.sender.factory:
-            self.out.sender.factory.destroy()
+        if self.out.get('sender'):
+            self.out.sender.close()
         
     def _recreate_sender(self):
         self._stop_connection()
@@ -183,6 +186,8 @@ class OutgoingConnector(BaseConnector):
         #jms_template.send('aazaa', 'TEST.1')
         
     def _sender(self, factory):
+        """ Starts the outgoing connection in a new thread and returns it.
+        """
         sender = OutgoingConnection(factory, self.out.name)
         t = Thread(target=sender._run)
         t.start()
@@ -197,7 +202,10 @@ class OutgoingConnector(BaseConnector):
                 self._recreate_sender()
                 
     def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
+        """ Stops the connections, exits the process.
+        """
         self._stop_connection()
+        self._close()
         
 def run_connector():
     """ Invoked on the process startup.
