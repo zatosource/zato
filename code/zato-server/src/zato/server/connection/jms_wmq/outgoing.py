@@ -30,6 +30,10 @@ from pika import BasicProperties
 # Bunch
 from bunch import Bunch
 
+# Spring Python
+from springpython.jms.core import JmsTemplate
+from springpython.jms.factory import WebSphereMQConnectionFactory
+
 # Zato
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
@@ -134,10 +138,41 @@ class OutgoingConnector(BaseConnector):
         self.out.delivery_mode = item.delivery_mode
         self.out.priority = item.priority
         self.out.expiration = item.expiration
-        self.out.publisher = None
+        self.out.sender = None
+        
+    def _stop_connection(self):
+        """ Stops the given outgoing connection's publisher. The method must 
+        be called from a method that holds onto all related RLocks.
+        """
+        if self.out.get('sender') and self.out.sender.get('factory'):
+            self.out.sender.factory.destroy()
         
     def _recreate_connection(self):
-        pass
+        self._stop_connection()
+        
+        import inspect
+        print('aaa', inspect.getsourcefile(WebSphereMQConnectionFactory))
+       
+        self.sender = Bunch()
+        self.sender.factory = WebSphereMQConnectionFactory(
+            self.def_.queue_manager,
+            str(self.def_.channel),
+            str(self.def_.host),
+            self.def_.port,
+            self.def_.cache_open_send_queues,
+            self.def_.cache_open_receive_queues,
+            self.def_.use_shared_connections,
+            ssl = self.def_.ssl,
+            ssl_cipher_spec = self.def_.ssl_cipher_spec,
+            ssl_key_repository = self.def_.ssl_key_repository,
+            needs_mcd = self.def_.needs_mcd,
+        )
+        
+        #self.def_.max_chars_printed = item.max_chars_printed
+        
+        jms_template = JmsTemplate(self.sender.factory)
+        
+        jms_template.send('aazaa', 'TEST.1')
         
     def _setup_connector(self):
         """ Sets up the connector on startup.

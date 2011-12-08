@@ -117,14 +117,14 @@ class OutgoingConnector(BaseAMQPConnector):
         self.out_amqp.app_id = item.app_id
         self.out_amqp.def_name = item.def_name
         self.out_amqp.def_id = item.def_id
-        self.out_amqp.publisher = None
+        self.out_amqp.sender = None
         
     def _setup_amqp(self):
-        """ Sets up the AMQP publisher on startup.
+        """ Sets up the AMQP sender on startup.
         """
         with self.out_amqp_lock:
             with self.def_amqp_lock:
-                self._recreate_amqp_publisher()
+                self._recreate_sender()
                 
     def filter(self, msg):
         """ Finds out whether the incoming message actually belongs to the 
@@ -145,20 +145,20 @@ class OutgoingConnector(BaseAMQPConnector):
                 self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
         
-    def _stop_amqp_connection(self):
-        """ Stops the given outgoing AMQP connection's publisher. The method must 
+    def _stop_connection(self):
+        """ Stops the given outgoing AMQP connection's sender. The method must 
         be called from a method that holds onto all AMQP-related RLocks.
         """
-        if self.out_amqp.get('publisher') and self.out_amqp.publisher.conn and self.out_amqp.publisher.conn.is_open:
-            self.out_amqp.publisher.close()
+        if self.out_amqp.get('sender') and self.out_amqp.sender.conn and self.out_amqp.sender.conn.is_open:
+            self.out_amqp.sender.close()
                             
-    def _recreate_amqp_publisher(self):
-        """ (Re-)creates an AMQP publisher and updates the related outgoing
+    def _recreate_sender(self):
+        """ (Re-)creates an AMQP sender and updates the related outgoing
         AMQP connection's attributes so that they point to the newly created
-        publisher. The method must be called from a method that holds
+        sender. The method must be called from a method that holds
         onto all AMQP-related RLocks.
         """
-        self._stop_amqp_connection()
+        self._stop_connection()
             
         vhost = self.def_amqp.virtual_host if 'virtual_host' in self.def_amqp else self.def_amqp.vhost
         if 'credentials' in self.def_amqp:
@@ -175,17 +175,17 @@ class OutgoingConnector(BaseAMQPConnector):
             self.out_amqp.content_encoding, self.out_amqp.delivery_mode, self.out_amqp.priority, 
             self.out_amqp.expiration, self.out_amqp.user_id, self.out_amqp.app_id)
 
-        # An actual AMQP publisher
+        # An actual AMQP sender
         if self.out_amqp.is_active:
-            publisher = self._amqp_publisher(conn_params, self.out_amqp.name, properties)
-            self.out_amqp.publisher = publisher
+            sender = self._sender(conn_params, self.out_amqp.name, properties)
+            self.out_amqp.sender = sender
             
-    def _amqp_publisher(self, conn_params, out_name, properties):
-        publisher = PublishingConnection(conn_params, out_name, properties)
-        t = Thread(target=publisher._run)
+    def _sender(self, conn_params, out_name, properties):
+        sender = PublishingConnection(conn_params, out_name, properties)
+        t = Thread(target=sender._run)
         t.start()
         
-        return publisher
+        return sender
     
     def def_amqp_get(self, id):
         """ Returns the configuration of the AMQP definition of the given name.
@@ -195,14 +195,14 @@ class OutgoingConnector(BaseAMQPConnector):
         
     def _out_amqp_create_edit(self, msg, *args):
         """ Creates or updates an outgoing AMQP connection and its associated
-        AMQP publisher.
+        AMQP sender.
         """ 
         with self.def_amqp_lock:
             with self.out_amqp_lock:
-                publisher = self.out_amqp.get('publisher')
+                sender = self.out_amqp.get('sender')
                 self.out_amqp = msg
-                self.out_amqp.publisher = publisher
-                self._recreate_amqp_publisher()
+                self.out_amqp.sender = sender
+                self._recreate_sender()
 
     def out_amqp_get(self, name):
         """ Returns the configuration of an outgoing AMQP connection.
@@ -252,7 +252,7 @@ class OutgoingConnector(BaseAMQPConnector):
         for name, value in properties.items():
             setattr(pika_properties, name, value)
             
-        self.out_amqp.publisher.publish(msg['body'], msg['exchange'], 
+        self.out_amqp.sender.publish(msg['body'], msg['exchange'], 
                     msg['routing_key'], pika_properties, *msg['args'], **msg['kwargs'])
         
 
