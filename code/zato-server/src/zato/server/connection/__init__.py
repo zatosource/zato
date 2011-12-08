@@ -25,9 +25,11 @@ from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
 # stdlib
-import os, sys
+import os, sys, time
+from datetime import datetime
 from subprocess import Popen
 from threading import RLock
+from traceback import format_exc
 
 # ZeroMQ
 import zmq
@@ -40,8 +42,105 @@ from zato.broker.zato_client import BrokerClient
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 
+class BaseConnection(object):
+    """ A base class for connections to any external resourced accessed through
+    connectors. Implements the (re-)connection logic and leaves all the particular
+    details related to messaging to subclasses.
+    """
+    def __init__(self):
+        self.reconnect_error_numbers = ()
+        self.reconnect_exceptions = ()
+        self.connection_attempts = 1
+        self.first_connection_attempt_time = None
+        self.keep_running = True
+        self.reconnect_sleep_time = 5 # Seconds
+
+    def _start(self):
+        """ Actually start a specific resource.
+        """ 
+        raise NotImplementedError('Must be implemented by a subclass')
+    
+    def _close(self):
+        """ Perform a resource-specific close operation.
+        """
+        raise NotImplementedError('Must be implemented by a subclass')
+
+    def _conn_info(self):
+        """ A textual information regarding the connection for logging purposes.
+        """
+        raise NotImplementedError('Must be implemented by a subclass')
+    
+    def _keep_connecting(self, e):
+        """ Invoked on an exception being caught during establishing a connection.
+        Receives the exception object and has to answer whether to keep on (re-)connecting.
+        """
+        raise NotImplementedError('Must be implemented by a subclass')
+    
+    def _run(self):
+        """ Run the main (re-)connecting loop, close on Ctrl-C.
+        """ 
+        try:
+            self.start()
+        except KeyboardInterrupt:
+            self.close()
+    
+    def close(self):
+        """ Attempt to close the connection to an external resource.
+        """
+        if(self.logger.isEnabledFor(TRACE1)):
+            msg = 'About to close the connection for {0}'.format(self._conn_info())
+            self.logger.log(TRACE1, msg)
+            
+        self.keep_running = False
+        self._close()
+            
+        msg = 'Closed the connection for {0}'.format(self._conn_info())
+        self.logger.debug(msg)
+    
+    def _on_connected(self, *ignored_args, **ignored_kwargs):
+        """ Invoked after establishing a successful connection to the resource.
+        Will report a diagnostic message regarding how many attempts there were
+        and how long it took if the connection hadn't been established straightaway.
+        """
+        if self.connection_attempts > 1:
+            delta = datetime.now() - self.first_connection_attempt_time
+            msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
+                self._conn_info(), self.connection_attempts, delta)
+            self.logger.warn(msg)
+            
+        self.connection_attempts = 1
+    
+    def start(self):
+        """ Start the connection, reconnect on any recoverable errors.
+        """ 
+        self.first_connection_attempt_time = datetime.now() 
+        while self.keep_running:
+            try:
+                
+                # Actually try establishing the connection
+                self._start()
+                
+                # Set only if there was an already established connection 
+                # and we're now trying to reconnect to the resource.
+                self.first_connection_attempt_time = datetime.now()
+            except self.reconnect_exceptions, e:
+                if self._keep_connecting(e):
+                    if isinstance(e, EnvironmentError):
+                        err_info = '{0} {1}'.format(e.errno, e.strerror)
+                    else:
+                        err_info = format_exc(e)
+                    msg = 'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
+                    delta = datetime.now() - self.first_connection_attempt_time
+                    self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
+                    self.connection_attempts += 1
+                    time.sleep(self.reconnect_sleep_time)
+                else:
+                    msg = 'No connection for {0}, e=[{1}]'.format(self._conn_info(), format_exc(e))
+                    self.logger.error(msg)
+                    raise
+
 class BaseConnector(BaseWorker):
-    """ A base class for both channels and outgoing connections.
+    """ A base class for both channels and outgoing connectors.
     """
     def __init__(self, repo_location, def_id):
         self.repo_location = repo_location

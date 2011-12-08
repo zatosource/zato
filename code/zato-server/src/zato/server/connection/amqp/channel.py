@@ -34,16 +34,17 @@ from bunch import Bunch
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
-from zato.server.connection.amqp import BaseConnection, BaseAMQPConnector
+from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_CHANNEL_ID'
 
-class ConsumingConnection(BaseConnection):
+class ConsumingConnection(BaseAMQPConnection):
     """ A connection for consuming the AMQP messages.
     """
     def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, callback):
         super(ConsumingConnection, self).__init__(conn_params, channel_name)
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
         self.callback = callback

@@ -34,14 +34,18 @@ from bunch import Bunch
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
 from zato.common.util import TRACE1
-from zato.server.connection.amqp import BaseConnection, BaseAMQPConnector
+from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_OUT_ID'
 
-class PublishingConnection(BaseConnection):
+class PublishingConnection(BaseAMQPConnection):
     """ A connection for publishing of the AMQP messages.
     """
+    def __init__(self, *args, **kwargs):
+        super(PublishingConnection, self).__init__(*args, **kwargs)
+        self.logger = logging.getLogger(self.__class__.__name__)
+        
     def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
         if self.channel:
             if self.conn.is_open:
