@@ -100,6 +100,9 @@ CHANNEL.AMQP_MESSAGE_RECEIVED = b'10703'
 AMQP_CONNECTOR = Bunch()
 AMQP_CONNECTOR.CLOSE = b'10801'
 
+JMS_WMQ_CONNECTOR = Bunch()
+JMS_WMQ_CONNECTOR.CLOSE = b'10802'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

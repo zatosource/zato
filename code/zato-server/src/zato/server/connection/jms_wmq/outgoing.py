@@ -76,14 +76,16 @@ class OutgoingConnection(BaseConnection):
         self.factory = factory
         self.out_name = out_name
         self.reconnect_exceptions = (JMSException, )
-        
+
     def _start(self):
         self.factory._connect()
-        
-    def _keep_connecting(self, *ignored_args):
-        # Always assume we'll eventually, connect
-        return True
-        
+        self._on_connected()
+
+    def _keep_connecting(self, exception):
+        # Assume we can always deal with JMS exception and network errors
+        return isinstance(exception, JMSException) or (isinstance(exception, EnvironmentError) 
+                                            and exception.errno in self.reconnect_error_numbers)
+
     def _conn_info(self):
         return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.out_name)
 
@@ -138,11 +140,21 @@ class OutgoingConnector(BaseConnector):
         self.out.expiration = item.expiration
         self.out.sender = None
         
+    def filter(self, msg):
+        """ Can we handle the incoming message?
+        """
+        if super(OutgoingConnector, self).filter(msg):
+            return True
+        
+        #elif msg.action == OUTGOING.AMQP_PUBLISH:
+        #    if self.out_amqp.name == msg.out_name:
+        #        return True
+        
     def _stop_connection(self):
         """ Stops the given outgoing connection's publisher. The method must 
         be called from a method that holds onto all related RLocks.
         """
-        if self.out.get('sender') and self.out.sender.get('factory'):
+        if self.out.get('sender') and self.out.sender.factory:
             self.out.sender.factory.destroy()
         
     def _recreate_sender(self):
@@ -183,6 +195,9 @@ class OutgoingConnector(BaseConnector):
         with self.out_lock:
             with self.def_lock:
                 self._recreate_sender()
+                
+    def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
+        self._stop_connection()
         
 def run_connector():
     """ Invoked on the process startup.
