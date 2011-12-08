@@ -153,6 +153,8 @@ class BaseConnector(BaseWorker):
         self.broker_client_name = None
         
     def _close(self):
+        """ Close the process, don't forget about the ODB connection if it exists.
+        """
         if self.odb:
             self.odb.close()
         p = psutil.Process(os.getpid())
