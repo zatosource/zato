@@ -25,11 +25,14 @@ from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
 # stdlib
-import os, sys, time
+import errno, os, sys, time
 from datetime import datetime
 from subprocess import Popen
 from threading import RLock
 from traceback import format_exc
+
+# psutil
+import psutil
 
 # ZeroMQ
 import zmq
@@ -48,7 +51,8 @@ class BaseConnection(object):
     details related to messaging to subclasses.
     """
     def __init__(self):
-        self.reconnect_error_numbers = ()
+        self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
+            errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
         self.reconnect_exceptions = ()
         self.connection_attempts = 1
         self.first_connection_attempt_time = None
@@ -149,7 +153,10 @@ class BaseConnector(BaseWorker):
         self.broker_client_name = None
         
     def _close(self):
-        raise NotImplementedError('Must be implemented by a subclass')
+        if self.odb:
+            self.odb.close()
+        p = psutil.Process(os.getpid())
+        p.terminate()
     
     def _setup_odb(self):
         # First let's see if the server we're running on top of exists in the ODB.

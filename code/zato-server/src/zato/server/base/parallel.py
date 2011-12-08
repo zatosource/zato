@@ -39,7 +39,7 @@ from bunch import Bunch
 from zato.broker.zato_client import BrokerClient
 from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
      ZATO_OK, ZATO_URL_TYPE_SOAP)
-from zato.common.broker_message import AMQP_CONNECTOR, MESSAGE_TYPE
+from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
@@ -359,13 +359,19 @@ class ParallelServer(BrokerMessageReceiver):
 
         except KeyboardInterrupt:
             logger.info('Shutting down')
+
+            # Close all the connector subprocesses this server has started
+            pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB),
+                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB))
             
-            # Close all the AMQP subprocesses this server has started.
-            msg = {}
-            msg['action'] = AMQP_CONNECTOR.CLOSE
-            msg['odb_token'] = self.odb.odb_data['token']
-            self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
-            time.sleep(0.1)
+            for action, msg_type in pairs:
+                msg = {}
+                msg['action'] = action
+                msg['odb_token'] = self.odb.odb_data['token']
+                self.broker_client.send_json(msg, msg_type=msg_type)
+                print(msg)
+                time.sleep(0.2)
+            
             self.broker_client.close()
             
             if self.singleton_server:

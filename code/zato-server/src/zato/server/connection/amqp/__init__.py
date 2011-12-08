@@ -40,9 +40,6 @@ from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
 from pika.spec import BasicProperties
 
-# psutil
-import psutil
-
 # Bunch
 from bunch import Bunch
 
@@ -62,9 +59,6 @@ class BaseAMQPConnection(BaseConnection):
         self.properties = properties
         self.conn = None
         self.channel = None
-        
-        self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
-            errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
         self.reconnect_exceptions = (TypeError, EnvironmentError)
         
     def _start(self):
@@ -219,10 +213,6 @@ class BaseAMQPConnector(BaseConnector):
         with self.def_amqp_lock:
             with self.out_amqp_lock:
                 self._stop_amqp_connection()
-                self.odb.close()
-                
-                p = psutil.Process(os.getpid())
-                p.terminate()
                 
     def _setup_odb(self):
         super(BaseAMQPConnector, self)._setup_odb()

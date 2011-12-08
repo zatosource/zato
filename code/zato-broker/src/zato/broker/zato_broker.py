@@ -37,10 +37,16 @@ CONFIG_MESSAGE_PREFIX = 'ZATO_CONFIG'
 msg_socket = {
     MESSAGE_TYPE.TO_PARALLEL_PULL: 'worker-thread/pull-push',
     MESSAGE_TYPE.TO_PARALLEL_SUB: 'worker-thread/sub',
+    
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
+    
     MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL: 'amqp-publishing-connector/pull-push',
     MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL: 'amqp-consuming-connector/pull-push',
-    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'unused',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'unused-amqp-sub',
+    
+    MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL: 'jms-wmq-publishing-connector/pull-push',
+    MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_PULL: 'jms-wmq-consuming-connector/pull-push',
+    MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB: 'unused-jms-wmq-sub',
 }
 
 msg_types = msg_socket.keys()
@@ -83,13 +89,20 @@ class Broker(BaseBroker):
                 sockets.extend((self.sockets['amqp-publishing-connector/sub'].pub,
                            self.sockets['amqp-consuming-connector/sub'].pub))
                 
+            if msg_type == MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB:
+                sockets.extend((self.sockets['jms-wmq-publishing-connector/sub'].pub,
+                           self.sockets['jms-wmq-consuming-connector/sub'].pub))
+                
             _msg_socket = msg_socket[msg_type]
+            
             if logger.isEnabledFor(TRACE1):
                 logger.log(TRACE1, '_msg_socket [{0}]'.format(_msg_socket))
 
             if msg_type in(MESSAGE_TYPE.TO_SINGLETON, MESSAGE_TYPE.TO_PARALLEL_PULL, \
                            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL,
-                           MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL):
+                           MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL,
+                           MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL,
+                           MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_PULL):
                 sockets.append(self.sockets[_msg_socket].push)
             
             # We don't want the subscribers to know what the original token was.

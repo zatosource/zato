@@ -58,6 +58,14 @@ if __name__ == '__main__':
     consuming_connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONSUMING_CONNECTOR_AMQP_PUSH_BROKER_PULL)
     broker_pub_consuming_connector_amqp_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONSUMING_CONNECTOR_AMQP_SUB)
     
+    broker_push_publishing_connector_jms_wmq_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_JMS_WMQ_PULL)
+    publishing_connector_jms_wmq_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.PUBLISHING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL)
+    broker_pub_publishing_connector_jms_wmq_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_JMS_WMQ_SUB)
+    
+    broker_push_consuming_connector_jms_wmq_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_JMS_WMQ_PULL)
+    consuming_connector_jms_wmq_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONSUMING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL)
+    broker_pub_consuming_connector_jms_wmq_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONSUMING_CONNECTOR_JMS_WMQ_SUB)
+    
     sockets = []
     
     sockets.append(SocketData('worker-thread/pull-push', broker_push_worker_pull, worker_push_broker_pull))
@@ -70,5 +78,11 @@ if __name__ == '__main__':
     
     sockets.append(SocketData('amqp-consuming-connector/pull-push', broker_push_consuming_connector_amqp_pull, consuming_connector_amqp_push_broker_pull))
     sockets.append(SocketData('amqp-consuming-connector/sub', None, None, broker_pub_consuming_connector_amqp_sub))
+    
+    sockets.append(SocketData('jms-wmq-publishing-connector/pull-push', broker_push_publishing_connector_jms_wmq_pull, publishing_connector_jms_wmq_push_broker_pull))
+    sockets.append(SocketData('jms-wmq-publishing-connector/sub', None, None, broker_pub_publishing_connector_jms_wmq_sub))
+    
+    sockets.append(SocketData('jms-wmq-consuming-connector/pull-push', broker_push_consuming_connector_jms_wmq_pull, consuming_connector_jms_wmq_push_broker_pull))
+    sockets.append(SocketData('jms-wmq-consuming-connector/sub', None, None, broker_pub_consuming_connector_jms_wmq_sub))
     
     Broker(token, log_invalid_tokens, *sockets).serve_forever()
