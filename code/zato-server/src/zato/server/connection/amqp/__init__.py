@@ -29,7 +29,6 @@ import errno, time
 from datetime import datetime
 from subprocess import Popen
 from threading import RLock
-from traceback import format_exc
 
 # ZeroMQ
 import zmq
@@ -51,104 +50,58 @@ from bunch import Bunch
 from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.broker_message import AMQP_CONNECTOR, DEFINITION
 from zato.common.util import TRACE1
-from zato.server.connector import BaseConnector
+from zato.server.connection import BaseConnection, BaseConnector
 
-class BaseConnection(object):
+class BaseAMQPConnection(BaseConnection):
     """ An object which does an actual job of (re-)connecting to the the AMQP broker.
     Concrete subclasses implement either listening or publishing features.
     """
     def __init__(self, conn_params, item_name, properties=None):
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.conn_params = conn_params
         self.item_name = item_name
         self.properties = properties
         self.conn = None
         self.channel = None
-        self.connection_attempts = 1
-        self.first_connection_attempt_time = None
-        self.keep_running = True
-        self.reconnect_sleep_time = 5 # Seconds
+        
         self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
             errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
+        self.reconnect_exceptions = (TypeError, EnvironmentError)
         
+    def _start(self):
+        self.conn = TornadoConnection(self.conn_params, self._on_connected)
+        self.conn.ioloop.start()
+        
+    def _close(self):
+        """ Actually close the connection.
+        """
+        if self.conn:
+            self.conn.close()
+            
     def _conn_info(self):
         return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
             self.conn_params.port, self.conn_params.virtual_host, self.item_name)
-        
-    def _on_connected(self, conn):
-        """ Invoked after establishing a successful connection to an AMQP broker.
-        Will report a diagnostic message regarding how many attempts there were
-        and how long it took if the connection hasn't been established straightaway.
-        """
-        
-        if self.connection_attempts > 1:
-            delta = datetime.now() - self.first_connection_attempt_time
-            msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
-                self._conn_info(), self.connection_attempts, delta)
-            self.logger.warn(msg)
             
-        self.connection_attempts = 1
-        conn.channel(self._on_channel_open)
-        
     def _on_channel_open(self, channel):
         self.channel = channel
         msg = 'Got a channel for {0}'.format(self._conn_info())
         self.logger.debug(msg)
         
-    def _run(self):
-        try:
-            self.start()
-        except KeyboardInterrupt:
-            self.close()
+    def _keep_connecting(self, e):
+        # We need to catch TypeError because pika will sometimes erroneously raise
+        # it in self._start's self.conn.ioloop.start().
+        # Otherwise, it may one of the network errors we are hopefully able to recover from.
+        return isinstance(e, TypeError) or (isinstance(e, EnvironmentError) 
+                                            and e.errno in self.reconnect_error_numbers)
             
-    def _start(self):
-        self.conn = TornadoConnection(self.conn_params, self._on_connected)
-        self.conn.ioloop.start()
+    def _on_connected(self, conn):
+        """ Invoked after establishing a successful connection to an AMQP broker.
+        Will report a diagnostic message regarding how many attempts there were
+        and how long it took if the connection hasn't been established straightaway.
+        """
+        super(BaseAMQPConnection, self)._on_connected()
+        conn.channel(self._on_channel_open)
         
-    def start(self):
         
-        # Set right after the publisher has been created
-        self.first_connection_attempt_time = datetime.now() 
-        
-        while self.keep_running:
-            try:
-                
-                # Actually try establishing the connection
-                self._start()
-                
-                # Set only if there was an already established connection 
-                # and we're now trying to reconnect to the broker.
-                self.first_connection_attempt_time = datetime.now()
-            except(TypeError, EnvironmentError), e:
-                # We need to catch TypeError because pika will sometimes erroneously raise
-                # it in self._start's self.conn.ioloop.start()
-                if isinstance(e, TypeError) or e.errno in self.reconnect_error_numbers:
-                    if isinstance(e, TypeError):
-                        err_info = format_exc(e)
-                    else:
-                        err_info = '{0} {1}'.format(e.errno, e.strerror)
-                    msg = 'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
-                    delta = datetime.now() - self.first_connection_attempt_time
-                    self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
-                    self.connection_attempts += 1
-                    time.sleep(self.reconnect_sleep_time)
-                else:
-                    msg = 'No connection for {0}, e=[{1}]'.format(self._conn_info(), format_exc(e))
-                    self.logger.error(msg)
-                    raise
-        
-    def close(self):
-        if(self.logger.isEnabledFor(TRACE1)):
-            msg = 'About to close the publisher for {0}'.format(self._conn_info())
-            self.logger.log(TRACE1, msg)
-            
-        self.keep_running = False
-        if self.conn:
-            self.conn.close()
-            
-        msg = 'Closed the connection for {0}'.format(self._conn_info())
-        self.logger.debug(msg)
-
 class BaseAMQPConnector(BaseConnector):
     """ A base connector for any AMQP-related ones.
     """

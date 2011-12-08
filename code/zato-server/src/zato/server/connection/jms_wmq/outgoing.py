@@ -31,6 +31,7 @@ from pika import BasicProperties
 from bunch import Bunch
 
 # Spring Python
+from springpython.jms import JMSException
 from springpython.jms.core import JmsTemplate
 from springpython.jms.factory import WebSphereMQConnectionFactory
 
@@ -38,33 +39,12 @@ from springpython.jms.factory import WebSphereMQConnectionFactory
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
 from zato.common.util import TRACE1
-from zato.server.connection import BaseConnector
-#from zato.server.connection.amqp import BaseConnection, BaseAMQPConnector
+from zato.server.connection import BaseConnection, BaseConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_OUT_ID'
 
 '''
-class PublishingConnection(BaseConnection):
-    """ A connection for publishing of the AMQP messages.
-    """
-    def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
-        if self.channel:
-            if self.conn.is_open:
-                properties = properties if properties else self.properties
-                self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
-                if(self.logger.isEnabledFor(logging.DEBUG)):
-                    log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
-                    self.logger.log(logging.DEBUG, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
-            else:
-                msg = "Can't publish, the connection for {0} is not open".format(self._conn_info())
-                self.logger.error(msg)
-                raise ConnectionException(msg)
-        else:
-            msg = "Can't publish, don't have a channel for {0}".format(self._conn_info())
-            self.logger.error(msg)
-            raise ConnectionException(msg)
-
 class PublisherFacade(object):
     """ An AMQP facade for services so they aren't aware that publishing AMQP
     messages actually requires us to use the Zato broker underneath.
@@ -88,6 +68,24 @@ class PublisherFacade(object):
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL)
 '''
+
+class OutgoingConnection(BaseConnection):
+    def __init__(self, factory, out_name):
+        super(OutgoingConnection, self).__init__()
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.factory = factory
+        self.out_name = out_name
+        self.reconnect_exceptions = (JMSException, )
+        
+    def _start(self):
+        self.factory._connect()
+        
+    def _keep_connecting(self, *ignored_args):
+        # Always assume we'll eventually, connect
+        return True
+        
+    def _conn_info(self):
+        return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.out_name)
 
 class OutgoingConnector(BaseConnector):
     """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP
@@ -147,14 +145,10 @@ class OutgoingConnector(BaseConnector):
         if self.out.get('sender') and self.out.sender.get('factory'):
             self.out.sender.factory.destroy()
         
-    def _recreate_connection(self):
+    def _recreate_sender(self):
         self._stop_connection()
         
-        import inspect
-        print('aaa', inspect.getsourcefile(WebSphereMQConnectionFactory))
-       
-        self.sender = Bunch()
-        self.sender.factory = WebSphereMQConnectionFactory(
+        factory = WebSphereMQConnectionFactory(
             self.def_.queue_manager,
             str(self.def_.channel),
             str(self.def_.host),
@@ -168,18 +162,27 @@ class OutgoingConnector(BaseConnector):
             needs_mcd = self.def_.needs_mcd,
         )
         
+        if self.out.is_active:
+            sender = self._sender(factory)
+            self.out.sender = sender
+        
         #self.def_.max_chars_printed = item.max_chars_printed
+        #jms_template = JmsTemplate(self.sender.factory)
+        #jms_template.send('aazaa', 'TEST.1')
         
-        jms_template = JmsTemplate(self.sender.factory)
+    def _sender(self, factory):
+        sender = OutgoingConnection(factory, self.out.name)
+        t = Thread(target=sender._run)
+        t.start()
         
-        jms_template.send('aazaa', 'TEST.1')
+        return sender
         
     def _setup_connector(self):
         """ Sets up the connector on startup.
         """
         with self.out_lock:
             with self.def_lock:
-                self._recreate_connection()
+                self._recreate_sender()
         
 def run_connector():
     """ Invoked on the process startup.
