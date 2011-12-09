@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_jms_wmq_list
-#from zato.server.amqp.outgoing import start_connector as out_start_connector
+from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
@@ -124,7 +124,7 @@ class Create(AdminService):
                 session.commit()
                 
                 created_elem.id = item.id
-                #out_start_connector(self.server.repo_location, item.id, item.def_id)
+                start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
