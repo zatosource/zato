@@ -194,10 +194,8 @@ class Edit(AdminService):
                 
                 xml_item.id = item.id
                 
-                #core_params['action'] = OUTGOING.JMS_WMQ_EDIT
-                #core_params['old_name'] = old_name
-                #core_params.update(optional_params)
-                #self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                msg = {'action': OUTGOING.JMS_WMQ_EDIT, 'name': item.name, 'id':item.id}
+                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
@@ -220,14 +218,14 @@ class Delete(AdminService):
                 
                 id = params['id']
                 
-                out = session.query(OutgoingWMQ).\
+                item = session.query(OutgoingWMQ).\
                     filter(OutgoingWMQ.id==id).\
                     one()
                 
-                session.delete(out)
+                session.delete(item)
                 session.commit()
 
-                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': out.name, 'id':out.id}
+                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': item.name, 'id':item.id}
                 self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
             except Exception, e:
