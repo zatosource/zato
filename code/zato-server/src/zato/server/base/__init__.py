@@ -76,9 +76,9 @@ class BrokerMessageReceiver(object):
     def filter(self, msg):
         """ Subclasses may override the method in order to filter the messages
         prior to invoking the actual message handler. Default implementation 
-        always returns True which lets the messages in.
+        always returns False.
         """
-        return True
+        return False
             
 class BaseWorker(BrokerMessageReceiver):
         

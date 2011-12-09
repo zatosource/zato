@@ -191,6 +191,12 @@ class OutgoingConnector(BaseAMQPConnector):
         
         return sender
     
+    def _stop_amqp_connection(self):
+        """ Stops the AMQP connection.
+        """
+        if self.out_amqp.sender:
+            self.out_amqp.sender.close()
+    
     def def_amqp_get(self, id):
         """ Returns the configuration of the AMQP definition of the given name.
         """

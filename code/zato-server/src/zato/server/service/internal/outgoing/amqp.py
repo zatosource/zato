@@ -132,7 +132,7 @@ class Create(AdminService):
                 session.commit()
                 
                 created_elem.id = item.id
-                out_start_connector(self.server.repo_location, item.id, item.def_id)
+                start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
