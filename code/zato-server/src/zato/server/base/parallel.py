@@ -370,7 +370,6 @@ class ParallelServer(BrokerMessageReceiver):
                 msg['action'] = action
                 msg['odb_token'] = self.odb.odb_data['token']
                 self.broker_client.send_json(msg, msg_type=msg_type)
-                print(msg)
                 time.sleep(0.2)
             
             self.broker_client.close()

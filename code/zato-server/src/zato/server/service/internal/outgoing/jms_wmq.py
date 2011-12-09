@@ -194,8 +194,10 @@ class Edit(AdminService):
                 
                 xml_item.id = item.id
                 
-                msg = {'action': OUTGOING.JMS_WMQ_EDIT, 'name': item.name, 'id':item.id}
-                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                core_params['action'] = OUTGOING.JMS_WMQ_EDIT
+                core_params['old_name'] = old_name
+                core_params.update(optional_params)
+                self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
