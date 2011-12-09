@@ -261,6 +261,7 @@ class OutgoingConnector(BaseConnector):
         if not self.out.is_active:
             log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out)
             self.logger.info(log_msg)
+            return
             
         if self.out.sender:
             self.out.sender.send(msg, self.out.delivery_mode, self.out.expiration, 
