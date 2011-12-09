@@ -37,7 +37,7 @@ from springpython.jms.factory import WebSphereMQConnectionFactory
 
 # Zato
 from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import JMS_WMQ_CONNECTOR, MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import DEFINITION, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
 from zato.server.connection import BaseConnection, BaseConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
@@ -184,8 +184,11 @@ class OutgoingConnector(BaseConnector):
         elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
             return self.odb.odb_data['token'] == msg['odb_token']
             
-        elif msg.action in(OUTGOING.JMS_WMQ_SEND, OUTGOING.JMS_WMQ_DELETE):
+        elif msg.action in(OUTGOING.JMS_WMQ_SEND, OUTGOING.JMS_WMQ_DELETE, OUTGOING.JMS_WMQ_EDIT):
             return self.out.name == msg['name']
+        
+        elif msg.action in(DEFINITION.JMS_WMQ_EDIT, DEFINITION.JMS_WMQ_DELETE):
+            return self.def_.id == msg.id
         
     def _stop_connection(self):
         """ Stops the given outgoing connection's publisher. The method must 
@@ -235,12 +238,30 @@ class OutgoingConnector(BaseConnector):
     def _close_delete(self):
         """ Stops the connections, exits the process.
         """
-        self._stop_connection()
-        self._close()
+        with self.def_lock:
+            with self.out_lock:
+                self._stop_connection()
+                self._close()
+                
+    def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
+        self._close_delete()
+                
+    def on_broker_pull_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
+        with self.def_lock:
+            with self.out_lock:
+                self.def_ = msg
+                self._recreate_sender()
+                
+    def on_broker_pull_msg_DEFINITION_JMS_WMQ_DELETE(self, msg, args=None):
+        self._close_delete()
 
     def on_broker_pull_msg_OUTGOING_JMS_WMQ_SEND(self, msg, args=None):
         """ Puts a message on a queue.
         """
+        if not self.out.is_active:
+            log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out)
+            self.logger.info(log_msg)
+            
         if self.out.sender:
             self.out.sender.send(msg, self.out.delivery_mode, self.out.expiration, 
                     self.out.priority, self.def_.max_chars_printed)
@@ -249,11 +270,16 @@ class OutgoingConnector(BaseConnector):
                 log_msg = 'No sender for [{0}]'.format(self.out.name)
                 self.logger.log(TRACE1, log_msg)
                 
-    def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
-        self._close_delete()
-        
     def on_broker_pull_msg_OUTGOING_JMS_WMQ_DELETE(self, msg, args=None):
         self._close_delete()
+        
+    def on_broker_pull_msg_OUTGOING_JMS_WMQ_EDIT(self, msg, args=None):
+        with self.def_lock:
+            with self.out_lock:
+                sender = self.out.get('sender')
+                self.out = msg
+                self.out.sender = sender
+                self._recreate_sender()
 
 def run_connector():
     """ Invoked on the process startup.

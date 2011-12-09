@@ -258,8 +258,8 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                #msg = {'action': DEFINITION.JMS_WMQ_DELETE, 'id': id}
-                #self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                msg = {'action': DEFINITION.JMS_WMQ_DELETE, 'id': id}
+                self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
