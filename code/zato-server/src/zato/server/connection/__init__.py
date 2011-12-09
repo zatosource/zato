@@ -56,7 +56,7 @@ class BaseConnection(object):
         self.reconnect_exceptions = ()
         self.connection_attempts = 1
         self.first_connection_attempt_time = None
-        self.keep_running = True
+        self.keep_connecting = True
         self.reconnect_sleep_time = 5 # Seconds
 
     def _start(self):
@@ -95,7 +95,7 @@ class BaseConnection(object):
             msg = 'About to close the connection for {0}'.format(self._conn_info())
             self.logger.log(TRACE1, msg)
             
-        self.keep_running = False
+        self.keep_connecting = False
         self._close()
             
         msg = 'Closed the connection for {0}'.format(self._conn_info())
@@ -118,7 +118,7 @@ class BaseConnection(object):
         """ Start the connection, reconnect on any recoverable errors.
         """ 
         self.first_connection_attempt_time = datetime.now() 
-        while self.keep_running:
+        while self.keep_connecting:
             try:
                 
                 # Actually try establishing the connection
