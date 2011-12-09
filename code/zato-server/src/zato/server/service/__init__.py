@@ -24,6 +24,7 @@ import logging
 
 # Zato
 from zato.server.connection.amqp.outgoing import PublisherFacade
+from zato.server.connection.jms_wmq.outgoing import WMQFacade
 
 __all__ = ["Service"]
 
@@ -37,10 +38,12 @@ class Service(object):
         self.broker_client = None
         self.channel = None
         self.amqp = None
+        self.jms_wmq = None
         self.rid = None
         
     def _init(self):
         self.amqp = PublisherFacade(self.broker_client)
+        self.jms_wmq = WMQFacade(self.broker_client)
 
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process

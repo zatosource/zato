@@ -32,7 +32,7 @@ from bunch import Bunch
 
 # Spring Python
 from springpython.jms import JMSException
-from springpython.jms.core import JmsTemplate
+from springpython.jms.core import JmsTemplate, TextMessage
 from springpython.jms.factory import WebSphereMQConnectionFactory
 
 # Zato
@@ -44,39 +44,56 @@ from zato.server.connection import setup_logging, start_connector as _start_conn
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_OUT_ID'
 
-'''
-class PublisherFacade(object):
-    """ An AMQP facade for services so they aren't aware that publishing AMQP
+class WMQFacade(object):
+    """ A WebSphere MQ facade for services so they aren't aware that sending WMQ
     messages actually requires us to use the Zato broker underneath.
     """
     def __init__(self, broker_client):
-        self.broker_client = broker_client # A Zato broker client, not the AMQP one.
+        self.broker_client = broker_client # A Zato broker client
     
-    def publish(self, msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
-        """ Publishes the message on the Zato broker which forwards it to one of the
-        AMQP connectors.
+    def put(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
+            *args, **kwargs):
+        """ Puts a message on a WebSphere MQ queue.
         """
         params = {}
-        params['action'] = OUTGOING.AMQP_PUBLISH
+        params['action'] = OUTGOING.JMS_WMQ_SEND
         params['out_name'] = out_name
         params['body'] = msg
-        params['exchange'] = bytes(exchange)
-        params['routing_key'] = bytes(routing_key)
-        params['properties'] = properties
+        params['queue'] = queue
+        params['delivery_mode'] = delivery_mode
+        params['expiration'] = expiration
+        params['priority'] = priority
+        params['max_chars_printed'] = max_chars_printed
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL)
-'''
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL)
 
 class OutgoingConnection(BaseConnection):
     def __init__(self, factory, out_name):
         super(OutgoingConnection, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.factory = factory
+        self.jms_template = JmsTemplate(self.factory)
         self.out_name = out_name
         self.reconnect_exceptions = (JMSException, )
-
+        
+    def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
+        jms_msg = TextMessage()
+        jms_msg.text = msg.get('body')
+        jms_msg.jms_correlation_id = msg.get('jms_correlation_id')
+        jms_msg.jms_delivery_mode = msg.get('jms_delivery_mode') or default_delivery_mode
+        jms_msg.jms_destination = msg.get('jms_destination')
+        jms_msg.jms_expiration = msg.get('jms_expiration') or default_expiration
+        jms_msg.jms_message_id = msg.get('jms_message_id')
+        jms_msg.jms_priority = msg.get('jms_priority') or default_priority
+        jms_msg.jms_redelivered = msg.get('jms_redelivered')
+        jms_msg.jms_timestamp = msg.get('jms_timestamp')
+        jms_msg.max_chars_printed = msg.get('max_chars_printed') or default_max_chars_printed
+        
+        queue = str(msg['queue'])
+        self.jms_template.send(jms_msg, queue)
+        
     def _start(self):
         self.factory._connect()
         self._on_connected()
@@ -150,11 +167,10 @@ class OutgoingConnector(BaseConnector):
             return True
         
         elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
-            if self.odb.odb_data['token'] == msg['odb_token']:
-                return True
+            return self.odb.odb_data['token'] == msg['odb_token']
             
-        #elif msg.action == OUTGOING.JMS_WMQ_SEND:
-        #    if self.out.name == 
+        elif msg.action == OUTGOING.JMS_WMQ_SEND:
+            return self.out.name == msg['out_name']
         
     def _stop_connection(self):
         """ Stops the given outgoing connection's publisher. The method must 
@@ -205,14 +221,16 @@ class OutgoingConnector(BaseConnector):
             with self.def_lock:
                 self._recreate_sender()
 
-    def on_broker_pull_msg_JMS_WMQ_SEND(self, msg, args=None):
+    def on_broker_pull_msg_OUTGOING_JMS_WMQ_SEND(self, msg, args=None):
         """ Puts a message on a queue.
         """
-        if self.out.get('sender'):
-            self.out.sender.send(msg)
+        if self.out.sender:
+            self.out.sender.send(msg, self.out.delivery_mode, self.out.expiration, 
+                    self.out.priority, self.def_.max_chars_printed)
         else:
             if self.logger.isEnabledFor(TRACE1):
                 log_msg = 'No sender for [{0}]'.format(self.out.name)
+                self.logger.log(TRACE1, log_msg)
                 
     def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
         """ Stops the connections, exits the process.
