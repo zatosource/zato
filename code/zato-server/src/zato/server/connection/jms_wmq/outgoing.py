@@ -211,8 +211,8 @@ class OutgoingConnector(BaseConnector):
                 self.def_.cache_open_receive_queues,
                 self.def_.use_shared_connections,
                 ssl = self.def_.ssl,
-                ssl_cipher_spec = self.def_.ssl_cipher_spec,
-                ssl_key_repository = self.def_.ssl_key_repository,
+                ssl_cipher_spec = str(self.def_.ssl_cipher_spec),
+                ssl_key_repository = str(self.def_.ssl_key_repository),
                 needs_mcd = self.def_.needs_mcd,
             )
 
