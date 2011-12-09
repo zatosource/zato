@@ -143,7 +143,7 @@ def out_amqp_list(session, cluster_id):
 def _out_jms_wmq(session, cluster_id):
     return session.query(OutgoingWMQ.id, OutgoingWMQ.name, OutgoingWMQ.is_active, 
             OutgoingWMQ.delivery_mode, OutgoingWMQ.priority, OutgoingWMQ.expiration, 
-            OutgoingWMQ.name.label('def_name'), OutgoingWMQ.def_id).\
+            ConnDefWMQ.name.label('def_name'), OutgoingWMQ.def_id).\
         filter(OutgoingWMQ.def_id==ConnDefWMQ.id).\
         filter(ConnDefWMQ.id==OutgoingWMQ.def_id).\
         filter(Cluster.id==ConnDefWMQ.cluster_id).\

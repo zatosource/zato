@@ -312,12 +312,12 @@ class ParallelServer(BrokerMessageReceiver):
             amqp_out_start_connector(self.repo_location, item.id, item.def_id)
         
         # AMQP - channels    
-        #for item in self.odb.get_channel_amqp_list(server.cluster.id):
-        #    amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
+        for item in self.odb.get_channel_amqp_list(server.cluster.id):
+            amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
             
         # JMS WMQ - outgoing
-        #for item in self.odb.get_out_jms_wmq_list(server.cluster.id):
-        #    jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
+        for item in self.odb.get_out_jms_wmq_list(server.cluster.id):
+            jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
     
     def _after_init_non_accepted(self, server):
         pass    
