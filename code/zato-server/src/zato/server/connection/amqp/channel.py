@@ -168,6 +168,12 @@ class ConsumingConnector(BaseAMQPConnector):
                 self.channel_amqp.consumer = consumer
                 self._recreate_amqp_consumer()
                 
+    def _stop_amqp_connection(self):
+        """ Stops the AMQP connection.
+        """
+        if self.channel_amqp.consumer:
+            self.channel_amqp.consumer.close()
+                
     def _on_amqp_message(self, method_frame, header_frame, body):
         """ A callback to be invoked by ConsumingConnection on each new AMQP message.
         """
@@ -201,7 +207,6 @@ class ConsumingConnector(BaseAMQPConnector):
         """ Stops the consumer, ODB connection and exits the process.
         """
         self._close()
-
 
 def run_connector():
     """ Invoked on the process startup.

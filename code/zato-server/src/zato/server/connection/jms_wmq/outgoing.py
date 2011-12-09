@@ -37,7 +37,7 @@ from springpython.jms.factory import WebSphereMQConnectionFactory
 
 # Zato
 from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
+from zato.common.broker_message import JMS_WMQ_CONNECTOR, MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
 from zato.server.connection import BaseConnection, BaseConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
@@ -149,9 +149,12 @@ class OutgoingConnector(BaseConnector):
         if super(OutgoingConnector, self).filter(msg):
             return True
         
-        #elif msg.action == OUTGOING.AMQP_PUBLISH:
-        #    if self.out_amqp.name == msg.out_name:
-        #        return True
+        elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
+            if self.odb.odb_data['token'] == msg['odb_token']:
+                return True
+            
+        #elif msg.action == OUTGOING.JMS_WMQ_SEND:
+        #    if self.out.name == 
         
     def _stop_connection(self):
         """ Stops the given outgoing connection's publisher. The method must 
@@ -163,21 +166,22 @@ class OutgoingConnector(BaseConnector):
     def _recreate_sender(self):
         self._stop_connection()
         
-        factory = WebSphereMQConnectionFactory(
-            self.def_.queue_manager,
-            str(self.def_.channel),
-            str(self.def_.host),
-            self.def_.port,
-            self.def_.cache_open_send_queues,
-            self.def_.cache_open_receive_queues,
-            self.def_.use_shared_connections,
-            ssl = self.def_.ssl,
-            ssl_cipher_spec = self.def_.ssl_cipher_spec,
-            ssl_key_repository = self.def_.ssl_key_repository,
-            needs_mcd = self.def_.needs_mcd,
-        )
-        
         if self.out.is_active:
+            
+            factory = WebSphereMQConnectionFactory(
+                self.def_.queue_manager,
+                str(self.def_.channel),
+                str(self.def_.host),
+                self.def_.port,
+                self.def_.cache_open_send_queues,
+                self.def_.cache_open_receive_queues,
+                self.def_.use_shared_connections,
+                ssl = self.def_.ssl,
+                ssl_cipher_spec = self.def_.ssl_cipher_spec,
+                ssl_key_repository = self.def_.ssl_key_repository,
+                needs_mcd = self.def_.needs_mcd,
+            )
+
             sender = self._sender(factory)
             self.out.sender = sender
         
@@ -200,6 +204,15 @@ class OutgoingConnector(BaseConnector):
         with self.out_lock:
             with self.def_lock:
                 self._recreate_sender()
+
+    def on_broker_pull_msg_JMS_WMQ_SEND(self, msg, args=None):
+        """ Puts a message on a queue.
+        """
+        if self.out.get('sender'):
+            self.out.sender.send(msg)
+        else:
+            if self.logger.isEnabledFor(TRACE1):
+                log_msg = 'No sender for [{0}]'.format(self.out.name)
                 
     def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
         """ Stops the connections, exits the process.

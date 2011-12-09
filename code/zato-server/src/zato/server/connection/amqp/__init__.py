@@ -54,6 +54,7 @@ class BaseAMQPConnection(BaseConnection):
     Concrete subclasses implement either listening or publishing features.
     """
     def __init__(self, conn_params, item_name, properties=None):
+        super(BaseAMQPConnection, self).__init__()
         self.conn_params = conn_params
         self.item_name = item_name
         self.properties = properties
@@ -202,7 +203,7 @@ class BaseAMQPConnector(BaseConnector):
             out_attrs.user_id, out_attrs.app_id)
                 
     def _stop_amqp_connection(self):
-        """ Stops the publisher, a subclass needs to implement it.
+        """ Stops the AMQP connection, a subclass needs to implement it.
         """
         raise NotImplementedError('Must be implemented by a subclass')
                 
@@ -213,6 +214,7 @@ class BaseAMQPConnector(BaseConnector):
         with self.def_amqp_lock:
             with self.out_amqp_lock:
                 self._stop_amqp_connection()
+                super(BaseAMQPConnector, self)._close()
                 
     def _setup_odb(self):
         super(BaseAMQPConnector, self)._setup_odb()
