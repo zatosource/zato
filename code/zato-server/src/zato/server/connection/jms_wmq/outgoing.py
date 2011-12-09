@@ -57,7 +57,7 @@ class WMQFacade(object):
         """
         params = {}
         params['action'] = OUTGOING.JMS_WMQ_SEND
-        params['out_name'] = out_name
+        params['name'] = out_name
         params['body'] = msg
         params['queue'] = queue
         params['delivery_mode'] = delivery_mode
@@ -184,8 +184,8 @@ class OutgoingConnector(BaseConnector):
         elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
             return self.odb.odb_data['token'] == msg['odb_token']
             
-        elif msg.action == OUTGOING.JMS_WMQ_SEND:
-            return self.out.name == msg['out_name']
+        elif msg.action in(OUTGOING.JMS_WMQ_SEND, OUTGOING.JMS_WMQ_DELETE):
+            return self.out.name == msg['name']
         
     def _stop_connection(self):
         """ Stops the given outgoing connection's publisher. The method must 
@@ -215,11 +215,7 @@ class OutgoingConnector(BaseConnector):
 
             sender = self._sender(factory)
             self.out.sender = sender
-        
-        #self.def_.max_chars_printed = item.max_chars_printed
-        #jms_template = JmsTemplate(self.sender.factory)
-        #jms_template.send('aazaa', 'TEST.1')
-        
+
     def _sender(self, factory):
         """ Starts the outgoing connection in a new thread and returns it.
         """
@@ -235,6 +231,12 @@ class OutgoingConnector(BaseConnector):
         with self.out_lock:
             with self.def_lock:
                 self._recreate_sender()
+                
+    def _close_delete(self):
+        """ Stops the connections, exits the process.
+        """
+        self._stop_connection()
+        self._close()
 
     def on_broker_pull_msg_OUTGOING_JMS_WMQ_SEND(self, msg, args=None):
         """ Puts a message on a queue.
@@ -248,11 +250,11 @@ class OutgoingConnector(BaseConnector):
                 self.logger.log(TRACE1, log_msg)
                 
     def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
-        """ Stops the connections, exits the process.
-        """
-        self._stop_connection()
-        self._close()
+        self._close_delete()
         
+    def on_broker_pull_msg_OUTGOING_JMS_WMQ_DELETE(self, msg, args=None):
+        self._close_delete()
+
 def run_connector():
     """ Invoked on the process startup.
     """
