@@ -78,6 +78,10 @@ class OutgoingConnection(BaseConnection):
         self.out_name = out_name
         self.reconnect_exceptions = (JMSException, )
         
+        # Not everyone uses WebSphere MQ
+        from pymqi import MQMIError
+        self.MQMIError = MQMIError
+        
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         jms_msg = TextMessage()
         jms_msg.text = msg.get('body')
@@ -92,19 +96,30 @@ class OutgoingConnection(BaseConnection):
         jms_msg.max_chars_printed = msg.get('max_chars_printed') or default_max_chars_printed
         
         queue = str(msg['queue'])
-        self.jms_template.send(jms_msg, queue)
+        
+        try:
+            self.jms_template.send(jms_msg, queue)
+        except Exception, e:
+            if self._keep_connecting(e):
+                self.close()
+                self.keep_connecting = True
+                self.factory._disconnecting = False
+                self.start()
+            else:
+                raise
         
     def _start(self):
         self.factory._connect()
         self._on_connected()
+        self.keep_connecting = False
         
     def _close(self):
         self.factory.destroy()
 
     def _keep_connecting(self, exception):
         # Assume we can always deal with JMS exception and network errors
-        return isinstance(exception, JMSException) or (isinstance(exception, EnvironmentError) 
-                                            and exception.errno in self.reconnect_error_numbers)
+        return isinstance(exception, (JMSException, self.MQMIError)) \
+               or (isinstance(exception, EnvironmentError) and exception.errno in self.reconnect_error_numbers)
 
     def _conn_info(self):
         return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.out_name)
