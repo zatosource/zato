@@ -234,6 +234,9 @@ class ParallelServer(BrokerMessageReceiver):
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
+
+            # Start the connectors only once throughout the whole cluster
+            self._init_connectors(server)
                     
         self.worker_config = Bunch()
         
@@ -287,8 +290,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config.tech_acc = ta_config
         self.worker_config.wss = wss_config
         self.worker_config.url_sec = url_sec
-        
-        self._init_connectors(server)
         
         # The parallel server's broker client. The client's used to notify
         # all the server's AMQP subprocesses that they need to shut down.
