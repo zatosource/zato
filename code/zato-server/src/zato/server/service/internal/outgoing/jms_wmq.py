@@ -220,14 +220,14 @@ class Delete(AdminService):
                 
                 id = params['id']
                 
-                def_ = session.query(OutgoingWMQ).\
+                out = session.query(OutgoingWMQ).\
                     filter(OutgoingWMQ.id==id).\
                     one()
                 
-                session.delete(def_)
+                session.delete(out)
                 session.commit()
 
-                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': def_.name, 'id':def_.id}
+                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': out.name, 'id':out.id}
                 self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
             except Exception, e:
