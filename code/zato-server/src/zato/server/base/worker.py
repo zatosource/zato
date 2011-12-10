@@ -71,6 +71,9 @@ class WorkerStore(BaseWorker):
         self.wss_lock = RLock()
         self.url_sec_lock = RLock()
         
+    def filter(self, msg):
+        return True
+        
 # ##############################################################################        
         
     def basic_auth_get(self, name):
@@ -204,6 +207,9 @@ class WorkerStore(BaseWorker):
 
     def on_broker_pull_msg_CHANNEL_AMQP_MESSAGE_RECEIVED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'amqp', 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
+    
+    def on_broker_pull_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
+        return self._on_message_invoke_service(msg, 'jms-wmq', 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
             
 # ##############################################################################
             

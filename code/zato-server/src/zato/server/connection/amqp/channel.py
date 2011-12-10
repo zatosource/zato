@@ -151,7 +151,7 @@ class ConsumingConnector(BaseAMQPConnector):
     def _amqp_consumer(self):
         consumer = ConsumingConnection(self._amqp_conn_params(), self.channel_amqp.name,
             self.channel_amqp.queue, self.channel_amqp.consumer_tag_prefix,
-            self._on_amqp_message)
+            self._on_message)
         t = Thread(target=consumer._run)
         t.start()
         
@@ -174,7 +174,7 @@ class ConsumingConnector(BaseAMQPConnector):
         if self.channel_amqp.consumer:
             self.channel_amqp.consumer.close()
                 
-    def _on_amqp_message(self, method_frame, header_frame, body):
+    def _on_message(self, method_frame, header_frame, body):
         """ A callback to be invoked by ConsumingConnection on each new AMQP message.
         """
         params = {}

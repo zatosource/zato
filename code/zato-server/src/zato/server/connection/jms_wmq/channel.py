@@ -36,7 +36,7 @@ from springpython.jms.listener import MessageHandler, SimpleMessageListenerConta
 # Zato
 from zato.common import ConnectionException, PORTS
 from zato.common.broker_message import CHANNEL, DEFINITION, JMS_WMQ_CONNECTOR, MESSAGE_TYPE
-from zato.common.util import TRACE1
+from zato.common.util import new_rid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 
@@ -44,17 +44,24 @@ ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_CHANNEL_ID'
 
 class _MessageHandler(MessageHandler):
     def __init__(self, callback):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.callback = callback
         
     def handle(self, message):
-        self.callback(message)
+        rid = new_rid()
+        if self.logger.isEnabledFor(logging.DEBUG):
+            log_msg = 'About to invoke the message handler'
+            self.logger.debug(log_msg)
+            
+        self.callback(message, rid)
 
 class ConsumingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, name, queue, handler):
         super(ConsumingConnection, self).__init__(factory, name)
         self.logger = logging.getLogger(self.__class__.__name__)
         
-        self.listener = SimpleMessageListenerContainer(self.factory, queue, handler)
+        self.listener = SimpleMessageListenerContainer(self.factory, queue, handler,
+            handlers_per_listener=1)
         self.listener.after_properties_set()
         
 class ConsumingConnector(BaseJMSWMQConnector):
@@ -73,7 +80,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
         self.def_ = Bunch()
         self.channel = Bunch()
         
-        self._message_handler = _MessageHandler(self._on_message_received)
+        self._message_handler = _MessageHandler(self._on_message)
         
         self.broker_push_client_pull_port = PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_JMS_WMQ_PULL
         self.client_push_broker_pull_port = PORTS.CONSUMING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL
@@ -160,9 +167,16 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 self._stop_connection()
                 self._close()
                 
-    def _on_message_received(self, msg):
+    def _on_message(self, body, rid):
         """ Invoked for each message taken off a WebSphere MQ queue.
-        """ 
+        """
+        params = {}
+        params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED
+        params['service'] = self.channel.service
+        params['rid'] = rid
+        params['payload'] = body.text
+        
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
                 
     def on_broker_pull_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
