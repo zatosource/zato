@@ -24,6 +24,7 @@ import errno, logging, os, socket, sys
 from copy import deepcopy
 from multiprocessing import Process
 from threading import RLock, Thread
+from traceback import format_exc
 
 # Pika
 from pika import BasicProperties
@@ -32,6 +33,7 @@ from pika import BasicProperties
 from bunch import Bunch
 
 # Spring Python
+from springpython.jms import WebSphereMQJMSException, NoMessageAvailableException
 from springpython.jms.core import reserved_attributes
 from springpython.jms.listener import MessageHandler, SimpleMessageListenerContainer
 
@@ -51,27 +53,50 @@ MESSAGE_ATTRS = deepcopy(reserved_attributes)
 MESSAGE_ATTRS.remove('text')
 MESSAGE_ATTRS = MESSAGE_ATTRS - set(dir(object) + ["__weakref__", "__dict__", "__module__"])
 
-class _MessageHandler(MessageHandler):
-    def __init__(self, callback):
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.callback = callback
-        
-    def handle(self, message):
-        rid = new_rid()
-        if self.logger.isEnabledFor(logging.DEBUG):
-            log_msg = 'About to invoke the message handler'
-            self.logger.debug(log_msg)
-            
-        self.callback(message, rid)
-
 class ConsumingConnection(BaseJMSWMQConnection):
-    def __init__(self, factory, name, queue, handler):
+    def __init__(self, factory, name, queue, callback):
         super(ConsumingConnection, self).__init__(factory, name)
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.queue = queue
+        self.callback = callback
+        self.keep_listening = False
         
-        self.listener = SimpleMessageListenerContainer(self.factory, queue, handler,
-            handlers_per_listener=1)
-        self.listener.after_properties_set()
+    def _close(self):
+        self.keep_listening = False
+        super(ConsumingConnection, self)._close()
+        
+    def _on_connected(self):
+        super(ConsumingConnection, self)._on_connected()
+        
+        self.keep_listening = True
+        self.logger.debug('Starting listener for [{0}]'.format(self._conn_info()))
+        
+        while self.keep_listening:
+            try:
+                msg = self.factory.receive(self.queue, 1000)
+                self.logger.log(TRACE1, 'Message received [{0}]'.format(str(msg).decode("utf-8")))
+                
+                if msg:
+                    self.callback(msg)
+                
+            except NoMessageAvailableException, e:
+                self.logger.log(TRACE1, 'No messages [{0}], queue [{1}]'.format(
+                    self._conn_info(), self.queue))
+                
+            except WebSphereMQJMSException, e:
+                self.logger.error('Caught [{0}], e.completion_code [{1}], '
+                    'e.reason_code [{2}]'.format(format_exc(e), e.completion_code, e.reason_code))
+              
+                self.keep_listening = False
+                self.close()
+                
+                self.factory._disconnecting = False
+                self.keep_connecting = True
+                self.start()
+            except Exception, e:
+                log_msg = 'Caught an exception [{0}]'.format(format_exc(e))
+                self.logger.error(log_msg)
+                raise 
         
 class ConsumingConnector(BaseJMSWMQConnector):
     """ An AMQP consuming connector started as a subprocess. Each connection to an AMQP
@@ -88,8 +113,6 @@ class ConsumingConnector(BaseJMSWMQConnector):
         
         self.def_ = Bunch()
         self.channel = Bunch()
-        
-        self._message_handler = _MessageHandler(self._on_message)
         
         self.broker_push_client_pull_port = PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_JMS_WMQ_PULL
         self.client_push_broker_pull_port = PORTS.CONSUMING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL
@@ -140,7 +163,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
         
         if self.channel.is_active:
             factory = self._get_factory()
-            listener = self._listener(factory, self.channel.queue, self._message_handler)
+            listener = self._listener(factory, self.channel.queue, self._on_message)
             self.channel.listener = listener
 
     def _listener(self, factory, queue, handler):
@@ -163,9 +186,8 @@ class ConsumingConnector(BaseJMSWMQConnector):
         """ Stops the given channel's listener. The method must be called from 
         a method that holds onto all related RLocks.
         """
-        if self.channel.get('channel'):
+        if self.channel.get('listener'):
             listener = self.channel.listener
-            self.channel.clear()
             listener.close()
             
     def _close_delete(self):
@@ -176,13 +198,13 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 self._stop_connection()
                 self._close()
                 
-    def _on_message(self, msg, rid):
+    def _on_message(self, msg):
         """ Invoked for each message taken off a WebSphere MQ queue.
         """
         params = {}
         params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED
         params['service'] = self.channel.service
-        params['rid'] = rid
+        params['rid'] = new_rid()
         params['payload'] = msg.text
         
         for attr in MESSAGE_ATTRS:
