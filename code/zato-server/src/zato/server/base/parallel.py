@@ -43,6 +43,7 @@ from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, MESSAG
 from zato.common.util import new_rid, TRACE1
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
+from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
@@ -306,19 +307,23 @@ class ParallelServer(BrokerMessageReceiver):
     def _init_connectors(self, server):
         """ Starts all the connector subprocesses.
         """
+
+        # AMQP - channels    
+        for item in self.odb.get_channel_amqp_list(server.cluster.id):
+            amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
         
         # AMQP - outgoing
         for item in self.odb.get_out_amqp_list(server.cluster.id):
             amqp_out_start_connector(self.repo_location, item.id, item.def_id)
-        
-        # AMQP - channels    
-        for item in self.odb.get_channel_amqp_list(server.cluster.id):
-            amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
             
+        # JMS WMQ - channels
+        for item in self.odb.get_channel_jms_wmq_list(server.cluster.id):
+            jms_wmq_channel_start_connector(self.repo_location, item.id, item.def_id)
+    
         # JMS WMQ - outgoing
         for item in self.odb.get_out_jms_wmq_list(server.cluster.id):
             jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
-    
+            
     def _after_init_non_accepted(self, server):
         pass    
         
@@ -363,7 +368,7 @@ class ParallelServer(BrokerMessageReceiver):
 
             # Close all the connector subprocesses this server has started
             pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB),
-                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB))
+                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB),)
             
             for action, msg_type in pairs:
                 msg = {}
