@@ -178,6 +178,7 @@ class OutgoingConnector(BaseConnector):
     def filter(self, msg):
         """ Can we handle the incoming message?
         """
+        
         if super(OutgoingConnector, self).filter(msg):
             return True
         
@@ -195,7 +196,9 @@ class OutgoingConnector(BaseConnector):
         be called from a method that holds onto all related RLocks.
         """
         if self.out.get('sender'):
-            self.out.sender.close()
+            sender = self.out.sender
+            self.out.clear()
+            sender.close()
         
     def _recreate_sender(self):
         self._stop_connection()
@@ -258,17 +261,22 @@ class OutgoingConnector(BaseConnector):
     def on_broker_pull_msg_OUTGOING_JMS_WMQ_SEND(self, msg, args=None):
         """ Puts a message on a queue.
         """
-        if not self.out.is_active:
+        if not self.out.get('is_active'):
             log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out)
             self.logger.info(log_msg)
             return
             
-        if self.out.sender:
-            self.out.sender.send(msg, self.out.delivery_mode, self.out.expiration, 
+        if self.out.get('sender'):
+            if self.out.get('sender').factory._is_connected:
+                self.out.sender.send(msg, self.out.delivery_mode, self.out.expiration, 
                     self.out.priority, self.def_.max_chars_printed)
+            else:
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    log_msg = 'Not sending, the factory for [{0}] is not connected'.format(self.out)
+                    self.logger.debug(log_msg)
         else:
             if self.logger.isEnabledFor(TRACE1):
-                log_msg = 'No sender for [{0}]'.format(self.out.name)
+                log_msg = 'No sender for [{0}]'.format(self.out)
                 self.logger.log(TRACE1, log_msg)
                 
     def on_broker_pull_msg_OUTGOING_JMS_WMQ_DELETE(self, msg, args=None):
