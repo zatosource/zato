@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function
 
 # stdlib
 import errno, logging, os, socket, sys
+from copy import deepcopy
 from multiprocessing import Process
 from threading import RLock, Thread
 
@@ -31,6 +32,7 @@ from pika import BasicProperties
 from bunch import Bunch
 
 # Spring Python
+from springpython.jms.core import reserved_attributes
 from springpython.jms.listener import MessageHandler, SimpleMessageListenerContainer
 
 # Zato
@@ -41,6 +43,13 @@ from zato.server.connection import setup_logging, start_connector as _start_conn
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_CHANNEL_ID'
+
+# Spring Python's 'text' is our 'payload' hence we need to do away with the 'text' attribute.
+# In addition to that, we also need to get rid of all the magic methods.
+
+MESSAGE_ATTRS = deepcopy(reserved_attributes)
+MESSAGE_ATTRS.remove('text')
+MESSAGE_ATTRS = MESSAGE_ATTRS - set(dir(object) + ["__weakref__", "__dict__", "__module__"])
 
 class _MessageHandler(MessageHandler):
     def __init__(self, callback):
@@ -167,14 +176,17 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 self._stop_connection()
                 self._close()
                 
-    def _on_message(self, body, rid):
+    def _on_message(self, msg, rid):
         """ Invoked for each message taken off a WebSphere MQ queue.
         """
         params = {}
         params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED
         params['service'] = self.channel.service
         params['rid'] = rid
-        params['payload'] = body.text
+        params['payload'] = msg.text
+        
+        for attr in MESSAGE_ATTRS:
+            params[attr] = getattr(msg, attr, None)
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
                 
