@@ -225,7 +225,7 @@ class Delete(AdminService):
                     one()
                 
                 session.delete(item)
-                session.commit()
+                #session.commit()
 
                 msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': item.name, 'id':item.id}
                 self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
