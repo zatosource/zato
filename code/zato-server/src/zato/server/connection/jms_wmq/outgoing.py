@@ -33,7 +33,6 @@ from bunch import Bunch
 # Spring Python
 from springpython.jms import JMSException
 from springpython.jms.core import JmsTemplate, TextMessage
-from springpython.jms.factory import WebSphereMQConnectionFactory
 
 # Zato
 from zato.common import ConnectionException, PORTS
@@ -41,7 +40,7 @@ from zato.common.broker_message import DEFINITION, JMS_WMQ_CONNECTOR, MESSAGE_TY
 from zato.common.util import TRACE1
 from zato.server.connection import BaseConnection
 from zato.server.connection import setup_logging, start_connector as _start_connector
-from zato.server.connection.jms_wmq import BaseJMSWMQConnector
+from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_OUT_ID'
 
@@ -70,18 +69,11 @@ class WMQFacade(object):
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL)
 
-class OutgoingConnection(BaseConnection):
+class OutgoingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, out_name):
         super(OutgoingConnection, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.factory = factory
         self.jms_template = JmsTemplate(self.factory)
-        self.out_name = out_name
-        self.reconnect_exceptions = (JMSException, )
-        
-        # Not everyone uses WebSphere MQ
-        from pymqi import MQMIError
-        self.MQMIError = MQMIError
         
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         jms_msg = TextMessage()
@@ -108,22 +100,6 @@ class OutgoingConnection(BaseConnection):
                 self.start()
             else:
                 raise
-        
-    def _start(self):
-        self.factory._connect()
-        self._on_connected()
-        self.keep_connecting = False
-        
-    def _close(self):
-        self.factory.destroy()
-
-    def _keep_connecting(self, exception):
-        # Assume we can always deal with JMS exception and network errors
-        return isinstance(exception, (JMSException, self.MQMIError)) \
-               or (isinstance(exception, EnvironmentError) and exception.errno in self.reconnect_error_numbers)
-
-    def _conn_info(self):
-        return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.out_name)
 
 class OutgoingConnector(BaseJMSWMQConnector):
     """ An outgoing connector started as a subprocess. Each connection to a queue manager
@@ -198,21 +174,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
         self._stop_connection()
         
         if self.out.is_active:
-            
-            factory = WebSphereMQConnectionFactory(
-                self.def_.queue_manager,
-                str(self.def_.channel),
-                str(self.def_.host),
-                self.def_.port,
-                self.def_.cache_open_send_queues,
-                self.def_.cache_open_receive_queues,
-                self.def_.use_shared_connections,
-                ssl = self.def_.ssl,
-                ssl_cipher_spec = str(self.def_.ssl_cipher_spec) if self.def_.ssl_cipher_spec else None,
-                ssl_key_repository = str(self.def_.ssl_key_repository) if self.def_.ssl_key_repository else None,
-                needs_mcd = self.def_.needs_mcd,
-            )
-
+            factory = self._get_factory()
             sender = self._sender(factory)
             self.out.sender = sender
 
@@ -239,19 +201,13 @@ class OutgoingConnector(BaseJMSWMQConnector):
             with self.out_lock:
                 self._stop_connection()
                 self._close()
-                
-    def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
-        self._close_delete()
-                
+
     def on_broker_pull_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
             with self.out_lock:
                 self.def_ = msg
                 self._recreate_sender()
                 
-    def on_broker_pull_msg_DEFINITION_JMS_WMQ_DELETE(self, msg, args=None):
-        self._close_delete()
-
     def on_broker_pull_msg_OUTGOING_JMS_WMQ_SEND(self, msg, args=None):
         """ Puts a message on a queue.
         """
