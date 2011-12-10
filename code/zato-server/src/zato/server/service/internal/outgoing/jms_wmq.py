@@ -49,8 +49,6 @@ class GetList(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        self.jms_wmq.put('hi there', 'Adapter CRM MQ', 'TEST.1')
-        
         with closing(self.server.odb.session()) as session:
             item_list = Element('item_list')
             db_items = out_jms_wmq_list(session, params['cluster_id'])
@@ -225,7 +223,7 @@ class Delete(AdminService):
                     one()
                 
                 session.delete(item)
-                #session.commit()
+                session.commit()
 
                 msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': item.name, 'id':item.id}
                 self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
