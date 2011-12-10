@@ -37,42 +37,17 @@ from springpython.jms.factory import WebSphereMQConnectionFactory
 
 # Zato
 from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import DEFINITION, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import CHANNEL, DEFINITION, JMS_WMQ_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import TRACE1
 from zato.server.connection import BaseConnection
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnector
 
-ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_OUT_ID'
+ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_CHANNEL_ID'
 
-class WMQFacade(object):
-    """ A WebSphere MQ facade for services so they aren't aware that sending WMQ
-    messages actually requires us to use the Zato broker underneath.
-    """
-    def __init__(self, broker_client):
-        self.broker_client = broker_client # A Zato broker client
-    
-    def put(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            *args, **kwargs):
-        """ Puts a message on a WebSphere MQ queue.
-        """
-        params = {}
-        params['action'] = OUTGOING.JMS_WMQ_SEND
-        params['name'] = out_name
-        params['body'] = msg
-        params['queue'] = queue
-        params['delivery_mode'] = delivery_mode
-        params['expiration'] = expiration
-        params['priority'] = priority
-        params['max_chars_printed'] = max_chars_printed
-        params['args'] = args
-        params['kwargs'] = kwargs
-        
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL)
-
-class OutgoingConnection(BaseConnection):
+class ConsumingConnection(BaseConnection):
     def __init__(self, factory, out_name):
-        super(OutgoingConnection, self).__init__()
+        super(ConsumingConnection, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
         self.factory = factory
         self.jms_template = JmsTemplate(self.factory)
@@ -125,29 +100,102 @@ class OutgoingConnection(BaseConnection):
     def _conn_info(self):
         return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.out_name)
 
-class OutgoingConnector(BaseJMSWMQConnector):
-    """ An outgoing connector started as a subprocess. Each connection to a queue manager
-    gets its own connector.
+class ConsumingConnector(BaseJMSWMQConnector):
+    """ An AMQP consuming connector started as a subprocess. Each connection to an AMQP
+    broker gets its own connector.
     """
-    def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
-        super(OutgoingConnector, self).__init__(repo_location, def_id)
-        self.broker_client_name = 'jms-wmq-outgoing-connector'
+    def __init__(self, repo_location=None, def_id=None, channel_id=None, init=True):
+        super(ConsumingConnector, self).__init__(repo_location, def_id)
+        self.broker_client_name = 'jms-wmq-consuming-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.out_id = out_id
+        self.channel_id = channel_id
         
-        self.out_lock = RLock()
+        self.channel_lock = RLock()
         self.def_lock = RLock()
         
-        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_JMS_WMQ_PULL
-        self.client_push_broker_pull_port = PORTS.PUBLISHING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL
-        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_JMS_WMQ_SUB
+        self.def_ = Bunch()
+        self.channel = Bunch()
+        
+        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_JMS_WMQ_PULL
+        self.client_push_broker_pull_port = PORTS.CONSUMING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL
+        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_CONSUMING_CONNECTOR_JMS_WMQ_SUB
         
         if init:
             self._init()
             self._setup_connector()
             
+    def filter(self, msg):
+        """ Can we handle the incoming message?
+        """
+        if super(ConsumingConnector, self).filter(msg):
+            return True
+            
+        elif msg.action in(CHANNEL.JMS_WMQ_DELETE, CHANNEL.JMS_WMQ_EDIT):
+            return self.out.name == msg['name']
+            
+    def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
+        self._close_delete()
+        
+    '''
+    def _recreate_sender(self):
+        self._stop_connection()
+        
+        if self.out.is_active:
+            
+            factory = WebSphereMQConnectionFactory(
+                self.def_.queue_manager,
+                str(self.def_.channel),
+                str(self.def_.host),
+                self.def_.port,
+                self.def_.cache_open_send_queues,
+                self.def_.cache_open_receive_queues,
+                self.def_.use_shared_connections,
+                ssl = self.def_.ssl,
+                ssl_cipher_spec = str(self.def_.ssl_cipher_spec) if self.def_.ssl_cipher_spec else None,
+                ssl_key_repository = str(self.def_.ssl_key_repository) if self.def_.ssl_key_repository else None,
+                needs_mcd = self.def_.needs_mcd,
+            )
+
+            sender = self._sender(factory)
+            self.out.sender = sender
+
+    def _sender(self, factory):
+        """ Starts the outgoing connection in a new thread and returns it.
+        """
+        sender = ConsumingConnection(factory, self.out.name)
+        t = Thread(target=sender._run)
+        t.start()
+        
+        return sender'''
+        
+    def _setup_connector(self):
+        """ Sets up the connector on startup.
+        """
+        with self.channel_lock:
+            with self.def_lock:
+                #self._recreate_listener()
+                pass
+            
+    def _stop_connection(self):
+        """ Stops the given channel's listener. The method must be called from 
+        a method that holds onto all related RLocks.
+        """
+        if self.channel.get('channel'):
+            listener = self.channel.listener
+            self.channel.clear()
+            listener.close()
+            
+    def _close_delete(self):
+        """ Stops the connections, exits the process.
+        """
+        with self.def_lock:
+            with self.channel_lock:
+                self._stop_connection()
+                self._close()
+            
+    '''
     def _setup_odb(self):
-        super(OutgoingConnector, self)._setup_odb()
+        super(ConsumingConnector, self)._setup_odb()
         
         item = self.odb.get_def_jms_wmq(self.server.cluster.id, self.def_id)
         self.def_ = Bunch()
@@ -179,14 +227,21 @@ class OutgoingConnector(BaseJMSWMQConnector):
     def filter(self, msg):
         """ Can we handle the incoming message?
         """
-        if super(OutgoingConnector, self).filter(msg):
+        
+        if super(ConsumingConnector, self).filter(msg):
             return True
-
+        
+        elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
+            return self.odb.odb_data['token'] == msg['odb_token']
+            
         elif msg.action in(OUTGOING.JMS_WMQ_SEND, OUTGOING.JMS_WMQ_DELETE, OUTGOING.JMS_WMQ_EDIT):
             return self.out.name == msg['name']
         
+        elif msg.action in(DEFINITION.JMS_WMQ_EDIT, DEFINITION.JMS_WMQ_DELETE):
+            return self.def_.id == msg.id
+        
     def _stop_connection(self):
-        """ Stops the given outgoing connection's sender. The method must 
+        """ Stops the given outgoing connection's publisher. The method must 
         be called from a method that holds onto all related RLocks.
         """
         if self.out.get('sender'):
@@ -219,7 +274,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
     def _sender(self, factory):
         """ Starts the outgoing connection in a new thread and returns it.
         """
-        sender = OutgoingConnection(factory, self.out.name)
+        sender = ConsumingConnection(factory, self.out.name)
         t = Thread(target=sender._run)
         t.start()
         
@@ -231,14 +286,6 @@ class OutgoingConnector(BaseJMSWMQConnector):
         with self.out_lock:
             with self.def_lock:
                 self._recreate_sender()
-                
-    def _close_delete(self):
-        """ Stops the connections, exits the process.
-        """
-        with self.def_lock:
-            with self.out_lock:
-                self._stop_connection()
-                self._close()
                 
     def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
         self._close_delete()
@@ -283,6 +330,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
                 self.out = msg
                 self.out.sender = sender
                 self._recreate_sender()
+                '''
 
 def run_connector():
     """ Invoked on the process startup.
@@ -293,7 +341,7 @@ def run_connector():
     def_id = os.environ['ZATO_CONNECTOR_DEF_ID']
     item_id = os.environ[ENV_ITEM_NAME]
     
-    connector = OutgoingConnector(repo_location, def_id, item_id)
+    connector = ConsumingConnector(repo_location, def_id, item_id)
     
     logger = logging.getLogger(__name__)
     logger.debug('Starting JMS WebSphere MQ outgoing, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(

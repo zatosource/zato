@@ -16,3 +16,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+# Zato
+from zato.common.broker_message import DEFINITION, JMS_WMQ_CONNECTOR
+from zato.server.connection import BaseConnection, BaseConnector
+
+class BaseJMSWMQConnector(BaseConnector):
+    
+    def filter(self, msg):
+        """ Can we handle the incoming message?
+        """
+        if super(BaseJMSWMQConnector, self).filter(msg):
+            return True
+        
+        elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
+            return self.odb.odb_data['token'] == msg['odb_token']
+        
+        elif msg.action in(DEFINITION.JMS_WMQ_EDIT, DEFINITION.JMS_WMQ_DELETE):
+            return self.def_.id == msg.id

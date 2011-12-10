@@ -111,7 +111,7 @@ class ConsumingConnector(BaseAMQPConnector):
         """
         with self.out_amqp_lock:
             with self.def_amqp_lock:
-                self._recreate_amqp_consumer()
+                self._recreate_consumer()
                 
     def filter(self, msg):
         """ Finds out whether the incoming message actually belongs to the 
@@ -136,7 +136,7 @@ class ConsumingConnector(BaseAMQPConnector):
         if self.channel_amqp.get('consumer') and self.channel_amqp.consumer.conn and self.channel_amqp.consumer.conn.is_open:
             self.channel_amqp.consumer.close()
                             
-    def _recreate_amqp_consumer(self):
+    def _recreate_consumer(self):
         """ (Re-)creates an AMQP consumer and updates the related attributes so 
         that they point to the newly created consumer. The method must be called 
         from a method that holds onto all AMQP-related RLocks.
@@ -166,7 +166,7 @@ class ConsumingConnector(BaseAMQPConnector):
                 consumer = self.channel_amqp.get('consumer')
                 self.channel_amqp = msg
                 self.channel_amqp.consumer = consumer
-                self._recreate_amqp_consumer()
+                self._recreate_consumer()
                 
     def _stop_amqp_connection(self):
         """ Stops the AMQP connection.
