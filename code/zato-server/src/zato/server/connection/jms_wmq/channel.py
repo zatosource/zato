@@ -106,7 +106,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
             return True
             
         elif msg.action in(CHANNEL.JMS_WMQ_DELETE, CHANNEL.JMS_WMQ_EDIT):
-            return self.out.name == msg['name']
+            return self.channel.id == msg['id']
         
     def _setup_odb(self):
         super(ConsumingConnector, self)._setup_odb()
@@ -198,6 +198,15 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 
     def on_broker_pull_msg_CHANNEL_JMS_WMQ_DELETE(self, msg, args=None):
         self._close_delete()
+        
+    def on_broker_pull_msg_CHANNEL_JMS_WMQ_EDIT(self, msg, args=None):
+        with self.def_lock:
+            with self.channel_lock:
+                listener = self.channel.listener
+                self.channel = msg
+                self.channel.queue = str(self.channel.queue)
+                self.channel.listener = listener
+                self._recreate_listener()
 
 def run_connector():
     """ Invoked on the process startup.
