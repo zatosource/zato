@@ -686,6 +686,30 @@ class OutgoingWMQ(Base):
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
         
+class OutgoingZMQ(Base):
+    """ An outgoing Zero MQ connection.
+    """
+    __tablename__ = 'out_zmq'
+    
+    id = Column(Integer,  Sequence('out_zmq_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    
+    address = Column(String(200), nullable=False)
+    socket_type = Column(String(20), nullable=False)
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_zmq', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, is_active=None, address=None,
+                 socket_type=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.socket_type = socket_type
+        self.address = address
+        self.cluster_id = cluster_id
+        
 ################################################################################
 
 class ChannelAMQP(Base):
@@ -741,4 +765,32 @@ class ChannelWMQ(Base):
         self.queue = queue
         self.def_id = def_id
         self.def_name = def_name # Not used by the DB
+        self.service_name = service_name # Not used by the DB
+
+class ChannelZMQ(Base):
+    """ An incoming Zero MQ connection.
+    """
+    __tablename__ = 'channel_zmq'
+    
+    id = Column(Integer,  Sequence('channel_zmq_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    
+    address = Column(String(200), nullable=False)
+    socket_type = Column(String(20), nullable=False)
+    
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship(Service, backref=backref('zmq_channels', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('zmq_channels', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, is_active=None, socket_type=None,
+            address=None, service_id=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.socket_type = socket_type
+        self.address = address
+        self.cluster_id = cluster_id
         self.service_name = service_name # Not used by the DB

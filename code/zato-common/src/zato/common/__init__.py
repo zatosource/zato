@@ -88,10 +88,6 @@ scheduler_date_time_format = "%Y-%m-%d %H:%M:%S"
 
 soap_date_time_format = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-# All IPC & AMQP config messages must start with this prefixes.
-ZATO_CONFIG_REQUEST = "ZATO_CONFIG_REQUEST\n"
-ZATO_CONFIG_RESPONSE = "ZATO_CONFIG_RESPONSE\n"
-
 # A convenient constant used in several places, simplifies passing around
 # arguments which are, well, not given (as opposed to being None, an empty string etc.)
 ZATO_NOT_GIVEN = b"ZATO_NOT_GIVEN"
@@ -123,6 +119,9 @@ ZATO_FIELD_OPERATORS = {
     'is-equal-to': '==',
     'is-not-equal-to': '!=',
     }
+
+ZMQ_OUTGOING_TYPES = ('PUSH',)
+ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

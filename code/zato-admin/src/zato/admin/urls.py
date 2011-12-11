@@ -34,6 +34,7 @@ from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
+from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pool import sql
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
@@ -147,6 +148,12 @@ urlpatterns = patterns('',
     url(r'^zato/outgoing/jms-wmq/create/$', out_jms_wmq.create, name='out-jms-wmq-create'),
     url(r'^zato/outgoing/jms-wmq/edit/$', out_jms_wmq.edit, name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_jms_wmq.delete, name='out-jms-wmq-delete'),
+    
+    # .. ZeroMQ
+    url(r'^zato/outgoing/zmq/$', out_zmq.index, name='out-zmq'),
+    url(r'^zato/outgoing/zmq/create/$', out_zmq.create, name='out-zmq-create'),
+    url(r'^zato/outgoing/zmq/edit/$', out_zmq.edit, name='out-zmq-edit'),
+    url(r'^zato/outgoing/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_zmq.delete, name='out-zmq-delete'),
     
     # Channels
     

@@ -39,8 +39,7 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import ZATO_CONFIG_REQUEST, ZATO_CONFIG_RESPONSE, ZATO_NOT_GIVEN, \
-     ZATO_ERROR, ZATO_OK, ZatoException
+from zato.common import ZATO_NOT_GIVEN, ZATO_ERROR, ZATO_OK, ZatoException
 from zato.common.util import TRACE1
 from zato.server.base import BrokerMessageReceiver
 

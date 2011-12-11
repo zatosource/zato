@@ -37,8 +37,7 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import(PORTS, ZATO_CONFIG_REQUEST, ZATO_JOIN_REQUEST_ACCEPTED,
-     ZATO_OK, ZATO_URL_TYPE_SOAP)
+from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_OK, ZATO_URL_TYPE_SOAP
 from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
