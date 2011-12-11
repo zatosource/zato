@@ -201,16 +201,18 @@ class ConsumingConnector(BaseJMSWMQConnector):
     def _on_message(self, msg):
         """ Invoked for each message taken off a WebSphere MQ queue.
         """
-        params = {}
-        params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED
-        params['service'] = self.channel.service
-        params['rid'] = new_rid()
-        params['payload'] = msg.text
-        
-        for attr in MESSAGE_ATTRS:
-            params[attr] = getattr(msg, attr, None)
-        
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+        with self.def_lock:
+            with self.channel_lock:
+                params = {}
+                params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED
+                params['service'] = self.channel.service
+                params['rid'] = new_rid()
+                params['payload'] = msg.text
+                
+                for attr in MESSAGE_ATTRS:
+                    params[attr] = getattr(msg, attr, None)
+                
+                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
                 
     def on_broker_pull_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
