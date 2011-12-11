@@ -189,6 +189,13 @@ class ZatoContext(PythonConfig):
             'zato:outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
             'zato:outgoing.jms_wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
             'zato:outgoing.jms_wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
+
+            # Outgoing connections - ZeroMQ
+            'zato:outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
+            'zato:outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
+            'zato:outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
+            'zato:outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',            
+            
         }
 
     @Object
