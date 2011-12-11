@@ -49,23 +49,7 @@ from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
-
-def _get_def_ids(cluster):
-    out = {}
-    
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.cluster_id = cluster.id        
-    _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.zmq.get-list', zato_message)
-    
-    if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
-        for definition_elem in zato_message.data.definition_list.definition:
-            id = definition_elem.id.text
-            name = definition_elem.name.text
-            out[id] = name
-        
-    return out
-        
+ 
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
@@ -78,7 +62,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
     zato_message.data.address = params[prefix + 'address']
     zato_message.data.socket_type = params[prefix + 'socket_type']
-
+    
     return zato_message
 
 def _edit_create_response(verb, id, name):
@@ -102,16 +86,11 @@ def index(req):
     if cluster_id and req.method == 'GET':
         
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        
-        def_ids = _get_def_ids(cluster)
-        create_form.set_def_id(def_ids)
-        edit_form.set_def_id(def_ids)
-
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
         zato_message.data.cluster_id = cluster_id
         
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.jms_wmq.get-list', zato_message)
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.zmq.get-list', zato_message)
         
         if zato_path('data.item_list.item').get_from(zato_message) is not None:
             
@@ -148,9 +127,9 @@ def create(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.jms_wmq.create', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.zmq.create', zato_message)
         
-        return _edit_create_response('created', zato_message.data.out_jms_wmq.id.text, req.POST['name'])
+        return _edit_create_response('created', zato_message.data.out_zmq.id.text, req.POST['name'])
     
     except Exception, e:
         msg = "Could not create an outgoing ZeroMQ connection, e=[{e}]".format(e=format_exc(e))
@@ -165,7 +144,7 @@ def edit(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.jms_wmq.edit', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.zmq.edit', zato_message)
 
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'])
         
@@ -184,7 +163,7 @@ def delete(req, id, cluster_id):
         zato_message.data = Element('data')
         zato_message.data.id = id
         
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.jms_wmq.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.zmq.delete', zato_message)
         
         return HttpResponse()
     
