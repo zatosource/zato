@@ -42,7 +42,7 @@ class ZMQPullSub(object):
     
     def __init__(self, name, zmq_context, broker_push_client_pull, broker_pub_client_sub, 
                  on_pull_handler=None,  pull_handler_args=None,
-                 on_sub_handler=None,  sub_handler_args=None, keep_running=True):
+                 on_sub_handler=None,  sub_handler_args=None, sub_key=b'', keep_running=True):
         self.name = name
         self.zmq_context = zmq_context
         self.broker_push_client_pull = broker_push_client_pull
@@ -52,6 +52,7 @@ class ZMQPullSub(object):
         self.pull_handler_args = pull_handler_args
         self.on_sub_handler = on_sub_handler
         self.sub_handler_args = sub_handler_args
+        self.sub_key = sub_key
         self.pull_socket = None
         self.sub_socket = None
         
@@ -94,7 +95,7 @@ class ZMQPullSub(object):
             self.sub_socket = self.zmq_context.socket(zmq.SUB)
             self.sub_socket.setsockopt(zmq.LINGER, 0)
             self.sub_socket.connect(self.broker_pub_client_sub)
-            self.sub_socket.setsockopt(zmq.SUBSCRIBE, b'')
+            self.sub_socket.setsockopt(zmq.SUBSCRIBE, self.sub_key)
             poller.register(self.sub_socket, zmq.POLLIN)
             _socks.append(('sub', self.sub_socket))
             
@@ -194,6 +195,7 @@ class BrokerClient(object):
         self.pull_handler_args = kwargs.get('pull_handler_args')
         self.on_sub_handler = kwargs.get('on_sub_handler')
         self.sub_handler_args = kwargs.get('sub_handler_args')
+        self.sub_key = kwargs.get('sub_key', b'')
 
         if init:
             self.init()
@@ -202,7 +204,7 @@ class BrokerClient(object):
         if self.broker_pub_client_sub or self.broker_push_client_pull:
             self._pull_sub = ZMQPullSub(self.name, self.zmq_context, self.broker_push_client_pull, 
                 self.broker_pub_client_sub, self.on_pull_handler, self.pull_handler_args,
-                self.on_sub_handler, self.sub_handler_args)
+                self.on_sub_handler, self.sub_handler_args, self.sub_key)
         
         if self.client_push_broker_pull:
             self._push = ZMQPush(self.name, self.zmq_context, self.client_push_broker_pull)
