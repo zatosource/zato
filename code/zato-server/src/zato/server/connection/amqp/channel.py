@@ -177,13 +177,15 @@ class ConsumingConnector(BaseAMQPConnector):
     def _on_message(self, method_frame, header_frame, body):
         """ A callback to be invoked by ConsumingConnection on each new AMQP message.
         """
-        params = {}
-        params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED
-        params['service'] = self.channel_amqp.service
-        params['rid'] = new_rid()
-        params['payload'] = body
-        
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+        with self.def_amqp_lock:
+            with self.channel_amqp_lock:
+                params = {}
+                params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED
+                params['service'] = self.channel_amqp.service
+                params['rid'] = new_rid()
+                params['payload'] = body
+                
+                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
 
     def on_broker_pull_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation
