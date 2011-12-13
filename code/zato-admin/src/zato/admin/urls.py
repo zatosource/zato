@@ -30,6 +30,7 @@ from zato.admin.web.views import(cluster, load_balancer, main, scheduler,
 from zato.admin.web.views.channel import soap
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
+from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.outgoing import amqp as out_amqp
@@ -77,11 +78,6 @@ urlpatterns = patterns('',
     url(r'^zato/service/$', service.index, name='service'),
     url(r'^zato/service/details/(?P<server_id>\d*)/(?P<service_name>.*)/invoke/$', service.invoke, name='service-invoke'),
     url(r'^zato/service/details/(?P<server_id>\d*)/(?P<service_name>.*)/$', service.details, name='service-details'),
-
-    # Channels.
-    url(r'^zato/channel/soap/$', soap.index, name='channel-soap'),
-    url(r'^zato/channel/soap/create/$', basic_auth.create, name='channel-soap-create'),
-    url(r'^zato/channel/soap/edit/$', basic_auth.edit, name='channel-soap-edit'),
 
     # Security..
 
@@ -163,11 +159,17 @@ urlpatterns = patterns('',
     url(r'^zato/channel/amqp/edit/$', channel_amqp.edit, name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.delete, name='channel-amqp-delete'),
     
-    # .. AMQP
+    # .. JMS WebSphere MQ
     url(r'^zato/channel/jms-wmq/$', channel_jms_wmq.index, name='channel-jms-wmq'),
     url(r'^zato/channel/jms-wmq/create/$', channel_jms_wmq.create, name='channel-jms-wmq-create'),
     url(r'^zato/channel/jms-wmq/edit/$', channel_jms_wmq.edit, name='channel-jms-wmq-edit'),
     url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_jms_wmq.delete, name='channel-jms-wmq-delete'),
+    
+    # .. ZeroMQ
+    url(r'^zato/channel/zmq/$', channel_zmq.index, name='channel-zmq'),
+    url(r'^zato/channel/zmq/create/$', channel_zmq.create, name='channel-zmq-create'),
+    url(r'^zato/channel/zmq/edit/$', channel_zmq.edit, name='channel-zmq-edit'),
+    url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_zmq.delete, name='channel-zmq-delete'),
     
 )
 

@@ -727,7 +727,7 @@ class ChannelAMQP(Base):
     service = relationship(Service, backref=backref('amqp_channels', order_by=name, cascade='all, delete, delete-orphan'))
     
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDefAMQP, backref=backref('amqp_channels', cascade='all, delete, delete-orphan'))
+    def_ = relationship(ConnDefAMQP, backref=backref('channels_amqp', cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, is_active=None, queue=None, 
                  consumer_tag_prefix=None, def_id=None, def_name=None,
@@ -755,7 +755,7 @@ class ChannelWMQ(Base):
     service = relationship(Service, backref=backref('wmq_channels', order_by=name, cascade='all, delete, delete-orphan'))
     
     def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(ConnDefWMQ, backref=backref('wmq_channels', cascade='all, delete, delete-orphan'))
+    def_ = relationship(ConnDefWMQ, backref=backref('channels_wmq', cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, is_active=None, queue=None, 
                  def_id=None, def_name=None, service_name=None):
@@ -778,19 +778,17 @@ class ChannelZMQ(Base):
     
     address = Column(String(200), nullable=False)
     socket_type = Column(String(20), nullable=False)
-    
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
-    service = relationship(Service, backref=backref('zmq_channels', order_by=name, cascade='all, delete, delete-orphan'))
+    sub_key = Column(String(200), nullable=False)
     
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('zmq_channels', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
     
-    def __init__(self, id=None, name=None, is_active=None, socket_type=None,
-            address=None, service_id=None, cluster_id=None):
+    def __init__(self, id=None, name=None, is_active=None, address=None,
+                 socket_type=None, sub_key=None, cluster_id=None):
         self.id = id
         self.name = name
         self.is_active = is_active
-        self.socket_type = socket_type
         self.address = address
+        self.socket_type = socket_type
+        self.sub_key = sub_key
         self.cluster_id = cluster_id
-        self.service_name = service_name # Not used by the DB
