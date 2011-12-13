@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, ChannelWMQ,
-    Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, 
+    ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, IntervalBasedJob, 
     Job,  OutgoingAMQP,  OutgoingWMQ, OutgoingZMQ, Service, TechnicalAccount, 
     WSSDefinition)
 
@@ -241,6 +241,27 @@ def out_zmq(session, cluster_id, out_id):
 
 def out_zmq_list(session, cluster_id):
     """ Outgoing ZeroMQ connections.
+    """
+    return _out_zmq(session, cluster_id).all()
+
+# ##############################################################################
+
+def _channel_zmq(session, cluster_id):
+    return session.query(ChannelZMQ.id, ChannelZMQ.name, ChannelZMQ.is_active, 
+            ChannelZMQ.address, ChannelZMQ.socket_type, ChannelZMQ.sub_key).\
+        filter(Cluster.id==ChannelZMQ.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(ChannelZMQ.name)
+
+def channel_zmq(session, cluster_id, out_id):
+    """ An incoming ZeroMQ connection.
+    """
+    return _channel_zmq(session, cluster_id).\
+           filter(ChannelZMQ.id==out_id).\
+           one()
+
+def channel_zmq_list(session, cluster_id):
+    """ Incoming ZeroMQ connections.
     """
     return _out_zmq(session, cluster_id).all()
 

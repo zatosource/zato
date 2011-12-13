@@ -178,6 +178,12 @@ class ZatoContext(PythonConfig):
             'zato:channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
             'zato:channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
             
+            # Channels - ZeroMQ
+            'zato:channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
+            'zato:channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
+            'zato:channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
+            'zato:channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
+            
             # Outgoing connections - AMQP
             'zato:outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
             'zato:outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
