@@ -166,7 +166,7 @@ class Edit(AdminService):
                 return ZATO_OK, etree.tostring(xml_item)
                 
             except Exception, e:
-                msg = 'Could not update the ZeroMQ definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the outgoing ZeroMQ connection, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -191,7 +191,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': OUTGOING.ZMQ_DELETE, 'name': item.name, 'id':item.id}
                 #self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
             except Exception, e:

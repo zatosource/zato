@@ -778,7 +778,7 @@ class ChannelZMQ(Base):
     
     address = Column(String(200), nullable=False)
     socket_type = Column(String(20), nullable=False)
-    sub_key = Column(String(200), nullable=False)
+    sub_key = Column(String(200), nullable=True)
     
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
