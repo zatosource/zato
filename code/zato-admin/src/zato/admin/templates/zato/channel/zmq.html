@@ -58,7 +58,7 @@
 
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show connections" />
+        <input type="submit" value="Show channels" />
     </form>
     </div>
 
@@ -115,7 +115,7 @@
         
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-zmq-create %}" method="post" id="create-form">
+                <form action="{% url channel-zmq-create %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -156,7 +156,7 @@
         
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-zmq-edit %}" method="post" id="edit-form">
+                <form action="{% url channel-zmq-edit %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -180,7 +180,7 @@
                         
                         <tr>
                             <td style="vertical-align:middle">Subscription key <span class='form_hint'>(Ignored if not SUB)</span></td>
-                            <td>{{ create_form.sub_key }}</td>
+                            <td>{{ edit_form.sub_key }}</td>
                         </tr>
                         
                         <tr>

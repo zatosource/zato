@@ -36,14 +36,14 @@ from validate import is_boolean
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
-from zato.common.odb.model import Cluster, OutgoingZMQ
+from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
+from zato.common.odb.model import ChannelZMQ, Cluster
 from zato.common.odb.query import channel_zmq_list
 #from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
-    """ Returns a list of outgoing ZeroMQ connections.
+    """ Returns a list of ZeroMQ channels.
     """
     def handle(self, *args, **kwargs):
         
@@ -61,13 +61,14 @@ class GetList(AdminService):
                 item.is_active = db_item.is_active
                 item.address = db_item.address
                 item.socket_type = db_item.socket_type
+                item.sub_key = db_item.sub_key
     
                 item_list.append(item)
     
             return ZATO_OK, etree.tostring(item_list)
         
 class Create(AdminService):
-    """ Creates a new outgoing ZeroMQ connection.
+    """ Creates a new ZeroMQ channel.
     """
     def handle(self, *args, **kwargs):
         
@@ -77,28 +78,32 @@ class Create(AdminService):
             core_params = ['cluster_id', 'name', 'is_active', 'address', 'socket_type']
             core_params = _get_params(payload, core_params, 'data.')
             
+            optional_params = ['sub_key']
+            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
+            
             name = core_params['name']
             cluster_id = core_params['cluster_id']
             
-            existing_one = session.query(OutgoingZMQ.id).\
-                filter(OutgoingZMQ.cluster_id==cluster_id).\
-                filter(OutgoingZMQ.name==name).\
+            existing_one = session.query(ChannelZMQ.id).\
+                filter(ChannelZMQ.cluster_id==cluster_id).\
+                filter(ChannelZMQ.name==name).\
                 first()
             
             if existing_one:
-                raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(name))
             
-            created_elem = Element('out_zmq')
+            created_elem = Element('channel_zmq')
             
             try:
 
                 core_params['is_active'] = is_boolean(core_params['is_active'])
                 
-                item = OutgoingZMQ()
+                item = ChannelZMQ()
                 item.name = core_params['name']
                 item.is_active = core_params['is_active']
                 item.address = core_params['address']
                 item.socket_type = core_params['socket_type']
+                item.sub_key = optional_params.get('sub_key')
                 item.cluster_id = core_params['cluster_id']
                 
                 session.add(item)
@@ -110,14 +115,14 @@ class Create(AdminService):
                 return ZATO_OK, etree.tostring(created_elem)
                 
             except Exception, e:
-                msg = 'Could not create an outgoing ZeroMQ connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create a ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
 
 class Edit(AdminService):
-    """ Updates an outgoing ZeroMQ connection.
+    """ Updates a ZeroMQ channel.
     """
     def handle(self, *args, **kwargs):
         
@@ -127,53 +132,57 @@ class Edit(AdminService):
             core_params = ['id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type']
             core_params = _get_params(payload, core_params, 'data.')
             
+            optional_params = ['sub_key']
+            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
+            
             id = core_params['id']
             name = core_params['name']
             cluster_id = core_params['cluster_id']
             
-            existing_one = session.query(OutgoingZMQ.id).\
-                filter(OutgoingZMQ.cluster_id==cluster_id).\
-                filter(OutgoingZMQ.name==name).\
-                filter(OutgoingZMQ.id!=core_params['id']).\
+            existing_one = session.query(ChannelZMQ.id).\
+                filter(ChannelZMQ.cluster_id==cluster_id).\
+                filter(ChannelZMQ.name==name).\
+                filter(ChannelZMQ.id!=id).\
                 first()
             
             if existing_one:
-                raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(name))
             
-            xml_item = Element('out_zmq')
+            xml_item = Element('channel_zmq')
             
             try:
                 
                 core_params['id'] = int(core_params['id'])
                 core_params['is_active'] = is_boolean(core_params['is_active'])
                 
-                item = session.query(OutgoingZMQ).filter_by(id=id).one()
+                item = session.query(ChannelZMQ).filter_by(id=id).one()
                 old_name = item.name
                 item.name = name
                 item.is_active = core_params['is_active']
                 item.address = core_params['address']
                 item.socket_type = core_params['socket_type']
+                item.sub_key = optional_params.get('sub_key')
                 
                 session.add(item)
                 session.commit()
                 
                 xml_item.id = item.id
                 
-                core_params['action'] = OUTGOING.ZMQ_EDIT
+                core_params['action'] = CHANNEL.ZMQ_EDIT
                 core_params['old_name'] = old_name
                 #self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
             except Exception, e:
-                msg = 'Could not update the ZeroMQ definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise  
         
 class Delete(AdminService):
-    """ Deletes an outgoing ZeroMQ connection.
+    """ Deletes a ZeroMQ channel.
     """
     def handle(self, *args, **kwargs):
         with closing(self.server.odb.session()) as session:
@@ -184,19 +193,19 @@ class Delete(AdminService):
                 
                 id = params['id']
                 
-                item = session.query(OutgoingZMQ).\
-                    filter(OutgoingZMQ.id==id).\
+                item = session.query(ChannelZMQ).\
+                    filter(ChannelZMQ.id==id).\
                     one()
                 
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': CHANNEL.ZMQ_DELETE, 'name': item.name, 'id':item.id}
                 #self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing ZeroMQ connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise

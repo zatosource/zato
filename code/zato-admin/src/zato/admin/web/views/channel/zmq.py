@@ -102,7 +102,11 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
                 address = msg_item.address.text
                 socket_type = msg_item.socket_type.text
-                sub_key = msg_item.sub_key.text
+                
+                if msg_item.sub_key:
+                    sub_key = msg_item.sub_key.text
+                else:
+                    sub_key = ''
                 
                 item =  ChannelZMQ(id, name, is_active, address, socket_type, sub_key)
                 items.append(item)
@@ -131,7 +135,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.zmq.create', zato_message)
         
-        return _edit_create_response('created', zato_message.data.out_zmq.id.text, req.POST['name'])
+        return _edit_create_response('created', zato_message.data.channel_zmq.id.text, req.POST['name'])
     
     except Exception, e:
         msg = "Could not create an ZeroMQ channel, e=[{e}]".format(e=format_exc(e))

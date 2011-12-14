@@ -263,6 +263,6 @@ def channel_zmq(session, cluster_id, out_id):
 def channel_zmq_list(session, cluster_id):
     """ Incoming ZeroMQ connections.
     """
-    return _out_zmq(session, cluster_id).all()
+    return _channel_zmq(session, cluster_id).all()
 
 # ##############################################################################
