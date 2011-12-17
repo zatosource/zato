@@ -70,6 +70,7 @@ class HTTPException(Exception):
         
 class ZatoHTTPListener(HTTPServer):
     
+    SERVER_IDENT = 'Zato'
     channel_class = _HTTPServerChannel
     
     def __init__(self, server, task_dispatcher, broker_client=None):
