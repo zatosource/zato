@@ -39,20 +39,29 @@ from validate import is_boolean
 from anyjson import dumps
 
 # Zato
-from zato.admin.settings import delivery_friendly_name
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.forms.channel.zmq import CreateForm, EditForm
+from zato.admin.web.forms.http_soap import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common.odb.model import Cluster, ChannelZMQ
-from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
+from zato.common.odb.model import Cluster, HTTPSOAP
+from zato.common import zato_namespace, zato_path, ZatoException
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
- 
+
+CONNECTION = {
+    'channel': 'channels',
+    'outgoing': 'outgoing connections',
+    }
+
+TRANSPORT = {
+    'plain': 'Plain HTTP',
+    'soap': 'SOAP',
+    }
 
 def _get_edit_create_message(params, prefix=''):
-    """ Creates a base document which can be used by both 'edit' and 'create' actions.
+    """ Creates a base document which can be used by both 'edit' and 'create' actions
+    for channels and outgoing connections.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
@@ -60,16 +69,18 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.address = params[prefix + 'address']
-    zato_message.data.socket_type = params[prefix + 'socket_type']
-    zato_message.data.sub_key = params.get(prefix + 'sub_key')
+    zato_message.data.connection = params['connection']
+    zato_message.data.transport = params['transport']
+    zato_message.data.url_path = params[prefix + 'url_path']
+    zato_message.data.method = params[prefix + 'method']
+    zato_message.data.soap_action = params[prefix + 'soap_action']
     
     return zato_message
 
-def _edit_create_response(verb, id, name):
+def _edit_create_response(cluster, verb, noun id, name, cluster_id):
 
     return_data = {'id': id,
-                   'message': 'Successfully {0} the ZeroMQ channel [{1}]'.format(verb, name),
+                   'message': 'Successfully {0} the {1} [{2}]'.format(verb, noun, name),
                 }
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -79,6 +90,8 @@ def index(req):
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
     choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
     cluster_id = req.GET.get('cluster')
+    connection = req.GET['connection']
+    transport = req.GET['transport']
     items = []
     
     create_form = CreateForm()
@@ -87,27 +100,34 @@ def index(req):
     if cluster_id and req.method == 'GET':
         
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
         zato_message.data.cluster_id = cluster_id
         
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:channel.zmq.get-list', zato_message)
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:http_soap.get-list', zato_message)
         
         if zato_path('data.item_list.item').get_from(zato_message) is not None:
             
             for msg_item in zato_message.data.item_list.item:
                 
+                zato_message.data.connection = params['connection']
+                zato_message.data.transport = params['transport']
+                zato_message.data.url_path = params[prefix + 'url_path']
+                zato_message.data.method = params[prefix + 'method']
+                zato_message.data.soap_action = params[prefix + 'soap_action']
+                
                 id = msg_item.id.text
                 name = msg_item.name.text
                 is_active = is_boolean(msg_item.is_active.text)
-                address = msg_item.address.text
-                socket_type = msg_item.socket_type.text
+                url_path = msg_item.url_path.text
                 
-                sub_key = msg_item.sub_key.text if msg_item.sub_key else ''
+                method = msg_item.method.text if msg_item.method else ''
+                soap_action = msg_item.soap_action.text if msg_item.soap_action else ''
                 
-                item =  ChannelZMQ(id, name, is_active, address, socket_type, sub_key)
+                item =  HTTPSOAP(id, name, is_active, connection, transport, url_path, method, soap_action)
                 items.append(item)
-
+                
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,
         'choose_cluster_form':choose_cluster_form,
@@ -120,7 +140,7 @@ def index(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/channel/zmq.html', return_data,
+    return render_to_response('zato/http_soap/index.html', return_data,
                               context_instance=RequestContext(req))
 
 @meth_allowed('POST')
@@ -130,12 +150,11 @@ def create(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.zmq.create', zato_message)
-        
-        return _edit_create_response('created', zato_message.data.channel_zmq.id.text, req.POST['name'])
-    
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.create', zato_message)
+
+        return _edit_create_response(cluster, 'created', zato_message.data.http_soap.id.text, req.POST['name'], req.POST['cluster_id'])
     except Exception, e:
-        msg = "Could not create an ZeroMQ channel, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not create the object, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -147,12 +166,12 @@ def edit(req):
     
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.zmq.edit', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.edit', zato_message)
 
-        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'])
+        return _edit_create_response(cluster, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'])
         
     except Exception, e:
-        msg = "Could not update the ZeroMQ channel, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not perform the update, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     
@@ -166,11 +185,11 @@ def delete(req, id, cluster_id):
         zato_message.data = Element('data')
         zato_message.data.id = id
         
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.zmq.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.delete', zato_message)
         
         return HttpResponse()
     
     except Exception, e:
-        msg = "Could not delete the ZeroMQ channel, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not delete the object, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)

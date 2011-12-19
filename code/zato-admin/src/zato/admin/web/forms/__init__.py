@@ -25,8 +25,8 @@ from django import forms
 class ChooseClusterForm(forms.Form):
     cluster = forms.ChoiceField(widget=forms.Select())
 
-    def __init__(self, clusters, post_data=None):
-        super(ChooseClusterForm, self).__init__(post_data)
+    def __init__(self, clusters, data=None):
+        super(ChooseClusterForm, self).__init__(data)
         self.fields['cluster'].choices = [('', '----------')]
         for cluster in clusters:
             server_info = '{0} - http://{1}:{2}'.format(cluster.name, cluster.lb_host, cluster.lb_port)
