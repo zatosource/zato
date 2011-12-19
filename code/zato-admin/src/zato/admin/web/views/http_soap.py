@@ -77,7 +77,7 @@ def _get_edit_create_message(params, prefix=''):
     
     return zato_message
 
-def _edit_create_response(cluster, verb, noun id, name, cluster_id):
+def _edit_create_response(cluster, verb, noun, id, name, cluster_id):
 
     return_data = {'id': id,
                    'message': 'Successfully {0} the {1} [{2}]'.format(verb, noun, name),
@@ -140,7 +140,7 @@ def index(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/http_soap/index.html', return_data,
+    return render_to_response('zato/http_soap.html', return_data,
                               context_instance=RequestContext(req))
 
 @meth_allowed('POST')
