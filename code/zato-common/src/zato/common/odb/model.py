@@ -799,29 +799,36 @@ class ChannelZMQ(Base):
         self.sub_key = sub_key
         self.cluster_id = cluster_id
         
-class ChannelHTTP(Base):
-    """ An incoming HTTP/SOAP connection.
+class HTTPSOAP(Base):
+    """ An incoming or outgoing HTTP/SOAP connection.
     """
-    __tablename__ = 'channel_http'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), UniqueConstraint('url_path', 'cluster_id'), {})
+    __tablename__ = 'http_soap'
+    __table_args__ = (UniqueConstraint('name', 'connection', 'cluster_id'), 
+                      UniqueConstraint('url_path', 'connection', 'cluster_id'), {})
     
-    id = Column(Integer,  Sequence('channel_http_seq'), primary_key=True)
+    id = Column(Integer,  Sequence('http_soap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     
+    connection = Column(String(20), nullable=False) # Channel or outgoing
+    transport = Column(String(20), nullable=False) # HTTP or SOAP
+    
     url_path = Column(String(200), nullable=False)
-    channel_type = Column(String(20), nullable=False)
     method = Column(String(200), nullable=True)
+    soap_action = Column(String(200), nullable=True)
     
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('channels_http', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
     
-    def __init__(self, id=None, name=None, is_active=None, url_path=None,
-                 channel_type=None, method=None, cluster_id=None):
+    def __init__(self, id=None, name=None, is_active=None, connection=None, 
+                 transport=None, url_path=None, method=None, soap_action=None, 
+                 cluster_id=None):
         self.id = id
         self.name = name
         self.is_active = is_active
+        self.connection = connection
+        self.transport = transport
         self.url_path = url_path
-        self.channel_type = channel_type
         self.method = method
+        self.soap_action = soap_action
         self.cluster_id = cluster_id

@@ -33,6 +33,7 @@ from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
+from zato.admin.web.views import http_soap
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import zmq as out_zmq
@@ -170,6 +171,12 @@ urlpatterns = patterns('',
     url(r'^zato/channel/zmq/create/$', channel_zmq.create, name='channel-zmq-create'),
     url(r'^zato/channel/zmq/edit/$', channel_zmq.edit, name='channel-zmq-edit'),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_zmq.delete, name='channel-zmq-delete'),
+    
+    # HTTP/SOAP
+    url(r'^zato/http-soap/$', http_soap.index, name='http-soap'),
+    url(r'^zato/http-soap/create/$', http_soap.create, name='http-soap-create'),
+    url(r'^zato/http-soap/edit/$', http_soap.edit, name='http-soap-edit'),
+    url(r'^zato/http-soap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', http_soap.delete, name='http-soap-delete'),
     
 )
 
