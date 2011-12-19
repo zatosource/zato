@@ -622,6 +622,7 @@ class OutgoingAMQP(Base):
     """ An outgoing AMQP connection.
     """
     __tablename__ = 'out_amqp'
+    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
     
     id = Column(Integer,  Sequence('out_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -661,6 +662,7 @@ class OutgoingWMQ(Base):
     """ An outgoing WebSphere MQ connection.
     """
     __tablename__ = 'out_wmq'
+    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
     
     id = Column(Integer,  Sequence('out_wmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -690,6 +692,7 @@ class OutgoingZMQ(Base):
     """ An outgoing Zero MQ connection.
     """
     __tablename__ = 'out_zmq'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
     
     id = Column(Integer,  Sequence('out_zmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -716,6 +719,7 @@ class ChannelAMQP(Base):
     """ An incoming AMQP connection.
     """
     __tablename__ = 'channel_amqp'
+    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
     
     id = Column(Integer,  Sequence('channel_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -745,6 +749,7 @@ class ChannelWMQ(Base):
     """ An incoming WebSphere MQ connection.
     """
     __tablename__ = 'channel_wmq'
+    __table_args__ = (UniqueConstraint('name', 'def_id'), {})
     
     id = Column(Integer,  Sequence('channel_wmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -771,6 +776,7 @@ class ChannelZMQ(Base):
     """ An incoming Zero MQ connection.
     """
     __tablename__ = 'channel_zmq'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
     
     id = Column(Integer,  Sequence('channel_zmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -791,4 +797,31 @@ class ChannelZMQ(Base):
         self.address = address
         self.socket_type = socket_type
         self.sub_key = sub_key
+        self.cluster_id = cluster_id
+        
+class ChannelHTTP(Base):
+    """ An incoming HTTP/SOAP connection.
+    """
+    __tablename__ = 'channel_http'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), UniqueConstraint('url_path', 'cluster_id'), {})
+    
+    id = Column(Integer,  Sequence('channel_http_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    
+    url_path = Column(String(200), nullable=False)
+    channel_type = Column(String(20), nullable=False)
+    method = Column(String(200), nullable=True)
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('channels_http', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, name=None, is_active=None, url_path=None,
+                 channel_type=None, method=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.url_path = url_path
+        self.channel_type = channel_type
+        self.method = method
         self.cluster_id = cluster_id
