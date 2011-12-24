@@ -77,8 +77,8 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.transport = params['transport']
     zato_message.data.url_path = params[prefix + 'url_path']
     zato_message.data.method = params[prefix + 'method']
-    zato_message.data.soap_action = params.get('soap_action', '')
-    zato_message.data.soap_version = params.get('soap_version', '')
+    zato_message.data.soap_action = params.get(prefix + 'soap_action', '')
+    zato_message.data.soap_version = params.get(prefix + 'soap_version', '')
 
     return zato_message
 
@@ -187,7 +187,11 @@ def edit(req):
         zato_message = _get_edit_create_message(req.POST, 'edit-')
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.edit', zato_message)
 
-        return _edit_create_response(cluster, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'])
+        return _edit_create_response(zato_message.data.http_soap.id.text,
+                                     'updated',
+                                     req.POST['transport'],
+                                     req.POST['connection'],
+                                     req.POST['edit-name'])
 
     except Exception, e:
         msg = 'Could not perform the update, e=[{e}]'.format(e=format_exc(e))
