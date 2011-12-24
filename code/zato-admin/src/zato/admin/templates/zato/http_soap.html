@@ -15,7 +15,7 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/channel/zmq.js"></script>
+    <script type="text/javascript" src="/static/js/http_soap.js"></script>
 
 
     <script>
@@ -25,9 +25,9 @@
             '_selection',
             'name',
             '_is_active',
-            'address',
-            'socket_type',
-            'sub_key',
+            'url_path',
+            'method',
+            {% ifequal transport 'soap' %}'soap_action',{% endifequal %}
             '_edit',
             '_delete',
             'id',
@@ -39,7 +39,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Zero MQ channels</h2>
+<h2 class="zato">{{ transport_label }} {{ connection_label_plural }}</h2>
 
 {% if not zato_clusters %}
     <p>
@@ -53,21 +53,23 @@
 
     <div class="prompt">
     {% if not cluster_id %}
-        Choose a cluster to manage Zero MQ channels
+        Choose a cluster to manage {{ transport_label }} {{ connection_label_plural }}
     {% endif %}
 
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show channels" />
+        {{ choose_cluster_form.connection }}
+        {{ choose_cluster_form.transport }}
+        <input type="submit" value="Show {{ connection_label_plural }}" />
     </form>
     </div>
 
 
     {% if cluster_id %}
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.channel.zmq.create()">Create a new Zero MQ channel</a>
+            <a href="javascript:$.fn.zato.http_soap.create()">Create a new {{ transport_label }} {{ connection_label }}</a>
         </div>
-        
+
 
         <div id="markup">
             <table id="data-table">
@@ -77,9 +79,9 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
-                        <th><a href="#">Socket type</a></th>
-                        <th><a href="#">Subscription key</a></th>
+                        <th><a href="#">URL path</a></th>
+                        <th><a href="#">Method</a></th>
+                        {% ifequal transport 'soap' %}<th><a href="#">SOAP action</a></th>{% endifequal %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -93,105 +95,114 @@
                         <td><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address }}</td>
-                        <td>{{ item.socket_type }}</td>
-                        <td>{{ item.sub_key }}</td>
-                        <td><a href="javascript:$.fn.zato.channel.zmq.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.channel.zmq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>{{ item.url_path }}</td>
+                        <td>{{ item.method }}</td>
+                        {% ifequal transport 'soap' %}<td>{{ item.soap_action }}</td>{% endifequal %}
+                        <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='9'>No results</td>
+                        <td colspan='{% ifequal transport 'soap' %}11{% else %}10{% endifequal %}'>No results</td>
                     </tr>
                 {% endif %}
 
                 </tbody>
             </table>
         </div>
-        
-        
+
+
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url channel-zmq-create %}" method="post" id="create-form">
+                <form action="{% url http-soap-create %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
-                    
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
-                            <td>{{ create_form.address }}</td>
+                            <td style="vertical-align:middle">URL path</td>
+                            <td>{{ create_form.url_path }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Socket type</td>
-                            <td>{{ create_form.socket_type }}</td>
+                            <td style="vertical-align:middle">Method</td>
+                            <td>{{ create_form.method }}</td>
                         </tr>
-                        
+
+                        {% ifequal transport 'soap' %}
                         <tr>
-                            <td style="vertical-align:middle">Subscription key <span class='form_hint'>(Ignored if not SUB)</span></td>
-                            <td>{{ create_form.sub_key }}</td>
+                            <td style="vertical-align:middle">SOAP action</span></td>
+                            <td>{{ create_form.soap_action }}</td>
                         </tr>
-                        
+                        {% endifequal %}
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
+
+                        </tr>
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" name="connection" value="{{ connection }}" />
+                    <input type="hidden" name="transport" value="{{ transport }}" />
                 </form>
             </div>
         </div>
-        
+
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url channel-zmq-edit %}" method="post" id="edit-form">
+                <form action="{% url http-soap-edit %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
-                    
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
-                            <td>{{ edit_form.address }}</td>
+                            <td style="vertical-align:middle">URL path</td>
+                            <td>{{ edit_form.url_path }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Socket type</td>
-                            <td>{{ edit_form.socket_type }}</td>
+                            <td style="vertical-align:middle">Method</td>
+                            <td>{{ edit_form.method }}</td>
                         </tr>
-                        
+
+                        {% ifequal transport 'soap' %}
                         <tr>
-                            <td style="vertical-align:middle">Subscription key <span class='form_hint'>(Ignored if not SUB)</span></td>
-                            <td>{{ edit_form.sub_key }}</td>
+                            <td style="vertical-align:middle">SOAP action</span></td>
+                            <td>{{ edit_form.soap_action }}</td>
                         </tr>
-                        
+                        {% endifequal %}
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
-                        </tr>                        
+                        </tr>
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                    <input type="hidden" name="connection" value="{{ connection }}" />
+                    <input type="hidden" name="transport" value="{{ transport }}" />
                 </form>
             </div>
         </div>

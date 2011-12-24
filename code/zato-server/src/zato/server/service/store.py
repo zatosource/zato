@@ -213,12 +213,12 @@ class ServiceStore(InitializingObject):
             msg = 'Error while invoking [%s] on service [%s] ' \
                 ' e=[%s]' % (hook_name, service_name, format_exc())
             logger.error(msg)
-            
+
     def new_instance(self, class_name):
         """ Returns a new instance of a service of the given name.
         """
         return self.services[class_name]['service_class']()
-        
+
     def service_data(self, class_name):
         """ Returns all the service-related data.
         """
@@ -270,7 +270,7 @@ class ServiceStore(InitializingObject):
         # Import internal services here to avoid circular dependencies.
         from zato.server.service import internal
         from zato.server.service.internal import AdminService
-        from zato.server.service.internal import sql, scheduler, service
+        from zato.server.service.internal import http_soap, scheduler, service, sql
         from zato.server.service.internal.channel import amqp as channel_amqp
         from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq
         from zato.server.service.internal.channel import zmq as channel_zmq
@@ -283,8 +283,8 @@ class ServiceStore(InitializingObject):
              tech_account, wss
 
         # XXX: The list would be better read from the IoC container
-        modules = [basic_auth, channel_amqp, channel_jms_wmq, channel_zmq, def_amqp, 
-                   def_jms_wmq, internal, out_amqp, out_jms_wmq, out_zmq, sql, 
+        modules = [basic_auth, channel_amqp, channel_jms_wmq, channel_zmq, def_amqp,
+                   def_jms_wmq, http_soap, internal, out_amqp, out_jms_wmq, out_zmq, sql,
                    scheduler, service, tech_account, wss]
 
         # Read all definitions of Zato's own internal services.
@@ -299,14 +299,14 @@ class ServiceStore(InitializingObject):
                             data = {'service_class': item, 'egg_path':'INTERNAL_SERVICE'}
                             data['deployment_time'] = datetime.now().isoformat()
                             data['deployment_user'] = 'INTERNAL_SERVICE'
-                            
+
                             class_name = '%s.%s' % (item.__module__, item.__name__)
                             self.services[class_name] = data
 
                             last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
                             self.odb.add_service(class_name, class_name, True,
                                                  last_mod, str(data))
-                            
+
                 except TypeError, e:
                     # Ignore non-class objects passed in to issubclass
                     logger.log(TRACE1, 'Ignoring exception, name=[%s], item=[%s], e=[%s]' % (

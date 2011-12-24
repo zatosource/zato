@@ -103,7 +103,7 @@ class ZatoContext(PythonConfig):
     @Object
     def soap_config(self):
         return {
-            
+
             # Ping
             'zato:ping': 'zato.server.service.internal.Ping',
 
@@ -128,7 +128,7 @@ class ZatoContext(PythonConfig):
 
             # SOAP channels
             'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
-            
+
             # Technical accounts
             'zato:security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
             'zato:security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
@@ -143,14 +143,14 @@ class ZatoContext(PythonConfig):
             'zato:security.wss.edit':'zato.server.service.internal.security.wss.Edit',
             'zato:security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
             'zato:security.wss.delete':'zato.server.service.internal.security.wss.Delete',
-            
+
             # HTTP Basic Auth
             'zato:security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
             'zato:security.basic-auth.create':'zato.server.service.internal.security.basic_auth.Create',
             'zato:security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
             'zato:security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
             'zato:security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
-            
+
             # Definitions - AMQP
             'zato:definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
             'zato:definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
@@ -158,38 +158,38 @@ class ZatoContext(PythonConfig):
             'zato:definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
             'zato:definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
             'zato:definition.amqp.delete':'zato.server.service.internal.definition.amqp.Delete',
-            
+
             # Definitions - JMS WebSphere MQ
             'zato:definition.jms_wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
             'zato:definition.jms_wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
             'zato:definition.jms_wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
             'zato:definition.jms_wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
             'zato:definition.jms_wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
-            
+
             # Channels - AMQP
             'zato:channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
             'zato:channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
             'zato:channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
             'zato:channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
-            
+
             # Channels - JMS WebSphere MQ
             'zato:channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
             'zato:channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
             'zato:channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
             'zato:channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
-            
+
             # Channels - ZeroMQ
             'zato:channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
             'zato:channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
             'zato:channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
             'zato:channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
-            
+
             # Outgoing connections - AMQP
             'zato:outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
             'zato:outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
             'zato:outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
             'zato:outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
-            
+
             # Outgoing connections - JMS WebSphere MQ
             'zato:outgoing.jms_wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
             'zato:outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
@@ -200,8 +200,14 @@ class ZatoContext(PythonConfig):
             'zato:outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
             'zato:outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
             'zato:outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
-            'zato:outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',            
-            
+            'zato:outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
+
+            # HTTP SOAP
+            'zato:http_soap.get-list':'zato.server.service.internal.http_soap.GetList',
+            'zato:http_soap.create':'zato.server.service.internal.http_soap.Create',
+            'zato:http_soap.edit':'zato.server.service.internal.http_soap.Edit',
+            'zato:http_soap.delete':'zato.server.service.internal.http_soap.Delete',
+
         }
 
     @Object
@@ -238,10 +244,10 @@ class ZatoContext(PythonConfig):
         #store.definitions = self.wss_username_password_definition_list()
 
         return store
-    
+
     # #######################################################
     # ODB (Operational Database)
-    
+
     @Object
     def odb_manager(self):
         return ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
