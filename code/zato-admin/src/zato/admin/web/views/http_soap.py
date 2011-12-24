@@ -24,7 +24,7 @@ import logging
 from traceback import format_exc
 
 # Django
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
@@ -99,9 +99,14 @@ def index(req):
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
     choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
     cluster_id = req.GET.get('cluster')
-    connection = req.GET['connection']
-    transport = req.GET['transport']
+    connection = req.GET.get('connection')
+    transport = req.GET.get('transport')
     items = []
+
+    if not all((connection, transport)):
+        log_msg = "Redirecting to / because at least one of ('connection', 'transport') GET parameters was missing"
+        logger.debug(log_msg)
+        return HttpResponseRedirect('/')
 
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
