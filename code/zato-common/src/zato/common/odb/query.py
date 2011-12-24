@@ -89,11 +89,11 @@ def _def_amqp(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefAMQP.name)
 
-def def_amqp(session, cluster_id, def_id):
+def def_amqp(session, cluster_id, id):
     """ A particular AMQP definition
     """
     return _def_amqp(session, cluster_id).\
-           filter(ConnDefAMQP.id==def_id).\
+           filter(ConnDefAMQP.id==id).\
            one()
 
 def def_amqp_list(session, cluster_id):
@@ -113,11 +113,11 @@ def _def_jms_wmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefWMQ.name)
 
-def def_jms_wmq(session, cluster_id, def_id):
+def def_jms_wmq(session, cluster_id, id):
     """ A particular JMS WebSphere MQ definition
     """
     return _def_jms_wmq(session, cluster_id).\
-           filter(ConnDefWMQ.id==def_id).\
+           filter(ConnDefWMQ.id==id).\
            one()
 
 def def_jms_wmq_list(session, cluster_id):
@@ -138,11 +138,11 @@ def _out_amqp(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingAMQP.name)
 
-def out_amqp(session, cluster_id, out_id):
+def out_amqp(session, cluster_id, id):
     """ An outgoing AMQP connection.
     """
     return _out_amqp(session, cluster_id).\
-           filter(OutgoingAMQP.id==out_id).\
+           filter(OutgoingAMQP.id==id).\
            one()
 
 def out_amqp_list(session, cluster_id):
@@ -162,11 +162,11 @@ def _out_jms_wmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingWMQ.name)
 
-def out_jms_wmq(session, cluster_id, out_id):
+def out_jms_wmq(session, cluster_id, id):
     """ An outgoing JMS WebSphere MQ connection.
     """
     return _out_jms_wmq(session, cluster_id).\
-           filter(OutgoingWMQ.id==out_id).\
+           filter(OutgoingWMQ.id==id).\
            one()
 
 def out_jms_wmq_list(session, cluster_id):
@@ -187,11 +187,11 @@ def _channel_amqp(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ChannelAMQP.name)
 
-def channel_amqp(session, cluster_id, channel_id):
+def channel_amqp(session, cluster_id, id):
     """ A particular AMQP channel.
     """
     return _channel_amqp(session, cluster_id).\
-           filter(ChannelAMQP.id==channel_id).\
+           filter(ChannelAMQP.id==id).\
            one()
 
 def channel_amqp_list(session, cluster_id):
@@ -211,11 +211,11 @@ def _channel_jms_wmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ChannelWMQ.name)
 
-def channel_jms_wmq(session, cluster_id, channel_id):
+def channel_jms_wmq(session, cluster_id, id):
     """ A particular JMS WebSphere MQ channel.
     """
     return _channel_jms_wmq(session, cluster_id).\
-           filter(ChannelWMQ.id==channel_id).\
+           filter(ChannelWMQ.id==id).\
            one()
 
 def channel_jms_wmq_list(session, cluster_id):
@@ -232,11 +232,11 @@ def _out_zmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingZMQ.name)
 
-def out_zmq(session, cluster_id, out_id):
+def out_zmq(session, cluster_id, id):
     """ An outgoing ZeroMQ connection.
     """
     return _out_zmq(session, cluster_id).\
-           filter(OutgoingZMQ.id==out_id).\
+           filter(OutgoingZMQ.id==id).\
            one()
 
 def out_zmq_list(session, cluster_id):
@@ -253,11 +253,11 @@ def _channel_zmq(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ChannelZMQ.name)
 
-def channel_zmq(session, cluster_id, out_id):
+def channel_zmq(session, cluster_id, id):
     """ An incoming ZeroMQ connection.
     """
     return _channel_zmq(session, cluster_id).\
-           filter(ChannelZMQ.id==out_id).\
+           filter(ChannelZMQ.id==id).\
            one()
 
 def channel_zmq_list(session, cluster_id):
@@ -275,16 +275,19 @@ def _http_soap(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(HTTPSOAP.name)
 
-def http_soap(session, cluster_id, out_id):
+def http_soap(session, cluster_id, id):
     """ An HTTP/SOAP connection.
     """
     return _http_soap(session, cluster_id).\
-           filter(HTTPSOAP.id==out_id).\
+           filter(HTTPSOAP.id==id).\
            one()
 
-def http_soap_list(session, cluster_id):
+def http_soap_list(session, cluster_id, connection, transport):
     """ HTTP/SOAP connections.
     """
-    return _http_soap(session, cluster_id).all()
+    return _http_soap(session, cluster_id).\
+           filter(HTTPSOAP.connection==connection).\
+           filter(HTTPSOAP.transport==transport).\
+           all()
 
 # ##############################################################################

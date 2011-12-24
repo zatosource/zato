@@ -119,6 +119,8 @@ def index(req):
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
         zato_message.data.cluster_id = cluster_id
+        zato_message.data.connection = connection
+        zato_message.data.transport = transport
 
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:http_soap.get-list', zato_message)
 

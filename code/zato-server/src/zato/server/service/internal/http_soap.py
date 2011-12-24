@@ -45,11 +45,12 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+        params = _get_params(kwargs.get('payload'), ['cluster_id', 'connection', 'transport'], 'data.')
 
         with closing(self.server.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = http_soap_list(session, params['cluster_id'])
+            db_items = http_soap_list(session, params['cluster_id'],
+                                      params['connection'], params['transport'])
 
             for db_item in db_items:
 
