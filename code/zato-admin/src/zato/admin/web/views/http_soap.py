@@ -78,6 +78,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.url_path = params[prefix + 'url_path']
     zato_message.data.method = params[prefix + 'method']
     zato_message.data.soap_action = params.get('soap_action', '')
+    zato_message.data.soap_version = params.get('soap_version', '')
 
     return zato_message
 
@@ -132,8 +133,9 @@ def index(req):
 
                 method = msg_item.method.text if msg_item.method else ''
                 soap_action = msg_item.soap_action.text if msg_item.soap_action else ''
+                soap_version = msg_item.soap_version.text if msg_item.soap_version else ''
 
-                item =  HTTPSOAP(id, name, is_active, connection, transport, url_path, method, soap_action)
+                item =  HTTPSOAP(id, name, is_active, connection, transport, url_path, method, soap_action, soap_version)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,
