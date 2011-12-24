@@ -130,39 +130,42 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type']
+            core_params = ['id', 'cluster_id', 'name', 'is_active', 'url_path', 'connection', 'transport']
             core_params = _get_params(payload, core_params, 'data.')
 
-            optional_params = ['sub_key']
+            optional_params = ['method', 'soap_action', 'soap_version']
             optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
 
             id = core_params['id']
             name = core_params['name']
             cluster_id = core_params['cluster_id']
 
-            existing_one = session.query(ChannelZMQ.id).\
-                filter(ChannelZMQ.cluster_id==cluster_id).\
-                filter(ChannelZMQ.name==name).\
-                filter(ChannelZMQ.id!=id).\
+            existing_one = session.query(HTTPSOAP.id).\
+                filter(HTTPSOAP.cluster_id==cluster_id).\
+                filter(HTTPSOAP.id!=id).\
+                filter(HTTPSOAP.name==name).\
                 first()
 
             if existing_one:
-                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(name))
+                raise Exception('An object of that name [{0}] already exists on this cluster'.format(name))
 
-            xml_item = Element('channel_zmq')
+            xml_item = Element('http_soap')
 
             try:
 
                 core_params['id'] = int(core_params['id'])
                 core_params['is_active'] = is_boolean(core_params['is_active'])
 
-                item = session.query(ChannelZMQ).filter_by(id=id).one()
-                old_name = item.name
-                item.name = name
+                item = session.query(HTTPSOAP).filter_by(id=id).one()
+                item.name = core_params['name']
                 item.is_active = core_params['is_active']
-                item.address = core_params['address']
-                item.socket_type = core_params['socket_type']
-                item.sub_key = optional_params.get('sub_key')
+                item.url_path = core_params['url_path']
+                item.connection = core_params['connection']
+                item.transport = core_params['transport']
+                item.cluster_id = core_params['cluster_id']
+                item.method = optional_params.get('method')
+                item.soap_action = optional_params.get('soap_action')
+                item.soap_version = optional_params.get('soap_version')
 
                 session.add(item)
                 session.commit()
@@ -172,7 +175,7 @@ class Edit(AdminService):
                 return ZATO_OK, etree.tostring(xml_item)
 
             except Exception, e:
-                msg = 'Could not update the ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the object, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
