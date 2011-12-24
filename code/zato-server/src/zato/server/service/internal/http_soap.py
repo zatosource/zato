@@ -179,7 +179,7 @@ class Edit(AdminService):
                 raise
 
 class Delete(AdminService):
-    """ Deletes a ZeroMQ channel.
+    """ Deletes an HTTP/SOAP connection.
     """
     def handle(self, *args, **kwargs):
         with closing(self.server.odb.session()) as session:
@@ -190,8 +190,8 @@ class Delete(AdminService):
 
                 id = params['id']
 
-                item = session.query(ChannelZMQ).\
-                    filter(ChannelZMQ.id==id).\
+                item = session.query(HTTPSOAP).\
+                    filter(HTTPSOAP.id==id).\
                     one()
 
                 session.delete(item)
@@ -199,7 +199,7 @@ class Delete(AdminService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the object, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
 
                 raise
