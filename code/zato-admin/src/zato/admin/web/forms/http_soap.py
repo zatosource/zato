@@ -24,6 +24,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import ChooseClusterForm as _ChooseClusterForm
+from zato.common import SOAP_VERSIONS
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -31,8 +32,16 @@ class CreateForm(forms.Form):
     url_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    soap_version = forms.ChoiceField(widget=forms.Select())
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
+
+    def __init__(self, prefix=None, post_data=None):
+        super(CreateForm, self).__init__(post_data, prefix=prefix)
+
+        self.fields['soap_version'].choices = []
+        for name in sorted(SOAP_VERSIONS):
+            self.fields['soap_version'].choices.append([name, name])
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

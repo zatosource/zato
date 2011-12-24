@@ -123,6 +123,8 @@ ZATO_FIELD_OPERATORS = {
 ZMQ_OUTGOING_TYPES = ('PUSH',)
 ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
 
+SOAP_VERSIONS = ('1.1', '1.2')
+
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks
 # with whom and over what ports.
@@ -179,12 +181,12 @@ class zato_path(path):
 class ZatoException(Exception):
     """ Base class for all Zato custom exceptions.
     """
-    
+
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems
     on the client side, such as invalid username or password.
     """
-    
+
 class ConnectionException(ZatoException):
     """ Encountered a problem with an external connections, such as to AMQP brokers.
     """
