@@ -38,8 +38,11 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
 
     var soap_action_tr = '';
+    var soap_version_tr = '';
+
     if(data.transport == 'soap') {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
+        soap_version_tr += String.format('<td>{0}</td>', item.soap_version);
     }
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -49,6 +52,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.url_path);
     row += String.format('<td>{0}</td>', item.method);
     row += soap_action_tr;
+    row += soap_version_tr;
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

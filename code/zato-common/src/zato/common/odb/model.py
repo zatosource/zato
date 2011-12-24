@@ -93,7 +93,7 @@ class Cluster(Base):
     def __init__(self, id=None, name=None, description=None, odb_type=None,
                  odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
                  odb_schema=None, broker_host=None, broker_start_port=None,
-                 broker_token=None, lb_host=None, lb_agent_port=None, 
+                 broker_token=None, lb_host=None, lb_agent_port=None,
                  lb_port=None):
         self.id = id
         self.name = name
@@ -125,16 +125,16 @@ class Server(Base):
 
     id = Column(Integer,  Sequence('server_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
-    
+
     last_join_status = Column(String(40), nullable=True)
     last_join_mod_date = Column(DateTime(timezone=True), nullable=True)
     last_join_mod_by = Column(String(200), nullable=True)
-    
+
     odb_token = Column(String(32), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('servers', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, name=None, cluster=None, odb_token=None,
                  last_join_status=None, last_join_mod_date=None, last_join_mod_by=None):
         self.id = id
@@ -147,7 +147,7 @@ class Server(Base):
 
     def __repr__(self):
         return make_repr(self)
-    
+
 ################################################################################
 
 class ChannelURLSecurity(Base):
@@ -155,35 +155,35 @@ class ChannelURLSecurity(Base):
         definitions and security definitions.
     """
     __tablename__ = 'channel_url_security'
-    
+
     id = Column(Integer, primary_key=True)
-    
+
     channel_url_def_id = Column(Integer, ForeignKey('channel_url_def.id'))
-    channel_url_def = relationship('ChannelURLDefinition', 
+    channel_url_def = relationship('ChannelURLDefinition',
                         backref=backref('channel_url_security', uselist=False))
-    
+
     security_def_id = Column(Integer, ForeignKey('security_def.id', ondelete='CASCADE'), nullable=False)
-    security_def = relationship('SecurityDefinition', 
+    security_def = relationship('SecurityDefinition',
                     backref=backref('channel_url_security_defs', order_by=id, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, channel_url_def, security_def):
         self.channel_url_def = channel_url_def
         self.security_def = security_def
-    
+
 ################################################################################
 
 class SecurityDefinition(Base):
     """ A security definition
     """
     __tablename__ = 'security_def'
-    
+
     id = Column(Integer,  Sequence('security_def_id_seq'), primary_key=True)
     security_def_type = Column(String(45), nullable=False)
-    
+
     def __init__(self, id=None, security_def_type=None):
         self.id = id
         self.security_def_type = security_def_type
-        
+
     def __repr__(self):
         return make_repr(self)
 
@@ -202,7 +202,7 @@ class ChannelURLDefinition(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=url_pattern, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, url_pattern=None, url_type=None, is_internal=None,
                  cluster=None):
         self.id = id
@@ -231,18 +231,18 @@ class WSSDefinition(Base):
     reject_stale_username = Column(Boolean(), nullable=True)
     expiry_limit = Column(Integer(), nullable=False)
     nonce_freshness = Column(Integer(), nullable=True)
-    
+
     is_active = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wss_defs', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('wss_def', order_by=name, uselist=False, cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, is_active=None, username=None, 
-                 password=None, password_type=None, reject_empty_nonce_ts=None, 
-                 reject_stale_username=None, expiry_limit=None, 
+
+    def __init__(self, id=None, name=None, is_active=None, username=None,
+                 password=None, password_type=None, reject_empty_nonce_ts=None,
+                 reject_stale_username=None, expiry_limit=None,
                  nonce_freshness=None, cluster=None, password_type_raw=None):
         self.id = id
         self.name = name
@@ -259,7 +259,7 @@ class WSSDefinition(Base):
 
     def __repr__(self):
         return make_repr(self)
-    
+
 class HTTPBasicAuth(Base):
     """ An HTTP Basic Auth definition.
     """
@@ -271,16 +271,16 @@ class HTTPBasicAuth(Base):
     username = Column(String(200), nullable=False)
     domain = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
-    
+
     is_active = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('http_basic_auth_defs', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('http_basic_auth_def', order_by=name, uselist=False))
-    
-    def __init__(self, id=None, name=None, is_active=None, username=None, 
+
+    def __init__(self, id=None, name=None, is_active=None, username=None,
                  domain=None, password=None, cluster=None):
         self.id = id
         self.name = name
@@ -299,20 +299,20 @@ class TechnicalAccount(Base):
     """
     __tablename__ = 'tech_account'
     __table_args__ = (UniqueConstraint('name'), {})
-    
+
     id = Column(Integer,  Sequence('tech_account_id_seq'), primary_key=True)
     name = Column(String(45), nullable=False)
     password = Column(String(64), nullable=False)
     salt = Column(String(32), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    
+
     security_def_id = Column(Integer, ForeignKey('security_def.id'), nullable=True)
     security_def = relationship(SecurityDefinition, backref=backref('tech_account', order_by=id, uselist=False))
-    
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('tech_accounts', order_by=name, cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, password=None, salt=None, 
+
+    def __init__(self, id=None, name=None, password=None, salt=None,
                  is_active=None, security_def=None, expected_password=None,
                  cluster=None):
         self.id = id
@@ -323,7 +323,7 @@ class TechnicalAccount(Base):
         self.security_def = security_def
         self.expected_password = expected_password
         self.cluster = cluster
-        
+
     def to_json(self):
         return to_json(self)
 
@@ -347,7 +347,7 @@ class SQLConnectionPool(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, name=None, db_name=None, user=None, engine=None,
                  extra=None, host=None, port=None, pool_size=None, cluster=None):
         self.id = id
@@ -378,7 +378,7 @@ class SQLConnectionPoolPassword(Base):
 
     sql_pool_id = Column(Integer, ForeignKey('sql_pool.id', ondelete='CASCADE'), nullable=False)
     sql_pool = relationship(SQLConnectionPool, backref=backref('sql_pool_passwords', order_by=id, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, password=None, server_key_hash=None, server_id=None,
                  server=None, sql_pool_id=None, sql_pool=None):
         self.id = id
@@ -400,17 +400,17 @@ class Service(Base):
     """
     __tablename__ = 'service'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-    
+
     id = Column(Integer,  Sequence('service_id_seq'), primary_key=True)
     name = Column(String(2000), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     impl_name = Column(String(2000), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
-    
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, impl_name=None, is_internal=None, 
+
+    def __init__(self, id=None, name=None, impl_name=None, is_internal=None,
                  is_active=None, cluster=None):
         self.id = id
         self.name = name
@@ -418,28 +418,28 @@ class Service(Base):
         self.is_internal = is_internal
         self.is_active = is_active
         self.cluster = cluster
-    
+
 class DeployedService(Base):
     """ A service living on a given server.
     """
     __tablename__ = 'deployed_service'
     __table_args__ = (UniqueConstraint('server_id', 'service_id'), {})
-    
+
     deployment_time = Column(DateTime(), nullable=False)
     details = Column(String(2000), nullable=False)
 
     server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=True)
     server = relationship(Server, backref=backref('deployed_services', order_by=deployment_time, cascade='all, delete, delete-orphan'))
-    
+
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False, primary_key=True)
     service = relationship(Service, backref=backref('deployment_data', order_by=deployment_time, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, deployment_time, details, server, service):
         self.deployment_time = deployment_time
         self.details = details
         self.server = server
         self.service = service
-    
+
 ################################################################################
 
 class Job(Base):
@@ -448,24 +448,24 @@ class Job(Base):
     """
     __tablename__ = 'job'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-    
+
     id = Column(Integer,  Sequence('job_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    job_type = Column(Enum('one_time', 'interval_based', 'cron_style', 
+    job_type = Column(Enum('one_time', 'interval_based', 'cron_style',
                            name='job_type'), nullable=False)
     start_date = Column(DateTime(), nullable=False)
     extra = Column(LargeBinary(400000), nullable=True)
-    
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, is_active=None, job_type=None, 
+
+    def __init__(self, id=None, name=None, is_active=None, job_type=None,
                  start_date=None, extra=None, cluster=None, cluster_id=None,
-                 service=None, service_id=None, service_name=None, interval_based=None, 
+                 service=None, service_id=None, service_name=None, interval_based=None,
                  cron_style=None, definition_text=None, job_type_friendly=None):
         self.id = id
         self.name = name
@@ -482,26 +482,26 @@ class Job(Base):
         self.cron_style = cron_style
         self.definition_text = definition_text # Not used by the database
         self.job_type_friendly = job_type_friendly # Not used by the database
-    
+
 class IntervalBasedJob(Base):
     """ A Cron-style scheduler's job.
     """
     __tablename__ = 'job_interval_based'
     __table_args__ = (UniqueConstraint('job_id'), {})
-    
+
     id = Column(Integer,  Sequence('job_intrvl_seq'), primary_key=True)
     job_id = Column(Integer, nullable=False)
-    
+
     weeks = Column(Integer, nullable=True)
     days = Column(Integer, nullable=True)
     hours = Column(Integer, nullable=True)
     minutes = Column(Integer, nullable=True)
     seconds = Column(Integer, nullable=True)
     repeats = Column(Integer, nullable=True)
-    
+
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
     job = relationship(Job, backref=backref('interval_based', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
-    
+
     def __init__(self, id=None, job=None, weeks=None, days=None, hours=None,
                  minutes=None, seconds=None, repeats=None, definition_text=None):
         self.id = id
@@ -513,19 +513,19 @@ class IntervalBasedJob(Base):
         self.seconds = seconds
         self.repeats = repeats
         self.definition_text = definition_text # Not used by the database
-    
+
 class CronStyleJob(Base):
     """ A Cron-style scheduler's job.
     """
     __tablename__ = 'job_cron_style'
     __table_args__ = (UniqueConstraint('job_id'), {})
-    
+
     id = Column(Integer,  Sequence('job_cron_seq'), primary_key=True)
     cron_definition = Column(String(4000), nullable=False)
-    
+
     job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
     job = relationship(Job, backref=backref('cron_style', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
-    
+
     def __init__(self, id=None, job=None, cron_definition=None):
         self.id = id
         self.job = job
@@ -538,11 +538,11 @@ class ConnDefAMQP(Base):
     """
     __tablename__ = 'conn_def_amqp'
     __table_args__ = (UniqueConstraint('name', 'cluster_id', 'def_type'), {})
-    
+
     id = Column(Integer,  Sequence('conn_def_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     def_type = Column(String(10), nullable=False)
-    
+
     host = Column(String(200), nullable=False)
     port = Column(Integer(), nullable=False)
     vhost = Column(String(200), nullable=False)
@@ -550,12 +550,12 @@ class ConnDefAMQP(Base):
     password = Column(String(200), nullable=False)
     frame_max = Column(Integer(), nullable=False)
     heartbeat = Column(Integer(), nullable=False)
-    
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('amqp_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, def_type=None, host=None, port=None, 
-                 vhost=None,  username=None,  password=None, frame_max=None, 
+
+    def __init__(self, id=None, name=None, def_type=None, host=None, port=None,
+                 vhost=None,  username=None,  password=None, frame_max=None,
                  heartbeat=None, cluster_id=None):
         self.id = id
         self.name = name
@@ -568,16 +568,16 @@ class ConnDefAMQP(Base):
         self.frame_max = frame_max
         self.heartbeat = heartbeat
         self.cluster_id = cluster_id
-        
+
 class ConnDefWMQ(Base):
     """ A WebSphere MQ connection definition.
     """
     __tablename__ = 'conn_def_wmq'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-    
+
     id = Column(Integer,  Sequence('conn_def_wmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
-    
+
     host = Column(String(200), nullable=False)
     port = Column(Integer, nullable=False)
     queue_manager = Column(String(200), nullable=False)
@@ -591,13 +591,13 @@ class ConnDefWMQ(Base):
     ssl_key_repository = Column(String(200))
     needs_mcd = Column(Boolean(), nullable=False)
     max_chars_printed = Column(Integer, nullable=False)
-    
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('wmq_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, host=None, port=None, 
-                 queue_manager=None, channel=None, cache_open_send_queues=None,  
-                 cache_open_receive_queues=None,  use_shared_connections=None, ssl=None, 
+
+    def __init__(self, id=None, name=None, host=None, port=None,
+                 queue_manager=None, channel=None, cache_open_send_queues=None,
+                 cache_open_receive_queues=None,  use_shared_connections=None, ssl=None,
                  ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=None,
                  max_chars_printed=None, cluster_id=None):
         self.id = id
@@ -623,25 +623,25 @@ class OutgoingAMQP(Base):
     """
     __tablename__ = 'out_amqp'
     __table_args__ = (UniqueConstraint('name', 'def_id'), {})
-    
+
     id = Column(Integer,  Sequence('out_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    
+
     delivery_mode = Column(SmallInteger(), nullable=False)
     priority = Column(SmallInteger(), server_default=str(AMQP_DEFAULT_PRIORITY), nullable=False)
-    
+
     content_type = Column(String(200), nullable=True)
     content_encoding = Column(String(200), nullable=True)
     expiration = Column(String(20), nullable=True)
     user_id = Column(String(200), nullable=True)
     app_id = Column(String(200), nullable=True)
-    
+
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefAMQP, backref=backref('out_conns_amqp', cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, name=None, is_active=None, delivery_mode=None,
-                 priority=None, content_type=None, content_encoding=None, 
+                 priority=None, content_type=None, content_encoding=None,
                  expiration=None, user_id=None, app_id=None, def_id=None,
                  delivery_mode_text=None, def_name=None):
         self.id = id
@@ -657,26 +657,26 @@ class OutgoingAMQP(Base):
         self.def_id = def_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
-        
+
 class OutgoingWMQ(Base):
     """ An outgoing WebSphere MQ connection.
     """
     __tablename__ = 'out_wmq'
     __table_args__ = (UniqueConstraint('name', 'def_id'), {})
-    
+
     id = Column(Integer,  Sequence('out_wmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    
+
     delivery_mode = Column(SmallInteger(), nullable=False)
     priority = Column(SmallInteger(), server_default=str(WMQ_DEFAULT_PRIORITY), nullable=False)
     expiration = Column(String(20), nullable=True)
-    
+
     def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefWMQ, backref=backref('out_conns_wmq', cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, name=None, is_active=None, delivery_mode=None,
-                 priority=None, expiration=None, def_id=None, delivery_mode_text=None, 
+                 priority=None, expiration=None, def_id=None, delivery_mode_text=None,
                  def_name=None):
         self.id = id
         self.name = name
@@ -687,23 +687,23 @@ class OutgoingWMQ(Base):
         self.def_id = def_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
-        
+
 class OutgoingZMQ(Base):
     """ An outgoing Zero MQ connection.
     """
     __tablename__ = 'out_zmq'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-    
+
     id = Column(Integer,  Sequence('out_zmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    
+
     address = Column(String(200), nullable=False)
     socket_type = Column(String(20), nullable=False)
-    
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_zmq', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, name=None, is_active=None, address=None,
                  socket_type=None, cluster_id=None):
         self.id = id
@@ -712,7 +712,7 @@ class OutgoingZMQ(Base):
         self.socket_type = socket_type
         self.address = address
         self.cluster_id = cluster_id
-        
+
 ################################################################################
 
 class ChannelAMQP(Base):
@@ -720,7 +720,7 @@ class ChannelAMQP(Base):
     """
     __tablename__ = 'channel_amqp'
     __table_args__ = (UniqueConstraint('name', 'def_id'), {})
-    
+
     id = Column(Integer,  Sequence('channel_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
@@ -729,11 +729,11 @@ class ChannelAMQP(Base):
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('amqp_channels', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefAMQP, backref=backref('channels_amqp', cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, is_active=None, queue=None, 
+
+    def __init__(self, id=None, name=None, is_active=None, queue=None,
                  consumer_tag_prefix=None, def_id=None, def_name=None,
                  service_name=None):
         self.id = id
@@ -744,13 +744,13 @@ class ChannelAMQP(Base):
         self.def_id = def_id
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
-        
+
 class ChannelWMQ(Base):
     """ An incoming WebSphere MQ connection.
     """
     __tablename__ = 'channel_wmq'
     __table_args__ = (UniqueConstraint('name', 'def_id'), {})
-    
+
     id = Column(Integer,  Sequence('channel_wmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
@@ -758,11 +758,11 @@ class ChannelWMQ(Base):
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('wmq_channels', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     def_id = Column(Integer, ForeignKey('conn_def_wmq.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefWMQ, backref=backref('channels_wmq', cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, is_active=None, queue=None, 
+
+    def __init__(self, id=None, name=None, is_active=None, queue=None,
                  def_id=None, def_name=None, service_name=None):
         self.id = id
         self.name = name
@@ -777,18 +777,18 @@ class ChannelZMQ(Base):
     """
     __tablename__ = 'channel_zmq'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-    
+
     id = Column(Integer,  Sequence('channel_zmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    
+
     address = Column(String(200), nullable=False)
     socket_type = Column(String(20), nullable=False)
     sub_key = Column(String(200), nullable=True)
-    
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
-    
+
     def __init__(self, id=None, name=None, is_active=None, address=None,
                  socket_type=None, sub_key=None, cluster_id=None):
         self.id = id
@@ -798,31 +798,33 @@ class ChannelZMQ(Base):
         self.socket_type = socket_type
         self.sub_key = sub_key
         self.cluster_id = cluster_id
-        
+
 class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """
     __tablename__ = 'http_soap'
-    __table_args__ = (UniqueConstraint('name', 'connection', 'cluster_id'), 
+    __table_args__ = (UniqueConstraint('name', 'connection', 'cluster_id'),
                       UniqueConstraint('url_path', 'connection', 'cluster_id'), {})
-    
+
     id = Column(Integer,  Sequence('http_soap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    
+
     connection = Column(String(20), nullable=False) # Channel or outgoing
     transport = Column(String(20), nullable=False) # HTTP or SOAP
-    
+
     url_path = Column(String(200), nullable=False)
     method = Column(String(200), nullable=True)
+
     soap_action = Column(String(200), nullable=True)
-    
+    soap_version = Column(String(20), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
-    
-    def __init__(self, id=None, name=None, is_active=None, connection=None, 
-                 transport=None, url_path=None, method=None, soap_action=None, 
-                 cluster_id=None):
+
+    def __init__(self, id=None, name=None, is_active=None, connection=None,
+                 transport=None, url_path=None, method=None, soap_action=None,
+                 soap_version=None, cluster_id=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -831,4 +833,5 @@ class HTTPSOAP(Base):
         self.url_path = url_path
         self.method = method
         self.soap_action = soap_action
+        self.soap_version = soap_version
         self.cluster_id = cluster_id

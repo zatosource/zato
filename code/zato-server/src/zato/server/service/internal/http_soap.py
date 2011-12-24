@@ -60,6 +60,7 @@ class GetList(AdminService):
                 item.url_path = db_item.url_path
                 item.method = db_item.method
                 item.soap_action = db_item.soap_action
+                item.soap_version = db_item.soap_version
 
                 item_list.append(item)
 
@@ -76,7 +77,7 @@ class Create(AdminService):
             core_params = ['cluster_id', 'name', 'is_active', 'url_path', 'connection', 'transport']
             core_params = _get_params(payload, core_params, 'data.')
 
-            optional_params = ['method', 'soap_action']
+            optional_params = ['method', 'soap_action', 'soap_version']
             optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
 
             name = core_params['name']
@@ -103,8 +104,9 @@ class Create(AdminService):
                 item.connection = core_params['connection']
                 item.transport = core_params['transport']
                 item.cluster_id = core_params['cluster_id']
-                item.soap_action = optional_params.get('soap_action')
                 item.method = optional_params.get('method')
+                item.soap_action = optional_params.get('soap_action')
+                item.soap_version = optional_params.get('soap_version')
 
                 session.add(item)
                 session.commit()

@@ -269,7 +269,8 @@ def channel_zmq_list(session, cluster_id):
 
 def _http_soap(session, cluster_id):
     return session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.is_active,
-            HTTPSOAP.url_path, HTTPSOAP.method, HTTPSOAP.soap_action).\
+            HTTPSOAP.url_path, HTTPSOAP.method, HTTPSOAP.soap_action,
+            HTTPSOAP.soap_version).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(HTTPSOAP.name)
