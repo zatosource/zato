@@ -21,8 +21,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, ChannelWMQ,
     ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth,
-    HTTPSOAP, IntervalBasedJob, Job,  OutgoingAMQP,  OutgoingWMQ, OutgoingZMQ,
-    Service, TechnicalAccount, WSSDefinition)
+    HTTPSOAP, IntervalBasedJob, Job,  OutgoingAMQP,  OutgoingS3, OutgoingWMQ,
+    OutgoingZMQ, Service, TechnicalAccount, WSSDefinition)
 
 def job_list(session, cluster_id):
     """ All the scheduler's jobs defined in the ODB.
@@ -289,5 +289,27 @@ def http_soap_list(session, cluster_id, connection, transport):
            filter(HTTPSOAP.connection==connection).\
            filter(HTTPSOAP.transport==transport).\
            all()
+
+# ##############################################################################
+
+def _out_s3(session, cluster_id):
+    return session.query(OutgoingS3.id, OutgoingS3.name, OutgoingS3.is_active,
+            OutgoingS3.prefix, OutgoingS3.aws_access_key, OutgoingS3.separator,
+            OutgoingS3.key_sync_timeout).\
+        filter(Cluster.id==OutgoingS3.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(OutgoingS3.name)
+
+def out_s3(session, cluster_id, id):
+    """ An outgoing S3 connection.
+    """
+    return _out_s3(session, cluster_id).\
+           filter(OutgoingS3.id==id).\
+           one()
+
+def out_s3_list(session, cluster_id):
+    """ Outgoing S3 connections.
+    """
+    return _out_s3(session, cluster_id).all()
 
 # ##############################################################################

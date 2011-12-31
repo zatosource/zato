@@ -25,7 +25,7 @@ from django.contrib.auth.views import login
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import(cluster, load_balancer, main, scheduler, 
+from zato.admin.web.views import(cluster, load_balancer, main, scheduler,
     service, servers)
 from zato.admin.web.views.channel import soap
 from zato.admin.web.views.channel import amqp as channel_amqp
@@ -36,6 +36,7 @@ from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views import http_soap
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
+from zato.admin.web.views.outgoing import s3 as out_s3
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pool import sql
 from zato.admin.web.views.security import basic_auth, tech_account, wss
@@ -88,7 +89,7 @@ urlpatterns = patterns('',
     url(r'^zato/security/basic-auth/edit/$', basic_auth.edit, name='security-basic-auth-edit'),
     url(r'^zato/security/basic-auth/change-password/$', basic_auth.change_password, name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', basic_auth.delete, name='security-basic-auth-delete'),
-    
+
     # .. Technical accounts
     url(r'^zato/security/tech-account/$', tech_account.index, name='security-tech-account'),
     url(r'^zato/security/tech-account/create/$', tech_account.create, name='security-tech-account-create'),
@@ -96,7 +97,7 @@ urlpatterns = patterns('',
     url(r'^zato/security/tech-account/change-password/$', tech_account.change_password, name='security-tech-account-change-password'),
     url(r'^zato/security/tech-account/get/by-id/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$', tech_account.get_by_id, name='security-tech-account-get-by-id'),
     url(r'^zato/security/tech-account/delete/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$', tech_account.delete, name='security-tech-account-delete'),
-    
+
     # .. WS-Security
     url(r'^zato/security/wss/$', wss.index, name='security-wss'),
     url(r'^zato/security/wss/create/$', wss.create, name='security-wss-create'),
@@ -118,66 +119,73 @@ urlpatterns = patterns('',
         scheduler.get_definition, name='scheduler-job-get-definition'),
 
     # Definitions
-    
+
     # .. AMQP
     url(r'^zato/definition/amqp/$', def_amqp.index, name='def-amqp'),
     url(r'^zato/definition/amqp/create/$', def_amqp.create, name='def-amqp-create'),
     url(r'^zato/definition/amqp/edit/$', def_amqp.edit, name='def-amqp-edit'),
     url(r'^zato/definition/amqp/change-password/$', def_amqp.change_password, name='def-amqp-change-password'),
     url(r'^zato/definition/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_amqp.delete, name='def-amqp-delete'),
-    
+
     # .. JMS WebSphere MQ
     url(r'^zato/definition/jms-wmq/$', def_jms_wmq.index, name='def-jms-wmq'),
     url(r'^zato/definition/jms-wmq/create/$', def_jms_wmq.create, name='def-jms-wmq-create'),
     url(r'^zato/definition/jms-wmq/edit/$', def_jms_wmq.edit, name='def-jms-wmq-edit'),
     url(r'^zato/definition/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_jms_wmq.delete, name='def-jms-wmq-delete'),
-    
+
     # Outgoing connections
-    
+
     # .. AMQP
     url(r'^zato/outgoing/amqp/$', out_amqp.index, name='out-amqp'),
     url(r'^zato/outgoing/amqp/create/$', out_amqp.create, name='out-amqp-create'),
     url(r'^zato/outgoing/amqp/edit/$', out_amqp.edit, name='out-amqp-edit'),
     url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_amqp.delete, name='out-amqp-delete'),
-    
+
     # .. JMS WebSphere MQ
     url(r'^zato/outgoing/jms-wmq/$', out_jms_wmq.index, name='out-jms-wmq'),
     url(r'^zato/outgoing/jms-wmq/create/$', out_jms_wmq.create, name='out-jms-wmq-create'),
     url(r'^zato/outgoing/jms-wmq/edit/$', out_jms_wmq.edit, name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_jms_wmq.delete, name='out-jms-wmq-delete'),
-    
+
+    # .. S3
+    url(r'^zato/outgoing/s3/$', out_s3.index, name='out-s3'),
+    url(r'^zato/outgoing/s3/create/$', out_s3.create, name='out-s3-create'),
+    url(r'^zato/outgoing/s3/edit/$', out_s3.edit, name='out-s3-edit'),
+    url(r'^zato/outgoing/s3/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_s3.delete, name='out-s3-delete'),
+    url(r'^zato/outgoing/s3/change-secret-key/$', out_s3.change_secret_key, name='out-s3-change-secret-key'),
+
     # .. ZeroMQ
     url(r'^zato/outgoing/zmq/$', out_zmq.index, name='out-zmq'),
     url(r'^zato/outgoing/zmq/create/$', out_zmq.create, name='out-zmq-create'),
     url(r'^zato/outgoing/zmq/edit/$', out_zmq.edit, name='out-zmq-edit'),
     url(r'^zato/outgoing/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_zmq.delete, name='out-zmq-delete'),
-    
+
     # Channels
-    
+
     # .. AMQP
     url(r'^zato/channel/amqp/$', channel_amqp.index, name='channel-amqp'),
     url(r'^zato/channel/amqp/create/$', channel_amqp.create, name='channel-amqp-create'),
     url(r'^zato/channel/amqp/edit/$', channel_amqp.edit, name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.delete, name='channel-amqp-delete'),
-    
+
     # .. JMS WebSphere MQ
     url(r'^zato/channel/jms-wmq/$', channel_jms_wmq.index, name='channel-jms-wmq'),
     url(r'^zato/channel/jms-wmq/create/$', channel_jms_wmq.create, name='channel-jms-wmq-create'),
     url(r'^zato/channel/jms-wmq/edit/$', channel_jms_wmq.edit, name='channel-jms-wmq-edit'),
     url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_jms_wmq.delete, name='channel-jms-wmq-delete'),
-    
+
     # .. ZeroMQ
     url(r'^zato/channel/zmq/$', channel_zmq.index, name='channel-zmq'),
     url(r'^zato/channel/zmq/create/$', channel_zmq.create, name='channel-zmq-create'),
     url(r'^zato/channel/zmq/edit/$', channel_zmq.edit, name='channel-zmq-edit'),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_zmq.delete, name='channel-zmq-delete'),
-    
+
     # HTTP/SOAP
     url(r'^zato/http-soap/$', http_soap.index, name='http-soap'),
     url(r'^zato/http-soap/create/$', http_soap.create, name='http-soap-create'),
     url(r'^zato/http-soap/edit/$', http_soap.edit, name='http-soap-edit'),
     url(r'^zato/http-soap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', http_soap.delete, name='http-soap-delete'),
-    
+
 )
 
 if settings.DEBUG:

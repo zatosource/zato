@@ -10,30 +10,30 @@
     <script type="text/javascript" src="/static/js/underscore-min.js"></script>
     <script type="text/javascript" src="/static/js/stringformat.js"></script>
     <script type="text/javascript" src="/static/mootools/mootools.js"></script>
-    <script type="text/javascript" src="/static/superfish/js/superfish.js"></script> 
-    
+    <script type="text/javascript" src="/static/superfish/js/superfish.js"></script>
+
     <script>
-    
-    $(document).ready(function(){ 
-        $("ul.sf-menu").superfish(); 
-    }); 
-    
+
+    $(document).ready(function(){
+        $("ul.sf-menu").superfish();
+    });
+
     </script>
 
-    
+
     {% block extra_css %}{% endblock %}
 
-    <link rel="stylesheet" media="screen" href="/static/css/formalize.css" /> 
-    <link rel="stylesheet" media="screen" href="/static/superfish/css/superfish.css" /> 
-    <link rel="stylesheet" media="screen" href="/static/css/bvalidator.css" /> 
+    <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
+    <link rel="stylesheet" media="screen" href="/static/superfish/css/superfish.css" />
+    <link rel="stylesheet" media="screen" href="/static/css/bvalidator.css" />
 
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 
 
     {% block extra_js %}
-    
-    
+
+
     {% endblock %}
 
 
@@ -50,8 +50,8 @@
             {% endif %}
             </div>
 
-            {% if user.is_authenticated %}            
-            
+            {% if user.is_authenticated %}
+
             <div id="main-menu">
                 <ul class="sf-menu" >
                 <li><span class="like-a">Clusters &darr;</span>
@@ -97,6 +97,7 @@
                                 <li class='wide'><a href="{% url out-jms-wmq %}">JMS WebSphere MQ</a></li>
                                 <li class='wide'><a href="{% url http-soap %}?connection=outgoing&transport=plain">Plain HTTP</a></li>
                                 <li class='wide'><a href="{% url http-soap %}?connection=outgoing&transport=soap">SOAP</a></li>
+                                <li class='wide'><a href="{% url out-s3 %}">S3</a></li>
                                 <li class='wide'><a href="{% url pool-sql %}">SQL</a></li>
                                 <li class='wide'><a href="{% url out-zmq %}">ZeroMQ</a></li>
                             </ul>
@@ -126,14 +127,14 @@
                 <li><a href="#">Suggest a feature</a></li>
                 <li><a href="#">Community</a></li>
                 <li><a style="margin-right:5px" href="#">Get involved</a></li>
-                
+
                 </ul>
                 <br style="clear:left"/>
             </div>
         </div>
 
-        {% endif %}        
-        
+        {% endif %}
+
         <div id="bd">
         <div id="yui-main">
             <div class="yui-b">{% block content %}{% endblock %}</div>

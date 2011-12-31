@@ -31,7 +31,8 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common.util import make_repr, object_attrs
-from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
+from zato.common.odb import AMQP_DEFAULT_PRIORITY, S3_DEFAULT_KEY_SYNC_TIMEOUT, \
+     S3_DEFAULT_SEPARATOR, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
 
@@ -711,6 +712,38 @@ class OutgoingZMQ(Base):
         self.is_active = is_active
         self.socket_type = socket_type
         self.address = address
+        self.cluster_id = cluster_id
+
+class OutgoingS3(Base):
+    """ An outgoing S3 connection.
+    """
+    __tablename__ = 'out_s3'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer,  Sequence('out_s3_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    prefix = Column(String(200), nullable=False)
+    aws_access_key = Column(String(400), nullable=False)
+    aws_secret_key = Column(String(400), nullable=False)
+    separator = Column(String(20), server_default=str(S3_DEFAULT_SEPARATOR), nullable=False)
+    key_sync_timeout = Column(Integer, server_default=str(S3_DEFAULT_KEY_SYNC_TIMEOUT), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_s3', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, prefix=None,
+                 aws_access_key=None, aws_secret_key=None, separator=None,
+                 key_sync_timeout=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.prefix = prefix
+        self.aws_access_key = aws_access_key
+        self.aws_secret_key = aws_secret_key
+        self.separator = separator
+        self.key_sync_timeout = key_sync_timeout
         self.cluster_id = cluster_id
 
 ################################################################################

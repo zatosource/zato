@@ -81,11 +81,11 @@ def set_servers_state(cluster, client):
     up = []
     down = []
     maint = []
-    
+
     cluster.some_down = False
     cluster.some_maint = False
     cluster.all_up = False
-    
+
     # Note: currently we support only the 'http_plain' access_type.
     for access_type in("http_plain",):
         up.extend(servers_state["UP"][access_type])
@@ -101,35 +101,34 @@ def set_servers_state(cluster, client):
                 cluster.some_down = True
             if maint:
                 cluster.some_maint = True
-                
+
             # We know not all are down so maybe all are up?
             if not(cluster.some_down or cluster.some_maint):
                 cluster.all_up = True
 
-def change_password(req, service_name):
-    
+def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated'):
+
     cluster_id = req.POST.get('cluster_id')
     id = req.POST.get('id')
-    
-    password1 = req.POST.get('password1', '')
-    password2 = req.POST.get('password2', '')
-    
+
+    password1 = req.POST.get(field1, '')
+    password2 = req.POST.get(field2, '')
+
     cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
+
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
         zato_message.data.id = id
         zato_message.data.password1 = password1
         zato_message.data.password2 = password2
-        
+
         _, zato_message, soap_response = invoke_admin_service(cluster,
                         service_name, zato_message)
-    
+
     except Exception, e:
         msg = 'Could not change the password, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return HttpResponse(dumps({'message':'Password updated'}))
-    
+        return HttpResponse(dumps({'message':success_msg}))
