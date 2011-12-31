@@ -127,7 +127,7 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['cluster_id', 'name', 'is_active', 'prefix', 'aws_access_key', 'separator', 'key_sync_timeout']
+            core_params = ['id', 'cluster_id', 'name', 'is_active', 'prefix', 'aws_access_key', 'separator', 'key_sync_timeout']
             core_params = _get_params(payload, core_params, 'data.')
 
             id = core_params['id']
