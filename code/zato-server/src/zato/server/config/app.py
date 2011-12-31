@@ -201,6 +201,7 @@ class ZatoContext(PythonConfig):
             'zato:outgoing.s3.create':'zato.server.service.internal.outgoing.s3.Create',
             'zato:outgoing.s3.edit':'zato.server.service.internal.outgoing.s3.Edit',
             'zato:outgoing.s3.delete':'zato.server.service.internal.outgoing.s3.Delete',
+            'zato:outgoing.s3.change-secret-key':'zato.server.service.internal.outgoing.s3.ChangeSecretKey',
 
             # Outgoing connections - ZeroMQ
             'zato:outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',

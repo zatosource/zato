@@ -41,7 +41,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms import ChooseClusterForm
+from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.outgoing.s3 import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common.odb.model import Cluster, OutgoingS3
@@ -84,6 +84,7 @@ def index(req):
 
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
+    change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':
 
@@ -116,6 +117,7 @@ def index(req):
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
+        'change_password_form': change_password_form
         }
 
     # TODO: Should really be done by a decorator.
@@ -179,5 +181,4 @@ def delete(req, id, cluster_id):
 
 @meth_allowed('POST')
 def change_secret_key(req):
-    return _change_password(req, 'zato:outgoing.s3.change-secret-key',
-                            'secret_key1', 'secret_key2', 'Secret key updated')
+    return _change_password(req, 'zato:outgoing.s3.change-secret-key', success_msg='Secret key updated')
