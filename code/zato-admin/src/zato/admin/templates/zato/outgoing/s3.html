@@ -15,8 +15,7 @@
     <script type="text/javascript" src="/static/js/common.js"></script>
 
     {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/outgoing/zmq.js"></script>
-
+    <script type="text/javascript" src="/static/js/outgoing/s3.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -25,8 +24,11 @@
             '_selection',
             'name',
             '_is_active',
-            'address',
-            'socket_type',
+            'prefix',
+            'aws_access_key',
+            'separator',
+            'key_sync_timeout',
+            '_change_password',
             '_edit',
             '_delete',
             'id',
@@ -38,7 +40,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Outgoing ZeroMQ connections</h2>
+<h2 class="zato">Outgoing S3 connections</h2>
 
 {% if not zato_clusters %}
     <p>
@@ -52,7 +54,7 @@
 
     <div class="prompt">
     {% if not cluster_id %}
-        Choose a cluster to manage outgoing ZeroMQ connections
+        Choose a cluster to manage outgoing S3 connections
     {% endif %}
 
     <form action="." method="get">
@@ -64,7 +66,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.outgoing.zmq.create()">Create a new outgoing ZeroMQ connection</a>
+            <a href="javascript:$.fn.zato.outgoing.s3.create()">Create a new outgoing S3 connection</a>
         </div>
 
 
@@ -76,10 +78,14 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Address</a></th>
-                        <th><a href="#">Socket type</a></th>
+                        <th><a href="#">Prefix</a></th>
+                        <th><a href="#">AWS access key</a></th>
+                        <th><a href="#">Separator</a></th>
+                        <th><a href="#">Key sync timeout</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -91,17 +97,20 @@
                         <td><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.address }}</td>
-                        <td>{{ item.socket_type }}</td>
-                        <td><a href="javascript:$.fn.zato.outgoing.zmq.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.zmq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>{{ item.prefix }}</td>
+                        <td>{{ item.aws_access_key }}</td>
+                        <td>{{ item.separator }}</td>
+                        <td>{{ item.key_sync_timeout }}</td>
+                        <td><a href="javascript:$.fn.zato.outgoing.s3.change_secret_key('{{ item.id }}')">Change secret key</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.s3.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.s3.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='9'>No results</td>
+                        <td colspan='13'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -112,7 +121,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-zmq-create %}" method="post" id="create-form">
+                <form action="{% url out-s3-create %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -125,13 +134,23 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
-                            <td>{{ create_form.address }}</td>
+                            <td style="vertical-align:middle">Prefix</td>
+                            <td>{{ create_form.prefix }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Socket type</td>
-                            <td>{{ create_form.socket_type }}</td>
+                            <td style="vertical-align:middle">AWS access key</td>
+                            <td>{{ create_form.aws_access_key }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Separator</td>
+                            <td>{{ create_form.separator }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Key sync timeout <span class='form_hint'>(seconds)</span></td>
+                            <td>{{ create_form.key_sync_timeout }}</td>
                         </tr>
 
                         <tr>
@@ -148,7 +167,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-zmq-edit %}" method="post" id="edit-form">
+                <form action="{% url out-s3-edit %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -161,13 +180,23 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Address</td>
-                            <td>{{ edit_form.address }}</td>
+                            <td style="vertical-align:middle">Prefix</td>
+                            <td>{{ edit_form.prefix }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Socket type</td>
-                            <td>{{ edit_form.socket_type }}</td>
+                            <td style="vertical-align:middle">AWS access key</td>
+                            <td>{{ edit_form.aws_access_key }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Separator</td>
+                            <td>{{ edit_form.separator }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Key sync timeout <span class='form_hint'>(seconds)</span></td>
+                            <td>{{ edit_form.key_sync_timeout }}</td>
                         </tr>
 
                         <tr>

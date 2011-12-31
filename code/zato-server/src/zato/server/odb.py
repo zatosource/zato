@@ -32,12 +32,12 @@ from bunch import Bunch
 
 # Zato
 from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
-     Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server, 
+     Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server,
      Service, TechnicalAccount, WSSDefinition)
 from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
-    channel_jms_wmq_list, def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, 
-    basic_auth_list,  job_list,  out_amqp, out_amqp_list, out_jms_wmq, out_jms_wmq_list, 
-    tech_acc_list, wss_list)
+    channel_jms_wmq_list, def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list,
+    basic_auth_list,  job_list,  out_amqp, out_amqp_list, out_jms_wmq, out_jms_wmq_list,
+    out_s3, out_s3_list, tech_acc_list, wss_list)
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -57,30 +57,30 @@ class ODBManager(object):
         self.pool = pool
         self.server = server
         self.cluster = cluster
-        
+
     def session(self):
         return self._Session()
-    
+
     def close(self):
         self._session.close()
-        
+
     '''
     def query(self, *args, **kwargs):
         return self._session.query(*args, **kwargs)
-    
+
     def add(self, *args, **kwargs):
         return self._session.add(*args, **kwargs)
-    
+
     def delete(self, *args, **kwargs):
         return self._session.delete(*args, **kwargs)
-    
+
     def commit(self, *args, **kwargs):
         return self._session.commit(*args, **kwargs)
-    
+
     def rollback(self, *args, **kwargs):
         return self._session.rollback(*args, **kwargs)
     '''
-    
+
     def fetch_server(self):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
         to the value pointed to by the server's .cluster attribute.
@@ -88,24 +88,24 @@ class ODBManager(object):
         if not self.pool:
             if not self.odb_config:
                 odb_data = dict(self.odb_data.items())
-                
+
                 if not odb_data['extra']:
                     odb_data['extra'] = {}
-                    
+
                 odb_data['pool_size'] = int(odb_data['pool_size'])
-                    
+
                 self.odb_config = {ZATO_ODB_POOL_NAME: odb_data}
-                
+
             self.pool = ODBConnectionPool(self.odb_config, True, self.crypto_manager)
             self.pool.init()
             self.pool.get(ZATO_ODB_POOL_NAME)
-            
+
         self.pool.ping({'pool_name': ZATO_ODB_POOL_NAME})
         engine = self.pool.get(ZATO_ODB_POOL_NAME)
-        
+
         self._Session = scoped_session(sessionmaker(bind=engine))
         self._session = self._Session()
-        
+
         try:
             self.server = self._session.query(Server).\
                    filter(Server.odb_token == self.odb_data['token']).\
@@ -117,22 +117,22 @@ class ODBManager(object):
                 self.odb_data['token'])
             logger.error(msg)
             raise
-        
+
     def get_url_security(self, server):
         """ Returns the security configuration of HTTP URLs.
         """
-        
+
         # What DB class to fetch depending on the string value of the security type.
         sec_type_db_class = {
             'tech-account': TechnicalAccount,
             'basic_auth': HTTPBasicAuth,
             'wss': WSSDefinition
             }
-        
+
         result = {}
-        
-        sec_def_q = self._session.query(SecurityDefinition.id, 
-                            SecurityDefinition.security_def_type, 
+
+        sec_def_q = self._session.query(SecurityDefinition.id,
+                            SecurityDefinition.security_def_type,
                             ChannelURLDefinition.url_pattern,
                             ChannelURLDefinition.url_type).\
                filter(SecurityDefinition.id==ChannelURLSecurity.security_def_id).\
@@ -140,21 +140,21 @@ class ODBManager(object):
                filter(ChannelURLDefinition.cluster_id==Cluster.id).\
                filter(Cluster.id==server.cluster_id).\
                all()
-        
+
         for sec_def_id, sec_def_type, url_pattern, url_type in sec_def_q:
-            
+
             # Will raise KeyError if the DB gets somehow misconfigured.
             db_class = sec_type_db_class[sec_def_type]
-            
+
             sec_def = self._session.query(db_class).\
                     filter(db_class.security_def_id==sec_def_id).\
                     one()
-            
+
             result[url_pattern] = Bunch()
             result[url_pattern].url_type = url_type
             result[url_pattern].sec_def = Bunch()
-            result[url_pattern].sec_def.type = sec_def_type            
-            
+            result[url_pattern].sec_def.type = sec_def_type
+
             if sec_def_type == 'tech-account':
                 result[url_pattern].sec_def.name = sec_def.name
                 result[url_pattern].sec_def.password = sec_def.password
@@ -171,11 +171,11 @@ class ODBManager(object):
                 result[url_pattern].sec_def.reject_stale_username = sec_def.reject_stale_username
                 result[url_pattern].sec_def.expiry_limit = sec_def.expiry_limit
                 result[url_pattern].sec_def.nonce_freshness = sec_def.nonce_freshness
-                
+
         return result
-    
+
     def add_service(self, name, impl_name, is_internal, deployment_time, details):
-        """ Adds information about the server's service into the ODB. 
+        """ Adds information about the server's service into the ODB.
         """
         try:
             service = Service(None, name, impl_name, is_internal, True, self.cluster)
@@ -186,21 +186,21 @@ class ODBManager(object):
                 logger.debug('IntegrityError (Service), e=[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
 
-                # We know the service exists in the ODB so we can now add 
+                # We know the service exists in the ODB so we can now add
                 # information about its deployment status.
                 service = self._session.query(Service).\
                     filter(Service.name==name).\
                     filter(Cluster.id==self.cluster.id).\
                     one()
                 self.add_deployed_service(deployment_time, details, service)
-                
+
         except Exception, e:
             msg = 'Could not add the Service, e=[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
-            
+
     def add_deployed_service(self, deployment_time, details, service):
-        """ Adds information about the server's deployed service into the ODB. 
+        """ Adds information about the server's deployed service into the ODB.
         """
         try:
             service = DeployedService(deployment_time, details, self.server, service)
@@ -214,39 +214,39 @@ class ODBManager(object):
             msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
-            
-            
+
+
 # ##############################################################################
-            
+
     def get_job_list(self, cluster_id):
         """ Returns a list of jobs defined on the given cluster .
         """
         return job_list(self._session, cluster_id)
-    
+
 # ##############################################################################
-    
+
     def get_basic_auth_list(self, cluster_id):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster .
         """
         return basic_auth_list(self._session, cluster_id)
-    
+
     def get_tech_acc_list(self, cluster_id):
         """ Returns a list of technical accounts existing on the given cluster .
         """
         return tech_acc_list(self._session, cluster_id)
-    
+
     def get_wss_list(self, cluster_id):
         """ Returns a list of WS-Security definitions on the given cluster .
         """
         return wss_list(self._session, cluster_id)
-    
+
 # ##############################################################################
 
     def get_def_amqp(self, cluster_id, def_id):
         """ Returns an AMQP definition's details.
         """
         return def_amqp(self._session, cluster_id, def_id)
-    
+
     def get_def_amqp_list(self, cluster_id):
         """ Returns a list of AMQP definitions on the given cluster .
         """
@@ -256,7 +256,7 @@ class ODBManager(object):
         """ Returns an outgoing AMQP connection's details.
         """
         return out_amqp(self._session, cluster_id, out_id)
-    
+
     def get_out_amqp_list(self, cluster_id):
         """ Returns a list of outgoing AMQP connections.
         """
@@ -266,19 +266,19 @@ class ODBManager(object):
         """ Returns a particular AMQP channel.
         """
         return channel_amqp(self._session, cluster_id, channel_id)
-    
+
     def get_channel_amqp_list(self, cluster_id):
         """ Returns a list of AMQP channels.
         """
         return channel_amqp_list(self._session, cluster_id)
-    
+
 # ##############################################################################
 
     def get_def_jms_wmq(self, cluster_id, def_id):
         """ Returns an JMS WebSphere MQ definition's details.
         """
         return def_jms_wmq(self._session, cluster_id, def_id)
-    
+
     def get_def_jms_wmq_list(self, cluster_id):
         """ Returns a list of JMS WebSphere MQ definitions on the given cluster .
         """
@@ -288,7 +288,7 @@ class ODBManager(object):
         """ Returns an outgoing JMS WebSphere MQ connection's details.
         """
         return out_jms_wmq(self._session, cluster_id, out_id)
-    
+
     def get_out_jms_wmq_list(self, cluster_id):
         """ Returns a list of outgoing JMS WebSphere MQ connections.
         """
@@ -298,10 +298,22 @@ class ODBManager(object):
         """ Returns a particular JMS WebSphere MQ channel.
         """
         return channel_jms_wmq(self._session, cluster_id, channel_id)
-    
+
     def get_channel_jms_wmq_list(self, cluster_id):
         """ Returns a list of JMS WebSphere MQ channels.
         """
         return channel_jms_wmq_list(self._session, cluster_id)
-    
+
+# ##############################################################################
+
+    def get_out_s3(self, cluster_id, out_id):
+        """ Returns an outgoing S3 connection's details.
+        """
+        return out_s3(self._session, cluster_id, out_id)
+
+    def get_out_s3_list(self, cluster_id):
+        """ Returns a list of outgoing S3 connections.
+        """
+        return out_s3_list(self._session, cluster_id)
+
 # ##############################################################################
