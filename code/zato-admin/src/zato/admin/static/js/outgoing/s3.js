@@ -45,7 +45,7 @@ $.fn.zato.outgoing.s3.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.aws_access_key);
     row += String.format('<td>{0}</td>', item.separator);
     row += String.format('<td>{0}</td>', item.key_sync_timeout);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.s3.change_secret_key('{0}')\">Change secret key</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change secret key</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.s3.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.s3.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

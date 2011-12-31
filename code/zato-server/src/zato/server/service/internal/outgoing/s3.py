@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, OutgoingS3
 from zato.common.odb.query import out_s3_list
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of outgoing S3 connections.
@@ -172,6 +172,15 @@ class Edit(AdminService):
                 session.rollback()
 
                 raise
+
+class ChangeSecretKey(ChangePasswordBase):
+    """ Changes the secret key of an S3 connection.
+    """
+    def handle(self, *args, **kwargs):
+        def _auth(instance, aws_secret_key):
+            instance.aws_secret_key = aws_secret_key
+
+        return self._handle(OutgoingS3, _auth, None, **kwargs)
 
 class Delete(AdminService):
     """ Deletes an outgoing S3 connection.

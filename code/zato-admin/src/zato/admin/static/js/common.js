@@ -355,17 +355,21 @@ $.fn.zato.data_table.on_change_password_submit = function() {
     }
 }
 
-$.fn.zato.data_table.change_password = function(id) {
+$.fn.zato.data_table.change_password = function(id, title) {
 
+    var _title = title;
     var name = $.fn.zato.data_table.data[id].name
+
+    if(!_title) {
+        _title = 'Change password ';
+    }
 
     $('#change-password-name').text(name);
     $('#id_change_password-id').val(id);
 
-    var title = 'Change password ';
     var div = $('#change_password-div');
 
-    div.prev().text(title); // prev() is a .ui-dialog-titlebar
+    div.prev().text(_title); // prev() is a .ui-dialog-titlebar
     div.dialog('open');
 }
 
