@@ -176,7 +176,3 @@ def delete(req, id, cluster_id):
         msg = "Could not delete the outgoing S3 connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-
-@meth_allowed('POST')
-def change_secret_key(req):
-    return _change_password(req, 'zato:outgoing.s3.change-secret-key', success_msg='Secret key updated')
