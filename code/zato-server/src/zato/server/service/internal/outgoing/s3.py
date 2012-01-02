@@ -59,7 +59,6 @@ class GetList(AdminService):
                 item.name = db_item.name
                 item.is_active = db_item.is_active
                 item.prefix_ = db_item.prefix
-                item.aws_access_key = db_item.aws_access_key
                 item.separator = db_item.separator
                 item.key_sync_timeout = db_item.key_sync_timeout
 
@@ -75,7 +74,7 @@ class Create(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['cluster_id', 'name', 'is_active', 'prefix', 'aws_access_key', 'separator', 'key_sync_timeout']
+            core_params = ['cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout']
             core_params = _get_params(payload, core_params, 'data.')
 
             name = core_params['name']
@@ -99,8 +98,6 @@ class Create(AdminService):
                 item.name = core_params['name']
                 item.is_active = core_params['is_active']
                 item.prefix = core_params['prefix']
-                item.aws_access_key = core_params['aws_access_key']
-                item.aws_secret_key = uuid4().hex
                 item.separator = core_params['separator']
                 item.key_sync_timeout = core_params['key_sync_timeout']
                 item.cluster_id = core_params['cluster_id']
@@ -127,7 +124,7 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'prefix', 'aws_access_key', 'separator', 'key_sync_timeout']
+            core_params = ['id', 'cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout']
             core_params = _get_params(payload, core_params, 'data.')
 
             id = core_params['id']
@@ -155,7 +152,6 @@ class Edit(AdminService):
                 item.name = name
                 item.is_active = core_params['is_active']
                 item.prefix = core_params['prefix']
-                item.aws_access_key = core_params['aws_access_key']
                 item.separator = core_params['separator']
                 item.key_sync_timeout = core_params['key_sync_timeout']
 
@@ -172,15 +168,6 @@ class Edit(AdminService):
                 session.rollback()
 
                 raise
-
-class ChangeSecretKey(ChangePasswordBase):
-    """ Changes the secret key of an S3 connection.
-    """
-    def handle(self, *args, **kwargs):
-        def _auth(instance, aws_secret_key):
-            instance.aws_secret_key = aws_secret_key
-
-        return self._handle(OutgoingS3, _auth, None, **kwargs)
 
 class Delete(AdminService):
     """ Deletes an outgoing S3 connection.
