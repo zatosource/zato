@@ -37,6 +37,7 @@ from zato.admin.web.views import http_soap
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import s3 as out_s3
+from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pool import sql
 from zato.admin.web.views.security import basic_auth, tech_account, wss
@@ -152,7 +153,13 @@ urlpatterns = patterns('',
     url(r'^zato/outgoing/s3/create/$', out_s3.create, name='out-s3-create'),
     url(r'^zato/outgoing/s3/edit/$', out_s3.edit, name='out-s3-edit'),
     url(r'^zato/outgoing/s3/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_s3.delete, name='out-s3-delete'),
-    url(r'^zato/outgoing/s3/change-secret-key/$', out_s3.change_secret_key, name='out-s3-change-secret-key'),
+    
+    # .. FTP
+    url(r'^zato/outgoing/ftp/$', out_ftp.index, name='out-ftp'),
+    url(r'^zato/outgoing/ftp/create/$', out_ftp.create, name='out-ftp-create'),
+    url(r'^zato/outgoing/ftp/edit/$', out_ftp.edit, name='out-ftp-edit'),
+    url(r'^zato/outgoing/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_ftp.delete, name='out-ftp-delete'),
+    url(r'^zato/outgoing/ftp/change-password/$', out_ftp.change_password, name='out-ftp-change-password'),
 
     # .. ZeroMQ
     url(r'^zato/outgoing/zmq/$', out_zmq.index, name='out-zmq'),

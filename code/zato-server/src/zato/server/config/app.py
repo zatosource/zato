@@ -201,6 +201,13 @@ class ZatoContext(PythonConfig):
             'zato:outgoing.s3.create':'zato.server.service.internal.outgoing.s3.Create',
             'zato:outgoing.s3.edit':'zato.server.service.internal.outgoing.s3.Edit',
             'zato:outgoing.s3.delete':'zato.server.service.internal.outgoing.s3.Delete',
+            
+            # Outgoing connections - FTP
+            'zato:outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
+            'zato:outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
+            'zato:outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
+            'zato:outgoing.ftp.delete':'zato.server.service.internal.outgoing.ftp.Delete',
+            'zato:outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
 
             # Outgoing connections - ZeroMQ
             'zato:outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
