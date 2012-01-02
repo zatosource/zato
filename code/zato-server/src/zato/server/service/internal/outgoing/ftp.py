@@ -34,11 +34,19 @@ from lxml.objectify import Element
 # validate
 from validate import is_boolean
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.odb.model import Cluster, OutgoingFTP
 from zato.common.odb.query import out_ftp_list
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+
+class _FTPService(AdminService):
+    def update_facade(self, params, optional_params, old_name=None):
+        params.update(optional_params)
+        self.ftp.update(Bunch(params), old_name)
 
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
@@ -68,11 +76,11 @@ class GetList(AdminService):
 
             return ZATO_OK, etree.tostring(item_list)
 
-class Create(AdminService):
+class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
     """
     def handle(self, *args, **kwargs):
-
+        
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
@@ -110,12 +118,12 @@ class Create(AdminService):
                 item.user = optional_params['user']
                 item.acct = optional_params['acct']
                 item.timeout = optional_params['timeout']
-                item.password = uuid4().hex
 
                 session.add(item)
                 session.commit()
 
                 created_elem.id = item.id
+                self.update_facade(core_params, optional_params)
 
                 return ZATO_OK, etree.tostring(created_elem)
 
@@ -126,7 +134,7 @@ class Create(AdminService):
 
                 raise
 
-class Edit(AdminService):
+class Edit(_FTPService):
     """ Updates an outgoing FTP connection.
     """
     def handle(self, *args, **kwargs):
@@ -162,6 +170,7 @@ class Edit(AdminService):
                 core_params['dircache'] = is_boolean(core_params['dircache'])
 
                 item = session.query(OutgoingFTP).filter_by(id=id).one()
+                old_name = item.name
                 item.name = core_params['name']
                 item.is_active = core_params['is_active']
                 item.cluster_id = core_params['cluster_id']
@@ -176,6 +185,7 @@ class Edit(AdminService):
                 session.commit()
 
                 xml_item.id = item.id
+                self.update_facade(core_params, optional_params, old_name)
 
                 return ZATO_OK, etree.tostring(xml_item)
 
@@ -201,9 +211,12 @@ class Delete(AdminService):
                 item = session.query(OutgoingFTP).\
                     filter(OutgoingFTP.id==id).\
                     one()
+                old_name = item.name
 
                 session.delete(item)
                 session.commit()
+                
+                self.ftp.update(None, old_name)
 
             except Exception, e:
                 session.rollback()

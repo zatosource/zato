@@ -42,6 +42,7 @@ from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, MESSAG
 from zato.common.util import new_rid, TRACE1
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
+from zato.server.connection.ftp import FTPFacade
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.base import BrokerMessageReceiver
@@ -184,7 +185,8 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb=None, singleton_server=None, worker_config=None, repo_location=None):
+                 odb=None, singleton_server=None, worker_config=None, repo_location=None,
+                 ftp=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -193,6 +195,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.singleton_server = singleton_server
         self.worker_config = worker_config
         self.repo_location = repo_location
+        self.ftp = ftp
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
@@ -238,6 +241,22 @@ class ParallelServer(BrokerMessageReceiver):
 
             # Start the connectors only once throughout the whole cluster
             self._init_connectors(server)
+            
+        # FTP
+        ftp_conn_params = Bunch()
+        for item in self.odb.get_out_ftp_list(server.cluster.id):
+            ftp_conn_params[item.name] = Bunch()
+            ftp_conn_params[item.name].is_active = item.is_active
+            ftp_conn_params[item.name].name = item.name
+            ftp_conn_params[item.name].host = item.host
+            ftp_conn_params[item.name].user = item.user
+            ftp_conn_params[item.name].passwd = item.password
+            ftp_conn_params[item.name].acct = item.acct
+            ftp_conn_params[item.name].timeout = item.timeout
+            ftp_conn_params[item.name].port = item.port
+            ftp_conn_params[item.name].dircache = item.dircache
+            
+        self.ftp = FTPFacade(ftp_conn_params)
                     
         self.worker_config = Bunch()
         
