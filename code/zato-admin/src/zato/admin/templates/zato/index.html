@@ -84,8 +84,8 @@
                             <ul>
                                 <li class='wide'><a href="{% url channel-amqp %}">AMQP</a></li>
                                 <li class='wide'><a href="{% url channel-jms-wmq %}">JMS WebSphere MQ</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?connection=channel&transport=plain">Plain HTTP</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?connection=channel&transport=soap">SOAP</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?connection=channel&amp;transport=plain">Plain HTTP</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?connection=channel&amp;transport=soap">SOAP</a></li>
                                 <li class='wide'><a href="{% url channel-zmq %}">ZeroMQ</a></li>
                             </ul>
                         </li>
@@ -95,8 +95,8 @@
                                 <li class='wide'><a href="{% url out-amqp %}">AMQP</a></li>
                                 <li class='wide'><a href="#">FTP</a></li>
                                 <li class='wide'><a href="{% url out-jms-wmq %}">JMS WebSphere MQ</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?connection=outgoing&transport=plain">Plain HTTP</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?connection=outgoing&transport=soap">SOAP</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?connection=outgoing&amp;transport=plain">Plain HTTP</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?connection=outgoing&amp;transport=soap">SOAP</a></li>
                                 <li class='wide'><a href="{% url out-s3 %}">S3</a></li>
                                 <li class='wide'><a href="{% url pool-sql %}">SQL</a></li>
                                 <li class='wide'><a href="{% url out-zmq %}">ZeroMQ</a></li>
