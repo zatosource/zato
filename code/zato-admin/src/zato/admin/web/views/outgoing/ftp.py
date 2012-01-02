@@ -39,12 +39,11 @@ from validate import is_boolean
 from anyjson import dumps
 
 # Zato
-from zato.admin.settings import delivery_friendly_name
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.forms.outgoing.s3 import CreateForm, EditForm
+from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
+from zato.admin.web.forms.outgoing.ftp import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
-from zato.common.odb.model import Cluster, OutgoingS3
+from zato.common.odb.model import Cluster, OutgoingFTP
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
 from zato.common.util import TRACE1, to_form
 
@@ -60,16 +59,18 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.prefix = params[prefix + 'prefix']
-    zato_message.data.separator = params[prefix + 'separator']
-    zato_message.data.key_sync_timeout = params[prefix + 'key_sync_timeout']
+    zato_message.data.host = params[prefix + 'host']
+    zato_message.data.user = params[prefix + 'user']
+    zato_message.data.timeout = params[prefix + 'timeout']
+    zato_message.data.port = params[prefix + 'port']
+    zato_message.data.dircache = bool(params.get(prefix + 'dircache'))
 
     return zato_message
 
 def _edit_create_response(verb, id, name):
 
     return_data = {'id': id,
-                   'message': 'Successfully {0} the outgoing S3 connection [{1}]'.format(verb, name),
+                   'message': 'Successfully {0} the outgoing FTP connection [{1}]'.format(verb, name),
                 }
 
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -83,6 +84,7 @@ def index(req):
 
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
+    change_password_form = ChangePasswordForm()
 
     if cluster_id and req.method == 'GET':
 
@@ -91,7 +93,7 @@ def index(req):
         zato_message.data = Element('data')
         zato_message.data.cluster_id = cluster_id
 
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.s3.get-list', zato_message)
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.ftp.get-list', zato_message)
 
         if zato_path('data.item_list.item').get_from(zato_message) is not None:
 
@@ -101,11 +103,13 @@ def index(req):
                 name = msg_item.name.text
                 is_active = is_boolean(msg_item.is_active.text)
 
-                prefix = msg_item.prefix_.text
-                separator = msg_item.separator.text
-                key_sync_timeout = msg_item.key_sync_timeout.text
+                host = msg_item.host.text if msg_item.host else ''
+                user = msg_item.user.text if msg_item.user else ''
+                timeout = msg_item.timeout.text if msg_item.timeout else ''
+                port = msg_item.port.text if msg_item.port else ''
+                dircache = is_boolean(msg_item.dircache.text)
 
-                item =  OutgoingS3(id, name, is_active, prefix, separator, key_sync_timeout)
+                item =  OutgoingFTP(id, name, is_active, host, user, None, timeout, port, dircache)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,
@@ -114,13 +118,14 @@ def index(req):
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
+        'change_password_form': change_password_form
         }
 
     # TODO: Should really be done by a decorator.
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/outgoing/s3.html', return_data,
+    return render_to_response('zato/outgoing/ftp.html', return_data,
                               context_instance=RequestContext(req))
 
 @meth_allowed('POST')
@@ -130,12 +135,12 @@ def create(req):
 
     try:
         zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.s3.create', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.ftp.create', zato_message)
 
         return _edit_create_response('created', zato_message.data.out_s3.id.text, req.POST['name'])
 
     except Exception, e:
-        msg = "Could not create an outgoing S3 connection, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not create an outgoing FTP connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -147,12 +152,12 @@ def edit(req):
 
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.s3.edit', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.ftp.edit', zato_message)
 
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'])
 
     except Exception, e:
-        msg = "Could not update the outgoing S3 connection, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not update the outgoing FTP connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -166,11 +171,15 @@ def delete(req, id, cluster_id):
         zato_message.data = Element('data')
         zato_message.data.id = id
 
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.s3.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.ftp.delete', zato_message)
 
         return HttpResponse()
 
     except Exception, e:
-        msg = "Could not delete the outgoing S3 connection, e=[{e}]".format(e=format_exc(e))
+        msg = "Could not delete the outgoing FTP connection, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+@meth_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato:security.basic-auth.change-password')

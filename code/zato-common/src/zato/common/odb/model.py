@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from ftplib import FTP_PORT
 from json import dumps
 
 # SQLAlchemy
@@ -658,7 +659,70 @@ class OutgoingAMQP(Base):
         self.def_id = def_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
+        
+class OutgoingFTP(Base):
+    """ An outgoing FTP connection.
+    """
+    __tablename__ = 'out_ftp'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
+    id = Column(Integer,  Sequence('out_ftp_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    host = Column(String(200), nullable=False)
+    user = Column(String(200), nullable=True)
+    passwd = Column(String(200), nullable=True)
+    acct = Column(String(200), nullable=True)
+    timeout = Column(Integer, nullable=True)
+    port = Column(Integer, server_default=str(FTP_PORT), nullable=False)
+    dircache = Column(Boolean(), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_ftp', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, host=None, user=None, 
+                 passwd=None, acct=None, timeout=None, port=None, dircache=None,
+                 cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.host = host
+        self.user = user
+        self.passwd = passwd
+        self.acct = acct
+        self.timeout = timeout
+        self.port = port
+        self.dircache = dircache
+        self.cluster_id = cluster_id
+
+class OutgoingS3(Base):
+    """ An outgoing S3 connection.
+    """
+    __tablename__ = 'out_s3'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer,  Sequence('out_s3_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    prefix = Column(String(200), nullable=False)
+    separator = Column(String(20), server_default=str(S3_DEFAULT_SEPARATOR), nullable=False)
+    key_sync_timeout = Column(Integer, server_default=str(S3_DEFAULT_KEY_SYNC_TIMEOUT), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_s3', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, prefix=None,
+                 separator=None, key_sync_timeout=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.prefix = prefix
+        self.separator = separator
+        self.key_sync_timeout = key_sync_timeout
+        self.cluster_id = cluster_id
+        
 class OutgoingWMQ(Base):
     """ An outgoing WebSphere MQ connection.
     """
@@ -712,33 +776,6 @@ class OutgoingZMQ(Base):
         self.is_active = is_active
         self.socket_type = socket_type
         self.address = address
-        self.cluster_id = cluster_id
-
-class OutgoingS3(Base):
-    """ An outgoing S3 connection.
-    """
-    __tablename__ = 'out_s3'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer,  Sequence('out_s3_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    prefix = Column(String(200), nullable=False)
-    separator = Column(String(20), server_default=str(S3_DEFAULT_SEPARATOR), nullable=False)
-    key_sync_timeout = Column(Integer, server_default=str(S3_DEFAULT_KEY_SYNC_TIMEOUT), nullable=False)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('out_conns_s3', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, prefix=None,
-                 separator=None, key_sync_timeout=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.prefix = prefix
-        self.separator = separator
-        self.key_sync_timeout = key_sync_timeout
         self.cluster_id = cluster_id
 
 ################################################################################
