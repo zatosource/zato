@@ -250,7 +250,7 @@ class ParallelServer(BrokerMessageReceiver):
             ftp_conn_params[item.name].name = item.name
             ftp_conn_params[item.name].host = item.host
             ftp_conn_params[item.name].user = item.user
-            ftp_conn_params[item.name].passwd = item.password
+            ftp_conn_params[item.name].password = item.password
             ftp_conn_params[item.name].acct = item.acct
             ftp_conn_params[item.name].timeout = item.timeout
             ftp_conn_params[item.name].port = item.port
