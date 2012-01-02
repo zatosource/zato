@@ -61,7 +61,6 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
     zato_message.data.prefix = params[prefix + 'prefix']
-    zato_message.data.aws_access_key = params[prefix + 'aws_access_key']
     zato_message.data.separator = params[prefix + 'separator']
     zato_message.data.key_sync_timeout = params[prefix + 'key_sync_timeout']
 
@@ -104,11 +103,10 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
 
                 prefix = msg_item.prefix_.text
-                aws_access_key = msg_item.aws_access_key.text
                 separator = msg_item.separator.text
                 key_sync_timeout = msg_item.key_sync_timeout.text
 
-                item =  OutgoingS3(id, name, is_active, prefix, aws_access_key, None, separator, key_sync_timeout)
+                item =  OutgoingS3(id, name, is_active, prefix, separator, key_sync_timeout)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,

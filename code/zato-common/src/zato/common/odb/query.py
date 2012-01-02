@@ -294,7 +294,7 @@ def http_soap_list(session, cluster_id, connection, transport):
 
 def _out_s3(session, cluster_id):
     return session.query(OutgoingS3.id, OutgoingS3.name, OutgoingS3.is_active,
-            OutgoingS3.prefix, OutgoingS3.aws_access_key, OutgoingS3.separator,
+            OutgoingS3.prefix, OutgoingS3.separator,
             OutgoingS3.key_sync_timeout).\
         filter(Cluster.id==OutgoingS3.cluster_id).\
         filter(Cluster.id==cluster_id).\
