@@ -41,12 +41,8 @@ class FTPFacade(object):
         with self._lock:
             params = self.conn_params[name]
             if params.is_active:
-                if params.get('passwd'):
-                    password = params.get('passwd')
-                else:
-                    password = params.get('password')
                 timeout = params.timeout if params.timeout else _GLOBAL_DEFAULT_TIMEOUT
-                return FTPFS(params.host, params.user, password, params.acct, timeout, int(params.port), params.dircache)
+                return FTPFS(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
             else:
                 raise ZatoException('FTP connection [{0}] is not active'.format(params.name))
         
@@ -66,3 +62,8 @@ class FTPFacade(object):
                         
             if old_name:
                 del self.conn_params[old_name]
+                
+    def update_password(self, name, password):
+        with self._lock:
+            self.conn_params[name].password = password
+            

@@ -52,7 +52,7 @@ class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
     def handle(self, *args, **kwargs):
-
+        
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
 
         with closing(self.server.odb.session()) as session:
@@ -231,7 +231,13 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing FTP connection.
     """
     def handle(self, *args, **kwargs):
-        def _auth(instance, password):
-            instance.password = password
+
+        with closing(self.server.odb.session()) as session:
             
-        return self._handle(OutgoingFTP, _auth, None, **kwargs)
+            def _auth(instance, password):
+                instance.password = password
+                self.ftp.update_password(instance.name, password)
+                
+            self._handle(OutgoingFTP, _auth, None, **kwargs)
+            
+            return ZATO_OK, ''
