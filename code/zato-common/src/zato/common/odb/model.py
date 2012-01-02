@@ -672,7 +672,7 @@ class OutgoingFTP(Base):
 
     host = Column(String(200), nullable=False)
     user = Column(String(200), nullable=True)
-    passwd = Column(String(200), nullable=True)
+    password = Column(String(200), nullable=True)
     acct = Column(String(200), nullable=True)
     timeout = Column(Integer, nullable=True)
     port = Column(Integer, server_default=str(FTP_PORT), nullable=False)
@@ -682,14 +682,14 @@ class OutgoingFTP(Base):
     cluster = relationship(Cluster, backref=backref('out_conns_ftp', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, host=None, user=None, 
-                 passwd=None, acct=None, timeout=None, port=None, dircache=None,
+                 password=None, acct=None, timeout=None, port=None, dircache=None,
                  cluster_id=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.host = host
         self.user = user
-        self.passwd = passwd
+        self.password = password
         self.acct = acct
         self.timeout = timeout
         self.port = port

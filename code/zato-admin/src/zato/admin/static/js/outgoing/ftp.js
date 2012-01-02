@@ -44,7 +44,6 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.host);
     row += String.format('<td>{0}</td>', item.user ? item.user : '');
-    row += String.format('<td>{0}</td>', item.passwd ? item.passwd : '');
     row += String.format('<td>{0}</td>', item.acct ? item.acct : '');
     row += String.format('<td>{0}</td>', item.timeout ? item.timeout : '');
     row += String.format('<td>{0}</td>', item.port);

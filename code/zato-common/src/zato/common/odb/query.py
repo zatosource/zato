@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, ChannelWMQ,
     ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth,
-    HTTPSOAP, IntervalBasedJob, Job,  OutgoingAMQP,  OutgoingS3, OutgoingWMQ,
+    HTTPSOAP, IntervalBasedJob, Job,  OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ,
     OutgoingZMQ, Service, TechnicalAccount, WSSDefinition)
 
 def job_list(session, cluster_id):
@@ -311,5 +311,27 @@ def out_s3_list(session, cluster_id):
     """ Outgoing S3 connections.
     """
     return _out_s3(session, cluster_id).all()
+
+# ##############################################################################
+
+def _out_ftp(session, cluster_id):
+    return session.query(OutgoingFTP.id, OutgoingFTP.name, OutgoingFTP.is_active,
+            OutgoingFTP.host, OutgoingFTP.port, OutgoingFTP.user, 
+            OutgoingFTP.acct, OutgoingFTP.timeout, OutgoingFTP.dircache).\
+        filter(Cluster.id==OutgoingFTP.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(OutgoingFTP.name)
+
+def out_ftp(session, cluster_id, id):
+    """ An outgoing FTP connection.
+    """
+    return _out_ftp(session, cluster_id).\
+           filter(OutgoingFTP.id==id).\
+           one()
+
+def out_ftp_list(session, cluster_id):
+    """ Outgoing FTP connections.
+    """
+    return _out_ftp(session, cluster_id).all()
 
 # ##############################################################################

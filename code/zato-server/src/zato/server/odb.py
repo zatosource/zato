@@ -36,8 +36,8 @@ from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
      Service, TechnicalAccount, WSSDefinition)
 from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
     channel_jms_wmq_list, def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list,
-    basic_auth_list,  job_list,  out_amqp, out_amqp_list, out_jms_wmq, out_jms_wmq_list,
-    out_s3, out_s3_list, tech_acc_list, wss_list)
+    basic_auth_list,  job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, 
+    out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, tech_acc_list, wss_list)
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -315,5 +315,17 @@ class ODBManager(object):
         """ Returns a list of outgoing S3 connections.
         """
         return out_s3_list(self._session, cluster_id)
+
+# ##############################################################################
+
+    def get_out_ftp(self, cluster_id, out_id):
+        """ Returns an outgoing FTP connection's details.
+        """
+        return out_ftp(self._session, cluster_id, out_id)
+
+    def get_out_ftp_list(self, cluster_id):
+        """ Returns a list of outgoing FTP connections.
+        """
+        return out_ftp_list(self._session, cluster_id)
 
 # ##############################################################################

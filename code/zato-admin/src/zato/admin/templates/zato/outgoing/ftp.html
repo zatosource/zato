@@ -89,6 +89,8 @@
                         <th><a href="#">Cache directories</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
@@ -112,11 +114,12 @@
                         <td><a href="javascript:$.fn.zato.outgoing.ftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.dircache }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='15'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -162,6 +165,11 @@
                         <tr>
                             <td style="vertical-align:middle">Timeout <span class='form_hint'>(seconds)</span></td>
                             <td>{{ create_form.timeout }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Cache directories</td>
+                            <td>{{ create_form.dircache }}</td>
                         </tr>
 
                         <tr>
@@ -215,6 +223,11 @@
                             <td>{{ edit_form.timeout }}</td>
                         </tr>
 
+                        <tr>
+                            <td style="vertical-align:middle">Cache directories</td>
+                            <td>{{ edit_form.dircache }}</td>
+                        </tr>
+                        
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
