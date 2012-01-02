@@ -39,11 +39,13 @@ class Service(object):
         self.channel = None
         self.amqp = None
         self.jms_wmq = None
+        self.ftp = None
         self.rid = None
         
     def _init(self):
         self.amqp = PublisherFacade(self.broker_client)
         self.jms_wmq = WMQFacade(self.broker_client)
+        self.ftp = self.server.ftp
 
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process
