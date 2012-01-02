@@ -463,6 +463,10 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     if(item.needs_mcd) {
         item.needs_mcd = $.fn.zato.to_bool(item.needs_mcd);
     }
+    
+    if(item.dircache) {
+        item.dircache = $.fn.zato.to_bool(item.dircache);
+    }
 
     $.fn.zato.data_table.data[item.id] = item;
     return new_row_func(item, data, include_tr);

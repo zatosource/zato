@@ -60,8 +60,9 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
     zato_message.data.host = params[prefix + 'host']
-    zato_message.data.user = params[prefix + 'user']
-    zato_message.data.timeout = params[prefix + 'timeout']
+    zato_message.data.user = params.get(prefix + 'user')
+    zato_message.data.timeout = params.get(prefix + 'timeout')
+    zato_message.data.acct = params.get(prefix + 'acct')
     zato_message.data.port = params[prefix + 'port']
     zato_message.data.dircache = bool(params.get(prefix + 'dircache'))
 
@@ -105,11 +106,12 @@ def index(req):
 
                 host = msg_item.host.text if msg_item.host else ''
                 user = msg_item.user.text if msg_item.user else ''
+                acct = msg_item.acct.text if msg_item.acct else ''
                 timeout = msg_item.timeout.text if msg_item.timeout else ''
                 port = msg_item.port.text if msg_item.port else ''
                 dircache = is_boolean(msg_item.dircache.text)
 
-                item =  OutgoingFTP(id, name, is_active, host, user, None, timeout, port, dircache)
+                item =  OutgoingFTP(id, name, is_active, host, user, None, acct, timeout, port, dircache)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,
@@ -137,7 +139,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.ftp.create', zato_message)
 
-        return _edit_create_response('created', zato_message.data.out_s3.id.text, req.POST['name'])
+        return _edit_create_response('created', zato_message.data.out_ftp.id.text, req.POST['name'])
 
     except Exception, e:
         msg = "Could not create an outgoing FTP connection, e=[{e}]".format(e=format_exc(e))
@@ -182,4 +184,4 @@ def delete(req, id, cluster_id):
 
 @meth_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato:security.basic-auth.change-password')
+    return _change_password(req, 'zato:outgoing.ftp.change-password')
