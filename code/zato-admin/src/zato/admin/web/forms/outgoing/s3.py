@@ -29,7 +29,6 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
-    aws_access_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
     separator = forms.CharField(initial=S3_DEFAULT_SEPARATOR, widget=forms.TextInput(attrs={'style':'width:10%'}))
     key_sync_timeout = forms.CharField(initial=S3_DEFAULT_KEY_SYNC_TIMEOUT, widget=forms.TextInput(attrs={'style':'width:10%'}))
 

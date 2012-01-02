@@ -725,8 +725,6 @@ class OutgoingS3(Base):
     is_active = Column(Boolean(), nullable=False)
 
     prefix = Column(String(200), nullable=False)
-    aws_access_key = Column(String(400), nullable=False)
-    aws_secret_key = Column(String(400), nullable=False)
     separator = Column(String(20), server_default=str(S3_DEFAULT_SEPARATOR), nullable=False)
     key_sync_timeout = Column(Integer, server_default=str(S3_DEFAULT_KEY_SYNC_TIMEOUT), nullable=False)
 
@@ -734,14 +732,11 @@ class OutgoingS3(Base):
     cluster = relationship(Cluster, backref=backref('out_conns_s3', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, prefix=None,
-                 aws_access_key=None, aws_secret_key=None, separator=None,
-                 key_sync_timeout=None, cluster_id=None):
+                 separator=None, key_sync_timeout=None, cluster_id=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.prefix = prefix
-        self.aws_access_key = aws_access_key
-        self.aws_secret_key = aws_secret_key
         self.separator = separator
         self.key_sync_timeout = key_sync_timeout
         self.cluster_id = cluster_id
