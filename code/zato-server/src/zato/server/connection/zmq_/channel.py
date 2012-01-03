@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at gefira.pl>
+Copyright (C) 2012 Dariusz Suchojad <dsuch at gefira.pl>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,9 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import errno, logging, os, socket, sys
-from copy import deepcopy
-from multiprocessing import Process
+import logging, os
 from threading import RLock, Thread
 from traceback import format_exc
 
