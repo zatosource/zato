@@ -30,6 +30,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     socket_type = forms.ChoiceField(widget=forms.Select())
+    service = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     sub_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
 
     def __init__(self, prefix=None, post_data=None):

@@ -63,6 +63,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.address = params[prefix + 'address']
     zato_message.data.socket_type = params[prefix + 'socket_type']
     zato_message.data.sub_key = params.get(prefix + 'sub_key')
+    zato_message.data.service = params[prefix + 'service']
     
     return zato_message
 
@@ -102,10 +103,10 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
                 address = msg_item.address.text
                 socket_type = msg_item.socket_type.text
-                
                 sub_key = msg_item.sub_key.text if msg_item.sub_key else ''
+                service_name = msg_item.service_name.text
                 
-                item =  ChannelZMQ(id, name, is_active, address, socket_type, sub_key)
+                item =  ChannelZMQ(id, name, is_active, address, socket_type, sub_key, service_name)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,

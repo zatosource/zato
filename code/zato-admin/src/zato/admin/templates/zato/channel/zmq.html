@@ -28,6 +28,7 @@
             'address',
             'socket_type',
             'sub_key',
+            'service',
             '_edit',
             '_delete',
             'id',
@@ -39,7 +40,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Zero MQ channels</h2>
+<h2 class="zato">ZeroMQ channels</h2>
 
 {% if not zato_clusters %}
     <p>
@@ -53,7 +54,7 @@
 
     <div class="prompt">
     {% if not cluster_id %}
-        Choose a cluster to manage Zero MQ channels
+        Choose a cluster to manage ZeroMQ channels
     {% endif %}
 
     <form action="." method="get">
@@ -65,7 +66,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.channel.zmq.create()">Create a new Zero MQ channel</a>
+            <a href="javascript:$.fn.zato.channel.zmq.create()">Create a new ZeroMQ channel</a>
         </div>
         
 
@@ -80,8 +81,10 @@
                         <th><a href="#">Address</a></th>
                         <th><a href="#">Socket type</a></th>
                         <th><a href="#">Subscription key</a></th>
+                        <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -96,6 +99,7 @@
                         <td>{{ item.address }}</td>
                         <td>{{ item.socket_type }}</td>
                         <td>{{ item.sub_key }}</td>
+                        <td><a href="{% url service %}?service={{ item.service_name }}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.zmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.zmq.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -104,7 +108,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='9'>No results</td>
+                        <td colspan='12'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -140,6 +144,11 @@
                         <tr>
                             <td style="vertical-align:middle">Subscription key <span class='form_hint'>(Ignored if not SUB)</span></td>
                             <td>{{ create_form.sub_key }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service }}</td>
                         </tr>
                         
                         <tr>
@@ -181,6 +190,11 @@
                         <tr>
                             <td style="vertical-align:middle">Subscription key <span class='form_hint'>(Ignored if not SUB)</span></td>
                             <td>{{ edit_form.sub_key }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service }}</td>
                         </tr>
                         
                         <tr>

@@ -93,6 +93,7 @@ class ConsumingConnector(BaseZMQConnector):
         self.channel.is_active = item.is_active
         self.channel.address = str(item.address)
         self.channel.socket_type = self.socket_type = item.socket_type
+        self.channel.service = item.service_name
         self.channel.sub_key = item.sub_key
         self.channel.listener = None
         
@@ -140,7 +141,7 @@ class ConsumingConnector(BaseZMQConnector):
         with self.channel_lock:
             params = {}
             params['action'] = CHANNEL.ZMQ_MESSAGE_RECEIVED
-            params['service'] = 'zato.server.service.internal.Ping'#self.channel.service
+            params['service'] = self.channel.service
             params['rid'] = new_rid()
             params['payload'] = msg
             

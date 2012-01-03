@@ -248,8 +248,10 @@ def out_zmq_list(session, cluster_id):
 
 def _channel_zmq(session, cluster_id):
     return session.query(ChannelZMQ.id, ChannelZMQ.name, ChannelZMQ.is_active,
-            ChannelZMQ.address, ChannelZMQ.socket_type, ChannelZMQ.sub_key).\
+            ChannelZMQ.address, ChannelZMQ.socket_type, ChannelZMQ.sub_key, 
+            Service.name.label('service_name')).\
         filter(Cluster.id==ChannelZMQ.cluster_id).\
+        filter(Service.id==ChannelZMQ.service_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ChannelZMQ.name)
 
