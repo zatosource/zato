@@ -121,6 +121,9 @@ class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
         return ZATO_OK, ''
+    
+class Ping2(Ping):
+    pass
 
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
