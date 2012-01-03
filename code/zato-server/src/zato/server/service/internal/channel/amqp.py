@@ -104,7 +104,6 @@ class Create(AdminService):
             
             if not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
-                logger.error(msg)
                 raise Exception(msg)
             
             created_elem = Element('channel_amqp')

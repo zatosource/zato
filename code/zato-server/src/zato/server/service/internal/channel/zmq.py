@@ -37,7 +37,7 @@ from validate import is_boolean
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
-from zato.common.odb.model import ChannelZMQ, Cluster
+from zato.common.odb.model import ChannelZMQ, Cluster, Service
 from zato.common.odb.query import channel_zmq_list
 #from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service.internal import _get_params, AdminService
@@ -62,6 +62,7 @@ class GetList(AdminService):
                 item.address = db_item.address
                 item.socket_type = db_item.socket_type
                 item.sub_key = db_item.sub_key
+                item.service_name = db_item.service_name
     
                 item_list.append(item)
     
@@ -75,13 +76,14 @@ class Create(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
             
-            core_params = ['cluster_id', 'name', 'is_active', 'address', 'socket_type']
+            core_params = ['cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service']
             core_params = _get_params(payload, core_params, 'data.')
             
             optional_params = ['sub_key']
             optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
             
             name = core_params['name']
+            service_name = core_params['service']
             cluster_id = core_params['cluster_id']
             
             existing_one = session.query(ChannelZMQ.id).\
@@ -91,6 +93,15 @@ class Create(AdminService):
             
             if existing_one:
                 raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(name))
+            
+            # Is the service's name correct?
+            service = session.query(Service).\
+                filter(Cluster.id==cluster_id).\
+                filter(Service.name==service_name).first()
+            
+            if not service:
+                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                raise Exception(msg)
             
             created_elem = Element('channel_zmq')
             
@@ -105,6 +116,7 @@ class Create(AdminService):
                 item.socket_type = core_params['socket_type']
                 item.sub_key = optional_params.get('sub_key')
                 item.cluster_id = core_params['cluster_id']
+                item.service = service
                 
                 session.add(item)
                 session.commit()
@@ -129,7 +141,7 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type']
+            core_params = ['id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service']
             core_params = _get_params(payload, core_params, 'data.')
             
             optional_params = ['sub_key']
@@ -137,6 +149,7 @@ class Edit(AdminService):
             
             id = core_params['id']
             name = core_params['name']
+            service_name = core_params['service']
             cluster_id = core_params['cluster_id']
             
             existing_one = session.query(ChannelZMQ.id).\
@@ -147,6 +160,15 @@ class Edit(AdminService):
             
             if existing_one:
                 raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(name))
+            
+            # Is the service's name correct?
+            service = session.query(Service).\
+                filter(Cluster.id==cluster_id).\
+                filter(Service.name==service_name).first()
+            
+            if not service:
+                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                raise Exception(msg)
             
             xml_item = Element('channel_zmq')
             
@@ -162,6 +184,7 @@ class Edit(AdminService):
                 item.address = core_params['address']
                 item.socket_type = core_params['socket_type']
                 item.sub_key = optional_params.get('sub_key')
+                item.service = core_params['service']
                 
                 session.add(item)
                 session.commit()
