@@ -233,7 +233,8 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     
     zato_env = {}
     zato_env['ZATO_REPO_LOCATION'] = repo_location
-    zato_env['ZATO_CONNECTOR_DEF_ID'] = str(def_id)
+    if def_id:
+        zato_env['ZATO_CONNECTOR_DEF_ID'] = str(def_id)
     zato_env[env_item_name] = str(item_id)
     
     _env = os.environ

@@ -193,7 +193,7 @@ class WorkerStore(BaseWorker):
         creates a new service instance and invokes it.
         """
         service_instance = self.worker_data.server.service_store.new_instance(msg.service)
-        service_instance.update(service_instance, self, self.broker_client, channel, msg.rid)
+        service_instance.update(service_instance, self.worker_data.server, self.broker_client, channel, msg.rid)
         
         response = service_instance.handle(payload=msg.get('payload'), raw_request=msg)
         
@@ -210,6 +210,9 @@ class WorkerStore(BaseWorker):
     
     def on_broker_pull_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'jms-wmq', 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
+    
+    def on_broker_pull_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
+        return self._on_message_invoke_service(msg, 'zmq', 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
             
 # ##############################################################################
             
