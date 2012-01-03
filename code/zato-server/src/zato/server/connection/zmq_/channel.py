@@ -154,7 +154,6 @@ class ConsumingConnector(BaseZMQConnector):
         with self.channel_lock:
             listener = self.channel.listener
             self.channel = msg
-            self.channel.queue = str(self.channel.queue)
             self.channel.listener = listener
             self._recreate_listener()
 
