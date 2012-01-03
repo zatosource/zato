@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service
 from zato.common.odb.query import channel_zmq_list
-#from zato.server.connection.jms_wmq.outgoing import start_connector
+from zato.server.connection.zmq_.channel import start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
@@ -122,7 +122,7 @@ class Create(AdminService):
                 session.commit()
                 
                 created_elem.id = item.id
-                #start_connector(self.server.repo_location, item.id, item.def_id)
+                start_connector(self.server.repo_location, item.id)
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
@@ -184,7 +184,7 @@ class Edit(AdminService):
                 item.address = core_params['address']
                 item.socket_type = core_params['socket_type']
                 item.sub_key = optional_params.get('sub_key')
-                item.service = core_params['service']
+                item.service = service
                 
                 session.add(item)
                 session.commit()
@@ -193,7 +193,8 @@ class Edit(AdminService):
                 
                 core_params['action'] = CHANNEL.ZMQ_EDIT
                 core_params['old_name'] = old_name
-                #self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                core_params['sub_key'] = optional_params.get('sub_key', b'')
+                self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
@@ -224,7 +225,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': CHANNEL.ZMQ_DELETE, 'name': item.name, 'id':item.id}
-                #self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
