@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_jms_wmq_list
-#from zato.server.amqp.channel import start_connector
+from zato.server.connection.jms_wmq.channel import start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
@@ -122,7 +122,7 @@ class Create(AdminService):
                 session.commit()
                 
                 created_elem.id = item.id
-                #start_connector(self.server.repo_location, item.id, item.def_id)
+                start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
@@ -224,8 +224,8 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                #msg = {'action': CHANNEL.JMS_WMQ_DELETE, 'name': def_.name, 'id':def_.id}
-                #self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                msg = {'action': CHANNEL.JMS_WMQ_DELETE, 'name': def_.name, 'id':def_.id}
+                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
