@@ -38,7 +38,7 @@ from bunch import Bunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_OK, ZATO_URL_TYPE_SOAP
-from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, MESSAGE_TYPE
+from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
@@ -392,7 +392,9 @@ class ParallelServer(BrokerMessageReceiver):
 
             # Close all the connector subprocesses this server has started
             pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB),
-                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB),)
+                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB),
+                    (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB),
+                    )
             
             for action, msg_type in pairs:
                 msg = {}
