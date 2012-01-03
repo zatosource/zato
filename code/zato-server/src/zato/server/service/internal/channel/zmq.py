@@ -24,9 +24,6 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
-# SQLAlchemy
-from sqlalchemy.orm.query import orm_exc
-
 # lxml
 from lxml import etree
 from lxml.objectify import Element
