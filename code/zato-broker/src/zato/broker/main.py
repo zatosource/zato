@@ -98,6 +98,9 @@ if __name__ == '__main__':
     
     sockets.append(SocketData('jms-wmq-consuming-connector/pull-push', broker_push_consuming_connector_jms_wmq_pull, consuming_connector_jms_wmq_push_broker_pull))
     sockets.append(SocketData('jms-wmq-consuming-connector/sub', None, None, broker_pub_consuming_connector_jms_wmq_sub))
+
+    sockets.append(SocketData('zmq-publishing-connector/pull-push', broker_push_publishing_connector_zmq_pull, publishing_connector_zmq_push_broker_pull))
+    sockets.append(SocketData('zmq-publishing-connector/sub', None, None, broker_pub_publishing_connector_zmq_sub))
     
     sockets.append(SocketData('zmq-consuming-connector/pull-push', broker_push_consuming_connector_zmq_pull, consuming_connector_zmq_push_broker_pull))
     sockets.append(SocketData('zmq-consuming-connector/sub', None, None, broker_pub_consuming_connector_zmq_sub))
