@@ -196,7 +196,7 @@ class _BaseSQLConnectionPool(object):
         engine.connect().execute(query)
         response_time = time() - start_time
 
-        self.logger.debug("Ping OK, pool_name=[%s], response_time=[%s]" % (pool_name, response_time))
+        self.logger.debug('Ping OK, pool_name=[{0}], response_time=[{1:03.4f} s]'.format(pool_name, response_time))
 
         return response_time
 

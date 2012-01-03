@@ -107,7 +107,7 @@ class ZMQPullSub(object):
             _handlers_args[self.pull_socket] = (self.on_pull_handler, self.pull_handler_args)
         if self.sub_socket:
             _handlers_args[self.sub_socket] = (self.on_sub_handler, self.sub_handler_args)
-        
+            
         while self.keep_running:
             try:
                 poll_socks = dict(poller.poll())
@@ -115,6 +115,7 @@ class ZMQPullSub(object):
                     if poll_socks.get(sock) == zmq.POLLIN:
                         msg = sock.recv()
                         try:
+                            
                             e = None
                             args = None
                             
@@ -235,3 +236,8 @@ class BrokerClient(object):
             self._push.close()
         if self._pull_sub:
             self._pull_sub.close()
+            
+    def get_connection_info(self):
+        return 'name=[{0}] client_pull=[{1}] client_push=[{2}] client_sub=[{3}] sub_key=[{4}]'.format(
+            self.name, self.broker_push_client_pull, self.client_push_broker_pull, self.broker_pub_client_sub,
+            self.sub_key)

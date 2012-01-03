@@ -45,6 +45,7 @@ from zato.server.connection.amqp.outgoing import start_connector as amqp_out_sta
 from zato.server.connection.ftp import FTPFacade
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
+from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
 from zato.server.channel.soap import server_soap_error
@@ -342,6 +343,10 @@ class ParallelServer(BrokerMessageReceiver):
         # JMS WMQ - outgoing
         for item in self.odb.get_out_jms_wmq_list(server.cluster.id):
             jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
+            
+        # ZMQ - channels
+        for item in self.odb.get_channel_zmq_list(server.cluster.id):
+            zmq_channel_start_connector(self.repo_location, item.id)
             
     def _after_init_non_accepted(self, server):
         pass    

@@ -49,6 +49,8 @@ if __name__ == '__main__':
     
     broker_push_singleton_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_SINGLETON_PULL)
     singleton_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.SINGLETON_PUSH_BROKER_PULL)
+
+    # AMQP
     
     broker_push_publishing_connector_amqp_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_AMQP_PULL)
     publishing_connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.PUBLISHING_CONNECTOR_AMQP_PUSH_BROKER_PULL)
@@ -57,6 +59,8 @@ if __name__ == '__main__':
     broker_push_consuming_connector_amqp_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_AMQP_PULL)
     consuming_connector_amqp_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONSUMING_CONNECTOR_AMQP_PUSH_BROKER_PULL)
     broker_pub_consuming_connector_amqp_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONSUMING_CONNECTOR_AMQP_SUB)
+
+    # JMS WMQ
     
     broker_push_publishing_connector_jms_wmq_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_JMS_WMQ_PULL)
     publishing_connector_jms_wmq_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.PUBLISHING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL)
@@ -65,6 +69,16 @@ if __name__ == '__main__':
     broker_push_consuming_connector_jms_wmq_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_JMS_WMQ_PULL)
     consuming_connector_jms_wmq_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONSUMING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL)
     broker_pub_consuming_connector_jms_wmq_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONSUMING_CONNECTOR_JMS_WMQ_SUB)
+
+    # ZMQ
+    
+    broker_push_publishing_connector_zmq_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_ZMQ_PULL)
+    publishing_connector_zmq_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.PUBLISHING_CONNECTOR_ZMQ_PUSH_BROKER_PULL)
+    broker_pub_publishing_connector_zmq_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_ZMQ_SUB)
+    
+    broker_push_consuming_connector_zmq_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_ZMQ_PULL)
+    consuming_connector_zmq_push_broker_pull = 'tcp://{0}:{1}'.format(host, start_port + PORTS.CONSUMING_CONNECTOR_ZMQ_PUSH_BROKER_PULL)
+    broker_pub_consuming_connector_zmq_sub = 'tcp://{0}:{1}'.format(host, start_port + PORTS.BROKER_PUB_CONSUMING_CONNECTOR_ZMQ_SUB)
     
     sockets = []
     
@@ -84,5 +98,8 @@ if __name__ == '__main__':
     
     sockets.append(SocketData('jms-wmq-consuming-connector/pull-push', broker_push_consuming_connector_jms_wmq_pull, consuming_connector_jms_wmq_push_broker_pull))
     sockets.append(SocketData('jms-wmq-consuming-connector/sub', None, None, broker_pub_consuming_connector_jms_wmq_sub))
+    
+    sockets.append(SocketData('zmq-consuming-connector/pull-push', broker_push_consuming_connector_zmq_pull, consuming_connector_zmq_push_broker_pull))
+    sockets.append(SocketData('zmq-consuming-connector/sub', None, None, broker_pub_consuming_connector_zmq_sub))
     
     Broker(token, log_invalid_tokens, *sockets).serve_forever()
