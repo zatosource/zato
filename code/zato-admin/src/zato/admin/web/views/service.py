@@ -120,8 +120,7 @@ def index(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/service/index.html', return_data,
-                              context_instance=RequestContext(req))
+    return render_to_response('zato/service/index.html', return_data, context_instance=RequestContext(req))
 
 
 @meth_allowed('POST')
@@ -142,8 +141,51 @@ def edit(req):
         return HttpResponseServerError(msg)
 
 @meth_allowed('GET')
-def details(req):
-    pass
+def details(req, service_id):
+    zato_clusters = req.odb.query(Cluster).order_by('name').all()
+    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
+    cluster_id = req.GET.get('cluster')
+    items = []
+    
+    create_form = CreateForm()
+    edit_form = EditForm(prefix='edit')
+
+    if cluster_id and req.method == 'GET':
+        
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.cluster_id = cluster_id
+        
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-list', zato_message)
+        
+        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+            
+            for msg_item in zato_message.data.item_list.item:
+                
+                id = msg_item.id.text
+                name = msg_item.name.text
+                is_active = is_boolean(msg_item.is_active.text)
+                impl_name = msg_item.impl_name.text
+                is_internal = is_boolean(msg_item.is_internal.text)
+                usage_count = msg_item.usage_count.text
+                
+                item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
+                items.append(item)
+
+    return_data = {'zato_clusters':zato_clusters,
+        'cluster_id':cluster_id,
+        'choose_cluster_form':choose_cluster_form,
+        'items':items,
+        'create_form':create_form,
+        'edit_form':edit_form,
+        }
+    
+    # TODO: Should really be done by a decorator.
+    if logger.isEnabledFor(TRACE1):
+        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
+
+    return render_to_response('zato/service/details.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('GET')
 def invoke(req):
