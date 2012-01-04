@@ -496,7 +496,8 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
     $.fn.zato.data_table.setup_change_password();
 
     /* Prepare the validators here so that it's all still a valid HTML
-       even with bValidator's custom attributes.
+    from the http://users.skynet.be/mgueury/mozilla/ point of view
+    even with bValidator's custom attributes.
     */
 
     var field_id = '';
@@ -504,7 +505,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
 
     $.each(['', 'edit'], function(ignored, action) {
         $.each(attrs, function(ignored, attr) {
-            if(action) {
+            if(!action) {
                 field_id = String.format('#id_{0}', attr);
             }
             else {
