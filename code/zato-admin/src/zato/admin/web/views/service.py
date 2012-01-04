@@ -150,14 +150,14 @@ def invoke(req):
     pass
     
 @meth_allowed('POST')
-def delete(req, id, cluster_id):
+def delete(req, service_id, cluster_id):
     
     cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.data.id = service_id
         
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.delete', zato_message)
         
