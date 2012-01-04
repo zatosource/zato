@@ -76,7 +76,7 @@ class GetList(AdminService):
             return ZATO_OK, etree.tostring(definition_list)
         
 class GetByID(AdminService):
-    """ Returns a particular JMS WebSphere MQ definition
+    """ Returns a particular JMS WebSphere MQ definition.
     """
     def handle(self, *args, **kwargs):
         
@@ -163,7 +163,7 @@ class Create(AdminService):
                 raise 
 
 class Edit(AdminService):
-    """ Updates an AMQP definition.
+    """ Updates an JMS WMQ definition.
     """
     def handle(self, *args, **kwargs):
         

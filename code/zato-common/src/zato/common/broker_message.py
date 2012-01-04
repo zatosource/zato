@@ -127,6 +127,10 @@ JMS_WMQ_CONNECTOR.CLOSE = b'10802'
 ZMQ_CONNECTOR = Bunch()
 ZMQ_CONNECTOR.CLOSE = b'10803'
 
+SERVICE = Bunch()
+SERVICE.EDIT = b'10900'
+SERVICE.DELETE = b'10901'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

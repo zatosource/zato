@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at gefira.pl>
+Copyright (C) 2011 Dariusz Suchojad <dsuch at gefira.pl>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime
+from traceback import format_exc
 
 # Django
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
@@ -32,96 +32,123 @@ from django.template import RequestContext
 from lxml import etree
 from lxml.objectify import Element
 
+# Validate
+from validate import is_boolean
+
+# anyjson
+from anyjson import dumps
+
 # Zato
+from zato.admin.settings import delivery_friendly_name
+from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.server_model import Service
+from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
+from zato.common.odb.model import Cluster, Service
 from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
-from zato.common.soap import invoke_admin_service
-from zato.common.odb.model import Server
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
-@meth_allowed("GET")
+def _get_edit_create_message(params, prefix=''):
+    """ Creates a base document which can be used by both 'edit' and 'create' actions.
+    """
+    zato_message = Element('{%s}zato_message' % zato_namespace)
+    zato_message.data = Element('data')
+    zato_message.data.id = params.get('id')
+    zato_message.data.cluster_id = params['cluster_id']
+    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
+    
+    return zato_message
+
+def _edit_create_response(verb, id, name):
+
+    return_data = {'id': id,
+                   'message': 'Successfully {0} the service [{1}]'.format(verb, name),
+                }
+    
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+
+@meth_allowed('GET')
 def index(req):
+    zato_clusters = req.odb.query(Cluster).order_by('name').all()
+    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
+    cluster_id = req.GET.get('cluster')
+    items = []
+    
+    create_form = CreateForm()
+    edit_form = EditForm(prefix='edit')
 
-    zato_servers = Server.objects.all().order_by("name")
-    choose_server_form = ChooseClusterForm(zato_servers, req.GET)
-    server_id = None
-    services = []
+    if cluster_id and req.method == 'GET':
+        
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.cluster_id = cluster_id
+        
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-list', zato_message)
+        
+        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+            
+            for msg_item in zato_message.data.item_list.item:
+                
+                id = msg_item.id.text
+                name = msg_item.name.text
+                is_active = is_boolean(msg_item.is_active.text)
+                impl_name = msg_item.impl_name.text
+                is_internal = is_boolean(msg_item.is_internal.text)
+                usage_count = 0
+                
+                item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
+                items.append(item)
 
-    # Build a list of services for a given Zato server.
-    server_id = req.GET.get("server")
-
-    if server_id and req.method == "GET":
-        server = Server.objects.get(id=server_id)
-
-        zato_message = Element("{%s}zato_message" % zato_namespace)
-        zato_message.data = Element("data")
-        zato_message.data.service = Element("service")
-        zato_message.data.service.name_pattern = ZATO_NOT_GIVEN
-        zato_message.data.service.pattern_type = "re"
-        zato_message.data.service.ignore_zato_services = False
-
-        _ignored, zato_message, soap_response  = invoke_admin_service(server.address,
-                "zato:service.get-list", etree.tostring(zato_message))
-
-        if zato_path("data.service_list.service").get_from(zato_message) is not None:
-            for service_elem in zato_message.data.service_list.service:
-                name = unicode(service_elem.name.text)
-                egg_path = unicode(service_elem.egg_path.text)
-                usage_count = int(service_elem.usage_count.text)
-
-                service = Service(name, egg_path, usage_count)
-                services.append(service)
-
-            services.sort()
-
-    return_data = {"zato_servers":zato_servers,
-        "server_id":server_id,
-        "choose_server_form":choose_server_form,
-        "services":services
+    return_data = {'zato_clusters':zato_clusters,
+        'cluster_id':cluster_id,
+        'choose_cluster_form':choose_cluster_form,
+        'items':items,
+        'create_form':create_form,
+        'edit_form':edit_form,
         }
-
-    # TODO: Should really be done with a decorator
+    
+    # TODO: Should really be done by a decorator.
     if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, "Returning render_to_response [%s]" % return_data)
+        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response("zato/service/index.html", return_data,
+    return render_to_response('zato/service/index.html', return_data,
                               context_instance=RequestContext(req))
 
-@meth_allowed("GET")
-def details(req, server_id, service_name):
 
-    server = Server.objects.get(id=server_id)
-    service = Service()
-
-    zato_message = Element("{%s}zato_message" % zato_namespace)
-    zato_message.data = Element("data")
-    zato_message.data.service = Element("service")
-    zato_message.data.service.name = service_name
-
-    _ignored, zato_message, soap_response  = invoke_admin_service(server.address,
-            "zato:service.get-details", etree.tostring(zato_message))
-
-    if zato_path("data.service").get_from(zato_message) is not None:
-        service_elem = zato_message.data.service
-
-        service.name = unicode(service_elem.name.text)
-        service.egg_path = unicode(service_elem.egg_path.text)
-        service.usage_count = int(service_elem.usage_count.text)
-        service.deployment_time = datetime.strptime(service_elem.deployment_time.text, "%Y-%m-%dT%H:%M:%S.%f")
-        service.deployment_user = service_elem.deployment_user.text
-
-    return_data = {"server": server, "service":service}
-
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, "Returning render_to_response [%s]" % return_data)
-
-    return render_to_response("zato/service/details.html", return_data,
-                              context_instance=RequestContext(req))
-
-@meth_allowed("TODO")
-def invoke(req, server_id, service_name):
+@meth_allowed('POST')
+def create(req):
     pass
+
+@meth_allowed('POST')
+def edit(req):
+    pass
+
+@meth_allowed('GET')
+def details(req):
+    pass
+
+@meth_allowed('GET')
+def invoke(req):
+    pass
+    
+@meth_allowed('POST')
+def delete(req, id, cluster_id):
+    
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = id
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.delete', zato_message)
+        
+        return HttpResponse()
+    
+    except Exception, e:
+        msg = "Could not delete the service, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)

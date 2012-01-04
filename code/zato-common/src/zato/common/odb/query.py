@@ -337,3 +337,24 @@ def out_ftp_list(session, cluster_id):
     return _out_ftp(session, cluster_id).all()
 
 # ##############################################################################
+
+def _service(session, cluster_id):
+    return session.query(Service.id, Service.name, Service.is_active,
+            Service.impl_name, Service.is_internal).\
+        filter(Cluster.id==Service.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(Service.name)
+
+def service(session, cluster_id, id):
+    """ A service.
+    """
+    return _service(session, cluster_id).\
+           filter(Service.id==id).\
+           one()
+
+def service_list(session, cluster_id):
+    """ All services.
+    """
+    return _service(session, cluster_id).all()
+
+# ##############################################################################

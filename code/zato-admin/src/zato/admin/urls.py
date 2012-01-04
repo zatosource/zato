@@ -79,8 +79,10 @@ urlpatterns = patterns('',
 
     # Services.
     url(r'^zato/service/$', service.index, name='service'),
-    url(r'^zato/service/details/(?P<server_id>\d*)/(?P<service_name>.*)/invoke/$', service.invoke, name='service-invoke'),
-    url(r'^zato/service/details/(?P<server_id>\d*)/(?P<service_name>.*)/$', service.details, name='service-details'),
+    url(r'^zato/service/details/(?P<service_id>\d*)/$', service.details, name='service-details'),
+    url(r'^zato/service/create/$', service.create, name='service-create'),
+    url(r'^zato/service/edit/$', service.edit, name='service-edit'),
+    url(r'^zato/service/invoke/$', service.invoke, name='service-invoke'),
 
     # Security..
 

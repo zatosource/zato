@@ -412,14 +412,15 @@ class Service(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, impl_name=None, is_internal=None,
-                 is_active=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, impl_name=None, 
+                 is_internal=None, cluster=None, usage_count=None):
         self.id = id
         self.name = name
+        self.is_active = is_active
         self.impl_name = impl_name
         self.is_internal = is_internal
-        self.is_active = is_active
         self.cluster = cluster
+        self.usage_count = usage_count # Not used by the database
 
 class DeployedService(Base):
     """ A service living on a given server.
