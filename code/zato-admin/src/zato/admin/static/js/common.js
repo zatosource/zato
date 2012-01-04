@@ -428,7 +428,7 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var prefix = action + '-';
     var name = '';
     var _columns = $.fn.zato.data_table.get_columns();
-
+    
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
         item[name] = elem.value;
@@ -467,6 +467,10 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     
     if(item.dircache) {
         item.dircache = $.fn.zato.to_bool(item.dircache);
+    }
+    
+    if(item.is_internal) {
+        item.is_internal = $.fn.zato.to_bool(item.is_internal);
     }
 
     $.fn.zato.data_table.data[item.id] = item;

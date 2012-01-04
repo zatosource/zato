@@ -61,6 +61,7 @@ class GetList(AdminService):
                 item.is_active = db_item.is_active
                 item.impl_name = db_item.impl_name
                 item.is_internal = db_item.is_internal
+                item.usage_count = 'TODO getlist'
     
                 item_list.append(item)
     
@@ -83,6 +84,7 @@ class GetByID(AdminService):
             item.is_active = db_item.is_active
             item.impl_name = db_item.impl_name
             item.is_internal = db_item.is_internal
+            item.usage_count = 'TODO getbyid'
     
             return ZATO_OK, etree.tostring(definition_elem)
         
@@ -150,11 +152,12 @@ class Edit(AdminService):
         
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
-            request_params = ['id', 'is_active']
+            request_params = ['id', 'is_active', 'name']
             
             params = _get_params(payload, request_params, 'data.')
             id = int(params['id'])
             is_active = is_boolean(params['is_active'])
+            name = params['name']
             
             service_elem = Element('service')
             
@@ -162,16 +165,21 @@ class Edit(AdminService):
                 
                 service = session.query(Service).filter_by(id=id).one()
                 service.is_active = is_active
+                service.name = name
                 
                 session.add(service)
                 session.commit()
                 
                 service_elem.id = service.id
+                service_elem.name = service.name
+                service_elem.impl_name = service.impl_name
+                service_elem.is_internal = service.is_internal
+                service_elem.usage_count = 'TODO edit'
                 
                 params['action'] = SERVICE.EDIT
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
-                return ZATO_OK, etree.tostring(def_jms_wmq_elem)
+                return ZATO_OK, etree.tostring(service_elem)
                 
             except Exception, e:
                 msg = 'Could not update the service, e=[{e}]'.format(e=format_exc(e))

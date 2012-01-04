@@ -57,15 +57,21 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data = Element('data')
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
+    zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
     
     return zato_message
 
-def _edit_create_response(verb, id, name):
+def _edit_create_response(verb, service_elem):
 
-    return_data = {'id': id,
-                   'message': 'Successfully {0} the service [{1}]'.format(verb, name),
+    return_data = {'id': str(service_elem.id),
+                   'is_internal':is_boolean(service_elem.is_internal.text),
+                   'impl_name':service_elem.impl_name.text,
+                   'usage_count':str(service_elem.usage_count.text),
+                   'message': 'Successfully {0} the service [{1}]'.format(verb, service_elem.name.text),
                 }
+
+    print(dumps(return_data))
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -97,7 +103,7 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
                 impl_name = msg_item.impl_name.text
                 is_internal = is_boolean(msg_item.is_internal.text)
-                usage_count = 0
+                usage_count = msg_item.usage_count.text
                 
                 item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
                 items.append(item)
@@ -124,7 +130,16 @@ def create(req):
 
 @meth_allowed('POST')
 def edit(req):
-    pass
+    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
+    try:
+        zato_message = _get_edit_create_message(req.POST, 'edit-')
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.edit', zato_message)
+
+        return _edit_create_response('updated', zato_message.data.service)
+    except Exception, e:
+        msg = "Could not update the service, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 @meth_allowed('GET')
 def details(req):
