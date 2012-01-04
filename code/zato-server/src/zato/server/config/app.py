@@ -123,8 +123,8 @@ class ZatoContext(PythonConfig):
             'zato:scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
 
             # Services
-            'zato:service.get-list':'zato.server.service.internal.service.GetServiceList',
-            'zato:service.get-details':'zato.server.service.internal.service.GetServiceDetails',
+            'zato:service.get-list':'zato.server.service.internal.service.GetList',
+            'zato:service.get-details':'zato.server.service.internal.service.GetByID',
 
             # SOAP channels
             'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',

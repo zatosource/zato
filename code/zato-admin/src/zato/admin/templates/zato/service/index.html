@@ -1,151 +1,176 @@
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
-    <style type="text/css">
-        .yui-pe .yui-pe-content {
-            display:none;
-        }
-    </style>
-
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
 {% block extra_js %}
-    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} Service JS {% endcomment %}
+    {% comment %} HTTP Basic Auth {% endcomment %}
     <script type="text/javascript" src="/static/js/service.js"></script>
 
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            'impl_name',
+            '_is_internal',
+            'usage_count',
+            '_edit',
+            '_delete',
+            'id',
+            'is_active',
+            'is_internal',
+        ]
+    }
     </script>
 
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Services</h1>
+<h2 class="zato">Services</h2>
 
-{% if not zato_servers %}
+{% if not zato_clusters %}
     <p>
-    There aren't any Zato servers registered with this ZatoAdmin instance.
-    <a href="{% url servers %}" class="common">Click here</a> to register a new server first.
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
     <br/><br/>
     </p>
 {% else %}
 
-    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if not server_id %}
-        Choose a server to manage the services.
-        <br/><br/>
+    <div class="prompt">
+    {% if not cluster_id %}
+        Choose a cluster to manage services
     {% endif %}
 
     <form action="." method="get">
-        {{ choose_server_form.server }}
+        {{ choose_cluster_form.cluster }}
         <input type="submit" value="Show services" />
-        <a class="common" href="#">More options (TODO: regexp search)</a>
     </form>
+    </div>
 
 
-    {% if server_id %}
-
-        <br/>
-
-        <input type="hidden" id="current_server_id" value="{{ server_id }}" />
-
-        {% if services %}
-            <a id="start_selected" name="start_selected" href="#">Start selected</a>
-            <a id="stop_selected" name="stop_selected" href="#">Stop selected</a>
-        {% endif %}
-
-
-        <a id="deploy_egg" name="deploy_egg" href="#">Deploy an .egg</a>
-        <a id="download_egg" name="download_egg" href="#">Download selected .eggs</a>
-
-        <br/><br/>
-
-        <script type="text/javascript">
-        YAHOO.util.Event.addListener(window, "load", function() {
-            YAHOO.example.EnhanceFromMarkup = function() {
-                data_column_defs = [
-                    {key:"service_selection", label:"", sortable:false},
-                    {key:"service_data", label:"Service", sortable:true},
-                    {key:"usage_count", label:"Usage count", sortable:true},
-                    {key:"is_active", label:"State", sortable:true},
-                ];
-
-                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
-                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
-                data_ds.responseSchema = {
-                    fields: [{key:"service_selection"},
-                            {key:"service_data"},
-                            {key:"usage_count"},
-                            {key:"is_active"},
-                    ]
-                };
-
-                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
-                        {sortedBy:{key:"service_data",dir:"desc"}}
-                );
-
-                return {
-                    oDS: data_ds,
-                    oDT: data_dt
-                };
-            }();
-
-        });
-        </script>
+    {% if cluster_id %}
+        <div class='page_prompt'>
+            <a href="javascript:$.fn.zato.service.create()">Upload a service</a>
+        </div>
+        
 
         <div id="markup">
             <table id="data-table">
                 <thead>
-
-                    <tr>
+                    <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Implementation</a></th>
+                        <th><a href="#">Internal</a></th>
+                        <th><a href="#">Usage count</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                    </tr>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
-                {% for service in services %}
-
-                    <tr>
-                        <td>
-                            <input type="checkbox" />
-                        </td>
-                        <td>
-                                <a href="/zato/service/details/{{ server_id }}/{{ service.name }}/" class="common">{{ service.name }}</a>
-                            <br/>
-                            <span style="font-size:10px;">
-                                <a href="#" style="color:#282828;text-decoration:none">SOAP</a>
-
-                                (<a href="#" style="color:#282828;text-decoration:none">WS-Security</a>),
-                                <a href="#" style="color:#282828;text-decoration:none">JMS</a>,
-
-                                <a href="#" style="color:#282828;text-decoration:none">Plain HTTP</a>
-                            <br/>
-                            <a href="#" style="color:#282828;text-decoration:none">{{ service.egg_path }}</a></span>
-                        </td>
-                        <td>{{ service.usage_count }}</td>
-                        <td>Running</td>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td><input type="checkbox" /></td>
+                        <td><a href="{% url service-details item.id %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.impl_name }}</td>
+                        <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
+                        <td>{{ item.usage_count }}</td>
+                        <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.service.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.is_internal }}</td>
                     </tr>
                 {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='12'>No results</td>
+                    </tr>
+                {% endif %}
 
                 </tbody>
             </table>
         </div>
+        
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url channel-zmq-create %}" method="post" id="create-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+                    
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_form.is_active }}</td>
+                        </tr>
 
-    {% endif %} {% comment %}server_id{% endcomment %}
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>                        
+                    </table>
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+        
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url channel-zmq-edit %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+                    
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>                        
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+    {% endif %}
 
-{% endif %}{% comment %}not zato_servers{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}

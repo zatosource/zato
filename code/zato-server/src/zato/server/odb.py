@@ -162,7 +162,7 @@ class ODBManager(object):
         """ Adds information about the server's service into the ODB.
         """
         try:
-            service = Service(None, name, impl_name, is_internal, True, self.cluster)
+            service = Service(None, name, True, impl_name, is_internal, self.cluster)
             self._session.add(service)
             try:
                 self._session.commit()

@@ -69,6 +69,7 @@ $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.wss');
+$.namespace('zato.service');
 
 
 $.fn.zato.post = function(url, callback) {
