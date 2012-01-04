@@ -60,8 +60,7 @@ soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
    <SOAP-ENV:Body>
      <SOAP-ENV:Fault>
      <faultcode>SOAP-ENV:$faultcode</faultcode>
-     <faultstring>[$rid]
-$faultstring</faultstring>
+     <faultstring>[$rid] $faultstring</faultstring>
       </SOAP-ENV:Fault>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>""")

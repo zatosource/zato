@@ -39,7 +39,7 @@ from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, OutgoingZMQ
 from zato.common.odb.query import out_zmq_list
-#from zato.server.connection.jms_wmq.outgoing import start_connector
+from zato.server.connection.zmq_.outgoing import start_connector
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
@@ -105,7 +105,7 @@ class Create(AdminService):
                 session.commit()
                 
                 created_elem.id = item.id
-                #start_connector(self.server.repo_location, item.id, item.def_id)
+                start_connector(self.server.repo_location, item.id)
                 
                 return ZATO_OK, etree.tostring(created_elem)
                 
@@ -161,7 +161,7 @@ class Edit(AdminService):
                 
                 core_params['action'] = OUTGOING.ZMQ_EDIT
                 core_params['old_name'] = old_name
-                #self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
@@ -192,7 +192,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': OUTGOING.ZMQ_DELETE, 'name': item.name, 'id':item.id}
-                #self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()

@@ -120,6 +120,7 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
+        self.zmq.send('aaa', 'zmqpush1')
         return ZATO_OK, ''
     
 class Ping2(Ping):

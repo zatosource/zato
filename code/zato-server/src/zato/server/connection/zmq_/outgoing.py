@@ -36,7 +36,7 @@ from zato.common.broker_message import DEFINITION, ZMQ_CONNECTOR, MESSAGE_TYPE, 
 from zato.common.util import TRACE1
 from zato.server.connection import BaseConnection
 from zato.server.connection import setup_logging, start_connector as _start_connector
-from zato.server.connection.zmq import BaseZMQConnection, BaseZMQConnector
+from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_ZMQ_OUT_ID'
 
@@ -47,58 +47,31 @@ class ZMQFacade(object):
     def __init__(self, broker_client):
         self.broker_client = broker_client # A Zato broker client
     
-    def put(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            *args, **kwargs):
-        """ Puts a message on a ZeroMQ queue.
+    def send(self, msg, out_name, *args, **kwargs):
+        """ Puts a message on a ZeroMQ socket.
         """
         params = {}
         params['action'] = OUTGOING.ZMQ_SEND
         params['name'] = out_name
         params['body'] = msg
-        params['queue'] = queue
-        params['delivery_mode'] = delivery_mode
-        params['expiration'] = expiration
-        params['priority'] = priority
-        params['max_chars_printed'] = max_chars_printed
         params['args'] = args
         params['kwargs'] = kwargs
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_PULL)
 
 class OutgoingConnection(BaseZMQConnection):
+    """ An outgoing (PUSH) connection to a ZMQ socket.
+    """
     def __init__(self, factory, out_name):
-        super(OutgoingConnection, self).__init__()
+        super(OutgoingConnection, self).__init__(factory, out_name)
         self.logger = logging.getLogger(self.__class__.__name__)
-        #self.jms_template = JmsTemplate(self.factory)
         
-    def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
-        
-        '''
-        jms_msg = TextMessage()
-        jms_msg.text = msg.get('body')
-        jms_msg.jms_correlation_id = msg.get('jms_correlation_id')
-        jms_msg.jms_delivery_mode = msg.get('jms_delivery_mode') or default_delivery_mode
-        jms_msg.jms_destination = msg.get('jms_destination')
-        jms_msg.jms_expiration = msg.get('jms_expiration') or default_expiration
-        jms_msg.jms_message_id = msg.get('jms_message_id')
-        jms_msg.jms_priority = msg.get('jms_priority') or default_priority
-        jms_msg.jms_redelivered = msg.get('jms_redelivered')
-        jms_msg.jms_timestamp = msg.get('jms_timestamp')
-        jms_msg.max_chars_printed = msg.get('max_chars_printed') or default_max_chars_printed
-        '''
-        
-        queue = str(msg['queue'])
-        
-        try:
-            self.jms_template.send(jms_msg, queue)
-        except Exception, e:
-            if self._keep_connecting(e):
-                self.close()
-                self.keep_connecting = True
-                self.factory._disconnecting = False
-                self.start()
-            else:
-                raise
+    def send(self, msg):
+        """ Sends a message to a ZMQ socket.
+        """
+        self.factory.send_raw(msg)
+        if self.logger.isEnabledFor(TRACE1):
+            self.logger.log(TRACE1, 'Sent {0} name {1} factory {2}'.format(msg, self.name, self.factory))
 
 class OutgoingConnector(BaseZMQConnector):
     """ An outgoing connector started as a subprocess. Each connection to a queue manager
@@ -111,7 +84,6 @@ class OutgoingConnector(BaseZMQConnector):
         self.out_id = out_id
         
         self.out_lock = RLock()
-        self.def_lock = RLock()
         
         self.broker_push_client_pull_port = PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_ZMQ_PULL
         self.client_push_broker_pull_port = PORTS.PUBLISHING_CONNECTOR_ZMQ_PUSH_BROKER_PULL
@@ -129,9 +101,8 @@ class OutgoingConnector(BaseZMQConnector):
         self.out.id = item.id
         self.out.name = item.name
         self.out.is_active = item.is_active
-        self.out.delivery_mode = item.delivery_mode
-        self.out.priority = item.priority
-        self.out.expiration = item.expiration
+        self.out.address = item.address
+        self.out.socket_type = self.socket_type = item.socket_type
         self.out.sender = None
         
     def filter(self, msg):
@@ -156,7 +127,7 @@ class OutgoingConnector(BaseZMQConnector):
         self._stop_connection()
         
         if self.out.is_active:
-            factory = self._get_factory()
+            factory = self._get_factory(None, self.out.address, None)
             sender = self._sender(factory)
             self.out.sender = sender
 
@@ -173,25 +144,17 @@ class OutgoingConnector(BaseZMQConnector):
         """ Sets up the connector on startup.
         """
         with self.out_lock:
-            with self.def_lock:
-                self._recreate_sender()
+            self._recreate_sender()
                 
     def _close_delete(self):
         """ Stops the connections, exits the process.
         """
-        with self.def_lock:
-            with self.out_lock:
-                self._stop_connection()
-                self._close()
+        with self.out_lock:
+            self._stop_connection()
+            self._close()
 
-    def on_broker_pull_msg_DEFINITION_ZMQ_EDIT(self, msg, args=None):
-        with self.def_lock:
-            with self.out_lock:
-                self.def_ = msg
-                self._recreate_sender()
-                
     def on_broker_pull_msg_OUTGOING_ZMQ_SEND(self, msg, args=None):
-        """ Puts a message on a queue.
+        """ Puts a message on a socket.
         """
         if not self.out.get('is_active'):
             log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out)
@@ -199,13 +162,7 @@ class OutgoingConnector(BaseZMQConnector):
             return
             
         if self.out.get('sender'):
-            if self.out.get('sender').factory._is_connected:
-                self.out.sender.send(msg, self.out.delivery_mode, self.out.expiration, 
-                    self.out.priority, self.def_.max_chars_printed)
-            else:
-                if self.logger.isEnabledFor(logging.DEBUG):
-                    log_msg = 'Not sending, the factory for [{0}] is not connected'.format(self.out)
-                    self.logger.debug(log_msg)
+            self.out.sender.send(msg.body)
         else:
             if self.logger.isEnabledFor(TRACE1):
                 log_msg = 'No sender for [{0}]'.format(self.out)
@@ -215,12 +172,11 @@ class OutgoingConnector(BaseZMQConnector):
         self._close_delete()
         
     def on_broker_pull_msg_OUTGOING_ZMQ_EDIT(self, msg, args=None):
-        with self.def_lock:
-            with self.out_lock:
-                sender = self.out.get('sender')
-                self.out = msg
-                self.out.sender = sender
-                self._recreate_sender()
+        with self.out_lock:
+            sender = self.out.get('sender')
+            self.out = msg
+            self.out.sender = sender
+            self._recreate_sender()
 
 def run_connector():
     """ Invoked on the process startup.
@@ -228,17 +184,16 @@ def run_connector():
     setup_logging()
     
     repo_location = os.environ['ZATO_REPO_LOCATION']
-    def_id = os.environ['ZATO_CONNECTOR_DEF_ID']
     item_id = os.environ[ENV_ITEM_NAME]
     
-    connector = OutgoingConnector(repo_location, def_id, item_id)
+    connector = OutgoingConnector(repo_location, item_id)
     
     logger = logging.getLogger(__name__)
-    logger.debug('Starting ZeroMQ outgoing, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
-        repo_location, item_id, def_id))
+    logger.debug('Starting ZeroMQ outgoing, repo_location [{0}], item_id [{1}]'.format(
+        repo_location, item_id))
     
-def start_connector(repo_location, item_id, def_id):
-    _start_connector(repo_location, __file__, ENV_ITEM_NAME, def_id, item_id)
+def start_connector(repo_location, item_id):
+    _start_connector(repo_location, __file__, ENV_ITEM_NAME, None, item_id)
     
 if __name__ == '__main__':
     run_connector()

@@ -25,6 +25,7 @@ import logging
 # Zato
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
+from zato.server.connection.zmq_.outgoing import ZMQFacade
 
 __all__ = ["Service"]
 
@@ -39,12 +40,14 @@ class Service(object):
         self.channel = None
         self.amqp = None
         self.jms_wmq = None
+        self.zmq = None
         self.ftp = None
         self.rid = None
         
     def _init(self):
         self.amqp = PublisherFacade(self.broker_client)
         self.jms_wmq = WMQFacade(self.broker_client)
+        self.zmq = ZMQFacade(self.broker_client)
         self.ftp = self.server.ftp
 
     def handle(self, *args, **kwargs):
