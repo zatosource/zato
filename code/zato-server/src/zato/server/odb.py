@@ -38,7 +38,7 @@ from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_w
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, 
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  job_list,  out_amqp, out_amqp_list, 
     out_ftp, out_ftp_list, out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, 
-    tech_acc_list, wss_list)
+    out_zmq, out_zmq_list, tech_acc_list, wss_list)
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -64,23 +64,6 @@ class ODBManager(object):
 
     def close(self):
         self._session.close()
-
-    '''
-    def query(self, *args, **kwargs):
-        return self._session.query(*args, **kwargs)
-
-    def add(self, *args, **kwargs):
-        return self._session.add(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        return self._session.delete(*args, **kwargs)
-
-    def commit(self, *args, **kwargs):
-        return self._session.commit(*args, **kwargs)
-
-    def rollback(self, *args, **kwargs):
-        return self._session.rollback(*args, **kwargs)
-    '''
 
     def fetch_server(self):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute

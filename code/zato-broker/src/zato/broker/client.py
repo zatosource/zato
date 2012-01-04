@@ -201,6 +201,16 @@ class BrokerClient(object):
         if init:
             self.init()
             
+    def __repr__(self):
+        return '<{0} at {1} name:[{2}] broker_push_client_pull:[{3}] '\
+               'client_push_broker_pull:[{4}] broker_pub_client_sub:[{5}] '\
+               'on_pull_handler:[{6}] pull_handler_args:[{7}] on_sub_handler:[{8}] '\
+               'sub_handler_args:[{9}] sub_key:[{10}]'.format(self.__class__.__name__,
+                    hex(id(self)), self.name, self.broker_push_client_pull,
+                    self.client_push_broker_pull, self.broker_pub_client_sub,
+                    self.on_pull_handler, self.pull_handler_args,
+                    self.on_sub_handler, self.sub_handler_args, self.sub_key)
+            
     def init(self):
         if self.broker_pub_client_sub or self.broker_push_client_pull:
             self._pull_sub = ZMQPullSub(self.name, self.zmq_context, self.broker_push_client_pull, 

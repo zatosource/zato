@@ -42,4 +42,7 @@ class BrokerClient(_BrokerClient):
     def send_json(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL):
         msg = dumps(msg)
         return self.send(msg, msg_type)
+    
+    def send_raw(self, msg):
+        return self._push.send(msg)
         
