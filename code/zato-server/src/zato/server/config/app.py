@@ -125,6 +125,9 @@ class ZatoContext(PythonConfig):
             # Services
             'zato:service.get-list':'zato.server.service.internal.service.GetList',
             'zato:service.get-details':'zato.server.service.internal.service.GetByID',
+            'zato:service.create':'zato.server.service.internal.service.Create',
+            'zato:service.edit':'zato.server.service.internal.service.Edit',
+            'zato:service.delete':'zato.server.service.internal.service.Delete',
 
             # SOAP channels
             'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
