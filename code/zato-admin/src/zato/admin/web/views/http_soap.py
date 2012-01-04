@@ -111,9 +111,16 @@ def index(req):
 
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
+    
+    colspan = 10
+    
+    if connection == 'channel':
+        colspan += 1
+    if transport == 'soap':
+        colspan += 2
 
     if cluster_id and req.method == 'GET':
-
+        
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
         zato_message = Element('{%s}zato_message' % zato_namespace)
@@ -151,6 +158,7 @@ def index(req):
         'connection_label':CONNECTION[connection],
         'connection_label_plural':CONNECTION_PLURAL[connection],
         'transport_label':TRANSPORT[transport],
+        'colspan': colspan
         }
 
     # TODO: Should really be done by a decorator.

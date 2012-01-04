@@ -31,6 +31,9 @@
                 'soap_action',
                 'soap_version',
             {% endifequal %}
+            {% ifequal connection 'channel' %}
+                'channel',
+            {% endifequal %}
             '_edit',
             '_delete',
             'id',
@@ -88,8 +91,12 @@
                             <th><a href="#">SOAP action</a></th>
                             <th><a href="#">SOAP version</a></th>
                         {% endifequal %}
+                        {% ifequal connection 'channel' %}
+                            <th><a href="#">Service</a></th>
+                        {% endifequal %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -107,6 +114,9 @@
                             <td>{{ item.soap_action }}</td>
                             <td>{{ item.soap_version }}</td>
                         {% endifequal %}
+                        {% ifequal connection 'channel' %}
+                            <td>{{ item.service_name }}</td>
+                        {% endifequal %}
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -115,7 +125,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='{% ifequal transport 'soap' %}12{% else %}10{% endifequal %}'>No results</td>
+                        <td colspan='{{ colspan }}'>No results</td>
                     </tr>
                 {% endif %}
 
