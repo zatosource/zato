@@ -104,7 +104,8 @@ class Broker(BaseBroker):
             _msg_socket = msg_socket[msg_type]
             
             if logger.isEnabledFor(TRACE1):
-                logger.log(TRACE1, '_msg_socket [{0}]'.format(_msg_socket))
+                logger.log(TRACE1, '_msg_socket:[{0}] msg_type:[{1}]'.format(
+                    _msg_socket, msg_type))
 
             if msg_type in(MESSAGE_TYPE.TO_SINGLETON, MESSAGE_TYPE.TO_PARALLEL_PULL, \
                            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL,
