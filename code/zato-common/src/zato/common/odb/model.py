@@ -152,24 +152,23 @@ class Server(Base):
 
 ################################################################################
 
-class ChannelURLSecurity(Base):
+class HTTPSOAPSecurity(Base):
     """ An association table for the many-to-many mapping bettween channel URL
         definitions and security definitions.
     """
-    __tablename__ = 'channel_url_security'
+    __tablename__ = 'http_soap_security'
 
     id = Column(Integer, primary_key=True)
 
-    channel_url_def_id = Column(Integer, ForeignKey('channel_url_def.id'))
-    channel_url_def = relationship('ChannelURLDefinition',
-                        backref=backref('channel_url_security', uselist=False))
+    http_soap_id = Column(Integer, ForeignKey('http_soap.id'))
+    http_soap = relationship('HTTPSOAP', backref=backref('http_soap_security', uselist=False))
 
     security_def_id = Column(Integer, ForeignKey('security_def.id', ondelete='CASCADE'), nullable=False)
     security_def = relationship('SecurityDefinition',
-                    backref=backref('channel_url_security_defs', order_by=id, cascade='all, delete, delete-orphan'))
+                    backref=backref('http_soap_security_defs', order_by=id, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, channel_url_def, security_def):
-        self.channel_url_def = channel_url_def
+    def __init__(self, http_soap, security_def):
+        self.http_soap = http_soap
         self.security_def = security_def
 
 ################################################################################
@@ -191,30 +190,90 @@ class SecurityDefinition(Base):
 
 ################################################################################
 
-class ChannelURLDefinition(Base):
-    """ A channel's URL definition.
-    """
-    __tablename__ = 'channel_url_def'
-    __table_args__ = (UniqueConstraint('cluster_id', 'url_pattern'), {})
+'''
+class (Base):
 
-    id = Column(Integer,  Sequence('channel_url_def_id_seq'), primary_key=True)
-    url_pattern = Column(String(400), nullable=False)
-    url_type = Column(String(45), nullable=False)
-    is_internal = Column(Boolean(), nullable=False)
+
+    id = Column(Integer,  Sequence('http_soap_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    connection = Column(String(20), nullable=False) # Channel or outgoing
+    transport = Column(String(20), nullable=False) # HTTP or SOAP
+
+    url_path = Column(String(200), nullable=False)
+    method = Column(String(200), nullable=True)
+
+    soap_action = Column(String(200), nullable=True)
+    soap_version = Column(String(20), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('channel_url_defs', order_by=url_pattern, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, url_pattern=None, url_type=None, is_internal=None,
-                 cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, connection=None,
+                 transport=None, url_path=None, method=None, soap_action=None,
+                 soap_version=None, cluster_id=None):
         self.id = id
-        self.url_pattern = url_pattern
-        self.url_type = url_type
-        self.is_internal = is_internal
-        self.cluster = cluster
+        self.name = name
+        self.is_active = is_active
+        self.connection = connection
+        self.transport = transport
+        self.url_path = url_path
+        self.method = method
+        self.soap_action = soap_action
+        self.soap_version = soap_version
+        self.cluster_id = cluster_id
+'''
 
-    def __repr__(self):
-        return make_repr(self)
+class HTTPSOAP(Base):
+    """ An incoming or outgoing HTTP/SOAP connection.
+    """
+    __tablename__ = 'http_soap'
+    __table_args__ = (UniqueConstraint('name', 'connection', 'cluster_id'),
+                      UniqueConstraint('url_path', 'connection', 'soap_action', 'cluster_id'), {})
+
+    id = Column(Integer,  Sequence('http_soap_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+    
+    connection = Column(String(20), nullable=False) # Channel or outgoing
+    transport = Column(String(20), nullable=False) # HTTP or SOAP
+    
+    url_path = Column(String(200), nullable=False)
+    method = Column(String(200), nullable=True)
+
+    soap_action = Column(String(200), nullable=True)
+    soap_version = Column(String(20), nullable=True)
+    
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    #url_pattern = Column(String(400), nullable=False)
+    #url_type = Column(String(45), nullable=False)
+    #is_internal = Column(Boolean(), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
+                 connection=None, transport=None, url_path=None, method=None, 
+                 soap_action=None, soap_version=None, service_id=None, service=None,
+                 cluster_id=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.is_internal = is_internal
+        self.connection = connection
+        self.transport = transport
+        self.url_path = url_path
+        self.method = method
+        self.soap_action = soap_action
+        self.soap_version = soap_version
+        self.service_id = service_id
+        self.service = service
+        self.cluster_id = cluster_id
+        self.cluster = cluster
 
 ################################################################################
 
@@ -867,40 +926,3 @@ class ChannelZMQ(Base):
         self.socket_type = socket_type
         self.sub_key = sub_key
         self.service_name = service_name # Not used by the DB
-
-class HTTPSOAP(Base):
-    """ An incoming or outgoing HTTP/SOAP connection.
-    """
-    __tablename__ = 'http_soap'
-    __table_args__ = (UniqueConstraint('name', 'connection', 'cluster_id'),
-                      UniqueConstraint('url_path', 'connection', 'cluster_id'), {})
-
-    id = Column(Integer,  Sequence('http_soap_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    connection = Column(String(20), nullable=False) # Channel or outgoing
-    transport = Column(String(20), nullable=False) # HTTP or SOAP
-
-    url_path = Column(String(200), nullable=False)
-    method = Column(String(200), nullable=True)
-
-    soap_action = Column(String(200), nullable=True)
-    soap_version = Column(String(20), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, connection=None,
-                 transport=None, url_path=None, method=None, soap_action=None,
-                 soap_version=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.connection = connection
-        self.transport = transport
-        self.url_path = url_path
-        self.method = method
-        self.soap_action = soap_action
-        self.soap_version = soap_version
-        self.cluster_id = cluster_id

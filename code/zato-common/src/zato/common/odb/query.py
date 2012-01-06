@@ -19,10 +19,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from zato.common.odb.model import(ChannelAMQP, ChannelURLDefinition, ChannelWMQ,
-    ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth,
-    HTTPSOAP, IntervalBasedJob, Job,  OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ,
-    OutgoingZMQ, Service, TechnicalAccount, WSSDefinition)
+from zato.common.odb.model import(ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, 
+    ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, 
+    Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, Service, 
+    TechnicalAccount, WSSDefinition)
+
+# ##############################################################################
+
+def internal_channel_list(session, cluster_id):
+    """ All the HTTP/SOAP channels that point to internal services.
+    """
+    return session.query(HTTPSOAP.soap_action, Service.name).\
+        filter(HTTPSOAP.cluster_id==Cluster.id).\
+        filter(HTTPSOAP.service_id==Service.id).\
+        filter(Service.is_internal==True).\
+        filter(Cluster.id==cluster_id)
+
+# ##############################################################################
 
 def job_list(session, cluster_id):
     """ All the scheduler's jobs defined in the ODB.
@@ -65,17 +78,6 @@ def wss_list(session, cluster_id):
     return session.query(WSSDefinition).\
         filter(Cluster.id==cluster_id).\
         order_by('wss_def.name').\
-        all()
-
-# ##############################################################################
-
-def soap_channel_list(session, cluster_id):
-    """ SOAP channels.
-    """
-    return session.query(ChannelURLDefinition).\
-        filter(Cluster.id==cluster_id).\
-        filter(ChannelURLDefinition.url_type=='soap').\
-        order_by(ChannelURLDefinition.url_pattern).\
         all()
 
 # ##############################################################################

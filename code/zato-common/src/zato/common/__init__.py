@@ -96,6 +96,7 @@ ZATO_NOT_GIVEN = b"ZATO_NOT_GIVEN"
 ZATO_OK = "ZATO_OK"
 ZATO_ERROR = "ZATO_ERROR"
 ZATO_WARNING = "ZATO_WARNING"
+ZATO_NONE = b"ZATO_NONE"
 
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
@@ -124,6 +125,8 @@ ZMQ_OUTGOING_TYPES = ('PUSH',)
 ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
 
 SOAP_VERSIONS = ('1.1', '1.2')
+
+SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

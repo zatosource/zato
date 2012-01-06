@@ -283,11 +283,13 @@ class ServiceStore(InitializingObject):
         from zato.server.service.internal.outgoing import zmq as out_zmq
         from zato.server.service.internal.security import basic_auth, \
              tech_account, wss
+        from zato.server.service.internal import security
 
         # XXX: The list would be better read from the IoC container
         modules = [basic_auth, channel_amqp, channel_jms_wmq, channel_zmq, def_amqp,
                    def_jms_wmq, http_soap, internal, out_amqp, out_jms_wmq, out_s3,
-                   out_ftp, out_zmq, sql, scheduler, service, tech_account, wss]
+                   out_ftp, out_zmq, sql, scheduler, security, 
+                   service, tech_account, wss]
 
         # Read all definitions of Zato's own internal services.
         for mod in modules:
@@ -306,8 +308,7 @@ class ServiceStore(InitializingObject):
                             self.services[class_name] = data
 
                             last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                            self.odb.add_service(class_name, class_name, True,
-                                                 last_mod, str(data))
+                            self.odb.add_service(class_name, class_name, True, last_mod, str(data))
 
                 except TypeError, e:
                     # Ignore non-class objects passed in to issubclass

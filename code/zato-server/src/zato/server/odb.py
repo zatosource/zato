@@ -31,14 +31,14 @@ from sqlalchemy.exc import IntegrityError
 from bunch import Bunch
 
 # Zato
-from zato.common.odb.model import(ChannelURLDefinition, ChannelURLSecurity,
+from zato.common.odb.model import(HTTPSOAP, HTTPSOAPSecurity,
      Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server,
      Service, TechnicalAccount, WSSDefinition)
 from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, 
-    def_jms_wmq, def_jms_wmq_list, basic_auth_list,  job_list,  out_amqp, out_amqp_list, 
-    out_ftp, out_ftp_list, out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, 
-    out_zmq, out_zmq_list, tech_acc_list, wss_list)
+    def_jms_wmq, def_jms_wmq_list, basic_auth_list,  internal_channel_list, 
+    job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, out_jms_wmq, 
+    out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, tech_acc_list, wss_list)
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -117,15 +117,15 @@ class ODBManager(object):
 
         sec_def_q = self._session.query(SecurityDefinition.id,
                             SecurityDefinition.security_def_type,
-                            ChannelURLDefinition.url_pattern,
-                            ChannelURLDefinition.url_type).\
-               filter(SecurityDefinition.id==ChannelURLSecurity.security_def_id).\
-               filter(ChannelURLSecurity.channel_url_def_id==ChannelURLDefinition.id).\
-               filter(ChannelURLDefinition.cluster_id==Cluster.id).\
+                            HTTPSOAP.url_path,
+                            HTTPSOAP.transport).\
+               filter(SecurityDefinition.id==HTTPSOAPSecurity.security_def_id).\
+               filter(HTTPSOAPSecurity.http_soap_id==HTTPSOAP.id).\
+               filter(HTTPSOAP.cluster_id==Cluster.id).\
                filter(Cluster.id==server.cluster_id).\
                all()
 
-        for sec_def_id, sec_def_type, url_pattern, url_type in sec_def_q:
+        for sec_def_id, sec_def_type, url_path, transport in sec_def_q:
 
             # Will raise KeyError if the DB gets somehow misconfigured.
             db_class = sec_type_db_class[sec_def_type]
@@ -134,27 +134,27 @@ class ODBManager(object):
                     filter(db_class.security_def_id==sec_def_id).\
                     one()
 
-            result[url_pattern] = Bunch()
-            result[url_pattern].url_type = url_type
-            result[url_pattern].sec_def = Bunch()
-            result[url_pattern].sec_def.type = sec_def_type
+            result[url_path] = Bunch()
+            result[url_path].transport = transport
+            result[url_path].sec_def = Bunch()
+            result[url_path].sec_def.type = sec_def_type
 
             if sec_def_type == 'tech-account':
-                result[url_pattern].sec_def.name = sec_def.name
-                result[url_pattern].sec_def.password = sec_def.password
-                result[url_pattern].sec_def.salt = sec_def.salt
+                result[url_path].sec_def.name = sec_def.name
+                result[url_path].sec_def.password = sec_def.password
+                result[url_path].sec_def.salt = sec_def.salt
             elif sec_def_type == 'basic_auth':
-                result[url_pattern].sec_def.name = sec_def.name
-                result[url_pattern].sec_def.password = sec_def.password
-                result[url_pattern].sec_def.domain = sec_def.domain
+                result[url_path].sec_def.name = sec_def.name
+                result[url_path].sec_def.password = sec_def.password
+                result[url_path].sec_def.domain = sec_def.domain
             elif sec_def_type == 'wss':
-                result[url_pattern].sec_def.username = sec_def.username
-                result[url_pattern].sec_def.password = sec_def.password
-                result[url_pattern].sec_def.password_type = sec_def.password_type
-                result[url_pattern].sec_def.reject_empty_nonce_ts = sec_def.reject_empty_nonce_ts
-                result[url_pattern].sec_def.reject_stale_username = sec_def.reject_stale_username
-                result[url_pattern].sec_def.expiry_limit = sec_def.expiry_limit
-                result[url_pattern].sec_def.nonce_freshness = sec_def.nonce_freshness
+                result[url_path].sec_def.username = sec_def.username
+                result[url_path].sec_def.password = sec_def.password
+                result[url_path].sec_def.password_type = sec_def.password_type
+                result[url_path].sec_def.reject_empty_nonce_ts = sec_def.reject_empty_nonce_ts
+                result[url_path].sec_def.reject_stale_username = sec_def.reject_stale_username
+                result[url_path].sec_def.expiry_limit = sec_def.expiry_limit
+                result[url_path].sec_def.nonce_freshness = sec_def.nonce_freshness
 
         return result
 
@@ -199,6 +199,14 @@ class ODBManager(object):
             logger.error(msg)
             self._session.rollback()
 
+
+# ##############################################################################
+
+    def get_internal_channel_list(self, cluster_id):
+        """ Returns the list of internal HTTP/SOAP channels, that is, 
+        channels pointing to internal services.
+        """
+        return internal_channel_list(self._session, cluster_id)
 
 # ##############################################################################
 

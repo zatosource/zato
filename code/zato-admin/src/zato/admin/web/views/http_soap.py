@@ -43,7 +43,7 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
 from zato.common.odb.model import Cluster, HTTPSOAP
-from zato.common import zato_namespace, zato_path, ZatoException
+from zato.common import SECURITY_TYPES, zato_namespace, zato_path, ZatoException
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,14 @@ TRANSPORT = {
     'plain': 'Plain HTTP',
     'soap': 'SOAP',
     }
+
+def _get_security_list(cluster):
+    zato_message = Element('{%s}zato_message' % zato_namespace)
+    zato_message.data = Element('data')
+    zato_message.data.cluster_id = cluster.id
+    
+    _, zato_message, _  = invoke_admin_service(cluster, 'zato:security.get-list', zato_message)
+    return zato_message
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions
@@ -103,15 +111,16 @@ def index(req):
     connection = req.GET.get('connection')
     transport = req.GET.get('transport')
     items = []
+    _security = []
 
     if not all((connection, transport)):
         log_msg = "Redirecting to / because at least one of ('connection', 'transport') GET parameters was missing"
         logger.debug(log_msg)
         return HttpResponseRedirect('/')
-
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
     
+    create_form = None
+    edit_form = None
+
     colspan = 10
     
     if connection == 'channel':
@@ -122,7 +131,17 @@ def index(req):
     if cluster_id and req.method == 'GET':
         
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
+        security_list = _get_security_list(cluster)
+        
+        if zato_path('data.definition_list.definition').get_from(security_list) is not None:
+            for def_item in security_list.data.definition_list.definition:
+                value = '{0}/{1}'.format(def_item.def_type, def_item.id)
+                label = '{0}/{1}'.format(SECURITY_TYPES[def_item.def_type], def_item.name)
+                _security.append((value, label))
+        
+        create_form = CreateForm(_security)
+        edit_form = EditForm(_security, prefix='edit')
+        
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.data = Element('data')
         zato_message.data.cluster_id = cluster_id
