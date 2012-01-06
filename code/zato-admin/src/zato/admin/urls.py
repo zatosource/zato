@@ -82,8 +82,9 @@ urlpatterns = patterns('',
     url(r'^zato/service/details/(?P<service_id>\d*)/$', service.details, name='service-details'),
     url(r'^zato/service/create/$', service.create, name='service-create'),
     url(r'^zato/service/edit/$', service.edit, name='service-edit'),
-    url(r'^zato/service/invoke/$', service.invoke, name='service-invoke'),
+    url(r'^zato/service/invoke/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.invoke, name='service-invoke'),
     url(r'^zato/service/delete/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.delete, name='service-delete'),
+    url(r'^zato/service/channel/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.channel, name='service-channel'),
 
     # Security..
 
