@@ -86,7 +86,7 @@ class GetByID(AdminService):
             item.is_internal = db_item.is_internal
             item.usage_count = 'TODO getbyid'
     
-            return ZATO_OK, etree.tostring(definition_elem)
+            return ZATO_OK, etree.tostring(item)
         
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
