@@ -40,15 +40,15 @@ msg_socket = {
     
     MESSAGE_TYPE.TO_SINGLETON: 'singleton',
     
-    MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL: 'amqp-publishing-connector/pull-push',
+    MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB: 'amqp-publishing-connector/sub',
     MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL: 'amqp-consuming-connector/pull-push',
     MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: 'unused-amqp-sub',
     
-    MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL: 'jms-wmq-publishing-connector/pull-push',
+    MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_SUB: 'jms-wmq-publishing-connector/sub',
     MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_PULL: 'jms-wmq-consuming-connector/pull-push',
     MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB: 'unused-jms-wmq-sub',
     
-    MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_PULL: 'zmq-publishing-connector/pull-push',
+    MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_SUB: 'zmq-publishing-connector/sub',
     MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_PULL: 'zmq-consuming-connector/pull-push',
     MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB: 'unused-zmq-sub',
 }
@@ -93,13 +93,23 @@ class Broker(BaseBroker):
                 sockets.extend((self.sockets['amqp-publishing-connector/sub'].pub,
                            self.sockets['amqp-consuming-connector/sub'].pub))
                 
+            if msg_type == MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB:
+                sockets.append(self.sockets['amqp-publishing-connector/sub'].pub)
+                
             if msg_type == MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB:
                 sockets.extend((self.sockets['jms-wmq-publishing-connector/sub'].pub,
+                           self.sockets['jms-wmq-consuming-connector/sub'].pub))
+                
+            if msg_type == MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_SUB:
+                sockets.append((self.sockets['jms-wmq-publishing-connector/sub'].pub,
                            self.sockets['jms-wmq-consuming-connector/sub'].pub))
                 
             if msg_type == MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB:
                 sockets.extend((self.sockets['zmq-publishing-connector/sub'].pub,
                            self.sockets['zmq-consuming-connector/sub'].pub))
+                
+            if msg_type == MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_SUB:
+                sockets.append(self.sockets['zmq-publishing-connector/sub'].pub)
                 
             _msg_socket = msg_socket[msg_type]
             
@@ -108,11 +118,8 @@ class Broker(BaseBroker):
                     _msg_socket, msg_type))
 
             if msg_type in(MESSAGE_TYPE.TO_SINGLETON, MESSAGE_TYPE.TO_PARALLEL_PULL, \
-                           MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL,
                            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL,
-                           MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL,
                            MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_PULL,
-                           MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_PULL,
                            MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_PULL,
                            ):
                 sockets.append(self.sockets[_msg_socket].push)
