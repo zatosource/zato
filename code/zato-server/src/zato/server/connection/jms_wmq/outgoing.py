@@ -67,7 +67,7 @@ class WMQFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_PULL)
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_SUB)
 
 class OutgoingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, out_name):

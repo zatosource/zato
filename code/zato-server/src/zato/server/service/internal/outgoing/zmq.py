@@ -47,6 +47,8 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
+        self.zmq.send('zzz', 'zmqpush1')
+        
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
         with closing(self.server.odb.session()) as session:

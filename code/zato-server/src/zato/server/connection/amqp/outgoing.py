@@ -84,7 +84,7 @@ class PublisherFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_PULL)
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB)
 
 class OutgoingConnector(BaseAMQPConnector):
     """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP

@@ -57,7 +57,7 @@ class ZMQFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_PULL)
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_SUB)
 
 class OutgoingConnection(BaseZMQConnection):
     """ An outgoing (PUSH) connection to a ZMQ socket.
@@ -126,7 +126,7 @@ class OutgoingConnector(BaseZMQConnector):
     def _recreate_sender(self):
         self._stop_connection()
         
-        if self.out.is_active:
+        if self.out.get('is_active'):
             factory = self._get_factory(None, self.out.address, None)
             sender = self._sender(factory)
             self.out.sender = sender
