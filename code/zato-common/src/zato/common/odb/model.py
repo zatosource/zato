@@ -190,41 +190,6 @@ class SecurityDefinition(Base):
 
 ################################################################################
 
-'''
-class (Base):
-
-
-    id = Column(Integer,  Sequence('http_soap_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-
-    connection = Column(String(20), nullable=False) # Channel or outgoing
-    transport = Column(String(20), nullable=False) # HTTP or SOAP
-
-    url_path = Column(String(200), nullable=False)
-    method = Column(String(200), nullable=True)
-
-    soap_action = Column(String(200), nullable=True)
-    soap_version = Column(String(20), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, connection=None,
-                 transport=None, url_path=None, method=None, soap_action=None,
-                 soap_version=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.connection = connection
-        self.transport = transport
-        self.url_path = url_path
-        self.method = method
-        self.soap_action = soap_action
-        self.soap_version = soap_version
-        self.cluster_id = cluster_id
-'''
-
 class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """
@@ -249,17 +214,13 @@ class HTTPSOAP(Base):
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
     
-    #url_pattern = Column(String(400), nullable=False)
-    #url_type = Column(String(45), nullable=False)
-    #is_internal = Column(Boolean(), nullable=False)
-
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
                  connection=None, transport=None, url_path=None, method=None, 
                  soap_action=None, soap_version=None, service_id=None, service=None,
-                 cluster_id=None, cluster=None):
+                 cluster_id=None, cluster=None, service_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -274,6 +235,7 @@ class HTTPSOAP(Base):
         self.service = service
         self.cluster_id = cluster_id
         self.cluster = cluster
+        self.service_name = service_name # Not used by the DB
 
 ################################################################################
 
@@ -353,7 +315,7 @@ class HTTPBasicAuth(Base):
 
     def __repr__(self):
         return make_repr(self)
-
+    
 class TechnicalAccount(Base):
     """ Stores information about technical accounts, used for instance by Zato
     itself for securing access to its API.

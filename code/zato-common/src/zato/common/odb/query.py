@@ -271,11 +271,27 @@ def channel_zmq_list(session, cluster_id):
 
 # ##############################################################################
 
+"""
+select http_soap.name, service.name, security_def.id, security_def.security_def_type,
+
+case when (security_def.security_def_type='tech-account') then
+    (select tech_account.name from tech_account where tech_account.security_def_id = security_def.id)
+end as security_name
+
+ from http_soap, service, http_soap_security, security_def
+where http_soap.service_id = service.id
+and http_soap_security.http_soap_id = http_soap.id
+and http_soap_security.security_def_id = security_def.id
+"""     
+
 def _http_soap(session, cluster_id):
-    return session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.is_active,
-            HTTPSOAP.url_path, HTTPSOAP.method, HTTPSOAP.soap_action,
-            HTTPSOAP.soap_version).\
+    return session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.is_active, 
+            HTTPSOAP.is_internal, HTTPSOAP.url_path, HTTPSOAP.method, 
+            HTTPSOAP.soap_action, HTTPSOAP.soap_version, 
+            Service.id.label('service_id'),
+            Service.name.label('service_name')).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
+        filter(Service.id==HTTPSOAP.service_id).\
         filter(Cluster.id==cluster_id).\
         order_by(HTTPSOAP.name)
 
