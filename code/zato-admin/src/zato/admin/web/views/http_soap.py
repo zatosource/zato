@@ -157,13 +157,17 @@ def index(req):
                 id = msg_item.id.text
                 name = msg_item.name.text
                 is_active = is_boolean(msg_item.is_active.text)
+                is_internal = is_boolean(msg_item.is_internal.text)
                 url_path = msg_item.url_path.text
-
                 method = msg_item.method.text if msg_item.method else ''
                 soap_action = msg_item.soap_action.text if msg_item.soap_action else ''
                 soap_version = msg_item.soap_version.text if msg_item.soap_version else ''
+                service_id = msg_item.service_id.text
+                service_name = msg_item.service_name.text
 
-                item =  HTTPSOAP(id, name, is_active, connection, transport, url_path, method, soap_action, soap_version)
+                item =  HTTPSOAP(id, name, is_active, is_internal, connection, 
+                        transport, url_path, method, soap_action, soap_version, 
+                        service_id=service_id, service_name=service_name)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,

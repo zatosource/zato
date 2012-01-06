@@ -94,6 +94,7 @@
                         {% ifequal connection 'channel' %}
                             <th><a href="#">Service</a></th>
                         {% endifequal %}
+                        <th><a href="#">Security</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -115,8 +116,9 @@
                             <td>{{ item.soap_version }}</td>
                         {% endifequal %}
                         {% ifequal connection 'channel' %}
-                            <td>{{ item.service_name }}</td>
+                            <td><a href="{% url service-details item.service_id %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         {% endifequal %}
+                        <td>{{ item.soap_action }}</td>
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

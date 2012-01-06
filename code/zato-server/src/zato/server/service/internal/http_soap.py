@@ -58,10 +58,13 @@ class GetList(AdminService):
                 item.id = db_item.id
                 item.name = db_item.name
                 item.is_active = db_item.is_active
+                item.is_internal = db_item.is_internal
                 item.url_path = db_item.url_path
                 item.method = db_item.method
                 item.soap_action = db_item.soap_action
                 item.soap_version = db_item.soap_version
+                item.service_id = db_item.service_id
+                item.service_name = db_item.service_name
 
                 item_list.append(item)
 
