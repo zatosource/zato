@@ -136,7 +136,7 @@ class ZatoHTTPListener(HTTPServer):
         # Initially, we have no clue about the type of the URL being accessed,
         # later on, if we don't stumble upon an exception, we may learn that
         # it is for instance, a SOAP URL.
-        url_type = None
+        transport = None
         rid = new_rid()
         
         try:
@@ -146,7 +146,7 @@ class ZatoHTTPListener(HTTPServer):
             
             url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
             if url_data:
-                url_type = url_data['url_type']
+                transport = url_data['transport']
                 
                 #self.handle_security(rid, url_data, task.request_data, body, headers)
                 
@@ -165,15 +165,15 @@ class ZatoHTTPListener(HTTPServer):
 
         except HTTPException, e:
             task.setResponseStatus(e.status, e.reason)
-            response = wrap_error_message(rid, url_type, e.reason)
+            response = wrap_error_message(rid, transport, e.reason)
             
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)
             logger.error('[{0}] Exception caught [{1}]'.format(rid, tb))
-            response = wrap_error_message(rid, url_type, tb)
+            response = wrap_error_message(rid, transport, tb)
 
-        if url_type == ZATO_URL_TYPE_SOAP:
+        if transport == ZATO_URL_TYPE_SOAP:
             content_type = 'text/xml'
         else:
             content_type = 'text/plain'
@@ -243,6 +243,10 @@ class ParallelServer(BrokerMessageReceiver):
 
             # Start the connectors only once throughout the whole cluster
             self._init_connectors(server)
+            
+        # Mapping between SOAP actions and internal services.
+        for soap_action, service_name in self.odb.get_internal_channel_list(server.cluster.id):
+            self.soap_handler.soap_config[soap_action] = service_name
             
         # FTP
         ftp_conn_params = Bunch()

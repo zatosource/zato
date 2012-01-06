@@ -24,7 +24,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import ChooseClusterForm as _ChooseClusterForm
-from zato.common import SOAP_VERSIONS
+from zato.common import SOAP_VERSIONS, ZATO_NONE
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -33,15 +33,23 @@ class CreateForm(forms.Form):
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
+    security = forms.ChoiceField(widget=forms.Select())
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, prefix=None, post_data=None):
+    def __init__(self, security_list=[], prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['soap_version'].choices = []
         for name in sorted(SOAP_VERSIONS):
             self.fields['soap_version'].choices.append([name, name])
+            
+        self.fields['security'].choices = []
+        self.fields['security'].choices.append(['', '----------'])
+        self.fields['security'].choices.append([ZATO_NONE, 'No security'])
+        
+        for value, label in security_list:
+            self.fields['security'].choices.append([value, label])
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

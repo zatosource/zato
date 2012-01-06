@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelZMQ;
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path']);
+    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'security']);
 })
 
 $.fn.zato.http_soap.create = function() {

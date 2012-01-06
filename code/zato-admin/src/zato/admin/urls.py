@@ -27,7 +27,6 @@ from django.contrib.auth.views import login
 from zato.admin import settings
 from zato.admin.web.views import(cluster, load_balancer, main, scheduler,
     service, servers)
-from zato.admin.web.views.channel import soap
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
