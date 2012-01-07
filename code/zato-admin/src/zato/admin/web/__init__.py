@@ -29,7 +29,7 @@ def invoke_admin_service(cluster, service, zato_message):
     """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
     Django session-related information to the request headers.
     """
-    headers = {'x-zato-session-type':'zato-admin/tech-account', 
+    headers = {'x-zato-session-type':'zato-admin/tech_acc', 
                'x-zato-user': TECH_ACCOUNT_NAME,
                'x-zato-password': TECH_ACCOUNT_PASSWORD
                }

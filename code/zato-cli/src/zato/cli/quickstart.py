@@ -148,7 +148,7 @@ class Quickstart(ZatoCommand):
 
             # Create the web admin now.
             
-            tech_account_name = 'techadmin-{random}'.format(random=uuid4().hex[:12])
+            tech_account_name = 'zato-{random}'.format(random=uuid4().hex[:10])
             tech_account_password_clear = uuid4().hex
             
             os.mkdir(zato_admin_dir)

@@ -220,7 +220,7 @@ class HTTPSOAP(Base):
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
                  connection=None, transport=None, url_path=None, method=None, 
                  soap_action=None, soap_version=None, service_id=None, service=None,
-                 cluster_id=None, cluster=None, service_name=None):
+                 cluster_id=None, cluster=None, service_name=None, security_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -236,6 +236,7 @@ class HTTPSOAP(Base):
         self.cluster_id = cluster_id
         self.cluster = cluster
         self.service_name = service_name # Not used by the DB
+        self.security_name = security_name # Not used by the DB
 
 ################################################################################
 

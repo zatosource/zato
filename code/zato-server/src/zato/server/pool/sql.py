@@ -70,7 +70,7 @@ def _get_engines(pool_list, crypto_manager, create_sa_engines):
 
             if create_sa_engines:
                 engine = create_engine(engine_url, 
-                            pool_size=engine_params["pool_size"], echo=False,
+                            pool_size=engine_params["pool_size"], echo=True,
                             **engine_params["extra"])
             else:
                 create_engine(engine_url, pool_size=engine_params["pool_size"], 

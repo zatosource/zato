@@ -121,7 +121,7 @@ def index(req):
     create_form = None
     edit_form = None
 
-    colspan = 10
+    colspan = 11
     
     if connection == 'channel':
         colspan += 1
@@ -164,10 +164,16 @@ def index(req):
                 soap_version = msg_item.soap_version.text if msg_item.soap_version else ''
                 service_id = msg_item.service_id.text
                 service_name = msg_item.service_name.text
+                
+                security_name = msg_item.security_name.text
+                security_def_type = msg_item.security_def_type.text
+                
+                label = '{0}/{1}'.format(SECURITY_TYPES[security_def_type], security_name)
 
                 item =  HTTPSOAP(id, name, is_active, is_internal, connection, 
                         transport, url_path, method, soap_action, soap_version, 
-                        service_id=service_id, service_name=service_name)
+                        service_id=service_id, service_name=service_name,
+                        security_name=label)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,
