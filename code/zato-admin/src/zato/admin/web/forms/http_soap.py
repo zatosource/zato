@@ -33,6 +33,7 @@ class CreateForm(forms.Form):
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
+    service = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     security = forms.ChoiceField(widget=forms.Select())
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
@@ -46,6 +47,7 @@ class CreateForm(forms.Form):
             
         self.fields['security'].choices = []
         self.fields['security'].choices.append(['', '----------'])
+        self.fields['security'].choices.append([ZATO_NONE, 'No security'])
         
         for value, label in security_list:
             self.fields['security'].choices.append([value, label])

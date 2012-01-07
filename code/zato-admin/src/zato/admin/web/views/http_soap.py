@@ -121,7 +121,7 @@ def index(req):
     create_form = None
     edit_form = None
 
-    colspan = 11
+    colspan = 13
     
     if connection == 'channel':
         colspan += 1
@@ -172,8 +172,6 @@ def index(req):
                 _security_id = msg_item.security_id.text
                 security_id = '{0}/{1}'.format(security_def_type, _security_id)
                 
-                print(name, security_id, security_name)
-
                 item = HTTPSOAP(id, name, is_active, is_internal, connection, 
                         transport, url_path, method, soap_action, soap_version, 
                         service_id=service_id, service_name=service_name,
