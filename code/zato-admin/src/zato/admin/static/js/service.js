@@ -45,10 +45,11 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
     var is_internal = data.is_internal == true;
+    var cluster_id = $(document).getUrlParam('cluster');
     
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.name));
+    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.name, cluster_id));
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.impl_name);
     row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');

@@ -10,6 +10,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.getUrlParam.js"></script>
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -94,7 +95,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
-                        <td><a href="{% url service-details item.id %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
+                        <td><a href="{% url service-details item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.impl_name }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>

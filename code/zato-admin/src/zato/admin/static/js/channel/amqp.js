@@ -40,6 +40,7 @@ $.fn.zato.channel.amqp.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true;
+    var cluster_id = $(document).getUrlParam('cluster');
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td><input type='checkbox' /></td>";
@@ -48,7 +49,7 @@ $.fn.zato.channel.amqp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', data.def_name);
     row += String.format('<td>{0}</td>', item.queue);
     row += String.format('<td>{0}</td>', item.consumer_tag_prefix);
-    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service));
+    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.amqp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.amqp.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

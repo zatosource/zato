@@ -427,11 +427,17 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var form = $(String.format('#{0}-form', action));
     var prefix = action + '-';
     var name = '';
+    var id = '';
+    var tag_name = '';
     var _columns = $.fn.zato.data_table.get_columns();
     
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
         item[name] = elem.value;
+        tag_name = $('#id_' + prefix + name).prop('tagName');
+        if(tag_name && tag_name.toLowerCase() == 'select') {
+            item[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
+        }
     })
     if(!item.id) {
         item.id = data.id;
@@ -577,8 +583,8 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
     $.fn.zato.data_table.cleanup('#'+ action +'-form');
 }
 
-$.fn.zato.data_table.service_text = function(service) {
-    return String.format('<a href="/zato/service/?service={0}">{1}</a>', service, service);
+$.fn.zato.data_table.service_text = function(service, cluster_id) {
+    return String.format('<a href="/zato/service/details/{0}/?cluster={1}">{0}</a>', service, cluster_id);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
