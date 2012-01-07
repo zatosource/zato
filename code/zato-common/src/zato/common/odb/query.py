@@ -19,10 +19,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# SQLAlchemy
+from sqlalchemy.sql.expression import case, literal_column
+
+# Zato
 from zato.common.odb.model import(ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, 
-    ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, 
-    Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, Service, 
-    TechnicalAccount, WSSDefinition)
+    ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, HTTPSOAPSecurity,
+    IntervalBasedJob, Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, 
+    SecurityDefinition, Service, TechnicalAccount, WSSDefinition)
 
 # ##############################################################################
 
@@ -271,25 +275,28 @@ def channel_zmq_list(session, cluster_id):
 
 # ##############################################################################
 
-"""
-select http_soap.name, service.name, security_def.id, security_def.security_def_type,
-
-case when (security_def.security_def_type='tech-account') then
-    (select tech_account.name from tech_account where tech_account.security_def_id = security_def.id)
-end as security_name
-
- from http_soap, service, http_soap_security, security_def
-where http_soap.service_id = service.id
-and http_soap_security.http_soap_id = http_soap.id
-and http_soap_security.security_def_id = security_def.id
-"""     
-
 def _http_soap(session, cluster_id):
+
+    tech_acc_case = (SecurityDefinition.security_def_type=='tech_acc', 
+                     literal_column('(select tech_account.name from tech_account where tech_account.security_def_id = security_def.id)'))
+    
+    wss_case = (SecurityDefinition.security_def_type=='wss_username_password', 
+                literal_column('(select wss_def.name from wss_def where wss_def.security_def_id = security_def.id)'))
+    
+    basic_auth_case = (SecurityDefinition.security_def_type=='basic_auth', 
+                literal_column('(select http_basic_auth_def.name from http_basic_auth_def where http_basic_auth_def.security_def_id = security_def.id)'))
+    
     return session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.is_active, 
             HTTPSOAP.is_internal, HTTPSOAP.url_path, HTTPSOAP.method, 
             HTTPSOAP.soap_action, HTTPSOAP.soap_version, 
             Service.id.label('service_id'),
-            Service.name.label('service_name')).\
+            Service.name.label('service_name'),
+            SecurityDefinition.id.label('security_def_id'),
+            SecurityDefinition.security_def_type,
+            case([tech_acc_case, wss_case, basic_auth_case]).label('security_name'),
+            ).\
+        outerjoin(HTTPSOAPSecurity, HTTPSOAPSecurity.http_soap_id==HTTPSOAP.id).\
+        outerjoin(SecurityDefinition, HTTPSOAPSecurity.security_def_id==SecurityDefinition.id).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
         filter(Service.id==HTTPSOAP.service_id).\
         filter(Cluster.id==cluster_id).\

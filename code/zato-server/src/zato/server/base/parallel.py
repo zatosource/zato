@@ -83,7 +83,7 @@ class ZatoHTTPListener(HTTPServer):
                                                task_dispatcher)
 
     def _handle_security_tech_account(self, rid, sec_def, request_data, body, headers):
-        """ Handles the 'tech-account' security config type.
+        """ Handles the 'tech_acc' security config type.
         """
         zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
         

@@ -65,6 +65,8 @@ class GetList(AdminService):
                 item.soap_version = db_item.soap_version
                 item.service_id = db_item.service_id
                 item.service_name = db_item.service_name
+                item.security_name = db_item.security_name
+                item.security_def_type = db_item.security_def_type
 
                 item_list.append(item)
 

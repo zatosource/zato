@@ -108,9 +108,9 @@ class ODBManager(object):
 
         # What DB class to fetch depending on the string value of the security type.
         sec_type_db_class = {
-            'tech-account': TechnicalAccount,
+            'tech_acc': TechnicalAccount,
             'basic_auth': HTTPBasicAuth,
-            'wss': WSSDefinition
+            'wss_username_password': WSSDefinition
             }
 
         result = {}
@@ -139,7 +139,7 @@ class ODBManager(object):
             result[url_path].sec_def = Bunch()
             result[url_path].sec_def.type = sec_def_type
 
-            if sec_def_type == 'tech-account':
+            if sec_def_type == 'tech_acc':
                 result[url_path].sec_def.name = sec_def.name
                 result[url_path].sec_def.password = sec_def.password
                 result[url_path].sec_def.salt = sec_def.salt
@@ -147,7 +147,7 @@ class ODBManager(object):
                 result[url_path].sec_def.name = sec_def.name
                 result[url_path].sec_def.password = sec_def.password
                 result[url_path].sec_def.domain = sec_def.domain
-            elif sec_def_type == 'wss':
+            elif sec_def_type == 'wss_username_password':
                 result[url_path].sec_def.username = sec_def.username
                 result[url_path].sec_def.password = sec_def.password
                 result[url_path].sec_def.password_type = sec_def.password_type
