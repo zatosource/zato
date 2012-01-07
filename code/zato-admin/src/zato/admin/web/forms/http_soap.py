@@ -46,7 +46,6 @@ class CreateForm(forms.Form):
             
         self.fields['security'].choices = []
         self.fields['security'].choices.append(['', '----------'])
-        self.fields['security'].choices.append([ZATO_NONE, 'No security'])
         
         for value, label in security_list:
             self.fields['security'].choices.append([value, label])

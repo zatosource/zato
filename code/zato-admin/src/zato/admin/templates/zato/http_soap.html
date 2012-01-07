@@ -39,6 +39,7 @@
             '_delete',
             'id',
             'is_active',
+            'security',
         ]
     }
     </script>
@@ -124,6 +125,7 @@
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.security_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
