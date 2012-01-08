@@ -340,7 +340,7 @@ class Quickstart(ZatoCommand):
             session.add(ping_service)
             
             zato_soap = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
-                'plain', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
+                'plain_http', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
             session.add(zato_soap)
 
             #
