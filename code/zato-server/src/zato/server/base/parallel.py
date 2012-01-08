@@ -22,7 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import asyncore, httplib, json, logging, os, socket, sys, time
 from copy import deepcopy
-from hashlib import sha256
 from threading import Thread
 from traceback import format_exc
 
@@ -37,7 +36,7 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_OK, ZATO_URL_TYPE_SOAP
+from zato.common import HTTPException, PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_OK, ZATO_URL_TYPE_SOAP
 from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.base import BrokerMessageReceiver
@@ -63,71 +62,18 @@ def wrap_error_message(rid, url_type, msg):
     # to use.
     return msg
 
-class HTTPException(Exception):
-    """ Raised when the underlying error condition can be easily expressed
-    as one of the HTTP status codes.
-    """
-    def __init__(self, status, reason):
-        self.status = status
-        self.reason = reason
-        
 class ZatoHTTPListener(HTTPServer):
     
     SERVER_IDENT = 'Zato'
     channel_class = _HTTPServerChannel
     
-    def __init__(self, server, task_dispatcher, broker_client=None):
+    def __init__(self, server, task_dispatcher, security, broker_client=None):
         self.server = server
         self.broker_client = broker_client
+        self.security = security
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
 
-    def _handle_security_tech_account(self, rid, sec_def, request_data, body, headers):
-        """ Handles the 'tech_acc' security config type.
-        """
-        zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
-        
-        for header in zato_headers:
-            if not headers.get(header, None):
-                msg = ("[{0}] The header [{1}] doesn't exist or is empty, URI=[{2}, "
-                      "headers=[{3}]]").\
-                        format(rid, header, request_data.uri, headers)
-                logger.error(msg)
-                raise HTTPException(httplib.FORBIDDEN, msg)
-
-        # Note that both checks below send a different message to the client 
-        # when compared with what goes into logs. It's to conceal from
-        # bad-behaving users what really went wrong (that of course assumes 
-        # they can't access the logs).
-
-        msg_template = '[{0}] The {1} is incorrect, URI=[{2}], X_ZATO_USER=[{3}]'
-
-        if headers['X_ZATO_USER'] != sec_def.name:
-            logger.error(msg_template.format(rid, 'username', 
-                        request_data.uri, headers['X_ZATO_USER']))
-            raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format(rid, 'username or password', request_data.uri, 
-                           headers['X_ZATO_USER']))
-        
-        incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
-        
-        if incoming_password != sec_def.password:
-            logger.error(msg_template.format(rid, 'password', request_data.uri, 
-                              headers['X_ZATO_USER']))
-            raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format(rid, 'username or password', request_data.uri, 
-                           headers['X_ZATO_USER']))
-        
-        
-    def handle_security(self, rid, url_data, request_data, body, headers):
-        """ Handles all security-related aspects of an incoming HTTP message
-        handling. Calls other concrete security methods as appropriate.
-        """
-        sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.type
-        
-        handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-        getattr(self, handler_name)(rid, sec_def, request_data, body, headers)
-            
     def executeRequest(self, task, thread_ctx):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
@@ -148,7 +94,7 @@ class ZatoHTTPListener(HTTPServer):
             if url_data:
                 transport = url_data['transport']
                 
-                #self.handle_security(rid, url_data, task.request_data, body, headers)
+                self.security.handle(rid, url_data, task.request_data, body, headers)
                 
                 # TODO: Shadow out any passwords that may be contained in HTTP
                 # headers or in the message itself. Of course, that only applies
@@ -188,7 +134,7 @@ class ZatoHTTPListener(HTTPServer):
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb=None, singleton_server=None, worker_config=None, repo_location=None,
-                 ftp=None):
+                 ftp=None, security=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -198,6 +144,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config = worker_config
         self.repo_location = repo_location
         self.ftp = ftp
+        self.security = security
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
@@ -390,7 +337,7 @@ class ParallelServer(BrokerMessageReceiver):
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 
-        ZatoHTTPListener(self, task_dispatcher)
+        ZatoHTTPListener(self, task_dispatcher, self.security)
 
         try:
             while True:

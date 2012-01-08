@@ -293,8 +293,8 @@ def _http_soap(session, cluster_id):
                 literal_column('(select http_basic_auth_def.name from http_basic_auth_def where http_basic_auth_def.security_def_id = security_def.id)'))
     
     return session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.is_active, 
-            HTTPSOAP.is_internal, HTTPSOAP.url_path, HTTPSOAP.method, 
-            HTTPSOAP.soap_action, HTTPSOAP.soap_version, 
+            HTTPSOAP.is_internal, HTTPSOAP.transport, HTTPSOAP.url_path, 
+            HTTPSOAP.method, HTTPSOAP.soap_action, HTTPSOAP.soap_version, 
             Service.id.label('service_id'),
             Service.name.label('service_name'),
             SecurityDefinition.id.label('security_def_id'),
@@ -308,6 +308,9 @@ def _http_soap(session, cluster_id):
         filter(Service.id==HTTPSOAP.service_id).\
         filter(Cluster.id==cluster_id).\
         order_by(HTTPSOAP.name)
+
+# No point in creating a new function if we can aliast an already existing one.
+http_soap_security_list = _http_soap
 
 def http_soap(session, cluster_id, id):
     """ An HTTP/SOAP connection.

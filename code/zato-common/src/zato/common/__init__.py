@@ -201,3 +201,11 @@ class ClientSecurityException(ZatoException):
 class ConnectionException(ZatoException):
     """ Encountered a problem with an external connections, such as to AMQP brokers.
     """
+    
+class HTTPException(ZatoException):
+    """ Raised when the underlying error condition can be easily expressed
+    as one of the HTTP status codes.
+    """
+    def __init__(self, status, reason):
+        self.status = status
+        self.reason = reason

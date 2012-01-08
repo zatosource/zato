@@ -34,6 +34,7 @@ from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.channel.soap import SOAPMessageHandler, SOAPChannelStore
+from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 from zato.server.crypto import CryptoManager
 from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
@@ -120,14 +121,10 @@ class ZatoContext(PythonConfig):
     @Object
     def wss_nonce_cache(self):
         return {}
-
-    #@Object
-    #def wss_username_password_definition_list(self):
-    #    definition_list = {u"Adapter AZR": {"username":"user1", "password":"zzz",
-    #                     "reject_empty_nonce_creation_timestamp":True,
-    #                     "expiry_limit":3000, "reject_stale_username_token":True,
-    #                     "nonce_freshness_time":30900}} # TODO: Make sure it can't be set to 0
-    #    return definition_list
+    
+    @Object
+    def connection_http_soap_security(self):
+        return ConnectionHTTPSOAPSecurity()
 
     @Object
     def wss_username_password_store(self):
@@ -156,6 +153,7 @@ class ZatoContext(PythonConfig):
         server.odb = self.odb_manager()
         server.soap_handler = self.soap_message_handler()
         server.service_store = self.service_store()
+        server.security = self.connection_http_soap_security()
 
         # Regular objects.
         #server.sql_pool = self.sql_pool()
