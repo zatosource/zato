@@ -196,9 +196,6 @@ class Quickstart(ZatoCommand):
             #
             soap_services = {
     
-                # Ping
-                'zato:ping': 'zato.server.service.internal.Ping',
-    
                 # SQL connection pools
                 'zato:pool.sql.get-list':'zato.server.service.internal.sql.GetSQLConnectionPoolList',
                 'zato:pool.sql.create':'zato.server.service.internal.sql.CreateSQLConnectionPool',
@@ -336,6 +333,15 @@ class Quickstart(ZatoCommand):
                 session.add(zato_soap)
                 
                 zato_soap_channels.append(zato_soap)
+                
+            # Ping
+            ping_service_name = 'zato.server.service.internal.Ping'
+            ping_service = Service(None, ping_service_name, True, ping_service_name, True, cluster)
+            session.add(ping_service)
+            
+            zato_soap = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
+                'plain', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
+            session.add(zato_soap)
 
             #
             # SecurityDef

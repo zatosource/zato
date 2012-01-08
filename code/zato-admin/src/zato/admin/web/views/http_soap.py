@@ -42,8 +42,8 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
+from zato.common import SECURITY_TYPES, ZatoException, zato_namespace, zato_path, ZATO_NONE
 from zato.common.odb.model import Cluster, HTTPSOAP
-from zato.common import SECURITY_TYPES, zato_namespace, zato_path, ZatoException
 from zato.common.util import TRACE1, to_form
 
 logger = logging.getLogger(__name__)
@@ -167,10 +167,16 @@ def index(req):
                 security_def_type = msg_item.security_def_type.text
                 
                 _security_name = msg_item.security_name.text
-                security_name = '{0}/{1}'.format(SECURITY_TYPES[security_def_type], _security_name)
+                if _security_name:
+                    security_name = '{0}/{1}'.format(SECURITY_TYPES[security_def_type], _security_name)
+                else:
+                    security_name = 'No security'
                 
                 _security_id = msg_item.security_id.text
-                security_id = '{0}/{1}'.format(security_def_type, _security_id)
+                if _security_id:
+                    security_id = '{0}/{1}'.format(security_def_type, _security_id)
+                else:
+                    security_id = ZATO_NONE
                 
                 item = HTTPSOAP(id, name, is_active, is_internal, connection, 
                         transport, url_path, method, soap_action, soap_version, 
