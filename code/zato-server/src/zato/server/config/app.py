@@ -34,6 +34,7 @@ from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.channel.soap import SOAPMessageHandler, SOAPChannelStore
+from zato.server.connection.http_soap import RequestHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 from zato.server.crypto import CryptoManager
 from zato.server.odb import ODBManager
@@ -145,15 +146,22 @@ class ZatoContext(PythonConfig):
 
     # #######################################################
     # Servers
+    
+    @Object
+    def request_handler(self):
+        rh = RequestHandler()
+        rh.security = self.connection_http_soap_security()
+        rh.soap_handler = self.soap_message_handler()
+        
+        return rh
 
     @Object
     def parallel_server(self):
 
         server = ParallelServer()
         server.odb = self.odb_manager()
-        server.soap_handler = self.soap_message_handler()
         server.service_store = self.service_store()
-        server.security = self.connection_http_soap_security()
+        server.request_handler = self.request_handler()
 
         # Regular objects.
         #server.sql_pool = self.sql_pool()

@@ -18,8 +18,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # stdlib
-import httplib, logging
+import logging
 from hashlib import sha256
+from httplib import FORBIDDEN, NOT_FOUND, responses
 
 # Zato
 from zato.common import HTTPException, ZATO_NONE
@@ -53,23 +54,43 @@ class Security(object):
                       "headers=[{3}]]").\
                         format(rid, header, request_data.uri, headers)
                 logger.error(msg)
-                raise HTTPException(httplib.FORBIDDEN, msg)
-
-        # Note that both checks below send a different message to the client 
-        # when compared with what goes into logs. It's to conceal from
-        # bad-behaving users what really went wrong (that of course assumes 
-        # they can't access the logs).
+                raise HTTPException(FORBIDDEN)
 
         msg_template = '[{0}] The {1} is incorrect, URI:[{2}], X_ZATO_USER:[{3}]'
 
         if headers['X_ZATO_USER'] != sec_def.name:
             logger.error(msg_template.format(rid, 'username', request_data.uri, headers['X_ZATO_USER']))
-            raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format(rid, 'username or password', request_data.uri, headers['X_ZATO_USER']))
+            raise HTTPException(FORBIDDEN)
         
         incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
         
         if incoming_password != sec_def.password:
             logger.error(msg_template.format(rid, 'password', request_data.uri, headers['X_ZATO_USER']))
-            raise HTTPException(httplib.FORBIDDEN, msg_template.\
-                    format(rid, 'username or password', request_data.uri, headers['X_ZATO_USER']))
+            raise HTTPException(FORBIDDEN)
+
+class RequestHandler(object):
+    """ Handles all the incoming HTTP/SOAP requests.
+    """
+    def __init__(self, security=None, soap_handler=None):
+        self.security = security
+        self.soap_handler = soap_handler
+    
+    def handle(self, rid, url_data, transport, task, thread_ctx):
+        if url_data:
+            
+            body = task.request_data.getBodyStream().getvalue()
+            headers = task.request_data.headers            
+            
+            self.security.handle(rid, url_data, task.request_data, body, headers)
+            
+            # TODO: Shadow out any passwords that may be contained in HTTP
+            # headers or in the message itself. Of course, that only applies
+            # to auth schemes we're aware of (HTTP Basic Auth, WSS etc.)
+            
+            # Fetch the response.
+            return self.soap_handler.handle(rid, body, headers, thread_ctx)
+
+        else:
+            msg = "The URL [{0}] doesn't exist".format(task.request_data.uri)
+            logger.warn(msg, rid)
+            raise HTTPException(NOT_FOUND)
