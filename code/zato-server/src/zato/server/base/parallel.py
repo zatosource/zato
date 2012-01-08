@@ -20,8 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, httplib, json, logging, os, socket, sys, time
+import asyncore, json, logging, os, socket, sys, time
 from copy import deepcopy
+from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
 from traceback import format_exc
 
@@ -67,10 +68,10 @@ class ZatoHTTPListener(HTTPServer):
     SERVER_IDENT = 'Zato'
     channel_class = _HTTPServerChannel
     
-    def __init__(self, server, task_dispatcher, security, broker_client=None):
+    def __init__(self, server, task_dispatcher, request_handler, broker_client=None):
         self.server = server
         self.broker_client = broker_client
-        self.security = security
+        self.request_handler = request_handler
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
 
@@ -86,36 +87,20 @@ class ZatoHTTPListener(HTTPServer):
         rid = new_rid()
         
         try:
-            # Collect necessary request data.
-            body = task.request_data.getBodyStream().getvalue()
-            headers = task.request_data.headers
-            
             url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
-            if url_data:
-                transport = url_data['transport']
-                
-                self.security.handle(rid, url_data, task.request_data, body, headers)
-                
-                # TODO: Shadow out any passwords that may be contained in HTTP
-                # headers or in the message itself. Of course, that only applies
-                # to auth schemes we're aware of (HTTP Basic Auth, WSS etc.)
 
-            else:
-                msg = ("The URL [{0}] doesn't exist or has no security "
-                      "configuration assigned").format(task.request_data.uri)
-                logger.warn(msg, rid)
-                raise HTTPException(httplib.NOT_FOUND, msg)
-
-            # Fetch the response.
-            response = self.server.soap_handler.handle(rid, body, headers, thread_ctx)
+            # SOAP or plain HTTP.
+            transport = url_data['transport']
+            response = self.request_handler.handle(rid, url_data, transport, task, thread_ctx)
 
         except HTTPException, e:
-            task.setResponseStatus(e.status, e.reason)
+            task.setResponseStatus(e.status, responses[e.status])
             response = wrap_error_message(rid, transport, e.reason)
             
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)
+            task.setResponseStatus(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
             logger.error('[{0}] Exception caught [{1}]'.format(rid, tb))
             response = wrap_error_message(rid, transport, tb)
 
@@ -123,8 +108,9 @@ class ZatoHTTPListener(HTTPServer):
             content_type = 'text/xml'
         else:
             content_type = 'text/plain'
-            
-        task.response_headers['Content-Type'] = content_type
+        
+        task.response_headers['Content-Type'] = content_type    
+        task.response_headers['X-Zato-RID'] = rid
             
         # Return the HTTP response.
         task.response_headers['Content-Length'] = str(len(response))
@@ -134,7 +120,7 @@ class ZatoHTTPListener(HTTPServer):
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb=None, singleton_server=None, worker_config=None, repo_location=None,
-                 ftp=None, security=None):
+                 ftp=None, request_handler=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -144,7 +130,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config = worker_config
         self.repo_location = repo_location
         self.ftp = ftp
-        self.security = security
+        self.request_handler = request_handler
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
@@ -193,7 +179,7 @@ class ParallelServer(BrokerMessageReceiver):
             
         # Mapping between SOAP actions and internal services.
         for soap_action, service_name in self.odb.get_internal_channel_list(server.cluster.id):
-            self.soap_handler.soap_config[soap_action] = service_name
+            self.request_handler.soap_handler.soap_config[soap_action] = service_name
             
         # FTP
         ftp_conn_params = Bunch()
@@ -337,7 +323,7 @@ class ParallelServer(BrokerMessageReceiver):
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 
-        ZatoHTTPListener(self, task_dispatcher, self.security)
+        ZatoHTTPListener(self, task_dispatcher, self.request_handler)
 
         try:
             while True:

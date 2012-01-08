@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from httplib import responses
 from string import Template
 
 # lxml
@@ -206,6 +207,6 @@ class HTTPException(ZatoException):
     """ Raised when the underlying error condition can be easily expressed
     as one of the HTTP status codes.
     """
-    def __init__(self, status, reason):
+    def __init__(self, status):
         self.status = status
-        self.reason = reason
+        self.reason = responses[status]
