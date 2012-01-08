@@ -42,7 +42,6 @@ from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CO
 from zato.common.util import new_rid, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
-from zato.server.channel.soap import server_soap_error
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
 from zato.server.connection.ftp import FTPFacade
@@ -52,16 +51,6 @@ from zato.server.connection.zmq_.channel import start_connector as zmq_channel_s
 from zato.server.connection.zmq_.outgoing import start_connector as zmq_outgoing_start_connector
 
 logger = logging.getLogger(__name__)
-
-def wrap_error_message(rid, url_type, msg):
-    """ Wraps an error message in a transport-specific envelope.
-    """
-    if url_type == ZATO_URL_TYPE_SOAP:
-        return server_soap_error(rid, msg)
-    
-    # Let's return the message as-is if we don't have any specific envelope
-    # to use.
-    return msg
 
 class ZatoHTTPListener(HTTPServer):
     
@@ -79,37 +68,25 @@ class ZatoHTTPListener(HTTPServer):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
-        
-        # Initially, we have no clue about the type of the URL being accessed,
-        # later on, if we don't stumble upon an exception, we may learn that
-        # it is for instance, a SOAP URL.
-        transport = None
         rid = new_rid()
+        response = str(rid)
         
         try:
             url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
 
             # SOAP or plain HTTP.
-            transport = url_data['transport']
-            response = self.request_handler.handle(rid, url_data, transport, task, thread_ctx)
+            response = self.request_handler.handle(rid, url_data, task, thread_ctx)
 
-        except HTTPException, e:
-            task.setResponseStatus(e.status, responses[e.status])
-            response = wrap_error_message(rid, transport, e.reason)
-            
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)
             task.setResponseStatus(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
-            logger.error('[{0}] Exception caught [{1}]'.format(rid, tb))
-            response = wrap_error_message(rid, transport, tb)
-
-        if transport == ZATO_URL_TYPE_SOAP:
-            content_type = 'text/xml'
-        else:
-            content_type = 'text/plain'
-        
-        task.response_headers['Content-Type'] = content_type    
+            error_msg = '[{0}] Exception caught [{1}]'.format(rid, tb)
+            logger.error(error_msg)
+            
+            response = error_msg
+            task.response_headers['Content-Type'] = 'text/plain'    
+            
         task.response_headers['X-Zato-RID'] = rid
             
         # Return the HTTP response.

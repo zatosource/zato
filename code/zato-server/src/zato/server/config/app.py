@@ -33,8 +33,7 @@ from springpython.context import scope
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
-from zato.server.channel.soap import SOAPMessageHandler, SOAPChannelStore
-from zato.server.connection.http_soap import RequestHandler
+from zato.server.connection.http_soap import PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 from zato.server.crypto import CryptoManager
 from zato.server.odb import ODBManager
@@ -100,21 +99,25 @@ class ZatoContext(PythonConfig):
         return store
 
     # #######################################################
-    # SOAP
+    # HTTP/SOAP handlers
 
     @Object
     def soap_config(self):
         return {}
 
     @Object
-    def soap_message_handler(self):
-        handler = SOAPMessageHandler()
+    def soap_handler(self):
+        handler = SOAPHandler()
         handler.soap_config = self.soap_config()
         handler.service_store = self.service_store()
         handler.crypto_manager = self.crypto_manager()
         handler.wss_store = self.wss_username_password_store()
 
         return handler
+    
+    @Object
+    def plain_http_handler(self):
+        return PlainHTTPHandler()
 
     # #######################################################
     # Security
@@ -151,7 +154,8 @@ class ZatoContext(PythonConfig):
     def request_handler(self):
         rh = RequestHandler()
         rh.security = self.connection_http_soap_security()
-        rh.soap_handler = self.soap_message_handler()
+        rh.soap_handler = self.soap_handler()
+        rh.plain_http_handler = self.plain_http_handler()
         
         return rh
 
@@ -162,12 +166,8 @@ class ZatoContext(PythonConfig):
         server.odb = self.odb_manager()
         server.service_store = self.service_store()
         server.request_handler = self.request_handler()
-
-        # Regular objects.
-        #server.sql_pool = self.sql_pool()
-        #server.odb_pool_config = self.odb_pool_config()
-        #server.wss_nonce_cache = self.wss_nonce_cache()
-        #server.wss_store = self.wss_username_password_store()
+        server.request_handler.soap_handler.server = server
+        server.request_handler.plain_http_handler.server = server
 
         return server
 

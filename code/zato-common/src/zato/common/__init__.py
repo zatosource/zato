@@ -193,6 +193,8 @@ class zato_path(path):
 class ZatoException(Exception):
     """ Base class for all Zato custom exceptions.
     """
+    def __init__(self, rid=None, msg=None):
+        self.rid = rid
 
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems
@@ -207,6 +209,7 @@ class HTTPException(ZatoException):
     """ Raised when the underlying error condition can be easily expressed
     as one of the HTTP status codes.
     """
-    def __init__(self, status):
+    def __init__(self, rid, msg, status):
+        super(HTTPException, self).__init__(rid, msg)
         self.status = status
         self.reason = responses[status]
