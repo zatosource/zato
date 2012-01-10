@@ -31,7 +31,7 @@ from lxml import etree, objectify
 # Zato
 from zato.common import ClientSecurityException, HTTPException, soap_body_xpath, \
      ZATO_ERROR, ZATO_NONE, ZATO_OK, ZatoException, zato_ns_map
-from zato.common.util import TRACE1
+from zato.common.util import security_def_type, TRACE1
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
@@ -90,10 +90,6 @@ class Security(object):
         """ Calls other concrete security methods as appropriate.
         """
         
-        # No security at all for that URL.
-        if url_data.sec_def == ZATO_NONE:
-            return True
-        
         sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.type
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
@@ -145,19 +141,26 @@ class RequestHandler(object):
         return msg        
     
     def handle(self, rid, url_data, task, thread_ctx):
+        """ Base method for handling incoming HTTP/SOAP messages. If the security
+        configuration is one of the technical account or HTTP basic auth, 
+        the security validation is being performed. Otherwise, that step 
+        is postponed until a concrete transport-specific handler is invoked.
+        """
         if url_data:
             
             transport = url_data['transport']
             
             try:
                 request = task.request_data.getBodyStream().getvalue()
-                headers = task.request_data.headers            
+                headers = task.request_data.headers
                 
-                self.security.handle(rid, url_data, task.request_data, request, headers)
-                
-                # TODO: Shadow out any passwords that may be contained in HTTP
-                # headers or in the message itself. Of course, that only applies
-                # to auth schemes we're aware of (HTTP Basic Auth, WSS etc.)
+                # No security at all for that URL.
+                if url_data.sec_def != ZATO_NONE:
+                    if url_data.sec_def.type in(security_def_type.tech_account, security_def_type.basic_auth):
+                        self.security.handle(rid, url_data, task.request_data, request, headers)
+                else:
+                    log_msg = '[{0}] No security for URL [{1}]'.format(rid, task.request_data.uri)
+                    logger.debug(log_msg)
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
                 return handler.handle(rid, request, headers, transport, thread_ctx)
@@ -166,18 +169,14 @@ class RequestHandler(object):
                 if transport == 'soap':
                     response = client_soap_error(rid, format_exc(e))
                 else:
-                    raise ZatoException('Unrecognized transport:[{0}]'.format(transport))
+                    raise ZatoException('Unrecognized transport [{0}]'.format(transport))
         
-            #except HTTPException, e:
-            #    task.setResponseStatus(e.status, responses[e.status])
-            #    response = wrap_error_message(rid, transport, e.reason)        
-
         else:
-            msg = "[{0}] The URL [{1}] doesn't exist".format(rid, task.request_data.uri)
+            response = "[{0}] The URL [{1}] doesn't exist".format(rid, task.request_data.uri)
             task.setResponseStatus(NOT_FOUND, responses[NOT_FOUND])
             
-            logger.error(msg)
-            return msg
+            logger.error(response)
+            return response
         
 class _BaseMessageHandler(object):
     
@@ -220,67 +219,44 @@ class _BaseMessageHandler(object):
         return payload, class_name, service_data
     
     def handle_security(self):
-        pass
+        raise NotImplementedError('Must be implemented by subclasses')
     
-    def invoke_service(self):
-        pass
-    
-    def return_response(self):
-        pass
-
     def handle(self, rid, request, headers, transport, thread_ctx):
         
-        try:
-            payload, class_name, service_data = self.init(rid, request, headers, transport)
+        payload, class_name, service_data = self.init(rid, request, headers, transport)
 
-            if self.wss_store.needs_wss(class_name):
-                # Will raise an exception if anything goes wrong.
-                self.wss_store.handle_request(class_name, service_data, soap)
-                
-            service_instance = self.service_store.new_instance(class_name)
-            service_instance.update(service_instance, self.server, thread_ctx.broker_client, transport, rid)
+        service_instance = self.service_store.new_instance(class_name)
+        service_instance.update(service_instance, self.server, thread_ctx.broker_client, transport, rid)
 
-            service_response = service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
+        service_response = service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
 
-            # Responses from all Zato's interal services are wrapped in
-            # in the <zato_message> element. Each one is also assigned the server's
-            # public key.
-            if isinstance(service_instance, AdminService):
+        # Responses from all Zato's interal services are wrapped in
+        # in the <zato_message> element. Each one is also assigned the server's
+        # public key.
+        if isinstance(service_instance, AdminService):
 
-                if logger.isEnabledFor(TRACE1):
-                    logger.log(TRACE1, '[{0}] len(service_response)=[{1}]'.format(rid, len(service_response)))
-                    for item in service_response:
-                        logger.log(TRACE1, '[{0}] service_response item=[{1}]'.format(rid, item))
+            if logger.isEnabledFor(TRACE1):
+                logger.log(TRACE1, '[{0}] len(service_response)=[{1}]'.format(rid, len(service_response)))
+                for item in service_response:
+                    logger.log(TRACE1, '[{0}] service_response item=[{1}]'.format(rid, item))
 
-                result, rest = service_response
-                if result == ZATO_OK:
-                    details = ''
-                    data = rest
-                else:
-                    details = rest
-                    data = ''
-                    
-                response = zato_message.safe_substitute(rid=rid, result=result, details=details, data=data)
+            result, rest = service_response
+            if result == ZATO_OK:
+                details = ''
+                data = rest
             else:
-                response = service_response
+                details = rest
+                data = ''
+                
+            response = zato_message.safe_substitute(rid=rid, result=result, details=details, data=data)
+        else:
+            response = service_response
 
-            if transport == 'soap':
-                response = soap_doc.safe_substitute(body=response)
+        if transport == 'soap':
+            response = soap_doc.safe_substitute(body=response)
 
-            logger.debug('[{0}] Returning response=[{1}]'.format(rid, response))
-            return response
-
-        except ClientSecurityException, e:
-            # TODO: Rethink if any errors may be logged here.
-            msg = '[{0}] [{1}]'.format(rid, escape(format_exc()))
-            logger.error(msg)
-            return client_soap_error(rid, e.args[0])
-
-        except Exception, e:
-            # TODO: Rethink if any errors may be logged here.
-            msg = '[{0}] [{1}]'.format(rid, escape(format_exc()))
-            logger.error(msg)
-            return server_soap_error(rid, msg)
+        logger.debug('[{0}] Returning response=[{1}]'.format(rid, response))
+        return response
         
 class SOAPHandler(_BaseMessageHandler):
     """ Dispatches incoming SOAP messages to services.
@@ -289,7 +265,12 @@ class SOAPHandler(_BaseMessageHandler):
         self.soap_config = soap_config
         self.service_store = service_store
         self.wss_store = wss_store
-        self.server = server # A ParalleServer instance.
+        self.server = server # A ParallelServer instance.
+        
+    def handle_security(self):
+        if self.wss_store.needs_wss(class_name):
+            # Will raise an exception if anything goes wrong.
+            self.wss_store.handle_request(class_name, service_data, soap)
 
 class PlainHTTPHandler(_BaseMessageHandler):
     """ Dispatches incoming plain HTTP messages to services.

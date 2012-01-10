@@ -269,7 +269,8 @@ class WSSDefinition(Base):
     def __init__(self, id=None, name=None, is_active=None, username=None,
                  password=None, password_type=None, reject_empty_nonce_ts=None,
                  reject_stale_username=None, expiry_limit=None,
-                 nonce_freshness=None, cluster=None, password_type_raw=None):
+                 nonce_freshness=None, security_def=None, cluster=None, 
+                 password_type_raw=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -307,13 +308,14 @@ class HTTPBasicAuth(Base):
     security_def = relationship(SecurityDefinition, backref=backref('http_basic_auth_def', order_by=name, uselist=False))
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
-                 domain=None, password=None, cluster=None):
+                 domain=None, password=None, security_def=None, cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
         self.domain = domain
         self.password = password
+        self.security_def = security_def
         self.cluster = cluster
 
     def __repr__(self):
