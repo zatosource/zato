@@ -76,10 +76,91 @@ class Quickstart(ZatoCommand):
             next_id = int(id) + 1
             
         return next_id
+    
+    def add_ping(self, session, cluster):
+        
+            #
+            # Ping service and channels, with and without security checks ..
+            #
+        
+            passwords = {
+                'ping.plain_http.basic_auth': None,
+                'ping.plain_http.wss.clear_text': None,
+                'ping.plain_http.wss.digest': None,
+                'ping.soap.basic_auth': None,
+                'ping.soap.wss.clear_text': None,
+                'ping.soap.wss.digest': None
+            }
+            
+            for password in passwords:
+                passwords[password] = uuid4().hex
 
+            ping_service_name = 'zato.server.service.internal.Ping'
+            ping_service = Service(None, ping_service_name, True, ping_service_name, True, cluster)
+            session.add(ping_service)
+            
+            #
+            # .. no security ..
+            #
+            ping_no_sec_channel = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
+                                           'plain_http', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
+            session.add(ping_no_sec_channel)
+
+
+            #
+            # All the possible options
+            # 
+            # Plain HTTP / Basic auth
+            # Plain HTTP / WSS / Clear text
+            # Plain HTTP / WSS / Digest
+            # SOAP / Basic auth
+            # SOAP / WSS / Clear text
+            # SOAP / WSS / Digest
+            #
+
+            transports = ['plain_http', 'soap']
+            wss_types = ['clear_text', 'digest']
+            
+            for transport in transports:
+
+                base_name = 'ping.{0}.basic_auth'.format(transport)
+                zato_name = 'zato:{0}'.format(base_name)
+                url = '/zato/{0}'.format(base_name)
+                soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else (None, None)
+                
+                sec_def = SecurityDefinition(None, security_def_type.basic_auth)
+                session.add(sec_def)
+                
+                sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', passwords[password], sec_def, cluster)
+                session.add(sec)
+                
+                channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, soap_version, service=ping_service, cluster=cluster)
+                session.add(channel)
+                
+                channel_sec = HTTPSOAPSecurity(channel, sec_def)
+                session.add(channel_sec)
+                
+                for wss_type in wss_types:
+                    base_name = 'ping.{0}.wss.{1}'.format(transport, wss_type)
+                    zato_name = 'zato:{0}'.format(base_name)
+                    url = '/zato/{0}'.format(base_name)
+                    
+                    sec_def = SecurityDefinition(None, security_def_type.wss_username_password)
+                    session.add(sec_def)
+                    
+                    sec = WSSDefinition(None, zato_name, True, zato_name, passwords[password], wss_type, True, True, 3600, 3600, sec_def, cluster)
+                    session.add(sec)
+                    
+                    channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, soap_version, service=ping_service, cluster=cluster)
+                    session.add(channel)
+                    
+                    channel_sec = HTTPSOAPSecurity(channel, sec_def)
+                    session.add(channel_sec)
+                    
     def execute(self, args):
         try:
 
+            
             # Make sure the ODB tables exists.
             # Note: Also make sure that's always at the very top of the method
             # as otherwise the 'quickstart' command will fail on a pristine
@@ -102,6 +183,8 @@ class Quickstart(ZatoCommand):
                                        '#')
             cluster_name = 'ZatoQuickstartCluster-#{next_id}'.format(next_id=next_id)
 
+
+            
             ca_dir = os.path.abspath(os.path.join(self.target_dir, './ca'))
             lb_dir = os.path.abspath(os.path.join(self.target_dir, './load-balancer'))
             server_dir = os.path.abspath(os.path.join(self.target_dir, './server'))
@@ -177,7 +260,7 @@ class Quickstart(ZatoCommand):
                               args.odb_dbname, args.odb_schema, args.broker_host,
                               args.broker_start_port, cb.token,
                               'localhost', 20151,  11223)
-            
+
             #
             # Server
             #
@@ -334,17 +417,11 @@ class Quickstart(ZatoCommand):
                 
                 zato_soap_channels.append(zato_soap)
                 
-            # Ping
-            ping_service_name = 'zato.server.service.internal.Ping'
-            ping_service = Service(None, ping_service_name, True, ping_service_name, True, cluster)
-            session.add(ping_service)
-            
-            zato_soap = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
-                'plain_http', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
-            session.add(zato_soap)
-
+            # Ping services
+            self.add_ping(session, cluster)
+                
             #
-            # SecurityDef
+            # Security definition for all the other admin services uses a technical account.
             #
             sec_def = SecurityDefinition(None, security_def_type.tech_account)
             session.add(sec_def)
@@ -361,8 +438,7 @@ class Quickstart(ZatoCommand):
             #
             salt = uuid4().hex
             password = tech_account_password(tech_account_password_clear, salt)
-            tech_account = TechnicalAccount(None, tech_account_name, 
-                                password, salt, True, sec_def, cluster=cluster)
+            tech_account = TechnicalAccount(None, tech_account_name, password, salt, True, sec_def, cluster=cluster)
             session.add(tech_account)
             
             # Commit all the stuff.
@@ -377,8 +453,6 @@ To start the load-balancer's agent, type 'zato start {lb_dir}'.
 To start the ZatoAdmin web console, type 'zato start {zato_admin_dir}'.
             """.format(server_dir=server_dir, lb_dir=lb_dir, zato_admin_dir=zato_admin_dir))
             
-
-
         except Exception, e:
             print("\nAn exception has been caught, quitting now!\n")
             traceback.print_exc()

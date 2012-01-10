@@ -110,7 +110,7 @@ ZATO_URL_TYPE_SOAP = 'soap'
 ZATO_URL_TYPE_PLAIN_HTTP = 'plain_http'
 
 # Whether WS-Security passwords are transmitted in clear-text or not.
-ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear-text', label='Clear text')
+ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
 ZATO_WSS_PASSWORD_DIGEST = Bunch(name='digest', label='Digest')
 ZATO_WSS_PASSWORD_TYPES = {
     ZATO_WSS_PASSWORD_CLEAR_TEXT.name:ZATO_WSS_PASSWORD_CLEAR_TEXT.label,
