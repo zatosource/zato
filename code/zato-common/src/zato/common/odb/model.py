@@ -281,6 +281,7 @@ class WSSDefinition(Base):
         self.reject_stale_username = reject_stale_username
         self.expiry_limit = expiry_limit
         self.nonce_freshness = nonce_freshness
+        self.security_def = security_def
         self.cluster = cluster
         self.password_type_raw = password_type_raw
 
