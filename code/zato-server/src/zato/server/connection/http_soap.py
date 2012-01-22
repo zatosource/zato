@@ -207,18 +207,19 @@ class _BaseMessageHandler(object):
     def init(self, rid, request, headers, transport):
         logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(rid, request, headers))
 
-        # HTTP headers are all uppercased at this point.
-        soap_action = headers.get('SOAPACTION')
-
-        if not soap_action:
-            raise BadRequest(rid, 'Client did not send the SOAPAction header')
-
-        # SOAP clients may send an empty header, i.e. SOAPAction: "",
-        # as opposed to not sending the header at all.
-        soap_action = soap_action.lstrip('"').rstrip('"')
-
-        if not soap_action:
-            raise BadRequest(rid, 'Client sent an empty SOAPAction header')
+        if transport == 'soap':
+            # HTTP headers are all uppercased at this point.
+            soap_action = headers.get('SOAPACTION')
+    
+            if not soap_action:
+                raise BadRequest(rid, 'Client did not send the SOAPAction header')
+    
+            # SOAP clients may send an empty header, i.e. SOAPAction: "",
+            # as opposed to not sending the header at all.
+            soap_action = soap_action.lstrip('"').rstrip('"')
+    
+            if not soap_action:
+                raise BadRequest(rid, 'Client sent an empty SOAPAction header')
 
         class_name = self.soap_config.get(soap_action)
         logger.debug('[{0}] class_name:[{1}]'.format(rid, class_name))
@@ -300,7 +301,7 @@ class PlainHTTPHandler(_BaseMessageHandler):
     """ Dispatches incoming plain HTTP messages to services.
     """
     def __init__(self, server=None):
-        self.server = server
+        self.server = server # A ParallelServer instance.
         
     def handle(self, rid, request, headers, transport, thread_ctx):
-        return 'TODO\n'
+        return super(PlainHTTPHandler, self).handle(rid, request, headers, transport, thread_ctx)
