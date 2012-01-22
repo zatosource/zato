@@ -195,6 +195,7 @@ class ZatoException(Exception):
     """
     def __init__(self, rid=None, msg=None):
         self.rid = rid
+        self.msg = msg
 
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems
