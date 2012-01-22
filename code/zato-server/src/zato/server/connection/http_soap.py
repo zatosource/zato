@@ -21,12 +21,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging, time
 from cgi import escape
 from hashlib import sha256
-from httplib import FORBIDDEN, NOT_FOUND, responses
+from httplib import BAD_REQUEST, FORBIDDEN, NOT_FOUND, responses
 from string import Template
 from traceback import format_exc
 
 # lxml
 from lxml import etree, objectify
+
+# sec-wall
+from secwall.server import on_basic_auth, on_wsse_pwd
 
 # Zato
 from zato.common import ClientSecurityException, HTTPException, soap_body_xpath, \
@@ -80,8 +83,16 @@ def server_soap_error(rid, faultstring):
     return soap_error.safe_substitute(faultcode='Server', rid=rid, faultstring=faultstring)
 
 class ClientHTTPError(HTTPException):
+    def __init__(self, rid, msg, status):
+        super(ClientHTTPError, self).__init__(rid, msg, status)
+        
+class BadRequest(ClientHTTPError):
     def __init__(self, rid, msg):
-        super(ClientSOAPError, self).__init__(rid, msg, BAD_REQUEST)
+        super(BadRequest, self).__init__(rid, msg, BAD_REQUEST)
+        
+class Forbidden(ClientHTTPError):
+    def __init__(self, rid, msg):
+        super(Forbidden, self).__init__(rid, msg, FORBIDDEN)
 
 class Security(object):
     """ Performs all the HTTP/SOAP-related security checks.
@@ -94,7 +105,19 @@ class Security(object):
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
         getattr(self, handler_name)(rid, sec_def, request_data, body, headers)
-    
+
+    def _handle_security_basic_auth(self, rid, sec_def, request_data, body, headers):
+        env = {'HTTP_AUTHORIZATION':headers['AUTHORIZATION']}
+        url_config = {'basic-auth-username':'user', 'basic-auth-password':'password'}
+        
+        result = on_basic_auth(env, url_config)
+        
+        if not result:
+            msg = 'FORBIDDEN rid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
+                rid, result.code, result.description)
+            logger.error(msg)
+            raise Forbidden(rid, msg)
+        
     def _handle_security_tech_acc(self, rid, sec_def, request_data, body, headers):
         """ Handles the 'tech_acc' security config type.
         """
@@ -166,11 +189,12 @@ class RequestHandler(object):
                 return handler.handle(rid, request, headers, transport, thread_ctx)
             
             except ClientHTTPError, e:
+                response = e.msg
                 if transport == 'soap':
-                    response = client_soap_error(rid, format_exc(e))
-                else:
-                    raise ZatoException('Unrecognized transport [{0}]'.format(transport))
-        
+                    response = client_soap_error(rid, response)
+                    
+                task.setResponseStatus(e.status, e.reason)
+                return response
         else:
             response = "[{0}] The URL [{1}] doesn't exist".format(rid, task.request_data.uri)
             task.setResponseStatus(NOT_FOUND, responses[NOT_FOUND])
@@ -187,20 +211,20 @@ class _BaseMessageHandler(object):
         soap_action = headers.get('SOAPACTION')
 
         if not soap_action:
-            raise ClientHTTPError(rid, 'Client did not send the SOAPAction header')
+            raise BadRequest(rid, 'Client did not send the SOAPAction header')
 
         # SOAP clients may send an empty header, i.e. SOAPAction: "",
         # as opposed to not sending the header at all.
         soap_action = soap_action.lstrip('"').rstrip('"')
 
         if not soap_action:
-            raise ClientHTTPError(rid, 'Client sent an empty SOAPAction header')
+            raise BadRequest(rid, 'Client sent an empty SOAPAction header')
 
         class_name = self.soap_config.get(soap_action)
         logger.debug('[{0}] class_name:[{1}]'.format(rid, class_name))
 
         if not class_name:
-            raise ClientHTTPError(rid, 'Unrecognized SOAPAction [{1}]'.format(soap_action))
+            raise BadRequest(rid, 'Unrecognized SOAPAction [{1}]'.format(soap_action))
 
         logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(rid, self.service_store.services))
         service_data = self.service_store.service_data(class_name)
@@ -209,7 +233,7 @@ class _BaseMessageHandler(object):
         body = soap_body_xpath(soap)
 
         if not body:
-            raise ClientHTTPError(rid, 'Client did not send the [{1}] element'.format(body_path))
+            raise BadRequest(rid, 'Client did not send the [{1}] element'.format(body_path))
         
         if transport == 'soap':
             payload = get_body_payload(body)
@@ -279,4 +303,4 @@ class PlainHTTPHandler(_BaseMessageHandler):
         self.server = server
         
     def handle(self, rid, request, headers, transport, thread_ctx):
-        return 'ZZZ'
+        return 'TODO\n'
