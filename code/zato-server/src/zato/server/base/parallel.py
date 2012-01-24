@@ -57,10 +57,9 @@ class ZatoHTTPListener(HTTPServer):
     SERVER_IDENT = 'Zato'
     channel_class = _HTTPServerChannel
     
-    def __init__(self, server, task_dispatcher, request_handler, broker_client=None):
+    def __init__(self, server, task_dispatcher, broker_client=None):
         self.server = server
         self.broker_client = broker_client
-        self.request_handler = request_handler
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
 
@@ -72,10 +71,8 @@ class ZatoHTTPListener(HTTPServer):
         response = str(rid)
         
         try:
-            url_data = thread_ctx.store.url_sec_get(task.request_data.uri)
-
             # SOAP or plain HTTP.
-            response = self.request_handler.handle(rid, url_data, task, thread_ctx)
+            response = thread_ctx.store.request_handler.handle(rid, task, thread_ctx)
 
         # Any exception at this point must be our fault.
         except Exception, e:
@@ -97,7 +94,7 @@ class ZatoHTTPListener(HTTPServer):
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb=None, singleton_server=None, worker_config=None, repo_location=None,
-                 ftp=None, request_handler=None):
+                 ftp=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -107,7 +104,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_config = worker_config
         self.repo_location = repo_location
         self.ftp = ftp
-        self.request_handler = request_handler
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
@@ -155,8 +151,8 @@ class ParallelServer(BrokerMessageReceiver):
             self._init_connectors(server)
             
         # Mapping between SOAP actions and internal services.
-        for soap_action, service_name in self.odb.get_internal_channel_list(server.cluster.id):
-            self.request_handler.soap_handler.soap_config[soap_action] = service_name
+        #for soap_action, service_name in self.odb.get_internal_channel_list(server.cluster.id):
+        #    self.request_handler.soap_handler.soap_config[soap_action] = service_name
             
         # FTP
         ftp_conn_params = Bunch()
@@ -296,11 +292,11 @@ class ParallelServer(BrokerMessageReceiver):
     def run_forever(self):
         
         task_dispatcher = _TaskDispatcher(self, self.worker_config, self.on_broker_msg, self.zmq_context)
-        task_dispatcher.setThreadCount(1)
+        task_dispatcher.setThreadCount(10)
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 
-        ZatoHTTPListener(self, task_dispatcher, self.request_handler)
+        ZatoHTTPListener(self, task_dispatcher)
 
         try:
             while True:
