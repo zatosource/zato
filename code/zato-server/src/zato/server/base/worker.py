@@ -41,6 +41,8 @@ from bunch import Bunch
 from zato.common import ConnectionException
 from zato.common.util import TRACE1
 from zato.server.base import BaseWorker, BrokerMessageReceiver
+from zato.server.connection.http_soap import PlainHTTPHandler, RequestHandler, SOAPHandler
+from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +63,17 @@ class WorkerStore(BaseWorker):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.worker_data = worker_data
         
-        self.basic_auth = self.worker_data.basic_auth
-        self.tech_acc = self.worker_data.tech_acc
-        self.wss = self.worker_data.wss
-        self.url_sec = self.worker_data.url_sec
+        #self.url_sec = self.worker_data.url_sec
         
         self.basic_auth_lock = RLock()
         self.tech_acc_lock = RLock()
         self.wss_lock = RLock()
-        self.url_sec_lock = RLock()
+        
+        self.request_handler = RequestHandler()
+        self.request_handler.soap_handler = SOAPHandler()
+        self.request_handler.plain_http_handler = PlainHTTPHandler()
+        self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_data.url_sec, 
+                self.worker_data.basic_auth, self.worker_data.tech_acc, self.worker_data.wss)
         
     def filter(self, msg):
         return True
@@ -80,112 +84,82 @@ class WorkerStore(BaseWorker):
         """ Returns the configuration of the HTTP Basic Auth security definition
         of the given name.
         """
-        with self.basic_auth_lock:
-            return self.basic_auth.get(Name)
+        self.request_handler.security.basic_auth_get(name)
 
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        with self.basic_auth_lock:
-            self.basic_auth[msg.name] = msg
+        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
-        with self.basic_auth_lock:
-            del self.basic_auth[msg.old_name]
-            self.basic_auth[msg.name] = msg
+        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(msg, *args)
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
-        with self.basic_auth_lock:
-            del self.basic_auth[msg.name]
+        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(msg, *args)
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
-        with self.basic_auth_lock:
-            self.basic_auth[msg.name]['password'] = msg.password
+        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg, *args)
 
 # ##############################################################################
 
     def tech_acc_get(self, name):
         """ Returns the configuration of the technical account of the given name.
         """
-        with self.tech_acc_lock:
-            return self.tech_acc.get(name)
+        self.request_handler.security.tech_acc_get(msg, *args)
 
     def on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
-        with self.tech_acc_lock:
-            self.tech_acc[msg.name] = msg
+        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
-        with self.tech_acc_lock:
-            del self.tech_acc[msg.old_name]
-            self.tech_acc[msg.name] = msg
+        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
-        with self.tech_acc_lock:
-            del self.tech_acc[msg.name]
+        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-        with self.tech_acc_lock:
-            # The message's 'password' attribute already takes the salt 
-            # into account (pun intended ;-))
-            self.tech_acc[msg.name]['password'] = msg.password
+        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
             
 # ##############################################################################
 
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
         """
-        with self.wss_lock:
-            return self.wss.get(name)
+        self.request_handler.security.wss_get(msg, *args)
 
     def on_broker_pull_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
-        with self.wss_lock:
-            self.wss[msg.name] = msg
+        self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_CREATE(msg, *args)
         
     def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
-        with self.wss_lock:
-            del self.wss[msg.old_name]
-            self.wss[msg.name] = msg
+        self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_EDIT(msg, *args)
         
     def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
-        with self.wss_lock:
-            del self.wss[msg.name]
+        self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_DELETE(msg, *args)
         
     def on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
         """
-        with self.wss_lock:
-            # The message's 'password' attribute already takes the salt 
-            # into account.
-            self.wss[msg.name]['password'] = msg.password
+        self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(msg, *args)
             
-# ##############################################################################
-
-    def url_sec_get(self, url):
-        """ Returns the configuration of the given URL
-        """
-        with self.url_sec_lock:
-            return self.url_sec.get(url)
-
 # ##############################################################################
 
     def _on_message_invoke_service(self, msg, channel, action, args=None):

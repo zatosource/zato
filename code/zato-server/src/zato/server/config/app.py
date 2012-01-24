@@ -105,20 +105,6 @@ class ZatoContext(PythonConfig):
     def soap_config(self):
         return {}
 
-    @Object
-    def soap_handler(self):
-        handler = SOAPHandler()
-        handler.soap_config = self.soap_config()
-        handler.service_store = self.service_store()
-        handler.crypto_manager = self.crypto_manager()
-        handler.wss_store = self.wss_username_password_store()
-
-        return handler
-    
-    @Object
-    def plain_http_handler(self):
-        return PlainHTTPHandler()
-
     # #######################################################
     # Security
 
@@ -151,23 +137,14 @@ class ZatoContext(PythonConfig):
     # Servers
     
     @Object
-    def request_handler(self):
-        rh = RequestHandler()
-        rh.security = self.connection_http_soap_security()
-        rh.soap_handler = self.soap_handler()
-        rh.plain_http_handler = self.plain_http_handler()
-        
-        return rh
-
-    @Object
     def parallel_server(self):
 
         server = ParallelServer()
         server.odb = self.odb_manager()
         server.service_store = self.service_store()
-        server.request_handler = self.request_handler()
-        server.request_handler.soap_handler.server = server
-        server.request_handler.plain_http_handler.server = server
+        #server.request_handler = self.request_handler()
+        #server.request_handler.soap_handler.server = server
+        #server.request_handler.plain_http_handler.server = server
 
         return server
 
