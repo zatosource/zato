@@ -311,7 +311,7 @@ class RequestHandler(object):
                     logger.debug(log_msg)
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
-                return handler.handle(rid, request, headers, transport, thread_ctx)
+                return handler.handle(rid, task, request, headers, transport, thread_ctx)
             
             except ClientHTTPError, e:
                 response = e.msg
@@ -329,7 +329,11 @@ class RequestHandler(object):
         
 class _BaseMessageHandler(object):
     
-    def init(self, rid, request, headers, transport):
+    def __init__(self, http_soap={}, server=None):
+        self.http_soap = http_soap
+        self.server = server # A ParallelServer instance.
+    
+    def init(self, rid, task, request, headers, transport):
         logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(rid, request, headers))
 
         if transport == 'soap':
@@ -345,37 +349,41 @@ class _BaseMessageHandler(object):
     
             if not soap_action:
                 raise BadRequest(rid, 'Client sent an empty SOAPAction header')
+        else:
+            soap_action = None
+            
+        _soap_actions = self.http_soap[task.request_data.uri]
+        _service_info = _soap_actions[soap_action]
 
-        class_name = self.soap_config.get(soap_action)
-        logger.debug('[{0}] class_name:[{1}]'.format(rid, class_name))
+        logger.debug('[{0}] impl_name:[{1}]'.format(rid, _service_info.impl_name))
 
-        if not class_name:
-            raise BadRequest(rid, 'Unrecognized SOAPAction [{1}]'.format(soap_action))
+        logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(rid, self.server.service_store.services))
+        service_data = self.server.service_store.service_data(_service_info.impl_name)
 
-        logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(rid, self.service_store.services))
-        service_data = self.service_store.service_data(class_name)
 
-        soap = objectify.fromstring(request)
-        body = soap_body_xpath(soap)
-
-        if not body:
-            raise BadRequest(rid, 'Client did not send the [{1}] element'.format(body_path))
         
         if transport == 'soap':
-            payload = get_body_payload(body)
+            soap = objectify.fromstring(request)
+            body = soap_body_xpath(soap)
+    
+            if not body:
+                raise BadRequest(rid, 'Client did not send the [{1}] element'.format(body_path))
+            
+            
+                payload = get_body_payload(body)
         else:
-            payload = body
+            payload = request
         
-        return payload, class_name, service_data
+        return payload, _service_info.impl_name, service_data
     
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, rid, request, headers, transport, thread_ctx):
+    def handle(self, rid, task, request, headers, transport, thread_ctx):
         
-        payload, class_name, service_data = self.init(rid, request, headers, transport)
+        payload, impl_name, service_data = self.init(rid, task, request, headers, transport)
 
-        service_instance = self.service_store.new_instance(class_name)
+        service_instance = self.server.service_store.new_instance(impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, transport, rid)
 
         service_response = service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
@@ -411,11 +419,8 @@ class _BaseMessageHandler(object):
 class SOAPHandler(_BaseMessageHandler):
     """ Dispatches incoming SOAP messages to services.
     """
-    def __init__(self, soap_config=None, service_store=None, wss_store=None, server=None):
-        self.soap_config = soap_config
-        self.service_store = service_store
-        self.wss_store = wss_store
-        self.server = server # A ParallelServer instance.
+    def __init__(self, http_soap=None, server=None):
+        super(SOAPHandler, self).__init__(http_soap, server)
         
     def handle_security(self):
         if self.wss_store.needs_wss(class_name):
@@ -425,8 +430,8 @@ class SOAPHandler(_BaseMessageHandler):
 class PlainHTTPHandler(_BaseMessageHandler):
     """ Dispatches incoming plain HTTP messages to services.
     """
-    def __init__(self, server=None):
-        self.server = server # A ParallelServer instance.
+    def __init__(self, http_soap=None, server=None):
+        super(PlainHTTPHandler, self).__init__(http_soap, server)
         
-    def handle(self, rid, request, headers, transport, thread_ctx):
-        return super(PlainHTTPHandler, self).handle(rid, request, headers, transport, thread_ctx)
+    def handle(self, rid, task, request, headers, transport, thread_ctx):
+        return super(PlainHTTPHandler, self).handle(rid, task, request, headers, transport, thread_ctx)

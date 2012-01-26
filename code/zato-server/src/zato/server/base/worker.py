@@ -63,15 +63,13 @@ class WorkerStore(BaseWorker):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.worker_data = worker_data
         
-        #self.url_sec = self.worker_data.url_sec
-        
         self.basic_auth_lock = RLock()
         self.tech_acc_lock = RLock()
         self.wss_lock = RLock()
         
         self.request_handler = RequestHandler()
-        self.request_handler.soap_handler = SOAPHandler()
-        self.request_handler.plain_http_handler = PlainHTTPHandler()
+        self.request_handler.soap_handler = SOAPHandler(self.worker_data.http_soap, self.worker_data.server)
+        self.request_handler.plain_http_handler = PlainHTTPHandler(self.worker_data.http_soap, self.worker_data.server)
         self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_data.url_sec, 
                 self.worker_data.basic_auth, self.worker_data.tech_acc, self.worker_data.wss)
         

@@ -218,11 +218,28 @@ class ParallelServer(BrokerMessageReceiver):
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)
         
+        # All the HTTP/SOAP channels.
+        http_soap = Bunch()
+        for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
+            http_soap[item.url_path] = Bunch()
+            http_soap[item.url_path] = Bunch()
+            http_soap[item.url_path][item.soap_action] = Bunch()
+            http_soap[item.url_path][item.soap_action].id = item.id
+            http_soap[item.url_path][item.soap_action].name = item.name
+            http_soap[item.url_path][item.soap_action].is_internal = item.is_internal
+            http_soap[item.url_path][item.soap_action].url_path = item.url_path
+            http_soap[item.url_path][item.soap_action].method = item.method
+            http_soap[item.url_path][item.soap_action].soap_version = item.soap_version
+            http_soap[item.url_path][item.soap_action].service_id = item.service_id
+            http_soap[item.url_path][item.soap_action].service_name = item.service_name
+            http_soap[item.url_path][item.soap_action].impl_name = item.impl_name
+            
         self.worker_config.basic_auth = ba_config
         self.worker_config.tech_acc = ta_config
         self.worker_config.wss = wss_config
         self.worker_config.url_sec = url_sec
-        
+        self.worker_config.http_soap = http_soap
+
         # The parallel server's broker client. The client's used to notify
         # all the server's AMQP subprocesses that they need to shut down.
 

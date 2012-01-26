@@ -297,6 +297,7 @@ def _http_soap(session, cluster_id):
             HTTPSOAP.method, HTTPSOAP.soap_action, HTTPSOAP.soap_version, 
             Service.id.label('service_id'),
             Service.name.label('service_name'),
+            Service.impl_name,
             SecurityDefinition.id.label('security_def_id'),
             SecurityDefinition.security_def_type,
             case([tech_acc_case_id, wss_case_id, basic_auth_case_id]).label('security_id'),
@@ -319,13 +320,18 @@ def http_soap(session, cluster_id, id):
            filter(HTTPSOAP.id==id).\
            one()
 
-def http_soap_list(session, cluster_id, connection, transport):
+def http_soap_list(session, cluster_id, connection=None, transport=None):
     """ HTTP/SOAP connections.
     """
-    return _http_soap(session, cluster_id).\
-           filter(HTTPSOAP.connection==connection).\
-           filter(HTTPSOAP.transport==transport).\
-           all()
+    q = _http_soap(session, cluster_id)
+    
+    if connection:
+        q = q.filter(HTTPSOAP.connection==connection)
+        
+    if transport:
+        q = q.filter(HTTPSOAP.transport==transport)
+        
+    return q.all()
 
 # ##############################################################################
 
