@@ -37,7 +37,7 @@ from zato.common.odb.model import(HTTPSOAP, HTTPSOAPSecurity,
      Service, TechnicalAccount, WSSDefinition)
 from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, 
-    def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_security_list, 
+    def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, 
     internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, out_jms_wmq, 
     out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, tech_acc_list, wss_list)
 from zato.server.pool.sql import ODBConnectionPool
@@ -117,40 +117,40 @@ class ODBManager(object):
         result = {}
 
         sec_def_q = http_soap_security_list(self._session, server.cluster_id).all()
-        for _, _, _, _, transport, url_path, _, _, _, _, _, sec_def_id, sec_def_type, _, _ in sec_def_q:
-
-            result[url_path] = Bunch()
-            result[url_path].transport = transport
+        for item in sec_def_q:
             
-            if sec_def_type:
-                result[url_path].sec_def = Bunch()
-                result[url_path].sec_def.type = sec_def_type
+            result[item.url_path] = Bunch()
+            result[item.url_path].transport = item.transport
+            
+            if item.security_def_type:
+                result[item.url_path].sec_def = Bunch()
+                result[item.url_path].sec_def.type = item.security_def_type
                 
                 # Will raise KeyError if the DB gets somehow misconfigured.
-                db_class = sec_type_db_class[sec_def_type]
+                db_class = sec_type_db_class[item.security_def_type]
     
                 sec_def = self._session.query(db_class).\
-                        filter(db_class.security_def_id==sec_def_id).\
+                        filter(db_class.security_def_id==item.security_def_id).\
                         one()
     
-                if sec_def_type == 'tech_acc':
-                    result[url_path].sec_def.name = sec_def.name
-                    result[url_path].sec_def.password = sec_def.password
-                    result[url_path].sec_def.salt = sec_def.salt
-                elif sec_def_type == 'basic_auth':
-                    result[url_path].sec_def.name = sec_def.name
-                    result[url_path].sec_def.password = sec_def.password
-                    result[url_path].sec_def.domain = sec_def.domain
-                elif sec_def_type == 'wss_username_password':
-                    result[url_path].sec_def.username = sec_def.username
-                    result[url_path].sec_def.password = sec_def.password
-                    result[url_path].sec_def.password_type = sec_def.password_type
-                    result[url_path].sec_def.reject_empty_nonce_ts = sec_def.reject_empty_nonce_ts
-                    result[url_path].sec_def.reject_stale_username = sec_def.reject_stale_username
-                    result[url_path].sec_def.expiry_limit = sec_def.expiry_limit
-                    result[url_path].sec_def.nonce_freshness = sec_def.nonce_freshness
+                if item.security_def_type == 'tech_acc':
+                    result[item.url_path].sec_def.name = sec_def.name
+                    result[item.url_path].sec_def.password = sec_def.password
+                    result[item.url_path].sec_def.salt = sec_def.salt
+                elif item.security_def_type == 'basic_auth':
+                    result[item.url_path].sec_def.name = sec_def.name
+                    result[item.url_path].sec_def.password = sec_def.password
+                    result[item.url_path].sec_def.domain = sec_def.domain
+                elif item.security_def_type == 'wss_username_password':
+                    result[item.url_path].sec_def.username = sec_def.username
+                    result[item.url_path].sec_def.password = sec_def.password
+                    result[item.url_path].sec_def.password_type = sec_def.password_type
+                    result[item.url_path].sec_def.reject_empty_nonce_ts = sec_def.reject_empty_nonce_ts
+                    result[item.url_path].sec_def.reject_stale_username = sec_def.reject_stale_username
+                    result[item.url_path].sec_def.expiry_limit = sec_def.expiry_limit
+                    result[item.url_path].sec_def.nonce_freshness = sec_def.nonce_freshness
             else:
-                result[url_path].sec_def = ZATO_NONE
+                result[item.url_path].sec_def = ZATO_NONE
 
         return result
 
@@ -203,6 +203,11 @@ class ODBManager(object):
         channels pointing to internal services.
         """
         return internal_channel_list(self._session, cluster_id)
+    
+    def get_http_soap_list(self, cluster_id, connection=None, transport=None):
+        """ Returns the list of all HTTP/SOAP channels.
+        """
+        return http_soap_list(self._session, cluster_id, connection, transport)
 
 # ##############################################################################
 
