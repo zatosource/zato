@@ -222,7 +222,6 @@ class ParallelServer(BrokerMessageReceiver):
         http_soap = Bunch()
         for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
             http_soap[item.url_path] = Bunch()
-            http_soap[item.url_path] = Bunch()
             http_soap[item.url_path][item.soap_action] = Bunch()
             http_soap[item.url_path][item.soap_action].id = item.id
             http_soap[item.url_path][item.soap_action].name = item.name

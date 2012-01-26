@@ -351,8 +351,10 @@ class _BaseMessageHandler(object):
                 raise BadRequest(rid, 'Client sent an empty SOAPAction header')
         else:
             soap_action = None
-            
+
         _soap_actions = self.http_soap[task.request_data.uri]
+        print(333, soap_action, _soap_actions)
+        
         _service_info = _soap_actions[soap_action]
 
         logger.debug('[{0}] impl_name:[{1}]'.format(rid, _service_info.impl_name))
