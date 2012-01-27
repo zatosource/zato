@@ -80,7 +80,7 @@ class Create(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['cluster_id', 'name', 'is_active', 'url_path', 'connection', 'transport']
+            core_params = ['cluster_id', 'name', 'is_active', 'is_internal', 'url_path', 'connection', 'transport']
             core_params = _get_params(payload, core_params, 'data.')
 
             optional_params = ['method', 'soap_action', 'soap_version']
@@ -106,6 +106,7 @@ class Create(AdminService):
                 item = HTTPSOAP()
                 item.name = core_params['name']
                 item.is_active = core_params['is_active']
+                item.is_internal = core_params['is_internal']
                 item.url_path = core_params['url_path']
                 item.connection = core_params['connection']
                 item.transport = core_params['transport']
