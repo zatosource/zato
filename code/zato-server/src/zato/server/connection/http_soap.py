@@ -94,6 +94,10 @@ class BadRequest(ClientHTTPError):
 class Forbidden(ClientHTTPError):
     def __init__(self, rid, msg):
         super(Forbidden, self).__init__(rid, msg, FORBIDDEN)
+        
+class NotFound(ClientHTTPError):
+    def __init__(self, rid, msg):
+        super(NotFound, self).__init__(rid, msg, NOT_FOUND)
 
 class Security(object):
     """ Performs all the HTTP/SOAP-related security checks.
@@ -139,21 +143,25 @@ class Security(object):
                       "headers=[{3}]]").\
                         format(rid, header, request_data.uri, headers)
                 logger.error(error_msg)
-                raise HTTPException(rid, error_msg, FORBIDDEN)
+                raise Forbidden(rid, error_msg)
 
+        # Note that logs get a specific information what went wrong whereas the
+        # user gets a generic 'username or password' message
         msg_template = '[{0}] The {1} is incorrect, URI:[{2}], X_ZATO_USER:[{3}]'
 
         if headers['X_ZATO_USER'] != sec_def.name:
             error_msg = msg_template.format(rid, 'username', request_data.uri, headers['X_ZATO_USER'])
+            user_msg = msg_template.format(rid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
             logger.error(error_msg)
-            raise HTTPException(rid, error_msg, FORBIDDEN)
+            raise Forbidden(rid, user_msg)
         
         incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
         
         if incoming_password != sec_def.password:
             error_msg = msg_template.format(rid, 'password', request_data.uri, headers['X_ZATO_USER'])
+            user_msg = msg_template.format(rid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
             logger.error(error_msg)
-            raise HTTPException(rid, error_msg, FORBIDDEN)
+            raise Forbidden(rid, user_msg)
         
 # ##############################################################################
         
@@ -352,25 +360,29 @@ class _BaseMessageHandler(object):
         else:
             soap_action = None
 
-        _soap_actions = self.http_soap[task.request_data.uri]
-        _service_info = _soap_actions[soap_action]
+        _soap_actions = self.http_soap.getall(task.request_data.uri)
+        for _soap_action_info in _soap_actions:
+            if soap_action in _soap_action_info:
+                _service_info = _soap_action_info[soap_action]
+                break
+        else:
+            msg = '[{0}] Could not find the service config for URL:[{1}], SOAP action:[{2}]'.format(
+                rid, task.request_data.uri, soap_action)
+            logger.warn(msg)
+            raise NotFound(rid, msg)
 
         logger.debug('[{0}] impl_name:[{1}]'.format(rid, _service_info.impl_name))
 
         logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(rid, self.server.service_store.services))
         service_data = self.server.service_store.service_data(_service_info.impl_name)
 
-
-        
         if transport == 'soap':
             soap = objectify.fromstring(request)
             body = soap_body_xpath(soap)
     
             if not body:
                 raise BadRequest(rid, 'Client did not send the [{1}] element'.format(body_path))
-            
-            
-                payload = get_body_payload(body)
+            payload = get_body_payload(body)
         else:
             payload = request
         

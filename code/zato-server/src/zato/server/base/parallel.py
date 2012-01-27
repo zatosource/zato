@@ -32,6 +32,9 @@ from zope.server.http.httpserver import HTTPServer
 # ZeroMQ
 import zmq
 
+# Paste
+from paste.util.multidict import MultiDict
+
 # Bunch
 from bunch import Bunch
 
@@ -219,19 +222,20 @@ class ParallelServer(BrokerMessageReceiver):
         url_sec = self.odb.get_url_security(server)
         
         # All the HTTP/SOAP channels.
-        http_soap = Bunch()
+        http_soap = MultiDict()
         for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
-            http_soap[item.url_path] = Bunch()
-            http_soap[item.url_path][item.soap_action] = Bunch()
-            http_soap[item.url_path][item.soap_action].id = item.id
-            http_soap[item.url_path][item.soap_action].name = item.name
-            http_soap[item.url_path][item.soap_action].is_internal = item.is_internal
-            http_soap[item.url_path][item.soap_action].url_path = item.url_path
-            http_soap[item.url_path][item.soap_action].method = item.method
-            http_soap[item.url_path][item.soap_action].soap_version = item.soap_version
-            http_soap[item.url_path][item.soap_action].service_id = item.service_id
-            http_soap[item.url_path][item.soap_action].service_name = item.service_name
-            http_soap[item.url_path][item.soap_action].impl_name = item.impl_name
+            _info = Bunch()
+            _info[item.soap_action] = Bunch()
+            _info[item.soap_action].id = item.id
+            _info[item.soap_action].name = item.name
+            _info[item.soap_action].is_internal = item.is_internal
+            _info[item.soap_action].url_path = item.url_path
+            _info[item.soap_action].method = item.method
+            _info[item.soap_action].soap_version = item.soap_version
+            _info[item.soap_action].service_id = item.service_id
+            _info[item.soap_action].service_name = item.service_name
+            _info[item.soap_action].impl_name = item.impl_name
+            http_soap.add(item.url_path, _info)
             
         self.worker_config.basic_auth = ba_config
         self.worker_config.tech_acc = ta_config
