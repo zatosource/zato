@@ -81,6 +81,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.data.is_internal = False
     zato_message.data.connection = params['connection']
     zato_message.data.transport = params['transport']
     zato_message.data.url_path = params[prefix + 'url_path']
