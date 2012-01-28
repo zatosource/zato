@@ -425,7 +425,15 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 
     var item = new $.fn.zato.data_table.class_();
     var form = $(String.format('#{0}-form', action));
-    var prefix = action + '-';
+    
+    var prefix;
+    if(action == 'edit') {
+        prefix = action + '-';
+    }
+    else {
+        prefix = '';
+    }
+    
     var name = '';
     var id = '';
     var tag_name = '';
