@@ -77,17 +77,26 @@ def _get_edit_create_message(params, prefix=''):
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
     zato_message.data = Element('data')
+    zato_message.data.is_internal = False
+    zato_message.data.connection = params['connection']
+    zato_message.data.transport = params['transport']
     zato_message.data.id = params.get('id')
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.is_internal = False
-    zato_message.data.connection = params['connection']
-    zato_message.data.transport = params['transport']
     zato_message.data.url_path = params[prefix + 'url_path']
     zato_message.data.method = params[prefix + 'method']
     zato_message.data.soap_action = params.get(prefix + 'soap_action', '')
     zato_message.data.soap_version = params.get(prefix + 'soap_version', '')
+    zato_message.data.service = params[prefix + 'service']
+
+    security = params[prefix + 'security']
+    if security != ZATO_NONE:
+        _, sec_def_id = security.split('/')
+    else:
+        _, sec_def_id = ZATO_NONE, ZATO_NONE
+        
+    zato_message.data.sec_def_id = sec_def_id
 
     return zato_message
 
