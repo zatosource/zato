@@ -35,9 +35,10 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.common import ZatoException, ZATO_OK
-from zato.common.odb.model import Cluster, HTTPSOAP
+from zato.common import ZatoException, ZATO_NONE, ZATO_OK
+from zato.common.odb.model import Cluster, HTTPSOAP, HTTPSOAPSecurity, SecurityDefinition, Service
 from zato.common.odb.query import http_soap_list
+from zato.common.util import security_def_type
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
@@ -80,7 +81,9 @@ class Create(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['cluster_id', 'name', 'is_active', 'is_internal', 'url_path', 'connection', 'transport']
+            core_params = ['connection', 'transport', 'cluster_id', 'name', 
+                           'is_active', 'is_internal', 'url_path', 'service', 
+                           'sec_def_id']
             core_params = _get_params(payload, core_params, 'data.')
 
             optional_params = ['method', 'soap_action', 'soap_version']
@@ -88,6 +91,8 @@ class Create(AdminService):
 
             name = core_params['name']
             cluster_id = core_params['cluster_id']
+            service_name = core_params['service']
+            sec_def_id = core_params['sec_def_id']
 
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==cluster_id).\
@@ -96,24 +101,50 @@ class Create(AdminService):
 
             if existing_one:
                 raise Exception('An object of that name [{0}] already exists on this cluster'.format(name))
+            
+            # Is the service's name correct?
+            service = session.query(Service).\
+                filter(Cluster.id==cluster_id).\
+                filter(Service.name==service_name).first()
+            
+            if not service:
+                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                self.logger.error(msg)
+                raise Exception(msg)
+            
+            # Now onto assigning the security-related attributes.
+
+            if sec_def_id != ZATO_NONE:
+                sec_def = session.query(SecurityDefinition).\
+                filter(SecurityDefinition.id==sec_def_id).\
+                one()
+                
+                #sec_def = SecurityDefinition(None, security_def_type)
+                #session.add(sec_def)
 
             created_elem = Element('http_soap')
-
+            
             try:
 
                 core_params['is_active'] = is_boolean(core_params['is_active'])
 
                 item = HTTPSOAP()
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.is_internal = core_params['is_internal']
-                item.url_path = core_params['url_path']
                 item.connection = core_params['connection']
                 item.transport = core_params['transport']
                 item.cluster_id = core_params['cluster_id']
+                item.is_internal = core_params['is_internal']
+                item.name = core_params['name']
+                item.is_active = core_params['is_active']
+                item.url_path = core_params['url_path']
                 item.method = optional_params.get('method')
                 item.soap_action = optional_params.get('soap_action')
                 item.soap_version = optional_params.get('soap_version')
+                item.service = service
+                
+                if sec_def_id != ZATO_NONE:
+                    
+                    channel_sec = HTTPSOAPSecurity(item, sec_def)
+                    session.add(channel_sec)
 
                 session.add(item)
                 session.commit()
