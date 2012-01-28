@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging, time
 from cgi import escape
 from hashlib import sha256
-from httplib import BAD_REQUEST, FORBIDDEN, NOT_FOUND, responses
+from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from string import Template
 from threading import RLock
 from traceback import format_exc
@@ -64,6 +64,9 @@ soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
       </SOAP-ENV:Fault>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>""")
+
+_reason_not_found = responses[NOT_FOUND]
+_reason_internal_server_error = responses[INTERNAL_SERVER_ERROR]
 
 def get_body_payload(body):
     body_children_count = body[0].countchildren()
@@ -320,17 +323,34 @@ class RequestHandler(object):
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
                 return handler.handle(rid, task, request, headers, transport, thread_ctx)
-            
-            except ClientHTTPError, e:
-                response = e.msg
+
+            except Exception, e:
+                _format_exc = format_exc(e)
+                if isinstance(e, ClientHTTPError):
+                    response = e.msg
+                    status = e.status
+                    reason = e.reason
+                else:
+                    response = _format_exc
+                    status = INTERNAL_SERVER_ERROR
+                    reason = _reason_internal_server_error
+                    
+                # TODO: This should be configurable. Some people may want such
+                # things to be on DEBUG whereas for others ERROR will make most sense
+                # in given circumstances.
+                if logger.isEnabledFor(logging.DEBUG):
+                    msg = 'Caught an exception, rid:[{0}], status:[{1}], reason:[{2}], _format_exc:[{3}]'.format(
+                        rid, status, reason, _format_exc)
+                    logger.debug(msg)
+                    
                 if transport == 'soap':
                     response = client_soap_error(rid, response)
                     
-                task.setResponseStatus(e.status, e.reason)
+                task.setResponseStatus(status, reason)
                 return response
         else:
             response = "[{0}] The URL [{1}] doesn't exist".format(rid, task.request_data.uri)
-            task.setResponseStatus(NOT_FOUND, responses[NOT_FOUND])
+            task.setResponseStatus(NOT_FOUND, _reason_not_found)
             
             logger.error(response)
             return response
