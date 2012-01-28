@@ -194,6 +194,7 @@ class ZatoException(Exception):
     """ Base class for all Zato custom exceptions.
     """
     def __init__(self, rid=None, msg=None):
+        super(ZatoException, self).__init__(msg)
         self.rid = rid
         self.msg = msg
 
