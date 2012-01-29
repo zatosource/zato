@@ -24,9 +24,9 @@ from sqlalchemy.sql.expression import case, literal_column
 
 # Zato
 from zato.common.odb.model import(ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, 
-    ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, HTTPSOAPSecurity,
-    IntervalBasedJob, Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, 
-    SecurityDefinition, Service, TechnicalAccount, WSSDefinition)
+    ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, 
+    Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, 
+    Service, TechnicalAccount, WSSDefinition)
 
 # ##############################################################################
 

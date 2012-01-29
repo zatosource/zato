@@ -32,8 +32,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.odb.model import(HTTPSOAP, HTTPSOAPSecurity,
-     Cluster, DeployedService, HTTPBasicAuth, SecurityDefinition, Server,
+from zato.common.odb.model import(HTTPSOAP, Cluster, DeployedService, HTTPBasicAuth, Server,
      Service, TechnicalAccount, WSSDefinition)
 from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, 
