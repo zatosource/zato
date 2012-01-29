@@ -28,10 +28,6 @@ from hashlib import sha256
 from string import Template
 from uuid import uuid4
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 # M2Crypto
 from M2Crypto import RSA
 
@@ -401,6 +397,15 @@ class Quickstart(ZatoCommand):
                 'zato:http_soap.edit':'zato.server.service.internal.http_soap.Edit',
                 'zato:http_soap.delete':'zato.server.service.internal.http_soap.Delete',
             }
+            
+            #
+            # TechnicalAccount
+            #
+            salt = uuid4().hex
+            password = tech_account_password(tech_account_password_clear, salt)
+            tech_account = TechnicalAccount(None, tech_account_name, True, 
+                password, salt, security_def_type.tech_account, cluster)
+            session.add(tech_account)
 
             #
             # HTTPSOAP + services
@@ -414,7 +419,8 @@ class Quickstart(ZatoCommand):
                 session.add(service)
                 
                 zato_soap = HTTPSOAP(None, soap_action, True, True, 'channel', 
-                    'soap', '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster)
+                    'soap', '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster,
+                    security_id=tech_account.id)
                 session.add(zato_soap)
                 
                 zato_soap_channels.append(zato_soap)
@@ -422,26 +428,18 @@ class Quickstart(ZatoCommand):
             #
             # Security definition for all the other admin services uses a technical account.
             #
-            sec_def = SecurityDefinition(None, security_def_type.tech_account)
-            session.add(sec_def)
+            #sec_def = SecurityDefinition(None, security_def_type.tech_account)
+            #session.add(sec_def)
             
             #
             # HTTPSOAPSecurity
             #
-            for soap_channel in zato_soap_channels:
-                chan_url_sec = HTTPSOAPSecurity(soap_channel, sec_def)
-                session.add(chan_url_sec)
+            #for soap_channel in zato_soap_channels:
+            #    chan_url_sec = HTTPSOAPSecurity(soap_channel, sec_def)
+            #    session.add(chan_url_sec)
                 
             # Ping services
-            self.add_ping(session, cluster)
-            
-            #
-            # TechnicalAccount
-            #
-            salt = uuid4().hex
-            password = tech_account_password(tech_account_password_clear, salt)
-            tech_account = TechnicalAccount(None, tech_account_name, password, salt, True, sec_def, cluster=cluster)
-            session.add(tech_account)
+            #self.add_ping(session, cluster)
             
             # Commit all the stuff.
             session.commit()
