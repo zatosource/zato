@@ -152,21 +152,95 @@ class Server(Base):
 
 ################################################################################
 
-class SecurityBase(ConcreteBase, Base):
-    """ A base class for any security definition.
+class SecurityBase(Base):
+    """ A base class for all the security definitions.
     """
     __tablename__ = 'sec_base'
-    __mapper_args__ = {'polymorphic_identity':'sec_base', 'concrete':False}
-
-    id = Column(Integer,  Sequence('sec_base_id_seq'), primary_key=True)
+    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
+    __mapper_args__ = {'polymorphic_on': 'sec_type'}
+    
+    id = Column(Integer,  Sequence('sec_base_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
     sec_type = Column(String(45), nullable=False)
     
-    def __init__(self, id=None, sec_type=None):
-        self.id = id
-        self.sec_type = sec_type
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('http_basic_auth_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __repr__(self):
-        return make_repr(self)
+class HTTPBasicAuth(SecurityBase):
+    """ An HTTP Basic Auth definition.
+    """    
+    __tablename__ = 'sec_basic_auth'
+    __mapper_args__ = {'polymorphic_identity': 'basic_auth'}
+    
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+
+    username = Column(String(200), nullable=False)
+    domain = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None,
+                 domain=None, password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.domain = domain
+        self.password = password
+        self.cluster = cluster
+
+class WSSDefinition(SecurityBase):
+    """ A WS-Security definition.
+    """
+    __tablename__ = 'sec_wss_def'
+    __mapper_args__ = {'polymorphic_identity':'wss'}
+    
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    
+    username = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    password_type = Column(String(45), nullable=False)
+    reject_empty_nonce_ts = Column(Boolean(), nullable=False)
+    reject_stale_username = Column(Boolean(), nullable=True)
+    expiry_limit = Column(Integer(), nullable=False)
+    nonce_freshness = Column(Integer(), nullable=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None,
+                 password=None, password_type=None, reject_empty_nonce_ts=None,
+                 reject_stale_username=None, expiry_limit=None,
+                 nonce_freshness=None, cluster=None, password_type_raw=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.password = password
+        self.password_type = password_type
+        self.reject_empty_nonce_ts = reject_empty_nonce_ts
+        self.reject_stale_username = reject_stale_username
+        self.expiry_limit = expiry_limit
+        self.nonce_freshness = nonce_freshness
+        self.cluster = cluster
+        self.password_type_raw = password_type_raw
+
+class TechnicalAccount(object):
+    """ Stores information about technical accounts, used for instance by Zato
+    itself for securing access to its API.
+    """
+    __tablename__ = 'sec_tech_account'
+    __mapper_args__ = {'polymorphic_identity':'tech_acc'}
+
+    password = Column(String(64), nullable=False)
+    salt = Column(String(32), nullable=False)
+    
+    sec_type = Column(String(45), nullable=False)
+
+    def __init__(self, id=None, name=None, is_active=None, password=None, salt=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.password = password
+        self.salt = salt
+        self.cluster = cluster
 
 ################################################################################
 
@@ -198,13 +272,12 @@ class HTTPSOAP(Base):
     cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
     
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
-    sec_type = Column(String(45), nullable=False)
-
+    security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
+    
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
                  connection=None, transport=None, url_path=None, method=None, 
                  soap_action=None, soap_version=None, service_id=None, service=None,
-                 cluster_id=None, cluster=None, service_name=None, security_id=None,
-                 security_name=None):
+                 security=None, cluster_id=None, cluster=None, service_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -217,122 +290,10 @@ class HTTPSOAP(Base):
         self.soap_version = soap_version
         self.service_id = service_id
         self.service = service
+        self.security = security
         self.cluster_id = cluster_id
         self.cluster = cluster
         self.service_name = service_name # Not used by the DB
-        self.security_id = security_id # Not used by the DB
-        self.security_name = security_name # Not used by the DB
-
-################################################################################
-
-class WSSDefinition(Base):
-    """ A WS-Security definition.
-    """
-    __tablename__ = 'wss_def'
-    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
-    __mapper_args__ = {'polymorphic_identity':'wss', 'concrete':True}
-
-    id = Column(Integer,  Sequence('wss_def_id_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    username = Column(String(200), nullable=False)
-    password = Column(String(200), nullable=False)
-    password_type = Column(String(45), nullable=False)
-    reject_empty_nonce_ts = Column(Boolean(), nullable=False)
-    reject_stale_username = Column(Boolean(), nullable=True)
-    expiry_limit = Column(Integer(), nullable=False)
-    nonce_freshness = Column(Integer(), nullable=True)
-
-    sec_type = Column(String(45), nullable=False)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('wss_defs', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, username=None,
-                 password=None, password_type=None, reject_empty_nonce_ts=None,
-                 reject_stale_username=None, expiry_limit=None,
-                 nonce_freshness=None, sec_type=None, cluster=None, password_type_raw=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.password = password
-        self.password_type = password_type
-        self.reject_empty_nonce_ts = reject_empty_nonce_ts
-        self.reject_stale_username = reject_stale_username
-        self.expiry_limit = expiry_limit
-        self.nonce_freshness = nonce_freshness
-        self.sec_type = sec_type
-        self.cluster = cluster
-        self.password_type_raw = password_type_raw
-
-    def __repr__(self):
-        return make_repr(self)
-
-class HTTPBasicAuth(Base):
-    """ An HTTP Basic Auth definition.
-    """
-    __tablename__ = 'http_basic_auth_def'
-    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
-    __mapper_args__ = {'polymorphic_identity':'basic_auth', 'concrete':True}
-
-    id = Column(Integer,  Sequence('http_b_auth_def_id_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    username = Column(String(200), nullable=False)
-    domain = Column(String(200), nullable=False)
-    password = Column(String(200), nullable=False)
-
-    sec_type = Column(String(45), nullable=False)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_basic_auth_defs', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, username=None,
-                 domain=None, password=None, sec_type=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.domain = domain
-        self.password = password
-        self.sec_type = sec_type
-        self.cluster = cluster
-
-    def __repr__(self):
-        return make_repr(self)
-    
-class TechnicalAccount(Base):
-    """ Stores information about technical accounts, used for instance by Zato
-    itself for securing access to its API.
-    """
-    __tablename__ = 'tech_account'
-    __table_args__ = (UniqueConstraint('name'), {})
-    __mapper_args__ = {'polymorphic_identity':'tech_acc', 'concrete':True}
-
-    id = Column(Integer,  Sequence('tech_account_id_seq'), primary_key=True)
-    name = Column(String(45), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    password = Column(String(64), nullable=False)
-    salt = Column(String(32), nullable=False)
-    
-    sec_type = Column(String(45), nullable=False)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('tech_accounts', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, password=None, 
-                 salt=None, sec_type=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.password = password
-        self.salt = salt
-        self.sec_type = sec_type
-        self.cluster = cluster
-
-    def to_json(self):
-        return to_json(self)
 
 ################################################################################
 
