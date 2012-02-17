@@ -98,9 +98,9 @@ class Quickstart(ZatoCommand):
             #
             # .. no security ..
             #
-            ping_no_sec_channel = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
-                                           'plain_http', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
-            session.add(ping_no_sec_channel)
+            #ping_no_sec_channel = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
+            #                               'plain_http', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
+            #session.add(ping_no_sec_channel)
 
 
             #
@@ -125,17 +125,12 @@ class Quickstart(ZatoCommand):
                 soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else (None, None)
                 password = passwords[base_name]
                 
-                sec_def = SecurityDefinition(None, security_def_type.basic_auth)
-                session.add(sec_def)
-                
-                sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', password, sec_def, cluster)
+                sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', password, cluster)
                 session.add(sec)
                 
-                channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, soap_version, service=ping_service, cluster=cluster)
+                channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, 
+                                   soap_version, service=ping_service, security=sec, cluster=cluster)
                 session.add(channel)
-                
-                channel_sec = HTTPSOAPSecurity(channel, sec_def)
-                session.add(channel_sec)
                 
                 for wss_type in wss_types:
                     base_name = 'ping.{0}.wss.{1}'.format(transport, wss_type)
@@ -143,17 +138,12 @@ class Quickstart(ZatoCommand):
                     url = '/zato/{0}'.format(base_name)
                     password = passwords[base_name]
                     
-                    sec_def = SecurityDefinition(None, security_def_type.wss_username_password)
-                    session.add(sec_def)
+                    #sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, True, True, 3600, 3600, cluster)
+                    #session.add(sec)
                     
-                    sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, True, True, 3600, 3600, sec_def, cluster)
-                    session.add(sec)
-                    
-                    channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, soap_version, service=ping_service, cluster=cluster)
-                    session.add(channel)
-                    
-                    channel_sec = HTTPSOAPSecurity(channel, sec_def)
-                    session.add(channel_sec)
+                    #channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, 
+                    #                   soap_version, service=ping_service, cluster=cluster)
+                    #session.add(channel)
                     
     def execute(self, args):
         try:
@@ -403,9 +393,9 @@ class Quickstart(ZatoCommand):
             #
             salt = uuid4().hex
             password = tech_account_password(tech_account_password_clear, salt)
-            tech_account = TechnicalAccount(None, tech_account_name, True, 
-                password, salt, security_def_type.tech_account, cluster)
-            session.add(tech_account)
+            #tech_account = TechnicalAccount(None, tech_account_name, True, 
+            #    password, salt, security_def_type.tech_account, cluster)
+            #session.add(tech_account)
 
             #
             # HTTPSOAP + services
@@ -413,17 +403,18 @@ class Quickstart(ZatoCommand):
 
             zato_soap_channels = []
             
-            for soap_action, service_name in soap_services.iteritems():
+            '''for soap_action, service_name in soap_services.iteritems():
                 
                 service = Service(None, service_name, True, service_name, True, cluster)
-                session.add(service)
+                #session.add(service)
                 
                 zato_soap = HTTPSOAP(None, soap_action, True, True, 'channel', 
                     'soap', '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster,
                     security_id=tech_account.id)
-                session.add(zato_soap)
+                #session.add(zato_soap)
                 
-                zato_soap_channels.append(zato_soap)
+                #zato_soap_channels.append(zato_soap)
+                '''
                 
             #
             # Security definition for all the other admin services uses a technical account.
@@ -439,7 +430,7 @@ class Quickstart(ZatoCommand):
             #    session.add(chan_url_sec)
                 
             # Ping services
-            #self.add_ping(session, cluster)
+            self.add_ping(session, cluster)
             
             # Commit all the stuff.
             session.commit()
