@@ -222,12 +222,14 @@ class WSSDefinition(SecurityBase):
         self.cluster = cluster
         self.password_type_raw = password_type_raw
 
-class TechnicalAccount(object):
+class TechnicalAccount(SecurityBase):
     """ Stores information about technical accounts, used for instance by Zato
     itself for securing access to its API.
     """
-    __tablename__ = 'sec_tech_account'
+    __tablename__ = 'sec_tech_acc'
     __mapper_args__ = {'polymorphic_identity':'tech_acc'}
+    
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
 
     password = Column(String(64), nullable=False)
     salt = Column(String(32), nullable=False)
@@ -271,7 +273,7 @@ class HTTPSOAP(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
     
-    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
