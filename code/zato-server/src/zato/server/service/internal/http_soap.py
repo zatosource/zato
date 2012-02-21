@@ -36,7 +36,7 @@ from validate import is_boolean
 
 # Zato
 from zato.common import ZatoException, ZATO_NONE, ZATO_OK
-from zato.common.odb.model import Cluster, HTTPSOAP, HTTPSOAPSecurity, SecurityDefinition, Service
+from zato.common.odb.model import Cluster, HTTPSOAP, Service
 from zato.common.odb.query import http_soap_list
 from zato.common.util import security_def_type
 from zato.server.service.internal import _get_params, AdminService
@@ -114,13 +114,13 @@ class Create(AdminService):
             
             # Now onto assigning the security-related attributes.
 
-            if sec_def_id != ZATO_NONE:
-                sec_def = session.query(SecurityDefinition).\
-                filter(SecurityDefinition.id==sec_def_id).\
-                one()
-                
-                #sec_def = SecurityDefinition(None, security_def_type)
-                #session.add(sec_def)
+            #if sec_def_id != ZATO_NONE:
+            #    sec_def = session.query(SecurityDefinition).\
+            #    filter(SecurityDefinition.id==sec_def_id).\
+            #    one()
+            #    
+            #    #sec_def = SecurityDefinition(None, security_def_type)
+            #    #session.add(sec_def)
 
             created_elem = Element('http_soap')
             
@@ -141,10 +141,10 @@ class Create(AdminService):
                 item.soap_version = optional_params.get('soap_version')
                 item.service = service
                 
-                if sec_def_id != ZATO_NONE:
-                    
-                    channel_sec = HTTPSOAPSecurity(item, sec_def)
-                    session.add(channel_sec)
+                #if sec_def_id != ZATO_NONE:
+                #    
+                #    channel_sec = HTTPSOAPSecurity(item, sec_def)
+                #    session.add(channel_sec)
 
                 session.add(item)
                 session.commit()

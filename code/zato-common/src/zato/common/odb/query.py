@@ -65,7 +65,7 @@ def basic_auth_list(session, cluster_id):
     """
     return session.query(HTTPBasicAuth).\
         filter(Cluster.id==cluster_id).\
-        order_by('http_basic_auth_def.name').\
+        order_by('sec_basic_auth.name').\
         all()
 
 def tech_acc_list(session, cluster_id):
@@ -74,6 +74,7 @@ def tech_acc_list(session, cluster_id):
     return session.query(TechnicalAccount).\
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
+        order_by('sec_tech_acc.name').\
         all()
 
 def wss_list(session, cluster_id):
@@ -81,7 +82,7 @@ def wss_list(session, cluster_id):
     """
     return session.query(WSSDefinition).\
         filter(Cluster.id==cluster_id).\
-        order_by('wss_def.name').\
+        order_by('sec_wss_def.name').\
         all()
 
 # ##############################################################################
@@ -298,13 +299,13 @@ def _http_soap(session, cluster_id):
             Service.id.label('service_id'),
             Service.name.label('service_name'),
             Service.impl_name,
-            SecurityDefinition.id.label('security_def_id'),
-            SecurityDefinition.security_def_type,
-            case([tech_acc_case_id, wss_case_id, basic_auth_case_id]).label('security_id'),
-            case([tech_acc_case_name, wss_case_name, basic_auth_case_name]).label('security_name'),
+            #SecurityDefinition.id.label('security_def_id'),
+            #SecurityDefinition.security_def_type,
+            #case([tech_acc_case_id, wss_case_id, basic_auth_case_id]).label('security_id'),
+            #case([tech_acc_case_name, wss_case_name, basic_auth_case_name]).label('security_name'),
             ).\
-        outerjoin(HTTPSOAPSecurity, HTTPSOAPSecurity.http_soap_id==HTTPSOAP.id).\
-        outerjoin(SecurityDefinition, HTTPSOAPSecurity.security_def_id==SecurityDefinition.id).\
+        #outerjoin(HTTPSOAPSecurity, HTTPSOAPSecurity.http_soap_id==HTTPSOAP.id).\
+        #outerjoin(SecurityDefinition, HTTPSOAPSecurity.security_def_id==SecurityDefinition.id).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
         filter(Service.id==HTTPSOAP.service_id).\
         filter(Cluster.id==cluster_id).\
