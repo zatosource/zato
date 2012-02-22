@@ -506,16 +506,16 @@ class ManageCommand(ZatoCommand):
         p.wait()
 
         if p.returncode is None:
-            msg = 'Could not execute command {0} (p.returncode is None)'
-            msg = msg.format(command)
+            msg = 'Could not execute command_list {0} (p.returncode is None)'
+            msg = msg.format(str(command_list))
             raise Exception(msg)
 
         else:
             if p.returncode != 0:
                 stdout, stderr = p.communicate()
-                msg = 'Failed to execute command {0}.'
+                msg = 'Failed to execute command_list {0}.'
                 msg += ' return code=[{1}], stdout=[{2}], stderr=[{3}]'
-                msg = msg.format(command, p.returncode, stdout, stderr)
+                msg = msg.format(str(command_list), p.returncode, stdout, stderr)
                 raise Exception(msg)
 
             stdout, stderr = p.communicate()
