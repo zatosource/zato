@@ -32,8 +32,8 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.odb.model import(HTTPSOAP, Cluster, DeployedService, HTTPBasicAuth, Server,
-     Service, TechnicalAccount, WSSDefinition)
+from zato.common.odb.model import(HTTPSOAP, Cluster, DeployedService, HTTPBasicAuth, 
+    SecurityBase, Server, Service, TechnicalAccount, WSSDefinition)
 from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, 
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, 
@@ -110,7 +110,7 @@ class ODBManager(object):
         sec_type_db_class = {
             'tech_acc': TechnicalAccount,
             'basic_auth': HTTPBasicAuth,
-            'wss_username_password': WSSDefinition
+            'wss': WSSDefinition
             }
 
         result = {}
@@ -120,27 +120,28 @@ class ODBManager(object):
             
             result[item.url_path] = Bunch()
             result[item.url_path].transport = item.transport
-            
-            if item.security_def_type:
+            result[item.url_path].sec_def = Bunch()
+
+            if item.security_id:
                 result[item.url_path].sec_def = Bunch()
-                result[item.url_path].sec_def.type = item.security_def_type
+                result[item.url_path].sec_def.type = item.sec_type
                 
                 # Will raise KeyError if the DB gets somehow misconfigured.
-                db_class = sec_type_db_class[item.security_def_type]
+                db_class = sec_type_db_class[item.sec_type]
     
                 sec_def = self._session.query(db_class).\
-                        filter(db_class.security_def_id==item.security_def_id).\
+                        filter(db_class.id==item.security_id).\
                         one()
     
-                if item.security_def_type == 'tech_acc':
+                if item.sec_type == 'tech_acc':
                     result[item.url_path].sec_def.name = sec_def.name
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.salt = sec_def.salt
-                elif item.security_def_type == 'basic_auth':
+                elif item.sec_type == 'basic_auth':
                     result[item.url_path].sec_def.name = sec_def.name
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.domain = sec_def.domain
-                elif item.security_def_type == 'wss_username_password':
+                elif item.sec_type == 'wss_username_password':
                     result[item.url_path].sec_def.username = sec_def.username
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.password_type = sec_def.password_type

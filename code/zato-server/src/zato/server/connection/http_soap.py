@@ -381,8 +381,12 @@ class _BaseMessageHandler(object):
             soap_action = None
 
         _soap_actions = self.http_soap.getall(task.request_data.uri)
+        
         for _soap_action_info in _soap_actions:
-            if soap_action in _soap_action_info:
+            
+            # TODO: Remove the call to .keys() when this pull request is merged in
+            #       https://github.com/dsc/bunch/pull/4
+            if soap_action in _soap_action_info.keys():
                 _service_info = _soap_action_info[soap_action]
                 break
         else:
