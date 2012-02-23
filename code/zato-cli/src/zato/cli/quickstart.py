@@ -134,7 +134,7 @@ class Quickstart(ZatoCommand):
                 
                 for wss_type in wss_types:
                     base_name = 'ping.{0}.wss.{1}'.format(transport, wss_type)
-                    zato_name = 'zato:{0}'.format(base_name)
+                    zato_name = 'zato.{0}'.format(base_name)
                     url = '/zato/{0}'.format(base_name)
                     password = passwords[base_name]
                     
