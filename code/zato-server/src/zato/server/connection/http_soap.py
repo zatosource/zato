@@ -124,7 +124,7 @@ class Security(object):
 
         ba_config = self.basic_auth_config[sec_def.name]
         
-        env = {'HTTP_AUTHORIZATION':headers['AUTHORIZATION']}
+        env = {'HTTP_AUTHORIZATION':headers.get('AUTHORIZATION')}
         url_config = {'basic-auth-username':ba_config.username, 'basic-auth-password':ba_config.password}
         
         result = on_basic_auth(env, url_config)
