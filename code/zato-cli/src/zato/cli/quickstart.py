@@ -120,7 +120,7 @@ class Quickstart(ZatoCommand):
             for transport in transports:
 
                 base_name = 'ping.{0}.basic_auth'.format(transport)
-                zato_name = 'zato:{0}'.format(base_name)
+                zato_name = 'zato.{0}'.format(base_name)
                 url = '/zato/{0}'.format(base_name)
                 soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else (None, None)
                 password = passwords[base_name]
