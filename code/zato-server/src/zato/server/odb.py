@@ -39,6 +39,7 @@ from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_w
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, 
     internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, out_jms_wmq, 
     out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, tech_acc_list, wss_list)
+from zato.common.util import security_def_type
 from zato.server.pool.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -133,15 +134,16 @@ class ODBManager(object):
                         filter(db_class.id==item.security_id).\
                         one()
     
-                if item.sec_type == 'tech_acc':
+                if item.sec_type == security_def_type.tech_account:
                     result[item.url_path].sec_def.name = sec_def.name
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.salt = sec_def.salt
-                elif item.sec_type == 'basic_auth':
+                elif item.sec_type == security_def_type.basic_auth:
                     result[item.url_path].sec_def.name = sec_def.name
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.domain = sec_def.domain
-                elif item.sec_type == 'wss_username_password':
+                elif item.sec_type == security_def_type.wss:
+                    result[item.url_path].sec_def.name = sec_def.name
                     result[item.url_path].sec_def.username = sec_def.username
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.password_type = sec_def.password_type
