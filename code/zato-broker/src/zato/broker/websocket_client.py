@@ -19,11 +19,47 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# websocket-client
-import websocket
+# stdlib
+from threading import Thread
 
-ws = websocket.WebSocket()
-ws.connect('ws://127.0.0.1:5100/zato')
-for x in range(100):
-    ws.send('aaa')
-    print(333, ws.recv())
+# websocket-client
+from websocket import WebSocketApp
+
+class Client(object):
+    def __init__(self, address):
+        self.address = address
+        self.sock = None
+
+    def on_open(self, *args, **kwargs):
+        print('on_open', args, kwargs)
+
+    def on_message(self, *args, **kwargs):
+        print('on_message', args, kwargs)
+
+    def on_error(self, *args, **kwargs):
+        print('on_error', args, kwargs)
+        
+    def on_close(self, *args, **kwargs):
+        print('on_close', args, kwargs)
+        
+    def run(self):
+        self.sock = WebSocketApp(self.address, self.on_open, self.on_message, self.on_error, self.on_close)
+        self.sock.run_forever()
+        
+    def send(self, data):
+        return self.sock.send(data)
+    
+if __name__ == '__main__':
+    from time import sleep
+    
+    client = Client('ws://127.0.0.1:5100/zato')
+    data = '111'
+    
+    t = Thread(target=client.run)
+    t.start()
+    
+    sleep(1)
+    
+    client.send(data)
+    
+    t.join()

@@ -50,12 +50,17 @@ class Broker(WSGIServer):
             
     def _on_message(self, sock, message):
         print(11, sock, message)
+
+        for client in self.clients:
+            client.send('aaa')
+        
         return 'OK'
     
     def on_connect(self, environ, start_response):
         """ A new client WebSocket connection has arrived.
         """
         sock = environ.get('wsgi.websocket')
+        self.clients.append(sock)
         
         #for(k, v) in sorted(environ.items()):
         #    print(k, v)
