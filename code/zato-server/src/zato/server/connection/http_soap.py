@@ -31,6 +31,7 @@ from lxml import etree, objectify
 
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
+from secwall.wsse import WSSE
 
 # Zato
 from zato.common import ClientSecurityException, HTTPException, soap_body_xpath, \
@@ -111,6 +112,7 @@ class Security(object):
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
         self.url_sec_lock = RLock()
+        self._wss = WSSE()
                  
     def handle(self, rid, url_data, request_data, body, headers):
         """ Calls other concrete security methods as appropriate.
@@ -121,11 +123,12 @@ class Security(object):
         getattr(self, handler_name)(rid, sec_def, request_data, body, headers)
 
     def _handle_security_basic_auth(self, rid, sec_def, request_data, body, headers):
-
-        ba_config = self.basic_auth_config[sec_def.name]
+        """ Performs the authentication using HTTP Basic Auth.
+        """
+        sec_config = self.basic_auth_config[sec_def.name]
         
         env = {'HTTP_AUTHORIZATION':headers.get('AUTHORIZATION')}
-        url_config = {'basic-auth-username':ba_config.username, 'basic-auth-password':ba_config.password}
+        url_config = {'basic-auth-username':sec_config.username, 'basic-auth-password':sec_config.password}
         
         result = on_basic_auth(env, url_config)
         
@@ -135,8 +138,48 @@ class Security(object):
             logger.error(msg)
             raise Forbidden(rid, msg)
         
+    def _handle_security_wss(self, rid, sec_def, request_data, body, headers):
+        """ Performs the authentication using WS-Security.
+        """
+        sec_config = self.wss_config[sec_def.name]
+        print(33, sec_config)
+
+        '''
+        expiry_limit=3600, 
+        is_active=True, 
+        nonce_freshness=3600, 
+        password=u'6d781a885218412ea3d475a0529af159', 
+        password_type=u'clear_text', 
+        reject_empty_nonce_ts=True, 
+        reject_stale_username=True, 
+        username=u'zato.ping.plain_http.wss.clear_text'
+        '''
+        
+        url_config = {}
+        url_config['wsse-pwd-username'] = sec_config['username']
+        url_config['wsse-pwd-password'] = sec_config['password']
+
+        if sec_config['password_type'] == 'clear_text':
+            
+        
+        #url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_config['']
+        #url_config['wsse-pwd-reject-stale-tokens'] = sec_config['']
+        #url_config['wsse-pwd-reject-expiry-limit'] = sec_config['']
+        #url_config.get('wsse-pwd-password-digest')
+        #url_config.get('wsse-pwd-nonce-freshness-time') = sec_config['']
+        
+        #url_config = {'basic-auth-username':sec_config.username, 'basic-auth-password':sec.password}
+        
+        result = on_wsse_pwd(self._wss, url_config, body)
+        
+        if not result:
+            msg = 'FORBIDDEN rid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
+                rid, result.code, result.description)
+            logger.error(msg)
+            raise Forbidden(rid, msg)
+        
     def _handle_security_tech_acc(self, rid, sec_def, request_data, body, headers):
-        """ Handles the 'tech_acc' security config type.
+        """ Performs the authentication using technical accounts.
         """
         zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
         
@@ -315,8 +358,12 @@ class RequestHandler(object):
                 
                 # No security at all for that URL.
                 if url_data.sec_def != ZATO_NONE:
-                    if url_data.sec_def.type in(security_def_type.tech_account, security_def_type.basic_auth):
+                    if url_data.sec_def.type in(security_def_type.tech_account, security_def_type.basic_auth, 
+                                                security_def_type.wss):
                         self.security.handle(rid, url_data, task.request_data, request, headers)
+                    else:
+                        log_msg = '[{0}] sec_def.type:[{1}] needs no auth'.format(rid, url_data.sec_def.type)
+                        logger.debug(log_msg)
                 else:
                     log_msg = '[{0}] No security for URL [{1}]'.format(rid, task.request_data.uri)
                     logger.debug(log_msg)

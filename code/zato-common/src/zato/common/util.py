@@ -69,7 +69,7 @@ _repr_template = Template("<$class_name at $mem_loc$attrs>")
 security_def_type = Bunch()
 security_def_type.basic_auth = 'basic_auth'
 security_def_type.tech_account = 'tech_acc'
-security_def_type.wss_username_password = 'wss_username_password'
+security_def_type.wss = 'wss'
 
 ################################################################################
 
