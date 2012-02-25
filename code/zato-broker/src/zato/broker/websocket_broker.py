@@ -20,7 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
+import logging, os
+from traceback import format_exc
 
 # gevent
 from gevent.pywsgi import WSGIServer
@@ -33,20 +34,32 @@ class Broker(WSGIServer):
     def __init__(self, host='', port=5100):
         super(Broker, self).__init__((host, port), self.on_connect, handler_class=WebSocketHandler)
         
+        self.logger = logging.getLogger(self.__class__.__name__)
+        
         # All the connected clients
-        self.clients = []
+        self.clients = set()
         
         # An RLock for updating the list of connected clients
-        self._update_lock = RLock()
+        self._client_update_lock = RLock()
         
         # The server-side of websockets will run as long as it's True
         self.keep_running = True
         
+    def _on_bad_request(self, environ, start_response):
+        """ The client must've sent something else than a WebSocket connection.
+        """
+        msg = '400 Bad Request, REMOTE_ADDR:[{}], PATH_INFO:[{}], QUERY_STRING:[{}], HTTP_USER_AGENT:[{}]'.format(
+            environ.get('REMOTE_ADDR'), environ.get('PATH_INFO'), environ.get('QUERY_STRING'), environ.get('HTTP_USER_AGENT'))
+        self.logger.error(msg)
+        
+        start_response('400 Bad Request', [])
+        return ['WebSocket connection is expected here.']
+        
     def _on_disconnect(self, sock):
         """ A client has disconnected.
         """
-        with self._update_lock:
-            print(22, sock)
+        with self._client_update_lock:
+            self.clients.remove(sock)
             
     def _on_message(self, sock, message):
         print(11, sock, message)
@@ -60,14 +73,13 @@ class Broker(WSGIServer):
         """ A new client WebSocket connection has arrived.
         """
         sock = environ.get('wsgi.websocket')
-        self.clients.append(sock)
-        
-        #for(k, v) in sorted(environ.items()):
-        #    print(k, v)
         
         if sock is None:
-            start_response('400 Bad Request', [])
-            return ['WebSocket connection is expected here.']
+            return self._on_bad_request(environ, start_response)
+
+        with self._client_update_lock:
+            self.clients.add(sock)        
+        
         try:
             while self.keep_running:
                 
@@ -86,9 +98,11 @@ class Broker(WSGIServer):
             # The broker's shutting down, we're closing the connection.
             sock.close()
             
-        except WebSocketError, ex:
-            print("%s: %s" % (ex.__class__.__name__, ex))
+        except Exception, e:
+            msg = 'Exception caught [{0}]'.format(format_exc(e))
+            self.logger.error(msg)
             
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     broker = Broker()
     broker.serve_forever()

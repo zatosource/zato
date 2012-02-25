@@ -23,7 +23,38 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from threading import Thread
 
 # websocket-client
-from websocket import WebSocketApp
+import websocket
+from websocket import WebSocket, WebSocketApp, WebSocketException
+
+websocket.enableTrace(22)
+
+class _App(WebSocketApp):
+    def __init__(self, *args, **kwargs):
+        super(_App, self).__init__(*args, **kwargs)
+        self.keep_running = True
+    
+    def run_forever(self):
+        """
+        run event loop for WebSocket framework.
+        This loop is infinite loop and is alive during websocket is available.
+        """
+        if self.sock:
+            raise WebSocketException("socket is already opened")
+        try:
+            self.sock = WebSocket()
+            self.sock.connect(self.url)
+            self._run_with_no_err(self.on_open)
+            while self.keep_running:
+                data = self.sock.recv()
+                if data is None:
+                    break
+                self._run_with_no_err(self.on_message, data)
+        except Exception, e:
+            self._run_with_no_err(self.on_error, e)
+        finally:
+            self.sock.close()
+            self._run_with_no_err(self.on_close)
+            self.sock = None
 
 class Client(object):
     def __init__(self, address):
@@ -43,8 +74,11 @@ class Client(object):
         print('on_close', args, kwargs)
         
     def run(self):
-        self.sock = WebSocketApp(self.address, self.on_open, self.on_message, self.on_error, self.on_close)
+        self.sock = _App(self.address, self.on_open, self.on_message, self.on_error, self.on_close)
         self.sock.run_forever()
+        
+    def stop(self):
+        self.sock.keep_running = False
         
     def send(self, data):
         return self.sock.send(data)
@@ -59,7 +93,7 @@ if __name__ == '__main__':
     t.start()
     
     sleep(1)
-    
     client.send(data)
     
+    client.stop()
     t.join()
