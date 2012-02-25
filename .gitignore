@@ -1,12 +1,3 @@
-message-bus/code/.installed.cfg
-message-bus/code/bin/
-message-bus/code/develop-eggs/
-message-bus/code/downloads/
-message-bus/code/eggs/
-message-bus/code/include/
-message-bus/code/lib/
-message-bus/code/local/
-message-bus/code/parts/
 platform/code/.installed.cfg
 platform/code/bin/*
 platform/code/develop-eggs/*
