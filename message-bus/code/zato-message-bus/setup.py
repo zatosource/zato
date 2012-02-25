@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 version = "1.0.0"
 
 setup(
-      name = "zato-broker",
+      name = "zato-message-bus",
       version = version,
 
       author = "Zato",
