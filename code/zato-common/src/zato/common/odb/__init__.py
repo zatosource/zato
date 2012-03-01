@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import copy, logging
 
 # SQLAlchemy
-from sqlalchemy import pool, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
