@@ -152,10 +152,6 @@ class ParallelServer(BrokerMessageReceiver):
             # Start the connectors only once throughout the whole cluster
             self._init_connectors(server)
             
-        # Mapping between SOAP actions and internal services.
-        #for soap_action, service_name in self.odb.get_internal_channel_list(server.cluster.id):
-        #    self.request_handler.soap_handler.soap_config[soap_action] = service_name
-            
         # FTP
         ftp_conn_params = Bunch()
         for item in self.odb.get_out_ftp_list(server.cluster.id):
