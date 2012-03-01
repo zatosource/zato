@@ -21,16 +21,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from pprint import pprint
 from string import punctuation
 
 # PyParsing
 from pyparsing import Word, Literal, nums, alphanums, alphas, restOfLine
 
 # Zato
-from zato.common.haproxy import http_log, tcp_log, reversed_http_log, \
-     reversed_tcp_log, Config
-from zato.common.util import make_repr
+from zato.common.haproxy import http_log, Config
 
 logger = logging.getLogger(__name__)
 
