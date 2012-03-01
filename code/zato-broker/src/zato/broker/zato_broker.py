@@ -24,7 +24,6 @@ from zato.broker import BaseBroker
 from zato.common.util import TRACE1
 
 # stdlib
-import sys
 from logging import getLogger
 
 # Zato
