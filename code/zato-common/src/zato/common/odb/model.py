@@ -200,10 +200,10 @@ class WSSDefinition(SecurityBase):
     username = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
     password_type = Column(String(45), nullable=False)
-    reject_empty_nonce_creat = Column(Boolean(), nullable=False) #
-    reject_stale_tokens = Column(Boolean(), nullable=True)       # 
-    reject_expiry_limit = Column(Integer(), nullable=False)      # 
-    nonce_freshness_time = Column(Integer(), nullable=True)      # 
+    reject_empty_nonce_creat = Column(Boolean(), nullable=False)
+    reject_stale_tokens = Column(Boolean(), nullable=True)
+    reject_expiry_limit = Column(Integer(), nullable=False)
+    nonce_freshness_time = Column(Integer(), nullable=True)
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
                  password=None, password_type=None, reject_empty_nonce_creat=None,
