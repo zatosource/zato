@@ -1,3 +1,0 @@
-services:
-  example.adapter.crm.service.HelloWorld:
-    egg_path: /home/dsuch/projects/zato/repo/code/zato-server/src/zato/server/work/8b73b79c25954bfe925e7289951e0698/example.adapter.crm.customer-1.0-py2.6.egg
