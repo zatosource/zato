@@ -170,12 +170,8 @@ class BaseConnector(BaseWorker):
         """ Initializes all the basic run-time data structures and connects
         to the Zato broker.
         """
-        
-        # Imported here to avoid circular dependencies
-        from zato.server.config.app import ZatoContext
-
         config = get_config(self.repo_location, 'server.conf')
-        app_context = get_app_context(config, ZatoContext)
+        app_context = get_app_context(config)
         crypto_manager = get_crypto_manager(self.repo_location, app_context, config)
         
         self.odb = app_context.get_object('odb_manager')

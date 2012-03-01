@@ -25,6 +25,7 @@ from base64 import b64encode
 from binascii import hexlify, unhexlify
 from cStringIO import StringIO
 from hashlib import sha1, sha256
+from importlib import import_module
 from itertools import ifilter
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint
@@ -49,7 +50,6 @@ from bunch import Bunch
 from configobj import ConfigObj
 
 # Spring Python
-from springpython.config import YamlConfig, XMLConfig
 from springpython.context import ApplicationContext
 
 # Zato
@@ -268,23 +268,15 @@ def _get_ioc_config(location, config_class):
 
     return config
 
-def get_app_context(config, main_ctx_class):
-    """ Returns the Zato's Inversion of Control application context, taking into
-    account any custom user-provided contexts.
+def get_app_context(config):
+    """ Returns the Zato's Inversion of Control application context.
     """
-    app_ctx_list = [main_ctx_class()]
-
-    custom_ctx_section = config.get('custom_context', {})
-    custom_xml_config_location = custom_ctx_section.get('custom_xml_config_location')
-    custom_yaml_config_location = custom_ctx_section.get('custom_yaml_config_location')
-
-    for location, config_class in ((custom_xml_config_location, XMLConfig), (custom_yaml_config_location, YamlConfig)):
-        if location:
-            ioc_config = _get_ioc_config(location, config_class)
-            if ioc_config:
-                app_ctx_list.append(ioc_config)
-
-    return ApplicationContext(app_ctx_list)
+    ctx_class_path = config['spring']['context_class']
+    ctx_class_path = ctx_class_path.split('.')
+    mod_name, class_name = '.'.join(ctx_class_path[:-1]), ctx_class_path[-1:][0]
+    mod = import_module(mod_name)
+    class_ = getattr(mod, class_name)()
+    return ApplicationContext(class_)
 
 def get_crypto_manager(repo_location, app_context, config, load_keys=True):
     """ Returns a tool for crypto manipulations.
