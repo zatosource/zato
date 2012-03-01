@@ -29,7 +29,6 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 # lxml
-from lxml import etree
 from lxml.objectify import Element
 
 # Validate
@@ -44,8 +43,8 @@ from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.outgoing.ftp import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
 from zato.common.odb.model import Cluster, OutgoingFTP
-from zato.common import zato_namespace, zato_path, ZatoException, ZATO_NOT_GIVEN
-from zato.common.util import TRACE1, to_form
+from zato.common import zato_namespace, zato_path
+from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

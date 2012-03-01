@@ -30,7 +30,6 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 # lxml
-from lxml import etree
 from lxml.objectify import Element
 
 # Validate
@@ -38,14 +37,12 @@ from validate import is_boolean
 
 # Zato
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
-from zato.admin.web.server_model import WSSUsernameTokenDefinition
 from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, meth_allowed
-from zato.common import zato_namespace, zato_path, ZatoException, \
-     ZATO_NOT_GIVEN, ZATO_WSS_PASSWORD_TYPES
+from zato.common import zato_namespace, zato_path, ZATO_WSS_PASSWORD_TYPES
 from zato.admin.web import invoke_admin_service
 from zato.common.odb.model import Cluster, WSSDefinition
-from zato.common.util import TRACE1, to_form
+from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

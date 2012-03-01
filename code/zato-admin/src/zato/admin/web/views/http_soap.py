@@ -29,7 +29,6 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 # lxml
-from lxml import etree
 from lxml.objectify import Element
 
 # Validate
@@ -42,9 +41,9 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common import SECURITY_TYPES, ZatoException, zato_namespace, zato_path, ZATO_NONE
+from zato.common import SECURITY_TYPES, zato_namespace, zato_path, ZATO_NONE
 from zato.common.odb.model import Cluster, HTTPSOAP
-from zato.common.util import TRACE1, to_form
+from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

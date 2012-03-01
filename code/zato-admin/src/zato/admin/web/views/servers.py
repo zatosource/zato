@@ -24,7 +24,6 @@ import logging
 from traceback import format_exc
 
 # Django
-from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response

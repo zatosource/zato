@@ -20,16 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import sys
 from operator import itemgetter
 
 # Django
 from django import forms
-from django.forms.util import ErrorList
 
 # Zato
 from zato.admin.settings import engine_friendly_name
-from zato.admin.web.server_model import SQLConnectionPool
 
 class SQLConnectionPoolForm(forms.Form):
     original_pool_name = forms.CharField(widget=forms.HiddenInput())
