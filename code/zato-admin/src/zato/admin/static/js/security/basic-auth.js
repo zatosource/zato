@@ -3,12 +3,12 @@
 
 $.fn.zato.data_table.BasicAuth = new Class({
     toString: function() {
-        var s = '<BasicAuth id:{0} name:{1} is_active:{2} username:{3} domain:{4}>';
+        var s = '<BasicAuth id:{0} name:{1} is_active:{2} username:{3} realm:{4}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
                                 this.username ? this.username : '(none)',
-                                this.domain ? this.domain : '(none)');
+                                this.realm ? this.realm : '(none)');
     }
 });
 
@@ -19,7 +19,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.BasicAuth;
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.basic_auth.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'username', 'domain']);
+    $.fn.zato.data_table.setup_forms(['name', 'username', 'realm']);
 })
 
 
@@ -45,7 +45,7 @@ $.fn.zato.security.basic_auth.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.username);
-    row += String.format('<td>{0}</td>', item.domain);
+    row += String.format('<td>{0}</td>', item.realm);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.basic_auth.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.basic_auth.delete_({0});'>Delete</a>", item.id));

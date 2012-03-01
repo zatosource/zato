@@ -64,7 +64,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
     zato_message.data.username = params[prefix + 'username']
-    zato_message.data.domain = params[prefix + 'domain']
+    zato_message.data.realm = params[prefix + 'realm']
 
     return zato_message
 
@@ -97,9 +97,9 @@ def index(req):
                 name = definition_elem.name.text
                 is_active = is_boolean(definition_elem.is_active.text)
                 username = definition_elem.username.text
-                domain = definition_elem.domain.text
+                realm = definition_elem.realm.text
 
-                items.append(HTTPBasicAuth(id, name, is_active, username, domain))
+                items.append(HTTPBasicAuth(id, name, is_active, username, realm))
 
     return_data = {'zato_clusters':zato_clusters,
         'cluster_id':cluster_id,

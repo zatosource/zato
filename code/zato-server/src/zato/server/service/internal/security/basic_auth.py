@@ -57,7 +57,7 @@ class GetList(AdminService):
                 definition_elem.name = definition.name
                 definition_elem.is_active = definition.is_active
                 definition_elem.username = definition.username
-                definition_elem.domain = definition.domain
+                definition_elem.realm = definition.realm
     
                 definition_list.append(definition_elem)
     
@@ -72,7 +72,7 @@ class Create(AdminService):
             try:
     
                 payload = kwargs.get('payload')
-                request_params = ['cluster_id', 'name', 'is_active', 'username', 'domain']
+                request_params = ['cluster_id', 'name', 'is_active', 'username', 'realm']
                 params = _get_params(payload, request_params, 'data.')
                 
                 cluster_id = params['cluster_id']
@@ -92,7 +92,7 @@ class Create(AdminService):
                 auth_elem = Element('basic_auth')
                 
                 auth = HTTPBasicAuth(None, name, params['is_active'], params['username'], 
-                                    params['domain'], uuid4().hex, None, cluster)
+                                    params['realm'], uuid4().hex, None, cluster)
                 
                 session.add(auth)
                 session.commit()
@@ -122,7 +122,7 @@ class Edit(AdminService):
             try:
                 
                 payload = kwargs.get('payload')
-                request_params = ['id', 'is_active', 'name', 'username', 'domain', 
+                request_params = ['id', 'is_active', 'name', 'username', 'realm', 
                                   'cluster_id']
                 new_params = _get_params(payload, request_params, 'data.')
                 
@@ -147,7 +147,7 @@ class Edit(AdminService):
                 definition.name = name
                 definition.is_active = new_params['is_active']
                 definition.username = new_params['username']
-                definition.domain = new_params['domain']
+                definition.realm = new_params['realm']
     
                 session.add(definition)
                 session.commit()

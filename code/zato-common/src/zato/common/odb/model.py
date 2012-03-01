@@ -176,16 +176,16 @@ class HTTPBasicAuth(SecurityBase):
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
 
     username = Column(String(200), nullable=False)
-    domain = Column(String(200), nullable=False)
+    realm = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
-                 domain=None, password=None, cluster=None):
+                 realm=None, password=None, cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
-        self.domain = domain
+        self.realm = realm
         self.password = password
         self.cluster = cluster
 

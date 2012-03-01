@@ -24,10 +24,10 @@ from django import forms
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
-    name = forms.CharField(widget=forms.TextInput(attrs={"class":"required", "style":"width:90%"}))
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    username = forms.CharField(widget=forms.TextInput(attrs={"class":"required"}))
-    domain = forms.CharField(widget=forms.TextInput(attrs={"class":"required"}))
+    username = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
+    realm = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
     
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
