@@ -28,7 +28,6 @@ from django import forms
 # Zato
 from zato.admin.settings import delivery_friendly_name
 from zato.common.odb import AMQP_DEFAULT_PRIORITY
-from zato.common.util import make_repr
 
 
 class CreateForm(forms.Form):

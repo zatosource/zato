@@ -26,7 +26,7 @@ from operator import itemgetter
 from django import forms
 
 # Zato
-from zato.common.haproxy import timeouts, http_log, tcp_log
+from zato.common.haproxy import timeouts, http_log
 from zato.common.util import make_repr
 
 def populate_choices(form, fields_choices):

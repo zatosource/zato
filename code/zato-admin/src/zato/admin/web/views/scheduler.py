@@ -27,7 +27,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from cStringIO import StringIO
 from datetime import datetime
-from uuid import uuid4
 from time import strptime
 from traceback import format_exc
 
@@ -51,11 +50,9 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.views import meth_allowed
 from zato.admin.settings import job_type_friendly_names
-from zato.admin.web.server_model import OneTimeSchedulerJob, IntervalBasedSchedulerJob
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
-from zato.common import scheduler_date_time_format, ZATO_OK, zato_namespace, \
-     zato_path, ZatoException
+from zato.common import scheduler_date_time_format, zato_namespace, zato_path, ZatoException
 from zato.common.odb.model import Cluster, CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint, TRACE1
 

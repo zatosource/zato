@@ -21,8 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import json, logging
-from datetime import datetime, timedelta
-from pprint import pprint
+from datetime import datetime
 from traceback import format_exc
 
 # OrderedDict is new in 2.7
@@ -33,7 +32,6 @@ except ImportError:
 
 # Django
 from django.contrib import messages
-from django.core import serializers
 from django.http import HttpResponse
 from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext

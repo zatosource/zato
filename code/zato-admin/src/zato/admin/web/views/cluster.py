@@ -21,21 +21,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from pprint import pprint
 from string import whitespace
 from traceback import format_exc
 
 # Django
-from django.core import serializers
-from django.core.urlresolvers import reverse
-from django.db import IntegrityError
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import loader, RequestContext
-
-# SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # anyjson
 from anyjson import dumps
@@ -44,7 +36,7 @@ from anyjson import dumps
 from zato.admin.web.forms.cluster import CreateClusterForm, EditClusterForm, DeleteClusterForm
 from zato.admin.web.views import get_lb_client, meth_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
-     DATABASE_USER, DATABASE_PASSWORD, sqlalchemy_django_engine
+     DATABASE_USER, sqlalchemy_django_engine
 from zato.common.odb.model import Cluster
 from zato.common.util import TRACE1
 

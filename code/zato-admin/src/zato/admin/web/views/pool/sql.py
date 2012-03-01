@@ -26,7 +26,6 @@ from uuid import uuid4
 from traceback import format_exc
 
 # Django
-from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response
 from django.http import HttpResponse, HttpResponseServerError
 from django.template import RequestContext
@@ -34,7 +33,6 @@ from django.template import RequestContext
 # lxml
 from lxml import etree
 from lxml import objectify
-from lxml.etree import SubElement
 from lxml.objectify import Element
 
 # Zato
@@ -47,7 +45,7 @@ from zato.admin.web.forms.pool.sql import SQLConnectionPoolForm
 from zato.common import zato_namespace, path, zato_path, ZatoException
 from zato.common.soap import invoke_admin_service
 from zato.common.odb.model import Server
-from zato.common.util import encrypt, decrypt, pprint, TRACE1
+from zato.common.util import encrypt, pprint, TRACE1
 
 logger = logging.getLogger("zatoadmin.web.views.sql")
 

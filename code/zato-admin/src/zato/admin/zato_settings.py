@@ -37,9 +37,6 @@ def _update_globals(config):
 
 # ##############################################################################
 
-# stdlib
-import os
-
 # Maps SQLAlchemy engine's name to a UI-friendly one.
 engine_friendly_name = {
     'postgres': 'PostgreSQL',
