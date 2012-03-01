@@ -138,7 +138,7 @@ class Quickstart(ZatoCommand):
                     url = '/zato/{0}'.format(base_name)
                     password = passwords[base_name]
                     
-                    sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, True, True, 3600, 3600, cluster)
+                    sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, False, True, 3600, 3600, cluster)
                     session.add(sec)
                     
                     channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, 
