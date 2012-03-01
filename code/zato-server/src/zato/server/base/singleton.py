@@ -20,27 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json, logging
-from uuid import uuid4
+import logging
 from time import sleep
-from traceback import format_exc
-
-# lxml
-from lxml import etree
-
-# ZeroMQ
-import zmq
-
-# anyjson
-from anyjson import loads
-
-# Bunch
-from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import ZATO_NOT_GIVEN, ZATO_ERROR, ZATO_OK, ZatoException
-from zato.common.util import TRACE1
+from zato.common import ZATO_OK, ZatoException
 from zato.server.base import BrokerMessageReceiver
 
 class SingletonServer(BrokerMessageReceiver):

@@ -20,18 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function
 
 # Setting the custom logger must come first
-import logging, os
+import logging
 from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
 # stdlib
-import errno, time
-from datetime import datetime
-from subprocess import Popen
 from threading import RLock
-
-# ZeroMQ
-import zmq
 
 # Pika
 from pika import BasicProperties
@@ -44,7 +38,6 @@ from pika.spec import BasicProperties
 from bunch import Bunch
 
 # Zato
-from zato.common import ConnectionException, PORTS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.broker_message import AMQP_CONNECTOR, DEFINITION
 from zato.common.util import TRACE1
 from zato.server.connection import BaseConnection, BaseConnector

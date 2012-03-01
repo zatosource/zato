@@ -20,12 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import errno, logging, multiprocessing, os, socket, sys, time
+import logging, socket
 from copy import deepcopy
-from datetime import datetime
-from subprocess import Popen
 from thread import start_new_thread
-from threading import local, RLock, Thread
+from threading import local, RLock
 from traceback import format_exc
 
 # zope.server
@@ -34,13 +32,7 @@ from zope.server.http.httptask import HTTPTask
 from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
-# Bunch
-from bunch import Bunch
-
 # Zato
-from zato.common import ConnectionException
-from zato.common.util import TRACE1
-from zato.server.base import BaseWorker, BrokerMessageReceiver
 from zato.server.connection.http_soap import PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 

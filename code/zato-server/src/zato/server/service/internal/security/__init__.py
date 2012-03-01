@@ -27,7 +27,7 @@ from lxml import etree
 from lxml.objectify import Element
 
 # Zato
-from zato.common import ZatoException, ZATO_OK
+from zato.common import ZATO_OK
 from zato.common.odb.query import basic_auth_list, tech_acc_list, wss_list
 from zato.server.service.internal import _get_params, AdminService
 

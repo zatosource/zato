@@ -20,18 +20,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function
 
 # stdlib
-import errno, logging, os, socket, sys
-from multiprocessing import Process
+import logging, os
 from random import getrandbits
 from os import getpid
 from socket import getfqdn, gethostbyname, gethostname
-from threading import RLock, Thread
+from threading import Thread
 
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.common import ConnectionException, PORTS
+from zato.common import PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector

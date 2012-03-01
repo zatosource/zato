@@ -27,3 +27,7 @@ if 'linux' in sys.platform:
 else:
     from zato.server.pickup.generic import Pickup, PickupEventProcessor
 
+
+# To silence out import checkers
+Pickup = Pickup
+PickupEventProcessor = PickupEventProcessor

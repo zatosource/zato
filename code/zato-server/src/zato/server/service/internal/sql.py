@@ -28,8 +28,7 @@ from springpython.util import synchronized
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.util import pprint, TRACE1
-from zato.server.service.internal import(_get_params, _parse_extra_params, AdminService,
-                                        success)
+from zato.server.service.internal import _get_params, _parse_extra_params, AdminService
 
 class GetSQLConnectionPoolList(AdminService):
     """ Returns a list of all SQL connection pools defined.

@@ -24,7 +24,7 @@ import logging
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy.orm import joinedload, sessionmaker, scoped_session
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.exc import IntegrityError
 
 # Bunch
@@ -32,8 +32,8 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.odb.model import(HTTPSOAP, Cluster, DeployedService, HTTPBasicAuth, 
-    SecurityBase, Server, Service, TechnicalAccount, WSSDefinition)
+from zato.common.odb.model import(Cluster, DeployedService, HTTPBasicAuth, Server, 
+    Service, TechnicalAccount, WSSDefinition)
 from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, 
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, 

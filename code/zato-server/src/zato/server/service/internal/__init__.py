@@ -20,14 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, time
+import logging
 from contextlib import closing
 from traceback import format_exc
 from urlparse import parse_qs
 
 # Zato
 from zato.common import zato_path, ZatoException, ZATO_OK
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import MESSAGE_TYPE
 from zato.server.service import Service
 
 success_code = 0

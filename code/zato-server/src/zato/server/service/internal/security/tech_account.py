@@ -32,11 +32,11 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.common import ZatoException, ZATO_OK
+from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common.odb.query import tech_acc_list
-from zato.common.util import TRACE1, tech_account_password
+from zato.common.util import tech_account_password
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):

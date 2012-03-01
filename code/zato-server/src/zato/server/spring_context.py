@@ -20,20 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import multiprocessing, os
-
-# PyYAML
-from yaml import load, Loader
+import multiprocessing
 
 # Spring Python
 from springpython.config import Object, PythonConfig
-from springpython.context import scope
 
 # Zato
 from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
-from zato.server.connection.http_soap import PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 from zato.server.crypto import CryptoManager
 from zato.server.odb import ODBManager

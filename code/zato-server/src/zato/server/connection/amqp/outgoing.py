@@ -20,9 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function
 
 # stdlib
-import errno, logging, os, socket, sys
-from multiprocessing import Process
-from threading import RLock, Thread
+import logging, os
+from threading import Thread
 
 # Pika
 from pika import BasicProperties

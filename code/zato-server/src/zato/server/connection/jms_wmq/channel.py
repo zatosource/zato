@@ -20,14 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import errno, logging, os, socket, sys
+import logging, os
 from copy import deepcopy
-from multiprocessing import Process
 from threading import RLock, Thread
 from traceback import format_exc
-
-# Pika
-from pika import BasicProperties
 
 # Bunch
 from bunch import Bunch
@@ -35,11 +31,10 @@ from bunch import Bunch
 # Spring Python
 from springpython.jms import WebSphereMQJMSException, NoMessageAvailableException
 from springpython.jms.core import reserved_attributes
-from springpython.jms.listener import MessageHandler, SimpleMessageListenerContainer
 
 # Zato
-from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import CHANNEL, DEFINITION, JMS_WMQ_CONNECTOR, MESSAGE_TYPE
+from zato.common import PORTS
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.util import new_rid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector

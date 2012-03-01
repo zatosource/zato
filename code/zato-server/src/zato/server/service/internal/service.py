@@ -22,10 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from traceback import format_exc
-from uuid import uuid4
-
-# SQLAlchemy
-from sqlalchemy.orm.query import orm_exc
 
 # lxml
 from lxml import etree
@@ -35,11 +31,10 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.common import ZatoException, ZATO_OK
+from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Cluster, Service
 from zato.common.odb.query import service, service_list
-from zato.common.util import TRACE1
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
