@@ -24,14 +24,13 @@ from ftplib import FTP_PORT
 from json import dumps
 
 # SQLAlchemy
-from sqlalchemy import Table, Column, Integer, String, DateTime, MetaData, \
-     ForeignKey, Sequence, Boolean, LargeBinary, UniqueConstraint, Enum, \
-     SmallInteger
-from sqlalchemy.ext.declarative import ConcreteBase, declarative_base
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Sequence, \
+     Boolean, LargeBinary, UniqueConstraint, Enum, SmallInteger
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common.util import make_repr, object_attrs
+from zato.common.util import make_repr
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, S3_DEFAULT_KEY_SYNC_TIMEOUT, \
      S3_DEFAULT_SEPARATOR, WMQ_DEFAULT_PRIORITY
 

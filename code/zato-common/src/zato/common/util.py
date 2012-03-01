@@ -22,7 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from base64 import b64encode
-from binascii import hexlify, unhexlify
 from cStringIO import StringIO
 from hashlib import sha1, sha256
 from importlib import import_module
@@ -32,13 +31,9 @@ from pprint import pprint as _pprint
 from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
-from threading import Thread
 
 # M2Crypto
-from M2Crypto import BIO, EVP, RSA
-
-# ZeroMQ
-import zmq
+from M2Crypto import BIO, RSA
 
 # ConfigObj
 from configobj import ConfigObj
@@ -54,8 +49,6 @@ from springpython.context import ApplicationContext
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common.broker_message import ZMQ_SOCKET
-from zato.common.log_message import RID_LENGTH
 
 logger = logging.getLogger(__name__)
 

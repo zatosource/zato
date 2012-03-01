@@ -45,7 +45,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 import imp
-import sys
 import logging
 
 logger = logging.getLogger(__name__)

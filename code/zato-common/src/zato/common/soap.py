@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from string import Template
 from traceback import format_exc
 
 # lxml
@@ -33,7 +32,7 @@ import urllib3
 
 # Zato
 from zato.common.util import TRACE1
-from zato.common import soap_doc, soap_fault_xpath, ZATO_ERROR, ZATO_OK
+from zato.common import soap_doc, soap_fault_xpath, ZATO_OK
 from zato.common import ZatoException, zato_data_xpath, zato_result_path_xpath
 
 logger = logging.getLogger(__name__)
