@@ -130,7 +130,7 @@ class Security(object):
         env = {'HTTP_AUTHORIZATION':headers.get('AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_config.username, 'basic-auth-password':sec_config.password}
         
-        result = on_basic_auth(env, url_config)
+        result = on_basic_auth(env, url_config, False)
         
         if not result:
             msg = 'FORBIDDEN rid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
