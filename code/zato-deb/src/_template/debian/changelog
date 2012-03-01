@@ -1,5 +1,0 @@
-zato (1.0-1) {distro_release}; urgency=low
-
-  * Initial release (Closes: #1234)  <nnnn is the bug number of your ITP>
-
- -- Dariusz Suchojad <dsuch@gefira.pl>  Mon, 18 Oct 2010 19:54:02 +0200
