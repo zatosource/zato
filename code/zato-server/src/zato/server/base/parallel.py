@@ -194,7 +194,7 @@ class ParallelServer(BrokerMessageReceiver):
             ba_config[item.name] = Bunch()
             ba_config[item.name].is_active = item.is_active
             ba_config[item.name].username = item.username
-            ba_config[item.name].domain = item.domain
+            ba_config[item.name].realm = item.realm
             ba_config[item.name].password = item.password
             
         # Technical accounts

@@ -141,7 +141,7 @@ class ODBManager(object):
                 elif item.sec_type == security_def_type.basic_auth:
                     result[item.url_path].sec_def.name = sec_def.name
                     result[item.url_path].sec_def.password = sec_def.password
-                    result[item.url_path].sec_def.domain = sec_def.domain
+                    result[item.url_path].sec_def.realm = sec_def.realm
                 elif item.sec_type == security_def_type.wss:
                     result[item.url_path].sec_def.name = sec_def.name
                     result[item.url_path].sec_def.username = sec_def.username
