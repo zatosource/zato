@@ -142,35 +142,21 @@ class Security(object):
         """ Performs the authentication using WS-Security.
         """
         sec_config = self.wss_config[sec_def.name]
-        print(33, sec_config)
-
-        '''
-        xexpxiry_limit=3600, 
-        is_xactive=True, 
-        xnonce_freshness=3600, 
-        password=u'6d781a885218412ea3d475a0529af159', 
-        password_type=u'clear_text', 
-        xrxeject_exmpty_noxnce_txs=True, 
-        xrxeject_stale_username=True, 
-        xusername=u'zato.ping.plain_http.wss.clear_text'
-        '''
         
         url_config = {}
-        url_config['wsse-pwd-username'] = sec_config['username']
-        url_config['wsse-pwd-password'] = sec_config['password']
-
+        
         if sec_config['password_type'] == 'clear_text':
-            
+            url_config['wsse-pwd-password'] = sec_config['password']
+        else:
+            url_config['wsse-pwd-password-digest'] = sec_config['password']
         
-        #url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_config['']
-        #url_config['wsse-pwd-reject-stale-tokens'] = sec_config['']
-        #url_config['wsse-pwd-reject-expiry-limit'] = sec_config['']
-        #url_config.get('wsse-pwd-password-digest')
-        #url_config.get('wsse-pwd-nonce-freshness-time') = sec_config['']
+        url_config['wsse-pwd-username'] = sec_config['username']
+        url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_config['reject_empty_nonce_creat']
+        url_config['wsse-pwd-reject-stale-tokens'] = sec_config['reject_stale_tokens']
+        url_config['wsse-pwd-reject-expiry-limit'] = sec_config['reject_expiry_limit']
+        url_config['wsse-pwd-nonce-freshness-time'] = sec_config['nonce_freshness_time']
         
-        #url_config = {'basic-auth-username':sec_config.username, 'basic-auth-password':sec.password}
-        
-        result = on_wsse_pwd(self._wss, url_config, body)
+        result = on_wsse_pwd(self._wss, url_config, body, False)
         
         if not result:
             msg = 'FORBIDDEN rid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(

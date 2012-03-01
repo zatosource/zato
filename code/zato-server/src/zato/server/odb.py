@@ -150,7 +150,7 @@ class ODBManager(object):
                     result[item.url_path].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
                     result[item.url_path].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
                     result[item.url_path].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
-                    result[item.url_path].sec_def.nonce_freshness = sec_def.nonce_freshness
+                    result[item.url_path].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
             else:
                 result[item.url_path].sec_def = ZATO_NONE
 
