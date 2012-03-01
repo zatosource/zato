@@ -21,13 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from threading import RLock, Thread
-
-# Pika
-from pika import BasicProperties
-from pika.adapters import SelectConnection
-from pika.connection import ConnectionParameters
-from pika.credentials import PlainCredentials
 
 # anyjson
 from anyjson import loads

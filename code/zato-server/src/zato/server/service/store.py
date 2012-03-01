@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import imp, logging, os, shutil, sys, tempfile, time, zipimport
+import imp, logging, os, shutil, sys, tempfile, zipimport
 from datetime import datetime
 from os.path import getmtime
 from traceback import format_exc
@@ -30,9 +30,9 @@ from uuid import uuid4
 import pkg_resources
 
 # PyYAML
-from yaml import dump
 try:
-    from yaml import CDumper as Dumper
+    from yaml import CDumper  # Looks awkward but
+    Dumper = CDumper          # it's to make import checkers happy
 except ImportError:
     from yaml import Dumper
 
@@ -41,7 +41,6 @@ from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common import ZATO_OK
 from zato.common.util import TRACE1
 from zato.server.service import Service
 

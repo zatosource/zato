@@ -22,10 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from traceback import format_exc
-from uuid import uuid4
-
-# SQLAlchemy
-from sqlalchemy.orm.query import orm_exc
 
 # lxml
 from lxml import etree
@@ -38,8 +34,8 @@ from validate import is_boolean
 from bunch import Bunch
 
 # Zato
-from zato.common import ZatoException, ZATO_OK
-from zato.common.odb.model import Cluster, OutgoingFTP
+from zato.common import ZATO_OK
+from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 

@@ -20,8 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, json, logging, os, socket, sys, time
-from copy import deepcopy
+import asyncore, logging, time
 from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
 from traceback import format_exc
@@ -40,11 +39,11 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import HTTPException, PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_OK, ZATO_URL_TYPE_SOAP
+from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED
 from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
-from zato.common.util import new_rid, TRACE1
+from zato.common.util import new_rid
 from zato.server.base import BrokerMessageReceiver
-from zato.server.base.worker import _HTTPServerChannel, _HTTPTask, _TaskDispatcher, WorkerStore
+from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
 from zato.server.connection.ftp import FTPFacade

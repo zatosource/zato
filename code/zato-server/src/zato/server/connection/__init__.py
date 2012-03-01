@@ -28,7 +28,6 @@ logging.setLoggerClass(ZatoLogger)
 import errno, os, sys, time
 from datetime import datetime
 from subprocess import Popen
-from threading import RLock
 from traceback import format_exc
 
 # psutil
@@ -41,7 +40,6 @@ import zmq
 from bunch import Bunch
 
 # Zato
-from zato.broker.zato_client import BrokerClient
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 

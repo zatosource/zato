@@ -21,8 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, time
-from datetime import datetime, timedelta
-from threading import Event
+from datetime import datetime
 from traceback import format_exc
 
 # APScheduler
@@ -30,7 +29,7 @@ from apscheduler.scheduler import Scheduler as APScheduler
 
 # Zato 
 from zato.common import scheduler_date_time_format
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
+from zato.common.broker_message import SCHEDULER
 from zato.common.util import new_rid
 
 logger = logging.getLogger(__name__)

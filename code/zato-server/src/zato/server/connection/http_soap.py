@@ -18,8 +18,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # stdlib
-import logging, time
-from cgi import escape
 from hashlib import sha256
 from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from string import Template
@@ -27,15 +25,14 @@ from threading import RLock
 from traceback import format_exc
 
 # lxml
-from lxml import etree, objectify
+from lxml import objectify
 
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import ClientSecurityException, HTTPException, soap_body_xpath, \
-     ZATO_ERROR, ZATO_NONE, ZATO_OK, ZatoException, zato_ns_map
+from zato.common import HTTPException, soap_body_xpath, ZATO_NONE, ZATO_OK
 from zato.common.util import security_def_type, TRACE1
 from zato.server.service.internal import AdminService
 

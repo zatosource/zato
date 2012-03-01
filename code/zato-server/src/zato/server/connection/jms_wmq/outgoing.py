@@ -20,25 +20,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import errno, logging, os, socket, sys
-from multiprocessing import Process
+import logging, os
 from threading import RLock, Thread
-
-# Pika
-from pika import BasicProperties
 
 # Bunch
 from bunch import Bunch
 
 # Spring Python
-from springpython.jms import JMSException
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
-from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import DEFINITION, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, OUTGOING
+from zato.common import PORTS
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
-from zato.server.connection import BaseConnection
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 

@@ -27,16 +27,15 @@ import sys
 import copy
 import logging
 from time import time
-from string import Template
 from threading import Event
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy import pool, create_engine
+from sqlalchemy import create_engine
 
 # Spring Python
 from springpython.util import synchronized
-from springpython.context import InitializingObject, DisposableObject
+from springpython.context import DisposableObject
 
 # Zato
 from zato.common import ZatoException

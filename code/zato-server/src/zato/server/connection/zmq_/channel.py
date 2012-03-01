@@ -22,15 +22,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from threading import RLock, Thread
-from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import CHANNEL, ZMQ_CONNECTOR, MESSAGE_TYPE
-from zato.common.util import new_rid, TRACE1
+from zato.common import PORTS
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
+from zato.common.util import new_rid
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
 

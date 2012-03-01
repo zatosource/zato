@@ -22,19 +22,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from threading import RLock, Thread
-from traceback import format_exc
-
-# Pika
-from pika import BasicProperties
 
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.common import ConnectionException, PORTS
-from zato.common.broker_message import DEFINITION, ZMQ_CONNECTOR, MESSAGE_TYPE, OUTGOING
+from zato.common import PORTS
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
-from zato.server.connection import BaseConnection
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
 

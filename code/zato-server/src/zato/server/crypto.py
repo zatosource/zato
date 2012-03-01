@@ -20,17 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os
-from base64 import b64encode, b64decode
-from uuid import uuid4
-from getpass import getpass
-from binascii import hexlify, unhexlify
+import logging
+from base64 import b64decode
+from binascii import hexlify
 
 # M2Crypto
-from M2Crypto import RSA, BIO
+from M2Crypto import RSA
 
 # Zato
-from zato.common.util import decrypt, encrypt, sign
+from zato.common.util import sign
 
 logger = logging.getLogger(__name__)
 
