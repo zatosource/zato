@@ -20,13 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json, multiprocessing, os, ssl
+import json, multiprocessing, os
 
 # ConfigObj
 from configobj import ConfigObj
-
-# sec-wall
-from secwall.cli import prepare_config
 
 # Zato
 from zato.admin.zato_settings import _update_globals

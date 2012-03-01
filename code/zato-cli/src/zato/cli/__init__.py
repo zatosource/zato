@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import argparse, glob, os, subprocess, sys, tempfile, textwrap, time, traceback
+import argparse, glob, os, subprocess, sys, tempfile, time
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname

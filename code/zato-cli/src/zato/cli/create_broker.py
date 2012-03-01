@@ -24,7 +24,6 @@ import os, uuid
 
 # Zato
 from zato.cli import ZATO_BROKER_DIR, ZatoCommand, common_logging_conf_contents
-from zato.common.defaults import zato_admin_host, zato_admin_port
 
 config_template = """{{
   "host": "{host}",

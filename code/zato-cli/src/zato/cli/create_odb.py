@@ -26,9 +26,7 @@ from getpass import getuser
 from socket import gethostname
 
 # SQLAlchemy
-from sqlalchemy import create_engine
 from sqlalchemy.exc import ProgrammingError
-from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts

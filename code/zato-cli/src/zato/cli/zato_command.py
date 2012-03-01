@@ -21,10 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import argparse, sys
+import sys
 
 # Zato
-from zato.cli import ca_create_ca, quickstart, start, stop, odb_delete, info
+from zato.cli import quickstart, start, stop, odb_delete, info
 
 USAGE = """
 Zato 1.0 - the open-source ESB and application server

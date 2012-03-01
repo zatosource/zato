@@ -20,28 +20,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import argparse, os, shutil, sys, textwrap, traceback
+import os, shutil, sys, traceback
 from copy import deepcopy
 from datetime import datetime
-from getpass import getpass
-from hashlib import sha256
-from string import Template
 from uuid import uuid4
-
-# M2Crypto
-from M2Crypto import RSA
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_zato_admin, create_broker, create_server, create_zato_admin
-from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
-from zato.common.odb import engine_def, ping_queries
+from zato.common.odb import ping_queries
 from zato.common.odb.model import *
-from zato.common.util import current_host, security_def_type, tech_account_password
+from zato.common.util import current_host, tech_account_password
 from zato.server import main
-from zato.server.crypto import CryptoManager
-from zato.server.repo import RepoManager
 
 ################################################################################
 
