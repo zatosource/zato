@@ -24,7 +24,7 @@ from copy import deepcopy
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
-from zato.common.odb import drop_all, engine_def
+from zato.common.odb import drop_all
 
 class Delete(ZatoCommand):
     command_name = "odb delete"
