@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import httplib, json, logging, logging.config, os, ssl, sys, urllib
+import httplib, json, logging, logging.config, os, ssl, urllib
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
 from time import sleep, time
@@ -33,7 +33,7 @@ from springpython.remoting.xmlrpc import SSLServer
 from zato.agent.load_balancer.config import config_from_string, string_from_config
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
 from zato.common import ZATO_OK
-from zato.common.haproxy import haproxy_stats, timeouts
+from zato.common.haproxy import haproxy_stats
 from zato.common.util import TRACE1
 
 public_method_prefix = "_lb_agent_"
