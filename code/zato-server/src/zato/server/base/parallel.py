@@ -213,10 +213,10 @@ class ParallelServer(BrokerMessageReceiver):
             wss_config[item.name].username = item.username
             wss_config[item.name].password = item.password
             wss_config[item.name].password_type = item.password_type
-            wss_config[item.name].reject_empty_nonce_ts = item.reject_empty_nonce_ts
-            wss_config[item.name].reject_stale_username = item.reject_stale_username
-            wss_config[item.name].expiry_limit = item.expiry_limit
-            wss_config[item.name].nonce_freshness = item.nonce_freshness
+            wss_config[item.name].reject_empty_nonce_creat = item.reject_empty_nonce_creat
+            wss_config[item.name].reject_stale_tokens = item.reject_stale_tokens
+            wss_config[item.name].reject_expiry_limit = item.reject_expiry_limit
+            wss_config[item.name].nonce_freshness_time = item.nonce_freshness_time
 
         # Security configuration of HTTP URLs.
         url_sec = self.odb.get_url_security(server)

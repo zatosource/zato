@@ -147,9 +147,9 @@ class ODBManager(object):
                     result[item.url_path].sec_def.username = sec_def.username
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.password_type = sec_def.password_type
-                    result[item.url_path].sec_def.reject_empty_nonce_ts = sec_def.reject_empty_nonce_ts
-                    result[item.url_path].sec_def.reject_stale_username = sec_def.reject_stale_username
-                    result[item.url_path].sec_def.expiry_limit = sec_def.expiry_limit
+                    result[item.url_path].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
+                    result[item.url_path].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
+                    result[item.url_path].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
                     result[item.url_path].sec_def.nonce_freshness = sec_def.nonce_freshness
             else:
                 result[item.url_path].sec_def = ZATO_NONE

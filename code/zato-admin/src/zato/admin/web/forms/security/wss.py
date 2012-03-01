@@ -31,10 +31,10 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     password_type = forms.ChoiceField(widget=forms.Select(attrs={"class":"required"}))
     username = forms.CharField(widget=forms.TextInput(attrs={"class":"required"}))
-    reject_empty_nonce_ts = forms.BooleanField(widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    reject_stale_username = forms.BooleanField(widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    expiry_limit = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
-    nonce_freshness = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
+    reject_empty_nonce_creat = forms.BooleanField(widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    reject_stale_tokens = forms.BooleanField(widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    reject_expiry_limit = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
+    nonce_freshness_time = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
     
     def __init__(self, post_data=None, initial={}, prefix=None):
         super(CreateForm, self).__init__(post_data, initial=initial, prefix=prefix)

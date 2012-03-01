@@ -57,10 +57,10 @@ class GetList(AdminService):
                 definition_elem.is_active = definition.is_active
                 definition_elem.password_type = definition.password_type
                 definition_elem.username = definition.username
-                definition_elem.reject_empty_nonce_ts = definition.reject_empty_nonce_ts
-                definition_elem.reject_stale_username = definition.reject_stale_username
-                definition_elem.expiry_limit = definition.expiry_limit
-                definition_elem.nonce_freshness = definition.nonce_freshness
+                definition_elem.reject_empty_nonce_creat = definition.reject_empty_nonce_creat
+                definition_elem.reject_stale_tokens = definition.reject_stale_tokens
+                definition_elem.reject_expiry_limit = definition.reject_expiry_limit
+                definition_elem.nonce_freshness_time = definition.nonce_freshness_time
     
                 definition_list.append(definition_elem)
     
@@ -74,9 +74,9 @@ class Create(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['cluster_id', 'name', 'is_active', 'username', 
-                              'password_type', 'reject_empty_nonce_ts', 
-                              'reject_stale_username',  'expiry_limit',
-                              'nonce_freshness']
+                              'password_type', 'reject_empty_nonce_creat', 
+                              'reject_stale_tokens',  'reject_expiry_limit',
+                              'nonce_freshness_time']
             params = _get_params(payload, request_params, 'data.')
             
             cluster_id = params['cluster_id']
@@ -99,9 +99,9 @@ class Create(AdminService):
             try:
                 wss = WSSDefinition(None, name, params['is_active'], params['username'], 
                                     password, params['password_type'],
-                                    params['reject_empty_nonce_ts'], 
-                                    params['reject_stale_username'], params['expiry_limit'], 
-                                    params['nonce_freshness'], cluster)
+                                    params['reject_empty_nonce_creat'], 
+                                    params['reject_stale_tokens'], params['reject_expiry_limit'], 
+                                    params['nonce_freshness_time'], cluster)
                 
                 session.add(wss)
                 session.commit()
@@ -130,8 +130,8 @@ class Edit(AdminService):
         with closing(self.server.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['id', 'is_active', 'name', 'username', 'password_type', 
-                              'reject_empty_nonce_ts', 'reject_stale_username', 
-                              'expiry_limit', 'nonce_freshness', 'cluster_id']
+                              'reject_empty_nonce_creat', 'reject_stale_tokens', 
+                              'reject_expiry_limit', 'nonce_freshness_time', 'cluster_id']
             new_params = _get_params(payload, request_params, 'data.')
             
             def_id = new_params['id']
@@ -157,10 +157,10 @@ class Edit(AdminService):
                 wss.is_active = new_params['is_active']
                 wss.username = new_params['username']
                 wss.password_type = new_params['password_type']
-                wss.reject_empty_nonce_ts = new_params['reject_empty_nonce_ts']
-                wss.reject_stale_username = new_params['reject_stale_username']
-                wss.expiry_limit = new_params['expiry_limit']
-                wss.nonce_freshness = new_params['nonce_freshness']
+                wss.reject_empty_nonce_creat = new_params['reject_empty_nonce_creat']
+                wss.reject_stale_tokens = new_params['reject_stale_tokens']
+                wss.reject_expiry_limit = new_params['reject_expiry_limit']
+                wss.nonce_freshness_time = new_params['nonce_freshness_time']
     
                 session.add(wss)
                 session.commit()

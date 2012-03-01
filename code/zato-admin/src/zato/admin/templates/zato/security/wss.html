@@ -27,18 +27,18 @@
             '_is_active',
             'username',
             '_password_type',
-            '_reject_empty_nonce_ts',
-            '_reject_stale_username',
-            'expiry_limit',
-            'nonce_freshness',
+            '_reject_empty_nonce_creat',
+            '_reject_stale_tokens',
+            'reject_expiry_limit',
+            'nonce_freshness_time',
             '_change_password',
             '_edit',
             '_delete',
             'id',
             'is_active',
             'password_type_raw',
-            'reject_empty_nonce_ts',
-            'reject_stale_username'
+            'reject_empty_nonce_creat',
+            'reject_stale_tokens'
         ]
     }
     </script>
@@ -97,19 +97,19 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Reject empty nonce creation timestamps</td>
-                            <td>{{ create_form.reject_empty_nonce_ts }} </td>
+                            <td>{{ create_form.reject_empty_nonce_creat }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Reject stale username tokens</td>
-                            <td>{{ create_form.reject_stale_username }} </td>
+                            <td>{{ create_form.reject_stale_tokens }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Expiry (seconds)</td>
-                            <td>{{ create_form.expiry_limit }} </td>
+                            <td>{{ create_form.reject_expiry_limit }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Nonce freshness (seconds)</td>
-                            <td>{{ create_form.nonce_freshness }} </td>
+                            <td>{{ create_form.nonce_freshness_time }} </td>
                         </tr>
 
                         <tr>
@@ -147,19 +147,19 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Reject empty nonce creation timestamps</td>
-                            <td>{{ edit_form.reject_empty_nonce_ts }} </td>
+                            <td>{{ edit_form.reject_empty_nonce_creat }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Reject stale username tokens</td>
-                            <td>{{ edit_form.reject_stale_username }} </td>
+                            <td>{{ edit_form.reject_stale_tokens }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Expiry (seconds)</td>
-                            <td>{{ edit_form.expiry_limit }} </td>
+                            <td>{{ edit_form.reject_expiry_limit }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Nonce freshness (seconds)</td>
-                            <td>{{ edit_form.nonce_freshness }} </td>
+                            <td>{{ edit_form.nonce_freshness_time }} </td>
                         </tr>
 
                         <tr>
@@ -241,18 +241,18 @@
                         <td>{% if item.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{{ item.username }}</td>
                         <td>{{ item.password_type }}</td>
-                        <td>{% if item.reject_empty_nonce_ts %}Yes{% else %}No{% endif %}</td>
-                        <td>{% if item.reject_stale_username %}Yes{% else %}No{% endif %}</td>
-                        <td>{{ item.expiry_limit }}</td>
-                        <td>{{ item.nonce_freshness }}</td>
+                        <td>{% if item.reject_empty_nonce_creat %}Yes{% else %}No{% endif %}</td>
+                        <td>{% if item.reject_stale_tokens %}Yes{% else %}No{% endif %}</td>
+                        <td>{{ item.reject_expiry_limit }}</td>
+                        <td>{{ item.nonce_freshness_time }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.security.wss.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.wss.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.password_type_raw }}</td>
-                        <td class='ignore'>{{ item.reject_empty_nonce_ts }}</td>
-                        <td class='ignore'>{{ item.reject_stale_username }}</td>
+                        <td class='ignore'>{{ item.reject_empty_nonce_creat }}</td>
+                        <td class='ignore'>{{ item.reject_stale_tokens }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

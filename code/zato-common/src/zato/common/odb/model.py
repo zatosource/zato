@@ -200,25 +200,25 @@ class WSSDefinition(SecurityBase):
     username = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
     password_type = Column(String(45), nullable=False)
-    reject_empty_nonce_ts = Column(Boolean(), nullable=False)
-    reject_stale_username = Column(Boolean(), nullable=True)
-    expiry_limit = Column(Integer(), nullable=False)
-    nonce_freshness = Column(Integer(), nullable=True)
+    reject_empty_nonce_creat = Column(Boolean(), nullable=False) #
+    reject_stale_tokens = Column(Boolean(), nullable=True)       # 
+    reject_expiry_limit = Column(Integer(), nullable=False)      # 
+    nonce_freshness_time = Column(Integer(), nullable=True)      # 
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
-                 password=None, password_type=None, reject_empty_nonce_ts=None,
-                 reject_stale_username=None, expiry_limit=None,
-                 nonce_freshness=None, cluster=None, password_type_raw=None):
+                 password=None, password_type=None, reject_empty_nonce_creat=None,
+                 reject_stale_tokens=None, reject_expiry_limit=None,
+                 nonce_freshness_time=None, cluster=None, password_type_raw=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
         self.password = password
         self.password_type = password_type
-        self.reject_empty_nonce_ts = reject_empty_nonce_ts
-        self.reject_stale_username = reject_stale_username
-        self.expiry_limit = expiry_limit
-        self.nonce_freshness = nonce_freshness
+        self.reject_empty_nonce_creat = reject_empty_nonce_creat
+        self.reject_stale_tokens = reject_stale_tokens
+        self.reject_expiry_limit = reject_expiry_limit
+        self.nonce_freshness_time = nonce_freshness_time
         self.cluster = cluster
         self.password_type_raw = password_type_raw
 

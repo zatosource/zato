@@ -145,14 +145,14 @@ class Security(object):
         print(33, sec_config)
 
         '''
-        expiry_limit=3600, 
-        is_active=True, 
-        nonce_freshness=3600, 
+        xexpxiry_limit=3600, 
+        is_xactive=True, 
+        xnonce_freshness=3600, 
         password=u'6d781a885218412ea3d475a0529af159', 
         password_type=u'clear_text', 
-        reject_empty_nonce_ts=True, 
-        reject_stale_username=True, 
-        username=u'zato.ping.plain_http.wss.clear_text'
+        xrxeject_exmpty_noxnce_txs=True, 
+        xrxeject_stale_username=True, 
+        xusername=u'zato.ping.plain_http.wss.clear_text'
         '''
         
         url_config = {}

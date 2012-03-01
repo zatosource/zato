@@ -68,10 +68,10 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
     zato_message.data.username = params[prefix + 'username']
     zato_message.data.password_type = params[prefix + 'password_type']
-    zato_message.data.reject_empty_nonce_ts = bool(params.get(prefix + 'reject_empty_nonce_ts'))
-    zato_message.data.reject_stale_username = bool(params.get(prefix + 'reject_stale_username'))
-    zato_message.data.expiry_limit = params[prefix + 'expiry_limit']
-    zato_message.data.nonce_freshness = params[prefix + 'nonce_freshness']
+    zato_message.data.reject_empty_nonce_creat = bool(params.get(prefix + 'reject_empty_nonce_creat'))
+    zato_message.data.reject_stale_tokens = bool(params.get(prefix + 'reject_stale_tokens'))
+    zato_message.data.reject_expiry_limit = params[prefix + 'reject_expiry_limit']
+    zato_message.data.nonce_freshness_time = params[prefix + 'nonce_freshness_time']
 
     return zato_message
 
@@ -106,14 +106,14 @@ def index(req):
                 username = definition_elem.username.text
                 password_type = ZATO_WSS_PASSWORD_TYPES[definition_elem.password_type.text]
                 password_type_raw = definition_elem.password_type.text
-                reject_empty_nonce_ts = definition_elem.reject_empty_nonce_ts
-                reject_stale_username = definition_elem.reject_stale_username
-                expiry_limit = definition_elem.expiry_limit
-                nonce_freshness = definition_elem.nonce_freshness
+                reject_empty_nonce_creat = definition_elem.reject_empty_nonce_creat
+                reject_stale_tokens = definition_elem.reject_stale_tokens
+                reject_expiry_limit = definition_elem.reject_expiry_limit
+                nonce_freshness_time = definition_elem.nonce_freshness_time
 
                 wss = WSSDefinition(id, name, is_active, username, None,
-                        password_type, reject_empty_nonce_ts, reject_stale_username,
-                        expiry_limit, nonce_freshness, password_type_raw=password_type_raw)
+                        password_type, reject_empty_nonce_creat, reject_stale_tokens,
+                        reject_expiry_limit, nonce_freshness_time, password_type_raw=password_type_raw)
 
                 items.append(wss)
 
