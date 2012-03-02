@@ -33,6 +33,7 @@ from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Zato
+from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 
