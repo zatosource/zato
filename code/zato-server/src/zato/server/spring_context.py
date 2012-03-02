@@ -33,7 +33,6 @@ from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecur
 from zato.server.crypto import CryptoManager
 from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
-from zato.server.pool.sql import SQLConnectionPool, SQLConnectionPool
 from zato.server.repo import RepoManager
 from zato.server.scheduler import Scheduler
 from zato.server.service.store import EggServiceImporter, ServiceStore
@@ -77,7 +76,6 @@ class ZatoContext(PythonConfig):
     @Object
     def config_repo_manager(self):
         repo_manager = RepoManager()
-        repo_manager.sql_pool_list_location = self.sql_pool_list_location()
 
         return repo_manager
 
@@ -93,18 +91,7 @@ class ZatoContext(PythonConfig):
         return store
 
     # #######################################################
-    # HTTP/SOAP handlers
-
-    @Object
-    def soap_config(self):
-        return {}
-
-    # #######################################################
     # Security
-
-    @Object
-    def wss_nonce_cache(self):
-        return {}
     
     @Object
     def connection_http_soap_security(self):
@@ -126,9 +113,6 @@ class ZatoContext(PythonConfig):
         server = ParallelServer()
         server.odb = self.odb_manager()
         server.service_store = self.service_store()
-        #server.request_handler = self.request_handler()
-        #server.request_handler.soap_handler.server = server
-        #server.request_handler.plain_http_handler.server = server
 
         return server
 
@@ -148,42 +132,3 @@ class ZatoContext(PythonConfig):
     @Object
     def scheduler(self):
         return Scheduler()
-
-    # #######################################################
-    # SQL connection pools management
-
-    @Object
-    def odb_pool_location(self):
-        pass
-        #return os.path.join(self.config_repo_location(), "odb.yml")
-
-    @Object
-    def odb_pool_config(self):
-        #data = load(open(self.odb_pool_location()), Loader=Loader)
-        #return data["zato_odb"]
-        pass
-
-    @Object
-    def sql_pool_list_location(self):
-        #return os.path.join(self.config_repo_location(), "sql-pool-list.yml")
-        pass
-
-    @Object
-    def sql_pool_list(self):
-        # TODO: Make sure the list is empty (sql_pool_list: {}) when Zato is
-        # installed.
-
-        #data = load(open(self.sql_pool_list_location()), Loader=Loader)
-        return {} #data["sql_pool_list"]
-
-
-    @Object
-    def sql_pool(self):
-        pool_list = self.sql_pool_list()
-        config_repo_manager = self.config_repo_manager()
-        crypto_manager = self.crypto_manager()
-        create_sa_engines = True
-        pool = SQLConnectionPool(pool_list, config_repo_manager, crypto_manager,
-                                 create_sa_engines)
-
-        return pool
