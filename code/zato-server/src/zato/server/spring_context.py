@@ -36,7 +36,6 @@ from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.pool.sql import SQLConnectionPool, SQLConnectionPool
 from zato.server.repo import RepoManager
 from zato.server.scheduler import Scheduler
-from zato.server.security.wss import WSSUsernameTokenProfileStore
 from zato.server.service.store import EggServiceImporter, ServiceStore
 
 class ZatoContext(PythonConfig):
@@ -110,16 +109,6 @@ class ZatoContext(PythonConfig):
     @Object
     def connection_http_soap_security(self):
         return ConnectionHTTPSOAPSecurity()
-
-    @Object
-    def wss_username_password_store(self):
-        store = WSSUsernameTokenProfileStore()
-        store.config = {"foo": "sample1"}
-
-        # TODO: Fetch definitions from ODB
-        #store.definitions = self.wss_username_password_definition_list()
-
-        return store
 
     # #######################################################
     # ODB (Operational Database)
