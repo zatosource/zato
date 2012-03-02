@@ -19,9 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import multiprocessing
-
 # Spring Python
 from springpython.config import Object, PythonConfig
 
@@ -122,7 +119,6 @@ class ZatoContext(PythonConfig):
         server.pickup = self.pickup()
         server.config_repo_manager = self.config_repo_manager()
         server.scheduler = self.scheduler()
-        server.config_queue = multiprocessing.Queue()
 
         return server
 
