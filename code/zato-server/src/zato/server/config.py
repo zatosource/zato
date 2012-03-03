@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from threading import RLock
 
 # Bunch
-from bunch import Bunch
+from bunch import SimpleBunch
 
 class ConfigDict(object):
     """ Stores configuration of a particular item of interest, such as an
@@ -56,19 +56,7 @@ class ConfigDict(object):
 class ConfigStore(object):
     def __init__(self):
         self.ftp = ConfigDict('ftp')
-    
-def my_test():
-    b = Bunch()
-    d = dict()
-    b.a = 1
-    d['a'] = 1
-    for x in range(500000):
-        #b.a
-        d['a']
-    
-if __name__ == '__main__':
-    import cProfile
-    cProfile.run('my_test()')
+
     
 # ftp = self.outgoing.ftp.get('aaa')
 # plain_http = self.outgoing.plain_http.get('aaa')
