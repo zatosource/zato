@@ -28,7 +28,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.exc import IntegrityError
 
 # Bunch
-from bunch import Bunch
+from bunch import SimpleBunch
 
 # Zato
 from zato.common import ZATO_NONE
@@ -103,7 +103,7 @@ class ODBManager(object):
             logger.error(msg)
             raise
 
-    def get_url_security(self, server, needs_columns=False):
+    def get_url_security(self, server):
         """ Returns the security configuration of HTTP URLs.
         """
 
@@ -116,15 +116,21 @@ class ODBManager(object):
 
         result = {}
 
-        sec_def_q = http_soap_security_list(self._session, server.cluster_id).all()
-        for item in sec_def_q:
+        query = http_soap_security_list(self._session, server.cluster_id)
+        columns = SimpleBunch()
+        
+        # So ConfigDict has its data in the format it expects
+        for c in query.statement.columns:
+            columns[c.name] = None
             
-            result[item.url_path] = Bunch()
+        for item in query.all():
+            
+            result[item.url_path] = SimpleBunch()
             result[item.url_path].transport = item.transport
-            result[item.url_path].sec_def = Bunch()
+            result[item.url_path].sec_def = SimpleBunch()
 
             if item.security_id:
-                result[item.url_path].sec_def = Bunch()
+                result[item.url_path].sec_def = SimpleBunch()
                 result[item.url_path].sec_def.type = item.sec_type
                 
                 # Will raise KeyError if the DB gets somehow misconfigured.
@@ -154,7 +160,7 @@ class ODBManager(object):
             else:
                 result[item.url_path].sec_def = ZATO_NONE
 
-        return result
+        return result, columns
 
     def add_service(self, name, impl_name, is_internal, deployment_time, details):
         """ Adds information about the server's service into the ODB.

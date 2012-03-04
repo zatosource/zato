@@ -83,7 +83,7 @@ class ConfigStore(object):
         self.jms_wmq = jms_wmq                      # not yet
         self.zmq = zmq                              # not yet
         
-        # Repo
+        # Local on-disk configuraion repository
         self.repo_location = repo_location          # done
         
         # Security definitions
