@@ -34,36 +34,89 @@ class ConfigDict(object):
     doesn't assume anything about CPython's byte code-specific implementation
     details.
     """
-    def __init__(self, name, _dict={}):
+    def __init__(self, name, _bunch={}):
         self.name = name
-        self._dict = _dict
+        self._bunch = _bunch
         self.lock = RLock()
         
     def get(self, key):
         with self.lock:
-            return self._dict[key]
+            return self._bunch[key]
         
     def set(self, key, value):
         with self.lock:
-            self._dict[key] = value
+            self._bunch[key] = value
             
     def __del__(self, key):
         with self.lock:
-            del self._dict[key]
+            del self._bunch[key]
             
-#    def from_query(self, query, attrs, item_class=
+    @staticmethod        
+    def from_query(query_data, item_class=SimpleBunch):
+        bunch = SimpleBunch()
+
+        if query_data:
+            query, attrs = query_data
+    
+            for item in query:
+                bunch[item.name] = SimpleBunch()
+                bunch[item.name].config = SimpleBunch()
+                
+                for attr_name in attrs.keys():
+                    bunch[item.name]['config'][attr_name] = getattr(item, attr_name)
+            
+        return bunch
 
 class ConfigStore(object):
-    def __init__(self):
-        self.ftp = ConfigDict('ftp')
+    def __init__(self, ftp=None, plain_http=None, soap=None, s3=None, 
+                 sql_conn=None, amqp=None, jms_wmq=None, zmq=None,
+                 repo_location=None, basic_auth=None, wss=None, tech_acc=None,
+                 url_sec=None, http_soap=None):
+        
+        # Outgoing connections
+        self.ftp = ftp                              # done
+        self.plain_http = plain_http                # not yet
+        self.soap = soap                            # not yet
+        self.s3 = s3                                # not yet
+        self.sql_conn = sql_conn                    # not yet
+        self.amqp = amqp                            # not yet
+        self.jms_wmq = jms_wmq                      # not yet
+        self.zmq = zmq                              # not yet
+        
+        # Repo
+        self.repo_location = repo_location          # done
+        
+        # Security definitions
+        self.basic_auth = basic_auth                # done
+        self.wss = wss                              # not yet
+        self.tech_acc = tech_acc                    # not yet
+        
+        # URL security
+        self.url_sec = url_sec                      # not yet
+        
+        # HTTP/SOAP channels
+        self.http_soap = http_soap                  # not yet
 
     
+#
+# ftp = self.outgoing.ftp.get('aaa')
+# ------------------------------------
+# self.outgoing -> ConfigStore
+# self.outgoing.ftp -> ConfigDict
+# self.outgoing.ftp.get('aaa') -> SimpleBunch
+# self.outgoing.ftp.get('aaa').config -> connection parameters
+# self.outgoing.ftp.get('aaa').conn -> connection object
+#
+
+# amqp = self.outgoing.amqp.get('aaa')
+# jms_wmq = self.outgoing.jms_wmq.get('aaa')
+# zmq = self.outgoing.zmq.get('aaa')
+
 # ftp = self.outgoing.ftp.get('aaa')
 # plain_http = self.outgoing.plain_http.get('aaa')
 # s3 = self.outgoing.s3.get('aaa')
 # soap = self.outgoing.soap.get('aaa')
 # sql_conn = self.sql_pool.get('aaa')
-
 # del self.outgoing.ftp['aaa']
 
 # config_copy = copy.copy(outgoing)

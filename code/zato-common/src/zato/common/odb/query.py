@@ -19,11 +19,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from functools import wraps
+
 # Zato
 from zato.common.odb.model import(ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, 
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, 
     Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, 
     SecurityBase, Service, TechnicalAccount, WSSDefinition)
+
+def needs_columns(func):
+    """ A decorator for queries which works out whether a given query function
+    should return the result only or a column list retrieved in addition
+    to the result. This is useful because some callers prefer the former and
+    some need the latter.
+    """
+    @wraps(func)
+    def inner(*args):
+        # needs_columns is always the last argument so we don't have to look
+        # it up using the 'inspect' module or anything like that.
+        needs_columns = args[-1]
+        
+        q = func(*args)
+        
+        if needs_columns:
+            return q.all(), q.statement.columns
+        return q.all()
+    
+    return inner
 
 # ##############################################################################
 
@@ -57,13 +80,13 @@ def job_list(session, cluster_id):
 
 # ##############################################################################
 
-def basic_auth_list(session, cluster_id):
+@needs_columns
+def basic_auth_list(session, cluster_id, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
     return session.query(HTTPBasicAuth).\
         filter(Cluster.id==cluster_id).\
-        order_by('sec_basic_auth.name').\
-        all()
+        order_by('sec_basic_auth.name')
 
 def tech_acc_list(session, cluster_id):
     """ All the technical accounts.
@@ -386,10 +409,11 @@ def out_ftp(session, cluster_id, id):
            filter(OutgoingFTP.id==id).\
            one()
 
-def out_ftp_list(session, cluster_id):
+@needs_columns
+def out_ftp_list(session, cluster_id, needs_columns=False):
     """ Outgoing FTP connections.
     """
-    return _out_ftp(session, cluster_id).all()
+    return _out_ftp(session, cluster_id)
 
 # ##############################################################################
 
