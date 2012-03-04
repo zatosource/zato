@@ -71,7 +71,7 @@ class ConfigStore(object):
     def __init__(self, ftp=None, plain_http=None, soap=None, s3=None, 
                  sql_conn=None, amqp=None, jms_wmq=None, zmq=None,
                  repo_location=None, basic_auth=None, wss=None, tech_acc=None,
-                 url_sec=None, http_soap=None):
+                 url_sec=None, http_soap=None, broker_config=None):
         
         # Outgoing connections
         self.ftp = ftp                              # done
@@ -96,6 +96,9 @@ class ConfigStore(object):
         
         # HTTP/SOAP channels
         self.http_soap = http_soap                  # not yet
+        
+        # Configuration for broker clients
+        self.broker_config = broker_config
 
     
 #
