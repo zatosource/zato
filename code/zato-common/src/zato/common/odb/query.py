@@ -88,22 +88,22 @@ def basic_auth_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         order_by('sec_basic_auth.name')
 
-def tech_acc_list(session, cluster_id):
+@needs_columns
+def tech_acc_list(session, cluster_id, needs_columns=False):
     """ All the technical accounts.
     """
     return session.query(TechnicalAccount).\
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
-        order_by('sec_tech_acc.name').\
-        all()
+        order_by('sec_tech_acc.name')
 
-def wss_list(session, cluster_id):
+@needs_columns
+def wss_list(session, cluster_id, needs_columns=False):
     """ All the WS-Security definitions.
     """
     return session.query(WSSDefinition).\
         filter(Cluster.id==cluster_id).\
-        order_by('sec_wss_def.name').\
-        all()
+        order_by('sec_wss_def.name')
 
 # ##############################################################################
 

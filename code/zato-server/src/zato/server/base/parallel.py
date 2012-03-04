@@ -170,15 +170,17 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.basic_auth = ConfigDict.from_query(query)
         
         # Technical accounts
-        ta_config = Bunch()
-        for item in self.odb.get_tech_acc_list(server.cluster.id):
-            ta_config[item.name] = Bunch()
-            ta_config[item.name].is_active = item.is_active
-            ta_config[item.name].name = item.name
-            ta_config[item.name].password = item.password
-            ta_config[item.name].salt = item.salt
-
-                    
+        query = self.odb.get_tech_acc_list(server.cluster.id, True)
+        self.config.tech_acc = ConfigDict.from_query(query)
+        
+        # WS-Security
+        query = self.odb.get_wss_list(server.cluster.id, True)
+        self.config.wss = ConfigDict.from_query(query)
+        
+        # Security configuration of HTTP URLs
+        query = self.odb.get_url_security(server, True)
+        self.config.url_sec = ConfigDict.from_query(query)
+        
         # The broker client for each of the worker threads.
         self.config.broker_config = Bunch()
         self.config.broker_config.name = 'worker-thread'
@@ -187,21 +189,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.broker_config.broker_push_client_pull = self.broker_push_worker_pull
         self.config.broker_config.client_push_broker_pull = self.worker_push_broker_pull
         self.config.broker_config.broker_pub_client_sub = self.broker_pub_worker_sub
-        
-        wss_config = Bunch()
-        for item in self.odb.get_wss_list(server.cluster.id):
-            wss_config[item.name] = Bunch()
-            wss_config[item.name].is_active = item.is_active
-            wss_config[item.name].username = item.username
-            wss_config[item.name].password = item.password
-            wss_config[item.name].password_type = item.password_type
-            wss_config[item.name].reject_empty_nonce_creat = item.reject_empty_nonce_creat
-            wss_config[item.name].reject_stale_tokens = item.reject_stale_tokens
-            wss_config[item.name].reject_expiry_limit = item.reject_expiry_limit
-            wss_config[item.name].nonce_freshness_time = item.nonce_freshness_time
-
-        # Security configuration of HTTP URLs.
-        url_sec = self.odb.get_url_security(server)
         
         # All the HTTP/SOAP channels.
         http_soap = MultiDict()
@@ -218,12 +205,7 @@ class ParallelServer(BrokerMessageReceiver):
             _info[item.soap_action].service_name = item.service_name
             _info[item.soap_action].impl_name = item.impl_name
             http_soap.add(item.url_path, _info)
-            
-        #self.config.basic_auth = ba_config
-        #self.config.tech_acc = ta_config
-        #self.config.wss = wss_config
-        #self.config.url_sec = url_sec
-        #self.config.http_soap = http_soap
+
 
         # The parallel server's broker client. The client's used to notify
         # all the server's AMQP subprocesses that they need to shut down.

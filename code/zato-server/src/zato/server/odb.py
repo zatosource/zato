@@ -228,12 +228,12 @@ class ODBManager(object):
     def get_tech_acc_list(self, cluster_id, needs_columns=False):
         """ Returns a list of technical accounts existing on the given cluster .
         """
-        return tech_acc_list(self._session, cluster_id)
+        return tech_acc_list(self._session, cluster_id, needs_columns)
 
     def get_wss_list(self, cluster_id, needs_columns=False):
         """ Returns a list of WS-Security definitions on the given cluster .
         """
-        return wss_list(self._session, cluster_id)
+        return wss_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 
