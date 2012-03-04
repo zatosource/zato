@@ -178,7 +178,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.wss = ConfigDict.from_query(query)
         
         # Security configuration of HTTP URLs
-        query = self.odb.get_url_security(server, True)
+        query = self.odb.get_url_security(server)
         self.config.url_sec = ConfigDict.from_query(query)
         
         # The broker client for each of the worker threads.
