@@ -44,6 +44,7 @@ from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CO
 from zato.common.util import new_rid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
+from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
 from zato.server.connection.ftp import FTPFacade
@@ -103,7 +104,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.crypto_manager = crypto_manager
         self.odb = odb
         self.singleton_server = singleton_server
-        self.worker_config = worker_config
+        self.config = worker_config
         self.repo_location = repo_location
         self.ftp = ftp
         
@@ -152,46 +153,22 @@ class ParallelServer(BrokerMessageReceiver):
             # Start the connectors only once throughout the whole cluster
             self._init_connectors(server)
             
-        # FTP
-        ftp_conn_params = Bunch()
-        for item in self.odb.get_out_ftp_list(server.cluster.id):
-            ftp_conn_params[item.name] = Bunch()
-            ftp_conn_params[item.name].is_active = item.is_active
-            ftp_conn_params[item.name].name = item.name
-            ftp_conn_params[item.name].host = item.host
-            ftp_conn_params[item.name].user = item.user
-            ftp_conn_params[item.name].password = item.password
-            ftp_conn_params[item.name].acct = item.acct
-            ftp_conn_params[item.name].timeout = item.timeout
-            ftp_conn_params[item.name].port = item.port
-            ftp_conn_params[item.name].dircache = item.dircache
             
-        self.ftp = FTPFacade(ftp_conn_params)
-                    
-        self.worker_config = Bunch()
+        # The main config store
+        self.config = ConfigStore()
         
-        # Repo location so that AMQP subprocesses know how where to read
+        # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
-        self.worker_config.repo_location = self.repo_location
-        
-        # The broker client for each of the worker threads.
-        self.worker_config.broker_config = Bunch()
-        self.worker_config.broker_config.name = 'worker-thread'
-        self.worker_config.broker_config.broker_token = self.broker_token
-        self.worker_config.broker_config.zmq_context = self.zmq_context
-        self.worker_config.broker_config.broker_push_client_pull = self.broker_push_worker_pull
-        self.worker_config.broker_config.client_push_broker_pull = self.worker_push_broker_pull
-        self.worker_config.broker_config.broker_pub_client_sub = self.broker_pub_worker_sub
-        
-        # HTTP Basic Auth
-        ba_config = Bunch()
-        for item in self.odb.get_basic_auth_list(server.cluster.id):
-            ba_config[item.name] = Bunch()
-            ba_config[item.name].is_active = item.is_active
-            ba_config[item.name].username = item.username
-            ba_config[item.name].realm = item.realm
-            ba_config[item.name].password = item.password
+        self.config.repo_location = self.repo_location
             
+        # FTP
+        query = self.odb.get_out_ftp_list(server.cluster.id, True)
+        self.config.ftp = ConfigDict.from_query(query)
+
+        # HTTP Basic Auth
+        query = self.odb.get_basic_auth_list(server.cluster.id, True)
+        self.config.basic_auth = ConfigDict.from_query(query)
+        
         # Technical accounts
         ta_config = Bunch()
         for item in self.odb.get_tech_acc_list(server.cluster.id):
@@ -200,7 +177,17 @@ class ParallelServer(BrokerMessageReceiver):
             ta_config[item.name].name = item.name
             ta_config[item.name].password = item.password
             ta_config[item.name].salt = item.salt
-            
+
+                    
+        # The broker client for each of the worker threads.
+        self.config.broker_config = Bunch()
+        self.config.broker_config.name = 'worker-thread'
+        self.config.broker_config.broker_token = self.broker_token
+        self.config.broker_config.zmq_context = self.zmq_context
+        self.config.broker_config.broker_push_client_pull = self.broker_push_worker_pull
+        self.config.broker_config.client_push_broker_pull = self.worker_push_broker_pull
+        self.config.broker_config.broker_pub_client_sub = self.broker_pub_worker_sub
+        
         wss_config = Bunch()
         for item in self.odb.get_wss_list(server.cluster.id):
             wss_config[item.name] = Bunch()
@@ -232,11 +219,11 @@ class ParallelServer(BrokerMessageReceiver):
             _info[item.soap_action].impl_name = item.impl_name
             http_soap.add(item.url_path, _info)
             
-        self.worker_config.basic_auth = ba_config
-        self.worker_config.tech_acc = ta_config
-        self.worker_config.wss = wss_config
-        self.worker_config.url_sec = url_sec
-        self.worker_config.http_soap = http_soap
+        #self.config.basic_auth = ba_config
+        #self.config.tech_acc = ta_config
+        #self.config.wss = wss_config
+        #self.config.url_sec = url_sec
+        #self.config.http_soap = http_soap
 
         # The parallel server's broker client. The client's used to notify
         # all the server's AMQP subprocesses that they need to shut down.
@@ -306,7 +293,7 @@ class ParallelServer(BrokerMessageReceiver):
 
     def run_forever(self):
         
-        task_dispatcher = _TaskDispatcher(self, self.worker_config, self.on_broker_msg, self.zmq_context)
+        task_dispatcher = _TaskDispatcher(self, self.config, self.on_broker_msg, self.zmq_context)
         task_dispatcher.setThreadCount(10)
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
