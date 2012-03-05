@@ -160,10 +160,34 @@ class ParallelServer(BrokerMessageReceiver):
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location
+        
+        #
+        # Outgoing connections - start
+        # 
             
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
-        self.config.ftp = ConfigDict.from_query('ftp', query)
+        self.config.out_ftp = ConfigDict.from_query('out_ftp', query)
+
+        # S3
+        query = self.odb.get_out_s3_list(server.cluster.id, True)
+        self.config.out_s3 = ConfigDict.from_query('out_s3', query)
+        
+        # AMQP
+        query = self.odb.get_out_amqp_list(server.cluster.id, True)
+        self.config.out_amqp = ConfigDict.from_query('out_amqp', query)
+        
+        # JMS WMQ
+        query = self.odb.get_out_jms_wmq_list(server.cluster.id, True)
+        self.config.out_jms_wmq = ConfigDict.from_query('out_jms_wmq', query)
+        
+        # ZMQ
+        query = self.odb.get_out_zmq_list(server.cluster.id, True)
+        self.config.out_zmq = ConfigDict.from_query('out_zmq', query)
+        
+        #
+        # Outgoing connections - end
+        # 
 
         # HTTP Basic Auth
         query = self.odb.get_basic_auth_list(server.cluster.id, True)

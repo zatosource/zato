@@ -70,7 +70,7 @@ class ConfigDict(object):
         """
         config_dict = ConfigDict(name)
         config_dict._bunch = SimpleBunch()
-
+        
         if query_data:
             query, attrs = query_data
     
@@ -88,20 +88,20 @@ class ConfigStore(object):
     shared across threads - each thread should get its own copy using the .copy
     method.
     """
-    def __init__(self, ftp=NotGiven, plain_http=NotGiven, soap=NotGiven, s3=NotGiven, 
-                 sql_conn=NotGiven, amqp=NotGiven, jms_wmq=NotGiven, zmq=NotGiven,
+    def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
+                 out_sql_conn=NotGiven, out_amqp=NotGiven, out_jms_wmq=NotGiven, out_zmq=NotGiven,
                  repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
                  url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven):
         
         # Outgoing connections
-        self.ftp = ftp                              # done
-        self.plain_http = plain_http                # not yet
-        self.soap = soap                            # not yet
-        self.s3 = s3                                # not yet
-        self.sql_conn = sql_conn                    # not yet
-        self.amqp = amqp                            # not yet
-        self.jms_wmq = jms_wmq                      # not yet
-        self.zmq = zmq                              # not yet
+        self.out_ftp = out_ftp                      # done
+        self.out_plain_http = out_plain_http        # not yet
+        self.out_soap = out_soap                    # not yet
+        self.out_s3 = out_s3                        # done
+        self.out_sql_conn = out_sql_conn            # not yet
+        self.out_amqp = out_amqp                    # done
+        self.out_jms_wmq = out_jms_wmq              # done
+        self.out_zmq = out_zmq                      # done
         
         # Local on-disk configuraion repository
         self.repo_location = repo_location          # done
@@ -114,7 +114,7 @@ class ConfigStore(object):
         # URL security
         self.url_sec = url_sec                      # done
         
-        # HTTP/SOAP channels
+        # HTTP/out_soap channels
         self.http_soap = http_soap                  # done
         
         # Configuration for broker clients
@@ -138,25 +138,25 @@ class ConfigStore(object):
         return config_store
     
 #
-# ftp = self.outgoing.ftp.get('aaa')
+# out_ftp = self.outgoing.out_ftp.get('aaa')
 # ------------------------------------
 # self.outgoing -> ConfigStore
-# self.outgoing.ftp -> ConfigDict
-# self.outgoing.ftp.get('aaa') -> SimpleBunch
-# self.outgoing.ftp.get('aaa').config -> connection parameters
-# self.outgoing.ftp.get('aaa').conn -> connection object
+# self.outgoing.out_ftp -> ConfigDict
+# self.outgoing.out_ftp.get('aaa') -> SimpleBunch
+# self.outgoing.out_ftp.get('aaa').config -> connection parameters
+# self.outgoing.out_ftp.get('aaa').conn -> connection object
 #
 
-# amqp = self.outgoing.amqp.get('aaa')
-# jms_wmq = self.outgoing.jms_wmq.get('aaa')
-# zmq = self.outgoing.zmq.get('aaa')
+# out_amqp = self.outgoing.out_amqp.get('aaa')
+# out_jms_wmq = self.outgoing.out_jms_wmq.get('aaa')
+# out_zmq = self.outgoing.out_zmq.get('aaa')
 
-# ftp = self.outgoing.ftp.get('aaa')
-# plain_http = self.outgoing.plain_http.get('aaa')
-# s3 = self.outgoing.s3.get('aaa')
-# soap = self.outgoing.soap.get('aaa')
-# sql_conn = self.sql_pool.get('aaa')
-# del self.outgoing.ftp['aaa']
+# out_ftp = self.outgoing.out_ftp.get('aaa')
+# out_plain_http = self.outgoing.out_plain_http.get('aaa')
+# out_s3 = self.outgoing.out_s3.get('aaa')
+# out_soap = self.outgoing.out_soap.get('aaa')
+# out_sql_conn = self.sql_pool.get('aaa')
+# del self.outgoing.out_ftp['aaa']
 
 # config_copy = copy.copy(outgoing)
-# ftp_copy = copy.copy(outgoing.ftp)
+# out_ftp_copy = copy.copy(outgoing.out_ftp)
