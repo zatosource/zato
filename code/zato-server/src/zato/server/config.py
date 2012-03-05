@@ -88,8 +88,8 @@ class ConfigStore(object):
         
         # Security definitions
         self.basic_auth = basic_auth                # done
-        self.wss = wss                              # not yet
-        self.tech_acc = tech_acc                    # not yet
+        self.wss = wss                              # done
+        self.tech_acc = tech_acc                    # done
         
         # URL security
         self.url_sec = url_sec                      # done
@@ -98,7 +98,7 @@ class ConfigStore(object):
         self.http_soap = http_soap                  # done
         
         # Configuration for broker clients
-        self.broker_config = broker_config
+        self.broker_config = broker_config          # done
 
     
 #
