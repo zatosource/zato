@@ -95,7 +95,7 @@ class ConfigStore(object):
         self.url_sec = url_sec                      # done
         
         # HTTP/SOAP channels
-        self.http_soap = http_soap                  # not yet
+        self.http_soap = http_soap                  # done
         
         # Configuration for broker clients
         self.broker_config = broker_config
