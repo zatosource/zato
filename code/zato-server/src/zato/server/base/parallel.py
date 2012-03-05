@@ -204,6 +204,8 @@ class ParallelServer(BrokerMessageReceiver):
             _info[item.soap_action].service_name = item.service_name
             _info[item.soap_action].impl_name = item.impl_name
             http_soap.add(item.url_path, _info)
+            
+        self.config.http_soap = http_soap
 
 
         # The parallel server's broker client. The client's used to notify
