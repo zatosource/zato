@@ -163,19 +163,19 @@ class ParallelServer(BrokerMessageReceiver):
             
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
-        self.config.ftp = ConfigDict.from_query(query)
+        self.config.ftp = ConfigDict.from_query('ftp', query)
 
         # HTTP Basic Auth
         query = self.odb.get_basic_auth_list(server.cluster.id, True)
-        self.config.basic_auth = ConfigDict.from_query(query)
+        self.config.basic_auth = ConfigDict.from_query('basic_auth', query)
         
         # Technical accounts
         query = self.odb.get_tech_acc_list(server.cluster.id, True)
-        self.config.tech_acc = ConfigDict.from_query(query)
+        self.config.tech_acc = ConfigDict.from_query('tech_acc', query)
         
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)
-        self.config.wss = ConfigDict.from_query(query)
+        self.config.wss = ConfigDict.from_query('wss', query)
         
         # Security configuration of HTTP URLs
         self.config.url_sec = self.odb.get_url_security(server)

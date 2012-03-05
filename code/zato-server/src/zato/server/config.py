@@ -58,27 +58,30 @@ class ConfigDict(object):
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
         """
-        config_dict = ConfigDict()
+        config_dict = ConfigDict(self.name)
         config_dict._bunch = SimpleBunch()
         config_dict._bunch.update(self._bunch)
         
         return config_dict
             
     @staticmethod        
-    def from_query(query_data, item_class=SimpleBunch):
-        bunch = SimpleBunch()
+    def from_query(name, query_data, item_class=SimpleBunch):
+        """ Return a new ConfigDict with items taken from an SQL query.
+        """
+        config_dict = ConfigDict(name)
+        config_dict._bunch = SimpleBunch()
 
         if query_data:
             query, attrs = query_data
     
             for item in query:
-                bunch[item.name] = SimpleBunch()
-                bunch[item.name].config = SimpleBunch()
+                config_dict._bunch[item.name] = SimpleBunch()
+                config_dict._bunch[item.name].config = SimpleBunch()
                 
                 for attr_name in attrs.keys():
-                    bunch[item.name]['config'][attr_name] = getattr(item, attr_name)
+                    config_dict._bunch[item.name]['config'][attr_name] = getattr(item, attr_name)
             
-        return bunch
+        return config_dict
 
 class ConfigStore(object):
     """ The central place for storing a Zato server configuration. May /not/ be
