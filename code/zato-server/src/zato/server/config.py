@@ -20,7 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
 from threading import RLock
+
+# mx
+from mx.Tools import NotGiven
 
 # Bunch
 from bunch import SimpleBunch
@@ -34,7 +38,7 @@ class ConfigDict(object):
     doesn't assume anything about CPython's byte code-specific implementation
     details.
     """
-    def __init__(self, name, _bunch={}):
+    def __init__(self, name, _bunch=None):
         self.name = name
         self._bunch = _bunch
         self.lock = RLock()
@@ -50,6 +54,15 @@ class ConfigDict(object):
     def __del__(self, key):
         with self.lock:
             del self._bunch[key]
+            
+    def copy(self):
+        """ Returns a new instance of ConfigDict with items copied over from self.
+        """
+        config_dict = ConfigDict()
+        config_dict._bunch = SimpleBunch()
+        config_dict._bunch.update(self._bunch)
+        
+        return config_dict
             
     @staticmethod        
     def from_query(query_data, item_class=SimpleBunch):
@@ -68,10 +81,14 @@ class ConfigDict(object):
         return bunch
 
 class ConfigStore(object):
-    def __init__(self, ftp=None, plain_http=None, soap=None, s3=None, 
-                 sql_conn=None, amqp=None, jms_wmq=None, zmq=None,
-                 repo_location=None, basic_auth=None, wss=None, tech_acc=None,
-                 url_sec=None, http_soap=None, broker_config=None):
+    """ The central place for storing a Zato server configuration. May /not/ be
+    shared across threads - each thread should get its own copy using the .copy
+    method.
+    """
+    def __init__(self, ftp=NotGiven, plain_http=NotGiven, soap=NotGiven, s3=NotGiven, 
+                 sql_conn=NotGiven, amqp=NotGiven, jms_wmq=NotGiven, zmq=NotGiven,
+                 repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
+                 url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven):
         
         # Outgoing connections
         self.ftp = ftp                              # done
@@ -99,7 +116,23 @@ class ConfigStore(object):
         
         # Configuration for broker clients
         self.broker_config = broker_config          # done
+        
+    def copy(self):
+        config_store = ConfigStore()
+        
+        # Grab all ConfigDicts - even if they're actually NotGiven - and make their copies
+        for attr_name in dir(self):
+            attr = getattr(self, attr_name)
+            if isinstance(attr, ConfigDict):
+                copy_meth = getattr(attr, 'copy')
+                setattr(config_store, attr_name, copy_meth())
+            elif attr is NotGiven:
+                setattr(config_store, attr_name, NotGiven)
 
+        config_store.url_sec = self.url_sec
+        config_store.broker_config = self.broker_config
+                
+        return config_store
     
 #
 # ftp = self.outgoing.ftp.get('aaa')

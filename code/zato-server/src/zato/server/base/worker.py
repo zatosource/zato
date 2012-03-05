@@ -210,7 +210,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 running += 1
 
                 # Each thread gets its own copy of the initial configuration ..
-                worker_config = deepcopy(self.server_config)
+                worker_config = self.server_config.copy()
                 
                 # .. though the ZMQ context is OK to be shared among multiple threads.
                 worker_config.zmq_context = self.zmq_context
