@@ -92,7 +92,7 @@ class ConfigStore(object):
         self.tech_acc = tech_acc                    # not yet
         
         # URL security
-        self.url_sec = url_sec                      # not yet
+        self.url_sec = url_sec                      # done
         
         # HTTP/SOAP channels
         self.http_soap = http_soap                  # not yet
