@@ -261,7 +261,7 @@ class ODBManager(object):
     def get_out_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing AMQP connections.
         """
-        return out_amqp_list(self._session, cluster_id)
+        return out_amqp_list(self._session, cluster_id, needs_columns)
 
     def get_channel_amqp(self, cluster_id, channel_id, needs_columns=False):
         """ Returns a particular AMQP channel.
@@ -293,7 +293,7 @@ class ODBManager(object):
     def get_out_jms_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing JMS WebSphere MQ connections.
         """
-        return out_jms_wmq_list(self._session, cluster_id)
+        return out_jms_wmq_list(self._session, cluster_id, needs_columns)
 
     def get_channel_jms_wmq(self, cluster_id, channel_id, needs_columns=False):
         """ Returns a particular JMS WebSphere MQ channel.
@@ -315,7 +315,7 @@ class ODBManager(object):
     def get_out_zmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing ZMQ connections.
         """
-        return out_zmq_list(self._session, cluster_id)
+        return out_zmq_list(self._session, cluster_id, needs_columns)
 
     def get_channel_zmq(self, cluster_id, channel_id, needs_columns=False):
         """ Returns a particular ZMQ channel.
@@ -337,14 +337,14 @@ class ODBManager(object):
     def get_out_s3_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing S3 connections.
         """
-        return out_s3_list(self._session, cluster_id)
+        return out_s3_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 
     def get_out_ftp(self, cluster_id, out_id, needs_columns=False):
         """ Returns an outgoing FTP connection's details.
         """
-        return out_ftp(self._session, cluster_id, out_id)
+        return out_ftp(self._session, cluster_id, out_id, needs_columns)
 
     def get_out_ftp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing FTP connections.

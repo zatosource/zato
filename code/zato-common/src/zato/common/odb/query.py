@@ -123,10 +123,12 @@ def def_amqp(session, cluster_id, id):
            filter(ConnDefAMQP.id==id).\
            one()
 
+
+@needs_columns
 def def_amqp_list(session, cluster_id):
     """ AMQP connection definitions.
     """
-    return _def_amqp(session, cluster_id).all()
+    return _def_amqp(session, cluster_id)
 
 # ##############################################################################
 
@@ -147,10 +149,11 @@ def def_jms_wmq(session, cluster_id, id):
            filter(ConnDefWMQ.id==id).\
            one()
 
+@needs_columns
 def def_jms_wmq_list(session, cluster_id):
     """ JMS WebSphere MQ connection definitions.
     """
-    return _def_jms_wmq(session, cluster_id).all()
+    return _def_jms_wmq(session, cluster_id)
 
 # ##############################################################################
 
@@ -172,10 +175,11 @@ def out_amqp(session, cluster_id, id):
            filter(OutgoingAMQP.id==id).\
            one()
 
-def out_amqp_list(session, cluster_id):
+@needs_columns
+def out_amqp_list(session, cluster_id, needs_columns=False):
     """ Outgoing AMQP connections.
     """
-    return _out_amqp(session, cluster_id).all()
+    return _out_amqp(session, cluster_id)
 
 # ##############################################################################
 
@@ -196,10 +200,11 @@ def out_jms_wmq(session, cluster_id, id):
            filter(OutgoingWMQ.id==id).\
            one()
 
-def out_jms_wmq_list(session, cluster_id):
+@needs_columns
+def out_jms_wmq_list(session, cluster_id, needs_columns=False):
     """ Outgoing JMS WebSphere MQ connections.
     """
-    return _out_jms_wmq(session, cluster_id).all()
+    return _out_jms_wmq(session, cluster_id)
 
 # ##############################################################################
 
@@ -266,7 +271,7 @@ def out_zmq(session, cluster_id, id):
            filter(OutgoingZMQ.id==id).\
            one()
 
-def out_zmq_list(session, cluster_id):
+def out_zmq_list(session, cluster_id, needs_columns=False):
     """ Outgoing ZeroMQ connections.
     """
     return _out_zmq(session, cluster_id).all()
@@ -350,7 +355,7 @@ def out_s3(session, cluster_id, id):
            filter(OutgoingS3.id==id).\
            one()
 
-def out_s3_list(session, cluster_id):
+def out_s3_list(session, cluster_id, needs_columns=False):
     """ Outgoing S3 connections.
     """
     return _out_s3(session, cluster_id).all()
