@@ -51,20 +51,20 @@ class WorkerStore(BaseWorker):
     because configuration updates are extremaly rare when compared to regular
     access by worker threads.
     """
-    def __init__(self, worker_data):
+    def __init__(self, worker_config):
 
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.worker_data = worker_data
+        self.worker_config = worker_config
         
         self.basic_auth_lock = RLock()
         self.tech_acc_lock = RLock()
         self.wss_lock = RLock()
         
         self.request_handler = RequestHandler()
-        self.request_handler.soap_handler = SOAPHandler(self.worker_data.http_soap, self.worker_data.server)
-        self.request_handler.plain_http_handler = PlainHTTPHandler(self.worker_data.http_soap, self.worker_data.server)
-        self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_data.url_sec, 
-                self.worker_data.basic_auth, self.worker_data.tech_acc, self.worker_data.wss)
+        self.request_handler.soap_handler = SOAPHandler(self.worker_config.http_soap, self.worker_config.server)
+        self.request_handler.plain_http_handler = PlainHTTPHandler(self.worker_config.http_soap, self.worker_config.server)
+        self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_config.url_sec, 
+                self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
     def filter(self, msg):
         return True
@@ -157,8 +157,8 @@ class WorkerStore(BaseWorker):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
-        service_instance = self.worker_data.server.service_store.new_instance(msg.service)
-        service_instance.update(service_instance, self.worker_data.server, self.broker_client, channel, msg.rid)
+        service_instance = self.worker_config.server.service_store.new_instance(msg.service)
+        service_instance.update(service_instance, self.worker_config.server, self.broker_client, channel, msg.rid)
         
         response = service_instance.handle(payload=msg.get('payload'), raw_request=msg)
         
@@ -185,10 +185,10 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the worker threads.
     """
-    def __init__(self, server, worker_config, pull_handler, zmq_context):
+    def __init__(self, server, server_config, pull_handler, zmq_context):
         super(_TaskDispatcher, self).__init__()
         self.server = server
-        self.worker_config = worker_config
+        self.server_config = server_config
         self.pull_handler = pull_handler
         self.zmq_context = zmq_context
         
@@ -210,16 +210,16 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 running += 1
 
                 # Each thread gets its own copy of the initial configuration ..
-                worker_data = deepcopy(self.worker_config)
+                worker_config = deepcopy(self.server_config)
                 
                 # .. though the ZMQ context is OK to be shared among multiple threads.
-                worker_data.zmq_context = self.zmq_context
+                worker_config.zmq_context = self.zmq_context
                 
                 # .. be careful with this, it's a reference to the main ParallelServer
                 # this thread is running on.
-                worker_data.server = self.server
+                worker_config.server = self.server
                 
-                start_new_thread(self.handlerThread, (thread_no, worker_data))
+                start_new_thread(self.handlerThread, (thread_no, worker_config))
                 
                 thread_no = thread_no + 1
             if running > count:
@@ -232,14 +232,14 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         finally:
             mlock.release()
             
-    def handlerThread(self, thread_no, worker_data):
+    def handlerThread(self, thread_no, worker_config):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
         """
 
         # We're in a new thread so we can start new thread-specific clients.
         _local = local()
-        _local.store = WorkerStore(worker_data)
+        _local.store = WorkerStore(worker_config)
         _local.store._init()
         _local.broker_client = _local.store.broker_client
         
@@ -270,11 +270,11 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
 class _HTTPTask(HTTPTask):
     """ An HTTP task which knows how to use ZMQ sockets.
     """
-    def service(self, worker_data):
+    def service(self, worker_config):
         try:
             try:
                 self.start()
-                self.channel.server.executeRequest(self, worker_data)
+                self.channel.server.executeRequest(self, worker_config)
                 self.finish()
             except socket.error:
                 self.close_on_finish = 1
@@ -289,7 +289,7 @@ class _HTTPServerChannel(HTTPServerChannel):
     """
     task_class = _HTTPTask
     
-    def service(self, worker_data):
+    def service(self, worker_config):
         """Execute all pending tasks"""
         while True:
             task = None
@@ -305,7 +305,7 @@ class _HTTPServerChannel(HTTPServerChannel):
             finally:
                 task_lock.release()
             try:
-                task.service(worker_data)
+                task.service(worker_config)
             except:
                 # propagate the exception, but keep executing tasks
                 self.server.addTask(self)

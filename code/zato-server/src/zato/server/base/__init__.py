@@ -84,12 +84,12 @@ class BaseWorker(BrokerMessageReceiver):
         """ Connects to the broker and sets up all the sockets.
         """
         self.broker_client = BrokerClient()
-        self.broker_client.name = self.worker_data.broker_config.name # TODO: Rename self.worker_data to self.worker_config
-        self.broker_client.token = self.worker_data.broker_config.broker_token
-        self.broker_client.zmq_context = self.worker_data.broker_config.zmq_context
-        self.broker_client.broker_push_client_pull = self.worker_data.broker_config.broker_push_client_pull
-        self.broker_client.client_push_broker_pull = self.worker_data.broker_config.client_push_broker_pull
-        self.broker_client.broker_pub_client_sub = self.worker_data.broker_config.broker_pub_client_sub
+        self.broker_client.name = self.worker_config.broker_config.name
+        self.broker_client.token = self.worker_config.broker_config.broker_token
+        self.broker_client.zmq_context = self.worker_config.broker_config.zmq_context
+        self.broker_client.broker_push_client_pull = self.worker_config.broker_config.broker_push_client_pull
+        self.broker_client.client_push_broker_pull = self.worker_config.broker_config.client_push_broker_pull
+        self.broker_client.broker_pub_client_sub = self.worker_config.broker_config.broker_pub_client_sub
         self.broker_client.on_pull_handler = self.on_broker_msg
         self.broker_client.on_sub_handler = self.on_broker_msg
         self.broker_client.init()
