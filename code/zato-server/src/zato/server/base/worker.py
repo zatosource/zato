@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, socket
-from copy import deepcopy
 from thread import start_new_thread
 from threading import local, RLock
 from traceback import format_exc

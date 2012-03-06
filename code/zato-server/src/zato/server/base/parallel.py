@@ -47,7 +47,6 @@ from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
 from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
-from zato.server.connection.ftp import FTPFacade
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
