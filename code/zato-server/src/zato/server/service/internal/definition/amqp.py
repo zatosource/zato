@@ -44,8 +44,8 @@ class GetList(AdminService):
         
         with closing(self.server.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = def_amqp_list(session, params['cluster_id'])
-    
+            definitions = def_amqp_list(session, params['cluster_id'], False)
+            
             for definition in definitions:
     
                 definition_elem = Element('definition')

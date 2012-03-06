@@ -49,7 +49,7 @@ class GetList(AdminService):
             definition_list = Element('definition_list')
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
 
-            definitions = tech_acc_list(session, params['cluster_id'])
+            definitions = tech_acc_list(session, params['cluster_id'], False)
             for definition in definitions:
     
                 definition_elem = Element('definition')

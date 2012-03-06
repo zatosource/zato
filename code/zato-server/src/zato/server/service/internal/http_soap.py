@@ -45,7 +45,9 @@ class GetList(AdminService):
 
         with closing(self.server.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = http_soap_list(session, params['cluster_id'], params['connection'], params['transport'])
+            db_items = http_soap_list(session, params['cluster_id'],
+                                      params['connection'], params['transport'], 
+                                      False)
             
             for db_item in db_items:
 

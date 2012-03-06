@@ -47,7 +47,7 @@ class GetList(AdminService):
         
         with closing(self.server.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = channel_jms_wmq_list(session, params['cluster_id'])
+            db_items = channel_jms_wmq_list(session, params['cluster_id'], False)
     
             for db_item in db_items:
     

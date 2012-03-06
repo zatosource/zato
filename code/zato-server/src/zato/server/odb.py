@@ -224,14 +224,14 @@ class ODBManager(object):
     def get_job_list(self, cluster_id, needs_columns=False):
         """ Returns a list of jobs defined on the given cluster.
         """
-        return job_list(self._session, cluster_id)
+        return job_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 
     def get_basic_auth_list(self, cluster_id, needs_columns=False):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
-        return basic_auth_list(self._session, cluster_id)
+        return basic_auth_list(self._session, cluster_id, needs_columns)
 
     def get_tech_acc_list(self, cluster_id, needs_columns=False):
         """ Returns a list of technical accounts existing on the given cluster.
@@ -245,7 +245,7 @@ class ODBManager(object):
 
 # ##############################################################################
 
-    def get_def_amqp(self, cluster_id, def_id, needs_columns=False):
+    def get_def_amqp(self, cluster_id, def_id):
         """ Returns an AMQP definition's details.
         """
         return def_amqp(self._session, cluster_id, def_id)
@@ -253,9 +253,9 @@ class ODBManager(object):
     def get_def_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AMQP definitions on the given cluster.
         """
-        return def_amqp_list(self._session, cluster_id)
+        return def_amqp_list(self._session, cluster_id, needs_columns)
 
-    def get_out_amqp(self, cluster_id, out_id, needs_columns=False):
+    def get_out_amqp(self, cluster_id, out_id):
         """ Returns an outgoing AMQP connection's details.
         """
         return out_amqp(self._session, cluster_id, out_id)
@@ -265,7 +265,7 @@ class ODBManager(object):
         """
         return out_amqp_list(self._session, cluster_id, needs_columns)
 
-    def get_channel_amqp(self, cluster_id, channel_id, needs_columns=False):
+    def get_channel_amqp(self, cluster_id, channel_id):
         """ Returns a particular AMQP channel.
         """
         return channel_amqp(self._session, cluster_id, channel_id)
@@ -273,11 +273,11 @@ class ODBManager(object):
     def get_channel_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AMQP channels.
         """
-        return channel_amqp_list(self._session, cluster_id)
+        return channel_amqp_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 
-    def get_def_jms_wmq(self, cluster_id, def_id, needs_columns=False):
+    def get_def_jms_wmq(self, cluster_id, def_id):
         """ Returns an JMS WebSphere MQ definition's details.
         """
         return def_jms_wmq(self._session, cluster_id, def_id)
@@ -285,9 +285,9 @@ class ODBManager(object):
     def get_def_jms_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of JMS WebSphere MQ definitions on the given cluster.
         """
-        return def_jms_wmq_list(self._session, cluster_id)
+        return def_jms_wmq_list(self._session, cluster_id, needs_columns)
 
-    def get_out_jms_wmq(self, cluster_id, out_id, needs_columns=False):
+    def get_out_jms_wmq(self, cluster_id, out_id):
         """ Returns an outgoing JMS WebSphere MQ connection's details.
         """
         return out_jms_wmq(self._session, cluster_id, out_id)
@@ -297,7 +297,7 @@ class ODBManager(object):
         """
         return out_jms_wmq_list(self._session, cluster_id, needs_columns)
 
-    def get_channel_jms_wmq(self, cluster_id, channel_id, needs_columns=False):
+    def get_channel_jms_wmq(self, cluster_id, channel_id):
         """ Returns a particular JMS WebSphere MQ channel.
         """
         return channel_jms_wmq(self._session, cluster_id, channel_id)
@@ -305,11 +305,11 @@ class ODBManager(object):
     def get_channel_jms_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of JMS WebSphere MQ channels.
         """
-        return channel_jms_wmq_list(self._session, cluster_id)
+        return channel_jms_wmq_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 
-    def get_out_zmq(self, cluster_id, out_id, needs_columns=False):
+    def get_out_zmq(self, cluster_id, out_id):
         """ Returns an outgoing ZMQ connection's details.
         """
         return out_zmq(self._session, cluster_id, out_id)
@@ -319,7 +319,7 @@ class ODBManager(object):
         """
         return out_zmq_list(self._session, cluster_id, needs_columns)
 
-    def get_channel_zmq(self, cluster_id, channel_id, needs_columns=False):
+    def get_channel_zmq(self, cluster_id, channel_id):
         """ Returns a particular ZMQ channel.
         """
         return channel_zmq(self._session, cluster_id, channel_id)
@@ -327,11 +327,11 @@ class ODBManager(object):
     def get_channel_zmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of ZMQ channels.
         """
-        return channel_zmq_list(self._session, cluster_id)
+        return channel_zmq_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 
-    def get_out_s3(self, cluster_id, out_id, needs_columns=False):
+    def get_out_s3(self, cluster_id, out_id):
         """ Returns an outgoing S3 connection's details.
         """
         return out_s3(self._session, cluster_id, out_id)
@@ -343,10 +343,10 @@ class ODBManager(object):
 
 # ##############################################################################
 
-    def get_out_ftp(self, cluster_id, out_id, needs_columns=False):
+    def get_out_ftp(self, cluster_id, out_id):
         """ Returns an outgoing FTP connection's details.
         """
-        return out_ftp(self._session, cluster_id, out_id, needs_columns)
+        return out_ftp(self._session, cluster_id, out_id)
 
     def get_out_ftp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing FTP connections.

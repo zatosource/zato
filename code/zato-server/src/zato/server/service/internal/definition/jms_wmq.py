@@ -46,7 +46,7 @@ class GetList(AdminService):
         
         with closing(self.server.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = def_jms_wmq_list(session, params['cluster_id'])
+            definitions = def_jms_wmq_list(session, params['cluster_id'], False)
     
             for definition in definitions:
     

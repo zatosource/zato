@@ -44,7 +44,7 @@ class GetList(AdminService):
         
         with closing(self.server.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = basic_auth_list(session, params['cluster_id'])
+            definitions = basic_auth_list(session, params['cluster_id'], False)
     
             for definition in definitions:
     
