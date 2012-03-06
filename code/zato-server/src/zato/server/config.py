@@ -84,9 +84,9 @@ class ConfigDict(object):
         return config_dict
 
 class ConfigStore(object):
-    """ The central place for storing a Zato server configuration. May /not/ be
-    shared across threads - each thread should get its own copy using the .copy
-    method.
+    """ The central place for storing a Zato server's thread configuration. 
+    May /not/ be shared across threads - each thread should get its own copy
+    using the .copy method.
     """
     def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
                  out_sql_conn=NotGiven, out_amqp=NotGiven, out_jms_wmq=NotGiven, out_zmq=NotGiven,
