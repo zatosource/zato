@@ -84,7 +84,11 @@ def job_list(session, cluster_id):
 def basic_auth_list(session, cluster_id, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
-    return session.query(HTTPBasicAuth).\
+    return session.query(HTTPBasicAuth.id, HTTPBasicAuth.name,
+                         HTTPBasicAuth.is_active, \
+                         HTTPBasicAuth.username, HTTPBasicAuth.realm, \
+                         HTTPBasicAuth.password
+                         ).\
         filter(Cluster.id==cluster_id).\
         order_by('sec_basic_auth.name')
 
@@ -92,7 +96,9 @@ def basic_auth_list(session, cluster_id, needs_columns=False):
 def tech_acc_list(session, cluster_id, needs_columns=False):
     """ All the technical accounts.
     """
-    return session.query(TechnicalAccount).\
+    return session.query(TechnicalAccount.id, TechnicalAccount.name, \
+                         TechnicalAccount.is_active, \
+                         TechnicalAccount.password, TechnicalAccount.salt).\
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
         order_by('sec_tech_acc.name')
@@ -101,7 +107,26 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
 def wss_list(session, cluster_id, needs_columns=False):
     """ All the WS-Security definitions.
     """
-    return session.query(WSSDefinition).\
+    '''
+    self.id = id
+    self.name = name
+    self.is_active = is_active
+    self.username = username
+    self.password = password
+    self.password_type = password_type
+    self.reject_empty_nonce_creat = reject_empty_nonce_creat
+    self.reject_stale_tokens = reject_stale_tokens
+    self.reject_expiry_limit = reject_expiry_limit
+    self.nonce_freshness_time = nonce_freshness_time
+    self.cluster = cluster
+    self.password_type_raw = password_type_raw
+    '''
+
+    return session.query(WSSDefinition.id, WSSDefinition.name , WSSDefinition.is_active, \
+                         WSSDefinition.username, WSSDefinition.password, WSSDefinition.password_type, \
+                         WSSDefinition.reject_empty_nonce_creat, WSSDefinition.reject_stale_tokens, \
+                         WSSDefinition.reject_expiry_limit, WSSDefinition.nonce_freshness_time, \
+                         WSSDefinition.nonce_freshness_time).\
         filter(Cluster.id==cluster_id).\
         order_by('sec_wss_def.name')
 
