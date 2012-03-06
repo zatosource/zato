@@ -17,6 +17,22 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+def index():
+    pass
+
+def create():
+    pass
+
+def edit():
+    pass
+
+def delete():
+    pass
+
+def ping():
+    pass
+
+'''
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
@@ -273,3 +289,4 @@ def delete(req):
     else:
         # 200 OK
         return HttpResponse()
+'''

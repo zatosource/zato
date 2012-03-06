@@ -41,7 +41,7 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, \
     tech_acc_list, wss_list
 from zato.common.util import security_def_type
-from zato.server.pool.sql import ODBConnectionPool
+from zato.server.connection.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
 
