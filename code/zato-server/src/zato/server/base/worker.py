@@ -63,7 +63,10 @@ class WorkerStore(BaseWorker):
         self.request_handler = RequestHandler()
         self.request_handler.soap_handler = SOAPHandler(self.worker_config.http_soap, self.worker_config.server)
         self.request_handler.plain_http_handler = PlainHTTPHandler(self.worker_config.http_soap, self.worker_config.server)
-        self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_config.url_sec, 
+        
+        # ConnectionHTTPSOAPSecurity needs only actual URLs hence it's self.worker_config.url_sec[0]
+        # below
+        self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_config.url_sec[0], 
                 self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
     def filter(self, msg):

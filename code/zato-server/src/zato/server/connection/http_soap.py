@@ -104,8 +104,9 @@ class NotFound(ClientHTTPError):
 class Security(object):
     """ Performs all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, url_sec={}, basic_auth_config={}, tech_acc_config={}, wss_config={}):
-        self.url_sec = url_sec
+    def __init__(self, url_sec=None, basic_auth_config=None, tech_acc_config=None,
+                 wss_config=None):
+        self.url_sec = url_sec 
         self.basic_auth_config = basic_auth_config
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
