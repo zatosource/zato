@@ -220,24 +220,24 @@ class ODBManager(object):
 # ##############################################################################
 
     def get_job_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of jobs defined on the given cluster .
+        """ Returns a list of jobs defined on the given cluster.
         """
         return job_list(self._session, cluster_id)
 
 # ##############################################################################
 
     def get_basic_auth_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of HTTP Basic Auth definitions existing on the given cluster .
+        """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
         return basic_auth_list(self._session, cluster_id)
 
     def get_tech_acc_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of technical accounts existing on the given cluster .
+        """ Returns a list of technical accounts existing on the given cluster.
         """
         return tech_acc_list(self._session, cluster_id, needs_columns)
 
     def get_wss_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of WS-Security definitions on the given cluster .
+        """ Returns a list of WS-Security definitions on the given cluster.
         """
         return wss_list(self._session, cluster_id, needs_columns)
 
@@ -249,7 +249,7 @@ class ODBManager(object):
         return def_amqp(self._session, cluster_id, def_id)
 
     def get_def_amqp_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of AMQP definitions on the given cluster .
+        """ Returns a list of AMQP definitions on the given cluster.
         """
         return def_amqp_list(self._session, cluster_id)
 
@@ -281,7 +281,7 @@ class ODBManager(object):
         return def_jms_wmq(self._session, cluster_id, def_id)
 
     def get_def_jms_wmq_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of JMS WebSphere MQ definitions on the given cluster .
+        """ Returns a list of JMS WebSphere MQ definitions on the given cluster.
         """
         return def_jms_wmq_list(self._session, cluster_id)
 
