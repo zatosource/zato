@@ -46,7 +46,7 @@ class GetList(AdminService):
             
             for def_type, meth in pairs:
                 
-                definitions = meth(session, params['cluster_id'])
+                definitions = meth(session, params['cluster_id'], False)
                 for definition in definitions:
         
                     definition_elem = Element('definition')
