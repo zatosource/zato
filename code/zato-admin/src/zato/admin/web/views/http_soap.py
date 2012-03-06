@@ -58,7 +58,7 @@ CONNECTION_PLURAL = {
     }
 
 TRANSPORT = {
-    'plain': 'Plain HTTP',
+    'plain_http': 'Plain HTTP',
     'soap': 'SOAP',
     }
 

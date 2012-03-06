@@ -42,7 +42,7 @@ class GetList(AdminService):
 
             pairs = (('basic_auth', basic_auth_list), 
                      ('tech_acc', tech_acc_list), 
-                     ('wss_username_password', wss_list))
+                     ('wss', wss_list))
             
             for def_type, meth in pairs:
                 

@@ -324,6 +324,8 @@ def _http_soap(session, cluster_id):
             Service.name.label('service_name'),
             Service.id.label('service_id'),
             Service.impl_name,
+            SecurityBase.name.label('security_name'),
+            SecurityBase.sec_type.label('security_def_type')
             ).\
            outerjoin(Service, Service.id==HTTPSOAP.service_id).\
            outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
