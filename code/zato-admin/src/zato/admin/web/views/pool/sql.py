@@ -40,7 +40,6 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.views import meth_allowed
 from zato.admin.settings import engine_friendly_name
 from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.server_model import SQLConnectionPool
 from zato.admin.web.forms.pool.sql import SQLConnectionPoolForm
 from zato.common import zato_namespace, path, zato_path, ZatoException
 from zato.common.soap import invoke_admin_service
