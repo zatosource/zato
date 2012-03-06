@@ -49,13 +49,6 @@ pool_size={odb_pool_size}
 user={odb_user}
 token={odb_token}
 
-[scheduler]
-job_list_location=job-list.yml
-destroy_wait_time=10
-
-[services]
-service_store_config_location=service-store-data.yml
-
 [pickup]
 pickup_dir=../../pickup-dir
 work_dir=../../work
