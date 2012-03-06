@@ -127,7 +127,7 @@ ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
 
 SOAP_VERSIONS = ('1.1', '1.2')
 
-SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss_username_password':'WS-Security'}
+SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks
