@@ -178,6 +178,7 @@ class ODBManager(object):
                 # We know the service exists in the ODB so we can now add
                 # information about its deployment status.
                 service = self._session.query(Service).\
+                    join(Cluster, Service.cluster_id==Cluster.id).\
                     filter(Service.name==name).\
                     filter(Cluster.id==self.cluster.id).\
                     one()
