@@ -26,6 +26,9 @@ from threading import RLock
 # mx
 from mx.Tools import NotGiven
 
+# Paste
+from paste.util.multidict import MultiDict
+
 # Bunch
 from bunch import SimpleBunch
 
@@ -137,7 +140,26 @@ class ConfigStore(object):
                 setattr(config_store, attr_name, copy_meth())
             elif attr is NotGiven:
                 setattr(config_store, attr_name, NotGiven)
-
+                
+        http_soap = MultiDict()
+        dict_of_lists = self.http_soap.dict_of_lists()
+        for url_path, lists in dict_of_lists.items():
+            _info = SimpleBunch()
+            for elem in lists:
+                for soap_action, item in elem.items():
+                    _info[soap_action] = SimpleBunch()
+                    _info[soap_action].id = item.id
+                    _info[soap_action].name = item.name
+                    _info[soap_action].is_internal = item.is_internal
+                    _info[soap_action].url_path = item.url_path
+                    _info[soap_action].method = item.method
+                    _info[soap_action].soap_version = item.soap_version
+                    _info[soap_action].service_id = item.service_id
+                    _info[soap_action].service_name = item.service_name
+                    _info[soap_action].impl_name = item.impl_name
+            http_soap.add(url_path, _info)
+        
+        config_store.http_soap = http_soap
         config_store.url_sec = self.url_sec
         config_store.broker_config = self.broker_config
                 
