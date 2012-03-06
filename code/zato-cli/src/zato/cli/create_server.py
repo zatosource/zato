@@ -29,22 +29,6 @@ from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
 from zato.server.repo import RepoManager
 
-custom_config_contents = """# -*- coding: utf-8 -*-
-
-# Spring Python
-from springpython.config import Object
-from springpython.config import PythonConfig
-
-class CustomContext(PythonConfig):
-    pass
-
-    # Uncomment below to set a custom HTTP port.
-
-    # @Object
-    # def http_port(self):
-    #     return 9876
-"""
-
 server_conf_template = """[bind]
 host=localhost
 starting_port=17010
@@ -76,12 +60,12 @@ service_store_config_location=service-store-data.yml
 pickup_dir=../../pickup-dir
 work_dir=../../work
 
-[custom_context]
-custom_xml_config_location=
-custom_yaml_config_location=
-
 [singleton]
 initial_sleep_time=500
+
+[spring]
+context_class=zato.server.spring_context.ZatoContext
+
 """
 
 haproxy_conf_contents = """
@@ -129,10 +113,6 @@ default_odb_pool_size = 4
 
 directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs')
 files = {ZATO_SERVER_DIR: '',
-         'config/repo/custom-config.yml': '',
-         'config/repo/custom-config.xml':'',
-         'config/repo/custom_config.py': custom_config_contents,
-         'config/repo/__init__.py': '',
          'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
 }
 

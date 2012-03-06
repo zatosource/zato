@@ -256,9 +256,9 @@ class HTTPSOAP(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
-    
-    connection = Column(String(20), nullable=False) # Channel or outgoing
-    transport = Column(String(20), nullable=False) # HTTP or SOAP
+
+    connection = Column(Enum('channel', 'outgoing', name='http_soap_connection'), nullable=False)
+    transport = Column(Enum('plain_http', 'soap', name='http_soap_transport'), nullable=False)
     
     url_path = Column(String(200), nullable=False)
     method = Column(String(200), nullable=True)

@@ -311,7 +311,7 @@ def _http_soap(session, cluster_id):
             Service.id.label('service_id'),
             Service.impl_name,
             ).\
-           filter(Service.id==HTTPSOAP.service_id).\
+           outerjoin(Service, Service.id==HTTPSOAP.service_id).\
            outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
            order_by(HTTPSOAP.name)
 
@@ -325,8 +325,9 @@ def http_soap(session, cluster_id, id):
            filter(HTTPSOAP.id==id).\
            one()
 
-def http_soap_list(session, cluster_id, connection=None, transport=None):
-    """ HTTP/SOAP connections.
+@needs_columns
+def http_soap_list(session, cluster_id, connection=None, transport=None, needs_columns=False):
+    """ HTTP/SOAP connections, both channels and outgoing ones.
     """
     q = _http_soap(session, cluster_id)
     
@@ -336,7 +337,7 @@ def http_soap_list(session, cluster_id, connection=None, transport=None):
     if transport:
         q = q.filter(HTTPSOAP.transport==transport)
         
-    return q.all()
+    return q
 
 # ##############################################################################
 
