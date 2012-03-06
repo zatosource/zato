@@ -61,7 +61,8 @@ def internal_channel_list(session, cluster_id):
 
 # ##############################################################################
 
-def job_list(session, cluster_id):
+@needs_columns
+def job_list(session, cluster_id, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
     return session.query(Job.id, Job.name, Job.is_active,
@@ -75,8 +76,7 @@ def job_list(session, cluster_id):
             outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
             filter(Cluster.id==cluster_id).\
             filter(Job.service_id==Service.id).\
-            order_by('job.name').\
-            all()
+            order_by('job.name')
 
 # ##############################################################################
 
@@ -135,7 +135,7 @@ def def_amqp(session, cluster_id, id):
 
 
 @needs_columns
-def def_amqp_list(session, cluster_id):
+def def_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP connection definitions.
     """
     return _def_amqp(session, cluster_id)
@@ -160,7 +160,7 @@ def def_jms_wmq(session, cluster_id, id):
            one()
 
 @needs_columns
-def def_jms_wmq_list(session, cluster_id):
+def def_jms_wmq_list(session, cluster_id, needs_columns=False):
     """ JMS WebSphere MQ connection definitions.
     """
     return _def_jms_wmq(session, cluster_id)
@@ -236,10 +236,11 @@ def channel_amqp(session, cluster_id, id):
            filter(ChannelAMQP.id==id).\
            one()
 
-def channel_amqp_list(session, cluster_id):
+@needs_columns
+def channel_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP channels.
     """
-    return _channel_amqp(session, cluster_id).all()
+    return _channel_amqp(session, cluster_id)
 
 # ##############################################################################
 
@@ -260,10 +261,11 @@ def channel_jms_wmq(session, cluster_id, id):
            filter(ChannelWMQ.id==id).\
            one()
 
-def channel_jms_wmq_list(session, cluster_id):
+@needs_columns
+def channel_jms_wmq_list(session, cluster_id, needs_columns=False):
     """ JMS WebSphere MQ channels.
     """
-    return _channel_jms_wmq(session, cluster_id).all()
+    return _channel_jms_wmq(session, cluster_id)
 
 # ##############################################################################
 
@@ -281,10 +283,11 @@ def out_zmq(session, cluster_id, id):
            filter(OutgoingZMQ.id==id).\
            one()
 
+@needs_columns
 def out_zmq_list(session, cluster_id, needs_columns=False):
     """ Outgoing ZeroMQ connections.
     """
-    return _out_zmq(session, cluster_id).all()
+    return _out_zmq(session, cluster_id)
 
 # ##############################################################################
 
@@ -304,10 +307,11 @@ def channel_zmq(session, cluster_id, id):
            filter(ChannelZMQ.id==id).\
            one()
 
-def channel_zmq_list(session, cluster_id):
+@needs_columns
+def channel_zmq_list(session, cluster_id, needs_columns=False):
     """ Incoming ZeroMQ connections.
     """
-    return _channel_zmq(session, cluster_id).all()
+    return _channel_zmq(session, cluster_id)
 
 # ##############################################################################
 
@@ -366,10 +370,11 @@ def out_s3(session, cluster_id, id):
            filter(OutgoingS3.id==id).\
            one()
 
+@needs_columns
 def out_s3_list(session, cluster_id, needs_columns=False):
     """ Outgoing S3 connections.
     """
-    return _out_s3(session, cluster_id).all()
+    return _out_s3(session, cluster_id)
 
 # ##############################################################################
 
@@ -410,9 +415,10 @@ def service(session, cluster_id, id):
            filter(Service.id==id).\
            one()
 
-def service_list(session, cluster_id):
+@needs_columns
+def service_list(session, cluster_id, needs_columns=False):
     """ All services.
     """
-    return _service(session, cluster_id).all()
+    return _service(session, cluster_id)
 
 # ##############################################################################

@@ -43,7 +43,7 @@ class GetList(AdminService):
         with closing(self.server.odb.session()) as session:
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
-            definitions = wss_list(session, params['cluster_id'])
+            definitions = wss_list(session, params['cluster_id'], False)
     
             for definition in definitions:
     
