@@ -107,21 +107,6 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
 def wss_list(session, cluster_id, needs_columns=False):
     """ All the WS-Security definitions.
     """
-    '''
-    self.id = id
-    self.name = name
-    self.is_active = is_active
-    self.username = username
-    self.password = password
-    self.password_type = password_type
-    self.reject_empty_nonce_creat = reject_empty_nonce_creat
-    self.reject_stale_tokens = reject_stale_tokens
-    self.reject_expiry_limit = reject_expiry_limit
-    self.nonce_freshness_time = nonce_freshness_time
-    self.cluster = cluster
-    self.password_type_raw = password_type_raw
-    '''
-
     return session.query(WSSDefinition.id, WSSDefinition.name , WSSDefinition.is_active, \
                          WSSDefinition.username, WSSDefinition.password, WSSDefinition.password_type, \
                          WSSDefinition.reject_empty_nonce_creat, WSSDefinition.reject_stale_tokens, \
