@@ -72,46 +72,54 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
                        has been returned in the response. Will raise a ZatoException if it hasn't
                        and 'needs_config_key' is True.
     """
-    url = 'http://{0}:{1}'.format(cluster.lb_host, cluster.lb_port)
-    logger.log(TRACE1, 'About to invoke the admin service url=[{0}]'.format(url))
-    pool = SOAPPool(url)
-    soap_response = pool.invoke('/zato/soap', soap_action, soap_body, headers)
-
-
-    logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
-    response = objectify.fromstring(soap_response)
-
-    # Do we have a SOAP fault?
-    if soap_fault_xpath(response):
-        msg = "Server returned a SOAP fault, soap_response=[%s]" % soap_response
-        logger.error(msg)
-        raise ZatoException(msg=msg)
-
-    # Did server send a business payload, i.e. a <data> elem in the Zato's namespace?
-    zato_data = zato_data_xpath(response)
-    if not zato_data:
-        msg = "Server did not send a business payload (zato_message.data element is missing), soap_response=[%s]" % soap_response
-        logger.error(msg)
-        raise ZatoException(msg=msg)
-
-    zato_message = zato_data[0].getparent()
-    logger.log(TRACE1, "zato_message=[%s]" % etree.tostring(zato_message))
-
-    # We have a payload but hadn't there been any errors at the server's side?
-    zato_result = zato_result_path_xpath(response)
-    if zato_result[0] != ZATO_OK:
-        logger.log(TRACE1, "zato_result=[%s]" % zato_result)
-        raise ZatoException(msg=soap_response)
-
-    # Check whether the key has been received, if one has been requested.
-    if needs_config_key:
-        try:
-            zato_message.envelope.config_pub_key
-        except AttributeError, e:
-            logger.error(e)
-            msg = "A server's config crypto key has been requested but none has " \
-                  "been received from the server, soap_response=[%s], traceback=[%s]" % (soap_response, format_exc())
+    try:
+        url = 'http://{0}:{1}'.format(cluster.lb_host, cluster.lb_port)
+        path = '/zato/soap'
+        logger.log(TRACE1, 'About to invoke the admin service url=[{0}]'.format(url))
+        pool = SOAPPool(url)
+        soap_response = pool.invoke(path, soap_action, soap_body, headers)
+    
+    
+        logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
+        response = objectify.fromstring(soap_response)
+    
+        # Do we have a SOAP fault?
+        if soap_fault_xpath(response):
+            msg = "Server returned a SOAP fault, soap_response=[%s]" % soap_response
             logger.error(msg)
             raise ZatoException(msg=msg)
-
-    return ZATO_OK, zato_message, soap_response
+    
+        # Did server send a business payload, i.e. a <data> elem in the Zato's namespace?
+        zato_data = zato_data_xpath(response)
+        if not zato_data:
+            msg = "Server did not send a business payload (zato_message.data element is missing), soap_response=[%s]" % soap_response
+            logger.error(msg)
+            raise ZatoException(msg=msg)
+    
+        zato_message = zato_data[0].getparent()
+        logger.log(TRACE1, "zato_message=[%s]" % etree.tostring(zato_message))
+    
+        # We have a payload but hadn't there been any errors at the server's side?
+        zato_result = zato_result_path_xpath(response)
+        if zato_result[0] != ZATO_OK:
+            logger.log(TRACE1, "zato_result=[%s]" % zato_result)
+            raise ZatoException(msg=soap_response)
+    
+        # Check whether the key has been received, if one has been requested.
+        if needs_config_key:
+            try:
+                zato_message.envelope.config_pub_key
+            except AttributeError, e:
+                logger.error(e)
+                msg = "A server's config crypto key has been requested but none has " \
+                      "been received from the server, soap_response=[%s], traceback=[%s]" % (soap_response, format_exc())
+                logger.error(msg)
+                raise ZatoException(msg=msg)
+    
+        return ZATO_OK, zato_message, soap_response
+    except Exception, e:
+        log_msg = 'Could not invoke the service. url:[{}] path:[{}] soap_action:[{}] '\
+                  'soap_body:[{}] headers:[{}] soap_response:[{}], e:[{}]'.format(
+                      url, path, soap_action, soap_body, headers, soap_response, format_exc(e))
+        logger.error(log_msg)
+        raise
