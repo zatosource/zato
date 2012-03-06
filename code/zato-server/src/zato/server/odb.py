@@ -32,13 +32,14 @@ from bunch import SimpleBunch
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.odb.model import(Cluster, DeployedService, HTTPBasicAuth, Server, 
-    Service, TechnicalAccount, WSSDefinition)
-from zato.common.odb.query import(channel_amqp, channel_amqp_list, channel_jms_wmq,
-    channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, 
-    def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, 
-    internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, out_jms_wmq, 
-    out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, tech_acc_list, wss_list)
+from zato.common.odb.model import Cluster, DeployedService, HTTPBasicAuth, Server, \
+    Service, TechnicalAccount, WSSDefinition
+from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
+    channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, \
+    def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
+    internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
+    out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, \
+    tech_acc_list, wss_list
 from zato.common.util import security_def_type
 from zato.server.pool.sql import ODBConnectionPool
 
@@ -173,7 +174,7 @@ class ODBManager(object):
             except IntegrityError, e:
                 logger.debug('IntegrityError (Service), e=[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
-
+                
                 # We know the service exists in the ODB so we can now add
                 # information about its deployment status.
                 service = self._session.query(Service).\
@@ -212,10 +213,10 @@ class ODBManager(object):
         """
         return internal_channel_list(self._session, cluster_id, needs_columns)
     
-    def get_http_soap_list(self, cluster_id, connection=None, transport=None):
+    def get_http_soap_list(self, cluster_id, connection=None, transport=None, needs_columns=False):
         """ Returns the list of all HTTP/SOAP channels.
         """
-        return http_soap_list(self._session, cluster_id, connection, transport)
+        return http_soap_list(self._session, cluster_id, connection, transport, needs_columns)
 
 # ##############################################################################
 

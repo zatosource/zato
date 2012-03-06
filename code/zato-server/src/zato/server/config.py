@@ -86,7 +86,12 @@ class ConfigDict(object):
 class ConfigStore(object):
     """ The central place for storing a Zato server's thread configuration. 
     May /not/ be shared across threads - each thread should get its own copy
-    using the .copy method.
+    using the .copy method - the sole exception is 'self.out_sql_conn' which can
+    be shared between threads - because it's a wrapper arounf SQLAlchemy's thread-safe
+    connection pool.
+    
+    Note that much more should be stored in here but the work is not finished yet -
+    for instance, connection definitions should be kept here.
     """
     def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
                  out_sql_conn=NotGiven, out_amqp=NotGiven, out_jms_wmq=NotGiven, out_zmq=NotGiven,
@@ -95,8 +100,8 @@ class ConfigStore(object):
         
         # Outgoing connections
         self.out_ftp = out_ftp                      # done
-        self.out_plain_http = out_plain_http        # not yet
-        self.out_soap = out_soap                    # not yet
+        self.out_plain_http = out_plain_http        # done
+        self.out_soap = out_soap                    # done
         self.out_s3 = out_s3                        # done
         self.out_sql_conn = out_sql_conn            # not yet
         self.out_amqp = out_amqp                    # done
@@ -121,6 +126,9 @@ class ConfigStore(object):
         self.broker_config = broker_config          # done
         
     def copy(self):
+        """ Creates a copy of thos ConfigStore. All configuration data is copied
+        over except for SQL connections
+        """
         config_store = ConfigStore()
         
         # Grab all ConfigDicts - even if they're actually NotGiven - and make their copies

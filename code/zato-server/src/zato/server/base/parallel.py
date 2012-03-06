@@ -168,6 +168,14 @@ class ParallelServer(BrokerMessageReceiver):
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query)
+        
+        # Plain HTTP
+        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
+        self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query)
+        
+        # SOAP
+        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
+        self.config.out_soap = ConfigDict.from_query('out_soap', query)
 
         # S3
         query = self.odb.get_out_s3_list(server.cluster.id, True)
