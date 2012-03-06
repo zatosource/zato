@@ -1,323 +1,274 @@
-
-
-{% comment %}
-
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
-    <style type="text/css">
-        .yui-pe .yui-pe-content {
-            display:none;
-        }
-    </style>
-
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
 {% block extra_js %}
-    <script type="text/javascript" src="/static/yui/build/yuiloader/yuiloader-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datasource/datasource-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/json/json-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/connection/connection-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/datatable/datatable-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/element/element-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
-    <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
 
-    <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
-    <script type="text/javascript" src="/static/js/validation/validation.js"></script>
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
-    <script type="text/javascript" src="/static/js/effects.js"></script>
-
-    <script type="text/javascript">
-
-        var engine_friendly_name = new Hash();
-
-        {% for name, friendly_name in engine_friendly_name%}
-            engine_friendly_name.set('{{ name }}', '{{ friendly_name }}');
-        {% endfor %}
-
-    </script>
-
+    {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    <script type="text/javascript" src="/static/js/pool/sql.js"></script>
+    {% comment %} SQL {% endcomment %}
+    <script type="text/javascript" src="/static/js/outgoing/ftp.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            '_is_active',
+            '_engine',
+            'host',
+            'db_name',
+            'user',
+            'pool_size',
+            'id',
+            'is_active',
+            'engine'
+        ]
+    }
+    </script>
 
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">SQL connection pools</h1>
+<h2 class="zato">Outgoing SQL connections</h2>
 
-{% if not zato_servers %}
+{% if not zato_clusters %}
     <p>
-    There aren't any Zato servers registered with this ZatoAdmin instance.
-    <a href="{% url servers %}" class="common">Click here</a> to register a new server first.
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
     <br/><br/>
     </p>
 {% else %}
 
-    <div id="user-message-div" style="display:none"><pre id="user-message"></pre><br/><br/></div>
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    {% if not server_id %}
-        Choose a server to manage the SQL connection pools.
-        <br/><br/>
+    <div class="prompt">
+    {% if not cluster_id %}
+        Choose a cluster to manage outgoing SQL connections
     {% endif %}
 
     <form action="." method="get">
-        {{ choose_server_form.server }}
-        <input type="submit" value="Show SQL connection pools" />
+        {{ choose_cluster_form.cluster }}
+        <input type="submit" value="Show outgoing connections" />
     </form>
+    </div>
 
-    {% if server_id %}
 
-        <br/>
-            <a href="javascript:sql_create('{{ server_id }}')" class="common">Create a new SQL connection pool</a>
-        <br/>
+    {% if cluster_id %}
+        <div class='page_prompt'>
+            <a href="javascript:$.fn.zato.outgoing.sql.create()">Create a new outgoing SQL connection</a>
+        </div>
 
-        <div id="create-sql" class="yui-pe-content">
-            <div class="hd">Create a new SQL connection pool</div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Engine</a></th>
+                        <th><a href="#">Host</a></th>
+                        <th><a href="#">DB name</a></th>
+                        <th><a href="#">User</a></th>
+                        <th><a href="#">Pool size</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td><input type="checkbox" /></td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.host }}</td>
+                        <td>{{ item.user }}</td>
+                        <td>{{ item.acct }}</td>
+                        <td>{{ item.timeout }}</td>
+                        <td>{{ item.port }}</td>
+                        <td>{{ item.dircache|yesno:'Yes,No' }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.ftp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.ftp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.dircache }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='16'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+
+        <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action=".?server={{ server_id }}" method="post" id="create-form">
-                    <table class="form-data" border="0">
-
+                <form action="{% url out-ftp-create %}" method="post" id="create-form">
+                    <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td>{{ create_form.pool_name }}</td>
+                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td>{{ create_form.name }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">DB type</td>
-                            <td>{{ create_form.engine }}</td>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ create_form.is_active }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Host</td>
                             <td>{{ create_form.host }}</td>
                         </tr>
-
+                        
                         <tr>
-                            <td style="vertical-align:middle">DB name</td>
-                            <td>{{ create_form.db_name }}</td>
+                            <td style="vertical-align:middle">Port</td>
+                            <td>{{ create_form.port }}</td>
                         </tr>
-
+                        
                         <tr>
                             <td style="vertical-align:middle">User</td>
                             <td>{{ create_form.user }}</td>
                         </tr>
-
+                        
                         <tr>
-                            <td style="vertical-align:middle">Pool size</td>
-                            <td>{{ create_form.pool_size }}</td>
+                            <td style="vertical-align:middle">Accounting info</td>
+                            <td>{{ create_form.acct }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Extra parameters</td>
-                            <td>{{ create_form.extra }}</td>
+                            <td style="vertical-align:middle">Timeout <span class='form_hint'>(seconds)</span></td>
+                            <td>{{ create_form.timeout }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Cache directories</td>
+                            <td>{{ create_form.dircache }}</td>
                         </tr>
 
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
                     </table>
-
-                    {{ create_form.server_id }}
-                    {{ create_form.temp_id }}
-                    <input type="hidden" name="zato_action" value="create" />
-
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
         </div>
 
-        <script type="text/javascript">
-        YAHOO.util.Event.addListener(window, "load", function() {
-            YAHOO.example.EnhanceFromMarkup = function() {
-                data_column_defs = [
-                    {key:"pool_name", label:"Name", sortable:true},
-                    {key:"engine", label:"DB type", sortable:true},
-                    {key:"host", label:"Host", sortable:true},
-                    {key:"db_name", label:"DB name", sortable:true},
-                    {key:"user", label:"User", sortable:true},
-                    {key:"pool_size", label:"Pool size", sortable:true},
-                    {key:"extra", label:"Extra parameters", sortable:true},
-                    {key:"edit", label:"&nbsp;"},
-                    {key:"change_password", label:"&nbsp;"},
-                    {key:"ping", label:"&nbsp;"},
-                    {key:"delete", label:"&nbsp;"},
-                ];
-
-                data_ds = new YAHOO.util.DataSource(YAHOO.util.Dom.get("data-table"));
-                data_ds.responseType = YAHOO.util.DataSource.TYPE_HTMLTABLE;
-                data_ds.responseSchema = {
-                    fields: [{key:"pool_name"},
-                            {key:"engine"},
-                            {key:"host"},
-                            {key:"db_name"},
-                            {key:"user"},
-                            {key:"pool_size"},
-                            {key:"extra"},
-                            {key:"edit"},
-                            {key:"change_password"},
-                            {key:"ping"},
-                            {key:"delete"},
-                    ]
-                };
-
-                data_dt = new YAHOO.widget.DataTable("markup", data_column_defs, data_ds,
-                        {sortedBy:{key:"pool_name",dir:"desc"}}
-                );
-
-                return {
-                    oDS: data_ds,
-                    oDT: data_dt
-                };
-            }();
-        });
-        </script>
-
-        <div id="change-password-sql" class="yui-pe-content">
-            <div class="hd">Change password</div>
+        <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action=".?server={{ server_id }}" method="post" id="change-password-form">
-                    <table class="form-data" border="0">
-
+                <form action="{% url out-ftp-edit %}" method="post" id="edit-form">
+                    <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">SQL connection pool name</td>
-                            <td><span id="change_password_pool_name"/></td>
+                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td>{{ edit_form.name }}</td>
                         </tr>
 
+                        <tr>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Host</td>
+                            <td>{{ edit_form.host }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Port</td>
+                            <td>{{ edit_form.port }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">User</td>
+                            <td>{{ edit_form.user }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Accounting info</td>
+                            <td>{{ edit_form.acct }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Timeout <span class='form_hint'>(seconds)</span></td>
+                            <td>{{ edit_form.timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Cache directories</td>
+                            <td>{{ edit_form.dircache }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+        
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url out-ftp-change-password %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
                         <tr>
                             <td style="vertical-align:middle">Password</td>
                             <td>{{ change_password_form.password1 }}</td>
                         </tr>
-
                         <tr>
-                            <td style="vertical-align:middle">Repeat password</td>
-                            <td>{{ change_password_form.password2 }}</td>
+                            <td style="vertical-align:middle">Confirm password</td>
+                            <td>{{ change_password_form.password2 }} 
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
                         </tr>
-
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
                     </table>
-
-                    <input type="hidden" name="config_pub_key" id="config_pub_key" value="{{ config_pub_key }}" />
-                    <input type="hidden" name="pool_name" id="hidden_change_password_pool_name" />
-                    <input type="hidden" name="zato_action" value="change_password" />
-
                 </form>
             </div>
         </div>
 
-    <div id="delete-container"></div>
-
-    <div id="edit-sql" class="yui-pe-content">
-        <div class="hd">Edit SQL connection pool</div>
-        <div class="bd">
-            <form action=".?server={{ server_id }}" method="post" id="edit-form">
-                <table class="form-data" border="0">
-
-                    <tr>
-                        <td style="vertical-align:middle">Name</td>
-                        <td>{{ edit_form.pool_name }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">DB type</td>
-                        <td>{{ edit_form.engine }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">Host</td>
-                        <td>{{ edit_form.host }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">DB name</td>
-                        <td>{{ edit_form.db_name }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">User</td>
-                        <td>{{ edit_form.user }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">Pool size</td>
-                        <td>{{ edit_form.pool_size }}</td>
-                    </tr>
-
-                    <tr>
-                        <td style="vertical-align:middle">Extra parameters</td>
-                        <td>{{ edit_form.extra }}</td>
-                    </tr>
-
-                </table>
-
-                {{ edit_form.temp_id }}
-                {{ edit_form.original_pool_name }}
-
-                <input type="hidden" name="zato_action" value="edit" />
-
-            </form>
-        </div>
-    </div>
-
-    <br/>
-    <div id="markup">
-        <table id="data-table">
-            <thead>
-
-                <tr>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                    <th>&nbsp;</th>
-                </tr>
-            </thead>
-
-            <tbody>
-            {% for pool in pools %}
-
-                <tr>
-                    <td>
-
-                            Storing the properties of a conection pool in this place
-                            simplifies the Javascript manipulations later on;
-                        <form style="display:none">
-                            <input type="hidden" id="hidden_original_pool_name_{{ pool.temp_id }}" value="{{ pool.original_pool_name }}" />
-                            <input type="hidden" id="hidden_pool_name_{{ pool.temp_id }}" value="{{ pool.pool_name }}" />
-                            <input type="hidden" id="hidden_engine_{{ pool.temp_id }}" value="{{ pool.engine }}" />
-                            <input type="hidden" id="hidden_host_{{ pool.temp_id }}" value="{{ pool.host }}" />
-                            <input type="hidden" id="hidden_db_name_{{ pool.temp_id }}" value="{{ pool.db_name }}" />
-                            <input type="hidden" id="hidden_user_{{ pool.temp_id }}" value="{{ pool.user }}" />
-                            <input type="hidden" id="hidden_pool_size_{{ pool.temp_id }}" value="{{ pool.pool_size }}" />
-                            <input type="hidden" id="hidden_extra_{{ pool.temp_id }}" value="{{ pool.extra }}" />
-                        </form>
-
-                        <span id="pool_name_{{ pool.temp_id }}">{{ pool.pool_name }}</span>
-                    </td>
-                    <td><span id="engine_{{ pool.temp_id }}">{{ pool.engine_friendly }}</span></td>
-                    <td><span id="host_{{ pool.temp_id }}">{{ pool.host }}</span></td>
-                    <td><span id="db_name_{{ pool.temp_id }}">{{ pool.db_name }}</span></td>
-                    <td><span id="user_{{ pool.temp_id }}">{{ pool.user }}</span></td>
-                    <td><span id="pool_size_{{ pool.temp_id }}">{{ pool.pool_size }}</span></td>
-                    <td><span id="extra_{{ pool.temp_id }}"><pre>{{ pool.extra }}</pre></span></td>
-                    <td><a href="javascript:sql_edit('{{ pool.temp_id }}')">Edit</a></td>
-                    <td><a href="javascript:sql_change_password('{{ pool.temp_id }}')">Change password</a></td>
-                    <td><a href="javascript:sql_ping('{{ pool.temp_id }}', '{{ server_id }}')">Ping</a></td>
-                    <td><a href="javascript:sql_delete('{{ pool.temp_id }}', '{{ server_id }}')">Delete</a></td>
-                </tr>
-            {% endfor %}
-
-            </tbody>
-        </table>
-    </div>
-
     {% endif %}
 
-{% endif %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}
-
-{% endcomment %}
