@@ -269,16 +269,17 @@ class ServiceStore(InitializingObject):
         # Import internal services here to avoid circular dependencies.
         from zato.server.service import internal
         from zato.server.service.internal import AdminService
-        from zato.server.service.internal import http_soap, scheduler, service, sql
+        from zato.server.service.internal import http_soap, scheduler, service
         from zato.server.service.internal.channel import amqp as channel_amqp
         from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq
         from zato.server.service.internal.channel import zmq as channel_zmq
         from zato.server.service.internal.definition import amqp as def_amqp
         from zato.server.service.internal.definition import jms_wmq as def_jms_wmq
         from zato.server.service.internal.outgoing import amqp as out_amqp
+        from zato.server.service.internal.outgoing import ftp as out_ftp
         from zato.server.service.internal.outgoing import jms_wmq as out_jms_wmq
         from zato.server.service.internal.outgoing import s3 as out_s3
-        from zato.server.service.internal.outgoing import ftp as out_ftp
+        from zato.server.service.internal.outgoing import sql as out_sql
         from zato.server.service.internal.outgoing import zmq as out_zmq
         from zato.server.service.internal.security import basic_auth, \
              tech_account, wss
@@ -286,8 +287,8 @@ class ServiceStore(InitializingObject):
 
         # XXX: The list would be better read from the IoC container
         modules = [basic_auth, channel_amqp, channel_jms_wmq, channel_zmq, def_amqp,
-                   def_jms_wmq, http_soap, internal, out_amqp, out_jms_wmq, out_s3,
-                   out_ftp, out_zmq, sql, scheduler, security, 
+                   def_jms_wmq, http_soap, internal, out_amqp, out_ftp, out_jms_wmq,
+                   out_s3, out_sql, out_zmq, scheduler, security, 
                    service, tech_account, wss]
 
         # Read all definitions of Zato's own internal services.

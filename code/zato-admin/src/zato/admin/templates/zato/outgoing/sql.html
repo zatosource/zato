@@ -1,3 +1,7 @@
+
+
+{% comment %}
+
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
@@ -20,14 +24,11 @@
     <script type="text/javascript" src="/static/yui/build/button/button-min.js"></script>
     <script type="text/javascript" src="/static/yui/build/container/container-min.js"></script>
 
-    {% comment %} Validation framework {% endcomment %}
     <script type="text/javascript" src="/static/js/prototype/prototype.js"></script>
     <script type="text/javascript" src="/static/js/validation/validation.js"></script>
 
-    {% comment %} Scriptaculous effects {% endcomment %}
     <script type="text/javascript" src="/static/js/effects.js"></script>
 
-    {% comment %} Build a list of engines' friendly names {% endcomment %}
     <script type="text/javascript">
 
         var engine_friendly_name = new Hash();
@@ -38,10 +39,8 @@
 
     </script>
 
-    {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} SQL connection pools related JS-code {% endcomment %}
     <script type="text/javascript" src="/static/js/pool/sql.js"></script>
 
 {% endblock %}
@@ -283,11 +282,8 @@
                 <tr>
                     <td>
 
-                        {% comment %}
                             Storing the properties of a conection pool in this place
                             simplifies the Javascript manipulations later on;
-                            mostly because Javascript links need not to be updated.
-                        {% endcomment %}
                         <form style="display:none">
                             <input type="hidden" id="hidden_original_pool_name_{{ pool.temp_id }}" value="{{ pool.original_pool_name }}" />
                             <input type="hidden" id="hidden_pool_name_{{ pool.temp_id }}" value="{{ pool.pool_name }}" />
@@ -318,8 +314,10 @@
         </table>
     </div>
 
-    {% endif %} {% comment %}server_id{% endcomment %}
+    {% endif %}
 
-{% endif %}{% comment %}not zato_servers{% endcomment %}
+{% endif %}
 
 {% endblock %}
+
+{% endcomment %}
