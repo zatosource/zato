@@ -238,7 +238,7 @@ class GetList(AdminService):
             
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
-            definitions = job_list(session, params['cluster_id'], needs_columns=False)
+            definitions = job_list(session, params['cluster_id'], False)
             
             for definition in definitions:
     
