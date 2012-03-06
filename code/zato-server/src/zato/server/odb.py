@@ -210,7 +210,7 @@ class ODBManager(object):
         """ Returns the list of internal HTTP/SOAP channels, that is, 
         channels pointing to internal services.
         """
-        return internal_channel_list(self._session, cluster_id, needs_columns=False)
+        return internal_channel_list(self._session, cluster_id, needs_columns)
     
     def get_http_soap_list(self, cluster_id, connection=None, transport=None):
         """ Returns the list of all HTTP/SOAP channels.
