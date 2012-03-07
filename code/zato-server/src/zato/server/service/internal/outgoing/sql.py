@@ -17,6 +17,52 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+# stdlib
+from contextlib import closing
+from traceback import format_exc
+
+# lxml
+from lxml import etree
+from lxml.objectify import Element
+
+# Zato
+from zato.common import ZATO_OK
+from zato.common.odb.model import SQLConnectionPool
+from zato.common.odb.query import out_sql_list
+from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+
+class GetList(AdminService):
+    """ Returns a list of outgoing SQL connections.
+    """
+    def handle(self, *args, **kwargs):
+        
+        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+
+        with closing(self.server.odb.session()) as session:
+            item_list = Element('item_list')
+            db_items = out_sql_list(session, params['cluster_id'], False)
+            
+            print(333, db_items)
+
+            for db_item in db_items:
+
+                item = Element('item')
+                item.id = db_item.id
+                item.name = db_item.name
+                item.is_active = db_item.is_active
+                
+                '''item.host = db_item.host
+                item.port = db_item.port
+                item.username = db_item.username
+                item.acct = db_item.acct
+                item.timeout = db_item.timeout
+                item.dircache = db_item.dircache
+                '''
+
+                item_list.append(item)
+
+            return ZATO_OK, etree.tostring(item_list)
+
 
 '''
 from __future__ import absolute_import, division, print_function, unicode_literals

@@ -309,10 +309,11 @@ class SQLConnectionPool(Base):
 
     id = Column(Integer,  Sequence('sql_pool_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
-    user = Column(String(200), nullable=False)
+    username = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
     db_name = Column(String(200), nullable=False)
     engine = Column(String(200), nullable=False)
-    extra = Column(LargeBinary(200000), nullable=True)
+    extra = Column(LargeBinary(20000), nullable=True)
     host = Column(String(200), nullable=False)
     port = Column(Integer(), nullable=False)
     pool_size = Column(Integer(), nullable=False)
@@ -320,50 +321,18 @@ class SQLConnectionPool(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, db_name=None, user=None, engine=None,
+    def __init__(self, id=None, name=None, db_name=None, username=None, engine=None,
                  extra=None, host=None, port=None, pool_size=None, cluster=None):
         self.id = id
         self.name = name
         self.db_name = db_name
-        self.user = user
+        self.username = username
         self.engine = engine
         self.extra = extra
         self.host = host
         self.port = port
         self.pool_size = pool_size
         self.cluster = cluster
-
-    def __repr__(self):
-        return make_repr(self)
-
-class SQLConnectionPoolPassword(Base):
-    """ An SQL connection pool's passwords.
-    """
-    __tablename__ = 'sql_pool_passwd'
-
-    id = Column(Integer,  Sequence('sql_pool_id_seq'), primary_key=True)
-    password = Column(LargeBinary(200000), server_default='not-set-yet', nullable=False)
-    server_key_hash = Column(LargeBinary(200000), server_default='not-set-yet', nullable=False)
-
-    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False)
-    server = relationship(Server, backref=backref('sql_pool_passwords', order_by=id, cascade='all, delete, delete-orphan'))
-
-    sql_pool_id = Column(Integer, ForeignKey('sql_pool.id', ondelete='CASCADE'), nullable=False)
-    sql_pool = relationship(SQLConnectionPool, backref=backref('sql_pool_passwords', order_by=id, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, password=None, server_key_hash=None, server_id=None,
-                 server=None, sql_pool_id=None, sql_pool=None):
-        self.id = id
-        self.password = password
-        self.server_key_hash = server_key_hash
-        self.server_id = server_id
-        self.server = server
-        self.sql_pool_id = sql_pool_id
-        self.sql_pool = sql_pool
-
-    def __repr__(self):
-        return make_repr(self)
-
 
 ################################################################################
 

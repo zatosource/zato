@@ -62,7 +62,7 @@ def index(req):
         zato_message.data = Element('data')
         zato_message.data.cluster_id = cluster_id
 
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.ftp.get-list', zato_message)
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.sql.get-list', zato_message)
 
         if zato_path('data.item_list.item').get_from(zato_message) is not None:
 
@@ -73,7 +73,7 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
 
                 #host = msg_item.host.text if msg_item.host else ''
-                #user = msg_item.user.text if msg_item.user else ''
+                #username = msg_item.user.text if msg_item.username else ''
                 #acct = msg_item.acct.text if msg_item.acct else ''
                 #timeout = msg_item.timeout.text if msg_item.timeout else ''
                 #port = msg_item.port.text if msg_item.port else ''
@@ -108,6 +108,9 @@ def delete():
     pass
 
 def ping():
+    pass
+
+def change_password():
     pass
 
 '''

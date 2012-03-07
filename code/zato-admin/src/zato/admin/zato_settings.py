@@ -42,11 +42,13 @@ engine_friendly_name = {
     'postgres': 'PostgreSQL',
     'oracle': 'Oracle',
     'mysql': 'MySQL',
-    'mssql': 'MS SQL Server',
-    'access': 'MS Access',
-    'firebird': 'Firebird',
-    'db2': 'DB2',
-    'informix':'Informix'
+    
+    # These are not supported /yet/.
+    #'mssql': 'MS SQL Server',
+    #'access': 'MS Access',
+    #'firebird': 'Firebird',
+    #'db2': 'DB2',
+    #'informix':'Informix'
 }
 
 odb_engine_friendly_name = {

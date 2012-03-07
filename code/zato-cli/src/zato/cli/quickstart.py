@@ -258,14 +258,6 @@ class Quickstart(ZatoCommand):
             #
             soap_services = {
     
-                # SQL connection pools
-                'zato:pool.sql.get-list':'zato.server.service.internal.sql.GetSQLConnectionPoolList',
-                'zato:pool.sql.create':'zato.server.service.internal.sql.CreateSQLConnectionPool',
-                'zato:pool.sql.edit':'zato.server.service.internal.sql.EditSQLConnectionPool',
-                'zato:pool.sql.delete':'zato.server.service.internal.sql.DeleteSQLConnectionPool',
-                'zato:pool.sql.change-password':'zato.server.service.internal.sql.ChangePasswordSQLConnectionPool',
-                'zato:pool.sql.ping':'zato.server.service.internal.sql.PingSQLConnectionPool',
-    
                 # Scheduler
                 'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
                 'zato:scheduler.job.create':'zato.server.service.internal.scheduler.Create',
@@ -346,6 +338,13 @@ class Quickstart(ZatoCommand):
                 'zato:outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
                 'zato:outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
                 'zato:outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
+                
+                # Outgoing connections - FTP
+                'zato:outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
+                'zato:outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
+                'zato:outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
+                'zato:outgoing.ftp.delete':'zato.server.service.internal.outgoing.ftp.Delete',
+                'zato:outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
     
                 # Outgoing connections - JMS WebSphere MQ
                 'zato:outgoing.jms_wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
@@ -359,13 +358,14 @@ class Quickstart(ZatoCommand):
                 'zato:outgoing.s3.edit':'zato.server.service.internal.outgoing.s3.Edit',
                 'zato:outgoing.s3.delete':'zato.server.service.internal.outgoing.s3.Delete',
                 
-                # Outgoing connections - FTP
-                'zato:outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
-                'zato:outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
-                'zato:outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
-                'zato:outgoing.ftp.delete':'zato.server.service.internal.outgoing.ftp.Delete',
-                'zato:outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
-    
+                # Outgoing connections - SQL
+                'zato:outgoing.sql.get-list':'zato.server.service.internal.outgoing.sql.GetList',
+                'zato:outgoing.sql.create':'zato.server.service.internal.outgoing.sql.Create',
+                'zato:outgoing.sql.edit':'zato.server.service.internal.outgoing.sql.Edit',
+                'zato:outgoing.sql.delete':'zato.server.service.internal.outgoing.sql.Delete',
+                'zato:outgoing.sql.change-password':'zato.server.service.internal.outgoing.sql.ChangePassword',
+                'zato:outgoing.sql.ping':'zato.server.service.internal.outgoing.sql.Ping',
+                
                 # Outgoing connections - ZeroMQ
                 'zato:outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
                 'zato:outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
