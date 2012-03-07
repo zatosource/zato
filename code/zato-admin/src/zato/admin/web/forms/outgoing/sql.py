@@ -29,10 +29,11 @@ from django import forms
 from zato.admin.settings import engine_friendly_name
 
 class CreateForm(forms.Form):
-    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     engine = forms.ChoiceField(widget=forms.Select(attrs={'class':'required'}))
-    host = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
+    host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
+    port = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
     db_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
     user = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
     pool_size = forms.IntegerField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30px'}))

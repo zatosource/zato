@@ -63,6 +63,7 @@ $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
 $.namespace('zato.outgoing.jms_wmq');
 $.namespace('zato.outgoing.s3');
+$.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');

@@ -26,7 +26,7 @@ from functools import wraps
 from zato.common.odb.model import(ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, 
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, 
     Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, 
-    SecurityBase, Service, TechnicalAccount, WSSDefinition)
+    SecurityBase, Service, SQLConnectionPool, TechnicalAccount, WSSDefinition)
 
 def needs_columns(func):
     """ A decorator for queries which works out whether a given query function
@@ -377,6 +377,27 @@ def out_s3_list(session, cluster_id, needs_columns=False):
     """ Outgoing S3 connections.
     """
     return _out_s3(session, cluster_id)
+
+# ##############################################################################
+
+def _out_sql(session, cluster_id):
+    return session.query(SQLConnectionPool).\
+        filter(Cluster.id==SQLConnectionPool.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(SQLConnectionPool.name)
+
+def out_sql(session, cluster_id, id):
+    """ An outgoing SQL connection.
+    """
+    return _out_sql(session, cluster_id).\
+           filter(SQLConnectionPool.id==id).\
+           one()
+
+@needs_columns
+def out_sql_list(session, cluster_id, needs_columns=False):
+    """ Outgoing SQL connections.
+    """
+    return _out_sql(session, cluster_id)
 
 # ##############################################################################
 
