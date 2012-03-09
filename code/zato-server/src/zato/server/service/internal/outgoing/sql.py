@@ -236,3 +236,35 @@ class ChangePassword(ChangePasswordBase):
             self._handle(SQLConnectionPool, _auth, None, **kwargs)
             
             return ZATO_OK, ''
+
+
+class Ping(AdminService):
+    """ Pings an SQL database
+    """
+    def handle(self, *args, **kwargs):
+        with closing(self.server.odb.session()) as session:
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['id']
+                params = _get_params(payload, request_params, 'data.')
+
+                id = params['id']
+
+                item = session.query(SQLConnectionPool).\
+                    filter(SQLConnectionPool.id==id).\
+                    one()
+                
+                # TODO: Actually ping the database
+                #response_time = self.ping(item)
+                
+                xml_item = etree.Element('response_time')
+                xml_item.text = '0.39239723'
+                
+                return ZATO_OK, etree.tostring(xml_item)
+
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not delete the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+
+                raise

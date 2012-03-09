@@ -202,8 +202,28 @@ def delete(req, id, cluster_id):
         return HttpResponseServerError(msg)
 
 
-def ping():
-    pass
+@meth_allowed('POST')
+def ping(req, cluster_id, id):
+    """ Pings a database and returns the time it took, in milliseconds.
+    """
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = id
+
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.ping', zato_message)
+        response_time = zato_path('data.response_time', True).get_from(zato_message)
+        
+    except Exception, e:
+        msg = 'Ping failed. e=[{}]'.format(format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return render_to_response('zato/outgoing/sql-ping-ok.html', 
+                                  {'response_time':'%.3f' % float(response_time)},
+                                  context_instance=RequestContext(req))
 
 @meth_allowed('POST')
 def change_password(req):
