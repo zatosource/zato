@@ -68,3 +68,20 @@ $.fn.zato.outgoing.sql.delete_ = function(id) {
         'Are you sure you want to delete the outgoing SQL connection [{0}]?',
         true);
 }
+
+$.fn.zato.outgoing.sql.ping = function(cluster_id, id) {
+
+    var _callback = function(data, status) {
+        var success = status == 'success';
+        msg = data.responseText;
+        $.fn.zato.user_message(success, msg);
+    }
+
+    $.ajax({
+        type: 'POST',
+        url: String.format('./ping/{0}/cluster/{1}/', cluster_id, id),
+        data: '',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        complete: _callback
+    });
+}

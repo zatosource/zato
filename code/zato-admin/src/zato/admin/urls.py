@@ -162,7 +162,7 @@ urlpatterns = patterns('',
     # SQL connection pools
     url(r'^zato/outgoing/sql/$', out_sql.index, name='out-sql'),
     url(r'^zato/outgoing/sql/create/$', out_sql.create, name='out-sql-create'),
-    url(r'^zato/outgoing/sql/ping/$', out_sql.ping, name='out-sql-ping'),
+    url(r'^zato/outgoing/sql/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_sql.ping, name='out-sql-ping'),
     url(r'^zato/outgoing/sql/edit/$', out_sql.edit, name='out-sql-edit'),
     url(r'^zato/outgoing/sql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_sql.delete, name='out-sql-delete'),
     url(r'^zato/outgoing/sql/change-password/$', out_sql.change_password, name='out-sql-change-password'),

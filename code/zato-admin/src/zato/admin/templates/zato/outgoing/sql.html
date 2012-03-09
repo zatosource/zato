@@ -113,7 +113,7 @@
                         <td>{{ item.db_name }}</td>
                         <td>{{ item.username }}</td>
                         <td>{{ item.pool_size }}</td>
-                        <td><a href="javascript:$.fn.zato.outgoing.sql.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.sql.ping('{{ item.id }}', '{{ cluster_id }}')">Ping</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sql.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.sql.delete_('{{ item.id }}')">Delete</a></td>
