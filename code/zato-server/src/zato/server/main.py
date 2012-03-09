@@ -28,10 +28,20 @@ logging.setLoggerClass(ZatoLogger)
 import os, sys
 import logging.config
 
+# psycopg2
+import psycopg2
+
 # Zato
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 
 def run(host, port, base_dir, start_singleton):
+    
+    # We're doing it here even if someone doesn't use PostgreSQL at all
+    # so we're not suprised when someone suddenly starts using PG.
+    # TODO: Make sure it's registered for each subprocess when the code's 
+    #       finally modified to use subprocesses.
+    psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+    psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 
     repo_location = os.path.join(base_dir, 'config', 'repo')
 
