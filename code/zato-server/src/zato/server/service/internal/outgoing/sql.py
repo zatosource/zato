@@ -126,6 +126,71 @@ class Create(AdminService):
 
                 raise
             
+class Edit(AdminService):
+    """ Updates an outgoing SQL connection.
+    """
+    def handle(self, *args, **kwargs):
+
+        with closing(self.server.odb.session()) as session:
+            payload = kwargs.get('payload')
+
+            core_params = ['id', 'cluster_id', 'name', 'is_active', 'engine', 
+                           'host', 'port', 'db_name', 'username', 'pool_size']
+            core_params = _get_params(payload, core_params, 'data.')
+            
+            optional_params = ['extra']
+            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
+
+            id = core_params['id']
+            name = core_params['name']
+            cluster_id = core_params['cluster_id']
+            extra = optional_params['extra']
+            extra = extra.encode('utf-8') if extra else ''
+
+            existing_one = session.query(SQLConnectionPool.id).\
+                filter(SQLConnectionPool.cluster_id==cluster_id).\
+                filter(SQLConnectionPool.name==name).\
+                filter(SQLConnectionPool.id!=core_params['id']).\
+                first()
+
+            if existing_one:
+                raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(name))
+
+            xml_item = Element('out_sql')
+
+            try:
+
+                core_params['id'] = int(core_params['id'])
+                core_params['is_active'] = is_boolean(core_params['is_active'])
+
+                item = session.query(SQLConnectionPool).filter_by(id=id).one()
+                old_name = item.name
+                item.name = core_params['name']
+                item.is_active = core_params['is_active']
+                item.cluster_id = core_params['cluster_id']
+                item.engine = core_params['engine']
+                item.host = core_params['host']
+                item.port = core_params['port']
+                item.db_name = core_params['db_name']
+                item.username = core_params['username']
+                item.pool_size = core_params['pool_size']
+                item.extra = extra
+
+                session.add(item)
+                session.commit()
+
+                xml_item.id = item.id
+                #self.update_facade(core_params, optional_params, old_name)
+
+                return ZATO_OK, etree.tostring(xml_item)
+
+            except Exception, e:
+                msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+
+                raise
+            
 class Delete(AdminService):
     """ Deletes an outgoing SQL connection.
     """

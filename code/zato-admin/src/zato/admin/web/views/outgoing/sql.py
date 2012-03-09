@@ -158,13 +158,28 @@ def create(req):
         return _edit_create_response('created', zato_message.data.out_sql.id.text, req.POST['name'], engine)
 
     except Exception, e:
-        msg = "Could not create an outgoing SQL connection, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
 
-def edit():
-    pass
+@meth_allowed('POST')
+def edit(req):
+    """ Updates an SQL connection.
+    """
+    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
+
+    try:
+        zato_message = _get_edit_create_message(req.POST, 'edit-')
+        engine = zato_message.data.engine
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.edit', zato_message)
+
+        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine)
+
+    except Exception, e:
+        msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
@@ -182,7 +197,7 @@ def delete(req, id, cluster_id):
         return HttpResponse()
 
     except Exception, e:
-        msg = "Could not delete the outgoing SQL connection, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not delete the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
