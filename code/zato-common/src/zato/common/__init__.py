@@ -125,6 +125,8 @@ ZATO_FIELD_OPERATORS = {
 ZMQ_OUTGOING_TYPES = ('PUSH',)
 ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
 
+ZATO_ODB_POOL_NAME = 'ZATO_ODB'
+
 SOAP_VERSIONS = ('1.1', '1.2')
 
 SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}

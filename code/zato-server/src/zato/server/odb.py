@@ -31,7 +31,7 @@ from sqlalchemy.exc import IntegrityError
 from bunch import SimpleBunch
 
 # Zato
-from zato.common import ZATO_NONE
+from zato.common import ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import Cluster, DeployedService, HTTPBasicAuth, Server, \
     Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
@@ -41,21 +41,17 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, \
     tech_acc_list, wss_list
 from zato.common.util import security_def_type
-from zato.server.connection.sql import ODBConnectionPool
+#from zato.server.connection.sql import ODBConnectionPool
 
 logger = logging.getLogger(__name__)
-
-ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 
 class ODBManager(object):
     """ Manages connections to the server's Operational Database.
     """
-    def __init__(self, well_known_data=None, odb_data=None, odb_config=None,
-                 crypto_manager=None, pool=None, server=None, cluster=None,
-                 init=True):
+    def __init__(self, well_known_data=None, odb_token=None, crypto_manager=None, 
+                 pool=None, server=None, cluster=None, init=True):
         self.well_known_data = well_known_data
-        self.odb_data = odb_data
-        self.odb_config = odb_data
+        self.odb_token = odb_token
         self.crypto_manager = crypto_manager
         self.pool = pool
         self.server = server
@@ -72,34 +68,21 @@ class ODBManager(object):
         to the value pointed to by the server's .cluster attribute.
         """
         if not self.pool:
-            if not self.odb_config:
-                odb_data = dict(self.odb_data.items())
+            self.pool = self.server.sql_pool_store[ZATO_ODB_POOL_NAME]
 
-                if not odb_data['extra']:
-                    odb_data['extra'] = {}
-
-                odb_data['pool_size'] = int(odb_data['pool_size'])
-
-                self.odb_config = {ZATO_ODB_POOL_NAME: odb_data}
-
-            self.pool = ODBConnectionPool(self.odb_config, True, self.crypto_manager)
-            self.pool.init()
-
-        self.pool.ping({'pool_name': ZATO_ODB_POOL_NAME})
-        engine = self.pool.get(ZATO_ODB_POOL_NAME)
-
-        self._Session = scoped_session(sessionmaker(bind=engine))
+        self.pool.ping()
+        self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
         self._session = self._Session()
 
         try:
             self.server = self._session.query(Server).\
-                   filter(Server.odb_token == self.odb_data['token']).\
+                   filter(Server.odb_token == self.odb_token).\
                    one()
             self.cluster = self.server.cluster
             return self.server
         except Exception, e:
             msg = 'Could not find the server in the ODB, token=[{0}]'.format(
-                self.odb_data['token'])
+                self.odb_token)
             logger.error(msg)
             raise
 

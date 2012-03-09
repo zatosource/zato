@@ -33,6 +33,7 @@ from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.repo import RepoManager
 from zato.server.scheduler import Scheduler
 from zato.server.service.store import EggServiceImporter, ServiceStore
+from zato.server.connection.sql import PoolStore
 
 class ZatoContext(PythonConfig):
 
@@ -95,11 +96,15 @@ class ZatoContext(PythonConfig):
         return ConnectionHTTPSOAPSecurity()
 
     # #######################################################
-    # ODB (Operational Database)
+    # SQL
 
     @Object
     def odb_manager(self):
         return ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
+    
+    @Object
+    def sql_pool_store(self):
+        return PoolStore()
 
     # #######################################################
     # Servers
@@ -110,6 +115,7 @@ class ZatoContext(PythonConfig):
         server = ParallelServer()
         server.odb = self.odb_manager()
         server.service_store = self.service_store()
+        server.sql_pool_store = self.sql_pool_store()
 
         return server
 
