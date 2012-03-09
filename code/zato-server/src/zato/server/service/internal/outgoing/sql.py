@@ -81,6 +81,8 @@ class Create(AdminService):
 
             name = core_params['name']
             cluster_id = core_params['cluster_id']
+            extra = optional_params['extra']
+            extra = extra.encode('utf-8') if extra else ''
 
             existing_one = session.query(SQLConnectionPool.id).\
                 filter(SQLConnectionPool.cluster_id==cluster_id).\
@@ -107,7 +109,7 @@ class Create(AdminService):
                 item.username = core_params['username']
                 item.password = uuid4().hex
                 item.pool_size = core_params['pool_size']
-                item.extra = optional_params['extra'].encode('utf-8')
+                item.extra = extra
 
                 session.add(item)
                 session.commit()
