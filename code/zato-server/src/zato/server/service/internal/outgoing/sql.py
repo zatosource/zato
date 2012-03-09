@@ -123,3 +123,34 @@ class Create(AdminService):
                 session.rollback()
 
                 raise
+            
+class Delete(AdminService):
+    """ Deletes an outgoing SQL connection.
+    """
+    def handle(self, *args, **kwargs):
+        with closing(self.server.odb.session()) as session:
+            try:
+                payload = kwargs.get('payload')
+                request_params = ['id']
+                params = _get_params(payload, request_params, 'data.')
+
+                id = params['id']
+
+                item = session.query(SQLConnectionPool).\
+                    filter(SQLConnectionPool.id==id).\
+                    one()
+                old_name = item.name
+
+                session.delete(item)
+                session.commit()
+                
+                #self.ftp.update(None, old_name)
+
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not delete the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+
+                raise
+
+            return ZATO_OK, ''

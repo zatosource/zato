@@ -68,7 +68,8 @@ def _get_edit_create_message(params, prefix=''):
     return zato_message
 
 def _edit_create_response(verb, id, name, engine):
-
+    """ A common function for producing return data for create and edit actions.
+    """
     return_data = {'id': id,
                    'message': 'Successfully {0} the outgoing SQL connection [{1}]'.format(verb, name),
                    'engine_text': odb_engine_friendly_name[engine],
@@ -78,6 +79,8 @@ def _edit_create_response(verb, id, name, engine):
 
 @meth_allowed('GET')
 def index(req):
+    """ Lists all the SQL connections.
+    """
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
     choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
     cluster_id = req.GET.get('cluster')
@@ -143,7 +146,8 @@ def index(req):
 
 @meth_allowed('POST')
 def create(req):
-
+    """ Creates a new SQL connection.
+    """
     cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
 
     try:
@@ -162,8 +166,26 @@ def create(req):
 def edit():
     pass
 
-def delete():
-    pass
+@meth_allowed('POST')
+def delete(req, id, cluster_id):
+    """ Deletes an SQL connection.
+    """
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.data = Element('data')
+        zato_message.data.id = id
+
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.delete', zato_message)
+
+        return HttpResponse()
+
+    except Exception, e:
+        msg = "Could not delete the outgoing SQL connection, e=[{e}]".format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
 
 def ping():
     pass
