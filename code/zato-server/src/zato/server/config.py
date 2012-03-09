@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
 from threading import RLock
 
 # mx
@@ -96,7 +97,7 @@ class ConfigStore(object):
     def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
                  out_sql_conn=NotGiven, out_amqp=NotGiven, out_jms_wmq=NotGiven, out_zmq=NotGiven,
                  repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
-                 url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven):
+                 url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven):
         
         # Outgoing connections
         self.out_ftp = out_ftp                      # done
@@ -124,6 +125,9 @@ class ConfigStore(object):
         
         # Configuration for broker clients
         self.broker_config = broker_config          # done
+        
+        # ODB
+        self.odb_data = odb_data                    # not yet
         
     def copy(self):
         """ Creates a copy of this ConfigStore. All configuration data is copied
@@ -161,6 +165,7 @@ class ConfigStore(object):
         config_store.http_soap = http_soap
         config_store.url_sec = self.url_sec
         config_store.broker_config = self.broker_config
+        config_store.odb_data = deepcopy(self.odb_data)
                 
         return config_store
     

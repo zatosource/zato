@@ -109,6 +109,9 @@ class ParallelServer(BrokerMessageReceiver):
         self.ftp = ftp
         self.sql_pool_store = sql_pool_store
         
+        # The main config store
+        self.config = ConfigStore()
+        
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
@@ -155,9 +158,6 @@ class ParallelServer(BrokerMessageReceiver):
             self._init_connectors(server)
             
             
-        # The main config store
-        self.config = ConfigStore()
-        
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location
@@ -240,7 +240,6 @@ class ParallelServer(BrokerMessageReceiver):
             
         self.config.http_soap = http_soap
 
-
         # The parallel server's broker client. The client's used to notify
         # all the server's AMQP subprocesses that they need to shut down.
 
@@ -286,19 +285,18 @@ class ParallelServer(BrokerMessageReceiver):
         
     def after_init(self):
         
-        # Create an ODB connection pool first and have self.odb use it, note that
-        # the ConfigObj's format needs to be converted over to our own SimpleBunch.
-        odb_data = SimpleBunch()
-        odb_data.db_name = self.odb_data['db_name']
-        odb_data.engine = self.odb_data['engine']
-        odb_data.extra = self.odb_data['extra']
-        odb_data.host = self.odb_data['host']
-        odb_data.password = self.crypto_manager.decrypt(self.odb_data['password'])
-        odb_data.pool_size = self.odb_data['pool_size']
-        odb_data.user = self.odb_data['user']
-        odb_data.is_odb = True
+        # Store the ODB configuration, create an ODB connection pool and have self.odb use it
+        self.config.odb_data = SimpleBunch()
+        self.config.odb_data.db_name = self.odb_data['db_name']
+        self.config.odb_data.engine = self.odb_data['engine']
+        self.config.odb_data.extra = self.odb_data['extra']
+        self.config.odb_data.host = self.odb_data['host']
+        self.config.odb_data.password = self.crypto_manager.decrypt(self.odb_data['password'])
+        self.config.odb_data.pool_size = self.odb_data['pool_size']
+        self.config.odb_data.user = self.odb_data['user']
+        self.config.odb_data.is_odb = True
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = odb_data
         self.odb.server = self
         self.odb.odb_token = self.odb_data['token']
         
