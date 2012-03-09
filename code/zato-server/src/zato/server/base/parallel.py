@@ -39,7 +39,7 @@ from bunch import Bunch, SimpleBunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED
+from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_rid
 from zato.server.base import BrokerMessageReceiver
@@ -95,17 +95,19 @@ class ZatoHTTPListener(HTTPServer):
 
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
-                 odb=None, singleton_server=None, worker_config=None, repo_location=None,
-                 ftp=None):
+                 odb=None, odb_data=None, singleton_server=None, worker_config=None, 
+                 repo_location=None, ftp=None, sql_pool_store=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
         self.odb = odb
+        self.odb_data = odb_data
         self.singleton_server = singleton_server
         self.config = worker_config
         self.repo_location = repo_location
         self.ftp = ftp
+        self.sql_pool_store = sql_pool_store
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
@@ -284,7 +286,23 @@ class ParallelServer(BrokerMessageReceiver):
         
     def after_init(self):
         
-        # First try grabbing the basic server's data from the ODB. No point
+        # Create an ODB connection pool first and have self.odb use it, note that
+        # the ConfigObj's format needs to be converted over to our own SimpleBunch.
+        odb_data = SimpleBunch()
+        odb_data.db_name = self.odb_data['db_name']
+        odb_data.engine = self.odb_data['engine']
+        odb_data.extra = self.odb_data['extra']
+        odb_data.host = self.odb_data['host']
+        odb_data.password = self.crypto_manager.decrypt(self.odb_data['password'])
+        odb_data.pool_size = self.odb_data['pool_size']
+        odb_data.user = self.odb_data['user']
+        odb_data.is_odb = True
+        
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = odb_data
+        self.odb.server = self
+        self.odb.odb_token = self.odb_data['token']
+        
+        # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
         server = self.odb.fetch_server()
         
@@ -330,7 +348,7 @@ class ParallelServer(BrokerMessageReceiver):
             for action, msg_type in pairs:
                 msg = {}
                 msg['action'] = action
-                msg['odb_token'] = self.odb.odb_data['token']
+                msg['odb_token'] = self.odb.odb_token
                 self.broker_client.send_json(msg, msg_type=msg_type)
                 time.sleep(0.2)
             

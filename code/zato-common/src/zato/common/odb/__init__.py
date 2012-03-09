@@ -34,7 +34,6 @@ S3_DEFAULT_SEPARATOR = '/'
 S3_DEFAULT_KEY_SYNC_TIMEOUT = 1
 WMQ_DEFAULT_PRIORITY = 5
 
-# TODO: Handle extra parameters.
 engine_def = '{engine}://{user}:{password}@{host}/{db_name}'
 
 # Queries to use in pinging the databases.
