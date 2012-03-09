@@ -32,6 +32,9 @@ from time import time
 from sqlalchemy import create_engine
 from sqlalchemy.pool import QueuePool
 
+# validate
+from validate import is_boolean, is_integer, VdtTypeError
+
 # Spring Python
 from springpython.context import DisposableObject
 
@@ -47,8 +50,33 @@ class SQLConnectionPool(object):
         # Safe for printing out to logs, any sensitive data has been shadowed
         self.data_no_sensitive = data_no_sensitive 
         
+        _extra = {}
+        for line in self.data.get('extra', '').splitlines():
+            original_line = line
+            if line:
+                line = line.split('=')
+                if not len(line) == 2:
+                    raise ValueError('Each line must be a single key=value entry, not [{}]'.format(original_line))
+                
+                key, value = line
+                value = value.strip()
+                
+                try:
+                    value = is_boolean(value)
+                except VdtTypeError:
+                    # It's cool, not a boolean
+                    pass 
+                
+                try:
+                    value = is_integer(value)
+                except VdtTypeError:
+                    # OK, not an integer
+                    pass 
+                
+                _extra[key.strip()] = value
+        
         engine_url = engine_def.format(**data)
-        self.engine = create_engine(engine_url, pool_size=int(data['pool_size']), echo=False)
+        self.engine = create_engine(engine_url, pool_size=int(data['pool_size']), **_extra)
         
     def ping(self):
         """ Pings the SQL database and returns the response time, in milliseconds.
