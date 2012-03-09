@@ -58,7 +58,7 @@ class GetList(AdminService):
                 item.db_name = db_item.db_name
                 item.username = db_item.username
                 item.pool_size = db_item.pool_size
-                item.extra = db_item.extra
+                item.extra = db_item.extra.decode('utf-8') if db_item.extra else ''
                 
                 item_list.append(item)
 
