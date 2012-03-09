@@ -84,7 +84,6 @@ class ODBManager(object):
 
             self.pool = ODBConnectionPool(self.odb_config, True, self.crypto_manager)
             self.pool.init()
-            self.pool.get(ZATO_ODB_POOL_NAME)
 
         self.pool.ping({'pool_name': ZATO_ODB_POOL_NAME})
         engine = self.pool.get(ZATO_ODB_POOL_NAME)
