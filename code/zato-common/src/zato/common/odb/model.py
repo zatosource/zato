@@ -309,6 +309,7 @@ class SQLConnectionPool(Base):
 
     id = Column(Integer,  Sequence('sql_pool_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
     username = Column(String(200), nullable=False)
     password = Column(String(200), nullable=False)
     db_name = Column(String(200), nullable=False)
@@ -320,11 +321,15 @@ class SQLConnectionPool(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
+    
+    engine_text = None # For auto-completion, not used by the DB
 
-    def __init__(self, id=None, name=None, db_name=None, username=None, engine=None,
-                 extra=None, host=None, port=None, pool_size=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, db_name=None, 
+                 username=None, engine=None, extra=None, host=None, port=None, 
+                 pool_size=None, cluster=None):
         self.id = id
         self.name = name
+        self.is_active = is_active
         self.db_name = db_name
         self.username = username
         self.engine = engine
