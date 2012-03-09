@@ -205,5 +205,6 @@ def delete(req, id, cluster_id):
 def ping():
     pass
 
-def change_password():
-    pass
+@meth_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato:outgoing.sql.change-password')

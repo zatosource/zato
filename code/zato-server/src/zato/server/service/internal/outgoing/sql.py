@@ -221,3 +221,18 @@ class Delete(AdminService):
                 raise
 
             return ZATO_OK, ''
+        
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of an outgoing SQL connection.
+    """
+    def handle(self, *args, **kwargs):
+
+        with closing(self.server.odb.session()) as session:
+            
+            def _auth(instance, password):
+                instance.password = password
+                #self.ftp.update_password(instance.name, password)
+                
+            self._handle(SQLConnectionPool, _auth, None, **kwargs)
+            
+            return ZATO_OK, ''
