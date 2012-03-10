@@ -30,7 +30,7 @@ from time import time
 
 # SQLAlchemy
 from sqlalchemy import create_engine
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 # validate
 from validate import is_boolean, is_integer, VdtTypeError
@@ -40,6 +40,24 @@ from springpython.context import DisposableObject
 
 # Zato
 from zato.common.odb import engine_def, ping_queries
+
+class SessionWrapper(object):
+    """ Wraps an SQLAlchemy session.
+    """
+    def __init__(self):
+        self.session_initialized = False
+        
+    def init_session(self, pool):
+        pool.ping()
+        self._Session = scoped_session(sessionmaker(bind=pool.engine))
+        self._session = self._Session()
+        self.session_initialized = True
+    
+    def session(self):
+        return self._Session()
+    
+    def close(self):
+        self._session.close()
 
 class SQLConnectionPool(object):
     def __init__(self, name, data, data_no_sensitive):

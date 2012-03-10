@@ -24,7 +24,6 @@ import logging
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.exc import IntegrityError
 
 # Bunch
@@ -41,39 +40,29 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, \
     tech_acc_list, wss_list
 from zato.common.util import security_def_type
-#from zato.server.connection.sql import ODBConnectionPool
+from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
 
-class ODBManager(object):
+class ODBManager(SessionWrapper):
     """ Manages connections to the server's Operational Database.
     """
     def __init__(self, well_known_data=None, odb_token=None, crypto_manager=None, 
-                 pool=None, server=None, cluster=None, init=True):
+                 server=None, cluster=None, init=True):
+        super(ODBManager, self).__init__()
         self.well_known_data = well_known_data
         self.odb_token = odb_token
         self.crypto_manager = crypto_manager
-        self.pool = pool
         self.server = server
         self.cluster = cluster
-
-    def session(self):
-        return self._Session()
-
-    def close(self):
-        self._session.close()
-
+        
     def fetch_server(self):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
         to the value pointed to by the server's .cluster attribute.
         """
-        if not self.pool:
-            self.pool = self.server.sql_pool_store[ZATO_ODB_POOL_NAME]
-
-        self.pool.ping()
-        self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
-        self._session = self._Session()
-
+        if not self.session_initialized:
+            self.init_session(self.server.sql_pool_store[ZATO_ODB_POOL_NAME])
+            
         try:
             self.server = self._session.query(Server).\
                    filter(Server.odb_token == self.odb_token).\

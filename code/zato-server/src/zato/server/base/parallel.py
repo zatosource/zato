@@ -65,7 +65,7 @@ class ZatoHTTPListener(HTTPServer):
         super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
                                                task_dispatcher)
 
-    def executeRequest(self, task, thread_ctx):
+    def executeRequest(self, task, thread_local_ctx):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
@@ -74,7 +74,7 @@ class ZatoHTTPListener(HTTPServer):
         
         try:
             # SOAP or plain HTTP.
-            response = thread_ctx.store.request_handler.handle(rid, task, thread_ctx)
+            response = thread_local_ctx.store.request_handler.handle(rid, task, thread_local_ctx)
 
         # Any exception at this point must be our fault.
         except Exception, e:
@@ -286,7 +286,7 @@ class ParallelServer(BrokerMessageReceiver):
     def after_init(self):
         
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
-        self.config.odb_data = SimpleBunch()
+        self.config.odb_data = Bunch()
         self.config.odb_data.db_name = self.odb_data['db_name']
         self.config.odb_data.engine = self.odb_data['engine']
         self.config.odb_data.extra = self.odb_data['extra']
