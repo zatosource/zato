@@ -43,7 +43,7 @@ class GetList(AdminService):
 
         params = _get_params(kwargs.get('payload'), ['cluster_id', 'connection', 'transport'], 'data.')
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = http_soap_list(session, params['cluster_id'],
                                       params['connection'], params['transport'], 
@@ -75,7 +75,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['connection', 'transport', 'cluster_id', 'name', 
@@ -162,7 +162,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['id', 'cluster_id', 'name', 'is_active', 'url_path', 'connection', 'transport']
@@ -220,7 +220,7 @@ class Delete(AdminService):
     """ Deletes an HTTP/SOAP connection.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

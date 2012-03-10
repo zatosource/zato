@@ -42,7 +42,7 @@ class GetList(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             definition_list = Element('definition_list')
             definitions = def_amqp_list(session, params['cluster_id'], False)
             
@@ -69,7 +69,7 @@ class GetByID(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
 
             definition = session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
                 ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
@@ -95,7 +95,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['cluster_id', 'name', 'host', 'port', 'vhost', 
                 'username', 'frame_max', 'heartbeat']
@@ -148,7 +148,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['id', 'cluster_id', 'name', 'host', 'port', 
                 'vhost',  'username', 'frame_max', 'heartbeat']
@@ -215,7 +215,7 @@ class Delete(AdminService):
     """ Deletes an AMQP definition.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

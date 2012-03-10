@@ -44,7 +44,7 @@ class GetList(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = service_list(session, params['cluster_id'], False)
             
@@ -69,7 +69,7 @@ class GetByID(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['id', 'cluster_id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
 
             db_item = service(session, params['cluster_id'], params['id'])
             
@@ -88,7 +88,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['cluster_id', 'name', 'host', 'port', 'queue_manager', 
                 'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
@@ -145,7 +145,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['id', 'is_active', 'name']
             
@@ -187,7 +187,7 @@ class Delete(AdminService):
     """ Deletes a service
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

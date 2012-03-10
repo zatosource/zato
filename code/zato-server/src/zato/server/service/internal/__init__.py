@@ -131,7 +131,7 @@ class ChangePasswordBase(AdminService):
     def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB,
                 *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id', 'password1', 'password2']

@@ -36,7 +36,7 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
 
