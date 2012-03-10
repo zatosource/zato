@@ -453,7 +453,8 @@ class _BaseMessageHandler(object):
 
         service_instance = self.server.service_store.new_instance(impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
-                                thread_ctx.store.odb, transport, rid)
+                                thread_ctx.store.odb, thread_ctx.store.sql_pool_store, 
+                                transport, rid)
 
         service_response = service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
 

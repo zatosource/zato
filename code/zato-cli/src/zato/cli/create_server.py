@@ -46,7 +46,7 @@ extra=
 host={odb_host}
 password={odb_password}
 pool_size={odb_pool_size}
-user={odb_user}
+username={odb_user}
 token={odb_token}
 
 [pickup]

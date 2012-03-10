@@ -40,7 +40,9 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-
+        
+        print(444, self.sql_pool_store)
+        
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = out_sql_list(session, params['cluster_id'], False)
@@ -83,6 +85,7 @@ class Create(AdminService):
             cluster_id = core_params['cluster_id']
             extra = optional_params['extra']
             extra = extra.encode('utf-8') if extra else ''
+            password = uuid4().hex
 
             existing_one = session.query(SQLConnectionPool.id).\
                 filter(SQLConnectionPool.cluster_id==cluster_id).\
@@ -107,16 +110,19 @@ class Create(AdminService):
                 item.port = core_params['port']
                 item.db_name = core_params['db_name']
                 item.username = core_params['username']
-                item.password = uuid4().hex
+                item.password = password
                 item.pool_size = core_params['pool_size']
                 item.extra = extra
 
                 session.add(item)
                 session.commit()
-
+                
                 created_elem.id = item.id
-                #self.update_facade(core_params, optional_params)
-
+                
+                core_params.update(optional_params)
+                core_params['password'] = password
+                self.sql_pool_store[core_params['name']] = core_params
+                
                 return ZATO_OK, etree.tostring(created_elem)
 
             except Exception, e:
