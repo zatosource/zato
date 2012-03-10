@@ -102,7 +102,7 @@ frontend front_http_plain
     monitor-uri /zato-server-alive # ZATO frontend front_http_plain:monitor-uri
 """
 
-default_odb_pool_size = 4
+default_odb_pool_size = 1
 
 directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs')
 files = {ZATO_SERVER_DIR: '',
