@@ -67,7 +67,7 @@ def _get_edit_create_message(params, prefix=''):
 
     return zato_message
 
-def _edit_create_response(verb, id, name, engine):
+def _edit_create_response(verb, id, name, engine, cluster_id):
     """ A common function for producing return data for create and edit actions.
     """
     return_data = {'id': id,
