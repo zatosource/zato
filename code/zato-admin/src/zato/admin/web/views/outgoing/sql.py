@@ -73,6 +73,7 @@ def _edit_create_response(verb, id, name, engine):
     return_data = {'id': id,
                    'message': 'Successfully {0} the outgoing SQL connection [{1}]'.format(verb, name),
                    'engine_text': odb_engine_friendly_name[engine],
+                   'cluster_id': cluster_id,
                 }
 
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -155,7 +156,7 @@ def create(req):
         engine = zato_message.data.engine
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.create', zato_message)
 
-        return _edit_create_response('created', zato_message.data.out_sql.id.text, req.POST['name'], engine)
+        return _edit_create_response('created', zato_message.data.out_sql.id.text, req.POST['name'], engine, cluster.id)
 
     except Exception, e:
         msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -174,7 +175,7 @@ def edit(req):
         engine = zato_message.data.engine
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.edit', zato_message)
 
-        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine)
+        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, cluster.id)
 
     except Exception, e:
         msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
