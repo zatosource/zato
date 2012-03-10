@@ -50,13 +50,21 @@ class ConfigDict(object):
         with self.lock:
             return self._bunch[key]
         
+    __getitem__ = get
+        
     def set(self, key, value):
         with self.lock:
             self._bunch[key] = value
             
+    __setitem__ = set
+            
     def __del__(self, key):
         with self.lock:
             del self._bunch[key]
+            
+    def __iter__(self):
+        with self.lock:
+            return iter(self._bunch)
             
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
@@ -95,7 +103,7 @@ class ConfigStore(object):
     for instance, connection definitions should be kept here.
     """
     def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
-                 out_sql_conn=NotGiven, out_amqp=NotGiven, out_jms_wmq=NotGiven, out_zmq=NotGiven,
+                 out_sql=NotGiven, out_amqp=NotGiven, out_jms_wmq=NotGiven, out_zmq=NotGiven,
                  repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
                  url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven):
         
@@ -104,7 +112,7 @@ class ConfigStore(object):
         self.out_plain_http = out_plain_http        # done
         self.out_soap = out_soap                    # done
         self.out_s3 = out_s3                        # done
-        self.out_sql_conn = out_sql_conn            # not yet
+        self.out_sql = out_sql                      # not yet
         self.out_amqp = out_amqp                    # done
         self.out_jms_wmq = out_jms_wmq              # done
         self.out_zmq = out_zmq                      # done

@@ -37,8 +37,8 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, \
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
     internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
-    out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, out_zmq, out_zmq_list, \
-    tech_acc_list, wss_list
+    out_jms_wmq, out_jms_wmq_list, out_s3, out_s3_list, out_sql, out_sql_list, \
+    out_zmq, out_zmq_list, tech_acc_list, wss_list
 from zato.common.util import security_def_type
 from zato.server.connection.sql import SessionWrapper
 
@@ -311,6 +311,18 @@ class ODBManager(SessionWrapper):
         """ Returns a list of outgoing S3 connections.
         """
         return out_s3_list(self._session, cluster_id, needs_columns)
+    
+# ##############################################################################
+
+    def get_out_sql(self, cluster_id, out_id):
+        """ Returns an outgoing SQL connection's details.
+        """
+        return out_sql(self._session, cluster_id, out_id)
+
+    def get_out_sql_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of outgoing SQL connections.
+        """
+        return out_sql_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 

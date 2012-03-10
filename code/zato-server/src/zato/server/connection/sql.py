@@ -24,6 +24,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
+from cStringIO import StringIO
 from logging import getLogger
 from threading import RLock
 from time import time
@@ -60,54 +61,56 @@ class SessionWrapper(object):
         self._session.close()
 
 class SQLConnectionPool(object):
-    def __init__(self, name, data, data_no_sensitive):
+    def __init__(self, name, config, config_no_sensitive):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
-        self.data = data
+        self.config = config
         
         # Safe for printing out to logs, any sensitive data has been shadowed
-        self.data_no_sensitive = data_no_sensitive 
+        self.config_no_sensitive = config_no_sensitive 
         
         _extra = {}
-        for line in self.data.get('extra', '').splitlines():
-            original_line = line
-            if line:
-                line = line.split('=')
-                if not len(line) == 2:
-                    raise ValueError('Each line must be a single key=value entry, not [{}]'.format(original_line))
-                
-                key, value = line
-                value = value.strip()
-                
-                try:
-                    value = is_boolean(value)
-                except VdtTypeError:
-                    # It's cool, not a boolean
-                    pass 
-                
-                try:
-                    value = is_integer(value)
-                except VdtTypeError:
-                    # OK, not an integer
-                    pass 
-                
-                _extra[key.strip()] = value
+        extra = self.config.get('extra') # Will be None at times
+        if extra:
+            for line in extra.splitlines():
+                original_line = line
+                if line:
+                    line = line.split('=')
+                    if not len(line) == 2:
+                        raise ValueError('Each line must be a single key=value entry, not [{}]'.format(original_line))
+                    
+                    key, value = line
+                    value = value.strip()
+                    
+                    try:
+                        value = is_boolean(value)
+                    except VdtTypeError:
+                        # It's cool, not a boolean
+                        pass 
+                    
+                    try:
+                        value = is_integer(value)
+                    except VdtTypeError:
+                        # OK, not an integer
+                        pass 
+                    
+                    _extra[key.strip()] = value
         
-        engine_url = engine_def.format(**data)
-        self.engine = create_engine(engine_url, pool_size=int(data['pool_size']), **_extra)
+        engine_url = engine_def.format(**config)
+        self.engine = create_engine(engine_url, pool_size=int(config['pool_size']), **_extra)
         
     def ping(self):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
         query = ping_queries[self.engine.name]
 
-        self.logger.debug('About to ping the SQL connection pool:[{}], query:[{}]'.format(self.data_no_sensitive, query))
+        self.logger.debug('About to ping the SQL connection pool:[{}], query:[{}]'.format(self.config_no_sensitive, query))
 
         start_time = time()
         self.engine.connect().execute(query)
         response_time = time() - start_time
 
-        self.logger.debug('Ping OK, pool:[{0}], response_time:[{1:03.4f} s]'.format(self.data_no_sensitive, response_time))
+        self.logger.debug('Ping OK, pool:[{0}], response_time:[{1:03.4f} s]'.format(self.config_no_sensitive, response_time))
 
         return response_time
 
@@ -127,16 +130,14 @@ class PoolStore(DisposableObject):
         with self._lock:
             return self.pools[name]
         
-    def __setitem__(self, name, data):
+    def __setitem__(self, name, config):
         """ Stops a connection pool if it exists and replaces it with a new one 
-        using updated settings. 'is_odb' is a flag used for creating a new ODB
-        connection for the server instead of a regular user-defined SQL connection
-        pool.
+        using updated settings.
         """
         with self._lock:
-            data_no_sensitive = deepcopy(data)
-            data_no_sensitive['password'] = '***'
-            pool = SQLConnectionPool(name, data, data_no_sensitive)
+            config_no_sensitive = deepcopy(config)
+            config_no_sensitive['password'] = '***'
+            pool = SQLConnectionPool(name, config, config_no_sensitive)
             self.pools[name] = pool
     
     def __delitem__(self, name):
@@ -144,6 +145,15 @@ class PoolStore(DisposableObject):
         """
         with self._lock:
             del self.pools[name]
+            
+    def __str__(self):
+        out = StringIO()
+        out.write('<{} at {} pools:['.format(self.__class__.__name__, hex(id(self))))
+        out.write(', '.join(sorted(self.pools.keys())))
+        out.write(']>')
+        return out.getvalue()
+    
+    __repr__ = __str__
         
     def destroy(self):
         """ Invoked when Spring Python's container is releasing the store.

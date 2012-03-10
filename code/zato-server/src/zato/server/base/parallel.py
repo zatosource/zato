@@ -182,6 +182,10 @@ class ParallelServer(BrokerMessageReceiver):
         query = self.odb.get_out_s3_list(server.cluster.id, True)
         self.config.out_s3 = ConfigDict.from_query('out_s3', query)
         
+        # SQL
+        query = self.odb.get_out_sql_list(server.cluster.id, True)
+        self.config.out_sql = ConfigDict.from_query('out_sql', query)
+        
         # AMQP
         query = self.odb.get_out_amqp_list(server.cluster.id, True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query)
@@ -293,8 +297,10 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.odb_data.host = self.odb_data['host']
         self.config.odb_data.password = self.crypto_manager.decrypt(self.odb_data['password'])
         self.config.odb_data.pool_size = self.odb_data['pool_size']
-        self.config.odb_data.user = self.odb_data['user']
+        self.config.odb_data.username = self.odb_data['username']
         self.config.odb_data.is_odb = True
+        
+        # This is the call that creates an SQLAlchemy connection
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         
         self.odb.server = self

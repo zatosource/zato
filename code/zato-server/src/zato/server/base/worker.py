@@ -88,7 +88,9 @@ class WorkerStore(BaseWorker):
         self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME])
         
         # Any user-defined SQL connections left?
-        
+        for pool_name in self.worker_config.out_sql:
+            config = self.worker_config.out_sql[pool_name]['config']
+            self.sql_pool_store[pool_name] = config
         
 # ##############################################################################        
         
@@ -180,7 +182,7 @@ class WorkerStore(BaseWorker):
         """
         service_instance = self.worker_config.server.service_store.new_instance(msg.service)
         service_instance.update(service_instance, self.worker_config.server, self.broker_client, 
-                                self.odb, channel, msg.rid)
+                                self.odb, self.sql_pool_store, channel, msg.rid)
         
         response = service_instance.handle(payload=msg.get('payload'), raw_request=msg)
         

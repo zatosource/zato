@@ -113,7 +113,7 @@ DATABASES['default']['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engin
 
 # SQLAlchemy setup
 SASession = scoped_session(sessionmaker())
-engine = create_engine(engine_def.format(engine=db_type, user=DATABASE_USER,
+engine = create_engine(engine_def.format(engine=db_type, username=DATABASE_USER,
                 password=DATABASE_PASSWORD, host=DATABASE_HOST, db_name=DATABASE_NAME))
 SASession.configure(bind=engine)
 
