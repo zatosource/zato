@@ -40,7 +40,7 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
             definitions = wss_list(session, params['cluster_id'], False)
@@ -67,7 +67,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['cluster_id', 'name', 'is_active', 'username', 
                               'password_type', 'reject_empty_nonce_creat', 
@@ -123,7 +123,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['id', 'is_active', 'name', 'username', 'password_type', 
                               'reject_empty_nonce_creat', 'reject_stale_tokens', 
@@ -191,7 +191,7 @@ class Delete(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['wss_id']

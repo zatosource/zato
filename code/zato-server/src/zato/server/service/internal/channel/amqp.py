@@ -45,7 +45,7 @@ class GetList(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = channel_amqp_list(session, params['cluster_id'], False)
     
@@ -70,7 +70,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             
             params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue', 
@@ -136,7 +136,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 
@@ -209,7 +209,7 @@ class Delete(AdminService):
     """ Deletes an AMQP channel.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

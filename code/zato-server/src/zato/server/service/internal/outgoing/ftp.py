@@ -51,7 +51,7 @@ class GetList(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = out_ftp_list(session, params['cluster_id'], False)
 
@@ -77,7 +77,7 @@ class Create(_FTPService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['cluster_id', 'name', 'is_active', 'host', 'port', 'dircache']
@@ -135,7 +135,7 @@ class Edit(_FTPService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['id', 'cluster_id', 'name', 'is_active', 'host', 'port', 'dircache']
@@ -196,7 +196,7 @@ class Delete(AdminService):
     """ Deletes an outgoing FTP connection.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']
@@ -228,7 +228,7 @@ class ChangePassword(ChangePasswordBase):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             
             def _auth(instance, password):
                 instance.password = password

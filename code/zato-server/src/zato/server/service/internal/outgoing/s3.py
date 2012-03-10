@@ -43,7 +43,7 @@ class GetList(AdminService):
 
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = out_s3_list(session, params['cluster_id'], False)
 
@@ -66,7 +66,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout']
@@ -116,7 +116,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['id', 'cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout']
@@ -168,7 +168,7 @@ class Delete(AdminService):
     """ Deletes an outgoing S3 connection.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

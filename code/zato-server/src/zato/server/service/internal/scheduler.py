@@ -234,7 +234,7 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
@@ -268,7 +268,7 @@ class Create(AdminService):
     """ Creates a new scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             return _create_edit('create', kwargs.get('payload'), self.logger, 
                 session, kwargs['thread_ctx'].broker_client)
         
@@ -276,7 +276,7 @@ class Edit(AdminService):
     """ Update a new scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             return _create_edit('edit', kwargs.get('payload'), self.logger, 
                 session, kwargs['thread_ctx'].broker_client)
 
@@ -284,7 +284,7 @@ class Delete(AdminService):
     """ Deletes a scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']
@@ -315,7 +315,7 @@ class Execute(AdminService):
     """ Executes a scheduler's job.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

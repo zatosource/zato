@@ -41,7 +41,7 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = out_sql_list(session, params['cluster_id'], False)
             
@@ -69,7 +69,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['name', 'is_active', 'cluster_id', 'engine', 'host', 'port',
@@ -131,7 +131,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
             core_params = ['id', 'cluster_id', 'name', 'is_active', 'engine', 
@@ -195,7 +195,7 @@ class Delete(AdminService):
     """ Deletes an outgoing SQL connection.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']
@@ -227,7 +227,7 @@ class ChangePassword(ChangePasswordBase):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             
             def _auth(instance, password):
                 instance.password = password
@@ -242,7 +242,7 @@ class Ping(AdminService):
     """ Pings an SQL database
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

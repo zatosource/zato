@@ -44,7 +44,7 @@ class GetList(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             definition_list = Element('definition_list')
             definitions = def_jms_wmq_list(session, params['cluster_id'], False)
     
@@ -77,7 +77,7 @@ class GetByID(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['id', 'cluster_id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
 
             definition = def_jms_wmq(session, params['cluster_id'], params['id'])
             
@@ -105,7 +105,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['cluster_id', 'name', 'host', 'port', 'queue_manager', 
                 'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
@@ -162,7 +162,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
             request_params = ['id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
                 'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
@@ -238,7 +238,7 @@ class Delete(AdminService):
     """ Deletes a JMS WebSphere MQ definition.
     """
     def handle(self, *args, **kwargs):
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']

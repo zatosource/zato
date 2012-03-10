@@ -42,7 +42,7 @@ class GetList(AdminService):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             definition_list = Element('definition_list')
             definitions = basic_auth_list(session, params['cluster_id'], False)
     
@@ -64,7 +64,7 @@ class Create(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
     
                 payload = kwargs.get('payload')
@@ -114,7 +114,7 @@ class Edit(AdminService):
     """
     def handle(self, *args, **kwargs):
 
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 
                 payload = kwargs.get('payload')
@@ -179,7 +179,7 @@ class Delete(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        with closing(self.server.odb.session()) as session:
+        with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
                 request_params = ['id']
