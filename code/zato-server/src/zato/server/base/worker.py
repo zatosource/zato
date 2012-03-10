@@ -32,9 +32,11 @@ from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Zato
+from zato.common import ZATO_ODB_POOL_NAME
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
+from zato.server.connection.sql import PoolStore, SessionWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +70,25 @@ class WorkerStore(BaseWorker):
         self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_config.url_sec[0], 
                 self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
+        # Create all the expected SQL pools
+        self.init_sql()
+        
     def filter(self, msg):
         return True
+    
+    def init_sql(self):
+        """ Initializes SQL connections, first to ODB and then any user-defined ones.
+        """
+        # We need a store first
+        self.sql_pool_store = PoolStore()
+        
+        # Connect to ODB
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
+        self.odb = SessionWrapper()
+        self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME])
+        
+        # Any user-defined SQL connections left?
+        
         
 # ##############################################################################        
         
@@ -160,7 +179,8 @@ class WorkerStore(BaseWorker):
         creates a new service instance and invokes it.
         """
         service_instance = self.worker_config.server.service_store.new_instance(msg.service)
-        service_instance.update(service_instance, self.worker_config.server, self.broker_client, channel, msg.rid)
+        service_instance.update(service_instance, self.worker_config.server, self.broker_client, 
+                                self.odb, channel, msg.rid)
         
         response = service_instance.handle(payload=msg.get('payload'), raw_request=msg)
         
@@ -272,11 +292,11 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
 class _HTTPTask(HTTPTask):
     """ An HTTP task which knows how to use ZMQ sockets.
     """
-    def service(self, worker_config):
+    def service(self, thread_ctx):
         try:
             try:
                 self.start()
-                self.channel.server.executeRequest(self, worker_config)
+                self.channel.server.executeRequest(self, thread_ctx)
                 self.finish()
             except socket.error:
                 self.close_on_finish = 1
@@ -291,7 +311,7 @@ class _HTTPServerChannel(HTTPServerChannel):
     """
     task_class = _HTTPTask
     
-    def service(self, worker_config):
+    def service(self, thread_ctx):
         """Execute all pending tasks"""
         while True:
             task = None
@@ -307,7 +327,7 @@ class _HTTPServerChannel(HTTPServerChannel):
             finally:
                 task_lock.release()
             try:
-                task.service(worker_config)
+                task.service(thread_ctx)
             except:
                 # propagate the exception, but keep executing tasks
                 self.server.addTask(self)

@@ -452,7 +452,8 @@ class _BaseMessageHandler(object):
         payload, impl_name, service_data = self.init(rid, task, request, headers, transport)
 
         service_instance = self.server.service_store.new_instance(impl_name)
-        service_instance.update(service_instance, self.server, thread_ctx.broker_client, transport, rid)
+        service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
+                                thread_ctx.store.odb, transport, rid)
 
         service_response = service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
 

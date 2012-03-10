@@ -192,3 +192,6 @@ class ConfigStore(object):
 
 # config_copy = copy.copy(outgoing)
 # out_ftp_copy = copy.copy(outgoing.out_ftp)
+
+# with closing(self.server.odb.session()) as session:
+# with self.odb.session() as session:
