@@ -25,12 +25,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from cStringIO import StringIO
-from logging import getLogger
+from logging import DEBUG, getLogger
 from threading import RLock
 from time import time
 
 # SQLAlchemy
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 # validate
@@ -99,6 +99,32 @@ class SQLConnectionPool(object):
         engine_url = engine_def.format(**config)
         self.engine = create_engine(engine_url, pool_size=int(config['pool_size']), **_extra)
         
+        event.listen(self.engine, 'checkin', self.on_checkin)
+        event.listen(self.engine, 'checkout', self.on_checkout)
+        event.listen(self.engine, 'connect', self.on_connect)
+        event.listen(self.engine, 'first_connect', self.on_first_connect)
+        
+    def on_checkin(self, dbapi_conn, conn_record):
+        if self.logger.isEnabledFor(DEBUG):
+            msg = 'Checked in dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
+            self.logger.debug(msg)
+            
+    def on_checkout(self, dbapi_conn, conn_record, conn_proxy):
+        if self.logger.isEnabledFor(DEBUG):
+            msg = 'Checked out dbapi_conn:{}, conn_record:{}, conn_proxy:{}'.format(
+                dbapi_conn, conn_record, conn_proxy)
+            self.logger.debug(msg)
+            
+    def on_connect(self, dbapi_conn, conn_record):
+        if self.logger.isEnabledFor(DEBUG):
+            msg = 'Connect dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
+            self.logger.debug(msg)
+            
+    def on_first_connect(self, dbapi_conn, conn_record):
+        if self.logger.isEnabledFor(DEBUG):
+            msg = 'First connect dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
+            self.logger.debug(msg)
+        
     def ping(self):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
@@ -119,8 +145,9 @@ class PoolStore(DisposableObject):
     """ A main class for accessing all of the SQL connection pools. Each server
     thread has its own store.
     """
-    def __init__(self):
+    def __init__(self, sql_conn_class=SQLConnectionPool):
         super(PoolStore, self).__init__()
+        self.sql_conn_class = sql_conn_class
         self._lock = RLock()
         self.pools = {}
         
@@ -135,15 +162,19 @@ class PoolStore(DisposableObject):
         using updated settings.
         """
         with self._lock:
+            if name in self.pools:
+                del self[name]
+                
             config_no_sensitive = deepcopy(config)
             config_no_sensitive['password'] = '***'
-            pool = SQLConnectionPool(name, config, config_no_sensitive)
+            pool = self.sql_conn_class(name, config, config_no_sensitive)
             self.pools[name] = pool
     
     def __delitem__(self, name):
         """ Stops a pool and deletes it from the store.
         """
         with self._lock:
+            self.pools[name].engine.dispose()
             del self.pools[name]
             
     def __str__(self):
@@ -154,6 +185,15 @@ class PoolStore(DisposableObject):
         return out.getvalue()
     
     __repr__ = __str__
+    
+    def change_password(self, name, password):
+        """ Updates the password which means recreating the pool using the new
+        password.
+        """
+        with self._lock:
+            config = deepcopy(self.pools[name].config)
+            config['password'] = password
+            self[name] = config
         
     def destroy(self):
         """ Invoked when Spring Python's container is releasing the store.

@@ -186,7 +186,10 @@ class Edit(AdminService):
                 session.commit()
 
                 xml_item.id = item.id
-                #self.update_facade(core_params, optional_params, old_name)
+
+                core_params.update(optional_params)
+                core_params['password'] = item.password
+                self.sql_pool_store[core_params['name']] = core_params
 
                 return ZATO_OK, etree.tostring(xml_item)
 
@@ -237,7 +240,7 @@ class ChangePassword(ChangePasswordBase):
             
             def _auth(instance, password):
                 instance.password = password
-                #self.ftp.update_password(instance.name, password)
+                self.sql_pool_store.change_password(instance.name, password)
                 
             self._handle(SQLConnectionPool, _auth, None, **kwargs)
             
