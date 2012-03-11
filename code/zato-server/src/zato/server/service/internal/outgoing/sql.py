@@ -260,11 +260,8 @@ class Ping(AdminService):
                     filter(SQLConnectionPool.id==id).\
                     one()
                 
-                # TODO: Actually ping the database
-                #response_time = self.ping(item)
-                
                 xml_item = etree.Element('response_time')
-                xml_item.text = '0.39239723'
+                xml_item.text = str(self.sql_pool_store.pools[item.name].ping())
                 
                 return ZATO_OK, etree.tostring(xml_item)
 
