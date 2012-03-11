@@ -330,7 +330,7 @@ class ParallelServer(BrokerMessageReceiver):
     def run_forever(self):
         
         task_dispatcher = _TaskDispatcher(self, self.config, self.on_broker_msg, self.zmq_context)
-        task_dispatcher.setThreadCount(10)
+        task_dispatcher.setThreadCount(1) # TODO: Make it configurable
 
         logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
 

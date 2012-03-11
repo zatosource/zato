@@ -30,7 +30,7 @@ from mx.Tools import NotGiven
 from paste.util.multidict import MultiDict
 
 # Bunch
-from bunch import SimpleBunch
+from bunch import Bunch
 
 class ConfigDict(object):
     """ Stores configuration of a particular item of interest, such as an
@@ -70,24 +70,24 @@ class ConfigDict(object):
         """ Returns a new instance of ConfigDict with items copied over from self.
         """
         config_dict = ConfigDict(self.name)
-        config_dict._bunch = SimpleBunch()
+        config_dict._bunch = Bunch()
         config_dict._bunch.update(self._bunch)
         
         return config_dict
             
     @staticmethod        
-    def from_query(name, query_data, item_class=SimpleBunch):
+    def from_query(name, query_data, item_class=Bunch):
         """ Return a new ConfigDict with items taken from an SQL query.
         """
         config_dict = ConfigDict(name)
-        config_dict._bunch = SimpleBunch()
+        config_dict._bunch = Bunch()
         
         if query_data:
             query, attrs = query_data
     
             for item in query:
-                config_dict._bunch[item.name] = SimpleBunch()
-                config_dict._bunch[item.name].config = SimpleBunch()
+                config_dict._bunch[item.name] = Bunch()
+                config_dict._bunch[item.name].config = Bunch()
                 
                 for attr_name in attrs.keys():
                     config_dict._bunch[item.name]['config'][attr_name] = getattr(item, attr_name)
@@ -155,10 +155,10 @@ class ConfigStore(object):
         http_soap = MultiDict()
         dict_of_lists = self.http_soap.dict_of_lists()
         for url_path, lists in dict_of_lists.items():
-            _info = SimpleBunch()
+            _info = Bunch()
             for elem in lists:
                 for soap_action, item in elem.items():
-                    _info[soap_action] = SimpleBunch()
+                    _info[soap_action] = Bunch()
                     _info[soap_action].id = item.id
                     _info[soap_action].name = item.name
                     _info[soap_action].is_internal = item.is_internal
@@ -182,7 +182,7 @@ class ConfigStore(object):
 # ------------------------------------
 # self.outgoing -> ConfigStore
 # self.outgoing.out_ftp -> ConfigDict
-# self.outgoing.out_ftp.get('aaa') -> SimpleBunch
+# self.outgoing.out_ftp.get('aaa') -> Bunch
 # self.outgoing.out_ftp.get('aaa').config -> connection parameters
 # self.outgoing.out_ftp.get('aaa').conn -> connection object
 #
