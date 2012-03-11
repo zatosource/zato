@@ -217,7 +217,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
                 
-                #self.ftp.update(None, old_name)
+                del self.sql_pool_store[old_name]
 
             except Exception, e:
                 session.rollback()
