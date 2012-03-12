@@ -103,39 +103,35 @@ class ConfigStore(object):
     for instance, connection definitions should be kept here.
     """
     def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
-                 out_sql=NotGiven, out_amqp=NotGiven, out_jms_wmq=NotGiven, out_zmq=NotGiven,
-                 repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
+                 out_sql=NotGiven, repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
                  url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven):
         
         # Outgoing connections
-        self.out_ftp = out_ftp                      # done
-        self.out_plain_http = out_plain_http        # done
-        self.out_soap = out_soap                    # done
-        self.out_s3 = out_s3                        # done
-        self.out_sql = out_sql                      # not yet
-        self.out_amqp = out_amqp                    # done
-        self.out_jms_wmq = out_jms_wmq              # done
-        self.out_zmq = out_zmq                      # done
+        self.out_ftp = out_ftp                      # broker messages - not yet
+        self.out_plain_http = out_plain_http        # broker messages - not yet
+        self.out_soap = out_soap                    # broker messages - not yet
+        self.out_s3 = out_s3                        # broker messages - not yet
+        self.out_sql = out_sql                      # broker messages - not yet
         
         # Local on-disk configuraion repository
-        self.repo_location = repo_location          # done
+        self.repo_location = repo_location          # broker messages - not yet
         
         # Security definitions
-        self.basic_auth = basic_auth                # done
-        self.wss = wss                              # done
-        self.tech_acc = tech_acc                    # done
+        self.basic_auth = basic_auth                # broker messages - not yet
+        self.wss = wss                              # broker messages - not yet
+        self.tech_acc = tech_acc                    # broker messages - not yet
         
         # URL security
-        self.url_sec = url_sec                      # done
+        self.url_sec = url_sec                      # broker messages - not yet
         
         # HTTP/out_soap channels
-        self.http_soap = http_soap                  # done
+        self.http_soap = http_soap                  # broker messages - not yet
         
         # Configuration for broker clients
-        self.broker_config = broker_config          # done
+        self.broker_config = broker_config          # broker messages - not yet
         
         # ODB
-        self.odb_data = odb_data                    # not yet
+        self.odb_data = odb_data                    # broker messages - not yet
         
     def copy(self):
         """ Creates a copy of this ConfigStore. All configuration data is copied
