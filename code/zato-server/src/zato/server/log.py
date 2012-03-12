@@ -26,9 +26,11 @@ from logging import Logger
 from zato.common.log_message import NULL_LMC, NULL_RID
 
 def wrapper(name):
-    def _log(self, msg, rid=NULL_RID, lmc=NULL_LMC, *args, **kwargs):
+    def _log(self, msg, *args, **kwargs):
         def _invoke(name, self, msg):
-            return Logger.__dict__[name](self, msg, extra={'rid':rid, 'lmc':lmc})
+            extra={'rid':kwargs.get('rid', NULL_RID), 'lmc':kwargs.get('lmc', NULL_LMC)}
+            extra.update(kwargs.pop('extra', {}))
+            return Logger.__dict__[name](self, msg, *args, extra=extra, **kwargs)
         return _invoke(name, self, msg)
     return _log
 
