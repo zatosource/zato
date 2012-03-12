@@ -29,28 +29,47 @@ from zato.server.connection.zmq_.outgoing import ZMQFacade
 
 __all__ = ["Service"]
 
-class Service(object):
-    """ A base class for all services exposed by Zato, no matter the transport
-    and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other.
+class Outgoing(object):
+    """ A container for various outgoing connections a service can access. This
+    in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
+    __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap', 's3')
+    def __init__(self, ftp=None, amqp=None, zmq=None, jms_wmq=None, sql=None, 
+                 plain_http=None, soap=None, s3=None):
+        self.ftp = ftp
+        self.amqp = amqp
+        self.zmq = zmq
+        self.jms_wmq = jms_wmq
+        self.sql = sql
+        self.plain_http = plain_http
+        self.soap = soap
+        self.soap = soap
 
+class Service(object):
+    """ A base class for all services deployed on Zato servers, no matter 
+    the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
+    regardless whether they're built-in or user-defined ones.
+    """
     def __init__(self, *ignored_args, **ignored_kwargs):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.broker_client = None
-        self.odb = None
-        self.sql_pool_store = None
         self.channel = None
-        self.amqp = None
-        self.jms_wmq = None
-        self.zmq = None
-        self.ftp = None
         self.rid = None
+        self.outgoing = None
+        self.worker_store = None
+        self.odb = None
         
     def _init(self):
-        self.amqp = PublisherFacade(self.broker_client)
-        self.jms_wmq = WMQFacade(self.broker_client)
-        self.zmq = ZMQFacade(self.broker_client)
-        self.ftp = self.server.ftp
+        """ Actually initializes the service.
+        """
+        self.odb = self.worker_store.odb
+        out_amqp = PublisherFacade(self.broker_client)
+        out_jms_wmq = WMQFacade(self.broker_client)
+        out_zmq = ZMQFacade(self.broker_client)
+        out_sql = self.worker_store.sql_pool_store
+
+        out_ftp, out_plain_http, out_soap, out_s3 = self.worker_store.worker_config.outgoing_connections()
+        self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap, out_s3)
 
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process
@@ -118,14 +137,13 @@ class Service(object):
         """
         
     @staticmethod
-    def update(service, server, broker_client, odb, sql_pool_store, channel, rid, init=True):
+    def update(service, server, broker_client, worker_store, channel, rid, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
         service.server = server
         service.broker_client = broker_client
-        service.odb = odb
-        service.sql_pool_store = sql_pool_store
+        service.worker_store = worker_store
         service.channel = channel
         service.rid = rid
         

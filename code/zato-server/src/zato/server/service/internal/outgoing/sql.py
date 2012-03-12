@@ -41,8 +41,6 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        print(444, self.sql_pool_store)
-        
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = out_sql_list(session, params['cluster_id'], False)
@@ -121,7 +119,8 @@ class Create(AdminService):
                 
                 core_params.update(optional_params)
                 core_params['password'] = password
-                self.sql_pool_store[core_params['name']] = core_params
+                
+                #self.sql_pool_store[core_params['name']] = core_params
                 
                 return ZATO_OK, etree.tostring(created_elem)
 
@@ -189,7 +188,8 @@ class Edit(AdminService):
 
                 core_params.update(optional_params)
                 core_params['password'] = item.password
-                self.sql_pool_store[core_params['name']] = core_params
+                
+                #self.sql_pool_store[core_params['name']] = core_params
 
                 return ZATO_OK, etree.tostring(xml_item)
 
@@ -220,7 +220,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
                 
-                del self.sql_pool_store[old_name]
+                #del self.sql_pool_store[old_name]
 
             except Exception, e:
                 session.rollback()
@@ -240,7 +240,8 @@ class ChangePassword(ChangePasswordBase):
             
             def _auth(instance, password):
                 instance.password = password
-                self.sql_pool_store.change_password(instance.name, password)
+                
+                #self.sql_pool_store.change_password(instance.name, password)
                 
             self._handle(SQLConnectionPool, _auth, None, **kwargs)
             
@@ -262,9 +263,11 @@ class Ping(AdminService):
                 item = session.query(SQLConnectionPool).\
                     filter(SQLConnectionPool.id==id).\
                     one()
-                
+
                 xml_item = etree.Element('response_time')
-                xml_item.text = str(self.sql_pool_store.pools[item.name].ping())
+                xml_item.text = str(self.outgoing.sql.get(item.name).ping())
+                
+                print(3333333, self.outgoing.sql.get(item.name).conn)
                 
                 return ZATO_OK, etree.tostring(xml_item)
 

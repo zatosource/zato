@@ -464,6 +464,7 @@ class Quickstart(ZatoCommand):
                 'zato:http_soap.create':'zato.server.service.internal.http_soap.Create',
                 'zato:http_soap.edit':'zato.server.service.internal.http_soap.Edit',
                 'zato:http_soap.delete':'zato.server.service.internal.http_soap.Delete',
+                'zato:http_soap.ping':'zato.server.service.internal.http_soap.Ping',
             }
             
             #
