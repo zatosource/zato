@@ -33,29 +33,29 @@ class Stop(ManageCommand):
     def _on_server(self):
         ports_pids = self._zdaemon_command('status')
         if not any(ports_pids.values()):
-            print('\nZato server at {0} is not running\n'.format(self.component_dir))
+            print('Zato server at {0} is not running'.format(self.component_dir))
         else:
             self._zdaemon_command('stop')
-            print('\nZato server at {0} has been stopped\n'.format(self.component_dir))
+            print('Zato server at {0} has been stopped'.format(self.component_dir))
 
     def _on_lb(self):
         ports_pids = self._zdaemon_command('status')
         if not any(ports_pids.values()):
-            print('\nZato load balancer and agent at {0} are not running\n'.format(self.component_dir))
+            print('Zato load balancer and agent at {0} are not running'.format(self.component_dir))
         else:
             self._zdaemon_command('stop')
-            print('\nZato load balancer and agent at {0} have been stopped\n'.format(self.component_dir))
+            print('Zato load balancer and agent at {0} have been stopped'.format(self.component_dir))
 
     def _on_zato_admin(self):
         pid_file = os.path.join(self.component_dir, '.zato-admin.pid')
         if not os.path.exists(pid_file):
-            msg = '\nDid not find the expected file {0}, quitting now\n'.format(pid_file)
+            msg = 'Did not find the expected file {0}, quitting now'.format(pid_file)
             print(msg)
             sys.exit(4) # TODO: Document exit codes
 
         pid = open(pid_file).read().strip()
         if not pid:
-            msg = '\nDid not attempt to stop the ZatoAdmin instance because file {0} is empty\n'.format(pid_file)
+            msg = 'Did not attempt to stop the ZatoAdmin instance because file {0} is empty'.format(pid_file)
             print(msg)
             sys.exit(5) # TODO: Document exit codes
 
@@ -71,10 +71,10 @@ class Stop(ManageCommand):
     def _on_broker(self):
         ports_pids = self._zdaemon_command('status')
         if not any(ports_pids.values()):
-            print('\nBroker at {0} is not running\n'.format(self.component_dir))
+            print('Broker at {0} is not running'.format(self.component_dir))
         else:
             self._zdaemon_command('stop')
-            print('\nBroker at {0} has been stopped\n'.format(self.component_dir))
+            print('Broker at {0} has been stopped'.format(self.component_dir))
 
 
 def main(target_dir):
