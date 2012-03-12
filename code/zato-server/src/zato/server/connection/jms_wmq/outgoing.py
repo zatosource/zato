@@ -45,7 +45,7 @@ class WMQFacade(object):
     def __init__(self, broker_client):
         self.broker_client = broker_client # A Zato broker client
     
-    def put(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
+    def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
             *args, **kwargs):
         """ Puts a message on a WebSphere MQ queue.
         """
@@ -62,6 +62,12 @@ class WMQFacade(object):
         params['kwargs'] = kwargs
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_SUB)
+        
+    def conn(self):
+        """ Returns self. Added to make the facade look like other outgoing
+        connection wrappers.
+        """
+        return self
 
 class OutgoingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, out_name):

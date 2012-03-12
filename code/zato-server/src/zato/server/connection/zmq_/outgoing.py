@@ -53,6 +53,12 @@ class ZMQFacade(object):
         params['kwargs'] = kwargs
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_SUB)
+        
+    def conn(self):
+        """ Returns self. Added to make the facade look like other outgoing
+        connection wrappers.
+        """
+        return self
 
 class OutgoingConnection(BaseZMQConnection):
     """ An outgoing (PUSH) connection to a ZMQ socket.
