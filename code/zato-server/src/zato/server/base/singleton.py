@@ -64,7 +64,6 @@ class SingletonServer(BrokerMessageReceiver):
         
         # Initialize scheduler.
         self.scheduler.singleton = self
-        self.scheduler._init()
         
         self.broker_client = BrokerClient()
         self.broker_client.name = 'singleton'
