@@ -179,7 +179,7 @@ class Quickstart(ZatoCommand):
         # .. no security ..
         #
         ping_no_sec_channel = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
-                                       'plain_http', '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
+                                       'plain_http', None, '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
         session.add(ping_no_sec_channel)
 
 
@@ -208,7 +208,7 @@ class Quickstart(ZatoCommand):
             sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', password, cluster)
             session.add(sec)
             
-            channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, 
+            channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
                                soap_version, service=ping_service, security=sec, cluster=cluster)
             session.add(channel)
             
@@ -221,7 +221,7 @@ class Quickstart(ZatoCommand):
                 sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, False, True, 3600, 3600, cluster)
                 session.add(sec)
                 
-                channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, url, None, soap_action, 
+                channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
                                    soap_version, service=ping_service, security=sec, cluster=cluster)
                 session.add(channel)
                     
@@ -487,7 +487,7 @@ class Quickstart(ZatoCommand):
                 session.add(service)
                 
                 zato_soap = HTTPSOAP(None, soap_action, True, True, 'channel', 
-                    'soap', '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster,
+                    'soap', None, '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster,
                     security=tech_account)
                 session.add(zato_soap)
                 

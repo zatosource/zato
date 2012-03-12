@@ -26,8 +26,10 @@
             '_selection',
             'name',
             '_is_active',
+            {% ifequal connection 'outgoing' %}
+                'host',
+            {% endifequal %}
             'url_path',
-            'method',
             {% ifequal transport 'soap' %}
                 'soap_action',
                 'soap_version',
@@ -36,8 +38,10 @@
                 '_service',
             {% endifequal %}
             '_security',
+            'method',
             '_edit',
             '_delete',
+            '_ping',
             'id',
             'is_active',
             'security',
@@ -89,8 +93,10 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        {% ifequal connection 'outgoing' %}
+                            <th><a href="#">Host</a></th>
+                        {% endifequal %}
                         <th><a href="#">URL path</a></th>
-                        <th><a href="#">Method</a></th>
                         {% ifequal transport 'soap' %}
                             <th><a href="#">SOAP action</a></th>
                             <th><a href="#">SOAP version</a></th>
@@ -99,6 +105,8 @@
                             <th><a href="#">Service</a></th>
                         {% endifequal %}
                         <th><a href="#">Security</a></th>
+                        <th><a href="#">Method</a></th>
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -113,8 +121,10 @@
                         <td><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        {% ifequal connection 'outgoing' %}
+                            <td>{{ item.host }}</td>
+                        {% endifequal %}
                         <td>{{ item.url_path }}</td>
-                        <td>{{ item.method }}</td>
                         {% ifequal transport 'soap' %}
                             <td>{{ item.soap_action }}</td>
                             <td>{{ item.soap_version }}</td>
@@ -123,8 +133,10 @@
                             <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         {% endifequal %}
                         <td>{{ item.security_name }}</td>
+                        <td>{{ item.method }}</td>
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.security_id }}</td>
@@ -155,6 +167,13 @@
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
+                        
+                        {% ifequal connection 'outgoing' %}
+                        <tr>
+                            <td style="vertical-align:middle">Host</td>
+                            <td>{{ create_form.host }}</td>
+                        </tr>
+                        {% endifequal %}
 
                         <tr>
                             <td style="vertical-align:middle">URL path</td>
@@ -218,6 +237,13 @@
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
+                        
+                        {% ifequal connection 'outgoing' %}
+                        <tr>
+                            <td style="vertical-align:middle">Host</td>
+                            <td>{{ edit_form.host }}</td>
+                        </tr>
+                        {% endifequal %}
 
                         <tr>
                             <td style="vertical-align:middle">URL path</td>

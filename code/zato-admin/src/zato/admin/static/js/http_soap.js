@@ -40,6 +40,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var soap_action_tr = '';
     var soap_version_tr = '';
     var service_tr = '';
+    var host_tr = '';
 
     if(data.transport == 'soap') {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
@@ -51,10 +52,15 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
         service_tr += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
     }
     
+    if($(document).getUrlParam('connection') == 'outgoing') {
+        host_tr += String.format('<td>{0}</td>', item.host);
+    }
+    
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += host_tr;
     row += String.format('<td>{0}</td>', item.url_path);
     row += String.format('<td>{0}</td>', item.method);
     row += soap_action_tr;
@@ -63,6 +69,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.security_select);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.ping({0});'>Ping</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
 
@@ -78,4 +85,16 @@ $.fn.zato.http_soap.delete_ = function(id) {
         'Object [{0}] deleted',
         'Are you sure you want to delete the object [{0}]?',
         true);
+}
+
+$.fn.zato.http_soap.ping = function(id) {
+
+	var callback = function(data, status) {
+		var success = status == 'success';
+		$.fn.zato.user_message(success, data.responseText);
+	}
+
+	var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+	$.fn.zato.post(url, callback);
+
 }
