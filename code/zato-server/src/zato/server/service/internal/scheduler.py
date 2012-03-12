@@ -270,7 +270,7 @@ class Create(AdminService):
     def handle(self, *args, **kwargs):
         with closing(self.odb.session()) as session:
             return _create_edit('create', kwargs.get('payload'), self.logger, 
-                session, kwargs['thread_ctx'].broker_client)
+                session, self.broker_client)
         
 class Edit(AdminService):
     """ Update a new scheduler's job.
@@ -278,7 +278,7 @@ class Edit(AdminService):
     def handle(self, *args, **kwargs):
         with closing(self.odb.session()) as session:
             return _create_edit('edit', kwargs.get('payload'), self.logger, 
-                session, kwargs['thread_ctx'].broker_client)
+                session, self.broker_client)
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
@@ -300,7 +300,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': SCHEDULER.DELETE, 'name': job.name}
-                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
                 
             except Exception, e:
                 session.rollback()
@@ -328,7 +328,7 @@ class Execute(AdminService):
                     one()
                 
                 msg = {'action': SCHEDULER.EXECUTE, 'name': job.name}
-                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
+                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_SINGLETON)
                 
             except Exception, e:
                 session.rollback()
