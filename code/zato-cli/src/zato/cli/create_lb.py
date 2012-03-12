@@ -72,8 +72,7 @@ defaults
 backend bck_http_plain
     mode http
     balance roundrobin
-
-    server http_plain--QuickstartServerHTTP 127.0.0.1:{http_plain_server_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--QuickstartServerHTTP
+{default_backend}
 
 # ##############################################################################
 
@@ -89,6 +88,11 @@ frontend front_http_plain
     monitor-uri /zato-lb-alive # ZATO frontend front_http_plain:monitor-uri
 """
 
+default_backend="""
+    server http_plain--server-01 127.0.0.1:{server01_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server-01
+    server http_plain--server-02 127.0.0.1:{server02_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server-02
+"""
+
 class CreateLoadBalancer(ZatoCommand):
     command_name = 'create lb-agent'
 
@@ -100,7 +104,7 @@ class CreateLoadBalancer(ZatoCommand):
 
     description = "Creates a Load Balancer's agent."
 
-    def execute(self, args):
+    def execute(self, args, use_default_backend=False, server02_port=None):
 
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon'))
@@ -112,10 +116,14 @@ class CreateLoadBalancer(ZatoCommand):
         open(os.path.join(self.target_dir, 'config', 'lb-agent.conf'), 'w').write(config_template)
         open(os.path.join(self.target_dir, 'config', 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path)))
         open(os.path.join(self.target_dir, ZATO_LB_DIR), 'w').close()
+        
+        if use_default_backend:
+            backend = default_backend.format(server01_port=http_plain_server_port, server02_port=server02_port)
+        else:
+            backend = '\n# ZATO default_backend_empty'
 
         zato_config = zato_config_template.format(stats_socket=stats_socket,
-                stats_password=uuid.uuid4().hex,
-                http_plain_server_port=http_plain_server_port)
+                stats_password=uuid.uuid4().hex, default_backend=backend)
         open(os.path.join(self.target_dir, 'config', 'zato.config'), 'w').write(zato_config)
 
         msg = """\nSuccessfully created a Load Balancer's agent.

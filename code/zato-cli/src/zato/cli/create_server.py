@@ -21,17 +21,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os, uuid
+from multiprocessing import cpu_count
 
 # Zato
 from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents
 from zato.common import ZATO_JOIN_REQUEST_ACCEPTED
+from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
 from zato.server.repo import RepoManager
 
 server_conf_template = """[bind]
 host=localhost
-starting_port=17010
+starting_port={starting_port}
+parallel_count={parallel_count}
 
 [crypto]
 priv_key_location=zs-priv-key.pem
@@ -135,7 +138,8 @@ class CreateServer(ZatoCommand):
 
         self.dirs_prepared = True
 
-    def execute(self, args, server_pub_key=None):
+    def execute(self, args, server_pub_key=None, starting_port=http_plain_server_port,
+                parallel_count=cpu_count() * 2):
         
         # Service list 1)
         # We need to check if we're the first server to join the cluster. If we
@@ -175,13 +179,10 @@ class CreateServer(ZatoCommand):
 
         server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
         server_conf = open(server_conf_loc, 'w')
-        server_conf.write(server_conf_template.format(odb_db_name=args.odb_dbname,
-                            odb_engine=args.odb_type,
-                        odb_host=args.odb_host,
-                        odb_password=encrypt(args.odb_password, pub_key),
-                        odb_pool_size=default_odb_pool_size, 
-                        odb_user=args.odb_user,
-                        odb_token=self.odb_token))
+        server_conf.write(server_conf_template.format(starting_port=starting_port,
+            parallel_count=parallel_count, odb_db_name=args.odb_dbname, odb_engine=args.odb_type, odb_host=args.odb_host,
+            odb_password=encrypt(args.odb_password, pub_key), odb_pool_size=default_odb_pool_size, 
+            odb_user=args.odb_user, odb_token=self.odb_token))
         server_conf.close()
         
         print('Core configuration stored in {server_conf_loc}'.format(server_conf_loc=server_conf_loc))

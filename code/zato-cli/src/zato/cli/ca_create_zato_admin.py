@@ -39,7 +39,7 @@ class CreateZatoAdmin(CACreateCommand):
         return "zato-admin"
 
     def get_organizational_unit(self, args):
-        return "ZatoAdmin"
+        return "zato-admin"
 
     def execute(self, args):
         return self._execute(args, "v3_client_server")

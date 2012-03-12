@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, logging, time
 from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
+from time import sleep
 from traceback import format_exc
 
 # zope.server
@@ -71,6 +72,8 @@ class ZatoHTTPListener(HTTPServer):
         """
         rid = new_rid()
         response = str(rid)
+        
+        #sleep(0.01)
         
         try:
             # SOAP or plain HTTP.
