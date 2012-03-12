@@ -107,31 +107,31 @@ class ConfigStore(object):
                  url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven):
         
         # Outgoing connections
-        self.out_ftp = out_ftp                      # broker messages - not yet
-        self.out_plain_http = out_plain_http        # broker messages - not yet
-        self.out_soap = out_soap                    # broker messages - not yet
-        self.out_s3 = out_s3                        # broker messages - not yet
-        self.out_sql = out_sql                      # broker messages - not yet
+        self.out_ftp = out_ftp
+        self.out_plain_http = out_plain_http
+        self.out_soap = out_soap
+        self.out_s3 = out_s3
+        self.out_sql = out_sql
         
         # Local on-disk configuraion repository
-        self.repo_location = repo_location          # broker messages - not yet
+        self.repo_location = repo_location
         
         # Security definitions
-        self.basic_auth = basic_auth                # broker messages - not yet
-        self.wss = wss                              # broker messages - not yet
-        self.tech_acc = tech_acc                    # broker messages - not yet
+        self.basic_auth = basic_auth
+        self.wss = wss
+        self.tech_acc = tech_acc
         
         # URL security
-        self.url_sec = url_sec                      # broker messages - not yet
+        self.url_sec = url_sec
         
         # HTTP/out_soap channels
-        self.http_soap = http_soap                  # broker messages - not yet
+        self.http_soap = http_soap
         
         # Configuration for broker clients
-        self.broker_config = broker_config          # broker messages - not yet
-        
+        self.broker_config = broker_config
+
         # ODB
-        self.odb_data = odb_data                    # broker messages - not yet
+        self.odb_data = odb_data
         
     def outgoing_connections(self):
         """ Returns all the outgoing connections.

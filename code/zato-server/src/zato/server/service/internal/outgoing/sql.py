@@ -31,9 +31,19 @@ from validate import is_boolean
 
 # Zato
 from zato.common import ZATO_OK
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+
+class _SQLService(object):
+    """ A common class for various SQL-related services.
+    """
+    def notify_worker_threads(self, params, action=OUTGOING.SQL_CREATE_EDIT):
+        """ Notify worker threads of new or updated parameters.
+        """
+        params['action'] = action
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
 
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
@@ -41,7 +51,7 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
-        print(3333333, self.outgoing.sql.get(item.name).conn)
+        print(888, self.outgoing.sql.pools)
         
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
@@ -66,7 +76,7 @@ class GetList(AdminService):
 
             return ZATO_OK, etree.tostring(item_list)
 
-class Create(AdminService):
+class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
     def handle(self, *args, **kwargs):
@@ -121,8 +131,7 @@ class Create(AdminService):
                 
                 core_params.update(optional_params)
                 core_params['password'] = password
-                
-                #self.sql_pool_store[core_params['name']] = core_params
+                self.notify_worker_threads(core_params)
                 
                 return ZATO_OK, etree.tostring(created_elem)
 
@@ -133,7 +142,7 @@ class Create(AdminService):
 
                 raise
             
-class Edit(AdminService):
+class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
     def handle(self, *args, **kwargs):
@@ -190,8 +199,8 @@ class Edit(AdminService):
 
                 core_params.update(optional_params)
                 core_params['password'] = item.password
-                
-                #self.sql_pool_store[core_params['name']] = core_params
+                core_params['old_name'] = old_name
+                self.notify_worker_threads(core_params)
 
                 return ZATO_OK, etree.tostring(xml_item)
 
@@ -202,7 +211,7 @@ class Edit(AdminService):
 
                 raise
             
-class Delete(AdminService):
+class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
     def handle(self, *args, **kwargs):
@@ -222,7 +231,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
                 
-                #del self.sql_pool_store[old_name]
+                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE)
 
             except Exception, e:
                 session.rollback()
@@ -234,7 +243,8 @@ class Delete(AdminService):
             return ZATO_OK, ''
         
 class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an outgoing SQL connection.
+    """ Changes the password of an outgoing SQL connection. The underlying implementation
+    will actually stop and recreate the connection using the new password.
     """
     def handle(self, *args, **kwargs):
 
@@ -243,9 +253,7 @@ class ChangePassword(ChangePasswordBase):
             def _auth(instance, password):
                 instance.password = password
                 
-                #self.sql_pool_store.change_password(instance.name, password)
-                
-            self._handle(SQLConnectionPool, _auth, None, **kwargs)
+            self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD, **kwargs)
             
             return ZATO_OK, ''
 

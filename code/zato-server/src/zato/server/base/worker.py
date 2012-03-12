@@ -202,6 +202,29 @@ class WorkerStore(BaseWorker):
     
     def on_broker_pull_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'zmq', 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
+    
+# ##############################################################################
+
+    def on_broker_pull_msg_OUTGOING_SQL_CREATE_EDIT(self, msg, *args):
+        """ Creates or updates a new SQL connection, including changing its
+        password.
+        """
+        # Is it a rename? If so, delete the connection first
+        if msg.get('old_name') and msg.get('old_name') != msg['name']:
+            del self.sql_pool_store[msg['old_name']]
+            
+        self.sql_pool_store[msg['name']] = msg
+        
+    def on_broker_pull_msg_OUTGOING_SQL_CHANGE_PASSWORD(self, msg, *args):
+        """ Deletes an outgoing SQL connection pool and recreates it using the
+        new password.
+        """
+        self.sql_pool_store.change_password(msg['name'], msg['password'])
+        
+    def on_broker_pull_msg_OUTGOING_SQL_DELETE(self, msg, *args):
+        """ Deletes an outgoing SQL connection pool.
+        """
+        del self.sql_pool_store[msg['name']]
             
 # ##############################################################################
             
