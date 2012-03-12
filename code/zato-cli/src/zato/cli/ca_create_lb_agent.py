@@ -39,7 +39,7 @@ class CreateLBAgent(CACreateCommand):
         return "lb-agent"
 
     def get_organizational_unit(self, args):
-        return "ZatoLBAgent"
+        return "zato-lb-agent"
 
     def execute(self, args):
         return self._execute(args, "v3_server")

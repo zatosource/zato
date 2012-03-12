@@ -56,15 +56,10 @@ Examples:
 
         server_conf = ConfigObj(os.path.join(self.config_dir, 'repo', 'server.conf'))
 
-        parallel_count = server_conf['bind'].get('parallel_count')
+        parallel_count = int(server_conf['bind']['parallel_count'])
         starting_port = int(server_conf['bind'].get('starting_port'))
 
-        if not parallel_count:
-            parallel_count = multiprocessing.cpu_count() * 2
-        else:
-            parallel_count = int(parallel_count)
-
-        for idx in range(parallel_count):
+        for idx in xrange(parallel_count):
 
             server_no = '{0}'.format(starting_port+idx).zfill(5)
 

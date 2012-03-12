@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os
+import logging, os, sys
 from base64 import b64encode
 from cStringIO import StringIO
 from hashlib import sha1, sha256
@@ -46,6 +46,8 @@ from configobj import ConfigObj
 
 # Spring Python
 from springpython.context import ApplicationContext
+from springpython.remoting.http import CAValidatingHTTPSConnection
+from springpython.remoting.xmlrpc import SSLClientTransport
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
@@ -229,8 +231,21 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
     """ Returns an SSL XML-RPC client to the load-balancer.
     """
     agent_uri = "https://{host}:{port}/RPC2".format(host=lb_host, port=lb_agent_port)
+
+    # See the 'Problems with XML-RPC over SSL' thread for details
+    # https://lists.springsource.com/archives/springpython-users/2011-June/000480.html
+    if sys.version_info >= (2, 7):
+        class Python27CompatTransport(SSLClientTransport):
+            def make_connection(self, host):
+                return CAValidatingHTTPSConnection(host, strict=self.strict, ca_certs=self.ca_certs,
+                        keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
+                        ssl_version=self.ssl_version, timeout=self.timeout)
+        transport = Python27CompatTransport
+    else:
+        transport = None
+    
     return LoadBalancerAgentClient(agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file,
-                                         timeout=timeout)
+                                transport=transport, timeout=timeout)
 
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
