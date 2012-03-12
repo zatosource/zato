@@ -41,6 +41,8 @@ class GetList(AdminService):
     def handle(self, *args, **kwargs):
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
+        print(3333333, self.outgoing.sql.get(item.name).conn)
+        
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = out_sql_list(session, params['cluster_id'], False)
@@ -266,8 +268,6 @@ class Ping(AdminService):
 
                 xml_item = etree.Element('response_time')
                 xml_item.text = str(self.outgoing.sql.get(item.name).ping())
-                
-                print(3333333, self.outgoing.sql.get(item.name).conn)
                 
                 return ZATO_OK, etree.tostring(xml_item)
 

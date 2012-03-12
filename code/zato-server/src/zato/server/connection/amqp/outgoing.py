@@ -69,7 +69,7 @@ class PublisherFacade(object):
     def __init__(self, broker_client):
         self.broker_client = broker_client # A Zato broker client, not the AMQP one.
     
-    def publish(self, msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
+    def send(self, msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
         """ Publishes the message on the Zato broker which forwards it to one of the
         AMQP connectors.
         """
@@ -84,6 +84,12 @@ class PublisherFacade(object):
         params['kwargs'] = kwargs
         
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB)
+        
+    def conn(self):
+        """ Returns self. Added to make the facade look like other outgoing
+        connection wrappers.
+        """
+        return self
 
 class OutgoingConnector(BaseAMQPConnector):
     """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP
