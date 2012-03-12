@@ -122,6 +122,8 @@ class Broker(BaseBroker):
                            MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_PULL,
                            ):
                 sockets.append(self.sockets[_msg_socket].push)
+            elif msg_type == MESSAGE_TYPE.TO_PARALLEL_SUB:
+                sockets.append(self.sockets[_msg_socket].pub)
             
             # We don't want the subscribers to know what the original token was.
             msg = bytes(msg_shadowed)
@@ -130,5 +132,10 @@ class Broker(BaseBroker):
             _msg_socket = msg_socket[MESSAGE_TYPE.TO_PARALLEL_PULL]
             sockets.append(self.sockets[_msg_socket].push)
         
+        if logger.isEnabledFor(TRACE1):
+            logger.log(TRACE1, 'sockets:[{}]'.format(str(sockets)))
+            
         for socket in sockets:
+            if logger.isEnabledFor(TRACE1):
+                logger.log(TRACE1, 'socket:[{}], msg:[{}]'.format(str(socket), msg))
             socket.send(msg)
