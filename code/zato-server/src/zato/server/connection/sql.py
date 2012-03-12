@@ -61,6 +61,8 @@ class SessionWrapper(object):
         self._session.close()
 
 class SQLConnectionPool(object):
+    """ A pool of SQL connections wrapping an SQLAlchemy engine.
+    """
     def __init__(self, name, config, config_no_sensitive):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
@@ -103,6 +105,11 @@ class SQLConnectionPool(object):
         event.listen(self.engine, 'checkout', self.on_checkout)
         event.listen(self.engine, 'connect', self.on_connect)
         event.listen(self.engine, 'first_connect', self.on_first_connect)
+        
+    def __str__(self):
+        return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
+    
+    __repr__ = __str__
         
     def on_checkin(self, dbapi_conn, conn_record):
         if self.logger.isEnabledFor(DEBUG):
