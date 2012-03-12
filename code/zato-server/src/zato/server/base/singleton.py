@@ -26,7 +26,11 @@ from time import sleep
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ZATO_OK, ZatoException
+from zato.common.broker_message import SCHEDULER
 from zato.server.base import BrokerMessageReceiver
+
+_scheduler_values = SCHEDULER.values()
+
 
 class SingletonServer(BrokerMessageReceiver):
     """ A server of which one instance only may be running in a Zato container.
@@ -83,6 +87,11 @@ class SingletonServer(BrokerMessageReceiver):
         '''
         
 ################################################################################
+
+    def filter(self, msg):
+        if msg.action in _scheduler_values:
+            return True
+        return False
 
     def on_broker_pull_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
         self.scheduler.create_edit('create', msg)
