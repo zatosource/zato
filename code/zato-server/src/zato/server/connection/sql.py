@@ -153,6 +153,13 @@ class SQLConnectionPool(object):
         return self.engine.connect()
     
     conn = property(fget=_conn, doc=_conn.__doc__)
+    
+    def _impl(self):
+        """ Returns the underlying connection's implementation, the SQLAlchemy engine.
+        """
+        return self.engine
+    
+    impl = property(fget=_impl, doc=_impl.__doc__)
 
 
 class PoolStore(DisposableObject):
