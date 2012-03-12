@@ -69,7 +69,7 @@ Examples:
             # If we have a socket of that name then we already have a running
             # server, in which case we refrain from starting new processes now.
             if os.path.exists(socket_name):
-                msg = '\nServer at {0} is already running\n'.format(self.component_dir)
+                msg = 'Server at {0} is already running'.format(self.component_dir)
                 print(msg)
                 return
 
@@ -92,7 +92,7 @@ Examples:
             self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                                 logfile_path_prefix, program)
 
-        print('\nZato server at {0} has been started\n'.format(self.component_dir))
+        print('Zato server at {0} has been started'.format(self.component_dir))
 
     def _on_lb(self):
 
@@ -118,7 +118,7 @@ Examples:
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                             logfile_path_prefix, program)
 
-        print('\nZato load balancer and agent started at {0}\n'.format(self.component_dir))
+        print('Zato load balancer and agent started at {0}'.format(self.component_dir))
 
     def _on_zato_admin(self):
 
@@ -144,14 +144,14 @@ Examples:
         socket_name = os.path.join(self.config_dir, 'zdaemon', socket_name)
         
         if os.path.exists(socket_name):
-            msg = '\nBroker at {0} is already running\n'.format(self.component_dir)
+            msg = 'Broker at {0} is already running'.format(self.component_dir)
             print(msg)
             return
 
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                             logfile_path_prefix, program)
         
-        print('\nBroker started at {0}\n'.format(self.component_dir))
+        print('Broker started at {0}'.format(self.component_dir))
         
 def main(target_dir):
     Start(target_dir).run()
