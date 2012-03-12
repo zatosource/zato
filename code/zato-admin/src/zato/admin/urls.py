@@ -198,6 +198,7 @@ urlpatterns = patterns('',
     url(r'^zato/http-soap/create/$', http_soap.create, name='http-soap-create'),
     url(r'^zato/http-soap/edit/$', http_soap.edit, name='http-soap-edit'),
     url(r'^zato/http-soap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', http_soap.delete, name='http-soap-delete'),
+    url(r'^zato/http-soap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', http_soap.ping, name='http-soap-ping'),
 
 )
 

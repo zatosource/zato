@@ -317,9 +317,9 @@ def channel_zmq_list(session, cluster_id, needs_columns=False):
 
 def _http_soap(session, cluster_id):
     return session.query(HTTPSOAP.id, HTTPSOAP.name, HTTPSOAP.is_active, 
-            HTTPSOAP.is_internal, HTTPSOAP.transport, HTTPSOAP.url_path, 
-            HTTPSOAP.method, HTTPSOAP.soap_action, HTTPSOAP.soap_version,
-            HTTPSOAP.security_id,
+            HTTPSOAP.is_internal, HTTPSOAP.transport, HTTPSOAP.host, 
+            HTTPSOAP.url_path, HTTPSOAP.method, HTTPSOAP.soap_action, 
+            HTTPSOAP.soap_version, HTTPSOAP.security_id,
             SecurityBase.sec_type,
             Service.name.label('service_name'),
             Service.id.label('service_id'),

@@ -260,13 +260,14 @@ class HTTPSOAP(Base):
     connection = Column(Enum('channel', 'outgoing', name='http_soap_connection'), nullable=False)
     transport = Column(Enum('plain_http', 'soap', name='http_soap_transport'), nullable=False)
     
+    host = Column(String(200), nullable=True)
     url_path = Column(String(200), nullable=False)
     method = Column(String(200), nullable=True)
 
     soap_action = Column(String(200), nullable=True)
     soap_version = Column(String(20), nullable=True)
     
-    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
     
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
@@ -276,7 +277,7 @@ class HTTPSOAP(Base):
     security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
     
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
-                 connection=None, transport=None, url_path=None, method=None, 
+                 connection=None, transport=None, host=None, url_path=None, method=None, 
                  soap_action=None, soap_version=None, service_id=None, service=None,
                  security=None, cluster_id=None, cluster=None, service_name=None,
                  security_id=None, security_name=None):
@@ -286,6 +287,7 @@ class HTTPSOAP(Base):
         self.is_internal = is_internal
         self.connection = connection
         self.transport = transport
+        self.host = host
         self.url_path = url_path
         self.method = method
         self.soap_action = soap_action

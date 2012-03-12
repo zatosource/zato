@@ -56,6 +56,7 @@ class GetList(AdminService):
                 item.name = db_item.name
                 item.is_active = db_item.is_active
                 item.is_internal = db_item.is_internal
+                item.host = db_item.host
                 item.url_path = db_item.url_path
                 item.method = db_item.method
                 item.soap_action = db_item.soap_action
@@ -83,13 +84,14 @@ class Create(AdminService):
                            'sec_def_id']
             core_params = _get_params(payload, core_params, 'data.')
 
-            optional_params = ['method', 'soap_action', 'soap_version']
+            optional_params = ['method', 'soap_action', 'soap_version', 'host']
             optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
 
             name = core_params['name']
             cluster_id = core_params['cluster_id']
             service_name = core_params['service']
             sec_def_id = core_params['sec_def_id']
+            connection = core_params['connection']
 
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==cluster_id).\
@@ -104,7 +106,7 @@ class Create(AdminService):
                 filter(Cluster.id==cluster_id).\
                 filter(Service.name==service_name).first()
             
-            if not service:
+            if connection == 'channel' and not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
                 self.logger.error(msg)
                 raise Exception(msg)
@@ -132,6 +134,7 @@ class Create(AdminService):
                 item.is_internal = core_params['is_internal']
                 item.name = core_params['name']
                 item.is_active = core_params['is_active']
+                item.host = optional_params['host']
                 item.url_path = core_params['url_path']
                 item.method = optional_params.get('method')
                 item.soap_action = optional_params.get('soap_action')
@@ -158,7 +161,7 @@ class Create(AdminService):
                 raise
 
 class Edit(AdminService):
-    """ Updates a ZeroMQ channel.
+    """ Updates an HTTP/SOAP connection.
     """
     def handle(self, *args, **kwargs):
 
@@ -168,7 +171,7 @@ class Edit(AdminService):
             core_params = ['id', 'cluster_id', 'name', 'is_active', 'url_path', 'connection', 'transport']
             core_params = _get_params(payload, core_params, 'data.')
 
-            optional_params = ['method', 'soap_action', 'soap_version']
+            optional_params = ['method', 'soap_action', 'soap_version', 'host']
             optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
 
             id = core_params['id']
@@ -194,6 +197,7 @@ class Edit(AdminService):
                 item = session.query(HTTPSOAP).filter_by(id=id).one()
                 item.name = core_params['name']
                 item.is_active = core_params['is_active']
+                item.host = optional_params['host']
                 item.url_path = core_params['url_path']
                 item.connection = core_params['connection']
                 item.transport = core_params['transport']

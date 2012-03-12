@@ -120,6 +120,8 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
+        conn = self.outgoing.plain_http.get('zz').conn
+        print(33, conn.get())
         return ZATO_OK, ''
     
 class Ping2(Ping):

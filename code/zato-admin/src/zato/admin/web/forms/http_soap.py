@@ -29,6 +29,7 @@ from zato.common import SOAP_VERSIONS, ZATO_NONE
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    host = forms.CharField(initial='http://', widget=forms.TextInput(attrs={'style':'width:100%'}))
     url_path = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))

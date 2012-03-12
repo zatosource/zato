@@ -83,11 +83,12 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.cluster_id = params['cluster_id']
     zato_message.data.name = params[prefix + 'name']
     zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.data.host = params.get(prefix + 'host')
     zato_message.data.url_path = params[prefix + 'url_path']
     zato_message.data.method = params[prefix + 'method']
     zato_message.data.soap_action = params.get(prefix + 'soap_action', '')
     zato_message.data.soap_version = params.get(prefix + 'soap_version', '')
-    zato_message.data.service = params[prefix + 'service']
+    zato_message.data.service = params.get(prefix + 'service')
 
     security = params[prefix + 'security']
     if security != ZATO_NONE:
@@ -130,10 +131,8 @@ def index(req):
     create_form = None
     edit_form = None
 
-    colspan = 13
+    colspan = 14
     
-    if connection == 'channel':
-        colspan += 1
     if transport == 'soap':
         colspan += 2
 
@@ -167,6 +166,7 @@ def index(req):
                 name = msg_item.name.text
                 is_active = is_boolean(msg_item.is_active.text)
                 is_internal = is_boolean(msg_item.is_internal.text)
+                host = msg_item.host.text
                 url_path = msg_item.url_path.text
                 method = msg_item.method.text if msg_item.method else ''
                 soap_action = msg_item.soap_action.text if msg_item.soap_action else ''
@@ -188,7 +188,7 @@ def index(req):
                     security_id = ZATO_NONE
                 
                 item = HTTPSOAP(id, name, is_active, is_internal, connection, 
-                        transport, url_path, method, soap_action, soap_version, 
+                        transport, host, url_path, method, soap_action, soap_version, 
                         service_id=service_id, service_name=service_name,
                         security_id=security_id, security_name=security_name)
                 items.append(item)
@@ -254,9 +254,7 @@ def edit(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-@meth_allowed('POST')
-def delete(req, id, cluster_id):
-
+def _delete_ping(req, id, cluster_id, service, error_template):
     cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
     try:
@@ -264,11 +262,19 @@ def delete(req, id, cluster_id):
         zato_message.data = Element('data')
         zato_message.data.id = id
 
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, service, zato_message)
 
-        return HttpResponse()
+        return HttpResponse(zato_message.zato_env.result.text)
 
     except Exception, e:
-        msg = 'Could not delete the object, e=[{e}]'.format(e=format_exc(e))
+        msg = error_template.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+@meth_allowed('POST')
+def delete(req, id, cluster_id):
+    return _delete_ping(req, id, cluster_id, 'zato:http_soap.delete', 'Could not delete the object, e=[{e}]')
+
+@meth_allowed('POST')
+def ping(req, id, cluster_id):
+    return _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
