@@ -43,7 +43,7 @@ class Scheduler(object):
     """ The Zato's job scheduler. All of the operations assume the data's being
     first validated and sanitized by relevant Zato public API services.
     """
-    def __init__(self, singleton=None, init=False):
+    def __init__(self, singleton=None, init=True):
         self.singleton = singleton
         
         if init:
@@ -52,6 +52,12 @@ class Scheduler(object):
     def _init(self):
         self._sched = APScheduler()
         self._sched.start()
+        
+    def wait_for_init(self):
+        """ Sleeps till the background APScheduler's thread is up and running.
+        """
+        while not self._sched.running:
+            time.sleep(0.01)
         
     def _parse_cron(self, def_):
         minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
