@@ -247,3 +247,18 @@ class Delete(AdminService):
                 raise
 
             return ZATO_OK, ''
+
+class Ping(AdminService):
+    """ Pings an HTTP/SOAP connection.
+    """
+    def handle(self, *args, **kwargs):
+        with closing(self.odb.session()) as session:
+            params = ['id']
+            params = _get_params(kwargs.get('payload'), params, 'data.')
+            
+            item = session.query(HTTPSOAP).filter_by(id=params['id']).one()
+    
+            conversation_elem = etree.Element('conversation')
+            conversation_elem.text = str(item)
+            
+            return ZATO_OK, etree.tostring(conversation_elem)

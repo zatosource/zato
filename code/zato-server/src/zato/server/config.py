@@ -133,6 +133,11 @@ class ConfigStore(object):
         # ODB
         self.odb_data = odb_data                    # broker messages - not yet
         
+    def outgoing_connections(self):
+        """ Returns all the outgoing connections.
+        """
+        return self.out_ftp, self.out_plain_http, self.out_soap, self.out_s3
+        
     def copy(self):
         """ Creates a copy of this ConfigStore. All configuration data is copied
         over except for SQL connections.
@@ -177,25 +182,25 @@ class ConfigStore(object):
 # out_ftp = self.outgoing.out_ftp.get('aaa')
 # ------------------------------------
 # self.outgoing -> ConfigStore
-# self.outgoing.out_ftp -> ConfigDict
-# self.outgoing.out_ftp.get('aaa') -> Bunch
-# self.outgoing.out_ftp.get('aaa').config -> connection parameters
-# self.outgoing.out_ftp.get('aaa').conn -> connection object
+# self.outgoing.ftp -> ConfigDict
+# self.outgoing.ftp.get('aaa') -> Bunch
+# self.outgoing.ftp.get('aaa').config -> connection parameters
+# self.outgoing.ftp.get('aaa').conn -> connection object
 #
 
-# out_amqp = self.outgoing.out_amqp.get('aaa')
-# out_jms_wmq = self.outgoing.out_jms_wmq.get('aaa')
-# out_zmq = self.outgoing.out_zmq.get('aaa')
+# out_amqp = self.outgoing.amqp.get('aaa')
+# out_jms_wmq = self.outgoing.jms_wmq.get('aaa')
+# out_zmq = self.outgoing.zmq.get('aaa')
 
-# out_ftp = self.outgoing.out_ftp.get('aaa')
-# out_plain_http = self.outgoing.out_plain_http.get('aaa')
-# out_s3 = self.outgoing.out_s3.get('aaa')
-# out_soap = self.outgoing.out_soap.get('aaa')
+# out_ftp = self.outgoing.ftp.get('aaa')
+# out_plain_http = self.outgoing.plain_http.get('aaa')
+# out_s3 = self.outgoing.s3.get('aaa')
+# out_soap = self.outgoing.soap.get('aaa')
 # out_sql_conn = self.sql_pool.get('aaa')
-# del self.outgoing.out_ftp['aaa']
+# del self.outgoing.ftp['aaa']
 
 # config_copy = copy.copy(outgoing)
-# out_ftp_copy = copy.copy(outgoing.out_ftp)
+# out_ftp_copy = copy.copy(outgoing.ftp)
 
 # with closing(self.server.odb.session()) as session:
 # with self.odb.session() as session:

@@ -139,6 +139,13 @@ class SQLConnectionPool(object):
         self.logger.debug('Ping OK, pool:[{0}], response_time:[{1:03.4f} s]'.format(self.config_no_sensitive, response_time))
 
         return response_time
+    
+    def _conn(self):
+        """ Returns an SQLAlchemy connection object.
+        """
+        return self.engine.connect()
+    
+    conn = property(fget=_conn, doc=_conn.__doc__)
 
 
 class PoolStore(DisposableObject):
@@ -156,6 +163,8 @@ class PoolStore(DisposableObject):
         """
         with self._lock:
             return self.pools[name]
+        
+    get = __getitem__
         
     def __setitem__(self, name, config):
         """ Stops a connection pool if it exists and replaces it with a new one 

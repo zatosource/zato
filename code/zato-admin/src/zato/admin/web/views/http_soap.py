@@ -264,7 +264,7 @@ def _delete_ping(req, id, cluster_id, service, error_template):
 
         _, zato_message, soap_response = invoke_admin_service(cluster, service, zato_message)
 
-        return HttpResponse(zato_message.zato_env.result.text)
+        return zato_message
 
     except Exception, e:
         msg = error_template.format(e=format_exc(e))
@@ -273,8 +273,10 @@ def _delete_ping(req, id, cluster_id, service, error_template):
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
-    return _delete_ping(req, id, cluster_id, 'zato:http_soap.delete', 'Could not delete the object, e=[{e}]')
+    _delete_ping(req, id, cluster_id, 'zato:http_soap.delete', 'Could not delete the object, e=[{e}]')
+    return HttpResponse()
 
 @meth_allowed('POST')
 def ping(req, id, cluster_id):
-    return _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
+    zato_message = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
+    return HttpResponse(zato_message.data.conversation.text)
