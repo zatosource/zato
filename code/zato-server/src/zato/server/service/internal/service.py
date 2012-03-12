@@ -82,63 +82,6 @@ class GetByID(AdminService):
             item.usage_count = 'TODO getbyid'
     
             return ZATO_OK, etree.tostring(item)
-        
-class Create(AdminService):
-    """ Creates a new JMS WebSphere MQ definition.
-    """
-    def handle(self, *args, **kwargs):
-        
-        with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'name', 'host', 'port', 'queue_manager', 
-                'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
-                'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-                'ssl_key_repository', 'needs_mcd', 'max_chars_printed']
-            
-            params = _get_params(payload, request_params, 'data.')
-            name = params['name']
-            params['port'] = int(params['port'])
-            params['cache_open_send_queues'] = is_boolean(params['cache_open_send_queues'])
-            params['cache_open_receive_queues'] = is_boolean(params['cache_open_receive_queues'])
-            params['use_shared_connections'] = is_boolean(params['use_shared_connections'])
-            params['ssl'] = is_boolean(params['ssl'])
-            params['needs_mcd'] = is_boolean(params['needs_mcd'])
-            params['max_chars_printed'] = int(params['max_chars_printed'])
-            
-            cluster_id = params['cluster_id']
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
-            # Let's see if we already have an object of that name before committing
-            # any stuff into the database.
-            existing_one = session.query(ConnDefWMQ).\
-                filter(ConnDefWMQ.cluster_id==Cluster.id).\
-                filter(ConnDefWMQ.name==name).\
-                first()
-            
-            if existing_one:
-                raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(name))
-            
-            created_elem = Element('def_jms_wmq')
-            
-            try:
-                def_ = ConnDefWMQ(None, name, params['host'], params['port'], params['queue_manager'], 
-                    params['channel'], params['cache_open_send_queues'], params['cache_open_receive_queues'],
-                    params['use_shared_connections'], params['ssl'], params['ssl_cipher_spec'], 
-                    params['ssl_key_repository'], params['needs_mcd'], params['max_chars_printed'],
-                    cluster_id)
-                session.add(def_)
-                session.commit()
-                
-                created_elem.id = def_.id
-                
-                return ZATO_OK, etree.tostring(created_elem)
-                
-            except Exception, e:
-                msg = "Could not create a JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
-                self.logger.error(msg)
-                session.rollback()
-                
-                raise 
 
 class Edit(AdminService):
     """ Updates a service.
