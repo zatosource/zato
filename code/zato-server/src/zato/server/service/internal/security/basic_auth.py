@@ -88,7 +88,7 @@ class Create(AdminService):
                 auth_elem = Element('basic_auth')
                 
                 auth = HTTPBasicAuth(None, name, params['is_active'], params['username'], 
-                                    params['realm'], uuid4().hex, None, cluster)
+                                    params['realm'], uuid4().hex, cluster)
                 
                 session.add(auth)
                 session.commit()
