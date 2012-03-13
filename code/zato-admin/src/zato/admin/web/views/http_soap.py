@@ -41,7 +41,7 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common import SECURITY_TYPES, zato_namespace, zato_path, ZATO_NONE
+from zato.common import SECURITY_TYPES, url_type, zato_namespace, zato_path, ZATO_NONE
 from zato.common.odb.model import Cluster, HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type, TRACE1
 
@@ -144,10 +144,16 @@ def index(req):
         if zato_path('data.definition_list.definition').get_from(security_list) is not None:
             for def_item in security_list.data.definition_list.definition:
 
-                # Outgoing plain HTTP connections cannot use WS-Security
-                if def_item.def_type == _security_def_type.wss and transport == 'plain_http'\
-                   and connection == 'outgoing':
-                    continue
+                # Outgoing plain HTTP connections may use HTTP Basic Auth only,
+                # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
+                if connection == 'outgoing':
+                    if transport == url_type.plain_http and def_item.def_type != _security_def_type.basic_auth:
+                        #continue
+                        pass
+                    elif transport == url_type.soap and def_item.def_type \
+                         not in(_security_def_type.basic_auth, _security_def_type.wss):
+                        #continue
+                        pass
                 
                 value = '{0}/{1}'.format(def_item.def_type, def_item.id)
                 label = '{0}/{1}'.format(SECURITY_TYPES[def_item.def_type], def_item.name)
