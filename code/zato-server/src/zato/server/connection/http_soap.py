@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # stdlib
 import logging
+from copy import deepcopy
 from cStringIO import StringIO
 from datetime import datetime
 from hashlib import sha256
@@ -515,6 +516,8 @@ class HTTPSOAPWrapper(object):
     """
     def __init__(self, config):
         self.config = config
+        self.config_no_sensitive = deepcopy(self.config)
+        self.config_no_sensitive['password'] = '***'
         self.requests = requests
         
     def __str__(self):
@@ -533,15 +536,22 @@ class HTTPSOAPWrapper(object):
     def ping(self):
         """ Pings a given HTTP/SOAP resource
         """
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = 'About to ping:[{}]'.format(self.config_no_sensitive)
+            logger.debug(msg)
+            
+        if self.config['sec_type'] == security_def_type.basic_auth:
+            auth = (self.config['username'], self.config['password'])
+        else:
+            auth = None
+            
         # requests will write some info to it ..
         verbose = StringIO()
         
         start = datetime.now()
         
-        method = self.config.get('method')
-        
         # .. invoke the other end ..
-        r = self.requests.head(self.config['address'], config={'verbose':verbose})
+        r = self.requests.head(self.config['address'], auth=auth, config={'verbose':verbose})
         
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(r.status_code))
