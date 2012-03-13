@@ -287,9 +287,15 @@ class Delete(AdminService, _HTTPSOAPService):
                 item = session.query(HTTPSOAP).\
                     filter(HTTPSOAP.id==id).\
                     one()
+                
+                old_name = item.name
+                old_transport = item.transport
 
                 session.delete(item)
                 session.commit()
+                
+                self.notify_worker_threads({'name':old_name, 'transport':old_transport},
+                    OUTGOING.HTTP_SOAP_DELETE)
 
             except Exception, e:
                 session.rollback()

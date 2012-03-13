@@ -255,6 +255,21 @@ class WorkerStore(BaseWorker):
         del self.sql_pool_store[msg['name']]
 
 # ##############################################################################
+
+    def _delete_outgoing_http_soap(self, name, transport, log_meth):
+        """ Actually deletes an outgoing HTTP/SOAP connection.
+        """
+        # Are we dealing with plain HTTP or SOAP?
+        if transport == url_type.plain_http:
+            config_dict = self.worker_config.out_plain_http
+        else:
+            config_dict = self.worker_config.out_soap
+        
+        # Delete the connection first, if it exists at all ..
+        try:
+            del config_dict[name]
+        except(KeyError, AttributeError), e:
+            log_meth('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
         
     def on_broker_pull_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP connection.
@@ -262,25 +277,22 @@ class WorkerStore(BaseWorker):
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
+
+        # .. delete the connection if it exists ..
+        self._delete_outgoing_http_soap(msg['name'], msg['transport'], logger.debug)
         
-        # Are we dealing with plain HTTP or SOAP?
-        if msg['transport'] == url_type.plain_http:
-            config_dict = self.worker_config.out_plain_http
-        else:
-            config_dict = self.worker_config.out_soap
-        
-        # Delete the connection first, if it exists at all ..
-        try:
-            del config_dict[del_name]
-        except(KeyError, AttributeError), e:
-            logger.debug('e:[{}]'.format(format_exc(e)))
-            
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg)
         self.worker_config.out_plain_http[msg['name']] = Bunch()
         self.worker_config.out_plain_http[msg['name']].config = msg
         self.worker_config.out_plain_http[msg['name']].conn = wrapper
         self.worker_config.out_plain_http[msg['name']].ping = wrapper.ping # (just like in self.init_http)
+        
+    def on_broker_pull_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg, *args):
+        """ Deletes an outgoing HTTP/SOAP connection (actually delegates the
+        task to self._delete_outgoing_http_soap.
+        """
+        self._delete_outgoing_http_soap(msg['name'], msg['transport'], logger.error)
             
 # ##############################################################################
             
