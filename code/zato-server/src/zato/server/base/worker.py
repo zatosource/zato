@@ -34,7 +34,7 @@ from zope.server.taskthreads import ThreadedTaskDispatcher
 # Zato
 from zato.common import ZATO_ODB_POOL_NAME
 from zato.server.base import BaseWorker
-from zato.server.connection.http_soap import PlainHTTPHandler, RequestHandler, SOAPHandler
+from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore, SessionWrapper
 
@@ -70,8 +70,9 @@ class WorkerStore(BaseWorker):
         self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_config.url_sec[0], 
                 self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
-        # Create all the expected SQL pools
+        # Create all the expected connections
         self.init_sql()
+        self.init_http_plain()
         
     def filter(self, msg):
         return True
@@ -91,6 +92,21 @@ class WorkerStore(BaseWorker):
         for pool_name in self.worker_config.out_sql:
             config = self.worker_config.out_sql[pool_name]['config']
             self.sql_pool_store[pool_name] = config
+            
+    def init_http_plain(self):
+        """ Initializes plain HTTP connections.
+        """
+        for name in self.worker_config.out_plain_http:
+            config = self.worker_config.out_plain_http[name].config
+            wrapper = HTTPSOAPWrapper({'id':config.id, 
+                'is_active':config.is_active, 'method':config.method, 
+                'name':config.name, 'transport':config.transport, 
+                'address':config.host + config.url_path
+                })
+            self.worker_config.out_plain_http[name].conn = wrapper
+            
+            # To make it consistent with SQL connection pools
+            self.worker_config.out_plain_http[name].ping = wrapper.ping
         
 # ##############################################################################        
         

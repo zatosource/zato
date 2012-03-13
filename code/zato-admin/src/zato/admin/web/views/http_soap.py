@@ -278,5 +278,7 @@ def delete(req, id, cluster_id):
 
 @meth_allowed('POST')
 def ping(req, id, cluster_id):
-    zato_message = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
-    return HttpResponse(zato_message.data.conversation.text)
+    ret = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse(ret.data.conversation.text)
