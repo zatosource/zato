@@ -31,7 +31,7 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.common import ZATO_OK
+from zato.common import ZATO_NONE, ZATO_OK
 from zato.common.odb.model import Cluster, HTTPSOAP, Service
 from zato.common.odb.query import http_soap_list
 from zato.server.service.internal import _get_params, AdminService
@@ -90,8 +90,10 @@ class Create(AdminService):
             name = core_params['name']
             cluster_id = core_params['cluster_id']
             service_name = core_params['service']
-            sec_def_id = core_params['sec_def_id']
+            security_id = core_params['sec_def_id']
+            security_id = security_id if security_id != ZATO_NONE else None
             connection = core_params['connection']
+            
 
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==cluster_id).\
@@ -126,7 +128,7 @@ class Create(AdminService):
                 item.is_active = core_params['is_active']
                 item.host = optional_params['host']
                 item.url_path = core_params['url_path']
-                item.security_id = core_params['sec_def_id']
+                item.security_id = security_id
                 item.method = optional_params.get('method')
                 item.soap_action = optional_params.get('soap_action')
                 item.soap_version = optional_params.get('soap_version')
@@ -164,6 +166,8 @@ class Edit(AdminService):
             id = core_params['id']
             name = core_params['name']
             cluster_id = core_params['cluster_id']
+            security_id = core_params['sec_def_id']
+            security_id = security_id if security_id != ZATO_NONE else None
 
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==cluster_id).\
@@ -186,10 +190,10 @@ class Edit(AdminService):
                 item.is_active = core_params['is_active']
                 item.host = optional_params['host']
                 item.url_path = core_params['url_path']
+                item.security_id = security_id
                 item.connection = core_params['connection']
                 item.transport = core_params['transport']
                 item.cluster_id = core_params['cluster_id']
-                item.security_id = core_params['sec_def_id']
                 item.method = optional_params.get('method')
                 item.soap_action = optional_params.get('soap_action')
                 item.soap_version = optional_params.get('soap_version')
@@ -246,7 +250,7 @@ class Ping(AdminService):
             
             item = session.query(HTTPSOAP).filter_by(id=params['id']).one()
     
-            conversation_elem = etree.Element('conversation')
-            conversation_elem.text = self.outgoing.plain_http.get(item.name).ping()
+            info_elem = etree.Element('info')
+            info_elem.text = self.outgoing.plain_http.get(item.name).ping()
             
-            return ZATO_OK, etree.tostring(conversation_elem)
+            return ZATO_OK, etree.tostring(info_elem)
