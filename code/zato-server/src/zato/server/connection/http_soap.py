@@ -538,6 +538,8 @@ class HTTPSOAPWrapper(object):
         
         start = datetime.now()
         
+        method = self.config.get('method')
+        
         # .. invoke the other end ..
         r = self.requests.head(self.config['address'], config={'verbose':verbose})
         
