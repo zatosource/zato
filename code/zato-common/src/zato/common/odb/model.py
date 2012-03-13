@@ -244,7 +244,7 @@ class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """
     __tablename__ = 'http_soap'
-    __table_args__ = (UniqueConstraint('name', 'connection', 'cluster_id'),
+    __table_args__ = (UniqueConstraint('name', 'connection', 'transport', 'cluster_id'),
                       UniqueConstraint('url_path', 'connection', 'soap_action', 'cluster_id'), {})
 
     id = Column(Integer,  Sequence('http_soap_seq'), primary_key=True)
