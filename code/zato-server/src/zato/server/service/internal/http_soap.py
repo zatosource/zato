@@ -41,8 +41,6 @@ class GetList(AdminService):
     """
     def handle(self, *args, **kwargs):
         
-        #print(4444, self.outgoing.plain_http.get('kk').ping())
-
         params = _get_params(kwargs.get('payload'), ['cluster_id', 'connection', 'transport'], 'data.')
 
         with closing(self.odb.session()) as session:
@@ -112,16 +110,6 @@ class Create(AdminService):
                 msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
                 self.logger.error(msg)
                 raise Exception(msg)
-            
-            # Now onto assigning the security-related attributes.
-
-            #if sec_def_id != ZATO_NONE:
-            #    sec_def = session.query(SecurityDefinition).\
-            #    filter(SecurityDefinition.id==sec_def_id).\
-            #    one()
-            #    
-            #    #sec_def = SecurityDefinition(None, security_def_type)
-            #    #session.add(sec_def)
 
             created_elem = Element('http_soap')
             
@@ -138,15 +126,11 @@ class Create(AdminService):
                 item.is_active = core_params['is_active']
                 item.host = optional_params['host']
                 item.url_path = core_params['url_path']
+                item.security_id = core_params['sec_def_id']
                 item.method = optional_params.get('method')
                 item.soap_action = optional_params.get('soap_action')
                 item.soap_version = optional_params.get('soap_version')
                 item.service = service
-                
-                #if sec_def_id != ZATO_NONE:
-                #    
-                #    channel_sec = HTTPSOAPSecurity(item, sec_def)
-                #    session.add(channel_sec)
 
                 session.add(item)
                 session.commit()
@@ -170,7 +154,8 @@ class Edit(AdminService):
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
 
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'url_path', 'connection', 'transport']
+            core_params = ['id', 'cluster_id', 'name', 'is_active', 'url_path', 
+                'connection', 'transport', 'sec_def_id']
             core_params = _get_params(payload, core_params, 'data.')
 
             optional_params = ['method', 'soap_action', 'soap_version', 'host']
@@ -204,6 +189,7 @@ class Edit(AdminService):
                 item.connection = core_params['connection']
                 item.transport = core_params['transport']
                 item.cluster_id = core_params['cluster_id']
+                item.security_id = core_params['sec_def_id']
                 item.method = optional_params.get('method')
                 item.soap_action = optional_params.get('soap_action')
                 item.soap_version = optional_params.get('soap_version')
