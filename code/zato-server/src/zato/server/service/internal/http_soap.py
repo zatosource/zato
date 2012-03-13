@@ -40,6 +40,8 @@ class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
     def handle(self, *args, **kwargs):
+        
+        #print(4444, self.outgoing.plain_http.get('kk').ping())
 
         params = _get_params(kwargs.get('payload'), ['cluster_id', 'connection', 'transport'], 'data.')
 
@@ -259,6 +261,6 @@ class Ping(AdminService):
             item = session.query(HTTPSOAP).filter_by(id=params['id']).one()
     
             conversation_elem = etree.Element('conversation')
-            conversation_elem.text = str(item)
+            conversation_elem.text = self.outgoing.plain_http.get(item.name).ping()
             
             return ZATO_OK, etree.tostring(conversation_elem)

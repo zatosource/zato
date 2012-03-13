@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # stdlib
 import logging
+from cStringIO import StringIO
+from datetime import datetime
 from hashlib import sha256
 from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from string import Template
@@ -27,6 +29,9 @@ from traceback import format_exc
 
 # lxml
 from lxml import objectify
+
+# Requests
+import requests
 
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
@@ -504,3 +509,43 @@ class PlainHTTPHandler(_BaseMessageHandler):
         
     def handle(self, rid, task, request, headers, transport, thread_ctx):
         return super(PlainHTTPHandler, self).handle(rid, task, request, headers, transport, thread_ctx)
+
+class HTTPSOAPWrapper(object):
+    """ A thin wrapper around the API exposed by the 'requests' package.
+    """
+    def __init__(self, config):
+        self.config = config
+        self.requests = requests
+        
+    def __str__(self):
+        return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config)
+    
+    __repr__ = __str__
+    
+    def _impl(self):
+        """ Returns the 'requests' module which is the actual implementation
+        of the HTTP/SOAP outgoing connections API.
+        """
+        return self.requests
+
+    impl = property(fget=_impl, doc=_impl.__doc__)
+    
+    def ping(self):
+        """ Pings a given HTTP/SOAP resource
+        """
+        # requests will write some info to it ..
+        verbose = StringIO()
+        
+        start = datetime.now()
+        
+        # .. invoke the other end ..
+        r = self.requests.head(self.config['address'], config={'verbose':verbose})
+        
+        # .. store additional info, get and close the stream.
+        verbose.write('Code: {}'.format(r.status_code))
+        verbose.write('\nResponse time: {}'.format(datetime.now() - start))
+        
+        value = verbose.getvalue()
+        verbose.close()
+        
+        return value
