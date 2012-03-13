@@ -165,7 +165,7 @@ class ChangePasswordBase(AdminService):
                     params['action'] = action
                     params['name'] = name
                     params['password'] = auth.password
-                    kwargs['thread_ctx'].broker_client.send_json(params, msg_type=msg_type)
+                    self.broker_client.send_json(params, msg_type=msg_type)
 
                 return ZATO_OK, ''
 

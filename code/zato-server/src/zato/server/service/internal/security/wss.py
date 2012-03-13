@@ -113,7 +113,7 @@ class Create(AdminService):
             else:
                 params['action'] = SECURITY.WSS_CREATE
                 params['password'] = password
-                kwargs['thread_ctx'].broker_client.send_json(params, 
+                self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, etree.tostring(wss_elem)
@@ -172,7 +172,7 @@ class Edit(AdminService):
             else:
                 new_params['action'] = SECURITY.WSS_EDIT
                 new_params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(new_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(new_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
             return ZATO_OK, etree.tostring(wss_elem)
     
@@ -214,6 +214,6 @@ class Delete(AdminService):
             else:
                 params['action'] = SECURITY.WSS_DELETE
                 params['name'] = wss.name
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, ''

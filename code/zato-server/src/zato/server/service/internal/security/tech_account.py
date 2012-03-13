@@ -128,7 +128,7 @@ class Create(AdminService):
             else:
                 params['action'] = SECURITY.TECH_ACC_CREATE
                 params['password'] = password
-                kwargs['thread_ctx'].broker_client.send_json(params, 
+                self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, etree.tostring(tech_account_elem)
@@ -181,7 +181,7 @@ class Edit(AdminService):
             else:
                 params['action'] = SECURITY.TECH_ACC_EDIT
                 params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(params, 
+                self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, etree.tostring(tech_account_elem)
@@ -232,7 +232,7 @@ class Delete(AdminService):
             else:
                 params['action'] = SECURITY.TECH_ACC_DELETE
                 params['name'] = tech_account.name
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, ''
     
