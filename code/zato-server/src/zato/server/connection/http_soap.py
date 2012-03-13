@@ -39,7 +39,7 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import HTTPException, soap_body_xpath, ZATO_NONE, ZATO_OK
+from zato.common import HTTPException, soap_body_xpath, url_type, ZATO_NONE, ZATO_OK
 from zato.common.util import security_def_type, TRACE1
 from zato.server.service.internal import AdminService
 
@@ -519,6 +519,8 @@ class HTTPSOAPWrapper(object):
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.requests = requests
+        self.auth = self.get_auth()
+        self.requests_auth = self.auth if self.config['sec_type'] == security_def_type.basic_auth else None
         
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config)
@@ -533,25 +535,31 @@ class HTTPSOAPWrapper(object):
 
     impl = property(fget=_impl, doc=_impl.__doc__)
     
+    def get_auth(self):
+        """ Returns a username and password pair or None, if no security definition
+        has been attached.
+        """
+        if self.config['sec_type'] == security_def_type.basic_auth:
+            auth = (self.config['username'], self.config['password'])
+        else:
+            auth = None
+            
+        return auth
+    
     def ping(self):
         """ Pings a given HTTP/SOAP resource
         """
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'About to ping:[{}]'.format(self.config_no_sensitive)
             logger.debug(msg)
-            
-        if self.config['sec_type'] == security_def_type.basic_auth:
-            auth = (self.config['username'], self.config['password'])
-        else:
-            auth = None
-            
+         
         # requests will write some info to it ..
         verbose = StringIO()
         
         start = datetime.now()
         
         # .. invoke the other end ..
-        r = self.requests.head(self.config['address'], auth=auth, config={'verbose':verbose})
+        r = self.requests.head(self.config['address'], auth=self.requests_auth, config={'verbose':verbose})
         
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(r.status_code))
