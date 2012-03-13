@@ -148,12 +148,10 @@ def index(req):
                 # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
                 if connection == 'outgoing':
                     if transport == url_type.plain_http and def_item.def_type != _security_def_type.basic_auth:
-                        #continue
-                        pass
+                        continue
                     elif transport == url_type.soap and def_item.def_type \
                          not in(_security_def_type.basic_auth, _security_def_type.wss):
-                        #continue
-                        pass
+                        continue
                 
                 value = '{0}/{1}'.format(def_item.def_type, def_item.id)
                 label = '{0}/{1}'.format(SECURITY_TYPES[def_item.def_type], def_item.name)
