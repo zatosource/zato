@@ -43,7 +43,7 @@ from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditFo
 from zato.admin.web.views import meth_allowed
 from zato.common import SECURITY_TYPES, zato_namespace, zato_path, ZATO_NONE
 from zato.common.odb.model import Cluster, HTTPSOAP
-from zato.common.util import TRACE1
+from zato.common.util import security_def_type as _security_def_type, TRACE1
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +143,12 @@ def index(req):
         
         if zato_path('data.definition_list.definition').get_from(security_list) is not None:
             for def_item in security_list.data.definition_list.definition:
+
+                # Outgoing plain HTTP connections cannot use WS-Security
+                if def_item.def_type == _security_def_type.wss and transport == 'plain_http'\
+                   and connection == 'outgoing':
+                    continue
+                
                 value = '{0}/{1}'.format(def_item.def_type, def_item.id)
                 label = '{0}/{1}'.format(SECURITY_TYPES[def_item.def_type], def_item.name)
                 _security.append((value, label))
@@ -281,4 +287,4 @@ def ping(req, id, cluster_id):
     ret = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
-    return HttpResponse(ret.data.conversation.text)
+    return HttpResponse(ret.data.info.text)
