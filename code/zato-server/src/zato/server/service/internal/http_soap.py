@@ -47,6 +47,35 @@ class _HTTPSOAPService(object):
         params['action'] = action
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
 
+    def _handle_security_info(self, security_id, connection, transport):
+        """ First checks whether the security type is correct for the given 
+        connection type. If it is, returns a dictionary of security-related information.
+        """
+        info = {'id':None, 'username':None, 'password':None, 'password_type':None, 'sec_type':None}
+        
+        if security_id:
+            
+            security = session.query(SecurityBase.sec_type).\
+            filter(SecurityBase.id==security_id).\
+            one()
+            
+            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
+            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.                
+            if connection == 'outgoing':
+                if transport == url_type.plain_http and security.sec_type != security_def_type.basic_auth:
+                    raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
+                elif transport == url_type.soap and security.sec_type \
+                     not in(security_def_type.basic_auth, security_def_type.wss):
+                    raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
+            
+            info['id'] = security.id
+            info['username'] = security.username
+            info['password'] = security.password
+            info['password_type'] = security.password_type
+            info['sec_type'] = security.sec_type
+            
+        return info
+        
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
@@ -57,9 +86,7 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = http_soap_list(session, params['cluster_id'],
-                                      params['connection'], params['transport'], 
-                                      False)
-            
+                params['connection'], params['transport'], False)
             for db_item in db_items:
 
                 item = Element('item')
@@ -126,20 +153,10 @@ class Create(AdminService, _HTTPSOAPService):
                 self.logger.error(msg)
                 raise Exception(msg)
             
-            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
-            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
+            # Will raise exception if the security type doesn't match connection
+            # type and transport
+            sec_info = self._handle_security_info(security_id, connection, transport)
             
-            if security_id and connection == 'outgoing':
-                security = session.query(SecurityBase.sec_type).\
-                filter(SecurityBase.id==security_id).\
-                one()
-                
-                if transport == url_type.plain_http and security.sec_type != security_def_type.basic_auth:
-                    raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
-                elif transport == url_type.soap and security.sec_type \
-                     not in(security_def_type.basic_auth, security_def_type.wss):
-                    raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
-
             created_elem = Element('http_soap')
             
             try:
@@ -165,6 +182,7 @@ class Create(AdminService, _HTTPSOAPService):
                 session.commit()
                 
                 core_params.update(optional_params)
+                core_params.update(sec_info)
                 self.notify_worker_threads(core_params)
 
                 created_elem.id = item.id
@@ -212,19 +230,9 @@ class Edit(AdminService, _HTTPSOAPService):
             if existing_one:
                 raise Exception('An object of that name [{0}] already exists on this cluster'.format(name))
             
-            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
-            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
-            
-            if security_id and connection == 'outgoing':
-                security = session.query(SecurityBase.sec_type).\
-                filter(SecurityBase.id==security_id).\
-                one()
-                
-                if transport == url_type.plain_http and security.sec_type != security_def_type.basic_auth:
-                    raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
-                elif transport == url_type.soap and security.sec_type \
-                     not in(security_def_type.basic_auth, security_def_type.wss):
-                    raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
+            # Will raise exception if the security type doesn't match connection
+            # type and transport
+            sec_info = self._handle_security_info(security_id, connection, transport)
 
             xml_item = Element('http_soap')
 
@@ -248,8 +256,12 @@ class Edit(AdminService, _HTTPSOAPService):
 
                 session.add(item)
                 session.commit()
-
+                
                 xml_item.id = item.id
+                
+                core_params.update(optional_params)
+                core_params.update(sec_info)
+                self.notify_worker_threads(core_params)
 
                 return ZATO_OK, etree.tostring(xml_item)
 

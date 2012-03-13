@@ -58,13 +58,20 @@ class ConfigDict(object):
             
     __setitem__ = set
             
-    def __del__(self, key):
+    def __delitem__(self, key):
         with self.lock:
             del self._bunch[key]
             
     def __iter__(self):
         with self.lock:
             return iter(self._bunch)
+        
+    def __repr__(self):
+        with self.lock:
+            return '<{} at {} keys:[{}]>'.format(self.__class__.__name__,
+                hex(id(self)), sorted(self._bunch.keys()))
+        
+    __str__ = __repr__
             
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
