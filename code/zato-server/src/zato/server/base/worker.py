@@ -25,6 +25,9 @@ from thread import start_new_thread
 from threading import local, RLock
 from traceback import format_exc
 
+# Bunch
+from bunch import Bunch
+
 # zope.server
 from zope.server.http.httpserverchannel import HTTPServerChannel
 from zope.server.http.httptask import HTTPTask
@@ -32,7 +35,7 @@ from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Zato
-from zato.common import ZATO_ODB_POOL_NAME
+from zato.common import url_type, ZATO_ODB_POOL_NAME
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
@@ -93,21 +96,28 @@ class WorkerStore(BaseWorker):
             config = self.worker_config.out_sql[pool_name]['config']
             self.sql_pool_store[pool_name] = config
             
+    def _http_soap_wrapper_from_config(self, config):
+        """ Creates a new HTTP/SOAP connection wrapper out of a configuration
+        dictionary. 
+        """
+        return HTTPSOAPWrapper({'id':config.id, 
+            'is_active':config.is_active, 'method':config.method, 
+            'name':config.name, 'transport':config.transport, 
+            'address':config.host + config.url_path, 
+            'sec_type':config.sec_type, 'username':config.username, 
+            'password':config.password, 'password_type':config.password_type, 
+            'soap_action':config.soap_action, 'soap_version':config.soap_version})
+            
     def init_http(self):
         """ Initializes plain HTTP/SOAP connections.
         """
         for name in self.worker_config.out_plain_http:
             config = self.worker_config.out_plain_http[name].config
-            wrapper = HTTPSOAPWrapper({'id':config.id, 
-                'is_active':config.is_active, 'method':config.method, 
-                'name':config.name, 'transport':config.transport, 
-                'address':config.host + config.url_path, 
-                'sec_type':config.sec_type, 'username':config.username, 
-                'password':config.password, 'password_type':config.password_type, 
-                'soap_action':config.soap_action, 'soap_version':config.soap_version})
+            
+            wrapper = self._http_soap_wrapper_from_config(config)
             self.worker_config.out_plain_http[name].conn = wrapper
             
-            # To make it consistent with SQL connection pools
+            # To make the API consistent with that of SQL connection pools
             self.worker_config.out_plain_http[name].ping = wrapper.ping
         
 # ##############################################################################        
@@ -224,7 +234,7 @@ class WorkerStore(BaseWorker):
 # ##############################################################################
 
     def on_broker_pull_msg_OUTGOING_SQL_CREATE_EDIT(self, msg, *args):
-        """ Creates or updates a new SQL connection, including changing its
+        """ Creates or updates an SQL connection, including changing its
         password.
         """
         # Is it a rename? If so, delete the connection first
@@ -243,6 +253,34 @@ class WorkerStore(BaseWorker):
         """ Deletes an outgoing SQL connection pool.
         """
         del self.sql_pool_store[msg['name']]
+
+# ##############################################################################
+        
+    def on_broker_pull_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+        """ Creates or updates an HTTP/SOAP connection.
+        """
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        
+        # Are we dealing with plain HTTP or SOAP?
+        if msg['transport'] == url_type.plain_http:
+            config_dict = self.worker_config.out_plain_http
+        else:
+            config_dict = self.worker_config.out_soap
+        
+        # Delete the connection first, if it exists at all ..
+        try:
+            del config_dict[del_name]
+        except(KeyError, AttributeError), e:
+            logger.debug('e:[{}]'.format(format_exc(e)))
+            
+        # .. and create a new one
+        wrapper = self._http_soap_wrapper_from_config(msg)
+        self.worker_config.out_plain_http[msg['name']] = Bunch()
+        self.worker_config.out_plain_http[msg['name']].config = msg
+        self.worker_config.out_plain_http[msg['name']].conn = wrapper
+        self.worker_config.out_plain_http[msg['name']].ping = wrapper.ping # (just like in self.init_http)
             
 # ##############################################################################
             
