@@ -104,7 +104,7 @@ class Create(AdminService):
             else:
                 params['action'] = SECURITY.BASIC_AUTH_CREATE
                 params['password'] = uuid4().hex
-                kwargs['thread_ctx'].broker_client.send_json(params, 
+                self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, etree.tostring(auth_elem)
@@ -159,7 +159,7 @@ class Edit(AdminService):
             else:
                 new_params['action'] = SECURITY.BASIC_AUTH_EDIT
                 new_params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(new_params, 
+                self.broker_client.send_json(new_params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
             return ZATO_OK, etree.tostring(auth_elem)
@@ -202,7 +202,7 @@ class Delete(AdminService):
             else:
                 params['action'] = SECURITY.BASIC_AUTH_DELETE
                 params['name'] = auth.name
-                kwargs['thread_ctx'].broker_client.send_json(params, 
+                self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             return ZATO_OK, ''

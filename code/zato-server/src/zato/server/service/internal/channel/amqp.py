@@ -194,7 +194,7 @@ class Edit(AdminService):
                 
                 params['action'] = CHANNEL.AMQP_EDIT
                 params['old_name'] = old_name
-                kwargs['thread_ctx'].broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
                 return ZATO_OK, etree.tostring(xml_item)
                 
@@ -225,7 +225,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': CHANNEL.AMQP_DELETE, 'name': def_.name, 'id':def_.id}
-                kwargs['thread_ctx'].broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()
