@@ -72,7 +72,7 @@ class WorkerStore(BaseWorker):
         
         # Create all the expected connections
         self.init_sql()
-        self.init_http_plain()
+        self.init_http()
         
     def filter(self, msg):
         return True
@@ -93,8 +93,8 @@ class WorkerStore(BaseWorker):
             config = self.worker_config.out_sql[pool_name]['config']
             self.sql_pool_store[pool_name] = config
             
-    def init_http_plain(self):
-        """ Initializes plain HTTP connections.
+    def init_http(self):
+        """ Initializes plain HTTP/SOAP connections.
         """
         for name in self.worker_config.out_plain_http:
             config = self.worker_config.out_plain_http[name].config
