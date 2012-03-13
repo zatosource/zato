@@ -31,9 +31,10 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.common import ZATO_NONE, ZATO_OK
-from zato.common.odb.model import Cluster, HTTPSOAP, Service
+from zato.common import url_type, ZATO_NONE, ZATO_OK
+from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
+from zato.common.util import security_def_type
 from zato.server.service.internal import _get_params, AdminService
 
 class GetList(AdminService):
@@ -93,7 +94,7 @@ class Create(AdminService):
             security_id = core_params['sec_def_id']
             security_id = security_id if security_id != ZATO_NONE else None
             connection = core_params['connection']
-            
+            transport = core_params['transport']
 
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==cluster_id).\
@@ -112,6 +113,20 @@ class Create(AdminService):
                 msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
                 self.logger.error(msg)
                 raise Exception(msg)
+            
+            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
+            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
+            
+            if security_id and connection == 'outgoing':
+                security = session.query(SecurityBase.sec_type).\
+                filter(SecurityBase.id==security_id).\
+                one()
+                
+                if transport == url_type.plain_http and security.sec_type != security_def_type.basic_auth:
+                    raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
+                elif transport == url_type.soap and security.sec_type \
+                     not in(security_def_type.basic_auth, security_def_type.wss):
+                    raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
 
             created_elem = Element('http_soap')
             
@@ -120,8 +135,8 @@ class Create(AdminService):
                 core_params['is_active'] = is_boolean(core_params['is_active'])
 
                 item = HTTPSOAP()
-                item.connection = core_params['connection']
-                item.transport = core_params['transport']
+                item.connection = connection
+                item.transport = transport
                 item.cluster_id = core_params['cluster_id']
                 item.is_internal = core_params['is_internal']
                 item.name = core_params['name']
@@ -168,6 +183,8 @@ class Edit(AdminService):
             cluster_id = core_params['cluster_id']
             security_id = core_params['sec_def_id']
             security_id = security_id if security_id != ZATO_NONE else None
+            connection = core_params['connection']
+            transport = core_params['transport']
 
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==cluster_id).\
@@ -177,6 +194,20 @@ class Edit(AdminService):
 
             if existing_one:
                 raise Exception('An object of that name [{0}] already exists on this cluster'.format(name))
+            
+            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
+            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
+            
+            if security_id and connection == 'outgoing':
+                security = session.query(SecurityBase.sec_type).\
+                filter(SecurityBase.id==security_id).\
+                one()
+                
+                if transport == url_type.plain_http and security.sec_type != security_def_type.basic_auth:
+                    raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
+                elif transport == url_type.soap and security.sec_type \
+                     not in(security_def_type.basic_auth, security_def_type.wss):
+                    raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
 
             xml_item = Element('http_soap')
 
@@ -191,8 +222,8 @@ class Edit(AdminService):
                 item.host = optional_params['host']
                 item.url_path = core_params['url_path']
                 item.security_id = security_id
-                item.connection = core_params['connection']
-                item.transport = core_params['transport']
+                item.connection = connection
+                item.transport = transport
                 item.cluster_id = core_params['cluster_id']
                 item.method = optional_params.get('method')
                 item.soap_action = optional_params.get('soap_action')

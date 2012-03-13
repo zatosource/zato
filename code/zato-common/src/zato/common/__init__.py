@@ -106,8 +106,9 @@ ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 ZATO_JOIN_REQUEST_ACCEPTED = 'ACCEPTED'
 
 # All URL types Zato understands.
-ZATO_URL_TYPE_SOAP = 'soap'
-ZATO_URL_TYPE_PLAIN_HTTP = 'plain_http'
+url_type = Bunch()
+url_type.soap = 'soap'
+url_type.plain_http = 'plain_http'
 
 # Whether WS-Security passwords are transmitted in clear-text or not.
 ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
