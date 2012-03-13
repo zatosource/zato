@@ -113,7 +113,7 @@ class Create(AdminService):
             tech_account_elem = Element('tech_account')
             
             try:
-                tech_account = TechnicalAccount(None, name, password, salt, params['is_active'], cluster=cluster)
+                tech_account = TechnicalAccount(None, name, params['is_active'], password, salt, cluster=cluster)
                 session.add(tech_account)
                 session.commit()
                 

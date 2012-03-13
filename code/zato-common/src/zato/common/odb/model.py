@@ -160,6 +160,12 @@ class SecurityBase(Base):
     
     id = Column(Integer,  Sequence('sec_base_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+    
+    # It's nullable because TechnicalAccount doesn't use usernames
+    username = Column(String(200), nullable=True) 
+    
+    password = Column(String(64), nullable=False)
+    password_type = Column(String(45), nullable=True)
     is_active = Column(Boolean(), nullable=False)
     sec_type = Column(String(45), nullable=False)
     
@@ -173,10 +179,7 @@ class HTTPBasicAuth(SecurityBase):
     __mapper_args__ = {'polymorphic_identity': 'basic_auth'}
     
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-
-    username = Column(String(200), nullable=False)
     realm = Column(String(200), nullable=False)
-    password = Column(String(200), nullable=False)
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
                  realm=None, password=None, cluster=None):
@@ -195,10 +198,6 @@ class WSSDefinition(SecurityBase):
     __mapper_args__ = {'polymorphic_identity':'wss'}
     
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    
-    username = Column(String(200), nullable=False)
-    password = Column(String(200), nullable=False)
-    password_type = Column(String(45), nullable=False)
     reject_empty_nonce_creat = Column(Boolean(), nullable=False)
     reject_stale_tokens = Column(Boolean(), nullable=True)
     reject_expiry_limit = Column(Integer(), nullable=False)
@@ -229,11 +228,7 @@ class TechnicalAccount(SecurityBase):
     __mapper_args__ = {'polymorphic_identity':'tech_acc'}
     
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-
-    password = Column(String(64), nullable=False)
     salt = Column(String(32), nullable=False)
-    
-    sec_type = Column(String(45), nullable=False)
 
     def __init__(self, id=None, name=None, is_active=None, password=None, salt=None, cluster=None):
         self.id = id
