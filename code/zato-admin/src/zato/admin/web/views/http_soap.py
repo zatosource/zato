@@ -179,17 +179,17 @@ def index(req):
                 soap_version = msg_item.soap_version.text if msg_item.soap_version else ''
                 service_id = msg_item.service_id.text
                 service_name = msg_item.service_name.text
-                security_def_type = msg_item.security_def_type.text
+                sec_type = msg_item.sec_type.text
                 
                 _security_name = msg_item.security_name.text
                 if _security_name:
-                    security_name = '{0}\n{1}'.format(SECURITY_TYPES[security_def_type], _security_name)
+                    security_name = '{0}\n{1}'.format(SECURITY_TYPES[sec_type], _security_name)
                 else:
                     security_name = 'No security'
                 
                 _security_id = msg_item.security_id.text
                 if _security_id:
-                    security_id = '{0}/{1}'.format(security_def_type, _security_id)
+                    security_id = '{0}/{1}'.format(sec_type, _security_id)
                 else:
                     security_id = ZATO_NONE
                 

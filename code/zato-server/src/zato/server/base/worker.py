@@ -101,8 +101,10 @@ class WorkerStore(BaseWorker):
             wrapper = HTTPSOAPWrapper({'id':config.id, 
                 'is_active':config.is_active, 'method':config.method, 
                 'name':config.name, 'transport':config.transport, 
-                'address':config.host + config.url_path
-                })
+                'address':config.host + config.url_path, 
+                'sec_type':config.sec_type, 'username':config.username, 
+                'password':config.password, 'password_type':config.password_type, 
+                'soap_action':config.soap_action, 'soap_version':config.soap_version})
             self.worker_config.out_plain_http[name].conn = wrapper
             
             # To make it consistent with SQL connection pools

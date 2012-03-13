@@ -65,7 +65,7 @@ class GetList(AdminService):
                 item.service_name = db_item.service_name
                 item.security_id = db_item.security_id
                 item.security_name = db_item.security_name
-                item.security_def_type = db_item.security_def_type
+                item.sec_type = db_item.sec_type
 
                 item_list.append(item)
 
