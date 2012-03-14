@@ -59,7 +59,7 @@ class GetList(AdminService):
 
                 item_list.append(item)
 
-            return ZATO_OK, etree.tostring(item_list)
+            self.response.payload = etree.tostring(item_list)
 
 class Create(AdminService):
     """ Creates a new outgoing S3 connection.
@@ -102,7 +102,7 @@ class Create(AdminService):
 
                 created_elem.id = item.id
 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
 
             except Exception, e:
                 msg = 'Could not create an outgoing S3 connection, e=[{e}]'.format(e=format_exc(e))
@@ -155,7 +155,7 @@ class Edit(AdminService):
 
                 xml_item.id = item.id
 
-                return ZATO_OK, etree.tostring(xml_item)
+                self.response.payload = etree.tostring(xml_item)
 
             except Exception, e:
                 msg = 'Could not update the outgoing S3 connection, e=[{e}]'.format(e=format_exc(e))
@@ -189,5 +189,3 @@ class Delete(AdminService):
                 self.logger.error(msg)
 
                 raise
-
-            return ZATO_OK, ''

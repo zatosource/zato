@@ -60,7 +60,7 @@ class GetList(AdminService):
     
                 definition_list.append(definition_elem)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            self.response.payload = etree.tostring(definition_list)
 
 class Create(AdminService):
     """ Creates a new WS-Security definition.
@@ -116,7 +116,7 @@ class Create(AdminService):
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            return ZATO_OK, etree.tostring(wss_elem)
+            self.response.payload = etree.tostring(wss_elem)
 
 class Edit(AdminService):
     """ Updates a WS-S definition.
@@ -174,7 +174,7 @@ class Edit(AdminService):
                 new_params['old_name'] = old_name
                 self.broker_client.send_json(new_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
-            return ZATO_OK, etree.tostring(wss_elem)
+            self.response.payload = etree.tostring(wss_elem)
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a WS-Security definition.
@@ -215,5 +215,3 @@ class Delete(AdminService):
                 params['action'] = SECURITY.WSS_DELETE
                 params['name'] = wss.name
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
-            
-            return ZATO_OK, ''

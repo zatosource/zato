@@ -72,7 +72,7 @@ class GetList(AdminService):
                 
                 item_list.append(item)
 
-            return ZATO_OK, etree.tostring(item_list)
+            self.response.payload = etree.tostring(item_list)
 
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
@@ -131,7 +131,7 @@ class Create(AdminService, _SQLService):
                 core_params['password'] = password
                 self.notify_worker_threads(core_params)
                 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
 
             except Exception, e:
                 msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -200,7 +200,7 @@ class Edit(AdminService, _SQLService):
                 core_params['old_name'] = old_name
                 self.notify_worker_threads(core_params)
 
-                return ZATO_OK, etree.tostring(xml_item)
+                self.response.payload = etree.tostring(xml_item)
 
             except Exception, e:
                 msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -238,7 +238,7 @@ class Delete(AdminService, _SQLService):
 
                 raise
 
-            return ZATO_OK, ''
+            
         
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing SQL connection. The underlying implementation
@@ -253,9 +253,6 @@ class ChangePassword(ChangePasswordBase):
                 
             self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD, **kwargs)
             
-            return ZATO_OK, ''
-
-
 class Ping(AdminService):
     """ Pings an SQL database
     """
@@ -275,7 +272,7 @@ class Ping(AdminService):
                 xml_item = etree.Element('response_time')
                 xml_item.text = str(self.outgoing.sql.get(item.name).ping())
                 
-                return ZATO_OK, etree.tostring(xml_item)
+                self.response.payload = etree.tostring(xml_item)
 
             except Exception, e:
                 session.rollback()

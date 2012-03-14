@@ -62,7 +62,7 @@ class GetList(AdminService):
     
                 item_list.append(item)
 
-            return ZATO_OK, etree.tostring(item_list)
+            self.response.payload = etree.tostring(item_list)
         
 class Create(AdminService):
     """ Creates a new WebSphere MQ channel.
@@ -120,7 +120,7 @@ class Create(AdminService):
                 created_elem.id = item.id
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
                 
             except Exception, e:
                 msg = 'Could not create a WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
@@ -192,7 +192,7 @@ class Edit(AdminService):
                 params['old_name'] = old_name
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
-                return ZATO_OK, etree.tostring(xml_item)
+                self.response.payload = etree.tostring(xml_item)
                 
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))
@@ -229,5 +229,3 @@ class Delete(AdminService):
                 self.logger.error(msg)
                 
                 raise
-            
-            return ZATO_OK, ''

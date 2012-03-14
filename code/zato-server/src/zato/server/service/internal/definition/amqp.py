@@ -60,7 +60,7 @@ class GetList(AdminService):
     
                 definition_list.append(definition_elem)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            self.response.payload = etree.tostring(definition_list)
         
 class GetByID(AdminService):
     """ Returns a particular AMQP definition
@@ -88,7 +88,7 @@ class GetByID(AdminService):
             definition_elem.frame_max = definition.frame_max
             definition_elem.heartbeat = definition.heartbeat
     
-            return ZATO_OK, etree.tostring(definition_elem)
+            self.response.payload = etree.tostring(definition_elem)
         
 class Create(AdminService):
     """ Creates a new AMQP definition.
@@ -134,7 +134,7 @@ class Create(AdminService):
                 
                 created_elem.id = def_.id
                 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
                 
             except Exception, e:
                 msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
@@ -202,7 +202,7 @@ class Edit(AdminService):
                 params['old_name'] = old_name
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
-                return ZATO_OK, etree.tostring(def_amqp_elem)
+                self.response.payload = etree.tostring(def_amqp_elem)
                 
             except Exception, e:
                 msg = "Could not update the AMQP definition, e=[{e}]".format(e=format_exc(e))
@@ -240,8 +240,6 @@ class Delete(AdminService):
                 
                 raise
             
-            return ZATO_OK, ''
-        
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """

@@ -126,7 +126,7 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self, *args, **kwargs):
-        return ZATO_OK, ''
+        pass
     
 class Ping2(Ping):
     pass
@@ -172,8 +172,6 @@ class ChangePasswordBase(AdminService):
                     params['name'] = name
                     params['password'] = auth.password
                     self.broker_client.send_json(params, msg_type=msg_type)
-
-                return ZATO_OK, ''
 
             except Exception, e:
                 msg = "Could not update the password, e=[{e}]".format(e=format_exc(e))
