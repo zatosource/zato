@@ -50,7 +50,7 @@ class _HTTPSOAPService(object):
         params['action'] = action
         self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
 
-    def _handle_security_info(self, security_id, connection, transport):
+    def _handle_security_info(self, session, security_id, connection, transport):
         """ First checks whether the security type is correct for the given 
         connection type. If it is, returns a dictionary of security-related information.
         """
@@ -58,7 +58,7 @@ class _HTTPSOAPService(object):
         
         if security_id:
             
-            security = session.query(SecurityBase.sec_type).\
+            security = session.query(SecurityBase).\
             filter(SecurityBase.id==security_id).\
             one()
             
@@ -158,7 +158,7 @@ class Create(AdminService, _HTTPSOAPService):
             
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._handle_security_info(security_id, connection, transport)
+            sec_info = self._handle_security_info(session, security_id, connection, transport)
             
             created_elem = Element('http_soap')
             
@@ -235,7 +235,7 @@ class Edit(AdminService, _HTTPSOAPService):
             
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._handle_security_info(security_id, connection, transport)
+            sec_info = self._handle_security_info(session, security_id, connection, transport)
 
             xml_item = Element('http_soap')
 

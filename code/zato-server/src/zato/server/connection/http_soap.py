@@ -214,32 +214,32 @@ class Security(object):
         """ Returns the configuration of the HTTP Basic Auth security definition
         of the given name.
         """
-        with self.basic_auth_lock:
+        with self.url_sec_lock:
             return self.basic_auth.get(name)
 
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        with self.basic_auth_lock:
+        with self.url_sec_lock:
             self.basic_auth[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
-        with self.basic_auth_lock:
+        with self.url_sec_lock:
             del self.basic_auth[msg.old_name]
             self.basic_auth[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
-        with self.basic_auth_lock:
+        with self.url_sec_lock:
             del self.basic_auth[msg.name]
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
-        with self.basic_auth_lock:
+        with self.url_sec_lock:
             self.basic_auth[msg.name]['password'] = msg.password
 
 # ##############################################################################
@@ -247,32 +247,32 @@ class Security(object):
     def tech_acc_get(self, name):
         """ Returns the configuration of the technical account of the given name.
         """
-        with self.tech_acc_lock:
+        with self.url_sec_lock:
             return self.tech_acc.get(name)
 
     def on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
-        with self.tech_acc_lock:
+        with self.url_sec_lock:
             self.tech_acc[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
-        with self.tech_acc_lock:
+        with self.url_sec_lock:
             del self.tech_acc[msg.old_name]
             self.tech_acc[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
-        with self.tech_acc_lock:
+        with self.url_sec_lock:
             del self.tech_acc[msg.name]
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-        with self.tech_acc_lock:
+        with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account (pun intended ;-))
             self.tech_acc[msg.name]['password'] = msg.password
@@ -282,32 +282,32 @@ class Security(object):
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
         """
-        with self.wss_lock:
+        with self.url_sec_lock:
             return self.wss.get(name)
 
     def on_broker_pull_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
-        with self.wss_lock:
+        with self.url_sec_lock:
             self.wss[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
-        with self.wss_lock:
+        with self.url_sec_lock:
             del self.wss[msg.old_name]
             self.wss[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
-        with self.wss_lock:
+        with self.url_sec_lock:
             del self.wss[msg.name]
         
     def on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
         """
-        with self.wss_lock:
+        with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account.
             self.wss[msg.name]['password'] = msg.password
