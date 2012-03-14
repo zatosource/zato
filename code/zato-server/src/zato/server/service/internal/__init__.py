@@ -171,6 +171,7 @@ class ChangePasswordBase(AdminService):
                     params['action'] = action
                     params['name'] = name
                     params['password'] = auth.password
+                    params['salt'] = kwargs.get('salt')
                     self.broker_client.send_json(params, msg_type=msg_type)
 
             except Exception, e:

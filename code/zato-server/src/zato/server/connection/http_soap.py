@@ -279,20 +279,24 @@ class Security(object):
         with self.url_sec_lock:
             del self.tech_acc_config[msg.old_name]
             self.tech_acc_config[msg.name] = msg
+            self._update_url_sec(msg, security_def_type.tech_account)
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
         with self.url_sec_lock:
             del self.tech_acc_config[msg.name]
+            self._update_url_sec(msg, security_def_type.tech_account, True)
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
+
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account (pun intended ;-))
             self.tech_acc_config[msg.name]['password'] = msg.password
+            self._update_url_sec(msg, security_def_type.tech_account)
             
 # ##############################################################################
 
