@@ -189,13 +189,13 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
     """
     def handle(self, *args, **kwargs):
+        salt = uuid4().hex
         def _auth(instance, password):
-            salt = uuid4().hex
             instance.password = tech_account_password(password, salt)
             instance.salt = salt
 
         return self._handle(TechnicalAccount, _auth, 
-                            SECURITY.TECH_ACC_CHANGE_PASSWORD, **kwargs)
+                            SECURITY.TECH_ACC_CHANGE_PASSWORD, salt=salt, **kwargs)
     
 class Delete(AdminService):
     """ Deletes a technical account.
