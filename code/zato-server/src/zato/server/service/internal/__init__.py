@@ -114,6 +114,12 @@ def _parse_extra_params(payload):
     return extra_dict
 
 class AdminService(Service):
+    def __init__(self):
+        super(AdminService, self).__init__()
+        
+        # Whether the responses are to be wrapped in a SOAP message
+        self.needs_xml = True
+        
     def handle(self, *args, **kwargs):
         raise NotImplementedError("Should be overridden by subclasses.")
 

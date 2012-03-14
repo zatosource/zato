@@ -30,6 +30,9 @@ from lxml.objectify import Element
 # validate
 from validate import is_boolean
 
+# anyjson
+from json import dumps
+
 # Zato
 from zato.common import url_type, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
@@ -320,3 +323,12 @@ class Ping(AdminService):
             info_elem.text = self.outgoing.plain_http.get(item.name).ping()
             
             return ZATO_OK, etree.tostring(info_elem)
+
+class GetURLSecurity(AdminService):
+    """ Returns a JSON document describing the security configuration of all
+    Zato channels.
+    """
+    def handle(self, *args, **kwargs):
+        self.needs_xml = False
+        self.response.payload = dumps(self.worker_store.request_handler.security.url_sec, sort_keys=True, indent=4)
+        self.response.content_type = 'application/json'
