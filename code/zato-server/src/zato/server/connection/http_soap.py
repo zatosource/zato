@@ -130,10 +130,8 @@ class Security(object):
     def _handle_security_basic_auth(self, rid, sec_def, request_data, body, headers):
         """ Performs the authentication using HTTP Basic Auth.
         """
-        sec_config = self.basic_auth_config[sec_def.name]
-        
         env = {'HTTP_AUTHORIZATION':headers.get('AUTHORIZATION')}
-        url_config = {'basic-auth-username':sec_config.username, 'basic-auth-password':sec_config.password}
+        url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
         
         result = on_basic_auth(env, url_config, False)
         
@@ -146,20 +144,18 @@ class Security(object):
     def _handle_security_wss(self, rid, sec_def, request_data, body, headers):
         """ Performs the authentication using WS-Security.
         """
-        sec_config = self.wss_config[sec_def.name]
-        
         url_config = {}
         
-        if sec_config['password_type'] == 'clear_text':
-            url_config['wsse-pwd-password'] = sec_config['password']
+        if sec_def['password_type'] == 'clear_text':
+            url_config['wsse-pwd-password'] = sec_def['password']
         else:
-            url_config['wsse-pwd-password-digest'] = sec_config['password']
+            url_config['wsse-pwd-password-digest'] = sec_def['password']
         
-        url_config['wsse-pwd-username'] = sec_config['username']
-        url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_config['reject_empty_nonce_creat']
-        url_config['wsse-pwd-reject-stale-tokens'] = sec_config['reject_stale_tokens']
-        url_config['wsse-pwd-reject-expiry-limit'] = sec_config['reject_expiry_limit']
-        url_config['wsse-pwd-nonce-freshness-time'] = sec_config['nonce_freshness_time']
+        url_config['wsse-pwd-username'] = sec_def['username']
+        url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_def['reject_empty_nonce_creat']
+        url_config['wsse-pwd-reject-stale-tokens'] = sec_def['reject_stale_tokens']
+        url_config['wsse-pwd-reject-expiry-limit'] = sec_def['reject_expiry_limit']
+        url_config['wsse-pwd-nonce-freshness-time'] = sec_def['nonce_freshness_time']
         
         result = on_wsse_pwd(self._wss, url_config, body, False)
         
@@ -208,39 +204,60 @@ class Security(object):
         with self.url_sec_lock:
             return self.url_sec.get(url)
         
+    def _update_url_sec(self, msg, sec_def_type, delete=False):
+        """ Updates URL security definitions that use the security configuration
+        of the name and type given in 'msg' so that existing definitions use 
+        the new configuration or, optionally, deletes the URL security definition
+        altogether if 'delete' is True.
+        """
+        for sec_def_name, sec_def_value in self.url_sec.items():
+            sec_def = sec_def_value.sec_def
+            if sec_def != ZATO_NONE and sec_def.type == sec_def_type:
+                name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
+                if sec_def.name == name:
+                    if delete:
+                        del self.url_sec[sec_def_name]
+                    else:
+                        for key, new_value in msg.items():
+                            if key in sec_def:
+                                sec_def[key] = msg[key]
+
 # ##############################################################################        
-        
+
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition
         of the given name.
         """
         with self.url_sec_lock:
-            return self.basic_auth.get(name)
+            return self.basic_auth_config.get(name)
 
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
         with self.url_sec_lock:
-            self.basic_auth[msg.name] = msg
+            self.basic_auth_config[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
-            del self.basic_auth[msg.old_name]
-            self.basic_auth[msg.name] = msg
-        
+            del self.basic_auth_config[msg.old_name]
+            self.basic_auth_config[msg.name] = msg
+            self._update_url_sec(msg, security_def_type.basic_auth)
+            
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
-            del self.basic_auth[msg.name]
+            del self.basic_auth_config[msg.name]
+            self._update_url_sec(msg, security_def_type.basic_auth, True)
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
-            self.basic_auth[msg.name]['password'] = msg.password
+            self.basic_auth_config[msg.name]['password'] = msg.password
+            self._update_url_sec(msg, security_def_type.basic_auth)
 
 # ##############################################################################
 
@@ -248,26 +265,26 @@ class Security(object):
         """ Returns the configuration of the technical account of the given name.
         """
         with self.url_sec_lock:
-            return self.tech_acc.get(name)
+            return self.tech_acc_config.get(name)
 
     def on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
         with self.url_sec_lock:
-            self.tech_acc[msg.name] = msg
+            self.tech_acc_config[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
         with self.url_sec_lock:
-            del self.tech_acc[msg.old_name]
-            self.tech_acc[msg.name] = msg
+            del self.tech_acc_config[msg.old_name]
+            self.tech_acc_config[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
         with self.url_sec_lock:
-            del self.tech_acc[msg.name]
+            del self.tech_acc_config[msg.name]
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
@@ -275,7 +292,7 @@ class Security(object):
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account (pun intended ;-))
-            self.tech_acc[msg.name]['password'] = msg.password
+            self.tech_acc_config[msg.name]['password'] = msg.password
             
 # ##############################################################################
 
