@@ -71,13 +71,10 @@ class ZatoHTTPListener(HTTPServer):
         of the threads created in ParallelServer.run_forever method.
         """
         rid = new_rid()
-        response = str(rid)
-        
-        #sleep(0.01)
         
         try:
             # SOAP or plain HTTP.
-            response = thread_local_ctx.store.request_handler.handle(rid, task, thread_local_ctx)
+            payload = thread_local_ctx.store.request_handler.handle(rid, task, thread_local_ctx)
 
         # Any exception at this point must be our fault.
         except Exception, e:
@@ -86,14 +83,15 @@ class ZatoHTTPListener(HTTPServer):
             error_msg = '[{0}] Exception caught [{1}]'.format(rid, tb)
             logger.error(error_msg)
             
-            response = error_msg
-            task.response_headers['Content-Type'] = 'text/plain'    
+            payload = error_msg
+            task.response_headers['Content-Type'] = 'text/plain'
             
         task.response_headers['X-Zato-RID'] = rid
             
-        # Return the HTTP response.
-        task.response_headers['Content-Length'] = str(len(response))
-        task.write(response)
+        # Can't set it any earlier, this is the only place we're sure the payload
+        # won't be modified anymore.
+        task.response_headers['Content-Length'] = str(len(payload))
+        task.write(payload)
 
 
 class ParallelServer(BrokerMessageReceiver):

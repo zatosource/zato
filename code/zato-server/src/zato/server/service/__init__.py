@@ -21,8 +21,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from httplib import OK
+
+# Bunch
+from bunch import Bunch
 
 # Zato
+from zato.common import ZATO_OK
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
@@ -44,6 +49,27 @@ class Outgoing(object):
         self.plain_http = plain_http
         self.soap = soap
         self.soap = soap
+        
+class Response(object):
+    """ A response from the service's invocation.
+    """
+    __slots__ = ('result', 'result_details', 'payload', 'content_type', 'content_encoding',
+                 'headers', 'status_code')
+    
+    def __init__(self, result=ZATO_OK, result_details='', payload='', 
+        content_type='text/plain', content_encoding=None, headers=None,  status_code=OK):
+        self.result = ZATO_OK
+        self.result_details = result_details
+        self.payload = payload
+        self.content_type = content_type
+        self.content_encoding = content_encoding
+        
+        # Specific to HTTP/SOAP probably?
+        self.headers = headers or Bunch()
+        self.status_code = status_code
+        
+    def __len__(self):
+        return len(self.payload)
 
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter 
@@ -58,6 +84,7 @@ class Service(object):
         self.outgoing = None
         self.worker_store = None
         self.odb = None
+        self.response = None
         
     def _init(self):
         """ Actually initializes the service.
@@ -146,6 +173,7 @@ class Service(object):
         service.worker_store = worker_store
         service.channel = channel
         service.rid = rid
+        service.response = Response()
         
         if init:
             service._init()

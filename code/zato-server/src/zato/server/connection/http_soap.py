@@ -206,8 +206,6 @@ class Security(object):
         """ Returns the security configuration of the given URL
         """
         with self.url_sec_lock:
-            import pprint
-            pprint.pprint(self.url_sec)
             return self.url_sec.get(url)
         
 # ##############################################################################        
@@ -362,7 +360,11 @@ class RequestHandler(object):
                     logger.debug(log_msg)
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
-                return handler.handle(rid, task, request, headers, transport, thread_ctx)
+
+                response = handler.handle(rid, task, request, headers, transport, thread_ctx)
+                task.response_headers['Content-Type'] = response.content_type
+          
+                return response.payload
 
             except Exception, e:
                 _format_exc = format_exc(e)
@@ -463,34 +465,17 @@ class _BaseMessageHandler(object):
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
                                 thread_ctx.store, transport, rid)
 
-        service_response = service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
+        service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
+        response = service_instance.response
 
-        # Responses from all Zato's interal services are wrapped in
-        # in the <zato_message> element. Each one is also assigned the server's
-        # public key.
-        if isinstance(service_instance, AdminService):
-
-            if logger.isEnabledFor(TRACE1):
-                logger.log(TRACE1, '[{0}] len(service_response)=[{1}]'.format(rid, len(service_response)))
-                for item in service_response:
-                    logger.log(TRACE1, '[{0}] service_response item=[{1}]'.format(rid, item))
-
-            result, rest = service_response
-            if result == ZATO_OK:
-                details = ''
-                data = rest
-            else:
-                details = rest
-                data = ''
-                
-            response = zato_message.safe_substitute(rid=rid, result=result, details=details, data=data)
-        else:
-            response = service_response
+        if isinstance(service_instance, AdminService) and service_instance.needs_xml:
+            response.payload = zato_message.safe_substitute(rid=service_instance.rid, 
+                result=response.result, details=response.result_details, data=response.payload)
 
         if transport == 'soap':
-            response = soap_doc.safe_substitute(body=response)
+            response.payload = soap_doc.safe_substitute(body=response.payload)
 
-        logger.debug('[{0}] Returning response=[{1}]'.format(rid, response))
+        logger.debug('[{0}] Returning response=[{1}]'.format(rid, response.payload))
         return response
         
 class SOAPHandler(_BaseMessageHandler):
