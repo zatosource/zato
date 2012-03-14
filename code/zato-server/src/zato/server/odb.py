@@ -119,6 +119,7 @@ class ODBManager(SessionWrapper):
                 if item.sec_type == security_def_type.tech_account:
                     result[item.url_path].sec_def.salt = sec_def.salt
                 elif item.sec_type == security_def_type.basic_auth:
+                    result[item.url_path].sec_def.username = sec_def.username
                     result[item.url_path].sec_def.password = sec_def.password
                     result[item.url_path].sec_def.realm = sec_def.realm
                 elif item.sec_type == security_def_type.wss:
