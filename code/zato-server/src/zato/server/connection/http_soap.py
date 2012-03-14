@@ -206,6 +206,8 @@ class Security(object):
         """ Returns the security configuration of the given URL
         """
         with self.url_sec_lock:
+            import pprint
+            pprint.pprint(self.url_sec)
             return self.url_sec.get(url)
         
 # ##############################################################################        

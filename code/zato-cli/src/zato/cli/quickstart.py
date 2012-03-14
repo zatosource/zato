@@ -32,7 +32,7 @@ from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb import ping_queries
 from zato.common.odb.model import *
-from zato.common.util import current_host, tech_account_password
+from zato.common.util import current_host, service_name_from_impl, tech_account_password
 from zato.server import main
 
 zato_qs_start_template = """#!/usr/bin/env sh
@@ -156,7 +156,7 @@ class Quickstart(ZatoCommand):
             
         return next_id
     
-    def add_ping(self, session, cluster):
+    def add_ping_services(self, session, cluster):
         """ Add a ping service and channels, with and without security checks.
         """
         passwords = {
@@ -171,14 +171,15 @@ class Quickstart(ZatoCommand):
         for password in passwords:
             passwords[password] = uuid4().hex
 
+        ping_impl_name = 'zato.Ping'
         ping_service_name = 'zato.server.service.internal.Ping'
-        ping_service = Service(None, ping_service_name, True, ping_service_name, True, cluster)
+        ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
         session.add(ping_service)
         
         #
         # .. no security ..
         #
-        ping_no_sec_channel = HTTPSOAP(None, 'zato:ping', True, True, 'channel', 
+        ping_no_sec_channel = HTTPSOAP(None, 'zato.ping', True, True, 'channel', 
                                        'plain_http', None, '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
         session.add(ping_no_sec_channel)
 
@@ -224,6 +225,175 @@ class Quickstart(ZatoCommand):
                 channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
                                    soap_version, service=ping_service, security=sec, cluster=cluster)
                 session.add(channel)
+                
+    def add_soap_services(self, session, cluster, tech_account):
+        """ Adds these Zato internal services that can be accessed through SOAP requests.
+        """
+        soap_services = {
+
+            # Scheduler
+            'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
+            'zato:scheduler.job.create':'zato.server.service.internal.scheduler.Create',
+            'zato:scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
+            'zato:scheduler.job.execute':'zato.server.service.internal.scheduler.Execute',
+            'zato:scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
+
+            # Services
+            'zato:service.get-list':'zato.server.service.internal.service.GetList',
+            'zato:service.get-by-id':'zato.server.service.internal.service.GetByID',
+            'zato:service.create':'zato.server.service.internal.service.Create',
+            'zato:service.edit':'zato.server.service.internal.service.Edit',
+            'zato:service.delete':'zato.server.service.internal.service.Delete',
+
+            # SOAP channels
+            'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
+
+            # Security
+            'zato:security.get-list':'zato.server.service.internal.security.GetList',
+
+            # Technical accounts
+            'zato:security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
+            'zato:security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
+            'zato:security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
+            'zato:security.tech-account.edit':'zato.server.service.internal.security.tech_account.Edit',
+            'zato:security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
+            'zato:security.tech-account.delete':'zato.server.service.internal.security.tech_account.Delete',
+
+            # WS-Security
+            'zato:security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
+            'zato:security.wss.create':'zato.server.service.internal.security.wss.Create',
+            'zato:security.wss.edit':'zato.server.service.internal.security.wss.Edit',
+            'zato:security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
+            'zato:security.wss.delete':'zato.server.service.internal.security.wss.Delete',
+
+            # HTTP Basic Auth
+            'zato:security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
+            'zato:security.basic-auth.create':'zato.server.service.internal.security.basic_auth.Create',
+            'zato:security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
+            'zato:security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
+            'zato:security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
+
+            # Definitions - AMQP
+            'zato:definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
+            'zato:definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
+            'zato:definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
+            'zato:definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
+            'zato:definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
+            'zato:definition.amqp.delete':'zato.server.service.internal.definition.amqp.Delete',
+
+            # Definitions - JMS WebSphere MQ
+            'zato:definition.jms_wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
+            'zato:definition.jms_wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
+            'zato:definition.jms_wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
+            'zato:definition.jms_wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
+            'zato:definition.jms_wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
+
+            # Channels - AMQP
+            'zato:channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
+            'zato:channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
+            'zato:channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
+            'zato:channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
+
+            # Channels - JMS WebSphere MQ
+            'zato:channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
+            'zato:channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
+            'zato:channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
+            'zato:channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
+
+            # Channels - ZeroMQ
+            'zato:channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
+            'zato:channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
+            'zato:channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
+            'zato:channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
+
+            # Outgoing connections - AMQP
+            'zato:outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
+            'zato:outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
+            'zato:outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
+            'zato:outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
+            
+            # Outgoing connections - FTP
+            'zato:outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
+            'zato:outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
+            'zato:outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
+            'zato:outgoing.ftp.delete':'zato.server.service.internal.outgoing.ftp.Delete',
+            'zato:outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
+
+            # Outgoing connections - JMS WebSphere MQ
+            'zato:outgoing.jms_wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
+            'zato:outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
+            'zato:outgoing.jms_wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
+            'zato:outgoing.jms_wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
+
+            # Outgoing connections - S3
+            'zato:outgoing.s3.get-list':'zato.server.service.internal.outgoing.s3.GetList',
+            'zato:outgoing.s3.create':'zato.server.service.internal.outgoing.s3.Create',
+            'zato:outgoing.s3.edit':'zato.server.service.internal.outgoing.s3.Edit',
+            'zato:outgoing.s3.delete':'zato.server.service.internal.outgoing.s3.Delete',
+            
+            # Outgoing connections - SQL
+            'zato:outgoing.sql.get-list':'zato.server.service.internal.outgoing.sql.GetList',
+            'zato:outgoing.sql.create':'zato.server.service.internal.outgoing.sql.Create',
+            'zato:outgoing.sql.edit':'zato.server.service.internal.outgoing.sql.Edit',
+            'zato:outgoing.sql.delete':'zato.server.service.internal.outgoing.sql.Delete',
+            'zato:outgoing.sql.change-password':'zato.server.service.internal.outgoing.sql.ChangePassword',
+            'zato:outgoing.sql.ping':'zato.server.service.internal.outgoing.sql.Ping',
+            
+            # Outgoing connections - ZeroMQ
+            'zato:outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
+            'zato:outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
+            'zato:outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
+            'zato:outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
+
+            # HTTP SOAP
+            'zato:http_soap.get-list':'zato.server.service.internal.http_soap.GetList',
+            'zato:http_soap.create':'zato.server.service.internal.http_soap.Create',
+            'zato:http_soap.edit':'zato.server.service.internal.http_soap.Edit',
+            'zato:http_soap.delete':'zato.server.service.internal.http_soap.Delete',
+            'zato:http_soap.ping':'zato.server.service.internal.http_soap.Ping',
+        }
+        
+        #
+        # HTTPSOAP + services
+        #
+
+        zato_soap_channels = []
+        
+        for soap_action, impl_name in soap_services.iteritems():
+
+            # Make the actual name shorter so it better fits the screen's real estate
+            service_name = service_name_from_impl(impl_name)
+            
+            service = Service(None, service_name, True, impl_name, True, cluster)
+            session.add(service)
+            
+            zato_soap = HTTPSOAP(None, soap_action, True, True, 'channel', 
+                'soap', None, '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster,
+                security=tech_account)
+            session.add(zato_soap)
+            
+            zato_soap_channels.append(zato_soap)
+            
+    def add_json_services(self, session, cluster, tech_account):
+        """ Adds these Zato internal services that can be accessed through JSON
+        over plain HTTP.
+        """
+        json_services = (
+            # URL Security
+            ('/zato/json/http-soap/url-security', 'zato.server.service.internal.http_soap.GetURLSecurity'),
+        )
+        
+        for url_path, impl_name in json_services:
+        
+            # Make the actual name shorter so it better fits the screen's real estate
+            service_name = service_name_from_impl(impl_name)
+            
+            service = Service(None, service_name , True, impl_name, True, cluster)
+            session.add(service)
+        
+            http_soap = HTTPSOAP(None, service_name, True, True, 'channel', 'plain_http', 
+                None, url_path, None, None, None, service=service, cluster=cluster, security=tech_account)
+            session.add(http_soap)
                     
     def execute(self, args):
         
@@ -339,163 +509,23 @@ class Quickstart(ZatoCommand):
             server2 = Server(None,  'zato-quickstart-server-02', cluster, cs2.odb_token, 'ACCEPTED', datetime.now(), 'zato-quickstart/' + current_host())
             session.add(server2)
             
-            
             #
-            # SOAP Services
-            #
-            soap_services = {
-    
-                # Scheduler
-                'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
-                'zato:scheduler.job.create':'zato.server.service.internal.scheduler.Create',
-                'zato:scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
-                'zato:scheduler.job.execute':'zato.server.service.internal.scheduler.Execute',
-                'zato:scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
-    
-                # Services
-                'zato:service.get-list':'zato.server.service.internal.service.GetList',
-                'zato:service.get-by-id':'zato.server.service.internal.service.GetByID',
-                'zato:service.create':'zato.server.service.internal.service.Create',
-                'zato:service.edit':'zato.server.service.internal.service.Edit',
-                'zato:service.delete':'zato.server.service.internal.service.Delete',
-    
-                # SOAP channels
-                'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
-    
-                # Security
-                'zato:security.get-list':'zato.server.service.internal.security.GetList',
-    
-                # Technical accounts
-                'zato:security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
-                'zato:security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
-                'zato:security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
-                'zato:security.tech-account.edit':'zato.server.service.internal.security.tech_account.Edit',
-                'zato:security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
-                'zato:security.tech-account.delete':'zato.server.service.internal.security.tech_account.Delete',
-    
-                # WS-Security
-                'zato:security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
-                'zato:security.wss.create':'zato.server.service.internal.security.wss.Create',
-                'zato:security.wss.edit':'zato.server.service.internal.security.wss.Edit',
-                'zato:security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
-                'zato:security.wss.delete':'zato.server.service.internal.security.wss.Delete',
-    
-                # HTTP Basic Auth
-                'zato:security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
-                'zato:security.basic-auth.create':'zato.server.service.internal.security.basic_auth.Create',
-                'zato:security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
-                'zato:security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
-                'zato:security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
-    
-                # Definitions - AMQP
-                'zato:definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
-                'zato:definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
-                'zato:definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
-                'zato:definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
-                'zato:definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
-                'zato:definition.amqp.delete':'zato.server.service.internal.definition.amqp.Delete',
-    
-                # Definitions - JMS WebSphere MQ
-                'zato:definition.jms_wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
-                'zato:definition.jms_wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
-                'zato:definition.jms_wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
-                'zato:definition.jms_wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
-                'zato:definition.jms_wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
-    
-                # Channels - AMQP
-                'zato:channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
-                'zato:channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
-                'zato:channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
-                'zato:channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
-    
-                # Channels - JMS WebSphere MQ
-                'zato:channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
-                'zato:channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
-                'zato:channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
-                'zato:channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
-    
-                # Channels - ZeroMQ
-                'zato:channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
-                'zato:channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
-                'zato:channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
-                'zato:channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
-    
-                # Outgoing connections - AMQP
-                'zato:outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
-                'zato:outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
-                'zato:outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
-                'zato:outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
-                
-                # Outgoing connections - FTP
-                'zato:outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
-                'zato:outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
-                'zato:outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
-                'zato:outgoing.ftp.delete':'zato.server.service.internal.outgoing.ftp.Delete',
-                'zato:outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
-    
-                # Outgoing connections - JMS WebSphere MQ
-                'zato:outgoing.jms_wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
-                'zato:outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
-                'zato:outgoing.jms_wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
-                'zato:outgoing.jms_wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
-    
-                # Outgoing connections - S3
-                'zato:outgoing.s3.get-list':'zato.server.service.internal.outgoing.s3.GetList',
-                'zato:outgoing.s3.create':'zato.server.service.internal.outgoing.s3.Create',
-                'zato:outgoing.s3.edit':'zato.server.service.internal.outgoing.s3.Edit',
-                'zato:outgoing.s3.delete':'zato.server.service.internal.outgoing.s3.Delete',
-                
-                # Outgoing connections - SQL
-                'zato:outgoing.sql.get-list':'zato.server.service.internal.outgoing.sql.GetList',
-                'zato:outgoing.sql.create':'zato.server.service.internal.outgoing.sql.Create',
-                'zato:outgoing.sql.edit':'zato.server.service.internal.outgoing.sql.Edit',
-                'zato:outgoing.sql.delete':'zato.server.service.internal.outgoing.sql.Delete',
-                'zato:outgoing.sql.change-password':'zato.server.service.internal.outgoing.sql.ChangePassword',
-                'zato:outgoing.sql.ping':'zato.server.service.internal.outgoing.sql.Ping',
-                
-                # Outgoing connections - ZeroMQ
-                'zato:outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
-                'zato:outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
-                'zato:outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
-                'zato:outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
-    
-                # HTTP SOAP
-                'zato:http_soap.get-list':'zato.server.service.internal.http_soap.GetList',
-                'zato:http_soap.create':'zato.server.service.internal.http_soap.Create',
-                'zato:http_soap.edit':'zato.server.service.internal.http_soap.Edit',
-                'zato:http_soap.delete':'zato.server.service.internal.http_soap.Delete',
-                'zato:http_soap.ping':'zato.server.service.internal.http_soap.Ping',
-            }
-            
-            #
-            # TechnicalAccount
+            # TechnicalAccount for the web admin
             #
             salt = uuid4().hex
             password = tech_account_password(tech_account_password_clear, salt)
             
             tech_account = TechnicalAccount(None, tech_account_name, True, password, salt, cluster)
             session.add(tech_account)
-
-            #
-            # HTTPSOAP + services
-            #
-
-            zato_soap_channels = []
-            
-            for soap_action, service_name in soap_services.iteritems():
-                
-                service = Service(None, service_name, True, service_name, True, cluster)
-                session.add(service)
-                
-                zato_soap = HTTPSOAP(None, soap_action, True, True, 'channel', 
-                    'soap', None, '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster,
-                    security=tech_account)
-                session.add(zato_soap)
-                
-                zato_soap_channels.append(zato_soap)
                 
             # Ping services
-            self.add_ping(session, cluster)
+            self.add_ping_services(session, cluster)
+            
+            # SOAP services
+            self.add_soap_services(session, cluster, tech_account)
+            
+            # JSON services
+            self.add_json_services(session, cluster, tech_account)
             
             # Commit all the stuff.
             session.commit()
