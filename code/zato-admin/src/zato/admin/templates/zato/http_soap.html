@@ -41,7 +41,9 @@
             'method',
             '_edit',
             '_delete',
-            '_ping',
+            {% ifequal connection 'outgoing' %}
+                '_ping',
+            {% endifequal %}
             'id',
             'is_active',
             'security',
@@ -108,7 +110,9 @@
                         <th><a href="#">Method</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        {% ifequal connection 'outgoing' %}
+                            <th>&nbsp;</th>
+                        {% endifequal %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -138,7 +142,9 @@
                         <td>{{ item.method }}</td>
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
-                        <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
+                        {% ifequal connection 'outgoing' %}
+                            <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
+                        {% endifequal %}
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.security_id }}</td>
