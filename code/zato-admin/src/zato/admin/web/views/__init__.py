@@ -84,27 +84,23 @@ def set_servers_state(cluster, client):
 
     cluster.some_down = False
     cluster.some_maint = False
-    cluster.all_up = False
+    cluster.all_down = False
 
     # Note: currently we support only the 'http_plain' access_type.
-    for access_type in("http_plain",):
-        up.extend(servers_state["UP"][access_type])
-        down.extend(servers_state["DOWN"][access_type])
-        maint.extend(servers_state["MAINT"][access_type])
+    for access_type in('http_plain',):
+        up.extend(servers_state['UP'][access_type])
+        down.extend(servers_state['DOWN'][access_type])
+        maint.extend(servers_state['MAINT'][access_type])
 
     # Do we have any servers at all?
     if any((up, down, maint)):
         if not(up or maint) and down:
-            cluster.all_up = True
+            cluster.all_down = True
         else:
             if down:
                 cluster.some_down = True
             if maint:
                 cluster.some_maint = True
-
-            # We know not all are down so maybe all are up?
-            if not(cluster.some_down or cluster.some_maint):
-                cluster.all_up = True
 
 def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated'):
 

@@ -1,11 +1,10 @@
-{% if not item.all_up %}
+{% if item.some_down or item.all_down%}
     <br/>
-    All servers are down
-{% endif %}
-
-{% if item.some_down %}
-    <br/>
-    Some servers are DOWN
+    {% if item.all_down %}
+        All servers are DOWN
+    {% else %}
+        Some servers are DOWN
+    {% endif %}
 {% endif %}
 
 {% if item.some_maint %}
