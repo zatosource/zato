@@ -60,7 +60,7 @@ class GetList(AdminService):
     
                 item_list.append(item)
     
-            return ZATO_OK, etree.tostring(item_list)
+            self.response.payload = etree.tostring(item_list)
         
 class GetByID(AdminService):
     """ Returns a particular service.
@@ -81,7 +81,7 @@ class GetByID(AdminService):
             item.is_internal = db_item.is_internal
             item.usage_count = 'TODO getbyid'
     
-            return ZATO_OK, etree.tostring(item)
+            self.response.payload = etree.tostring(item)
 
 class Edit(AdminService):
     """ Updates a service.
@@ -117,7 +117,7 @@ class Edit(AdminService):
                 params['action'] = SERVICE.EDIT
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
-                return ZATO_OK, etree.tostring(service_elem)
+                self.response.payload = etree.tostring(service_elem)
                 
             except Exception, e:
                 msg = 'Could not update the service, e=[{e}]'.format(e=format_exc(e))
@@ -155,5 +155,3 @@ class Delete(AdminService):
                 
                 raise
             
-            return ZATO_OK, ''
-

@@ -57,7 +57,7 @@ class GetList(AdminService):
     
                 definition_list.append(definition_elem)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            self.response.payload = etree.tostring(definition_list)
 
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
@@ -107,7 +107,7 @@ class Create(AdminService):
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            return ZATO_OK, etree.tostring(auth_elem)
+            self.response.payload = etree.tostring(auth_elem)
 
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
@@ -162,7 +162,7 @@ class Edit(AdminService):
                 self.broker_client.send_json(new_params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
-            return ZATO_OK, etree.tostring(auth_elem)
+            self.response.payload = etree.tostring(auth_elem)
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
@@ -204,6 +204,3 @@ class Delete(AdminService):
                 params['name'] = auth.name
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
-            
-            return ZATO_OK, ''
-    

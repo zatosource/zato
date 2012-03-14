@@ -56,4 +56,4 @@ class GetList(AdminService):
         
                     definition_list.append(definition_elem)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            self.response.payload = etree.tostring(definition_list)

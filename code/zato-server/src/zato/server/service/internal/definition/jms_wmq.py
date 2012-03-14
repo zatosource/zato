@@ -68,7 +68,7 @@ class GetList(AdminService):
     
                 definition_list.append(definition_elem)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            self.response.payload = etree.tostring(definition_list)
         
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
@@ -98,7 +98,7 @@ class GetByID(AdminService):
             definition_elem.needs_mcd = definition.needs_mcd
             definition_elem.max_chars_printed = definition.max_chars_printed
     
-            return ZATO_OK, etree.tostring(definition_elem)
+            self.response.payload = etree.tostring(definition_elem)
         
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
@@ -148,7 +148,7 @@ class Create(AdminService):
                 
                 created_elem.id = def_.id
                 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
                 
             except Exception, e:
                 msg = "Could not create a JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
@@ -225,7 +225,7 @@ class Edit(AdminService):
                 params['old_name'] = old_name
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
-                return ZATO_OK, etree.tostring(def_jms_wmq_elem)
+                self.response.payload = etree.tostring(def_jms_wmq_elem)
                 
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))
@@ -262,6 +262,3 @@ class Delete(AdminService):
                 self.logger.error(msg)
                 
                 raise
-            
-            return ZATO_OK, ''
-

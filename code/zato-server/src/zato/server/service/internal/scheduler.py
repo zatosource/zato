@@ -225,9 +225,7 @@ def _create_edit(action, payload, logger, session, broker_client):
             # a substitution like changing '@hourly' into '0 * * * *'.
             job_elem.cron_definition = cs_job.cron_definition
 
-        out = etree.tostring(job_elem)
-        
-        return ZATO_OK, out
+        self.response.payload = etree.tostring(job_elem)
 
 class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
@@ -262,7 +260,7 @@ class GetList(AdminService):
                 
                 definition_list.append(definition_elem)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            self.response.payload = etree.tostring(definition_list)
 
 class Create(AdminService):
     """ Creates a new scheduler's job.
@@ -309,8 +307,6 @@ class Delete(AdminService):
                 
                 raise
             
-            return ZATO_OK, ''
-
 class Execute(AdminService):
     """ Executes a scheduler's job.
     """
@@ -336,6 +332,3 @@ class Execute(AdminService):
                 self.logger.error(msg)
                 
                 raise
-            
-            return ZATO_OK, ''
-        

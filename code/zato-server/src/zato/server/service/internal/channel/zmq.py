@@ -62,7 +62,7 @@ class GetList(AdminService):
     
                 item_list.append(item)
     
-            return ZATO_OK, etree.tostring(item_list)
+            self.response.payload = etree.tostring(item_list)
         
 class Create(AdminService):
     """ Creates a new ZeroMQ channel.
@@ -120,7 +120,7 @@ class Create(AdminService):
                 created_elem.id = item.id
                 start_connector(self.server.repo_location, item.id)
                 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
                 
             except Exception, e:
                 msg = 'Could not create a ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
@@ -192,7 +192,7 @@ class Edit(AdminService):
                 core_params['sub_key'] = optional_params.get('sub_key', b'')
                 self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
-                return ZATO_OK, etree.tostring(xml_item)
+                self.response.payload = etree.tostring(xml_item)
                 
             except Exception, e:
                 msg = 'Could not update the ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
@@ -229,5 +229,3 @@ class Delete(AdminService):
                 self.logger.error(msg)
                 
                 raise
-            
-            return ZATO_OK, ''

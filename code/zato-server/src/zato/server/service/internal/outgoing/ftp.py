@@ -70,7 +70,7 @@ class GetList(AdminService):
 
                 item_list.append(item)
 
-            return ZATO_OK, etree.tostring(item_list)
+            self.response.payload = etree.tostring(item_list)
 
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
@@ -121,7 +121,7 @@ class Create(_FTPService):
                 created_elem.id = item.id
                 self.update_facade(core_params, optional_params)
 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
 
             except Exception, e:
                 msg = 'Could not create an outgoing FTP connection, e=[{e}]'.format(e=format_exc(e))
@@ -183,7 +183,7 @@ class Edit(_FTPService):
                 xml_item.id = item.id
                 self.update_facade(core_params, optional_params, old_name)
 
-                return ZATO_OK, etree.tostring(xml_item)
+                self.response.payload = etree.tostring(xml_item)
 
             except Exception, e:
                 msg = 'Could not update the outgoing FTP connection, e=[{e}]'.format(e=format_exc(e))
@@ -221,8 +221,6 @@ class Delete(AdminService):
 
                 raise
 
-            return ZATO_OK, ''
-
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing FTP connection.
     """
@@ -235,5 +233,3 @@ class ChangePassword(ChangePasswordBase):
                 self.ftp.update_password(instance.name, password)
                 
             self._handle(OutgoingFTP, _auth, None, **kwargs)
-            
-            return ZATO_OK, ''

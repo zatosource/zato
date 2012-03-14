@@ -59,7 +59,7 @@ class GetList(AdminService):
     
                 definition_list.append(definition_elem)
     
-            return ZATO_OK, etree.tostring(definition_list)
+            self.response.payload = etree.tostring(definition_list)
     
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
@@ -72,16 +72,16 @@ class GetByID(AdminService):
             params = _get_params(payload, request_params, 'data.')
     
             tech_account = session.query(TechnicalAccount.id, 
-                                                 TechnicalAccount.name, 
-                                                 TechnicalAccount.is_active).\
-                filter(TechnicalAccount.id==params['tech_account_id']).one()
+                TechnicalAccount.name, TechnicalAccount.is_active).\
+                filter(TechnicalAccount.id==params['tech_account_id']).\
+                one()
             
             tech_account_elem = Element('tech_account')
             tech_account_elem.id = tech_account.id;
             tech_account_elem.name = tech_account.name;
             tech_account_elem.is_active = tech_account.is_active;
             
-            return ZATO_OK, etree.tostring(tech_account_elem)
+            self.response.payload = etree.tostring(tech_account_elem)
     
 class Create(AdminService):
     """ Creates a new technical account.
@@ -131,8 +131,7 @@ class Create(AdminService):
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            return ZATO_OK, etree.tostring(tech_account_elem)
-    
+            self.response.payload = etree.tostring(tech_account_elem)
 
 class Edit(AdminService):
     """ Updates an existing technical account.
@@ -184,7 +183,7 @@ class Edit(AdminService):
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            return ZATO_OK, etree.tostring(tech_account_elem)
+            self.response.payload = etree.tostring(tech_account_elem)
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
@@ -233,6 +232,3 @@ class Delete(AdminService):
                 params['action'] = SECURITY.TECH_ACC_DELETE
                 params['name'] = tech_account.name
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
-            
-            return ZATO_OK, ''
-    

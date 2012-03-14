@@ -110,7 +110,7 @@ class GetList(AdminService):
 
                 item_list.append(item)
 
-            return ZATO_OK, etree.tostring(item_list)
+            self.response.payload = etree.tostring(item_list)
 
 class Create(AdminService, _HTTPSOAPService):
     """ Creates a new HTTP/SOAP connection.
@@ -190,7 +190,7 @@ class Create(AdminService, _HTTPSOAPService):
 
                 created_elem.id = item.id
 
-                return ZATO_OK, etree.tostring(created_elem)
+                self.response.payload = etree.tostring(created_elem)
 
             except Exception, e:
                 msg = 'Could not create the object, e=[{e}]'.format(e=format_exc(e))
@@ -266,7 +266,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 core_params.update(sec_info)
                 self.notify_worker_threads(core_params)
 
-                return ZATO_OK, etree.tostring(xml_item)
+                self.response.payload = etree.tostring(xml_item)
 
             except Exception, e:
                 msg = 'Could not update the object, e=[{e}]'.format(e=format_exc(e))
@@ -306,9 +306,7 @@ class Delete(AdminService, _HTTPSOAPService):
                 self.logger.error(msg)
 
                 raise
-
-            return ZATO_OK, ''
-
+            
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
@@ -322,7 +320,7 @@ class Ping(AdminService):
             info_elem = etree.Element('info')
             info_elem.text = self.outgoing.plain_http.get(item.name).ping()
             
-            return ZATO_OK, etree.tostring(info_elem)
+            self.response.payload = etree.tostring(info_elem)
 
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
