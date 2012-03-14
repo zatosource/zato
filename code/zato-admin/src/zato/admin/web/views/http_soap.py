@@ -187,7 +187,8 @@ def index(req):
                 
                 _security_name = msg_item.security_name.text
                 if _security_name:
-                    security_name = '{0}\n{1}'.format(SECURITY_TYPES[sec_type], _security_name)
+                    security_name = '{0}<br/>{1}'.format(SECURITY_TYPES[sec_type], _security_name)
+                    print(333, security_name)
                 else:
                     security_name = 'No security'
                 

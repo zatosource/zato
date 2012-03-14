@@ -132,7 +132,7 @@
                         {% ifequal connection 'channel' %}
                             <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         {% endifequal %}
-                        <td>{{ item.security_name }}</td>
+                        <td>{{ item.security_name|safe }}</td>
                         <td>{{ item.method }}</td>
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>

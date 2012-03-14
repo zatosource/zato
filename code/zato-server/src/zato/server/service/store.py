@@ -41,7 +41,7 @@ from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common.util import TRACE1
+from zato.common.util import service_name_from_impl, TRACE1
 from zato.server.service import Service
 
 __all__ = ['Service']
@@ -308,7 +308,7 @@ class ServiceStore(InitializingObject):
                             self.services[class_name] = data
 
                             last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                            self.odb.add_service(class_name, class_name, True, last_mod, str(data))
+                            self.odb.add_service(service_name_from_impl(class_name), class_name, True, last_mod, str(data))
 
                 except TypeError, e:
                     # Ignore non-class objects passed in to issubclass

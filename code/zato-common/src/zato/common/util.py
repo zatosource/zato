@@ -310,3 +310,9 @@ def get_crypto_manager(repo_location, app_context, config, load_keys=True):
         crypto_manager.load_keys()
         
     return crypto_manager
+
+def service_name_from_impl(impl_name):
+    """ Turns a Zato internal service's implementation name into a shorter
+    service name
+    """
+    return impl_name.replace('server.service.internal.', '')
