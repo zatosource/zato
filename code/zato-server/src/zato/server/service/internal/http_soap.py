@@ -71,7 +71,7 @@ class _HTTPSOAPService(object):
                      not in(security_def_type.basic_auth, security_def_type.wss):
                     raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
             
-            info['sec_name'] = security.name
+            info['security_name'] = security.name
             info['sec_type'] = security.sec_type
             
         return info

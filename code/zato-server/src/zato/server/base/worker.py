@@ -36,6 +36,8 @@ from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Zato
 from zato.common import url_type, ZATO_ODB_POOL_NAME
+from zato.common.broker_message import code_to_name
+from zato.common.util import security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
@@ -60,9 +62,7 @@ class WorkerStore(BaseWorker):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.worker_config = worker_config
         
-        self.basic_auth_lock = RLock()
-        self.tech_acc_lock = RLock()
-        self.wss_lock = RLock()
+        self.update_lock = RLock()
         
         self.request_handler = RequestHandler()
         self.request_handler.soap_handler = SOAPHandler(self.worker_config.http_soap, self.worker_config.server)
@@ -96,17 +96,43 @@ class WorkerStore(BaseWorker):
             config = self.worker_config.out_sql[pool_name]['config']
             self.sql_pool_store[pool_name] = config
             
-    def _http_soap_wrapper_from_config(self, config):
+    def _http_soap_wrapper_from_config(self, config, has_sec_config=True):
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration
         dictionary. 
         """
-        return HTTPSOAPWrapper({'id':config.id, 
+        security_name = config.get('security_name')
+        sec_config = {'security_name':security_name, 'sec_type':None, 'username':None, 
+            'password':None, 'password_type':None}
+        _sec_config = None
+
+        # This will be set to True only if the method's invoked on a server's starting up
+        if has_sec_config:
+            # It's possible that there is no security config attached at all
+            if security_name:
+                _sec_config = config
+        else:
+            if security_name:
+                sec_type = config.sec_type
+                meth = getattr(self.request_handler.security, sec_type + '_get')
+                _sec_config = meth(security_name).config
+                
+        if logger.isEnabledFor(TRACE1):
+            logger.log(TRACE1, 'has_sec_config:[{}], security_name:[{}], _sec_config:[{}]'.format(
+                has_sec_config, security_name, _sec_config))
+                
+        if _sec_config:
+            sec_config['sec_type'] = _sec_config['sec_type']
+            sec_config['username'] = _sec_config['username']
+            sec_config['password'] = _sec_config['password']
+            sec_config['password_type'] = _sec_config.get('password_type')
+            
+        wrapper_config = {'id':config.id, 
             'is_active':config.is_active, 'method':config.method, 
             'name':config.name, 'transport':config.transport, 
             'address':config.host + config.url_path, 
-            'sec_type':config.sec_type, 'username':config.username, 
-            'password':config.password, 'password_type':config.password_type, 
-            'soap_action':config.soap_action, 'soap_version':config.soap_version})
+            'soap_action':config.soap_action, 'soap_version':config.soap_version}
+        wrapper_config.update(sec_config)
+        return HTTPSOAPWrapper(wrapper_config)
             
     def init_http(self):
         """ Initializes plain HTTP/SOAP connections.
@@ -119,6 +145,52 @@ class WorkerStore(BaseWorker):
             
             # To make the API consistent with that of SQL connection pools
             self.worker_config.out_plain_http[name].ping = wrapper.ping
+            
+    def _update_auth(self, msg, action_name, sec_type, visit_wrapper, keys=None):
+        """ A common method for updating auth-related configuration.
+        """ 
+        with self.update_lock:
+            # Channels
+            handler = getattr(self.request_handler.security, 'on_broker_pull_msg_' + action_name)
+            handler(msg)
+            
+            # Wrappers and static configuration for outgoing connections
+            for name in self.worker_config.out_plain_http.copy_keys():
+                config = self.worker_config.out_plain_http[name].config
+                wrapper = self.worker_config.out_plain_http[name].conn
+                if config['sec_type'] == sec_type:
+                    if keys:
+                        visit_wrapper(wrapper, msg, keys)
+                    else:
+                        visit_wrapper(wrapper, msg)
+                        
+    def _visit_wrapper_edit(self, wrapper, msg, keys):
+        """ Updates a given wrapper's security configuration.
+        """
+        if wrapper.config['security_name'] == msg['old_name']:
+            for key in keys:
+                # All's good except for 'name', the msg's 'name' is known
+                # as 'security_name' in wrapper's config.
+                if key == 'name':
+                    key1 = 'security_name'
+                    key2 = key
+                else:
+                    key1, key2 = key, key
+                wrapper.config[key1] = msg[key2]
+            wrapper.set_auth()
+    
+    def _visit_wrapper_delete(self, wrapper, msg):
+        """ Deletes a wrapper.
+        """
+        if wrapper.config['security_name'] == msg['name']:
+            del self.worker_config.out_plain_http[wrapper.config['name']]
+            
+    def _visit_wrapper_change_password(self, wrapper, msg):
+        """ Changes a wrapper's password.
+        """
+        if wrapper.config['security_name'] == msg['name']:
+            wrapper.config['password'] = msg['password']
+            wrapper.set_auth()
         
 # ##############################################################################        
         
@@ -136,17 +208,20 @@ class WorkerStore(BaseWorker):
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(msg, *args)
-        
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
+                self._visit_wrapper_edit, keys=('username', 'name'))
+
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(msg, *args)
-        
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
+                self._visit_wrapper_delete)
+                    
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(msg, *args)
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
+                self._visit_wrapper_change_password)
 
 # ##############################################################################
 
@@ -282,7 +357,7 @@ class WorkerStore(BaseWorker):
         self._delete_outgoing_http_soap(msg['name'], msg['transport'], logger.debug)
         
         # .. and create a new one
-        wrapper = self._http_soap_wrapper_from_config(msg)
+        wrapper = self._http_soap_wrapper_from_config(msg, False)
         self.worker_config.out_plain_http[msg['name']] = Bunch()
         self.worker_config.out_plain_http[msg['name']].config = msg
         self.worker_config.out_plain_http[msg['name']].conn = wrapper

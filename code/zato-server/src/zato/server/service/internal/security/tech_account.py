@@ -128,6 +128,7 @@ class Create(AdminService):
             else:
                 params['action'] = SECURITY.TECH_ACC_CREATE
                 params['password'] = password
+                params['sec_type'] = 'tech_acc'
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
@@ -180,6 +181,7 @@ class Edit(AdminService):
             else:
                 params['action'] = SECURITY.TECH_ACC_EDIT
                 params['old_name'] = old_name
+                params['sec_type'] = 'tech_acc'
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
