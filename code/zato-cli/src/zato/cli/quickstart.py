@@ -171,8 +171,8 @@ class Quickstart(ZatoCommand):
         for password in passwords:
             passwords[password] = uuid4().hex
 
-        ping_impl_name = 'zato.Ping'
-        ping_service_name = 'zato.server.service.internal.Ping'
+        ping_impl_name = 'zato.server.service.internal.Ping'
+        ping_service_name = 'zato.Ping'
         ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
         session.add(ping_service)
         

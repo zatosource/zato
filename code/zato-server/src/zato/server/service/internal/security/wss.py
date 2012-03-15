@@ -28,6 +28,9 @@ from uuid import uuid4
 from lxml import etree
 from lxml.objectify import Element
 
+# validate
+from validate import is_boolean
+
 # Zato
 from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
@@ -133,6 +136,11 @@ class Edit(AdminService):
             def_id = new_params['id']
             name = new_params['name']
             cluster_id = new_params['cluster_id']
+            
+            new_params['reject_empty_nonce_creat'] = is_boolean(new_params['reject_empty_nonce_creat'])
+            new_params['reject_stale_tokens'] = is_boolean(new_params['reject_stale_tokens'])
+            new_params['reject_expiry_limit'] = int(new_params['reject_expiry_limit'])
+            new_params['nonce_freshness_time'] = int(new_params['nonce_freshness_time'])
             
             existing_one = session.query(WSSDefinition).\
                 filter(Cluster.id==cluster_id).\

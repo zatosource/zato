@@ -291,7 +291,6 @@ class Security(object):
     def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account (pun intended ;-))
@@ -304,26 +303,28 @@ class Security(object):
         """ Returns the configuration of the WSS definition of the given name.
         """
         with self.url_sec_lock:
-            return self.wss.get(name)
+            return self.wss_config.get(name)
 
     def on_broker_pull_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
         with self.url_sec_lock:
-            self.wss[msg.name] = msg
+            self.wss_config[msg.name] = msg
         
     def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
         with self.url_sec_lock:
-            del self.wss[msg.old_name]
-            self.wss[msg.name] = msg
+            del self.wss_config[msg.old_name]
+            self.wss_config[msg.name] = msg
+            self._update_url_sec(msg, security_def_type.wss)
         
     def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
         with self.url_sec_lock:
-            del self.wss[msg.name]
+            del self.wss_config[msg.name]
+            self._update_url_sec(msg, security_def_type.wss, True)
         
     def on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
@@ -331,7 +332,8 @@ class Security(object):
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account.
-            self.wss[msg.name]['password'] = msg.password
+            self.wss_config[msg.name]['password'] = msg.password
+            self._update_url_sec(msg, security_def_type.wss)
             
 # ##############################################################################
 
@@ -506,9 +508,9 @@ class SOAPHandler(_BaseMessageHandler):
         super(SOAPHandler, self).__init__(http_soap, server)
         
     def handle_security(self):
-        if self.wss_store.needs_wss(class_name):
+        if self.wss_config_store.needs_wss(class_name):
             # Will raise an exception if anything goes wrong.
-            self.wss_store.handle_request(class_name, service_data, soap)
+            self.wss_config_store.handle_request(class_name, service_data, soap)
 
 class PlainHTTPHandler(_BaseMessageHandler):
     """ Dispatches incoming plain HTTP messages to services.
