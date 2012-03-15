@@ -54,11 +54,11 @@ class _HTTPSOAPService(object):
         """ First checks whether the security type is correct for the given 
         connection type. If it is, returns a dictionary of security-related information.
         """
-        info = {'id':None, 'username':None, 'password':None, 'password_type':None, 'sec_type':None}
+        info = {'sec_name':None, 'sec_type':None}
         
         if security_id:
             
-            security = session.query(SecurityBase).\
+            security = session.query(SecurityBase.name, SecurityBase.sec_type).\
             filter(SecurityBase.id==security_id).\
             one()
             
@@ -71,10 +71,7 @@ class _HTTPSOAPService(object):
                      not in(security_def_type.basic_auth, security_def_type.wss):
                     raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
             
-            info['id'] = security.id
-            info['username'] = security.username
-            info['password'] = security.password
-            info['password_type'] = security.password_type
+            info['sec_name'] = security.name
             info['sec_type'] = security.sec_type
             
         return info
