@@ -182,6 +182,7 @@ class Create(AdminService, _HTTPSOAPService):
                 session.commit()
                 
                 core_params.update(optional_params)
+                core_params['id'] = item.id
                 core_params.update(sec_info)
                 self.notify_worker_threads(core_params)
 
