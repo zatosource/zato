@@ -574,7 +574,6 @@ class HTTPSOAPWrapper(object):
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(r.status_code))
         verbose.write('\nResponse time: {}'.format(datetime.now() - start))
-        
         value = verbose.getvalue()
         verbose.close()
         
