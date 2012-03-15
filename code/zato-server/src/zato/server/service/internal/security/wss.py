@@ -116,6 +116,7 @@ class Create(AdminService):
             else:
                 params['action'] = SECURITY.WSS_CREATE
                 params['password'] = password
+                params['sec_type'] = 'wss'
                 self.broker_client.send_json(params, 
                     msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
@@ -180,6 +181,7 @@ class Edit(AdminService):
             else:
                 new_params['action'] = SECURITY.WSS_EDIT
                 new_params['old_name'] = old_name
+                new_params['sec_type'] = 'wss'
                 self.broker_client.send_json(new_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
             self.response.payload = etree.tostring(wss_elem)

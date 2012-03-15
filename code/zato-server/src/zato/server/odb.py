@@ -115,6 +115,7 @@ class ODBManager(SessionWrapper):
                 # Common things first
                 result[item.url_path].sec_def.name = sec_def.name    
                 result[item.url_path].sec_def.password = sec_def.password
+                result[item.url_path].sec_def.sec_type = item.sec_type
     
                 if item.sec_type == security_def_type.tech_account:
                     result[item.url_path].sec_def.salt = sec_def.salt

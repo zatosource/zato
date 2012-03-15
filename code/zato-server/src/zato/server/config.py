@@ -81,6 +81,12 @@ class ConfigDict(object):
         config_dict._bunch.update(self._bunch)
         
         return config_dict
+    
+    def copy_keys(self):
+        """ Returns a deepcopy of the underlying Bunch's keys
+        """
+        with self.lock:
+            return deepcopy(self._bunch.keys())
             
     @staticmethod        
     def from_query(name, query_data, item_class=Bunch):

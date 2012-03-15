@@ -34,6 +34,9 @@ from lxml import objectify
 # Requests
 import requests
 
+# Bunch
+from bunch import Bunch
+
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
@@ -222,7 +225,14 @@ class Security(object):
                             if key in sec_def:
                                 sec_def[key] = msg[key]
 
-# ##############################################################################        
+# ##############################################################################
+
+    def _update_basic_auth(self, name, config):
+        if name in self.basic_auth_config:
+            self.basic_auth_config[name].clear()
+            
+        self.basic_auth_config[name] = Bunch()
+        self.basic_auth_config[name].config = config
 
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition
@@ -235,14 +245,14 @@ class Security(object):
         """ Creates a new HTTP Basic Auth security definition
         """
         with self.url_sec_lock:
-            self.basic_auth_config[msg.name] = msg
+            self._update_basic_auth(msg.name, msg)
         
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
             del self.basic_auth_config[msg.old_name]
-            self.basic_auth_config[msg.name] = msg
+            self._update_basic_auth(msg.name, msg)
             self._update_url_sec(msg, security_def_type.basic_auth)
             
     def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
@@ -256,10 +266,17 @@ class Security(object):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
-            self.basic_auth_config[msg.name]['password'] = msg.password
+            self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.basic_auth)
 
 # ##############################################################################
+
+    def _update_tech_acc(self, name, config):
+        if name in self.tech_acc_config:
+            self.tech_acc_config[name].clear()
+            
+        self.tech_acc_config[name] = Bunch()
+        self.tech_acc_config[name].config = config
 
     def tech_acc_get(self, name):
         """ Returns the configuration of the technical account of the given name.
@@ -271,14 +288,14 @@ class Security(object):
         """ Creates a new technical account.
         """
         with self.url_sec_lock:
-            self.tech_acc_config[msg.name] = msg
+            self._update_tech_acc(msg.name, msg)
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
         with self.url_sec_lock:
             del self.tech_acc_config[msg.old_name]
-            self.tech_acc_config[msg.name] = msg
+            self._update_tech_acc(msg.name, msg)
             self._update_url_sec(msg, security_def_type.tech_account)
         
     def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
@@ -299,6 +316,13 @@ class Security(object):
             
 # ##############################################################################
 
+    def _update_wss(self, name, config):
+        if name in self.wss_config:
+            self.wss_config[name].clear()
+            
+        self.wss_config[name] = Bunch()
+        self.wss_config[name].config = config
+
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
         """
@@ -309,14 +333,14 @@ class Security(object):
         """ Creates a new WS-Security definition.
         """
         with self.url_sec_lock:
-            self.wss_config[msg.name] = msg
+            self._update_wss(msg.name, msg)
         
     def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
         with self.url_sec_lock:
             del self.wss_config[msg.old_name]
-            self.wss_config[msg.name] = msg
+            self._update_wss(msg.name, msg)
             self._update_url_sec(msg, security_def_type.wss)
         
     def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
@@ -529,11 +553,16 @@ class HTTPSOAPWrapper(object):
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.requests = requests
+        self.set_auth()
+        
+    def set_auth(self):
+        """ Configures the security for requests, if any is to be configured at all.
+        """
         self.auth = self.get_auth()
         self.requests_auth = self.auth if self.config['sec_type'] == security_def_type.basic_auth else None
         
     def __str__(self):
-        return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config)
+        return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
     
     __repr__ = __str__
     

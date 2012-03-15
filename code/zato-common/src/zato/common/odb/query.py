@@ -87,8 +87,8 @@ def basic_auth_list(session, cluster_id, needs_columns=False):
     return session.query(HTTPBasicAuth.id, HTTPBasicAuth.name,
                          HTTPBasicAuth.is_active, \
                          HTTPBasicAuth.username, HTTPBasicAuth.realm, \
-                         HTTPBasicAuth.password
-                         ).\
+                         HTTPBasicAuth.password, HTTPBasicAuth.sec_type,
+                         HTTPBasicAuth.password_type).\
         filter(Cluster.id==cluster_id).\
         order_by('sec_basic_auth.name')
 
@@ -98,7 +98,8 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
     """
     return session.query(TechnicalAccount.id, TechnicalAccount.name, \
                          TechnicalAccount.is_active, \
-                         TechnicalAccount.password, TechnicalAccount.salt).\
+                         TechnicalAccount.password, TechnicalAccount.salt, 
+                         TechnicalAccount.sec_type, TechnicalAccount.password_type).\
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
         order_by('sec_tech_acc.name')
@@ -111,7 +112,7 @@ def wss_list(session, cluster_id, needs_columns=False):
                          WSSDefinition.username, WSSDefinition.password, WSSDefinition.password_type, \
                          WSSDefinition.reject_empty_nonce_creat, WSSDefinition.reject_stale_tokens, \
                          WSSDefinition.reject_expiry_limit, WSSDefinition.nonce_freshness_time, \
-                         WSSDefinition.nonce_freshness_time).\
+                         WSSDefinition.nonce_freshness_time, WSSDefinition.sec_type).\
         filter(Cluster.id==cluster_id).\
         order_by('sec_wss_def.name')
 
