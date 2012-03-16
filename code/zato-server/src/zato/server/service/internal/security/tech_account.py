@@ -147,6 +147,7 @@ class Edit(AdminService):
             cluster_id = params['cluster_id']
             tech_account_id = params['tech_account_id']
             name = params['name']
+            params['is_active'] = is_boolean(params['is_active'])
             
             existing_one = session.query(TechnicalAccount).\
                 filter(Cluster.id==cluster_id).\

@@ -94,7 +94,7 @@ class Edit(AdminService):
             
             params = _get_params(payload, request_params, 'data.')
             id = int(params['id'])
-            is_active = is_boolean(params['is_active'])
+            params['is_active'] = is_boolean(params['is_active'])
             name = params['name']
             
             service_elem = Element('service')
@@ -102,7 +102,7 @@ class Edit(AdminService):
             try:
                 
                 service = session.query(Service).filter_by(id=id).one()
-                service.is_active = is_active
+                service.is_active = params['is_active']
                 service.name = name
                 
                 session.add(service)
