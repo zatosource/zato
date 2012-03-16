@@ -504,15 +504,15 @@ class _BaseMessageHandler(object):
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, rid, task, request, headers, transport, thread_ctx):
+    def handle(self, rid, task, raw_request, headers, transport, thread_ctx):
         
-        payload, impl_name, service_data = self.init(rid, task, request, headers, transport)
+        payload, impl_name, service_data = self.init(rid, task, raw_request, headers, transport)
 
         service_instance = self.server.service_store.new_instance(impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
-                                thread_ctx.store, transport, rid)
+            thread_ctx.store, rid, payload, raw_request, transport)
 
-        service_instance.handle(payload=payload, raw_request=request, transport=transport, thread_ctx=thread_ctx)
+        service_instance.handle()
         response = service_instance.response
 
         if isinstance(service_instance, AdminService) and service_instance.needs_xml:

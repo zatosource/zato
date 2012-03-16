@@ -92,11 +92,11 @@ def _get_edit_create_message(params, prefix=''):
 
     security = params[prefix + 'security']
     if security != ZATO_NONE:
-        _, sec_def_id = security.split('/')
+        _, security_id = security.split('/')
     else:
-        _, sec_def_id = ZATO_NONE, ZATO_NONE
+        _, security_id = ZATO_NONE, ZATO_NONE
         
-    zato_message.data.sec_def_id = sec_def_id
+    zato_message.data.security_id = security_id
 
     return zato_message
 

@@ -34,19 +34,20 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
-    def handle(self, *args, **kwargs):
-        
-        with closing(self.odb.session()) as session:
-            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-            definition_list = Element('definition_list')
+    class FlatInput:
+        required = ('cluster_id',)
 
+    def handle(self, *args, **kwargs):
+        with closing(self.odb.session()) as session:
+            
+            definition_list = Element('definition_list')
             pairs = (('basic_auth', basic_auth_list), 
                      ('tech_acc', tech_acc_list), 
                      ('wss', wss_list))
             
             for def_type, meth in pairs:
                 
-                definitions = meth(session, params['cluster_id'], False)
+                definitions = meth(session, self.request.input.cluster_id, False)
                 for definition in definitions:
         
                     definition_elem = Element('definition')
