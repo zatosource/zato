@@ -79,16 +79,16 @@ class _HTTPSOAPService(object):
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
-    def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id', 'connection', 'transport'], 'data.')
+    class FlatInput:
+        required = ('cluster_id', 'connection', 'transport')
 
+    def handle(self):
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = http_soap_list(session, params['cluster_id'],
-                params['connection'], params['transport'], False)
+            db_items = http_soap_list(session, self.request.input.cluster_id,
+                self.request.input.connection, self.request.input.transport, False)
+            
             for db_item in db_items:
-
                 item = Element('item')
                 item.id = db_item.id
                 item.name = db_item.name
@@ -112,32 +112,21 @@ class GetList(AdminService):
 class Create(AdminService, _HTTPSOAPService):
     """ Creates a new HTTP/SOAP connection.
     """
-    def handle(self, *args, **kwargs):
-
+    class FlatInput:
+        required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
+                    'url_path', 'service', 'security_id')
+        optional = ('method', 'soap_action', 'soap_version', 'host')
+    
+    def handle(self):
+        input = self.request.input
+        input.security_id = input.security_id if input.security_id != ZATO_NONE else None
+        
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            core_params = ['connection', 'transport', 'cluster_id', 'name', 
-                           'is_active', 'is_internal', 'url_path', 'service', 
-                           'sec_def_id']
-            core_params = _get_params(payload, core_params, 'data.')
-
-            optional_params = ['method', 'soap_action', 'soap_version', 'host']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            service_name = core_params['service']
-            security_id = core_params['sec_def_id']
-            security_id = security_id if security_id != ZATO_NONE else None
-            connection = core_params['connection']
-            transport = core_params['transport']
-
             existing_one = session.query(HTTPSOAP.id).\
-                filter(HTTPSOAP.cluster_id==cluster_id).\
-                filter(HTTPSOAP.name==name).\
-                filter(HTTPSOAP.connection==connection).\
-                filter(HTTPSOAP.transport==transport).\
+                filter(HTTPSOAP.cluster_id==input.cluster_id).\
+                filter(HTTPSOAP.name==input.name).\
+                filter(HTTPSOAP.connection==input.connection).\
+                filter(HTTPSOAP.transport==input.transport).\
                 first()
 
             if existing_one:
@@ -145,46 +134,44 @@ class Create(AdminService, _HTTPSOAPService):
             
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==cluster_id).\
-                filter(Service.name==service_name).first()
+                filter(Cluster.id==input.cluster_id).\
+                filter(Service.name==input.service).first()
             
-            if connection == 'channel' and not service:
+            if input.connection == 'channel' and not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
                 self.logger.error(msg)
                 raise Exception(msg)
             
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._handle_security_info(session, security_id, connection, transport)
+            sec_info = self._handle_security_info(session, input.security_id, 
+                input.connection, input.transport)
             
             created_elem = Element('http_soap')
             
             try:
 
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-
                 item = HTTPSOAP()
-                item.connection = connection
-                item.transport = transport
-                item.cluster_id = core_params['cluster_id']
-                item.is_internal = core_params['is_internal']
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.host = optional_params['host']
-                item.url_path = core_params['url_path']
-                item.security_id = security_id
-                item.method = optional_params.get('method')
-                item.soap_action = optional_params.get('soap_action')
-                item.soap_version = optional_params.get('soap_version')
+                item.connection = input.connection
+                item.transport = input.transport
+                item.cluster_id = input.cluster_id
+                item.is_internal = input.is_internal
+                item.name = input.name
+                item.is_active = input.is_active
+                item.host = input.host
+                item.url_path = input.url_path
+                item.security_id = input.security_id
+                item.method = input.method
+                item.soap_action = input.soap_action
+                item.soap_version = input.soap_version
                 item.service = service
 
                 session.add(item)
                 session.commit()
                 
-                core_params.update(optional_params)
-                core_params['id'] = item.id
-                core_params.update(sec_info)
-                self.notify_worker_threads(core_params)
+                input.id = item.id
+                input.update(sec_info)
+                self.notify_worker_threads(input)
 
                 created_elem.id = item.id
 
@@ -200,32 +187,23 @@ class Create(AdminService, _HTTPSOAPService):
 class Edit(AdminService, _HTTPSOAPService):
     """ Updates an HTTP/SOAP connection.
     """
-    def handle(self, *args, **kwargs):
-
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
+                'connection', 'transport', 'security_id')
+        optional = ('method', 'soap_action', 'soap_version', 'host')    
+    
+    def handle(self):
+        input = self.request.input
+        input.security_id = input.security_id if input.security_id != ZATO_NONE else None
+        
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'url_path', 
-                'connection', 'transport', 'sec_def_id']
-            core_params = _get_params(payload, core_params, 'data.')
-
-            optional_params = ['method', 'soap_action', 'soap_version', 'host']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-
-            id = core_params['id']
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            security_id = core_params['sec_def_id']
-            security_id = security_id if security_id != ZATO_NONE else None
-            connection = core_params['connection']
-            transport = core_params['transport']
 
             existing_one = session.query(HTTPSOAP.id).\
-                filter(HTTPSOAP.cluster_id==cluster_id).\
-                filter(HTTPSOAP.id!=id).\
-                filter(HTTPSOAP.name==name).\
-                filter(HTTPSOAP.connection==connection).\
-                filter(HTTPSOAP.transport==transport).\
+                filter(HTTPSOAP.cluster_id==input.cluster_id).\
+                filter(HTTPSOAP.id!=input.id).\
+                filter(HTTPSOAP.name==input.name).\
+                filter(HTTPSOAP.connection==input.connection).\
+                filter(HTTPSOAP.transport==input.transport).\
                 first()
 
             if existing_one:
@@ -233,36 +211,31 @@ class Edit(AdminService, _HTTPSOAPService):
             
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._handle_security_info(session, security_id, connection, transport)
+            sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
 
             xml_item = Element('http_soap')
 
             try:
-
-                core_params['id'] = int(core_params['id'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-
-                item = session.query(HTTPSOAP).filter_by(id=id).one()
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.host = optional_params['host']
-                item.url_path = core_params['url_path']
-                item.security_id = security_id
-                item.connection = connection
-                item.transport = transport
-                item.cluster_id = core_params['cluster_id']
-                item.method = optional_params.get('method')
-                item.soap_action = optional_params.get('soap_action')
-                item.soap_version = optional_params.get('soap_version')
+                item = session.query(HTTPSOAP).filter_by(id=input.id).one()
+                item.name = input.name
+                item.is_active = input.is_active
+                item.host = input.host
+                item.url_path = input.url_path
+                item.security_id = input.security_id
+                item.connection = input.connection
+                item.transport = input.transport
+                item.cluster_id = input.cluster_id
+                item.method = input.method
+                item.soap_action = input.soap_action
+                item.soap_version = input.soap_version
 
                 session.add(item)
                 session.commit()
                 
                 xml_item.id = item.id
                 
-                core_params.update(optional_params)
-                core_params.update(sec_info)
-                self.notify_worker_threads(core_params)
+                input.update(sec_info)
+                self.notify_worker_threads(input)
 
                 self.response.payload = etree.tostring(xml_item)
 
@@ -276,17 +249,14 @@ class Edit(AdminService, _HTTPSOAPService):
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-
-                id = params['id']
-
                 item = session.query(HTTPSOAP).\
-                    filter(HTTPSOAP.id==id).\
+                    filter(HTTPSOAP.id==self.request.input.id).\
                     one()
                 
                 old_name = item.name
@@ -308,13 +278,13 @@ class Delete(AdminService, _HTTPSOAPService):
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
-            params = ['id']
-            params = _get_params(kwargs.get('payload'), params, 'data.')
+            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             
-            item = session.query(HTTPSOAP).filter_by(id=params['id']).one()
-    
             info_elem = etree.Element('info')
             info_elem.text = self.outgoing.plain_http.get(item.name).ping()
             
@@ -324,7 +294,7 @@ class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
     Zato channels.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         self.needs_xml = False
         self.response.payload = dumps(self.worker_store.request_handler.security.url_sec, sort_keys=True, indent=4)
         self.response.content_type = 'application/json'

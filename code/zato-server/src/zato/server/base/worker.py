@@ -290,9 +290,9 @@ class WorkerStore(BaseWorker):
         """
         service_instance = self.worker_config.server.service_store.new_instance(msg.service)
         service_instance.update(service_instance, self.worker_config.server, self.broker_client, 
-                                self.odb, self.sql_pool_store, channel, msg.rid)
+            self.odb, self.sql_pool_store, channel, msg.get('payload'), raw_request, msg.rid)
         
-        response = service_instance.handle(payload=msg.get('payload'), raw_request=msg)
+        response = service_instance.handle()
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(

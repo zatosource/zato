@@ -40,13 +40,13 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of services.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('cluster_id',)
         
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
+    def handle(self):
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = service_list(session, params['cluster_id'], False)
+            db_items = service_list(session, self.request.input.cluster_id, False)
             
             for db_item in db_items:
     
@@ -65,13 +65,13 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular service.
     """
+    class FlatInput:
+        required = ('cluster_id', 'id')
+
     def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['id', 'cluster_id'], 'data.')
-        
         with closing(self.odb.session()) as session:
 
-            db_item = service(session, params['cluster_id'], params['id'])
+            db_item = service(session, self.request.input.cluster_id, self.request.input.id)
             
             item = Element('item')
             item.id = db_item.id
@@ -86,24 +86,18 @@ class GetByID(AdminService):
 class Edit(AdminService):
     """ Updates a service.
     """
+    class FlatInput:
+        required = ('id', 'is_active', 'name')
+    
     def handle(self, *args, **kwargs):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['id', 'is_active', 'name']
-            
-            params = _get_params(payload, request_params, 'data.')
-            id = int(params['id'])
-            params['is_active'] = is_boolean(params['is_active'])
-            name = params['name']
-            
             service_elem = Element('service')
-            
             try:
-                
-                service = session.query(Service).filter_by(id=id).one()
-                service.is_active = params['is_active']
-                service.name = name
+                service = session.query(Service).filter_by(id=input.id).one()
+                service.is_active = input.is_active
+                service.name = input.name
                 
                 session.add(service)
                 session.commit()
@@ -114,8 +108,8 @@ class Edit(AdminService):
                 service_elem.is_internal = service.is_internal
                 service_elem.usage_count = 'TODO edit'
                 
-                params['action'] = SERVICE.EDIT
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SERVICE.EDIT
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
                 self.response.payload = etree.tostring(service_elem)
                 
@@ -129,23 +123,20 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a service
     """
+    class FlatInput:
+        required = ('id',)
+
     def handle(self, *args, **kwargs):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = int(params['id'])
-                
                 service = session.query(Service).\
-                    filter(Service.id==id).\
+                    filter(Service.id==self.request.input.id).\
                     one()
                 
                 session.delete(service)
                 session.commit()
 
-                msg = {'action': SERVICE.DELETE, 'id': id}
+                msg = {'action': SERVICE.DELETE, 'id': self.request.input.id}
                 self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
             except Exception, e:
