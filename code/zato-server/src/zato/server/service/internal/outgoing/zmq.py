@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of outgoing ZeroMQ connections.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         self.zmq.send('zzz', 'zmqpush1')
         
@@ -67,7 +67,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing ZeroMQ connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -117,7 +117,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing ZeroMQ connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -173,7 +173,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing ZeroMQ connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')

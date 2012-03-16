@@ -33,18 +33,18 @@ from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common.odb.query import def_amqp_list
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
     """
-    def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
+    class FlatInput:
+        required = ('cluster_id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = def_amqp_list(session, params['cluster_id'], False)
+            definitions = def_amqp_list(session, self.request.input.cluster_id, False)
             
             for definition in definitions:
     
@@ -65,16 +65,16 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular AMQP definition
     """
-    def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['id'], 'data.')
-        
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
 
             definition = session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
                 ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
                 ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
-                filter(ConnDefAMQP.id==params['id']).\
+                filter(ConnDefAMQP.id==self.request.input.id).\
                 one()            
             
             definition_elem = Element('definition')
@@ -93,42 +93,32 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP definition.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('cluster_id', 'name', 'host', 'port', 'vhost', 
+            'username', 'frame_max', 'heartbeat')
+
+    def handle(self):
+        input = self.request.input
+        input.password = uuid4().hex
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'name', 'host', 'port', 'vhost', 
-                'username', 'frame_max', 'heartbeat']
-            
-            params = _get_params(payload, request_params, 'data.')
-            name = params['name']
-            params['port'] = int(params['port'])
-            params['frame_max'] = int(params['frame_max'])
-            params['heartbeat'] = int(params['heartbeat'])
-            
-            cluster_id = params['cluster_id']
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
-            password = uuid4().hex
-            params['password'] = password
-            
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
             existing_one = session.query(ConnDefAMQP).\
                 filter(ConnDefAMQP.cluster_id==Cluster.id).\
                 filter(ConnDefAMQP.def_type=='amqp').\
-                filter(ConnDefAMQP.name==name).\
+                filter(ConnDefAMQP.name==input.name).\
                 first()
             
             if existing_one:
-                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(input.name))
             
             created_elem = Element('def_amqp')
             
             try:
-                def_ = ConnDefAMQP(None, name, 'amqp', params['host'], params['port'], params['vhost'], 
-                    params['username'], password, params['frame_max'], params['heartbeat'],
-                    cluster_id)
+                def_ = ConnDefAMQP(None, input.name, 'amqp', input.host, input.port, input.vhost, 
+                    input.username, input.password, input.frame_max, input.heartbeat,
+                    input.cluster_id)
                 session.add(def_)
                 session.commit()
                 
@@ -146,61 +136,48 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an AMQP definition.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 
+            'username', 'frame_max', 'heartbeat')
+
+    def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['id', 'cluster_id', 'name', 'host', 'port', 
-                'vhost',  'username', 'frame_max', 'heartbeat']
-            
-            params = _get_params(payload, request_params, 'data.')
-            
-            id = params['id']
-            name = params['name']
-            params['port'] = int(params['port'])
-            params['frame_max'] = int(params['frame_max'])
-            params['heartbeat'] = int(params['heartbeat'])
-            
-            cluster_id = params['cluster_id']
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
-            password = uuid4().hex
-            
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
             existing_one = session.query(ConnDefAMQP).\
                 filter(ConnDefAMQP.cluster_id==Cluster.id).\
                 filter(ConnDefAMQP.def_type=='amqp').\
-                filter(ConnDefAMQP.id != id).\
-                filter(ConnDefAMQP.name==name).\
+                filter(ConnDefAMQP.id!=input.id).\
+                filter(ConnDefAMQP.name==input.name).\
                 first()
             
             if existing_one:
-                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('AMQP definition [{0}] already exists on this cluster'.format(input.name))
             
             def_amqp_elem = Element('def_amqp')
             
             try:
                 
-                def_amqp = session.query(ConnDefAMQP).filter_by(id=id).one()
+                def_amqp = session.query(ConnDefAMQP).filter_by(id=input.id).one()
                 old_name = def_amqp.name
-                def_amqp.name = name
-                def_amqp.host = params['host']
-                def_amqp.port = params['port']
-                def_amqp.vhost = params['vhost']
-                def_amqp.username = params['username']
-                def_amqp.frame_max = params['frame_max']
-                def_amqp.heartbeat = params['heartbeat']
+                def_amqp.name = input.name
+                def_amqp.host = input.host
+                def_amqp.port = input.port
+                def_amqp.vhost = input.vhost
+                def_amqp.username = input.username
+                def_amqp.frame_max = input.frame_max
+                def_amqp.heartbeat = input.heartbeat
                 
                 session.add(def_amqp)
                 session.commit()
                 
                 def_amqp_elem.id = def_amqp.id
                 
-                params['id'] = int(params['id'])
-                params['action'] = DEFINITION.AMQP_EDIT
-                params['old_name'] = old_name
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                input.action = DEFINITION.AMQP_EDIT
+                input.old_name = old_name
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
                 self.response.payload = etree.tostring(def_amqp_elem)
                 
@@ -214,23 +191,20 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an AMQP definition.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = int(params['id'])
-                
                 def_ = session.query(ConnDefAMQP).\
-                    filter(ConnDefAMQP.id==id).\
+                    filter(ConnDefAMQP.id==self.request.input.id).\
                     one()
                 
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.AMQP_DELETE, 'id': id}
+                msg = {'action': DEFINITION.AMQP_DELETE, 'id': self.request.input.id}
                 self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
             except Exception, e:
@@ -243,11 +217,11 @@ class Delete(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         def _auth(instance, password):
             instance.password = password
             
         return self._handle(ConnDefAMQP, _auth, 
-                            DEFINITION.AMQP_CHANGE_PASSWORD, 
-                            msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, **kwargs)
+            DEFINITION.AMQP_CHANGE_PASSWORD, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, 
+            payload=self.request.payload)

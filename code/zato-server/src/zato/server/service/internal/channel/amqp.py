@@ -41,13 +41,13 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of AMQP channels.
     """
-    def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
+    class FlatInput:
+        required = ('cluster_id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = channel_amqp_list(session, params['cluster_id'], False)
+            db_items = channel_amqp_list(session, self.request.input.cluster_id, False)
     
             for db_item in db_items:
     
@@ -68,26 +68,20 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP channel.
     """
-    def handle(self, *args, **kwargs):
-        
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 
+            'consumer_tag_prefix', 'service')
+
+    def handle(self):
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            
-            params = ['cluster_id', 'name', 'is_active', 'def_id', 'queue', 
-                      'consumer_tag_prefix', 'service']
-            params = _get_params(payload, params, 'data.')
-            
-            name = params['name']
-            cluster_id = params['cluster_id']
-            service_name = params['service']
-            params['def_id'] = int(params['def_id'])
+            input = self.request.input
             
             # Let's see if we already have a channel of that name before committing
             # any stuff into the database.
             existing_one = session.query(ChannelAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==cluster_id).\
+                filter(ConnDefAMQP.cluster_id==input.cluster_id).\
                 filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
-                filter(ChannelAMQP.name==name).\
+                filter(ChannelAMQP.name==input.name).\
                 first()
             
             if existing_one:
@@ -95,25 +89,22 @@ class Create(AdminService):
             
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==cluster_id).\
-                filter(Service.name==service_name).first()
+                filter(Cluster.id==input.cluster_id).\
+                filter(Service.name==input.service).first()
             
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
             
             created_elem = Element('channel_amqp')
             
             try:
-
-                params['is_active'] = is_boolean(params['is_active'])
-                
                 item = ChannelAMQP()
-                item.name = params['name']
-                item.is_active = params['is_active']
-                item.queue = params['queue']
-                item.consumer_tag_prefix = params['consumer_tag_prefix']
-                item.def_id = params['def_id']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.queue = input.queue
+                item.consumer_tag_prefix = input.consumer_tag_prefix
+                item.def_id = input.def_id
                 item.service = service
                 
                 session.add(item)
@@ -134,57 +125,45 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an AMQP channel.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 
+            'consumer_tag_prefix', 'service')
+
+    def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 
-                      'consumer_tag_prefix', 'service']
-            params = _get_params(payload, params, 'data.')
-            
-            id = params['id']
-            name = params['name']
-            cluster_id = params['cluster_id']
-            service_name = params['service']
-            params['def_id'] = int(params['def_id'])
-            
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
             existing_one = session.query(ChannelAMQP.id).\
-                filter(ConnDefAMQP.cluster_id==cluster_id).\
+                filter(ConnDefAMQP.cluster_id==input.cluster_id).\
                 filter(ChannelAMQP.def_id==ConnDefAMQP.id).\
-                filter(ChannelAMQP.name==name).\
-                filter(ChannelAMQP.id!=id).\
+                filter(ChannelAMQP.name==input.name).\
+                filter(ChannelAMQP.id!=input.id).\
                 first()
             
             if existing_one:
-                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(name))
+                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(input.name))
             
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==cluster_id).\
-                filter(Service.name==service_name).first()
+                filter(Cluster.id==input.cluster_id).\
+                filter(Service.name==input.service).first()
             
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
             
             xml_item = Element('channel_amqp')
             
             try:
-                
-                params['id'] = int(params['id'])
-                params['def_id'] = int(params['def_id'])
-                params['is_active'] = is_boolean(params['is_active'])
-                
-                item = session.query(ChannelAMQP).filter_by(id=id).one()
+                item = session.query(ChannelAMQP).filter_by(id=input.id).one()
                 old_name = item.name
-                item.name = name
-                item.is_active = params['is_active']
-                item.queue = params['queue']
-                item.consumer_tag_prefix = params['consumer_tag_prefix']
-                item.def_id = params['def_id']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.queue = input.queue
+                item.consumer_tag_prefix = input.consumer_tag_prefix
+                item.def_id = input.def_id
                 item.service = service
                 
                 session.add(item)
@@ -192,9 +171,9 @@ class Edit(AdminService):
                 
                 xml_item.id = item.id
                 
-                params['action'] = CHANNEL.AMQP_EDIT
-                params['old_name'] = old_name
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                input.action = CHANNEL.AMQP_EDIT
+                old_name = old_name
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
                 self.response.payload = etree.tostring(xml_item)
                 
@@ -208,17 +187,14 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an AMQP channel.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                
                 def_ = session.query(ChannelAMQP).\
-                    filter(ChannelAMQP.id==id).\
+                    filter(ChannelAMQP.id==self.request.input.id).\
                     one()
                 
                 session.delete(def_)

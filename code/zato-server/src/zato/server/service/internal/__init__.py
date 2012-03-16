@@ -28,44 +28,12 @@ from urlparse import parse_qs
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE
-from zato.server.service import Service
+from zato.server.service import _get_params, Service
 
 success_code = 0
-success = "<error_code>%s</error_code>" % success_code
+success = '<error_code>{}</error_code>'.format(success_code)
 
-logger = logging.getLogger("zato.server.service.internal")
-
-_get_params = 1
-
-def _parse_extra_params(payload):
-    """ Turns a query string with extra parameters into a dictionary.
-    """
-    extra_dict = {}
-
-    # Extra parameters are not mandatory.
-    if zato_path("pool.extra_list").get_from(payload) is not None:
-        for extra_elem in payload.pool.extra_list.extra:
-
-            extra_elem_dict = parse_qs(unicode(extra_elem), True)
-            param_name, param_value = extra_elem_dict.items()[0]
-            param_name = str(param_name)
-            param_value = param_value[0]
-
-            if not param_value:
-                msg = "Extra parameter [%s] has no value" % param_name
-                logger.error(msg)
-                raise ZatoException(msg)
-
-            if param_name in extra_dict:
-                msg = "Extra parameter [%s] specified more than once" % param_name
-                logger.error(msg)
-                raise ZatoException(msg)
-
-            extra_dict[param_name] = param_value
-
-    logger.debug("Returning extra parameters [%s]" % extra_dict)
-
-    return extra_dict
+logger = logging.getLogger(__name__)
 
 class AdminService(Service):
     def __init__(self):

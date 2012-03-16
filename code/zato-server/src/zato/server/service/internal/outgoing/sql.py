@@ -48,7 +48,7 @@ class _SQLService(object):
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
         with closing(self.odb.session()) as session:
@@ -77,7 +77,7 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -143,7 +143,7 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
 
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -212,7 +212,7 @@ class Edit(AdminService, _SQLService):
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
@@ -244,7 +244,7 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing SQL connection. The underlying implementation
     will actually stop and recreate the connection using the new password.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
 
         with closing(self.odb.session()) as session:
             
@@ -256,7 +256,7 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an SQL database
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')

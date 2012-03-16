@@ -43,7 +43,7 @@ class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
     sorted by the 'name' attribute.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             definition_list = Element('definition_list')
@@ -64,7 +64,7 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -86,7 +86,7 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new technical account.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -137,7 +137,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing technical account.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -191,7 +191,7 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         salt = uuid4().hex
         def _auth(instance, password):
             instance.password = tech_account_password(password, salt)
@@ -203,7 +203,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a technical account.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')

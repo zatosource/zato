@@ -41,13 +41,13 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.
     """
-    def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
+    class FlatInput:
+        required = ('cluster_id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = channel_zmq_list(session, params['cluster_id'], False)
+            db_items = channel_zmq_list(session, self.request.input.cluster_id, False)
             
             for db_item in db_items:
     
@@ -67,51 +67,41 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new ZeroMQ channel.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
+        optional = ('sub_key',)
+
+    def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            
-            core_params = ['cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['sub_key']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-            
-            name = core_params['name']
-            service_name = core_params['service']
-            cluster_id = core_params['cluster_id']
-            
             existing_one = session.query(ChannelZMQ.id).\
-                filter(ChannelZMQ.cluster_id==cluster_id).\
-                filter(ChannelZMQ.name==name).\
+                filter(ChannelZMQ.cluster_id==input.cluster_id).\
+                filter(ChannelZMQ.name==input.name).\
                 first()
             
             if existing_one:
-                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(name))
+                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(input.name))
             
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==cluster_id).\
-                filter(Service.name==service_name).first()
+                filter(Cluster.id==input.cluster_id).\
+                filter(Service.name==input.service).first()
             
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
             
             created_elem = Element('channel_zmq')
             
             try:
-
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                
                 item = ChannelZMQ()
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.address = core_params['address']
-                item.socket_type = core_params['socket_type']
-                item.sub_key = optional_params.get('sub_key')
-                item.cluster_id = core_params['cluster_id']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.address = input.address
+                item.socket_type = input.socket_type
+                item.sub_key = input.sub_key
+                item.cluster_id = input.cluster_id
                 item.service = service
                 
                 session.add(item)
@@ -132,54 +122,42 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a ZeroMQ channel.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
+        optional = ('sub_key',)
+
+    def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['sub_key']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-            
-            id = core_params['id']
-            name = core_params['name']
-            service_name = core_params['service']
-            cluster_id = core_params['cluster_id']
-            
             existing_one = session.query(ChannelZMQ.id).\
-                filter(ChannelZMQ.cluster_id==cluster_id).\
-                filter(ChannelZMQ.name==name).\
-                filter(ChannelZMQ.id!=id).\
+                filter(ChannelZMQ.cluster_id==input.cluster_id).\
+                filter(ChannelZMQ.name==input.name).\
+                filter(ChannelZMQ.id!=input.id).\
                 first()
             
             if existing_one:
-                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(name))
+                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(input.name))
             
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==cluster_id).\
-                filter(Service.name==service_name).first()
+                filter(Cluster.id==input.cluster_id).\
+                filter(Service.name==input.service).first()
             
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
             
             xml_item = Element('channel_zmq')
             
             try:
-                
-                core_params['id'] = int(core_params['id'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                
-                item = session.query(ChannelZMQ).filter_by(id=id).one()
+                item = session.query(ChannelZMQ).filter_by(id=input.id).one()
                 old_name = item.name
-                item.name = name
-                item.is_active = core_params['is_active']
-                item.address = core_params['address']
-                item.socket_type = core_params['socket_type']
-                item.sub_key = optional_params.get('sub_key')
+                item.name = input.name
+                item.is_active = input.is_active
+                item.address = input.address
+                item.socket_type = input.socket_type
+                item.sub_key = input.sub_key
                 item.service = service
                 
                 session.add(item)
@@ -187,10 +165,9 @@ class Edit(AdminService):
                 
                 xml_item.id = item.id
                 
-                core_params['action'] = CHANNEL.ZMQ_EDIT
-                core_params['old_name'] = old_name
-                core_params['sub_key'] = optional_params.get('sub_key', b'')
-                self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                input.action = CHANNEL.ZMQ_EDIT
+                input.sub_key = input.get('sub_key', b'')
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
                 self.response.payload = etree.tostring(xml_item)
                 
@@ -204,17 +181,14 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a ZeroMQ channel.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                
                 item = session.query(ChannelZMQ).\
-                    filter(ChannelZMQ.id==id).\
+                    filter(ChannelZMQ.id==self.request.input.id).\
                     one()
                 
                 session.delete(item)

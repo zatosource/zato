@@ -40,13 +40,13 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
-    def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
+    class FlatInput:
+        required = ('cluster_id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = def_jms_wmq_list(session, params['cluster_id'], False)
+            definitions = def_jms_wmq_list(session, self.request.input.cluster_id, False)
     
             for definition in definitions:
     
@@ -73,13 +73,14 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
     """
-    def handle(self, *args, **kwargs):
-        
-        params = _get_params(kwargs.get('payload'), ['id', 'cluster_id'], 'data.')
+    class FlatInput:
+        required = ('id', 'cluster_id',)
+
+    def handle(self):
         
         with closing(self.odb.session()) as session:
-
-            definition = def_jms_wmq(session, params['cluster_id'], params['id'])
+            definition = def_jms_wmq(session, self.request.input.cluster_id, 
+                self.request.input.id)
             
             definition_elem = Element('definition')
             
@@ -103,45 +104,33 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
+            'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
+            'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
+            'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
+
+    def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'name', 'host', 'port', 'queue_manager', 
-                'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
-                'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-                'ssl_key_repository', 'needs_mcd', 'max_chars_printed']
-            
-            params = _get_params(payload, request_params, 'data.')
-            name = params['name']
-            params['port'] = int(params['port'])
-            params['cache_open_send_queues'] = is_boolean(params['cache_open_send_queues'])
-            params['cache_open_receive_queues'] = is_boolean(params['cache_open_receive_queues'])
-            params['use_shared_connections'] = is_boolean(params['use_shared_connections'])
-            params['ssl'] = is_boolean(params['ssl'])
-            params['needs_mcd'] = is_boolean(params['needs_mcd'])
-            params['max_chars_printed'] = int(params['max_chars_printed'])
-            
-            cluster_id = params['cluster_id']
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
             # Let's see if we already have an object of that name before committing
             # any stuff into the database.
             existing_one = session.query(ConnDefWMQ).\
                 filter(ConnDefWMQ.cluster_id==Cluster.id).\
-                filter(ConnDefWMQ.name==name).\
+                filter(ConnDefWMQ.name==input.name).\
                 first()
             
             if existing_one:
-                raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(input.name))
             
             created_elem = Element('def_jms_wmq')
             
             try:
-                def_ = ConnDefWMQ(None, name, params['host'], params['port'], params['queue_manager'], 
-                    params['channel'], params['cache_open_send_queues'], params['cache_open_receive_queues'],
-                    params['use_shared_connections'], params['ssl'], params['ssl_cipher_spec'], 
-                    params['ssl_key_repository'], params['needs_mcd'], params['max_chars_printed'],
+                def_ = ConnDefWMQ(None, input.name, input.host, input.port, input.queue_manager, 
+                    input.channel, input.cache_open_send_queues, input.cache_open_receive_queues,
+                    input.use_shared_connections, input.ssl, input.ssl_cipher_spec, 
+                    input.ssl_key_repository, input.needs_mcd, input.max_chars_printed,
                     cluster_id)
                 session.add(def_)
                 session.commit()
@@ -158,72 +147,58 @@ class Create(AdminService):
                 raise 
 
 class Edit(AdminService):
-    """ Updates an JMS WMQ definition.
+    """ Updates a JMS WMQ definition.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
+            'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
+            'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
+            'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
+
+    def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
-                'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
-                'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-                'ssl_key_repository', 'needs_mcd', 'max_chars_printed']
-            
-            params = _get_params(payload, request_params, 'data.')
-            
-            id = int(params['id'])
-            name = params['name']
-            params['port'] = int(params['port'])
-            params['cache_open_send_queues'] = is_boolean(params['cache_open_send_queues'])
-            params['cache_open_receive_queues'] = is_boolean(params['cache_open_receive_queues'])
-            params['use_shared_connections'] = is_boolean(params['use_shared_connections'])
-            params['ssl'] = is_boolean(params['ssl'])
-            params['needs_mcd'] = is_boolean(params['needs_mcd'])
-            params['max_chars_printed'] = int(params['max_chars_printed'])
-            
-            cluster_id = params['cluster_id']
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
             # Let's see if we already have an object of that name before committing
             # any stuff into the database.
             existing_one = session.query(ConnDefWMQ).\
                 filter(ConnDefWMQ.cluster_id==Cluster.id).\
-                filter(ConnDefWMQ.id!=id).\
-                filter(ConnDefWMQ.name==name).\
+                filter(ConnDefWMQ.id!=input.id).\
+                filter(ConnDefWMQ.name==input.name).\
                 first()
             
             if existing_one:
-                raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(input.name))
             
             def_jms_wmq_elem = Element('def_jms_wmq')
             
             try:
                 
-                def_jms_wmq = session.query(ConnDefWMQ).filter_by(id=id).one()
+                def_jms_wmq = session.query(ConnDefWMQ).filter_by(id=input.id).one()
                 old_name = def_jms_wmq.name
-                def_jms_wmq.name = name
-                def_jms_wmq.host = params['host']
-                def_jms_wmq.port = params['port']
-                def_jms_wmq.queue_manager = params['queue_manager']
-                def_jms_wmq.channel = params['channel']
-                def_jms_wmq.cache_open_send_queues = params['cache_open_send_queues']
-                def_jms_wmq.cache_open_receive_queues = params['cache_open_receive_queues']
-                def_jms_wmq.use_shared_connections = params['use_shared_connections']
-                def_jms_wmq.ssl = params['ssl']
-                def_jms_wmq.ssl_cipher_spec = params['ssl_cipher_spec']
-                def_jms_wmq.ssl_key_repository = params['ssl_key_repository']
-                def_jms_wmq.needs_mcd = params['needs_mcd']
-                def_jms_wmq.max_chars_printed = params['max_chars_printed']
+                def_jms_wmq.name = input.name
+                def_jms_wmq.host = input.host
+                def_jms_wmq.port = input.port
+                def_jms_wmq.queue_manager = input.queue_manager
+                def_jms_wmq.channel = input.channel
+                def_jms_wmq.cache_open_send_queues = input.cache_open_send_queues
+                def_jms_wmq.cache_open_receive_queues = input.cache_open_receive_queues
+                def_jms_wmq.use_shared_connections = input.use_shared_connections
+                def_jms_wmq.ssl = input.ssl
+                def_jms_wmq.ssl_cipher_spec = input.ssl_cipher_spec
+                def_jms_wmq.ssl_key_repository = input.ssl_key_repository
+                def_jms_wmq.needs_mcd = input.needs_mcd
+                def_jms_wmq.max_chars_printed = input.max_chars_printed
                 
                 session.add(def_jms_wmq)
                 session.commit()
                 
                 def_jms_wmq_elem.id = def_jms_wmq.id
                 
-                params['id'] = id
-                params['action'] = DEFINITION.JMS_WMQ_EDIT
-                params['old_name'] = old_name
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                input.id = id
+                input.action = DEFINITION.JMS_WMQ_EDIT
+                input.old_name = old_name
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
                 self.response.payload = etree.tostring(def_jms_wmq_elem)
                 
@@ -237,23 +212,20 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a JMS WebSphere MQ definition.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = int(params['id'])
-                
                 def_ = session.query(ConnDefWMQ).\
-                    filter(ConnDefWMQ.id==id).\
+                    filter(ConnDefWMQ.id==self.request.input.id).\
                     one()
                 
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.JMS_WMQ_DELETE, 'id': id}
+                msg = {'action': DEFINITION.JMS_WMQ_DELETE, 'id': self.request.input.id}
                 self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
             except Exception, e:
