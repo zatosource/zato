@@ -485,8 +485,9 @@ class ConnDefAMQP(Base):
 
     id = Column(Integer,  Sequence('conn_def_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+    # TODO is_active = Column(Boolean(), nullable=False)
+    
     def_type = Column(String(10), nullable=False)
-
     host = Column(String(200), nullable=False)
     port = Column(Integer(), nullable=False)
     vhost = Column(String(200), nullable=False)
@@ -521,6 +522,7 @@ class ConnDefWMQ(Base):
 
     id = Column(Integer,  Sequence('conn_def_wmq_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+    # TODO is_active = Column(Boolean(), nullable=False)
 
     host = Column(String(200), nullable=False)
     port = Column(Integer, nullable=False)

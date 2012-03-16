@@ -138,6 +138,7 @@ class Edit(AdminService):
             name = new_params['name']
             cluster_id = new_params['cluster_id']
             
+            new_params['is_active'] = is_boolean(new_params['is_active'])
             new_params['reject_empty_nonce_creat'] = is_boolean(new_params['reject_empty_nonce_creat'])
             new_params['reject_stale_tokens'] = is_boolean(new_params['reject_stale_tokens'])
             new_params['reject_expiry_limit'] = int(new_params['reject_expiry_limit'])
