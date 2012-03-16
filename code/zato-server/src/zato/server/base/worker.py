@@ -265,31 +265,22 @@ class WorkerStore(BaseWorker):
     def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
-        self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
-                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
-        {"username": "zato.ping.plain_http.wss.digest", 
-         "name": "zato.ping.plain_http.wss.digest", 
-         "nonce_freshness_time": 3600, 
-         "is_active": "true", 
-         "id": "4", 
-         "sec_type": "wss", 
-         "cluster_id": "1", 
-         "old_name": "zato.ping.plain_http.wss.digest", 
-         "action": "10401", 
-         "reject_expiry_limit": 3600, 
-         "password_type": "clear_text", 
-         "reject_empty_nonce_creat": false, 
-         "reject_stale_tokens": true}
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.wss,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name',
+                    'nonce_freshness_time', 'reject_expiry_limit', 'password_type', 
+                    'reject_empty_nonce_creat', 'reject_stale_tokens'))
         
     def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_DELETE(msg, *args)
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.wss,
+                self._visit_wrapper_delete)
         
     def on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(msg, *args)
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.wss,
+                self._visit_wrapper_change_password)
             
 # ##############################################################################
 
