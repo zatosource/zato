@@ -37,7 +37,7 @@ class GetList(AdminService):
     class FlatInput:
         required = ('cluster_id',)
 
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
             
             definition_list = Element('definition_list')

@@ -38,7 +38,8 @@ from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_list
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service import _get_params
+from zato.server.service.internal import AdminService
 
 PREDEFINED_CRON_DEFINITIONS = {
     '@yearly': '0 0 1 1 *',
@@ -59,7 +60,7 @@ def _get_interval_based_start_date(payload):
 
     return str(start_date)
 
-def _create_edit(action, payload, logger, session, broker_client):
+def _create_edit(action, payload, logger, session, broker_client, response):
     """ Creating and updating a job requires a series of very similar steps
     so they've been all put here and depending on the 'action' parameter 
     (be it 'create'/'edit') some additional operations are performed.
@@ -225,18 +226,20 @@ def _create_edit(action, payload, logger, session, broker_client):
             # a substitution like changing '@hourly' into '0 * * * *'.
             job_elem.cron_definition = cs_job.cron_definition
 
-        self.response.payload = etree.tostring(job_elem)
+        response.payload = etree.tostring(job_elem)
 
 class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('cluster_id',)
+
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             
-            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
             definition_list = Element('definition_list')
-            definitions = job_list(session, params['cluster_id'], False)
+            definitions = job_list(session, self.request.input.cluster_id, False)
             
             for definition in definitions:
     
@@ -265,33 +268,30 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new scheduler's job.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
-            return _create_edit('create', kwargs.get('payload'), self.logger, 
-                session, self.broker_client)
+            return _create_edit('create', self.request.payload, self.logger, 
+                session, self.broker_client, self.response)
         
 class Edit(AdminService):
     """ Update a new scheduler's job.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
-            return _create_edit('edit', kwargs.get('payload'), self.logger, 
-                session, self.broker_client)
+            return _create_edit('edit', self.request.payload, self.logger, 
+                session, self.broker_client, self.response)
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                
                 job = session.query(Job).\
-                    filter(Job.id==id).\
+                    filter(Job.id==self.request.input.id).\
                     one()
                 
                 session.delete(job)
@@ -310,17 +310,14 @@ class Delete(AdminService):
 class Execute(AdminService):
     """ Executes a scheduler's job.
     """
-    def handle(self, *args, **kwargs):
+    class FlatInput:
+        required = ('id',)
+
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                
                 job = session.query(Job).\
-                    filter(Job.id==id).\
+                    filter(Job.id==self.request.input.id).\
                     one()
                 
                 msg = {'action': SCHEDULER.EXECUTE, 'name': job.name}

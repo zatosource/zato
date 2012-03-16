@@ -47,7 +47,7 @@ class _FTPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
 
@@ -75,7 +75,7 @@ class GetList(AdminService):
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -133,7 +133,7 @@ class Create(_FTPService):
 class Edit(_FTPService):
     """ Updates an outgoing FTP connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
 
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -195,7 +195,7 @@ class Edit(_FTPService):
 class Delete(AdminService):
     """ Deletes an outgoing FTP connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')
@@ -224,7 +224,7 @@ class Delete(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing FTP connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
 
         with closing(self.odb.session()) as session:
             

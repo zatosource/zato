@@ -68,7 +68,7 @@ class GetByID(AdminService):
     class FlatInput:
         required = ('cluster_id', 'id')
 
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
 
             db_item = service(session, self.request.input.cluster_id, self.request.input.id)
@@ -89,7 +89,7 @@ class Edit(AdminService):
     class FlatInput:
         required = ('id', 'is_active', 'name')
     
-    def handle(self, *args, **kwargs):
+    def handle(self):
         input = self.request.input
         
         with closing(self.odb.session()) as session:
@@ -126,7 +126,7 @@ class Delete(AdminService):
     class FlatInput:
         required = ('id',)
 
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
                 service = session.query(Service).\

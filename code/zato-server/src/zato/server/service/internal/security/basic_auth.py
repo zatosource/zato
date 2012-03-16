@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService, ChangePasswo
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
@@ -65,7 +65,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             try:
@@ -116,7 +116,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
 
         with closing(self.odb.session()) as session:
             try:
@@ -174,7 +174,7 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         def _auth(instance, password):
             instance.password = password
             
@@ -184,7 +184,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             try:

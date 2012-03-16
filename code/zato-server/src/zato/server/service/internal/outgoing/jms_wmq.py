@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of outgoing JMS WebSphere MQ connections.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
         
@@ -68,7 +68,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -132,7 +132,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing JMS WebSphere MQ connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -205,7 +205,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing JMS WebSphere MQ connection.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         with closing(self.odb.session()) as session:
             try:
                 payload = kwargs.get('payload')

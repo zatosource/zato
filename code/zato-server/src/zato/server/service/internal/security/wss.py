@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService, ChangePasswo
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
@@ -68,7 +68,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -125,7 +125,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a WS-S definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
 
         with closing(self.odb.session()) as session:
             payload = kwargs.get('payload')
@@ -190,7 +190,7 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a WS-Security definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         def _auth(instance, password):
             instance.password = password
             
@@ -200,7 +200,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
-    def handle(self, *args, **kwargs):
+    def handle(self):
         
         with closing(self.odb.session()) as session:
             try:
