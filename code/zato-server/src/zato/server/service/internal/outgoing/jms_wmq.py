@@ -41,13 +41,13 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of outgoing JMS WebSphere MQ connections.
     """
+    class FlatInput:
+        required = ('cluster_id',)
+
     def handle(self):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = out_jms_wmq_list(session, params['cluster_id'], False)
+            db_items = out_jms_wmq_list(session, self.request.input.cluster_id, False)
     
             for db_item in db_items:
     
@@ -68,51 +68,36 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.
     """
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        optional = ('expiration',)
+
     def handle(self):
-        
+        input = self.request.input
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            
-            core_params = ['cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['expiration']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-        
-            priority = int(core_params['priority'])
-        
-            if not(priority >= 0 and priority <= 9):
-                msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(priority))
+            if not(input.priority >= 0 and input.priority <= 9):
+                msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
                 raise ValueError(msg)
             
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            core_params['def_id'] = int(core_params['def_id'])
-            
             existing_one = session.query(OutgoingWMQ.id).\
-                filter(ConnDefWMQ.cluster_id==cluster_id).\
+                filter(ConnDefWMQ.cluster_id==input.cluster_id).\
                 filter(OutgoingWMQ.def_id==ConnDefWMQ.id).\
-                filter(OutgoingWMQ.name==name).\
+                filter(OutgoingWMQ.name==input.name).\
                 first()
             
             if existing_one:
-                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
             
             created_elem = Element('out_jms_wmq')
             
             try:
-
-                core_params['delivery_mode'] = int(core_params['delivery_mode'])
-                core_params['priority'] = int(core_params['priority'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                
                 item = OutgoingWMQ()
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.def_id = core_params['def_id']
-                item.delivery_mode = core_params['delivery_mode']
-                item.priority = core_params['priority']
-                item.expiration = optional_params['expiration']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.def_id = input.def_id
+                item.delivery_mode = input.delivery_mode
+                item.priority = input.priority
+                item.expiration = input.expiration
                 
                 session.add(item)
                 session.commit()
@@ -132,66 +117,47 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing JMS WebSphere MQ connection.
     """
-    def handle(self):
-        
-        with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        optional = ('expiration',)
 
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['expiration']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-        
-            priority = int(core_params['priority'])
-        
-            if not(priority >= 0 and priority <= 9):
-                msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(priority))
+    def handle(self):
+        input = self.request.input
+        with closing(self.odb.session()) as session:
+            if not(input.priority >= 0 and input.priority <= 9):
+                msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
                 raise ValueError(msg)
             
-            id = core_params['id']
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            core_params['def_id'] = int(core_params['def_id'])
-            
             existing_one = session.query(OutgoingWMQ.id).\
-                filter(ConnDefWMQ.cluster_id==cluster_id).\
+                filter(ConnDefWMQ.cluster_id==input.cluster_id).\
                 filter(OutgoingWMQ.def_id==ConnDefWMQ.id).\
-                filter(OutgoingWMQ.name==name).\
-                filter(OutgoingWMQ.id!=core_params['id']).\
+                filter(OutgoingWMQ.name==input.name).\
+                filter(OutgoingWMQ.id!=input.id).\
                 first()
             
             if existing_one:
-                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
             
             xml_item = Element('out_jms_wmq')
             
             try:
-                
-                core_params['id'] = int(core_params['id'])
-                core_params['delivery_mode'] = int(core_params['delivery_mode'])
-                core_params['priority'] = int(core_params['priority'])
-                core_params['def_id'] = int(core_params['def_id'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                
                 item = session.query(OutgoingWMQ).filter_by(id=id).one()
                 old_name = item.name
-                item.name = name
-                item.is_active = core_params['is_active']
-                item.def_id = core_params['def_id']
-                item.delivery_mode = core_params['delivery_mode']
-                item.priority = core_params['priority']
-                item.expiration = optional_params['expiration']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.def_id = input.def_id
+                item.delivery_mode = input.delivery_mode
+                item.priority = input.priority
+                item.expiration = input.expiration
                 
                 session.add(item)
                 session.commit()
                 
                 xml_item.id = item.id
                 
-                core_params['action'] = OUTGOING.JMS_WMQ_EDIT
-                core_params['old_name'] = old_name
-                core_params.update(optional_params)
-                self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                input.action = OUTGOING.JMS_WMQ_EDIT
+                input.old_name = old_name
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
                 self.response.payload = etree.tostring(xml_item)
                 
@@ -205,6 +171,9 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing JMS WebSphere MQ connection.
     """
+    class FlatInput:
+        required = ('id',)
+
     def handle(self):
         with closing(self.odb.session()) as session:
             try:

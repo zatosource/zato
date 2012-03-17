@@ -41,15 +41,13 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of outgoing ZeroMQ connections.
     """
+    class FlatInput:
+        required = ('cluster_id',)
+
     def handle(self):
-        
-        self.zmq.send('zzz', 'zmqpush1')
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = out_zmq_list(session, params['cluster_id'], False)
+            db_items = out_zmq_list(session, self.request.input.cluster_id, False)
             
             for db_item in db_items:
     
@@ -67,37 +65,29 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing ZeroMQ connection.
     """
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type')
+
     def handle(self):
-        
+        input = self.request.input
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            
-            core_params = ['cluster_id', 'name', 'is_active', 'address', 'socket_type']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            
             existing_one = session.query(OutgoingZMQ.id).\
-                filter(OutgoingZMQ.cluster_id==cluster_id).\
-                filter(OutgoingZMQ.name==name).\
+                filter(OutgoingZMQ.cluster_id==input.cluster_id).\
+                filter(OutgoingZMQ.name==input.name).\
                 first()
             
             if existing_one:
-                raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(input.name))
             
             created_elem = Element('out_zmq')
             
             try:
-
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                
                 item = OutgoingZMQ()
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.address = core_params['address']
-                item.socket_type = core_params['socket_type']
-                item.cluster_id = core_params['cluster_id']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.address = input.address
+                item.socket_type = input.socket_type
+                item.cluster_id = input.cluster_id
                 
                 session.add(item)
                 session.commit()
@@ -117,49 +107,39 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing ZeroMQ connection.
     """
-    def handle(self):
-        
-        with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
 
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            id = core_params['id']
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            
+    def handle(self):
+        input = self.request.input
+        with closing(self.odb.session()) as session:
             existing_one = session.query(OutgoingZMQ.id).\
-                filter(OutgoingZMQ.cluster_id==cluster_id).\
-                filter(OutgoingZMQ.name==name).\
-                filter(OutgoingZMQ.id!=core_params['id']).\
+                filter(OutgoingZMQ.cluster_id==input.cluster_id).\
+                filter(OutgoingZMQ.name==input.name).\
+                filter(OutgoingZMQ.id!=input.id).\
                 first()
             
             if existing_one:
-                raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(input.name))
             
             xml_item = Element('out_zmq')
             
             try:
-                
-                core_params['id'] = int(core_params['id'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                
-                item = session.query(OutgoingZMQ).filter_by(id=id).one()
+                item = session.query(OutgoingZMQ).filter_by(id=input.id).one()
                 old_name = item.name
-                item.name = name
-                item.is_active = core_params['is_active']
-                item.address = core_params['address']
-                item.socket_type = core_params['socket_type']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.address = input.address
+                item.socket_type = input.socket_type
                 
                 session.add(item)
                 session.commit()
                 
                 xml_item.id = item.id
                 
-                core_params['action'] = OUTGOING.ZMQ_EDIT
-                core_params['old_name'] = old_name
-                self.broker_client.send_json(core_params, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                input.action = OUTGOING.ZMQ_EDIT
+                input.old_name = old_name
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
                 self.response.payload = etree.tostring(xml_item)
                 
@@ -173,17 +153,14 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing ZeroMQ connection.
     """
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
+
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                
                 item = session.query(OutgoingZMQ).\
-                    filter(OutgoingZMQ.id==id).\
+                    filter(OutgoingZMQ.id==self.request.input.id).\
                     one()
                 
                 session.delete(item)
