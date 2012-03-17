@@ -41,13 +41,13 @@ from zato.server.service.internal import _get_params, AdminService, ChangePasswo
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
+    class FlatInput:
+        required = ('cluster_id',)
+
     def handle(self):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
         with closing(self.odb.session()) as session:
             definition_list = Element('definition_list')
-            definitions = basic_auth_list(session, params['cluster_id'], False)
+            definitions = basic_auth_list(session, self.request.input.cluster_id, False)
     
             for definition in definitions:
     
@@ -65,33 +65,30 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
     """
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active', 'username', 'realm')
+
     def handle(self):
+        input = self.request.input
+        input.password = uuid4().hex
         
         with closing(self.odb.session()) as session:
             try:
-    
-                payload = kwargs.get('payload')
-                request_params = ['cluster_id', 'name', 'is_active', 'username', 'realm']
-                params = _get_params(payload, request_params, 'data.')
-                
-                cluster_id = params['cluster_id']
-                name = params['name']
-    
-                cluster = session.query(Cluster).filter_by(id=cluster_id).first()
+                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
                 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==cluster_id).\
+                    filter(Cluster.id==input.cluster_id).\
                     filter(HTTPBasicAuth.name==name).first()
                 
                 if existing_one:
-                    raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(name))
+                    raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
                 
                 auth_elem = Element('basic_auth')
                 
-                auth = HTTPBasicAuth(None, name, params['is_active'], params['username'], 
-                                    params['realm'], uuid4().hex, cluster)
+                auth = HTTPBasicAuth(None, name, input.is_active, input.username, 
+                    input.realm, input.password, cluster)
                 
                 session.add(auth)
                 session.commit()
@@ -99,57 +96,46 @@ class Create(AdminService):
                 auth_elem.id = auth.id
                 
             except Exception, e:
-                msg = "Could not create an HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not create an HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
             else:
-                params['action'] = SECURITY.BASIC_AUTH_CREATE
-                params['password'] = uuid4().hex
-                params['sec_type'] = 'basic_auth'
-                self.broker_client.send_json(params, 
-                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SECURITY.BASIC_AUTH_CREATE
+                input.sec_type = 'basic_auth'
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             self.response.payload = etree.tostring(auth_elem)
 
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
-    def handle(self):
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'username', 'realm')
 
+    def handle(self):
+        input = self.request.input
         with closing(self.odb.session()) as session:
             try:
-                
-                payload = kwargs.get('payload')
-                request_params = ['id', 'is_active', 'name', 'username', 'realm', 
-                                  'cluster_id']
-                new_params = _get_params(payload, request_params, 'data.')
-                
-                def_id = new_params['id']
-                name = new_params['name']
-                cluster_id = new_params['cluster_id']
-                
-                new_params['is_active'] = is_boolean(new_params['is_active'])
-                
                 existing_one = session.query(HTTPBasicAuth).\
-                    filter(Cluster.id==cluster_id).\
-                    filter(HTTPBasicAuth.name==name).\
-                    filter(HTTPBasicAuth.id != def_id).\
+                    filter(Cluster.id==input.cluster_id).\
+                    filter(HTTPBasicAuth.name==input.name).\
+                    filter(HTTPBasicAuth.id!=input.id).\
                     first()
                 
                 if existing_one:
-                    raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(name))
+                    raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
                 
                 auth_elem = Element('basic_auth')
                 
-                definition = session.query(HTTPBasicAuth).filter_by(id=def_id).one()
+                definition = session.query(HTTPBasicAuth).filter_by(id=input.id).one()
                 old_name = definition.name
                 
-                definition.name = name
-                definition.is_active = new_params['is_active']
-                definition.username = new_params['username']
-                definition.realm = new_params['realm']
+                definition.name = input.name
+                definition.is_active = input.is_active
+                definition.username = input.username
+                definition.realm = input.realm
     
                 session.add(definition)
                 session.commit()
@@ -157,7 +143,7 @@ class Edit(AdminService):
                 auth_elem.id = definition.id
                 
             except Exception, e:
-                msg = "Could not update the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not update the HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -184,30 +170,25 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
+    class FlatInput:
+        required = ('id',)
+
     def handle(self):
-        
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                
                 auth = session.query(HTTPBasicAuth).\
-                    filter(HTTPBasicAuth.id==id).\
+                    filter(HTTPBasicAuth.id==self.request.input.id).\
                     one()
                 
                 session.delete(auth)
                 session.commit()
             except Exception, e:
-                msg = "Could not delete the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not delete the HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise
             else:
-                params['action'] = SECURITY.BASIC_AUTH_DELETE
-                params['name'] = auth.name
-                self.broker_client.send_json(params, 
-                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.request.input.action = SECURITY.BASIC_AUTH_DELETE
+                self.request.input.name = auth.name
+                self.broker_client.send_json(self.request.input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)

@@ -43,15 +43,30 @@ __all__ = ['Service', 'Request', 'Response', 'Outgoing']
 # TODO: Move it to zato.common.
 ZATO_NO_DEFAULT_VALUE = "ZATO_NO_DEFAULT_VALUE"
 
+class ForceType(object):
+    def __init__(self, name):
+        self.name = name
+
+class Boolean(BaseType):
+    pass
+
+class Integer(Integer):
+    pass
+
 def _get_params(payload, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE,
-                force_type=None, force_type_params=[], use_text=True, boolean_prefixes=('is_', 'should_')):
+                use_text=True, boolean_prefixes=('is_', 'should_')):
     """ Gets all requested parameters from a message. Will raise an exception
     if any is missing.
     """
     params = {}
     for param in request_params:
+        
+        if isinstance(param, ForceType):
+            param_name = param.name
+        else:
+            param_name = param
 
-        elem = zato_path(path_prefix + param, True).get_from(payload)
+        elem = zato_path(path_prefix + param_name, True).get_from(payload)
 
         if use_text:
             value = elem.text # We are interested in the text the elem contains ..
@@ -66,29 +81,19 @@ def _get_params(payload, request_params, path_prefix='', default_value=ZATO_NO_D
             if value is not None:
                 value = unicode(value)
 
-        # Should the value be of a specific type?
-        if force_type and param in force_type_params:
-            if force_type == bool:
-                # TODO: Those should be stored in the app context
-                if value.lower() in('0', 'false'):
-                    value = False
-                elif value.lower() in('1', 'true'):
-                    value = True
-                else:
-                    msg = "Don't know how to convert param[{}], value[{}], into a bool".format(
-                        param, value)
-                    logger.error(msg)
-                    raise ZatoException(msg)
-            else:
-                value = force_type(value)
-                
-        if any(param.startswith(prefix) for prefix in boolean_prefixes):
+        if any(param_name.startswith(prefix) for prefix in boolean_prefixes):
             value = is_boolean(value)
             
-        if value != ZATO_NONE and (param == 'id' or param.endswith('_id')):
+        if value != ZATO_NONE and (param_name == 'id' or param_name.endswith('_id') or \
+                                   param_name.endswith('_timeout') or param_name.endswith('_size')):
             value = int(value)
-
-        params[param] = value
+            
+        if isinstance(param, Boolean):
+            value = is_boolean(value)
+        elif isinstance(param, Integer):
+            value = int(value)
+            
+        params[param_name] = value
 
     return params
 

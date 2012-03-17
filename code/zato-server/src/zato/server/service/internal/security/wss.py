@@ -36,17 +36,18 @@ from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.odb.query import wss_list
+from zato.server.service import Boolean, Integer
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
+    class FlatInput:
+        required = ('cluster_id',)
+
     def handle(self):
-        
         with closing(self.odb.session()) as session:
-            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-            definition_list = Element('definition_list')
-            definitions = wss_list(session, params['cluster_id'], False)
+            definitions = wss_list(session, self.request.input.cluster_id, False)
     
             for definition in definitions:
     
@@ -68,39 +69,33 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active', 'username', 
+            'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
+            Boolean('reject_expiry_limit'), Integer('nonce_freshness_time'))
+
     def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'name', 'is_active', 'username', 
-                              'password_type', 'reject_empty_nonce_creat', 
-                              'reject_stale_tokens',  'reject_expiry_limit',
-                              'nonce_freshness_time']
-            params = _get_params(payload, request_params, 'data.')
-            
-            cluster_id = params['cluster_id']
-            name = params['name']
-            
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
             existing_one = session.query(WSSDefinition).\
-                filter(Cluster.id==cluster_id).\
-                filter(WSSDefinition.name==name).first()
+                filter(Cluster.id==input.cluster_id).\
+                filter(WSSDefinition.name==input.name).first()
             
             if existing_one:
-                raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(input.name))
             
             wss_elem = Element('wss')
             password = uuid4().hex
     
             try:
-                wss = WSSDefinition(None, name, params['is_active'], params['username'], 
-                                    password, params['password_type'],
-                                    params['reject_empty_nonce_creat'], 
-                                    params['reject_stale_tokens'], params['reject_expiry_limit'], 
-                                    params['nonce_freshness_time'], cluster)
+                wss = WSSDefinition(None, name, input.is_active, input.username, 
+                    password, input.password_type, input.reject_empty_nonce_creat, 
+                    input.reject_stale_tokens, input.reject_expiry_limit, input.nonce_freshness_time, 
+                    cluster)
                 
                 session.add(wss)
                 session.commit()
@@ -114,59 +109,47 @@ class Create(AdminService):
                 
                 raise 
             else:
-                params['action'] = SECURITY.WSS_CREATE
-                params['password'] = password
-                params['sec_type'] = 'wss'
-                self.broker_client.send_json(params, 
-                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SECURITY.WSS_CREATE
+                input.password = password
+                input.sec_type = 'wss'
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             self.response.payload = etree.tostring(wss_elem)
 
 class Edit(AdminService):
     """ Updates a WS-S definition.
     """
-    def handle(self):
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
+            'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
+            Boolean('reject_expiry_limit'), Integer('nonce_freshness_time'))
 
+    def handle(self):
+        input = self.request.input
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['id', 'is_active', 'name', 'username', 'password_type', 
-                              'reject_empty_nonce_creat', 'reject_stale_tokens', 
-                              'reject_expiry_limit', 'nonce_freshness_time', 'cluster_id']
-            new_params = _get_params(payload, request_params, 'data.')
-            
-            def_id = new_params['id']
-            name = new_params['name']
-            cluster_id = new_params['cluster_id']
-            
-            new_params['is_active'] = is_boolean(new_params['is_active'])
-            new_params['reject_empty_nonce_creat'] = is_boolean(new_params['reject_empty_nonce_creat'])
-            new_params['reject_stale_tokens'] = is_boolean(new_params['reject_stale_tokens'])
-            new_params['reject_expiry_limit'] = int(new_params['reject_expiry_limit'])
-            new_params['nonce_freshness_time'] = int(new_params['nonce_freshness_time'])
-            
             existing_one = session.query(WSSDefinition).\
                 filter(Cluster.id==cluster_id).\
-                filter(WSSDefinition.name==name).\
-                filter(WSSDefinition.id != def_id).\
+                filter(WSSDefinition.name==input.name).\
+                filter(WSSDefinition.id!=input.id).\
                 first()
             
             if existing_one:
-                raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(name))
+                raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(input.name))
             
             wss_elem = Element('wss')
     
             try:
-                wss = session.query(WSSDefinition).filter_by(id=def_id).one()
+                wss = session.query(WSSDefinition).filter_by(id=input.id).one()
                 old_name = wss.name
                 
                 wss.name = name
-                wss.is_active = new_params['is_active']
-                wss.username = new_params['username']
-                wss.password_type = new_params['password_type']
-                wss.reject_empty_nonce_creat = new_params['reject_empty_nonce_creat']
-                wss.reject_stale_tokens = new_params['reject_stale_tokens']
-                wss.reject_expiry_limit = new_params['reject_expiry_limit']
-                wss.nonce_freshness_time = new_params['nonce_freshness_time']
+                wss.is_active = input.is_active
+                wss.username = input.username
+                wss.password_type = input.password_type
+                wss.reject_empty_nonce_creat = input.reject_empty_nonce_creat
+                wss.reject_stale_tokens = input.reject_stale_tokens
+                wss.reject_expiry_limit = input.reject_expiry_limit
+                wss.nonce_freshness_time = input.nonce_freshness_time
     
                 session.add(wss)
                 session.commit()
@@ -180,10 +163,10 @@ class Edit(AdminService):
                 
                 raise 
             else:
-                new_params['action'] = SECURITY.WSS_EDIT
-                new_params['old_name'] = old_name
-                new_params['sec_type'] = 'wss'
-                self.broker_client.send_json(new_params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SECURITY.WSS_EDIT
+                input.old_name = old_name
+                input.sec_type = 'wss'
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
             self.response.payload = etree.tostring(wss_elem)
     
@@ -200,18 +183,15 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
+    class FlatInput:
+        required = ('wss_id',)
+
     def handle(self):
         
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['wss_id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                wss_id = params['wss_id']
-                
                 wss = session.query(WSSDefinition).\
-                    filter(WSSDefinition.id==wss_id).\
+                    filter(WSSDefinition.id==self.request.input.wss_id).\
                     one()
                 
                 session.delete(wss)
@@ -223,6 +203,6 @@ class Delete(AdminService):
                 
                 raise
             else:
-                params['action'] = SECURITY.WSS_DELETE
-                params['name'] = wss.name
+                self.request.input.action = SECURITY.WSS_DELETE
+                self.request.input.name = wss.name
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)

@@ -47,9 +47,9 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
             db_items = service_list(session, self.request.input.cluster_id, False)
-            
+
             for db_item in db_items:
-    
+
                 item = Element('item')
                 item.id = db_item.id
                 item.name = db_item.name

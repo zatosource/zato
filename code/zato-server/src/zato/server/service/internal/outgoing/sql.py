@@ -48,12 +48,13 @@ class _SQLService(object):
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
+    class FlatInput:
+        required = ('cluster_id',)
+
     def handle(self):
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
-        
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = out_sql_list(session, params['cluster_id'], False)
+            db_items = out_sql_list(session, self.request.input.cluster_id, False)
             
             for db_item in db_items:
 
@@ -77,59 +78,46 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
+    class FlatInput:
+        required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        optional = ('extra',)
+
     def handle(self):
+        input = self.request.input
+        input.password = uuid4().hex
+        input.extra = input.extra.encode('utf-8') if input.extra else ''
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            core_params = ['name', 'is_active', 'cluster_id', 'engine', 'host', 'port',
-                           'db_name', 'username', 'pool_size']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['extra']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            extra = optional_params['extra']
-            extra = extra.encode('utf-8') if extra else ''
-            password = uuid4().hex
-
             existing_one = session.query(SQLConnectionPool.id).\
-                filter(SQLConnectionPool.cluster_id==cluster_id).\
-                filter(SQLConnectionPool.name==name).\
+                filter(SQLConnectionPool.cluster_id==input.cluster_id).\
+                filter(SQLConnectionPool.name==input.name).\
                 first()
 
             if existing_one:
-                raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
 
             created_elem = Element('out_sql')
 
             try:
-
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-
                 item = SQLConnectionPool()
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.cluster_id = core_params['cluster_id']
-                item.engine = core_params['engine']
-                item.host = core_params['host']
-                item.port = core_params['port']
-                item.db_name = core_params['db_name']
-                item.username = core_params['username']
-                item.password = password
-                item.pool_size = core_params['pool_size']
-                item.extra = extra
+                item.name = input.name
+                item.is_active = input.is_active
+                item.cluster_id = input.cluster_id
+                item.engine = input.engine
+                item.host = input.host
+                item.port = input.port
+                item.db_name = input.db_name
+                item.username = input.username
+                item.password = input.password
+                item.pool_size = input.pool_size
+                item.extra = input.extra
 
                 session.add(item)
                 session.commit()
                 
                 created_elem.id = item.id
                 
-                core_params.update(optional_params)
-                core_params['password'] = password
-                self.notify_worker_threads(core_params)
+                self.notify_worker_threads(input)
                 
                 self.response.payload = etree.tostring(created_elem)
 
@@ -143,51 +131,38 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
+    class FlatInput:
+        required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        optional = ('extra',)
+
     def handle(self):
-
+        input = self.request.input
+        input.extra = input.extra.encode('utf-8') if input.extra else ''
+        
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'engine', 
-                           'host', 'port', 'db_name', 'username', 'pool_size']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['extra']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-
-            id = core_params['id']
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-            extra = optional_params['extra']
-            extra = extra.encode('utf-8') if extra else ''
-
             existing_one = session.query(SQLConnectionPool.id).\
-                filter(SQLConnectionPool.cluster_id==cluster_id).\
-                filter(SQLConnectionPool.name==name).\
-                filter(SQLConnectionPool.id!=core_params['id']).\
+                filter(SQLConnectionPool.cluster_id==input.cluster_id).\
+                filter(SQLConnectionPool.name==input.name).\
+                filter(SQLConnectionPool.id!=input.id).\
                 first()
 
             if existing_one:
-                raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
 
             xml_item = Element('out_sql')
 
             try:
-
-                core_params['id'] = int(core_params['id'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-
-                item = session.query(SQLConnectionPool).filter_by(id=id).one()
+                item = session.query(SQLConnectionPool).filter_by(id=input.id).one()
                 old_name = item.name
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.cluster_id = core_params['cluster_id']
-                item.engine = core_params['engine']
-                item.host = core_params['host']
-                item.port = core_params['port']
-                item.db_name = core_params['db_name']
-                item.username = core_params['username']
-                item.pool_size = core_params['pool_size']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.cluster_id = input.cluster_id
+                item.engine = input.engine
+                item.host = input.host
+                item.port = input.port
+                item.db_name = input.db_name
+                item.username = input.username
+                item.pool_size = input.pool_size
                 item.extra = extra
 
                 session.add(item)
@@ -195,10 +170,9 @@ class Edit(AdminService, _SQLService):
 
                 xml_item.id = item.id
 
-                core_params.update(optional_params)
-                core_params['password'] = item.password
-                core_params['old_name'] = old_name
-                self.notify_worker_threads(core_params)
+                input.password = item.password
+                input.old_name = old_name
+                self.notify_worker_threads(input)
 
                 self.response.payload = etree.tostring(xml_item)
 
@@ -212,17 +186,14 @@ class Edit(AdminService, _SQLService):
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
+    class FlatInput:
+        required = ('id',)
+
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-
-                id = params['id']
-
                 item = session.query(SQLConnectionPool).\
-                    filter(SQLConnectionPool.id==id).\
+                    filter(SQLConnectionPool.id==self.request.input.id).\
                     one()
                 old_name = item.name
 
@@ -256,17 +227,14 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an SQL database
     """
+    class FlatInput:
+        required = ('id',)
+
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-
-                id = params['id']
-
                 item = session.query(SQLConnectionPool).\
-                    filter(SQLConnectionPool.id==id).\
+                    filter(SQLConnectionPool.id==self.request.input.id).\
                     one()
 
                 xml_item = etree.Element('response_time')

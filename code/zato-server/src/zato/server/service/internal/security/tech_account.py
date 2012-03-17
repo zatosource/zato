@@ -43,15 +43,16 @@ class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
     sorted by the 'name' attribute.
     """
-    def handle(self):
-        
-        with closing(self.odb.session()) as session:
-            definition_list = Element('definition_list')
-            params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+    class FlatInput:
+        required = ('cluster_id',)
 
-            definitions = tech_acc_list(session, params['cluster_id'], False)
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            
+            definition_list = Element('definition_list')
+            definitions = tech_acc_list(session, self.request.input.cluster_id, False)
+            
             for definition in definitions:
-    
                 definition_elem = Element('definition')
                 definition_elem.id = definition.id
                 definition_elem.name = definition.name
@@ -64,16 +65,14 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
     """
+    class FlatInput:
+        required = ('tech_account_id',)
+
     def handle(self):
-        
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['tech_account_id']
-            params = _get_params(payload, request_params, 'data.')
-    
             tech_account = session.query(TechnicalAccount.id, 
                 TechnicalAccount.name, TechnicalAccount.is_active).\
-                filter(TechnicalAccount.id==params['tech_account_id']).\
+                filter(TechnicalAccount.id==self.request.input.tech_account_id).\
                 one()
             
             tech_account_elem = Element('tech_account')
@@ -86,84 +85,74 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new technical account.
     """
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active')
+
     def handle(self):
+        salt = uuid4().hex
+        input = self.request.input
+        input.password = tech_account_password(uuid4().hex, salt)
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'name', 'is_active']
-            params = _get_params(payload, request_params, 'data.')
-            
-            cluster_id = params['cluster_id']
-            name = params['name']
-            
             cluster = session.query(Cluster).filter_by(id=cluster_id).first()
-            
-            salt = uuid4().hex
-            password = tech_account_password(uuid4().hex, salt)
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
             existing_one = session.query(TechnicalAccount).\
-                filter(Cluster.id==cluster_id).\
-                filter(TechnicalAccount.name==name).first()
+                filter(Cluster.id==input.cluster_id).\
+                filter(TechnicalAccount.name==input.name).first()
             
             if existing_one:
-                raise Exception('Technical account [{0}] already exists on this cluster'.format(name))
+                raise Exception('Technical account [{0}] already exists on this cluster'.format(input.name))
             
             tech_account_elem = Element('tech_account')
             
             try:
-                tech_account = TechnicalAccount(None, name, params['is_active'], password, salt, cluster=cluster)
+                tech_account = TechnicalAccount(None, input.name, input.is_active, input.password, salt, cluster=cluster)
                 session.add(tech_account)
                 session.commit()
                 
                 tech_account_elem.id = tech_account.id
                 
             except Exception, e:
-                msg = "Could not create a technical account, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not create a technical account, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
             else:
-                params['action'] = SECURITY.TECH_ACC_CREATE
-                params['password'] = password
-                params['sec_type'] = 'tech_acc'
-                self.broker_client.send_json(params, 
-                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SECURITY.TECH_ACC_CREATE
+                input.password = password
+                input.sec_type = 'tech_acc'
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             self.response.payload = etree.tostring(tech_account_elem)
 
 class Edit(AdminService):
     """ Updates an existing technical account.
     """
+    class FlatInput:
+        required = ('cluster_id', 'tech_account_id', 'name', 'is_active')
+
     def handle(self):
-        
+        input = self.request.input
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['cluster_id', 'tech_account_id', 'name', 'is_active']
-            params = _get_params(payload, request_params, 'data.')
-            
-            cluster_id = params['cluster_id']
-            tech_account_id = params['tech_account_id']
-            name = params['name']
-            params['is_active'] = is_boolean(params['is_active'])
-            
             existing_one = session.query(TechnicalAccount).\
-                filter(Cluster.id==cluster_id).\
-                filter(TechnicalAccount.name==name).\
-                filter(TechnicalAccount.id != tech_account_id).\
+                filter(Cluster.id==input.cluster_id).\
+                filter(TechnicalAccount.name==input.name).\
+                filter(TechnicalAccount.id!=input.tech_account_id).\
                 first()
             
             if existing_one:
-                raise Exception('Technical account [{0}] already exists on this cluster'.format(name))
+                raise Exception('Technical account [{0}] already exists on this cluster'.format(input.name))
             
             tech_account = session.query(TechnicalAccount).\
-                filter(TechnicalAccount.id==tech_account_id).one()
+                filter(TechnicalAccount.id==input.tech_account_id).\
+                one()
             old_name = tech_account.name
             
             tech_account.name = name
-            tech_account.is_active = is_boolean(params['is_active'])
+            tech_account.is_active = input.is_active
 
             tech_account_elem = Element('tech_account')            
             
@@ -180,11 +169,10 @@ class Edit(AdminService):
                 
                 raise 
             else:
-                params['action'] = SECURITY.TECH_ACC_EDIT
-                params['old_name'] = old_name
-                params['sec_type'] = 'tech_acc'
-                self.broker_client.send_json(params, 
-                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SECURITY.TECH_ACC_EDIT
+                input.old_name = old_name
+                input.sec_type = 'tech_acc'
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             self.response.payload = etree.tostring(tech_account_elem)
     
@@ -203,35 +191,31 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a technical account.
     """
+    class FlatInput:
+        required = ('tech_account_id', 'zato_admin_tech_account_name')
+
     def handle(self):
-        
+        input = self.request.input
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-            request_params = ['tech_account_id', 'zato_admin_tech_account_name']
-            params = _get_params(payload, request_params, 'data.')
-            
-            tech_account_id = params['tech_account_id']
-            zato_admin_tech_account_name = params['zato_admin_tech_account_name']
-            
             tech_account = session.query(TechnicalAccount).\
-                filter(TechnicalAccount.id==tech_account_id).\
+                filter(TechnicalAccount.id==input.tech_account_id).\
                 one()
             
-            if tech_account.name == zato_admin_tech_account_name:
+            if tech_account.name == input.zato_admin_tech_account_name:
                 msg = "Can't delete account [{0}], at least one client console uses it".\
-                    format(zato_admin_tech_account_name)
+                    format(input.zato_admin_tech_account_name)
                 raise Exception(msg)
             
             try:
                 session.delete(tech_account)
                 session.commit()
             except Exception, e:
-                msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not delete the account, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise
             else:
-                params['action'] = SECURITY.TECH_ACC_DELETE
-                params['name'] = tech_account.name
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SECURITY.TECH_ACC_DELETE
+                input.name = tech_account.name
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)

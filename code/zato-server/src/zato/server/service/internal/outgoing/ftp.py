@@ -40,20 +40,19 @@ from zato.common.odb.query import out_ftp_list
 from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
 
 class _FTPService(AdminService):
-    def update_facade(self, params, optional_params, old_name=None):
-        params.update(optional_params)
-        self.ftp.update(Bunch(params), old_name)
+    def update_facade(self, params, old_name=None):
+        self.ftp.update(params, old_name)
 
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
-    def handle(self):
-        
-        params = _get_params(kwargs.get('payload'), ['cluster_id'], 'data.')
+    class FlatInput:
+        required = ('cluster_id',)
 
+    def handle(self):
         with closing(self.odb.session()) as session:
             item_list = Element('item_list')
-            db_items = out_ftp_list(session, params['cluster_id'], False)
+            db_items = out_ftp_list(session, self.request.input.cluster_id, False)
 
             for db_item in db_items:
 
@@ -75,51 +74,41 @@ class GetList(AdminService):
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
     """
+    class FlatInput:
+        required = ('cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
+        optional = ('user', 'acct', 'timeout')
+
     def handle(self):
+        input = self.request.input
         
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            core_params = ['cluster_id', 'name', 'is_active', 'host', 'port', 'dircache']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['user', 'acct', 'timeout']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-
             existing_one = session.query(OutgoingFTP.id).\
-                filter(OutgoingFTP.cluster_id==cluster_id).\
-                filter(OutgoingFTP.name==name).\
+                filter(OutgoingFTP.cluster_id==input.cluster_id).\
+                filter(OutgoingFTP.name==input.name).\
                 first()
 
             if existing_one:
-                raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(input.name))
 
             created_elem = Element('out_ftp')
 
             try:
-
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                core_params['dircache'] = is_boolean(core_params['dircache'])
-
                 item = OutgoingFTP()
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.cluster_id = core_params['cluster_id']
-                item.dircache = core_params['dircache']
-                item.host = core_params['host']
-                item.port = core_params['port']
-                item.user = optional_params['user']
-                item.acct = optional_params['acct']
-                item.timeout = optional_params['timeout']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.cluster_id = input.cluster_id
+                item.dircache = input.dircache
+                item.host = input.host
+                item.port = input.port
+                item.user = input.user
+                item.acct = input.acct
+                item.timeout = input.timeout
 
                 session.add(item)
                 session.commit()
 
                 created_elem.id = item.id
-                self.update_facade(core_params, optional_params)
+                self.update_facade(input)
 
                 self.response.payload = etree.tostring(created_elem)
 
@@ -133,55 +122,42 @@ class Create(_FTPService):
 class Edit(_FTPService):
     """ Updates an outgoing FTP connection.
     """
+    class FlatInput:
+        required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
+        optional = ('user', 'acct', 'timeout')
+
     def handle(self):
-
+        input = self.request.input
         with closing(self.odb.session()) as session:
-            payload = kwargs.get('payload')
-
-            core_params = ['id', 'cluster_id', 'name', 'is_active', 'host', 'port', 'dircache']
-            core_params = _get_params(payload, core_params, 'data.')
-            
-            optional_params = ['user', 'acct', 'timeout']
-            optional_params = _get_params(payload, optional_params, 'data.', default_value=None)
-
-            id = core_params['id']
-            name = core_params['name']
-            cluster_id = core_params['cluster_id']
-
             existing_one = session.query(OutgoingFTP.id).\
-                filter(OutgoingFTP.cluster_id==cluster_id).\
-                filter(OutgoingFTP.name==name).\
-                filter(OutgoingFTP.id!=core_params['id']).\
+                filter(OutgoingFTP.cluster_id==input.cluster_id).\
+                filter(OutgoingFTP.name==input.name).\
+                filter(OutgoingFTP.id!=input.id).\
                 first()
 
             if existing_one:
-                raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(name))
+                raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(input.name))
 
             xml_item = Element('out_ftp')
 
             try:
-
-                core_params['id'] = int(core_params['id'])
-                core_params['is_active'] = is_boolean(core_params['is_active'])
-                core_params['dircache'] = is_boolean(core_params['dircache'])
-
-                item = session.query(OutgoingFTP).filter_by(id=id).one()
+                item = session.query(OutgoingFTP).filter_by(id=input.id).one()
                 old_name = item.name
-                item.name = core_params['name']
-                item.is_active = core_params['is_active']
-                item.cluster_id = core_params['cluster_id']
-                item.dircache = core_params['dircache']
-                item.host = core_params['host']
-                item.port = core_params['port']
-                item.user = optional_params['user']
-                item.acct = optional_params['acct']
-                item.timeout = optional_params['timeout']
+                item.name = input.name
+                item.is_active = input.is_active
+                item.cluster_id = input.cluster_id
+                item.dircache = input.dircache
+                item.host = input.host
+                item.port = input.port
+                item.user = input.user
+                item.acct = input.acct
+                item.timeout = input.timeout
 
                 session.add(item)
                 session.commit()
 
                 xml_item.id = item.id
-                self.update_facade(core_params, optional_params, old_name)
+                self.update_facade(input, old_name)
 
                 self.response.payload = etree.tostring(xml_item)
 
@@ -195,17 +171,14 @@ class Edit(_FTPService):
 class Delete(AdminService):
     """ Deletes an outgoing FTP connection.
     """
+    class FlatInput:
+        required = ('id',)
+
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-
-                id = params['id']
-
                 item = session.query(OutgoingFTP).\
-                    filter(OutgoingFTP.id==id).\
+                    filter(OutgoingFTP.id==self.request.input.id).\
                     one()
                 old_name = item.name
 
