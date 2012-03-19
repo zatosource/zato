@@ -73,7 +73,7 @@ class Create(AdminService):
     class FlatInput:
         required = ('cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
-            Boolean('reject_expiry_limit'), Integer('nonce_freshness_time'))
+            'reject_expiry_limit', Integer('nonce_freshness_time'))
 
     def handle(self):
         input = self.request.input
