@@ -552,7 +552,8 @@ class HTTPSOAPWrapper(object):
         self.config = config
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
-        self.requests = requests
+        self.requests_module = requests
+        self.session = self.requests_module.session()
         self.set_auth()
         
     def set_auth(self):
@@ -567,10 +568,10 @@ class HTTPSOAPWrapper(object):
     __repr__ = __str__
     
     def _impl(self):
-        """ Returns the 'requests' module which is the actual implementation
-        of the HTTP/SOAP outgoing connections API.
+        """ Returns the self.session object through which access to HTTP/SOAP
+        resources is mediated.
         """
-        return self.requests
+        return self.session
 
     impl = property(fget=_impl, doc=_impl.__doc__)
     
@@ -592,13 +593,14 @@ class HTTPSOAPWrapper(object):
             msg = 'About to ping:[{}]'.format(self.config_no_sensitive)
             logger.debug(msg)
          
-        # requests will write some info to it ..
+        # session will write some info to it ..
         verbose = StringIO()
         
         start = datetime.now()
         
         # .. invoke the other end ..
-        r = self.requests.head(self.config['address'], auth=self.requests_auth, config={'verbose':verbose})
+        r = self.session.head(self.config['address'], auth=self.requests_auth, prefetch=True,
+                config={'verbose':verbose})
         
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(r.status_code))
@@ -607,3 +609,17 @@ class HTTPSOAPWrapper(object):
         verbose.close()
         
         return value
+    
+    def get(self, params=None, prefetch=True, *args, **kwargs):
+        """ Invokes a resource using the GET method.
+        """
+        return self.session.get(self.config['address'], params=params or {}, 
+            prefetch=prefetch, auth=self.requests_auth, *args, **kwargs)
+    
+    def post(self, data=None, prefetch=True, *args, **kwargs):
+        """ Invokes a resource using the POST method.
+        """
+        return self.session.post(self.config['address'], data=data or '', 
+            prefetch=prefetch, auth=self.requests_auth, *args, **kwargs)
+    
+    send = post

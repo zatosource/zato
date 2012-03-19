@@ -47,7 +47,7 @@ class AdminService(Service):
 
 class Ping(AdminService):
 
-    def handle(self, *args, **kwargs):
+    def handle(self):
         pass
     
 class Ping2(Ping):
