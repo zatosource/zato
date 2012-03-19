@@ -35,7 +35,7 @@ from json import dumps
 
 # Zato
 from zato.common import url_type, ZATO_NONE, ZATO_OK
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
 from zato.common.util import security_def_type
@@ -44,7 +44,7 @@ from zato.server.service.internal import _get_params, AdminService
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.
     """
-    def notify_worker_threads(self, params, action=OUTGOING.HTTP_SOAP_CREATE_EDIT):
+    def notify_worker_threads(self, params, action):
         """ Notify worker threads of new or updated parameters.
         """
         params['action'] = action
@@ -120,6 +120,7 @@ class Create(AdminService, _HTTPSOAPService):
     def handle(self):
         input = self.request.input
         input.security_id = input.security_id if input.security_id != ZATO_NONE else None
+        input.soap_action = input.soap_action if input.soap_action else ''
         
         if not input.url_path.startswith('/'):
             msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
@@ -176,7 +177,12 @@ class Create(AdminService, _HTTPSOAPService):
                 
                 input.id = item.id
                 input.update(sec_info)
-                self.notify_worker_threads(input)
+                
+                if input.connection == 'channel':
+                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT
+                else:
+                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT
+                self.notify_worker_threads(input, action)
 
                 created_elem.id = item.id
 
@@ -200,6 +206,7 @@ class Edit(AdminService, _HTTPSOAPService):
     def handle(self):
         input = self.request.input
         input.security_id = input.security_id if input.security_id != ZATO_NONE else None
+        input.soap_action = input.soap_action if input.soap_action else ''
         
         if not input.url_path.startswith('/'):
             msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
@@ -245,7 +252,12 @@ class Edit(AdminService, _HTTPSOAPService):
                 xml_item.id = item.id
                 
                 input.update(sec_info)
-                self.notify_worker_threads(input)
+                
+                if input.connection == 'channel':
+                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT
+                else:
+                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT
+                self.notify_worker_threads(input, action)
 
                 self.response.payload = etree.tostring(xml_item)
 
@@ -275,8 +287,12 @@ class Delete(AdminService, _HTTPSOAPService):
                 session.delete(item)
                 session.commit()
                 
-                self.notify_worker_threads({'name':old_name, 'transport':old_transport},
-                    OUTGOING.HTTP_SOAP_DELETE)
+                if item.connection == 'channel':
+                    action = CHANNEL.HTTP_SOAP_DELETE
+                else:
+                    action = OUTGOING.HTTP_SOAP_DELETE
+                
+                self.notify_worker_threads({'name':old_name, 'transport':old_transport}, action)
 
             except Exception, e:
                 session.rollback()
