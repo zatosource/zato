@@ -552,6 +552,20 @@ class HTTPSOAPWrapper(object):
         self.session = self.requests_module.session()
         self.set_auth()
         
+        self.soap = {}
+        self.soap['1.1'] = {}
+        self.soap['1.1']['Content-Type'] = 'text/xml; charset=utf-8'
+        self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>{data}</soap:Body>
+</soap:Envelope>"""
+        self.soap['1.2'] = {}
+        self.soap['1.2']['Content-Type'] = 'application/soap+xml; charset=utf-8'
+        self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+  <soap12:Body></soap12:Body>
+</soap12:Envelope>"""
+        
     def set_auth(self):
         """ Configures the security for requests, if any is to be configured at all.
         """
@@ -613,6 +627,14 @@ class HTTPSOAPWrapper(object):
             prefetch=prefetch, auth=self.requests_auth, *args, **kwargs)
     
     def _soap_data(self, data, headers):
+        """ Wraps the data in a SOAP-specific messages and adds the headers required.
+        """
+        # The idea here is that even though there usually won't be the Content-Type
+        # header provided by the user, we shouldn't overwrite it if one has been
+        # actually passed in.
+        if not headers.get('Content-Type'):
+            headers['Content-Type'] = self.soap[self.config['soap_version']]['Content-Type']
+
         return data, headers
     
     def post(self, data=None, prefetch=True, *args, **kwargs):
@@ -620,6 +642,7 @@ class HTTPSOAPWrapper(object):
         """
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data or '', kwargs.pop('headers', {}))
+
         return self.session.post(self.config['address'], data=data, 
             prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)
     
