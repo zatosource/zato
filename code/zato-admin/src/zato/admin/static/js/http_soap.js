@@ -37,6 +37,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
 
+	var method_tr = '';
     var soap_action_tr = '';
     var soap_version_tr = '';
     var service_tr = '';
@@ -50,6 +51,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     if($(document).getUrlParam('connection') == 'channel') {
         var cluster_id = $(document).getUrlParam('cluster');
         service_tr += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
+		method_tr += String.format('<td>{0}</td>', item.method);
     }
     
     if($(document).getUrlParam('connection') == 'outgoing') {
@@ -66,7 +68,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += soap_version_tr;
     row += service_tr;
     row += String.format('<td>{0}</td>', item.security_select);
-	row += String.format('<td>{0}</td>', item.method);
+	row += method_tr;
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
 	if($(document).getUrlParam('connection') == 'outgoing') {

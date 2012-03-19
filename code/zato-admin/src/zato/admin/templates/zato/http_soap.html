@@ -38,7 +38,9 @@
                 '_service',
             {% endifequal %}
             '_security',
-            'method',
+            {% ifequal connection 'channel' %}
+                'method',
+            {% endifequal %}
             '_edit',
             '_delete',
             {% ifequal connection 'outgoing' %}
@@ -107,7 +109,9 @@
                             <th><a href="#">Service</a></th>
                         {% endifequal %}
                         <th><a href="#">Security</a></th>
-                        <th><a href="#">Method</a></th>
+                        {% ifequal connection 'channel' %}
+                            <th><a href="#">Method</a></th>
+                        {% endifequal %}
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         {% ifequal connection 'outgoing' %}
@@ -139,7 +143,9 @@
                             <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         {% endifequal %}
                         <td>{{ item.security_name|safe }}</td>
-                        <td>{{ item.method }}</td>
+                        {% ifequal connection 'channel' %}
+                            <td>{{ item.method }}</td>
+                        {% endifequal %}
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         {% ifequal connection 'outgoing' %}
@@ -188,10 +194,12 @@
                             <td>{{ create_form.url_path }}</td>
                         </tr>
 
+                        {% ifequal connection 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">Method</td>
                             <td>{{ create_form.method }}</td>
                         </tr>
+                        {% endifequal %}
                         
                         {% ifequal transport 'soap' %}
                         <tr>
@@ -258,10 +266,12 @@
                             <td>{{ edit_form.url_path }}</td>
                         </tr>
 
+                        {% ifequal connection 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">Method</td>
                             <td>{{ edit_form.method }}</td>
                         </tr>
+                        {% endifequal %}
                         
                         {% ifequal transport 'soap' %}
                         <tr>
