@@ -80,14 +80,14 @@ class Create(AdminService):
                 # any stuff into the database.
                 existing_one = session.query(HTTPBasicAuth).\
                     filter(Cluster.id==input.cluster_id).\
-                    filter(HTTPBasicAuth.name==name).first()
+                    filter(HTTPBasicAuth.name==input.name).first()
                 
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
                 
                 auth_elem = Element('basic_auth')
                 
-                auth = HTTPBasicAuth(None, name, input.is_active, input.username, 
+                auth = HTTPBasicAuth(None, input.name, input.is_active, input.username, 
                     input.realm, input.password, cluster)
                 
                 session.add(auth)
