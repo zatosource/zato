@@ -121,6 +121,11 @@ class Create(AdminService, _HTTPSOAPService):
         input = self.request.input
         input.security_id = input.security_id if input.security_id != ZATO_NONE else None
         
+        if not input.url_path.startswith('/'):
+            msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
+            self.logger.error(msg)
+            raise Exception(msg)
+        
         with closing(self.odb.session()) as session:
             existing_one = session.query(HTTPSOAP.id).\
                 filter(HTTPSOAP.cluster_id==input.cluster_id).\
@@ -195,6 +200,11 @@ class Edit(AdminService, _HTTPSOAPService):
     def handle(self):
         input = self.request.input
         input.security_id = input.security_id if input.security_id != ZATO_NONE else None
+        
+        if not input.url_path.startswith('/'):
+            msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
+            self.logger.error(msg)
+            raise Exception(msg)
         
         with closing(self.odb.session()) as session:
 
