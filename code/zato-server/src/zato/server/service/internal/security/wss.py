@@ -177,8 +177,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
             
-        return self._handle(WSSDefinition, _auth, 
-                            SECURITY.WSS_CHANGE_PASSWORD, **kwargs)
+        return self._handle(WSSDefinition, _auth, SECURITY.WSS_CHANGE_PASSWORD)
     
 class Delete(AdminService):
     """ Deletes a WS-Security definition.

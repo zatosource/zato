@@ -177,14 +177,8 @@ class Delete(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                payload = kwargs.get('payload')
-                request_params = ['id']
-                params = _get_params(payload, request_params, 'data.')
-                
-                id = params['id']
-                
                 item = session.query(OutgoingWMQ).\
-                    filter(OutgoingWMQ.id==id).\
+                    filter(OutgoingWMQ.id==self.request.input.id).\
                     one()
                 
                 session.delete(item)

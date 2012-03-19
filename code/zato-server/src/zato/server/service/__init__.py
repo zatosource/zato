@@ -47,10 +47,10 @@ class ForceType(object):
     def __init__(self, name):
         self.name = name
 
-class Boolean(BaseType):
+class Boolean(ForceType):
     pass
 
-class Integer(Integer):
+class Integer(ForceType):
     pass
 
 def _get_params(payload, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE,
