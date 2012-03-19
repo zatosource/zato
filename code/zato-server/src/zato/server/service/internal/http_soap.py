@@ -135,7 +135,7 @@ class Create(AdminService, _HTTPSOAPService):
                 first()
 
             if existing_one:
-                raise Exception('An object of that name [{0}] already exists on this cluster'.format(name))
+                raise Exception('An object of that name [{0}] already exists on this cluster'.format(input.name))
             
             # Is the service's name correct?
             service = session.query(Service).\

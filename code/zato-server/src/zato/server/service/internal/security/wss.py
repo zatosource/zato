@@ -193,7 +193,7 @@ class Delete(AdminService):
                 wss = session.query(WSSDefinition).\
                     filter(WSSDefinition.id==self.request.input.wss_id).\
                     one()
-                
+
                 session.delete(wss)
                 session.commit()
             except Exception, e:
@@ -205,4 +205,4 @@ class Delete(AdminService):
             else:
                 self.request.input.action = SECURITY.WSS_DELETE
                 self.request.input.name = wss.name
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(self.request.input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)

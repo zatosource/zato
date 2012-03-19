@@ -49,7 +49,7 @@ class Ping(AdminService):
 
     def handle(self):
         out = self.outgoing.soap.get('ServerInfo').conn
-        print(333, out.post('zzz'))
+        print(333, out.post(self.rid, 'zzz'))
     
 class Ping2(Ping):
     pass

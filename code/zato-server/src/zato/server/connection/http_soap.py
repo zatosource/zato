@@ -27,6 +27,7 @@ from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, re
 from string import Template
 from threading import RLock
 from traceback import format_exc
+from uuid import uuid4
 
 # lxml
 from lxml import objectify
@@ -550,27 +551,51 @@ class HTTPSOAPWrapper(object):
         self.config_no_sensitive['password'] = '***'
         self.requests_module = requests
         self.session = self.requests_module.session()
-        self.set_auth()
         
         self.soap = {}
         self.soap['1.1'] = {}
-        self.soap['1.1']['Content-Type'] = 'text/xml; charset=utf-8'
+        self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
         self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>{data}</soap:Body>
-</soap:Envelope>"""
+<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  {header}
+  <s11:Body>{data}</s11:Body>
+</s11:Envelope>"""
+        self.soap['1.1']['header_template'] = """<s11:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
+          <wsse:Security>
+            <wsse:UsernameToken>
+              <wsse:Username>{Username}</wsse:Username>
+              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
+            </wsse:UsernameToken>
+          </wsse:Security>
+        </s11:Header>
+        """
+
         self.soap['1.2'] = {}
-        self.soap['1.2']['Content-Type'] = 'application/soap+xml; charset=utf-8'
+        self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
         self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-  <soap12:Body></soap12:Body>
-</soap12:Envelope>"""
+<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  {header}
+  <s12:Body></s12:Body>
+</s12:Envelope>"""
+        self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
+          <wsse:Security>
+            <wsse:UsernameToken>
+              <wsse:Username>{Username}</wsse:Username>
+              <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">{Password}</wsse:Password>
+            </wsse:UsernameToken>
+          </wsse:Security>
+        </s12:Header>
+        """
+        
+        self.set_auth()
         
     def set_auth(self):
         """ Configures the security for requests, if any is to be configured at all.
         """
-        self.auth = self.get_auth()
         self.requests_auth = self.auth if self.config['sec_type'] == security_def_type.basic_auth else None
+        if self.config['sec_type'] == security_def_type.wss:
+            self.soap[self.config['soap_version']]['header'] = self.soap[self.config['soap_version']]['header_template'].format(
+                Username=self.config['username'], Password=self.config['password'])
         
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
@@ -585,18 +610,20 @@ class HTTPSOAPWrapper(object):
 
     impl = property(fget=_impl, doc=_impl.__doc__)
     
-    def get_auth(self):
+    def _get_auth(self):
         """ Returns a username and password pair or None, if no security definition
         has been attached.
         """
-        if self.config['sec_type'] == security_def_type.basic_auth:
+        if self.config['sec_type'] in(security_def_type.basic_auth, security_def_type.wss):
             auth = (self.config['username'], self.config['password'])
         else:
             auth = None
             
         return auth
     
-    def ping(self):
+    auth = property(fget=_get_auth, doc=_get_auth)
+    
+    def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
         """
         if logger.isEnabledFor(logging.DEBUG):
@@ -610,7 +637,7 @@ class HTTPSOAPWrapper(object):
         
         # .. invoke the other end ..
         r = self.session.head(self.config['address'], auth=self.requests_auth, prefetch=True,
-                config={'verbose':verbose})
+                config={'verbose':verbose}, headers={'X-Zato-CID':cid})
         
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(r.status_code))
@@ -620,28 +647,42 @@ class HTTPSOAPWrapper(object):
         
         return value
     
-    def get(self, params=None, prefetch=True, *args, **kwargs):
+    def get(self, cid, params=None, prefetch=True, *args, **kwargs):
         """ Invokes a resource using the GET method.
         """
+        headers = kwargs.pop('headers', {})
+        if not 'X-Zato-CID' in headers:
+            headers['X-Zato-CID'] = cid
+
         return self.session.get(self.config['address'], params=params or {}, 
             prefetch=prefetch, auth=self.requests_auth, *args, **kwargs)
     
     def _soap_data(self, data, headers):
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
+        soap_config = self.soap[self.config['soap_version']]
+        
         # The idea here is that even though there usually won't be the Content-Type
         # header provided by the user, we shouldn't overwrite it if one has been
         # actually passed in.
         if not headers.get('Content-Type'):
-            headers['Content-Type'] = self.soap[self.config['soap_version']]['Content-Type']
-
-        return data, headers
+            headers['Content-Type'] = soap_config['content_type']
+            
+        if self.config['sec_type'] == security_def_type.wss:
+            soap_header = soap_config['header']
+        else:
+            soap_header = ''
+            
+        return soap_config['message'].format(header=soap_header, data=data), headers
     
-    def post(self, data=None, prefetch=True, *args, **kwargs):
+    def post(self, cid, data='', prefetch=True, *args, **kwargs):
         """ Invokes a resource using the POST method.
         """
         if self.config['transport'] == 'soap':
-            data, headers = self._soap_data(data or '', kwargs.pop('headers', {}))
+            data, headers = self._soap_data(data, kwargs.pop('headers', {}))
+            
+        if not 'X-Zato-CID' in headers:
+            headers['X-Zato-CID'] = cid
 
         return self.session.post(self.config['address'], data=data, 
             prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)
