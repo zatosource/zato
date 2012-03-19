@@ -358,6 +358,20 @@ class Security(object):
             
 # ##############################################################################
 
+    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+        """ Creates or updates an HTTP/SOAP channel.
+        """
+        with self.url_sec_lock:
+            raise NotImplementedError()
+
+    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
+        """ Deletes an HTTP/SOAP channel.
+        """
+        with self.url_sec_lock:
+            raise NotImplementedError()
+
+# ##############################################################################
+
 class RequestHandler(object):
     """ Handles all the incoming HTTP/SOAP requests.
     """

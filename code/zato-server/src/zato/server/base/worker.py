@@ -342,6 +342,18 @@ class WorkerStore(BaseWorker):
 
 # ##############################################################################
 
+    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+        """ Creates or updates an HTTP/SOAP channel.
+        """
+        self.request_handler.security.on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
+        
+    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
+        """ Deletes an HTTP/SOAP channel.
+        """
+        self.request_handler.security.on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+
+# ##############################################################################
+
     def _delete_outgoing_http_soap(self, name, transport, log_meth):
         """ Actually deletes an outgoing HTTP/SOAP connection.
         """
@@ -355,7 +367,7 @@ class WorkerStore(BaseWorker):
             log_meth('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
         
     def on_broker_pull_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
-        """ Creates or updates an HTTP/SOAP connection.
+        """ Creates or updates an outgoing HTTP/SOAP connection.
         """
         # It might be a rename
         old_name = msg.get('old_name')
