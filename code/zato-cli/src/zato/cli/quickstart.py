@@ -177,7 +177,7 @@ class Quickstart(ZatoCommand):
         # .. no security ..
         #
         ping_no_sec_channel = HTTPSOAP(None, 'zato.ping', True, True, 'channel', 
-                                       'plain_http', None, '/zato/ping', None, None, None, service=ping_service, cluster=cluster)
+                                       'plain_http', None, '/zato/ping', None, '', None, service=ping_service, cluster=cluster)
         session.add(ping_no_sec_channel)
 
 
@@ -197,7 +197,7 @@ class Quickstart(ZatoCommand):
             base_name = 'ping.{0}.basic_auth'.format(transport)
             zato_name = 'zato.{0}'.format(base_name)
             url = '/zato/{0}'.format(base_name)
-            soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else (None, None)
+            soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else ('', None)
             password = passwords[base_name]
             
             sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', password, cluster)
@@ -387,7 +387,7 @@ class Quickstart(ZatoCommand):
             session.add(service)
         
             http_soap = HTTPSOAP(None, service_name, True, True, 'channel', 'plain_http', 
-                None, url_path, None, None, None, service=service, cluster=cluster, security=tech_account)
+                None, url_path, None, '', None, service=service, cluster=cluster, security=tech_account)
             session.add(http_soap)
                     
     def execute(self, args):

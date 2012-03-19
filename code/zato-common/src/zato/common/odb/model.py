@@ -259,7 +259,7 @@ class HTTPSOAP(Base):
     url_path = Column(String(200), nullable=False)
     method = Column(String(200), nullable=True)
 
-    soap_action = Column(String(200), nullable=True)
+    soap_action = Column(String(200), nullable=False)
     soap_version = Column(String(20), nullable=True)
     
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
