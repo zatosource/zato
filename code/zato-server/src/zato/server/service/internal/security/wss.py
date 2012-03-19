@@ -79,7 +79,7 @@ class Create(AdminService):
         input = self.request.input
         
         with closing(self.odb.session()) as session:
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
+            cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
             # Let's see if we already have a definition of that name before committing
             # any stuff into the database.
             existing_one = session.query(WSSDefinition).\
@@ -93,7 +93,7 @@ class Create(AdminService):
             password = uuid4().hex
     
             try:
-                wss = WSSDefinition(None, name, input.is_active, input.username, 
+                wss = WSSDefinition(None, input.name, input.is_active, input.username, 
                     password, input.password_type, input.reject_empty_nonce_creat, 
                     input.reject_stale_tokens, input.reject_expiry_limit, input.nonce_freshness_time, 
                     cluster)
@@ -123,13 +123,13 @@ class Edit(AdminService):
     class FlatInput:
         required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
-            Boolean('reject_expiry_limit'), Integer('nonce_freshness_time'))
+            'reject_expiry_limit', Integer('nonce_freshness_time'))
 
     def handle(self):
         input = self.request.input
         with closing(self.odb.session()) as session:
             existing_one = session.query(WSSDefinition).\
-                filter(Cluster.id==cluster_id).\
+                filter(Cluster.id==input.cluster_id).\
                 filter(WSSDefinition.name==input.name).\
                 filter(WSSDefinition.id!=input.id).\
                 first()
@@ -143,7 +143,7 @@ class Edit(AdminService):
                 wss = session.query(WSSDefinition).filter_by(id=input.id).one()
                 old_name = wss.name
                 
-                wss.name = name
+                wss.name = input.name
                 wss.is_active = input.is_active
                 wss.username = input.username
                 wss.password_type = input.password_type
