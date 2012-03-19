@@ -30,7 +30,7 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     host = forms.CharField(initial='http://', widget=forms.TextInput(attrs={'style':'width:100%'}))
-    url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:50%'}))
+    url_path = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:100%'}))
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
