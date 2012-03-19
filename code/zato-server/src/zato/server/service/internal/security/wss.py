@@ -47,6 +47,7 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
+            definition_list = Element('definition_list')
             definitions = wss_list(session, self.request.input.cluster_id, False)
     
             for definition in definitions:
