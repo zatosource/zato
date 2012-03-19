@@ -616,10 +616,15 @@ class HTTPSOAPWrapper(object):
         return self.session.get(self.config['address'], params=params or {}, 
             prefetch=prefetch, auth=self.requests_auth, *args, **kwargs)
     
+    def _soap_data(self, data, headers):
+        return data, headers
+    
     def post(self, data=None, prefetch=True, *args, **kwargs):
         """ Invokes a resource using the POST method.
         """
-        return self.session.post(self.config['address'], data=data or '', 
-            prefetch=prefetch, auth=self.requests_auth, *args, **kwargs)
+        if self.config['transport'] == 'soap':
+            data, headers = self._soap_data(data or '', kwargs.pop('headers', {}))
+        return self.session.post(self.config['address'], data=data, 
+            prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)
     
     send = post
