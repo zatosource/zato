@@ -75,7 +75,7 @@ class WorkerStore(BaseWorker):
         
         # Create all the expected connections
         self.init_sql()
-        self.init_http()
+        self.init_http_soap()
         
     def filter(self, msg):
         return True
@@ -134,17 +134,19 @@ class WorkerStore(BaseWorker):
         wrapper_config.update(sec_config)
         return HTTPSOAPWrapper(wrapper_config)
             
-    def init_http(self):
+    def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
         """
-        for name in self.worker_config.out_plain_http:
-            config = self.worker_config.out_plain_http[name].config
-            
-            wrapper = self._http_soap_wrapper_from_config(config)
-            self.worker_config.out_plain_http[name].conn = wrapper
-            
-            # To make the API consistent with that of SQL connection pools
-            self.worker_config.out_plain_http[name].ping = wrapper.ping
+        for transport in('soap', 'plain_http'):
+            config_dict = getattr(self.worker_config, 'out_' + transport)
+            for name in config_dict:
+                config = config_dict[name].config
+                
+                wrapper = self._http_soap_wrapper_from_config(config)
+                config_dict[name].conn = wrapper
+                
+                # To make the API consistent with that of SQL connection pools
+                config_dict[name].ping = wrapper.ping
             
     def _update_auth(self, msg, action_name, sec_type, visit_wrapper, keys=None):
         """ A common method for updating auth-related configuration.
@@ -153,16 +155,19 @@ class WorkerStore(BaseWorker):
             # Channels
             handler = getattr(self.request_handler.security, 'on_broker_pull_msg_' + action_name)
             handler(msg)
-            
-            # Wrappers and static configuration for outgoing connections
-            for name in self.worker_config.out_plain_http.copy_keys():
-                config = self.worker_config.out_plain_http[name].config
-                wrapper = self.worker_config.out_plain_http[name].conn
-                if config['sec_type'] == sec_type:
-                    if keys:
-                        visit_wrapper(wrapper, msg, keys)
-                    else:
-                        visit_wrapper(wrapper, msg)
+        
+            for transport in('soap', 'plain_http'):
+                config_dict = getattr(self.worker_config, 'out_' + transport)
+                
+                # Wrappers and static configuration for outgoing connections
+                for name in config_dict.copy_keys():
+                    config = config_dict[name].config
+                    wrapper = config_dict[name].conn
+                    if config['sec_type'] == sec_type:
+                        if keys:
+                            visit_wrapper(wrapper, msg, keys)
+                        else:
+                            visit_wrapper(wrapper, msg)
                         
     def _visit_wrapper_edit(self, wrapper, msg, keys):
         """ Updates a given wrapper's security configuration.
@@ -182,8 +187,9 @@ class WorkerStore(BaseWorker):
     def _visit_wrapper_delete(self, wrapper, msg):
         """ Deletes a wrapper.
         """
+        config_dict = getattr(self.worker_config, 'out_' + wrapper.config['transport'])
         if wrapper.config['security_name'] == msg['name']:
-            del self.worker_config.out_plain_http[wrapper.config['name']]
+            del config_dict[wrapper.config['name']]
             
     def _visit_wrapper_change_password(self, wrapper, msg):
         """ Changes a wrapper's password.
@@ -340,10 +346,7 @@ class WorkerStore(BaseWorker):
         """ Actually deletes an outgoing HTTP/SOAP connection.
         """
         # Are we dealing with plain HTTP or SOAP?
-        if transport == url_type.plain_http:
-            config_dict = self.worker_config.out_plain_http
-        else:
-            config_dict = self.worker_config.out_soap
+        config_dict = getattr(self.worker_config, 'out_' + transport)
         
         # Delete the connection first, if it exists at all ..
         try:
@@ -363,10 +366,11 @@ class WorkerStore(BaseWorker):
         
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, False)
-        self.worker_config.out_plain_http[msg['name']] = Bunch()
-        self.worker_config.out_plain_http[msg['name']].config = msg
-        self.worker_config.out_plain_http[msg['name']].conn = wrapper
-        self.worker_config.out_plain_http[msg['name']].ping = wrapper.ping # (just like in self.init_http)
+        config_dict = getattr(self.worker_config, 'out_' + msg['transport'])
+        config_dict[msg['name']] = Bunch()
+        config_dict[msg['name']].config = msg
+        config_dict[msg['name']].conn = wrapper
+        config_dict[msg['name']].ping = wrapper.ping # (just like in self.init_http)
         
     def on_broker_pull_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the

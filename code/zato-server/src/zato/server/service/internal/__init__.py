@@ -48,7 +48,9 @@ class AdminService(Service):
 class Ping(AdminService):
 
     def handle(self):
-        pass
+        out = self.outgoing.plain_http.get('Twitter Search').conn
+        print(333, out.config)
+        #out.get()
     
 class Ping2(Ping):
     pass

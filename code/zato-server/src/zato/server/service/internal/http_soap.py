@@ -296,7 +296,8 @@ class Ping(AdminService):
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             
             info_elem = etree.Element('info')
-            info_elem.text = self.outgoing.plain_http.get(item.name).ping()
+            config_dict = getattr(self.outgoing, item.transport)
+            info_elem.text = config_dict.get(item.name).ping()
             
             self.response.payload = etree.tostring(info_elem)
 

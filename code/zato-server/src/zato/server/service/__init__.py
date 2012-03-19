@@ -111,7 +111,6 @@ class Outgoing(object):
         self.sql = sql
         self.plain_http = plain_http
         self.soap = soap
-        self.soap = soap
 
 class Response(object):
     """ A response from the service's invocation.
