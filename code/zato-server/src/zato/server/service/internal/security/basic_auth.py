@@ -149,11 +149,10 @@ class Edit(AdminService):
                 
                 raise 
             else:
-                new_params['action'] = SECURITY.BASIC_AUTH_EDIT
-                new_params['old_name'] = old_name
-                new_params['sec_type'] = 'basic_auth'
-                self.broker_client.send_json(new_params, 
-                    msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                input.action = SECURITY.BASIC_AUTH_EDIT
+                input.old_name = old_name
+                input.sec_type = 'basic_auth'
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
             self.response.payload = etree.tostring(auth_elem)
     
@@ -164,8 +163,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
             
-        return self._handle(HTTPBasicAuth, _auth, 
-                            SECURITY.BASIC_AUTH_CHANGE_PASSWORD, **kwargs)
+        return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD)
 
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.

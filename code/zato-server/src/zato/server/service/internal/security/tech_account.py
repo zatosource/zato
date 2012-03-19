@@ -186,7 +186,7 @@ class ChangePassword(ChangePasswordBase):
             instance.salt = salt
 
         return self._handle(TechnicalAccount, _auth, 
-                            SECURITY.TECH_ACC_CHANGE_PASSWORD, salt=salt, **kwargs)
+                            SECURITY.TECH_ACC_CHANGE_PASSWORD, salt=salt)
     
 class Delete(AdminService):
     """ Deletes a technical account.
