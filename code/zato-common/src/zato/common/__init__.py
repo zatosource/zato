@@ -54,9 +54,8 @@ wsu_namespace = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecur
 wss_namespaces = {"soapenv":soapenv_namespace, "wsse":wsse_namespace, "wsu":wsu_namespace}
 
 wsse_password_type_text = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
-wsse_password_type_digest = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest"
 
-supported_wsse_password_types = (wsse_password_type_text, wsse_password_type_digest)
+supported_wsse_password_types = (wsse_password_type_text, )
 
 wsse_username_path = "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username"
 wsse_username_xpath = etree.XPath(wsse_username_path, namespaces=wss_namespaces)
@@ -112,10 +111,8 @@ url_type.plain_http = 'plain_http'
 
 # Whether WS-Security passwords are transmitted in clear-text or not.
 ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
-ZATO_WSS_PASSWORD_DIGEST = Bunch(name='digest', label='Digest')
 ZATO_WSS_PASSWORD_TYPES = {
     ZATO_WSS_PASSWORD_CLEAR_TEXT.name:ZATO_WSS_PASSWORD_CLEAR_TEXT.label,
-    ZATO_WSS_PASSWORD_DIGEST.name:ZATO_WSS_PASSWORD_DIGEST.label
 }
 
 ZATO_FIELD_OPERATORS = {

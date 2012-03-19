@@ -26,7 +26,6 @@
             'name',
             '_is_active',
             'username',
-            '_password_type',
             '_reject_empty_nonce_creat',
             '_reject_stale_tokens',
             'reject_expiry_limit',
@@ -36,7 +35,6 @@
             '_delete',
             'id',
             'is_active',
-            'password_type_raw',
             'reject_empty_nonce_creat',
             'reject_stale_tokens'
         ]
@@ -92,10 +90,6 @@
                             <td>{{ create_form.username }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Password type</td>
-                            <td>{{ create_form.password_type }} </td>
-                        </tr>
-                        <tr>
                             <td style="vertical-align:middle">Reject empty nonce creation timestamps</td>
                             <td>{{ create_form.reject_empty_nonce_creat }} </td>
                         </tr>
@@ -121,6 +115,7 @@
                         
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="password_type" name="password_type" value="clear_text" />
                 </form>
             </div>
         </div>
@@ -140,10 +135,6 @@
                         <tr>
                             <td style="vertical-align:middle">Username</td>
                             <td>{{ edit_form.username }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Password type</td>
-                            <td>{{ edit_form.password_type }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Reject empty nonce creation timestamps</td>
@@ -172,6 +163,7 @@
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                    <input type="hidden" id="id_edit-password_type" name="edit-password_type" value="clear_text" />
                 </form>
             </div>
         </div>
@@ -216,7 +208,6 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Username</a></th>
-                        <th><a href="#">Password type</a></th>
                         <th><a href="#">Reject empty TS</a></th>
                         <th><a href="#">Reject stale username</a></th>
                         <th><a href="#">Expiry limit</a></th>
@@ -224,7 +215,6 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -240,7 +230,6 @@
                         <td>{{ item.name }}</td>
                         <td>{% if item.is_active %}Yes{% else %}No{% endif %}</td>
                         <td>{{ item.username }}</td>
-                        <td>{{ item.password_type }}</td>
                         <td>{% if item.reject_empty_nonce_creat %}Yes{% else %}No{% endif %}</td>
                         <td>{% if item.reject_stale_tokens %}Yes{% else %}No{% endif %}</td>
                         <td>{{ item.reject_expiry_limit }}</td>
@@ -250,7 +239,6 @@
                         <td><a href="javascript:$.fn.zato.security.wss.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.password_type_raw }}</td>
                         <td class='ignore'>{{ item.reject_empty_nonce_creat }}</td>
                         <td class='ignore'>{{ item.reject_stale_tokens }}</td>
                     </tr>

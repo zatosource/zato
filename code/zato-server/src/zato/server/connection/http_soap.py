@@ -149,11 +149,7 @@ class Security(object):
         """
         url_config = {}
         
-        if sec_def['password_type'] == 'clear_text':
-            url_config['wsse-pwd-password'] = sec_def['password']
-        else:
-            url_config['wsse-pwd-password-digest'] = sec_def['password']
-        
+        url_config['wsse-pwd-password'] = sec_def['password']
         url_config['wsse-pwd-username'] = sec_def['username']
         url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_def['reject_empty_nonce_creat']
         url_config['wsse-pwd-reject-stale-tokens'] = sec_def['reject_stale_tokens']
