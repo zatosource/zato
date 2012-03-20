@@ -48,7 +48,7 @@ class _SQLService(object):
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -78,7 +78,7 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
         optional = ('extra',)
 
@@ -131,7 +131,7 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
         optional = ('extra',)
 
@@ -186,7 +186,7 @@ class Edit(AdminService, _SQLService):
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):
@@ -227,7 +227,7 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an SQL database
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

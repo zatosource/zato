@@ -190,8 +190,8 @@ class Service(object):
         out_ftp, out_plain_http, out_soap, out_s3 = self.worker_store.worker_config.outgoing_connections()
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap, out_s3)
         
-        if hasattr(self, 'FlatInput'):
-            self.request.init(self.FlatInput)
+        if hasattr(self, 'SimpleIO'):
+            self.request.init(self.SimpleIO)
         
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process

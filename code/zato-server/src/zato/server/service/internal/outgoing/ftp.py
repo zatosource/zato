@@ -46,7 +46,7 @@ class _FTPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -74,7 +74,7 @@ class GetList(AdminService):
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
         optional = ('user', 'acct', 'timeout')
 
@@ -122,7 +122,7 @@ class Create(_FTPService):
 class Edit(_FTPService):
     """ Updates an outgoing FTP connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
         optional = ('user', 'acct', 'timeout')
 
@@ -171,7 +171,7 @@ class Edit(_FTPService):
 class Delete(AdminService):
     """ Deletes an outgoing FTP connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

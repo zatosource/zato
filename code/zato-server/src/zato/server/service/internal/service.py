@@ -40,7 +40,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of services.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
         
     def handle(self):
@@ -65,7 +65,7 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular service.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'id')
 
     def handle(self):
@@ -86,7 +86,7 @@ class GetByID(AdminService):
 class Edit(AdminService):
     """ Updates a service.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'is_active', 'name')
     
     def handle(self):
@@ -123,7 +123,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a service
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of AMQP channels.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -68,7 +68,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 
             'consumer_tag_prefix', 'service')
 
@@ -125,7 +125,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an AMQP channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 
             'consumer_tag_prefix', 'service')
 
@@ -187,7 +187,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an AMQP channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

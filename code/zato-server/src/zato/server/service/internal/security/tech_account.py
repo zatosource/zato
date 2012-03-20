@@ -43,7 +43,7 @@ class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
     sorted by the 'name' attribute.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -65,7 +65,7 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('tech_account_id',)
 
     def handle(self):
@@ -85,7 +85,7 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new technical account.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active')
 
     def handle(self):
@@ -131,7 +131,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing technical account.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'tech_account_id', 'name', 'is_active')
 
     def handle(self):
@@ -191,7 +191,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a technical account.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('tech_account_id', 'zato_admin_tech_account_name')
 
     def handle(self):

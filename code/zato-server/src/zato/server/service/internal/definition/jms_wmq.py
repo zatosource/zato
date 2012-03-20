@@ -40,7 +40,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -73,7 +73,7 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id',)
 
     def handle(self):
@@ -104,7 +104,7 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
             'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
@@ -149,7 +149,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a JMS WMQ definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
             'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
@@ -212,7 +212,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a JMS WebSphere MQ definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

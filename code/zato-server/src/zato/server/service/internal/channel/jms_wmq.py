@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ channels.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -67,7 +67,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WebSphere MQ channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
 
     def handle(self):
@@ -124,7 +124,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a JMS WebSphere MQ channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
 
     def handle(self):
@@ -184,7 +184,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an JMS WebSphere MQ channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):
