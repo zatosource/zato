@@ -103,7 +103,6 @@ class ODBManager(SessionWrapper):
 
             if item.security_id:
                 result[item.url_path].sec_def = SimpleBunch()
-                result[item.url_path].sec_def.type = item.sec_type
                 
                 # Will raise KeyError if the DB gets somehow misconfigured.
                 db_class = sec_type_db_class[item.sec_type]
