@@ -340,7 +340,7 @@ class Ping(AdminService):
             
             info_elem = etree.Element('info')
             config_dict = getattr(self.outgoing, item.transport)
-            info_elem.text = config_dict.get(item.name).ping(self.rid)
+            info_elem.text = config_dict.get(item.name).ping(self.cid)
             
             self.response.payload = etree.tostring(info_elem)
 

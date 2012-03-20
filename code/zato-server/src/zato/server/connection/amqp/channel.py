@@ -32,7 +32,7 @@ from bunch import Bunch
 # Zato
 from zato.common import PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
-from zato.common.util import new_rid, TRACE1
+from zato.common.util import new_cid, TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
 
@@ -181,7 +181,7 @@ class ConsumingConnector(BaseAMQPConnector):
                 params = {}
                 params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED
                 params['service'] = self.channel_amqp.service
-                params['rid'] = new_rid()
+                params['cid'] = new_cid()
                 params['payload'] = body
                 
                 self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)

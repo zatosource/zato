@@ -55,7 +55,7 @@ zato_message = Template("""
     <data>$data</data>
     <zato_env>
         <result>$result</result>
-        <rid>$rid</rid>
+        <cid>$cid</cid>
         <details>$details</details>
     </zato_env>
 </zato_message>""")
@@ -69,7 +69,7 @@ soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
    <SOAP-ENV:Body>
      <SOAP-ENV:Fault>
      <faultcode>SOAP-ENV:$faultcode</faultcode>
-     <faultstring>[$rid] $faultstring</faultstring>
+     <faultstring>[$cid] $faultstring</faultstring>
       </SOAP-ENV:Fault>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>""")
@@ -89,27 +89,27 @@ def get_body_payload(body):
 
     return body_payload
 
-def client_soap_error(rid, faultstring):
-    return soap_error.safe_substitute(faultcode='Client', rid=rid, faultstring=faultstring)
+def client_soap_error(cid, faultstring):
+    return soap_error.safe_substitute(faultcode='Client', cid=cid, faultstring=faultstring)
 
-def server_soap_error(rid, faultstring):
-    return soap_error.safe_substitute(faultcode='Server', rid=rid, faultstring=faultstring)
+def server_soap_error(cid, faultstring):
+    return soap_error.safe_substitute(faultcode='Server', cid=cid, faultstring=faultstring)
 
 class ClientHTTPError(HTTPException):
-    def __init__(self, rid, msg, status):
-        super(ClientHTTPError, self).__init__(rid, msg, status)
+    def __init__(self, cid, msg, status):
+        super(ClientHTTPError, self).__init__(cid, msg, status)
         
 class BadRequest(ClientHTTPError):
-    def __init__(self, rid, msg):
-        super(BadRequest, self).__init__(rid, msg, BAD_REQUEST)
+    def __init__(self, cid, msg):
+        super(BadRequest, self).__init__(cid, msg, BAD_REQUEST)
         
 class Forbidden(ClientHTTPError):
-    def __init__(self, rid, msg):
-        super(Forbidden, self).__init__(rid, msg, FORBIDDEN)
+    def __init__(self, cid, msg):
+        super(Forbidden, self).__init__(cid, msg, FORBIDDEN)
         
 class NotFound(ClientHTTPError):
-    def __init__(self, rid, msg):
-        super(NotFound, self).__init__(rid, msg, NOT_FOUND)
+    def __init__(self, cid, msg):
+        super(NotFound, self).__init__(cid, msg, NOT_FOUND)
 
 class Security(object):
     """ Performs all the HTTP/SOAP-related security checks.
@@ -123,15 +123,15 @@ class Security(object):
         self.url_sec_lock = RLock()
         self._wss = WSSE()
                  
-    def handle(self, rid, url_data, request_data, body, headers):
+    def handle(self, cid, url_data, request_data, body, headers):
         """ Calls other concrete security methods as appropriate.
         """
         sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.sec_type
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-        getattr(self, handler_name)(rid, sec_def, request_data, body, headers)
+        getattr(self, handler_name)(cid, sec_def, request_data, body, headers)
 
-    def _handle_security_basic_auth(self, rid, sec_def, request_data, body, headers):
+    def _handle_security_basic_auth(self, cid, sec_def, request_data, body, headers):
         """ Performs the authentication using HTTP Basic Auth.
         """
         env = {'HTTP_AUTHORIZATION':headers.get('AUTHORIZATION')}
@@ -140,12 +140,12 @@ class Security(object):
         result = on_basic_auth(env, url_config, False)
         
         if not result:
-            msg = 'FORBIDDEN rid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
-                rid, result.code, result.description)
+            msg = 'FORBIDDEN cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
+                cid, result.code, result.description)
             logger.error(msg)
-            raise Forbidden(rid, msg)
+            raise Forbidden(cid, msg)
         
-    def _handle_security_wss(self, rid, sec_def, request_data, body, headers):
+    def _handle_security_wss(self, cid, sec_def, request_data, body, headers):
         """ Performs the authentication using WS-Security.
         """
         url_config = {}
@@ -160,12 +160,12 @@ class Security(object):
         result = on_wsse_pwd(self._wss, url_config, body, False)
         
         if not result:
-            msg = 'FORBIDDEN rid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
-                rid, result.code, result.description)
+            msg = 'FORBIDDEN cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
+                cid, result.code, result.description)
             logger.error(msg)
-            raise Forbidden(rid, msg)
+            raise Forbidden(cid, msg)
         
-    def _handle_security_tech_acc(self, rid, sec_def, request_data, body, headers):
+    def _handle_security_tech_acc(self, cid, sec_def, request_data, body, headers):
         """ Performs the authentication using technical accounts.
         """
         zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
@@ -174,27 +174,27 @@ class Security(object):
             if not headers.get(header, None):
                 error_msg = ("[{0}] The header [{1}] doesn't exist or is empty, URI=[{2}, "
                       "headers=[{3}]]").\
-                        format(rid, header, request_data.uri, headers)
+                        format(cid, header, request_data.uri, headers)
                 logger.error(error_msg)
-                raise Forbidden(rid, error_msg)
+                raise Forbidden(cid, error_msg)
 
         # Note that logs get a specific information what went wrong whereas the
         # user gets a generic 'username or password' message
         msg_template = '[{0}] The {1} is incorrect, URI:[{2}], X_ZATO_USER:[{3}]'
 
         if headers['X_ZATO_USER'] != sec_def.name:
-            error_msg = msg_template.format(rid, 'username', request_data.uri, headers['X_ZATO_USER'])
-            user_msg = msg_template.format(rid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
+            error_msg = msg_template.format(cid, 'username', request_data.uri, headers['X_ZATO_USER'])
+            user_msg = msg_template.format(cid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
             logger.error(error_msg)
-            raise Forbidden(rid, user_msg)
+            raise Forbidden(cid, user_msg)
         
         incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
         
         if incoming_password != sec_def.password:
-            error_msg = msg_template.format(rid, 'password', request_data.uri, headers['X_ZATO_USER'])
-            user_msg = msg_template.format(rid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
+            error_msg = msg_template.format(cid, 'password', request_data.uri, headers['X_ZATO_USER'])
+            user_msg = msg_template.format(cid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
             logger.error(error_msg)
-            raise Forbidden(rid, user_msg)
+            raise Forbidden(cid, user_msg)
         
 # ##############################################################################
         
@@ -392,17 +392,17 @@ class RequestHandler(object):
         self.soap_handler = soap_handler
         self.plain_http_handler = plain_http_handler
         
-    def wrap_error_message(self, rid, url_type, msg):
+    def wrap_error_message(self, cid, url_type, msg):
         """ Wraps an error message in a transport-specific envelope.
         """
         if url_type == ZATO_URL_TYPE_SOAP:
-            return server_soap_error(rid, msg)
+            return server_soap_error(cid, msg)
         
         # Let's return the message as-is if we don't have any specific envelope
         # to use.
         return msg        
     
-    def handle(self, rid, task, thread_ctx):
+    def handle(self, cid, task, thread_ctx):
         """ Base method for handling incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth, 
         the security validation is being performed. Otherwise, that step 
@@ -422,17 +422,17 @@ class RequestHandler(object):
                 if url_data.sec_def != ZATO_NONE:
                     if url_data.sec_def.sec_type in(security_def_type.tech_account, security_def_type.basic_auth, 
                                                 security_def_type.wss):
-                        self.security.handle(rid, url_data, task.request_data, request, headers)
+                        self.security.handle(cid, url_data, task.request_data, request, headers)
                     else:
-                        log_msg = '[{0}] sec_def.sec_type:[{1}] needs no auth'.format(rid, url_data.sec_def.sec_type)
+                        log_msg = '[{0}] sec_def.sec_type:[{1}] needs no auth'.format(cid, url_data.sec_def.sec_type)
                         logger.debug(log_msg)
                 else:
-                    log_msg = '[{0}] No security for URL [{1}]'.format(rid, task.request_data.uri)
+                    log_msg = '[{0}] No security for URL [{1}]'.format(cid, task.request_data.uri)
                     logger.debug(log_msg)
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
 
-                response = handler.handle(rid, task, request, headers, transport, thread_ctx)
+                response = handler.handle(cid, task, request, headers, transport, thread_ctx)
                 task.response_headers['Content-Type'] = response.content_type
           
                 return response.payload
@@ -452,17 +452,17 @@ class RequestHandler(object):
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
                 if logger.isEnabledFor(logging.DEBUG):
-                    msg = 'Caught an exception, rid:[{0}], status:[{1}], reason:[{2}], _format_exc:[{3}]'.format(
-                        rid, status, reason, _format_exc)
+                    msg = 'Caught an exception, cid:[{0}], status:[{1}], reason:[{2}], _format_exc:[{3}]'.format(
+                        cid, status, reason, _format_exc)
                     logger.debug(msg)
                     
                 if transport == 'soap':
-                    response = client_soap_error(rid, response)
+                    response = client_soap_error(cid, response)
                     
                 task.setResponseStatus(status, reason)
                 return response
         else:
-            response = "[{0}] The URL [{1}] doesn't exist".format(rid, task.request_data.uri)
+            response = "[{0}] The URL [{1}] doesn't exist".format(cid, task.request_data.uri)
             task.setResponseStatus(NOT_FOUND, _reason_not_found)
             
             logger.error(response)
@@ -474,22 +474,22 @@ class _BaseMessageHandler(object):
         self.http_soap = http_soap
         self.server = server # A ParallelServer instance
     
-    def init(self, rid, task, request, headers, transport):
-        logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(rid, request, headers))
+    def init(self, cid, task, request, headers, transport):
+        logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(cid, request, headers))
 
         if transport == 'soap':
             # HTTP headers are all uppercased at this point.
             soap_action = headers.get('SOAPACTION')
     
             if not soap_action:
-                raise BadRequest(rid, 'Client did not send the SOAPAction header')
+                raise BadRequest(cid, 'Client did not send the SOAPAction header')
     
             # SOAP clients may send an empty header, i.e. SOAPAction: "",
             # as opposed to not sending the header at all.
             soap_action = soap_action.lstrip('"').rstrip('"')
     
             if not soap_action:
-                raise BadRequest(rid, 'Client sent an empty SOAPAction header')
+                raise BadRequest(cid, 'Client sent an empty SOAPAction header')
         else:
             soap_action = ''
 
@@ -504,13 +504,13 @@ class _BaseMessageHandler(object):
                 break
         else:
             msg = '[{0}] Could not find the service config for URL:[{1}], SOAP action:[{2}]'.format(
-                rid, task.request_data.uri, soap_action)
+                cid, task.request_data.uri, soap_action)
             logger.warn(msg)
-            raise NotFound(rid, msg)
+            raise NotFound(cid, msg)
 
-        logger.debug('[{0}] impl_name:[{1}]'.format(rid, _service_info.impl_name))
+        logger.debug('[{0}] impl_name:[{1}]'.format(cid, _service_info.impl_name))
 
-        logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(rid, self.server.service_store.services))
+        logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, self.server.service_store.services))
         service_data = self.server.service_store.service_data(_service_info.impl_name)
 
         if transport == 'soap':
@@ -518,7 +518,7 @@ class _BaseMessageHandler(object):
             body = soap_body_xpath(soap)
     
             if not body:
-                raise BadRequest(rid, 'Client did not send the [{1}] element'.format(body_path))
+                raise BadRequest(cid, 'Client did not send the [{1}] element'.format(body_path))
             
             payload = get_body_payload(body)
         else:
@@ -529,25 +529,25 @@ class _BaseMessageHandler(object):
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, rid, task, raw_request, headers, transport, thread_ctx):
+    def handle(self, cid, task, raw_request, headers, transport, thread_ctx):
         
-        payload, impl_name, service_data = self.init(rid, task, raw_request, headers, transport)
+        payload, impl_name, service_data = self.init(cid, task, raw_request, headers, transport)
 
         service_instance = self.server.service_store.new_instance(impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
-            thread_ctx.store, rid, payload, raw_request, transport)
+            thread_ctx.store, cid, payload, raw_request, transport)
 
         service_instance.handle()
         response = service_instance.response
 
         if isinstance(service_instance, AdminService) and service_instance.needs_xml:
-            response.payload = zato_message.safe_substitute(rid=service_instance.rid, 
+            response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
                 result=response.result, details=response.result_details, data=response.payload)
 
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
 
-        logger.debug('[{0}] Returning response=[{1}]'.format(rid, response.payload))
+        logger.debug('[{0}] Returning response=[{1}]'.format(cid, response.payload))
         return response
     
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
@@ -599,8 +599,8 @@ class PlainHTTPHandler(_BaseMessageHandler):
     def __init__(self, http_soap=None, server=None):
         super(PlainHTTPHandler, self).__init__(http_soap, server)
         
-    def handle(self, rid, task, request, headers, transport, thread_ctx):
-        return super(PlainHTTPHandler, self).handle(rid, task, request, headers, transport, thread_ctx)
+    def handle(self, cid, task, request, headers, transport, thread_ctx):
+        return super(PlainHTTPHandler, self).handle(cid, task, request, headers, transport, thread_ctx)
 
 class HTTPSOAPWrapper(object):
     """ A thin wrapper around the API exposed by the 'requests' package.

@@ -35,14 +35,14 @@ from springpython.jms.core import reserved_attributes
 # Zato
 from zato.common import PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
-from zato.common.util import new_rid, TRACE1
+from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_CHANNEL_ID'
 
 # Spring Python's 'text' is our 'payload' hence we need to do away with the 'text' attribute.
-# In addition to that, we also need to get rid of all the magic methods.
+# In addition to that, we also need to get cid of all the magic methods.
 
 MESSAGE_ATTRS = deepcopy(reserved_attributes)
 MESSAGE_ATTRS.remove('text')
@@ -201,7 +201,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 params = {}
                 params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED
                 params['service'] = self.channel.service
-                params['rid'] = new_rid()
+                params['cid'] = new_cid()
                 params['payload'] = msg.text
                 
                 for attr in MESSAGE_ATTRS:

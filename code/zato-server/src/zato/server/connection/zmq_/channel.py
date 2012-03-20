@@ -29,7 +29,7 @@ from bunch import Bunch
 # Zato
 from zato.common import PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
-from zato.common.util import new_rid
+from zato.common.util import new_cid
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
 
@@ -139,7 +139,7 @@ class ConsumingConnector(BaseZMQConnector):
             params = {}
             params['action'] = CHANNEL.ZMQ_MESSAGE_RECEIVED
             params['service'] = self.channel.service
-            params['rid'] = new_rid()
+            params['cid'] = new_cid()
             params['payload'] = msg
             
             self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)

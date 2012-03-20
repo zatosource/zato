@@ -23,10 +23,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # over them at all.
 
 # LMC stands for the 'log message code'
-# RID stands for the 'request ID'
+# CID stands for the 'correlation ID'
 
-# Needs to be kept in sync with zato.common.util.new_req_id
-RID_LENGTH = 24
+# Needs to be kept in sync with zato.common.util.new_cid
+CID_LENGTH = 24
 
 NULL_LMC = '0000.0000'
-NULL_RID = '0' * RID_LENGTH
+NULL_CID = '0' * CID_LENGTH

@@ -30,7 +30,7 @@ from apscheduler.scheduler import Scheduler as APScheduler
 # Zato 
 from zato.common import scheduler_date_time_format
 from zato.common.broker_message import SCHEDULER
-from zato.common.util import new_rid
+from zato.common.util import new_cid
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class Scheduler(object):
         one of the parallel server's broker clients.
         """
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'payload':extra,
-               'rid':new_rid()}
+               'cid':new_cid()}
         self.singleton.broker_client.send_json(msg)
         
         if logger.isEnabledFor(logging.DEBUG):
