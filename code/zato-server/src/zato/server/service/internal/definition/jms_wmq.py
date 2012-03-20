@@ -41,7 +41,7 @@ class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -74,7 +74,7 @@ class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id',)
+        input_required = ('id', 'cluster_id',)
 
     def handle(self):
         
@@ -105,7 +105,7 @@ class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
+        input_required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
             'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
             'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
@@ -150,7 +150,7 @@ class Edit(AdminService):
     """ Updates a JMS WMQ definition.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
+        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
             'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
             'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
@@ -213,7 +213,7 @@ class Delete(AdminService):
     """ Deletes a JMS WebSphere MQ definition.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

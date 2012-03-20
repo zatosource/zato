@@ -42,7 +42,7 @@ class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ channels.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -68,7 +68,7 @@ class Create(AdminService):
     """ Creates a new WebSphere MQ channel.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
 
     def handle(self):
         input = self.request.input
@@ -125,7 +125,7 @@ class Edit(AdminService):
     """ Updates a JMS WebSphere MQ channel.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
 
     def handle(self):
         input = self.request.input
@@ -185,7 +185,7 @@ class Delete(AdminService):
     """ Deletes an JMS WebSphere MQ channel.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

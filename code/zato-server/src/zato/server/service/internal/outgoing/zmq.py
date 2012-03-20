@@ -42,7 +42,7 @@ class GetList(AdminService):
     """ Returns a list of outgoing ZeroMQ connections.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -66,7 +66,7 @@ class Create(AdminService):
     """ Creates a new outgoing ZeroMQ connection.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type')
 
     def handle(self):
         input = self.request.input
@@ -108,7 +108,7 @@ class Edit(AdminService):
     """ Updates an outgoing ZeroMQ connection.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
 
     def handle(self):
         input = self.request.input
@@ -154,7 +154,7 @@ class Delete(AdminService):
     """ Deletes an outgoing ZeroMQ connection.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -40,7 +40,7 @@ class GetList(AdminService):
     """ Returns a list of outgoing S3 connections.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -65,7 +65,7 @@ class Create(AdminService):
     """ Creates a new outgoing S3 connection.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout')
+        input_required = ('cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout')
 
     def handle(self):
         input = self.request.input
@@ -107,7 +107,7 @@ class Edit(AdminService):
     """ Updates an outgoing S3 connection.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout')
 
     def handle(self):
         input = self.request.input
@@ -150,7 +150,7 @@ class Delete(AdminService):
     """ Deletes an outgoing S3 connection.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

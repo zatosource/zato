@@ -42,7 +42,7 @@ class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -73,8 +73,8 @@ class Create(AdminService):
     """ Creates a new outgoing AMQP connection.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
-        optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
     
     def handle(self):
         input = self.request.input
@@ -132,8 +132,8 @@ class Edit(AdminService):
     """ Updates an outgoing AMQP connection.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
-        optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
     
     def handle(self):
         
@@ -197,7 +197,7 @@ class Delete(AdminService):
     """ Deletes an outgoing AMQP connection.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
