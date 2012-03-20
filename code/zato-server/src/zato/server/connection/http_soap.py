@@ -198,11 +198,19 @@ class Security(object):
         
 # ##############################################################################
         
-    def url_sec_get(self, url):
+    def url_sec_get(self, url, soap_action):
         """ Returns the security configuration of the given URL
         """
         with self.url_sec_lock:
-            return self.url_sec.get(url)
+            url_path = self.url_sec.getall(url)
+            if not url_path:
+                return None
+            
+            for _soap_action in url_path:
+                if soap_action in _soap_action:
+                    return _soap_action[soap_action]
+            else:
+                return None
         
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
@@ -211,16 +219,17 @@ class Security(object):
         altogether if 'delete' is True.
         """
         for sec_def_name, sec_def_value in self.url_sec.items():
-            sec_def = sec_def_value.sec_def
-            if sec_def != ZATO_NONE and sec_def.type == sec_def_type:
-                name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
-                if sec_def.name == name:
-                    if delete:
-                        del self.url_sec[sec_def_name]
-                    else:
-                        for key, new_value in msg.items():
-                            if key in sec_def:
-                                sec_def[key] = msg[key]
+            for soap_action in sec_def_value:
+                sec_def = sec_def_value[soap_action].sec_def
+                if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
+                    name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
+                    if sec_def.name == name:
+                        if delete:
+                            del self.url_sec[sec_def_name]
+                        else:
+                            for key, new_value in msg.items():
+                                if key in sec_def:
+                                    sec_def[key] = msg[key]
 
 # ##############################################################################
 
@@ -369,18 +378,31 @@ class Security(object):
             else:
                 sec_def = ZATO_NONE
                 
-            if old_url_path in self.url_sec:
-                del self.url_sec[old_url_path]
+            for url_path, soap_action_items in self.url_sec.dict_of_lists().items():
+                if url_path == old_url_path:
+                    for soap_actions in soap_action_items:
+                        if msg.old_soap_action in soap_actions:
+                            del self.url_sec[old_url_path][msg.old_soap_action]
+                            if not self.url_sec[old_url_path]:
+                                del self.url_sec[old_url_path]
+                            break
                 
-            self.url_sec[msg.url_path] = Bunch()
-            self.url_sec[msg.url_path].sec_def = sec_def
-            self.url_sec[msg.url_path].transport = msg.transport
+            url_path_bunch = self.url_sec.setdefault(msg.url_path, Bunch())
+            soap_action_bunch = url_path_bunch.setdefault(msg.soap_action, Bunch())
+
+            soap_action_bunch.sec_def = sec_def
+            soap_action_bunch.transport = msg.transport
             
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
-            raise NotImplementedError()
+            if msg.transport == url_type.plain_http:
+                del self.url_sec[msg.url_path]
+            '''else:
+                del self.http_soap[msg.url_path][msg.soap_action]
+                if not self.http_soap[msg.url_path]:
+                    del self.http_soap[msg.url_path]'''
 
 # ##############################################################################
 
@@ -408,15 +430,13 @@ class RequestHandler(object):
         the security validation is being performed. Otherwise, that step 
         is postponed until a concrete transport-specific handler is invoked.
         """
-        url_data = self.security.url_sec_get(task.request_data.uri)
+        headers = task.request_data.headers
+        url_data = self.security.url_sec_get(task.request_data.uri, headers.get('SOAPACTION', ''))
 
         if url_data:
-            
             transport = url_data['transport']
-            
             try:
                 request = task.request_data.getBodyStream().getvalue()
-                headers = task.request_data.headers
                 
                 # No security at all for that URL.
                 if url_data.sec_def != ZATO_NONE:
@@ -585,7 +605,12 @@ class _BaseMessageHandler(object):
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
-        raise NotImplementedError()
+        if msg.transport == url_type.plain_http:
+            del self.http_soap[msg.url_path]
+        else:
+            del self.http_soap[msg.url_path][msg.soap_action]
+            if not self.http_soap[msg.url_path]:
+                del self.http_soap[msg.url_path]
         
 class SOAPHandler(_BaseMessageHandler):
     """ Dispatches incoming SOAP messages to services.

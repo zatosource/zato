@@ -374,7 +374,12 @@ class WorkerStore(BaseWorker):
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
+        # Security
         self.request_handler.security.on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+        
+        # A mapping between a URL and a service
+        handler = getattr(self.request_handler, msg.transport + '_handler')
+        handler.on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
 
 # ##############################################################################
 
