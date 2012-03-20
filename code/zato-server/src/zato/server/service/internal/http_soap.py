@@ -251,6 +251,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item = session.query(HTTPSOAP).filter_by(id=input.id).one()
                 old_name = item.name
                 old_url_path = item.url_path
+                old_soap_action = item.soap_action
                 item.name = input.name
                 item.is_active = input.is_active
                 item.host = input.host
@@ -276,6 +277,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 input.is_internal = item.is_internal
                 input.old_name = old_name
                 input.old_url_path = old_url_path
+                input.old_soap_action = old_soap_action
                 input.update(sec_info)
                 
                 if input.connection == 'channel':
