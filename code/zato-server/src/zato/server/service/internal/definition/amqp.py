@@ -39,7 +39,7 @@ class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -66,7 +66,7 @@ class GetByID(AdminService):
     """ Returns a particular AMQP definition
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -94,7 +94,7 @@ class Create(AdminService):
     """ Creates a new AMQP definition.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'host', 'port', 'vhost', 
+        input_required = ('cluster_id', 'name', 'host', 'port', 'vhost', 
             'username', 'frame_max', 'heartbeat')
 
     def handle(self):
@@ -137,7 +137,7 @@ class Edit(AdminService):
     """ Updates an AMQP definition.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 
+        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 
             'username', 'frame_max', 'heartbeat')
 
     def handle(self):
@@ -192,7 +192,7 @@ class Delete(AdminService):
     """ Deletes an AMQP definition.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

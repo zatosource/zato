@@ -49,7 +49,7 @@ class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -79,8 +79,8 @@ class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
     class SimpleIO:
-        required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
-        optional = ('extra',)
+        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        input_optional = ('extra',)
 
     def handle(self):
         input = self.request.input
@@ -132,8 +132,8 @@ class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
     class SimpleIO:
-        required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
-        optional = ('extra',)
+        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        input_optional = ('extra',)
 
     def handle(self):
         input = self.request.input
@@ -187,7 +187,7 @@ class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -228,7 +228,7 @@ class Ping(AdminService):
     """ Pings an SQL database
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

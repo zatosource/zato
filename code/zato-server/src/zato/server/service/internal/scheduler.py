@@ -232,7 +232,7 @@ class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         
@@ -285,7 +285,7 @@ class Delete(AdminService):
     """ Deletes a scheduler's job.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -311,7 +311,7 @@ class Execute(AdminService):
     """ Executes a scheduler's job.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

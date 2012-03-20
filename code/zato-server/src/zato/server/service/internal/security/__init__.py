@@ -35,7 +35,7 @@ class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

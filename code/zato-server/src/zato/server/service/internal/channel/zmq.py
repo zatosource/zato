@@ -42,7 +42,7 @@ class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -68,8 +68,8 @@ class Create(AdminService):
     """ Creates a new ZeroMQ channel.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
-        optional = ('sub_key',)
+        input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
+        input_optional = ('sub_key',)
 
     def handle(self):
         input = self.request.input
@@ -123,8 +123,8 @@ class Edit(AdminService):
     """ Updates a ZeroMQ channel.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
-        optional = ('sub_key',)
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
+        input_optional = ('sub_key',)
 
     def handle(self):
         input = self.request.input
@@ -182,7 +182,7 @@ class Delete(AdminService):
     """ Deletes a ZeroMQ channel.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

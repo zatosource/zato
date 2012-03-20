@@ -44,7 +44,7 @@ class GetList(AdminService):
     sorted by the 'name' attribute.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -66,7 +66,7 @@ class GetByID(AdminService):
     """ Returns a technical account of a given ID.
     """
     class SimpleIO:
-        required = ('tech_account_id',)
+        input_required = ('tech_account_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -86,7 +86,7 @@ class Create(AdminService):
     """ Creates a new technical account.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active')
+        input_required = ('cluster_id', 'name', 'is_active')
 
     def handle(self):
         salt = uuid4().hex
@@ -132,7 +132,7 @@ class Edit(AdminService):
     """ Updates an existing technical account.
     """
     class SimpleIO:
-        required = ('cluster_id', 'tech_account_id', 'name', 'is_active')
+        input_required = ('cluster_id', 'tech_account_id', 'name', 'is_active')
 
     def handle(self):
         input = self.request.input
@@ -192,7 +192,7 @@ class Delete(AdminService):
     """ Deletes a technical account.
     """
     class SimpleIO:
-        required = ('tech_account_id', 'zato_admin_tech_account_name')
+        input_required = ('tech_account_id', 'zato_admin_tech_account_name')
 
     def handle(self):
         input = self.request.input

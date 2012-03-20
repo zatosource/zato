@@ -42,7 +42,7 @@ class GetList(AdminService):
     """ Returns a list of outgoing JMS WebSphere MQ connections.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -69,8 +69,8 @@ class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
-        optional = ('expiration',)
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_optional = ('expiration',)
 
     def handle(self):
         input = self.request.input
@@ -118,8 +118,8 @@ class Edit(AdminService):
     """ Updates an outgoing JMS WebSphere MQ connection.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
-        optional = ('expiration',)
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_optional = ('expiration',)
 
     def handle(self):
         input = self.request.input
@@ -172,7 +172,7 @@ class Delete(AdminService):
     """ Deletes an outgoing JMS WebSphere MQ connection.
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

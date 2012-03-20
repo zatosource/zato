@@ -43,7 +43,7 @@ class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -71,7 +71,7 @@ class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
     class SimpleIO:
-        required = ('cluster_id', 'name', 'is_active', 'username', 
+        input_required = ('cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
 
@@ -121,7 +121,7 @@ class Edit(AdminService):
     """ Updates a WS-S definition.
     """
     class SimpleIO:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
 
@@ -184,7 +184,7 @@ class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
     class SimpleIO:
-        required = ('wss_id',)
+        input_required = ('wss_id',)
 
     def handle(self):
         

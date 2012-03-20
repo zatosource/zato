@@ -41,7 +41,7 @@ class GetList(AdminService):
     """ Returns a list of services.
     """
     class SimpleIO:
-        required = ('cluster_id',)
+        input_required = ('cluster_id',)
         
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -66,7 +66,7 @@ class GetByID(AdminService):
     """ Returns a particular service.
     """
     class SimpleIO:
-        required = ('cluster_id', 'id')
+        input_required = ('cluster_id', 'id')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -87,7 +87,7 @@ class Edit(AdminService):
     """ Updates a service.
     """
     class SimpleIO:
-        required = ('id', 'is_active', 'name')
+        input_required = ('id', 'is_active', 'name')
     
     def handle(self):
         input = self.request.input
@@ -124,7 +124,7 @@ class Delete(AdminService):
     """ Deletes a service
     """
     class SimpleIO:
-        required = ('id',)
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

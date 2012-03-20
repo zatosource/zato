@@ -150,8 +150,8 @@ class Request(object):
         """ Initializes the object with an invocation-specific data.
         """
         path_prefix = getattr(flat_input, 'path_prefix', 'data.')
-        required_list = getattr(flat_input, 'required', [])
-        optional_list = getattr(flat_input, 'optional', [])
+        required_list = getattr(flat_input, 'input_required', [])
+        optional_list = getattr(flat_input, 'input_optional', [])
         
         if required_list:
             params = _get_params(self.payload, required_list, path_prefix)
