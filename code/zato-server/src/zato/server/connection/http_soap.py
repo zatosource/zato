@@ -399,11 +399,16 @@ class Security(object):
         with self.url_sec_lock:
             if msg.transport == url_type.plain_http:
                 del self.url_sec[msg.url_path]
-            '''else:
-                del self.http_soap[msg.url_path][msg.soap_action]
-                if not self.http_soap[msg.url_path]:
-                    del self.http_soap[msg.url_path]'''
-
+            else:
+                
+                url_path = self.url_sec.getall(msg.url_path)
+                for _soap_action in url_path:
+                    if msg.soap_action in _soap_action:
+                        del _soap_action[msg.soap_action]
+                        if not any(url_path):
+                            del self.url_sec[msg.url_path]
+                        break
+                
 # ##############################################################################
 
 class RequestHandler(object):
