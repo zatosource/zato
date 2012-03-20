@@ -315,7 +315,7 @@ class WorkerStore(BaseWorker):
         """
         service_instance = self.worker_config.server.service_store.new_instance(msg.service)
         service_instance.update(service_instance, self.worker_config.server, self.broker_client, 
-            self.odb, self.sql_pool_store, channel, msg.get('payload'), raw_request, msg.rid)
+            self.odb, self.sql_pool_store, channel, msg.get('payload'), raw_request, msg.cid)
         
         response = service_instance.handle()
         

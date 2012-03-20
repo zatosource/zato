@@ -250,13 +250,13 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
 
-def new_rid():
-    """ Returns a new 64-bit request identifier. It's *not* safe to use the ID
+def new_cid():
+    """ Returns a new 64-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
     
-    # The number below (24) needs to be kept in sync with zato.common.log_message.RID_LENGTH
+    # The number below (24) needs to be kept in sync with zato.common.log_message.CID_LENGTH
     return '{0:0>24}'.format(getrandbits(64))
 
 def get_config(repo_location, config_name):

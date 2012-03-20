@@ -171,7 +171,7 @@ class Service(object):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.broker_client = None
         self.channel = None
-        self.rid = None
+        self.cid = None
         self.outgoing = None
         self.worker_store = None
         self.odb = None
@@ -259,7 +259,7 @@ class Service(object):
         """
         
     @staticmethod
-    def update(service, server, broker_client, worker_store, rid, payload,
+    def update(service, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
@@ -267,7 +267,7 @@ class Service(object):
         service.server = server
         service.broker_client = broker_client
         service.worker_store = worker_store
-        service.rid = rid
+        service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
         

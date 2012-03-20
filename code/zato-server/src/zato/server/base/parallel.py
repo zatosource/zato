@@ -42,7 +42,7 @@ from bunch import Bunch, SimpleBunch
 from zato.broker.zato_client import BrokerClient
 from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
-from zato.common.util import new_rid
+from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
 from zato.server.config import ConfigDict, ConfigStore
@@ -70,23 +70,23 @@ class ZatoHTTPListener(HTTPServer):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
-        rid = new_rid()
+        cid = new_cid()
         
         try:
             # SOAP or plain HTTP.
-            payload = thread_local_ctx.store.request_handler.handle(rid, task, thread_local_ctx)
+            payload = thread_local_ctx.store.request_handler.handle(cid, task, thread_local_ctx)
 
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)
             task.setResponseStatus(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
-            error_msg = '[{0}] Exception caught [{1}]'.format(rid, tb)
+            error_msg = '[{0}] Exception caught [{1}]'.format(cid, tb)
             logger.error(error_msg)
             
             payload = error_msg
             task.response_headers['Content-Type'] = 'text/plain'
             
-        task.response_headers['X-Zato-RID'] = rid
+        task.response_headers['X-Zato-CID'] = cid
             
         # Can't set it any earlier, this is the only place we're sure the payload
         # won't be modified anymore.

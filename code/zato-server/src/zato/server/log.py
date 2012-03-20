@@ -23,12 +23,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import Logger
 
 # Zato
-from zato.common.log_message import NULL_LMC, NULL_RID
+from zato.common.log_message import NULL_LMC, NULL_CID
 
 def wrapper(name):
     def _log(self, msg, *args, **kwargs):
         def _invoke(name, self, msg):
-            extra={'rid':kwargs.get('rid', NULL_RID), 'lmc':kwargs.get('lmc', NULL_LMC)}
+            extra={'cid':kwargs.get('cid', NULL_CID), 'lmc':kwargs.get('lmc', NULL_LMC)}
             extra.update(kwargs.pop('extra', {}))
             return Logger.__dict__[name](self, msg, *args, extra=extra, **kwargs)
         return _invoke(name, self, msg)
