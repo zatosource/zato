@@ -38,7 +38,7 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -65,7 +65,7 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular AMQP definition
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):
@@ -93,7 +93,7 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'host', 'port', 'vhost', 
             'username', 'frame_max', 'heartbeat')
 
@@ -136,7 +136,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an AMQP definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 
             'username', 'frame_max', 'heartbeat')
 
@@ -191,7 +191,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an AMQP definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

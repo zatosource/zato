@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of outgoing JMS WebSphere MQ connections.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -68,7 +68,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
         optional = ('expiration',)
 
@@ -117,7 +117,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing JMS WebSphere MQ connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
         optional = ('expiration',)
 
@@ -171,7 +171,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing JMS WebSphere MQ connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

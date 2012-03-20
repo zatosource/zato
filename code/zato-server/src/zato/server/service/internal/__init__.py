@@ -57,7 +57,7 @@ class Ping2(Ping):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'password1', 'password2')
 
     def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB,

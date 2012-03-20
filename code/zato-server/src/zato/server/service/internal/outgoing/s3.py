@@ -39,7 +39,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of outgoing S3 connections.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -64,7 +64,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing S3 connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout')
 
     def handle(self):
@@ -106,7 +106,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing S3 connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'prefix', 'separator', 'key_sync_timeout')
 
     def handle(self):
@@ -149,7 +149,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing S3 connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

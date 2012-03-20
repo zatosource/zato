@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -67,7 +67,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new ZeroMQ channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
         optional = ('sub_key',)
 
@@ -122,7 +122,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a ZeroMQ channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
         optional = ('sub_key',)
 
@@ -181,7 +181,7 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a ZeroMQ channel.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

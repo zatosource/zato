@@ -41,7 +41,7 @@ from zato.server.service.internal import _get_params, AdminService, ChangePasswo
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id',)
 
     def handle(self):
@@ -65,7 +65,7 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'name', 'is_active', 'username', 'realm')
 
     def handle(self):
@@ -111,7 +111,7 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'username', 'realm')
 
     def handle(self):
@@ -168,7 +168,7 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):

@@ -79,7 +79,7 @@ class _HTTPSOAPService(object):
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('cluster_id', 'connection', 'transport')
 
     def handle(self):
@@ -112,7 +112,7 @@ class GetList(AdminService):
 class Create(AdminService, _HTTPSOAPService):
     """ Creates a new HTTP/SOAP connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
                     'url_path', 'service', 'security_id')
         optional = ('method', 'soap_action', 'soap_version', 'host')
@@ -203,7 +203,7 @@ class Create(AdminService, _HTTPSOAPService):
 class Edit(AdminService, _HTTPSOAPService):
     """ Updates an HTTP/SOAP connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
                 'connection', 'service', 'transport', 'security_id')
         optional = ('method', 'soap_action', 'soap_version', 'host')
@@ -298,7 +298,7 @@ class Edit(AdminService, _HTTPSOAPService):
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):
@@ -331,7 +331,7 @@ class Delete(AdminService, _HTTPSOAPService):
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
-    class FlatInput:
+    class SimpleIO:
         required = ('id',)
 
     def handle(self):
