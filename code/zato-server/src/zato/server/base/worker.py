@@ -87,9 +87,6 @@ class WorkerStore(BaseWorker):
         self.request_handler.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
         self.request_handler.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
         
-        #import pprint
-        #pprint.pprint(self.request_handler.plain_http_handler.http_soap['/zato/ping.plain_http.basic_auth'][''])
-        
         # ConnectionHTTPSOAPSecurity needs only actual URLs hence it's self.worker_config.url_sec[0]
         # below
         self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_config.url_sec[0], 

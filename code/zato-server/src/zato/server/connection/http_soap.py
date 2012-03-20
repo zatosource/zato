@@ -126,7 +126,7 @@ class Security(object):
     def handle(self, rid, url_data, request_data, body, headers):
         """ Calls other concrete security methods as appropriate.
         """
-        sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.type
+        sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.sec_type
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
         getattr(self, handler_name)(rid, sec_def, request_data, body, headers)
@@ -365,7 +365,7 @@ class Security(object):
             old_url_path = msg.get('old_url_path')
             if msg.sec_type:
                 sec_def_dict = getattr(self, msg.sec_type + '_config')
-                sec_def = deepcopy(sec_def_dict[msg.security_name])
+                sec_def = deepcopy(sec_def_dict[msg.security_name].config)
             else:
                 sec_def = ZATO_NONE
                 
@@ -409,6 +409,7 @@ class RequestHandler(object):
         is postponed until a concrete transport-specific handler is invoked.
         """
         url_data = self.security.url_sec_get(task.request_data.uri)
+
         if url_data:
             
             transport = url_data['transport']
@@ -419,11 +420,11 @@ class RequestHandler(object):
                 
                 # No security at all for that URL.
                 if url_data.sec_def != ZATO_NONE:
-                    if url_data.sec_def.type in(security_def_type.tech_account, security_def_type.basic_auth, 
+                    if url_data.sec_def.sec_type in(security_def_type.tech_account, security_def_type.basic_auth, 
                                                 security_def_type.wss):
                         self.security.handle(rid, url_data, task.request_data, request, headers)
                     else:
-                        log_msg = '[{0}] sec_def.type:[{1}] needs no auth'.format(rid, url_data.sec_def.type)
+                        log_msg = '[{0}] sec_def.sec_type:[{1}] needs no auth'.format(rid, url_data.sec_def.sec_type)
                         logger.debug(log_msg)
                 else:
                     log_msg = '[{0}] No security for URL [{1}]'.format(rid, task.request_data.uri)
@@ -574,11 +575,12 @@ class _BaseMessageHandler(object):
                 if not self.http_soap[old_url_path]:
                     del self.http_soap[old_url_path]
                 
-        self.http_soap[msg.url_path] = Bunch()
-        self.http_soap[msg.url_path][soap_action] = Bunch()
-        for name in('id', 'impl_name', 'is_internal', 'method', 'name', 
+        url_path_bunch = self.http_soap.setdefault(msg.url_path, Bunch())
+        soap_action_bunch = url_path_bunch.setdefault(soap_action, Bunch())
+
+        for name in('id', 'impl_name', 'is_internal', 'method', 'name',
                     'service_id', 'service_name', 'soap_version', 'url_path'):
-            self.http_soap[msg.url_path][soap_action][name] = msg[name]
+            soap_action_bunch[name] = msg[name]
             
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
