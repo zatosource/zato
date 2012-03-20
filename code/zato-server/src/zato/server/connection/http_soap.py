@@ -472,7 +472,7 @@ class _BaseMessageHandler(object):
     
     def __init__(self, http_soap={}, server=None):
         self.http_soap = http_soap
-        self.server = server # A ParallelServer instance.
+        self.server = server # A ParallelServer instance
     
     def init(self, rid, task, request, headers, transport):
         logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(rid, request, headers))
