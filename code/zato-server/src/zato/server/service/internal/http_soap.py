@@ -79,8 +79,8 @@ class _HTTPSOAPService(object):
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
-    class FlatInput:
-        required = ('cluster_id', 'connection', 'transport')
+    class SimpleIO:
+        input_required = ('cluster_id', 'connection', 'transport')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -112,10 +112,10 @@ class GetList(AdminService):
 class Create(AdminService, _HTTPSOAPService):
     """ Creates a new HTTP/SOAP connection.
     """
-    class FlatInput:
-        required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
+    class SimpleIO:
+        input_required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
                     'url_path', 'service', 'security_id')
-        optional = ('method', 'soap_action', 'soap_version', 'host')
+        input_optional = ('method', 'soap_action', 'soap_version', 'host')
     
     def handle(self):
         input = self.request.input
@@ -203,10 +203,10 @@ class Create(AdminService, _HTTPSOAPService):
 class Edit(AdminService, _HTTPSOAPService):
     """ Updates an HTTP/SOAP connection.
     """
-    class FlatInput:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
+    class SimpleIO:
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
                 'connection', 'service', 'transport', 'security_id')
-        optional = ('method', 'soap_action', 'soap_version', 'host')
+        input_optional = ('method', 'soap_action', 'soap_version', 'host')
     
     def handle(self):
         input = self.request.input
@@ -298,8 +298,8 @@ class Edit(AdminService, _HTTPSOAPService):
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -334,8 +334,8 @@ class Delete(AdminService, _HTTPSOAPService):
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

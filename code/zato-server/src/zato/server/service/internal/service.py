@@ -40,8 +40,8 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of services.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
         
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -65,8 +65,8 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular service.
     """
-    class FlatInput:
-        required = ('cluster_id', 'id')
+    class SimpleIO:
+        input_required = ('cluster_id', 'id')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -86,8 +86,8 @@ class GetByID(AdminService):
 class Edit(AdminService):
     """ Updates a service.
     """
-    class FlatInput:
-        required = ('id', 'is_active', 'name')
+    class SimpleIO:
+        input_required = ('id', 'is_active', 'name')
     
     def handle(self):
         input = self.request.input
@@ -123,8 +123,8 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a service
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
