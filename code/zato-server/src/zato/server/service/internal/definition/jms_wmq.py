@@ -40,8 +40,8 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -73,8 +73,8 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
     """
-    class FlatInput:
-        required = ('id', 'cluster_id',)
+    class SimpleIO:
+        input_required = ('id', 'cluster_id',)
 
     def handle(self):
         
@@ -104,8 +104,8 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
     """
-    class FlatInput:
-        required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
             'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
             'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
@@ -149,8 +149,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a JMS WMQ definition.
     """
-    class FlatInput:
-        required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
+    class SimpleIO:
+        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
             'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
             'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
@@ -212,8 +212,8 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a JMS WebSphere MQ definition.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

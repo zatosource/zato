@@ -48,8 +48,8 @@ class _SQLService(object):
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -78,9 +78,9 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
-    class FlatInput:
-        required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
-        optional = ('extra',)
+    class SimpleIO:
+        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        input_optional = ('extra',)
 
     def handle(self):
         input = self.request.input
@@ -131,9 +131,9 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
-    class FlatInput:
-        required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
-        optional = ('extra',)
+    class SimpleIO:
+        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        input_optional = ('extra',)
 
     def handle(self):
         input = self.request.input
@@ -186,8 +186,8 @@ class Edit(AdminService, _SQLService):
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -227,8 +227,8 @@ class ChangePassword(ChangePasswordBase):
 class Ping(AdminService):
     """ Pings an SQL database
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

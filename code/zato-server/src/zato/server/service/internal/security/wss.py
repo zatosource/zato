@@ -42,8 +42,8 @@ from zato.server.service.internal import _get_params, AdminService, ChangePasswo
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -70,8 +70,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
-    class FlatInput:
-        required = ('cluster_id', 'name', 'is_active', 'username', 
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
 
@@ -120,8 +120,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a WS-S definition.
     """
-    class FlatInput:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
+    class SimpleIO:
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
 
@@ -183,8 +183,8 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
-    class FlatInput:
-        required = ('wss_id',)
+    class SimpleIO:
+        input_required = ('wss_id',)
 
     def handle(self):
         

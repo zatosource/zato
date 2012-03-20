@@ -38,8 +38,8 @@ from zato.server.service.internal import AdminService, ChangePasswordBase
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -65,8 +65,8 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular AMQP definition
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -93,8 +93,8 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP definition.
     """
-    class FlatInput:
-        required = ('cluster_id', 'name', 'host', 'port', 'vhost', 
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'host', 'port', 'vhost', 
             'username', 'frame_max', 'heartbeat')
 
     def handle(self):
@@ -136,8 +136,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an AMQP definition.
     """
-    class FlatInput:
-        required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 
+    class SimpleIO:
+        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 
             'username', 'frame_max', 'heartbeat')
 
     def handle(self):
@@ -191,8 +191,8 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an AMQP definition.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

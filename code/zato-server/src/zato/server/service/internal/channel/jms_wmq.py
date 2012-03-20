@@ -41,8 +41,8 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ channels.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -67,8 +67,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WebSphere MQ channel.
     """
-    class FlatInput:
-        required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
 
     def handle(self):
         input = self.request.input
@@ -124,8 +124,8 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a JMS WebSphere MQ channel.
     """
-    class FlatInput:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+    class SimpleIO:
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
 
     def handle(self):
         input = self.request.input
@@ -184,8 +184,8 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an JMS WebSphere MQ channel.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

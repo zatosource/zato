@@ -150,8 +150,8 @@ class Request(object):
         """ Initializes the object with an invocation-specific data.
         """
         path_prefix = getattr(flat_input, 'path_prefix', 'data.')
-        required_list = getattr(flat_input, 'required', [])
-        optional_list = getattr(flat_input, 'optional', [])
+        required_list = getattr(flat_input, 'input_required', [])
+        optional_list = getattr(flat_input, 'input_optional', [])
         
         if required_list:
             params = _get_params(self.payload, required_list, path_prefix)
@@ -190,8 +190,8 @@ class Service(object):
         out_ftp, out_plain_http, out_soap, out_s3 = self.worker_store.worker_config.outgoing_connections()
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap, out_s3)
         
-        if hasattr(self, 'FlatInput'):
-            self.request.init(self.FlatInput)
+        if hasattr(self, 'SimpleIO'):
+            self.request.init(self.SimpleIO)
         
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process

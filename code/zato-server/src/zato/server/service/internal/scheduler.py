@@ -231,8 +231,8 @@ def _create_edit(action, payload, logger, session, broker_client, response):
 class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
 
     def handle(self):
         
@@ -284,8 +284,8 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a scheduler's job.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -310,8 +310,8 @@ class Delete(AdminService):
 class Execute(AdminService):
     """ Executes a scheduler's job.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

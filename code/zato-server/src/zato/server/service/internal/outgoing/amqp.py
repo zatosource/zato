@@ -41,8 +41,8 @@ from zato.server.service.internal import _get_params, AdminService
 class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.
     """
-    class FlatInput:
-        required = ('cluster_id',)
+    class SimpleIO:
+        input_required = ('cluster_id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -72,9 +72,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing AMQP connection.
     """
-    class FlatInput:
-        required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
-        optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
     
     def handle(self):
         input = self.request.input
@@ -131,9 +131,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing AMQP connection.
     """
-    class FlatInput:
-        required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
-        optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
+    class SimpleIO:
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_optional = ('content_type', 'content_encoding', 'expiration', 'user_id', 'app_id')
     
     def handle(self):
         
@@ -196,8 +196,8 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing AMQP connection.
     """
-    class FlatInput:
-        required = ('id',)
+    class SimpleIO:
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
