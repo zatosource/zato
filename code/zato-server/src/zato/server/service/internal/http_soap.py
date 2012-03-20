@@ -310,16 +310,19 @@ class Delete(AdminService, _HTTPSOAPService):
                 
                 old_name = item.name
                 old_transport = item.transport
+                old_url_path = item.url_path
+                old_soap_action = item.soap_action
 
                 session.delete(item)
-                session.commit()
+                #session.commit()
                 
                 if item.connection == 'channel':
                     action = CHANNEL.HTTP_SOAP_DELETE
                 else:
                     action = OUTGOING.HTTP_SOAP_DELETE
                 
-                self.notify_worker_threads({'name':old_name, 'transport':old_transport}, action)
+                self.notify_worker_threads({'name':old_name, 'transport':old_transport,
+                    'url_path':old_url_path, 'soap_action':old_soap_action}, action)
 
             except Exception, e:
                 session.rollback()
@@ -351,7 +354,7 @@ class GetURLSecurity(AdminService):
     def handle(self):
         self.needs_xml = False
         response = {}
-        response['url_sec'] = self.worker_store.request_handler.security.url_sec
+        response['url_sec'] = sorted(self.worker_store.request_handler.security.url_sec.items())
         response['plain_http_handler.http_soap'] = sorted(self.worker_store.request_handler.plain_http_handler.http_soap.items())
         response['soap_handler.http_soap'] = sorted(self.worker_store.request_handler.soap_handler.http_soap.items())
         self.response.payload = dumps(response, sort_keys=True, indent=4)

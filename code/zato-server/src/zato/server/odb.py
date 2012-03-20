@@ -26,6 +26,9 @@ from traceback import format_exc
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
+# Paste
+from paste.util.multidict import MultiDict
+
 # Bunch
 from bunch import SimpleBunch
 
@@ -86,7 +89,7 @@ class ODBManager(SessionWrapper):
             'wss': WSSDefinition
             }
 
-        result = {}
+        result = MultiDict()
 
         query = http_soap_security_list(self._session, server.cluster_id)
         columns = SimpleBunch()
@@ -97,12 +100,12 @@ class ODBManager(SessionWrapper):
             
         for item in query.all():
             
-            result[item.url_path] = SimpleBunch()
-            result[item.url_path].transport = item.transport
-            result[item.url_path].sec_def = SimpleBunch()
+            _info = SimpleBunch()
+            _info[item.soap_action] = SimpleBunch()
+            _info[item.soap_action].transport = item.transport
 
             if item.security_id:
-                result[item.url_path].sec_def = SimpleBunch()
+                _info[item.soap_action].sec_def = SimpleBunch()
                 
                 # Will raise KeyError if the DB gets somehow misconfigured.
                 db_class = sec_type_db_class[item.sec_type]
@@ -112,26 +115,28 @@ class ODBManager(SessionWrapper):
                         one()
 
                 # Common things first
-                result[item.url_path].sec_def.name = sec_def.name    
-                result[item.url_path].sec_def.password = sec_def.password
-                result[item.url_path].sec_def.sec_type = item.sec_type
+                _info[item.soap_action].sec_def.name = sec_def.name    
+                _info[item.soap_action].sec_def.password = sec_def.password
+                _info[item.soap_action].sec_def.sec_type = item.sec_type
     
                 if item.sec_type == security_def_type.tech_account:
-                    result[item.url_path].sec_def.salt = sec_def.salt
+                    _info[item.soap_action].sec_def.salt = sec_def.salt
                 elif item.sec_type == security_def_type.basic_auth:
-                    result[item.url_path].sec_def.username = sec_def.username
-                    result[item.url_path].sec_def.password = sec_def.password
-                    result[item.url_path].sec_def.realm = sec_def.realm
+                    _info[item.soap_action].sec_def.username = sec_def.username
+                    _info[item.soap_action].sec_def.password = sec_def.password
+                    _info[item.soap_action].sec_def.realm = sec_def.realm
                 elif item.sec_type == security_def_type.wss:
-                    result[item.url_path].sec_def.username = sec_def.username
-                    result[item.url_path].sec_def.password = sec_def.password
-                    result[item.url_path].sec_def.password_type = sec_def.password_type
-                    result[item.url_path].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
-                    result[item.url_path].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
-                    result[item.url_path].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
-                    result[item.url_path].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
+                    _info[item.soap_action].sec_def.username = sec_def.username
+                    _info[item.soap_action].sec_def.password = sec_def.password
+                    _info[item.soap_action].sec_def.password_type = sec_def.password_type
+                    _info[item.soap_action].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
+                    _info[item.soap_action].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
+                    _info[item.soap_action].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
+                    _info[item.soap_action].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
             else:
-                result[item.url_path].sec_def = ZATO_NONE
+                _info[item.soap_action].sec_def = ZATO_NONE
+                
+            result.add(item.url_path, _info)
 
         return result, columns
 
