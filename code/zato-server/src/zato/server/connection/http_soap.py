@@ -362,8 +362,20 @@ class Security(object):
         """ Creates or updates an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
-            raise NotImplementedError()
-
+            old_url_path = msg.get('old_url_path')
+            if msg.sec_type:
+                sec_def_dict = getattr(self, msg.sec_type + '_config')
+                sec_def = deepcopy(sec_def_dict[msg.security_name])
+            else:
+                sec_def = ZATO_NONE
+                
+            if old_url_path in self.url_sec:
+                del self.url_sec[old_url_path]
+                
+            self.url_sec[msg.url_path] = Bunch()
+            self.url_sec[msg.url_path].sec_def = sec_def
+            self.url_sec[msg.url_path].transport = msg.transport
+            
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
@@ -478,7 +490,7 @@ class _BaseMessageHandler(object):
             if not soap_action:
                 raise BadRequest(rid, 'Client sent an empty SOAPAction header')
         else:
-            soap_action = None
+            soap_action = ''
 
         _soap_actions = self.http_soap.getall(task.request_data.uri)
         
@@ -506,6 +518,7 @@ class _BaseMessageHandler(object):
     
             if not body:
                 raise BadRequest(rid, 'Client did not send the [{1}] element'.format(body_path))
+            
             payload = get_body_payload(body)
         else:
             payload = request
@@ -535,17 +548,48 @@ class _BaseMessageHandler(object):
 
         logger.debug('[{0}] Returning response=[{1}]'.format(rid, response.payload))
         return response
+    
+    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+        """ Updates the configuration so that there's a link between a URL
+        and a SOAP method to a service.
+        """
+        old_url_path = msg.get('old_url_path')
+        old_soap_action = msg.get('old_soap_action', '')
+        
+        # A plain HTTP channel has always one SOAP action, the dummy empty one ''
+        # so we can just quickly recreate it from scratch
+        if msg.transport == url_type.plain_http:
+            soap_action = ''
+            if old_url_path in self.http_soap:
+                del self.http_soap[old_url_path]
+        else:
+            soap_action = msg.soap_action
+            
+            # Delete the old SOAP action if it existed at all and then find out
+            # whether that was the only SOAP action attached to the URL. If it was,
+            # delete the URL as well.
+            if old_url_path in self.http_soap:
+                if old_soap_action in self.http_soap[old_url_path]:
+                    del self.http_soap[old_url_path][old_soap_action]
+                if not self.http_soap[old_url_path]:
+                    del self.http_soap[old_url_path]
+                
+        self.http_soap[msg.url_path] = Bunch()
+        self.http_soap[msg.url_path][soap_action] = Bunch()
+        for name in('id', 'impl_name', 'is_internal', 'method', 'name', 
+                    'service_id', 'service_name', 'soap_version', 'url_path'):
+            self.http_soap[msg.url_path][soap_action][name] = msg[name]
+            
+    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
+        """ Deletes an HTTP/SOAP channel.
+        """
+        raise NotImplementedError()
         
 class SOAPHandler(_BaseMessageHandler):
     """ Dispatches incoming SOAP messages to services.
     """
     def __init__(self, http_soap=None, server=None):
         super(SOAPHandler, self).__init__(http_soap, server)
-        
-    def handle_security(self):
-        if self.wss_config_store.needs_wss(class_name):
-            # Will raise an exception if anything goes wrong.
-            self.wss_config_store.handle_request(class_name, service_data, soap)
 
 class PlainHTTPHandler(_BaseMessageHandler):
     """ Dispatches incoming plain HTTP messages to services.

@@ -144,7 +144,7 @@ class Create(AdminService, _HTTPSOAPService):
                 filter(Service.name==input.service).first()
             
             if input.connection == 'channel' and not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
+                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
                 self.logger.error(msg)
                 raise Exception(msg)
             
@@ -175,6 +175,11 @@ class Create(AdminService, _HTTPSOAPService):
                 session.add(item)
                 session.commit()
                 
+                if input.connection == 'channel':
+                    input.impl_name = service.impl_name
+                    input.service_id = service.id
+                    input.service_name = service.name
+
                 input.id = item.id
                 input.update(sec_info)
                 
@@ -200,8 +205,8 @@ class Edit(AdminService, _HTTPSOAPService):
     """
     class FlatInput:
         required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
-                'connection', 'transport', 'security_id')
-        optional = ('method', 'soap_action', 'soap_version', 'host')    
+                'connection', 'service', 'transport', 'security_id')
+        optional = ('method', 'soap_action', 'soap_version', 'host')
     
     def handle(self):
         input = self.request.input
@@ -226,6 +231,16 @@ class Edit(AdminService, _HTTPSOAPService):
             if existing_one:
                 raise Exception('An object of that name [{0}] already exists on this cluster'.format(name))
             
+            # Is the service's name correct?
+            service = session.query(Service).\
+                filter(Cluster.id==input.cluster_id).\
+                filter(Service.name==input.service).first()
+            
+            if input.connection == 'channel' and not service:
+                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                self.logger.error(msg)
+                raise Exception(msg)
+            
             # Will raise exception if the security type doesn't match connection
             # type and transport
             sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
@@ -234,6 +249,8 @@ class Edit(AdminService, _HTTPSOAPService):
 
             try:
                 item = session.query(HTTPSOAP).filter_by(id=input.id).one()
+                old_name = item.name
+                old_url_path = item.url_path
                 item.name = input.name
                 item.is_active = input.is_active
                 item.host = input.host
@@ -251,6 +268,14 @@ class Edit(AdminService, _HTTPSOAPService):
                 
                 xml_item.id = item.id
                 
+                if input.connection == 'channel':
+                    input.impl_name = service.impl_name
+                    input.service_id = service.id
+                    input.service_name = service.name
+                
+                input.is_internal = item.is_internal
+                input.old_name = old_name
+                input.old_url_path = old_url_path
                 input.update(sec_info)
                 
                 if input.connection == 'channel':
@@ -313,7 +338,7 @@ class Ping(AdminService):
             
             info_elem = etree.Element('info')
             config_dict = getattr(self.outgoing, item.transport)
-            info_elem.text = config_dict.get(item.name).ping()
+            info_elem.text = config_dict.get(item.name).ping(self.rid)
             
             self.response.payload = etree.tostring(info_elem)
 
@@ -323,5 +348,9 @@ class GetURLSecurity(AdminService):
     """
     def handle(self):
         self.needs_xml = False
-        self.response.payload = dumps(self.worker_store.request_handler.security.url_sec, sort_keys=True, indent=4)
+        response = {}
+        response['url_sec'] = self.worker_store.request_handler.security.url_sec
+        response['plain_http_handler.http_soap'] = sorted(self.worker_store.request_handler.plain_http_handler.http_soap.items())
+        response['soap_handler.http_soap'] = sorted(self.worker_store.request_handler.soap_handler.http_soap.items())
+        self.response.payload = dumps(response, sort_keys=True, indent=4)
         self.response.content_type = 'application/json'

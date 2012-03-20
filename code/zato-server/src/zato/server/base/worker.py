@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, socket
+from copy import deepcopy
 from thread import start_new_thread
 from threading import local, RLock
 from traceback import format_exc
@@ -33,6 +34,9 @@ from zope.server.http.httpserverchannel import HTTPServerChannel
 from zope.server.http.httptask import HTTPTask
 from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
+
+# Paste
+from paste.util.multidict import MultiDict
 
 # Zato
 from zato.common import url_type, ZATO_ODB_POOL_NAME
@@ -64,9 +68,27 @@ class WorkerStore(BaseWorker):
         
         self.update_lock = RLock()
         
+        plain_http_config = MultiDict()
+        soap_config = MultiDict()
+        
+        copy = deepcopy(self.worker_config.http_soap)
+        for url_path in copy:
+            for soap_action in copy[url_path]:
+                item = copy[url_path][soap_action]
+                if item.connection == 'channel':
+                    if item.transport == 'plain_http':
+                        config = plain_http_config.setdefault(url_path, Bunch())
+                        config[soap_action] = deepcopy(item)
+                    else:
+                        config = soap_config.setdefault(url_path, Bunch())
+                        config[soap_action] = deepcopy(item)
+        
         self.request_handler = RequestHandler()
-        self.request_handler.soap_handler = SOAPHandler(self.worker_config.http_soap, self.worker_config.server)
-        self.request_handler.plain_http_handler = PlainHTTPHandler(self.worker_config.http_soap, self.worker_config.server)
+        self.request_handler.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
+        self.request_handler.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
+        
+        #import pprint
+        #pprint.pprint(self.request_handler.plain_http_handler.http_soap['/zato/ping.plain_http.basic_auth'][''])
         
         # ConnectionHTTPSOAPSecurity needs only actual URLs hence it's self.worker_config.url_sec[0]
         # below
@@ -345,7 +367,12 @@ class WorkerStore(BaseWorker):
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
+        # Security
         self.request_handler.security.on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
+        
+        # A mapping between a URL and a service
+        handler = getattr(self.request_handler, msg.transport + '_handler')
+        handler.on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
         
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.

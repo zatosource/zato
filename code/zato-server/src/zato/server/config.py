@@ -182,6 +182,8 @@ class ConfigStore(object):
                     _info[soap_action].service_id = item.service_id
                     _info[soap_action].service_name = item.service_name
                     _info[soap_action].impl_name = item.impl_name
+                    _info[soap_action].transport = item.transport
+                    _info[soap_action].connection = item.connection
             http_soap.add(url_path, _info)
         
         config_store.http_soap = http_soap
