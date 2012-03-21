@@ -35,6 +35,9 @@ from lxml import objectify
 # Requests
 import requests
 
+# anyjson
+from anyjson import loads
+
 # Bunch
 from bunch import Bunch
 
@@ -43,7 +46,7 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import HTTPException, soap_body_xpath, url_type, ZATO_NONE, ZATO_OK
+from zato.common import HTTPException, SIMPLE_IO, soap_body_xpath, url_type, ZATO_NONE, ZATO_OK
 from zato.common.util import security_def_type, TRACE1
 from zato.server.service.internal import AdminService
 
@@ -375,6 +378,7 @@ class Security(object):
             self.url_sec[msg.url_path] = Bunch()
             self.url_sec[msg.url_path].sec_def = sec_def
             self.url_sec[msg.url_path].transport = msg.transport
+            self.url_sec[msg.url_path].data_format = msg.data_format
             
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
@@ -417,14 +421,14 @@ class RequestHandler(object):
             transport = url_data['transport']
             
             try:
-                request = task.request_data.getBodyStream().getvalue()
+                payload = task.request_data.getBodyStream().getvalue()
                 headers = task.request_data.headers
                 
                 # No security at all for that URL.
                 if url_data.sec_def != ZATO_NONE:
                     if url_data.sec_def.sec_type in(security_def_type.tech_account, security_def_type.basic_auth, 
                                                 security_def_type.wss):
-                        self.security.handle(cid, url_data, task.request_data, request, headers)
+                        self.security.handle(cid, url_data, task.request_data, payload, headers)
                     else:
                         log_msg = '[{0}] sec_def.sec_type:[{1}] needs no auth'.format(cid, url_data.sec_def.sec_type)
                         logger.debug(log_msg)
@@ -434,7 +438,8 @@ class RequestHandler(object):
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
 
-                response = handler.handle(cid, task, request, headers, transport, thread_ctx, self.simple_io_config)
+                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, 
+                    self.simple_io_config, url_data['data_format'])
                 task.response_headers['Content-Type'] = response.content_type
           
                 return response.payload
@@ -476,7 +481,7 @@ class _BaseMessageHandler(object):
         self.http_soap = http_soap
         self.server = server # A ParallelServer instance
     
-    def init(self, cid, task, request, headers, transport):
+    def init(self, cid, task, request, headers, transport, data_format):
         logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(cid, request, headers))
 
         if transport == 'soap':
@@ -515,14 +520,17 @@ class _BaseMessageHandler(object):
         logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, self.server.service_store.services))
         service_data = self.server.service_store.service_data(_service_info.impl_name)
 
-        if transport == 'soap':
-            soap = objectify.fromstring(request)
-            body = soap_body_xpath(soap)
-    
-            if not body:
-                raise BadRequest(cid, 'Client did not send the [{1}] element'.format(body_path))
-            
-            payload = get_body_payload(body)
+        if data_format == SIMPLE_IO.FORMAT.XML:
+            if transport == 'soap':
+                soap = objectify.fromstring(request)
+                body = soap_body_xpath(soap)
+                if not body:
+                    raise BadRequest(cid, 'Client did not send the [{1}] element'.format(body_path))
+                payload = get_body_payload(body)
+            else:
+                payload = objectify.fromstring(request)
+        elif data_format == SIMPLE_IO.FORMAT.JSON:
+            payload = loads(request)
         else:
             payload = request
         
@@ -531,12 +539,13 @@ class _BaseMessageHandler(object):
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, cid, task, raw_request, headers, transport, thread_ctx, simple_io_config):
-        payload, impl_name, service_data = self.init(cid, task, raw_request, headers, transport)
+    def handle(self, cid, task, raw_request, headers, transport, thread_ctx, simple_io_config, data_format):
+        payload, impl_name, service_data = self.init(cid, task, raw_request, headers, transport, data_format)
 
         service_instance = self.server.service_store.new_instance(impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
-            thread_ctx.store, cid, payload, raw_request, transport, simple_io_config)
+            thread_ctx.store, cid, payload, raw_request, transport, simple_io_config,
+            data_format)
 
         service_instance.handle()
         response = service_instance.response
@@ -601,9 +610,6 @@ class PlainHTTPHandler(_BaseMessageHandler):
     """
     def __init__(self, http_soap=None, server=None):
         super(PlainHTTPHandler, self).__init__(http_soap, server)
-        
-    def handle(self, cid, task, request, headers, transport, thread_ctx):
-        return super(PlainHTTPHandler, self).handle(cid, task, request, headers, transport, thread_ctx)
 
 class HTTPSOAPWrapper(object):
     """ A thin wrapper around the API exposed by the 'requests' package.
