@@ -37,7 +37,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.odb.query import wss_list
 from zato.server.service import Boolean, Integer
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.

@@ -39,7 +39,7 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
 from zato.common.util import security_def_type
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.

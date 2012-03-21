@@ -34,7 +34,7 @@ from validate import is_boolean
 from zato.common import ZATO_OK
 from zato.common.odb.model import OutgoingS3
 from zato.common.odb.query import out_s3_list
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
     """ Returns a list of outgoing S3 connections.
