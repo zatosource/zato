@@ -83,7 +83,7 @@ class WorkerStore(BaseWorker):
                         config = soap_config.setdefault(url_path, Bunch())
                         config[soap_action] = deepcopy(item)
         
-        self.request_handler = RequestHandler()
+        self.request_handler = RequestHandler(simple_io_config=self.worker_config.simple_io)
         self.request_handler.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
         self.request_handler.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
         
