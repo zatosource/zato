@@ -22,6 +22,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from httplib import OK
+from itertools import chain
+
+# SQLAlchemy
+from sqlalchemy.util import NamedTuple
+
+# lxml
+from lxml import etree
+from lxml.objectify import Element
 
 # validate
 from validate import is_boolean
@@ -30,7 +38,8 @@ from validate import is_boolean
 from bunch import Bunch
 
 # Zato
-from zato.common import ZATO_NONE, ZATO_OK, zato_path
+from zato.common import SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common.util import TRACE1
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
@@ -111,15 +120,82 @@ class Outgoing(object):
         self.sql = sql
         self.plain_http = plain_http
         self.soap = soap
+        
+class SimpleIOPayload(object):
+    """ Produces the actual response - XML or JSON - out of the user-provided
+    SimpleIO abstract data.
+    """
+    def __init__(self, cid, logger, format, required_list, optional_list):
+        self.cid = None
+        self.logger = logger
+        self.is_xml = format == SIMPLE_IO.FORMAT.XML
+        self.output = []
+        self.required = [(True, name) for name in required_list]
+        self.optional = [(False, name) for name in optional_list]
+        
+    def append(self, item):
+        self.output.append(item)
+        
+    def _getvalue(self, name, item, is_sa_namedtuple):
+        """ Returns an element's value if any has been provided while taking
+        into account the differences between dictionaries and other formats.
+        """
+        if is_sa_namedtuple:
+            return getattr(item, name, ZATO_NONE)
+        else:
+            return item.get(required, ZATO_NONE)
+            
+    def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
+        """ Returns a log message indicating that an element was missing.
+        """
+        if is_sa_namedtuple:
+            msg_item = (item.keys(), item)
+        else:
+            msg_item = item
+        return '{} elem:[{}] not found in item:[{}]'.format(
+            'Expected' if is_required else 'Optional', name, msg_item)
+        
+    def getvalue(self):
+        """ Gets the actual payload's value converted to a string representing
+        either XML or JSON.
+        """
+        if self.output:
+            if self.is_xml:
+                value = Element('item_list')
+            else:
+                value = {}
+                
+            # All elements must be of the same type so it's OK to do it
+            is_sa_namedtuple = isinstance(self.output[0], NamedTuple) 
+            
+            for item in self.output:
+                out_item = Element('item')
+                for is_required, name in chain(self.required, self.optional):
+                    elem_value = self._getvalue(name, item, is_sa_namedtuple)
+                    if elem_value == ZATO_NONE:
+                        msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
+                        if is_required:
+                            self.logger.debug(msg)
+                            raise ZatoException(self.cid, msg)
+                        else:
+                            if self.logger.isEnabledFor(TRACE1):
+                                self.logger.log(TRACE1, msg)
+                    else:
+                        if self.is_xml:
+                            setattr(out_item, name, elem_value)
+                value.append(out_item)
+                
+        return etree.tostring(value)
 
 class Response(object):
     """ A response from the service's invocation.
     """
-    __slots__ = ('result', 'result_details', 'payload', 'content_type', 'content_encoding',
+    __slots__ = ('logger', 'result', 'result_details', 'payload', 'content_type', 'content_encoding',
                  'headers', 'status_code')
     
-    def __init__(self, result=ZATO_OK, result_details='', payload='', 
+    def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
         content_type='text/plain', content_encoding=None, headers=None,  status_code=OK):
+        self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details
         self.payload = payload
@@ -133,32 +209,42 @@ class Response(object):
     def __len__(self):
         return len(self.payload)
     
+    def init(self, cid, io):
+        required_list = getattr(io, 'output_required', [])
+        optional_list = getattr(io, 'output_optional', [])
+        
+        if required_list or optional_list:
+            self.payload = SimpleIOPayload(cid, self.logger, SIMPLE_IO.FORMAT.XML, 
+                    required_list, optional_list)
+    
 class ServiceInput(Bunch):
     pass
     
 class Request(object):
     """ Wraps a service request and adds some useful meta-data.
     """
-    __slots__ = ('payload', 'raw_request', 'input',)
+    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid')
     
-    def __init__(self):
+    def __init__(self, logger):
+        self.logger = logger
         self.payload = ''
         self.raw_request = ''
         self.input = ServiceInput()
+        self.cid = None
         
-    def init(self, flat_input):
+    def init(self, cid, io):
         """ Initializes the object with an invocation-specific data.
         """
-        path_prefix = getattr(flat_input, 'path_prefix', 'data.')
-        required_list = getattr(flat_input, 'input_required', [])
-        optional_list = getattr(flat_input, 'input_optional', [])
+        path_prefix = getattr(io, 'path_prefix', 'data.')
+        required_list = getattr(io, 'input_required', [])
+        optional_list = getattr(io, 'input_optional', [])
         
         if required_list:
             params = _get_params(self.payload, required_list, path_prefix)
             self.input.update(params)
             
         if optional_list:
-            default_value = getattr(flat_input, 'default_value', None)
+            default_value = getattr(io, 'default_value', None)
             params = _get_params(self.payload, optional_list, path_prefix, default_value)
             self.input.update(params)
     
@@ -175,8 +261,8 @@ class Service(object):
         self.outgoing = None
         self.worker_store = None
         self.odb = None
-        self.request = Request()
-        self.response = Response()
+        self.request = Request(self.logger)
+        self.response = Response(self.logger)
         
     def _init(self):
         """ Actually initializes the service.
@@ -191,7 +277,8 @@ class Service(object):
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap, out_s3)
         
         if hasattr(self, 'SimpleIO'):
-            self.request.init(self.SimpleIO)
+            self.request.init(self.cid, self.SimpleIO)
+            self.response.init(self.cid, self.SimpleIO)
         
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process

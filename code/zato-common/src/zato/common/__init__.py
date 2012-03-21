@@ -129,6 +129,11 @@ SOAP_VERSIONS = ('1.1', '1.2')
 
 SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}
 
+class SIMPLE_IO:
+    class FORMAT:
+        XML = 'xml'
+        JSON = 'json'
+
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks
 # with whom and over what ports.

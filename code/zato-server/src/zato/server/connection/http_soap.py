@@ -530,7 +530,6 @@ class _BaseMessageHandler(object):
         raise NotImplementedError('Must be implemented by subclasses')
     
     def handle(self, cid, task, raw_request, headers, transport, thread_ctx):
-        
         payload, impl_name, service_data = self.init(cid, task, raw_request, headers, transport)
 
         service_instance = self.server.service_store.new_instance(impl_name)
@@ -539,6 +538,8 @@ class _BaseMessageHandler(object):
 
         service_instance.handle()
         response = service_instance.response
+        if not isinstance(response.payload, basestring):
+            response.payload = response.payload.getvalue()
 
         if isinstance(service_instance, AdminService) and service_instance.needs_xml:
             response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
