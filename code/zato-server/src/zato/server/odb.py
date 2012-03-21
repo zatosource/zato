@@ -99,6 +99,7 @@ class ODBManager(SessionWrapper):
             
             result[item.url_path] = SimpleBunch()
             result[item.url_path].transport = item.transport
+            result[item.url_path].data_format = item.data_format
             result[item.url_path].sec_def = SimpleBunch()
 
             if item.security_id:

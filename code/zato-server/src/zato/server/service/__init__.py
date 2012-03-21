@@ -35,6 +35,9 @@ from lxml.objectify import Element
 # Paste
 from paste.util.converters import asbool
 
+# anyjson
+from anyjson import dumps
+
 # Bunch
 from bunch import Bunch
 
@@ -68,6 +71,7 @@ class Outgoing(object):
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
     __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap', 's3')
+    
     def __init__(self, ftp=None, amqp=None, zmq=None, jms_wmq=None, sql=None, 
                  plain_http=None, soap=None, s3=None):
         self.ftp = ftp
@@ -82,13 +86,16 @@ class SimpleIOPayload(object):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data.
     """
-    def __init__(self, cid, logger, format, required_list, optional_list):
+    __slots__ = ('cid', 'logger', 'is_xml', 'output', 'required', 'optional', 'data_format')
+    
+    def __init__(self, cid, logger, data_format, required_list, optional_list):
         self.cid = None
         self.logger = logger
-        self.is_xml = format == SIMPLE_IO.FORMAT.XML
+        self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
         self.output = []
         self.required = [(True, name) for name in required_list]
         self.optional = [(False, name) for name in optional_list]
+        self.data_format = data_format
         
     def append(self, item):
         self.output.append(item)
@@ -120,13 +127,16 @@ class SimpleIOPayload(object):
             if self.is_xml:
                 value = Element('item_list')
             else:
-                value = {}
+                value = []
                 
             # All elements must be of the same type so it's OK to do it
             is_sa_namedtuple = isinstance(self.output[0], NamedTuple) 
             
             for item in self.output:
-                out_item = Element('item')
+                if self.is_xml:
+                    out_item = Element('item')
+                else:
+                    out_item = {}
                 for is_required, name in chain(self.required, self.optional):
                     elem_value = self._getvalue(name, item, is_sa_namedtuple)
                     if elem_value == ZATO_NONE:
@@ -140,24 +150,32 @@ class SimpleIOPayload(object):
                     else:
                         if self.is_xml:
                             setattr(out_item, name, elem_value)
+                        else:
+                            out_item[name] = elem_value
+                            
                 value.append(out_item)
-                
-        return etree.tostring(value)
+            
+        if self.is_xml:
+            return etree.tostring(value)
+        else:
+            return dumps(value)
 
 class Response(object):
     """ A response from the service's invocation.
     """
     __slots__ = ('logger', 'result', 'result_details', 'payload', 'content_type', 'content_encoding',
-                 'headers', 'status_code')
+                 'headers', 'status_code', 'data_format')
     
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
-        content_type='text/plain', content_encoding=None, headers=None,  status_code=OK):
+            content_type='text/plain', content_encoding=None, data_format=None, headers=None, 
+            status_code=OK):
         self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details
         self.payload = payload
         self.content_type = content_type
         self.content_encoding = content_encoding
+        self.data_format = data_format
         
         # Specific to HTTP/SOAP probably?
         self.headers = headers or Bunch()
@@ -166,12 +184,13 @@ class Response(object):
     def __len__(self):
         return len(self.payload)
     
-    def init(self, cid, io):
+    def init(self, cid, io, data_format):
+        self.data_format = data_format
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
         
         if required_list or optional_list:
-            self.payload = SimpleIOPayload(cid, self.logger, SIMPLE_IO.FORMAT.XML, 
+            self.payload = SimpleIOPayload(cid, self.logger, data_format, 
                     required_list, optional_list)
     
 class ServiceInput(Bunch):
@@ -182,9 +201,9 @@ class Request(object):
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
                  'simple_io_config', 'bool_parameter_prefixes', 'int_parameters', 
-                 'int_parameter_suffixes')
+                 'int_parameter_suffixes', 'is_xml', 'data_format')
     
-    def __init__(self, logger, simple_io_config={}):
+    def __init__(self, logger, simple_io_config={}, data_format=None):
         self.logger = logger
         self.payload = ''
         self.raw_request = ''
@@ -195,10 +214,14 @@ class Request(object):
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
+        self.is_xml = None
+        self.data_format = data_format
         
-    def init(self, cid, io):
+    def init(self, cid, io, data_format):
         """ Initializes the object with an invocation-specific data.
         """
+        self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
+        self.data_format = data_format
         path_prefix = getattr(io, 'path_prefix', 'data.')
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
@@ -229,18 +252,21 @@ class Request(object):
                 param_name = param.name
             else:
                 param_name = param
-    
-            try:
-                elem = zato_path(path_prefix + param_name, True).get_from(self.payload)
-            except ParsingException, e:
-                msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
-                    etree.tostring(self.payload), format_exc(e))
-                raise ParsingException(self.cid, msg)
-    
-            if use_text:
-                value = elem.text # We are interested in the text the elem contains ..
+
+            if self.is_xml:
+                try:
+                    elem = zato_path(path_prefix + param_name, True).get_from(self.payload)
+                except ParsingException, e:
+                    msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
+                        etree.tostring(self.payload), format_exc(e))
+                    raise ParsingException(self.cid, msg)
+        
+                if use_text:
+                    value = elem.text # We are interested in the text the elem contains ..
+                else:
+                    return elem # .. or in the elem itself.
             else:
-                return elem # .. or in the elem itself.
+                value = self.payload[param_name]
     
             # Use a default value if an element is empty and we're allowed to
             # substitute its (empty) value with the default one.
@@ -280,6 +306,7 @@ class Service(object):
         self.outgoing = None
         self.worker_store = None
         self.odb = None
+        self.data_format = None
         self.request = Request(self.logger)
         self.response = Response(self.logger)
         
@@ -296,8 +323,8 @@ class Service(object):
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap, out_s3)
         
         if hasattr(self, 'SimpleIO'):
-            self.request.init(self.cid, self.SimpleIO)
-            self.response.init(self.cid, self.SimpleIO)
+            self.request.init(self.cid, self.SimpleIO, self.data_format)
+            self.response.init(self.cid, self.SimpleIO, self.data_format)
         
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process
@@ -366,7 +393,8 @@ class Service(object):
         
     @staticmethod
     def update(service, server, broker_client, worker_store, cid, payload,
-               raw_request, transport=None, simple_io_config=None, init=True):
+               raw_request, transport=None, simple_io_config=None, data_format=None,
+               init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -374,6 +402,7 @@ class Service(object):
         service.broker_client = broker_client
         service.worker_store = worker_store
         service.cid = cid
+        service.data_format = data_format
         service.request.payload = payload
         service.request.raw_request = raw_request
         service.request.simple_io_config = simple_io_config
