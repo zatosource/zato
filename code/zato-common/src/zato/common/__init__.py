@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from httplib import responses
 from string import Template
+from traceback import format_exc
 
 # lxml
 from lxml import etree
@@ -186,7 +187,7 @@ class path(object):
             return value
         except(ValueError, AttributeError), e:
             if self.raise_on_not_found:
-                raise
+                raise ParsingException(None, format_exc(e))
             else:
                 return None
 
@@ -220,3 +221,8 @@ class HTTPException(ZatoException):
         super(HTTPException, self).__init__(cid, msg)
         self.status = status
         self.reason = responses[status]
+        
+class ParsingException(ZatoException):
+    """ Raised when the error is to do with parsing of documents, such as an input
+    XML document.
+    """

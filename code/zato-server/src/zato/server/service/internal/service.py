@@ -53,7 +53,6 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             for item in service_list(session, self.request.input.cluster_id, False):
                 self.response.payload.append(item)
-
         
 class GetByID(AdminService):
     """ Returns a particular service.

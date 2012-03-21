@@ -24,7 +24,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import ChooseClusterForm as _ChooseClusterForm
-from zato.common import SOAP_VERSIONS, ZATO_NONE
+from zato.common import SIMPLE_IO, SOAP_VERSIONS, ZATO_NONE
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -34,6 +34,7 @@ class CreateForm(forms.Form):
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
+    data_format = forms.ChoiceField(widget=forms.Select())
     service = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     security = forms.ChoiceField(widget=forms.Select())
     connection = forms.CharField(widget=forms.HiddenInput())
@@ -45,6 +46,12 @@ class CreateForm(forms.Form):
         self.fields['soap_version'].choices = []
         for name in sorted(SOAP_VERSIONS):
             self.fields['soap_version'].choices.append([name, name])
+            
+        self.fields['data_format'].choices = []
+        self.fields['data_format'].choices.append(['', '----------'])
+        for name in sorted(dir(SIMPLE_IO.FORMAT)):
+            if name.upper() == name:
+                self.fields['data_format'].choices.append([name.lower(), name])
             
         self.fields['security'].choices = []
         self.fields['security'].choices.append(['', '----------'])
