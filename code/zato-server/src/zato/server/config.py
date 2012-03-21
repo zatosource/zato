@@ -46,9 +46,9 @@ class ConfigDict(object):
         self._bunch = _bunch
         self.lock = RLock()
         
-    def get(self, key):
+    def get(self, key, default=None):
         with self.lock:
-            return self._bunch[key]
+            return self._bunch.get(key, default)
         
     __getitem__ = get
         
@@ -72,6 +72,10 @@ class ConfigDict(object):
                 hex(id(self)), sorted(self._bunch.keys()))
         
     __str__ = __repr__
+    
+    def __nonzero__(self):
+        with self.lock:
+            return bool(self._bunch)
             
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
@@ -117,7 +121,8 @@ class ConfigStore(object):
     """
     def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
                  out_sql=NotGiven, repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
-                 url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven):
+                 url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven,
+                 simple_io=NotGiven):
         
         # Outgoing connections
         self.out_ftp = out_ftp
@@ -145,6 +150,9 @@ class ConfigStore(object):
 
         # ODB
         self.odb_data = odb_data
+        
+        # SimpleIO
+        self.simple_io = simple_io
         
     def outgoing_connections(self):
         """ Returns all the outgoing connections.

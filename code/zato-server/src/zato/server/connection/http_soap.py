@@ -387,10 +387,12 @@ class Security(object):
 class RequestHandler(object):
     """ Handles all the incoming HTTP/SOAP requests.
     """
-    def __init__(self, security=None, soap_handler=None, plain_http_handler=None):
+    def __init__(self, security=None, soap_handler=None, plain_http_handler=None,
+                 simple_io_config=None):
         self.security = security
         self.soap_handler = soap_handler
         self.plain_http_handler = plain_http_handler
+        self.simple_io_config = simple_io_config
         
     def wrap_error_message(self, cid, url_type, msg):
         """ Wraps an error message in a transport-specific envelope.
@@ -432,7 +434,7 @@ class RequestHandler(object):
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
 
-                response = handler.handle(cid, task, request, headers, transport, thread_ctx)
+                response = handler.handle(cid, task, request, headers, transport, thread_ctx, self.simple_io_config)
                 task.response_headers['Content-Type'] = response.content_type
           
                 return response.payload
@@ -529,12 +531,12 @@ class _BaseMessageHandler(object):
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, cid, task, raw_request, headers, transport, thread_ctx):
+    def handle(self, cid, task, raw_request, headers, transport, thread_ctx, simple_io_config):
         payload, impl_name, service_data = self.init(cid, task, raw_request, headers, transport)
 
         service_instance = self.server.service_store.new_instance(impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
-            thread_ctx.store, cid, payload, raw_request, transport)
+            thread_ctx.store, cid, payload, raw_request, transport, simple_io_config)
 
         service_instance.handle()
         response = service_instance.response

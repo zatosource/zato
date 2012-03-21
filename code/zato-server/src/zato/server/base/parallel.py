@@ -97,7 +97,8 @@ class ZatoHTTPListener(HTTPServer):
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb=None, odb_data=None, singleton_server=None, worker_config=None, 
-                 repo_location=None, ftp=None, sql_pool_store=None):
+                 repo_location=None, ftp=None, sql_pool_store=None, int_parameters=None, 
+                 int_parameter_suffixes=None, bool_parameter_prefixes=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -109,6 +110,9 @@ class ParallelServer(BrokerMessageReceiver):
         self.repo_location = repo_location
         self.ftp = ftp
         self.sql_pool_store = sql_pool_store
+        self.int_parameters = int_parameters
+        self.int_parameter_suffixes = int_parameter_suffixes
+        self.bool_parameter_prefixes = bool_parameter_prefixes
         
         # The main config store
         self.config = ConfigStore()
@@ -246,6 +250,12 @@ class ParallelServer(BrokerMessageReceiver):
             http_soap.add(item.url_path, _info)
             
         self.config.http_soap = http_soap
+        
+        # SimpleIO
+        self.config.simple_io = ConfigDict('simple_io', Bunch())
+        self.config.simple_io['int_parameters'] = self.int_parameters
+        self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
+        self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
 
         # The parallel server's broker client. The client's used to notify
         # all the server's AMQP subprocesses that they need to shut down.

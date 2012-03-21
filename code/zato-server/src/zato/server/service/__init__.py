@@ -180,18 +180,21 @@ class ServiceInput(Bunch):
 class Request(object):
     """ Wraps a service request and adds some useful meta-data.
     """
-    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'int_parameters',
-                 'int_parameter_suffixes', 'bool_parameter_prefixes')
+    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
+                 'simple_io_config', 'bool_parameter_prefixes', 'int_parameters', 
+                 'int_parameter_suffixes')
     
-    def __init__(self, logger):
+    def __init__(self, logger, simple_io_config={}):
         self.logger = logger
         self.payload = ''
         self.raw_request = ''
         self.input = ServiceInput()
         self.cid = None
-        self.int_parameters = []
-        self.int_parameter_suffixes = []
-        self.bool_parameter_prefixes = []
+        self.simple_io_config = simple_io_config
+        self.has_simple_io_config = False
+        self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
+        self.int_parameters = simple_io_config.get('int_parameters', [])
+        self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         
     def init(self, cid, io):
         """ Initializes the object with an invocation-specific data.
@@ -200,6 +203,12 @@ class Request(object):
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
         use_text = getattr(io, 'use_text', True)
+        
+        if self.simple_io_config:
+            self.has_simple_io_config = True
+            self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
+            self.int_parameters = self.simple_io_config.get('int_parameters', [])
+            self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
         
         if required_list:
             params = self.get_params(required_list, path_prefix, use_text=use_text)
@@ -244,7 +253,7 @@ class Request(object):
             if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
                 value = asbool(value)
                 
-            if value != ZATO_NONE:
+            if value != ZATO_NONE and self.has_simple_io_config:
                 if any(param_name==elem for elem in self.int_parameters) or \
                    any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
                     value = int(value)
@@ -357,7 +366,7 @@ class Service(object):
         
     @staticmethod
     def update(service, server, broker_client, worker_store, cid, payload,
-               raw_request, transport=None, init=True):
+               raw_request, transport=None, simple_io_config=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -367,6 +376,7 @@ class Service(object):
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
+        service.request.simple_io_config = simple_io_config
         
         if init:
             service._init()

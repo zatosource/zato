@@ -128,6 +128,9 @@ class ZatoContext(PythonConfig):
         server.odb = self.odb_manager()
         server.service_store = self.service_store()
         server.sql_pool_store = self.sql_pool_store()
+        server.int_parameters = self.int_parameters()
+        server.int_parameter_suffixes = self.int_parameter_suffixes()
+        server.bool_parameter_prefixes = self.bool_parameter_prefixes()
 
         return server
 
