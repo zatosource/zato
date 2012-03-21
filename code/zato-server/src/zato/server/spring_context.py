@@ -87,6 +87,18 @@ class ZatoContext(PythonConfig):
         store.services = {}
 
         return store
+    
+    @Object
+    def int_parameters(self):
+        return ['id']
+    
+    @Object
+    def int_parameter_suffixes(self):
+        return ['_id', '_size', '_timeout']
+    
+    @Object
+    def bool_parameter_prefixes(self):
+        return ['is_', 'should_']
 
     # #######################################################
     # Security

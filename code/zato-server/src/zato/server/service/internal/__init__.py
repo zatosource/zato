@@ -28,7 +28,7 @@ from urlparse import parse_qs
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE
-from zato.server.service import _get_params, Service
+from zato.server.service import Service
 
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)

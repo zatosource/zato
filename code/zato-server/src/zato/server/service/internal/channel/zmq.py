@@ -36,7 +36,7 @@ from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service
 from zato.common.odb.query import channel_zmq_list
 from zato.server.connection.zmq_.channel import start_connector
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.

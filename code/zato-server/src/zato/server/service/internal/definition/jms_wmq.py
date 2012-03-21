@@ -35,7 +35,7 @@ from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.

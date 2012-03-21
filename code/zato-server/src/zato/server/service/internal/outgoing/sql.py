@@ -34,7 +34,7 @@ from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class _SQLService(object):
     """ A common class for various SQL-related services.

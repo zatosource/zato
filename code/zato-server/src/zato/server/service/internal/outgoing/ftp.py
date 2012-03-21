@@ -37,7 +37,7 @@ from bunch import Bunch
 from zato.common import ZATO_OK
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class _FTPService(AdminService):
     def update_facade(self, params, old_name=None):

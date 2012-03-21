@@ -31,8 +31,8 @@ from sqlalchemy.util import NamedTuple
 from lxml import etree
 from lxml.objectify import Element
 
-# validate
-from validate import is_boolean
+# Paste
+from paste.util.converters import asbool
 
 # Bunch
 from bunch import Bunch
@@ -61,50 +61,6 @@ class Boolean(ForceType):
 
 class Integer(ForceType):
     pass
-
-def _get_params(payload, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE,
-                use_text=True, boolean_prefixes=('is_', 'should_')):
-    """ Gets all requested parameters from a message. Will raise an exception
-    if any is missing.
-    """
-    params = {}
-    for param in request_params:
-        
-        if isinstance(param, ForceType):
-            param_name = param.name
-        else:
-            param_name = param
-
-        elem = zato_path(path_prefix + param_name, True).get_from(payload)
-
-        if use_text:
-            value = elem.text # We are interested in the text the elem contains ..
-        else:
-            return elem # .. or in the elem itself.
-
-        # Use a default value if an element is empty and we're allowed to
-        # substitute its (empty) value with the default one.
-        if default_value != ZATO_NO_DEFAULT_VALUE and not value:
-            value = default_value
-        else:
-            if value is not None:
-                value = unicode(value)
-
-        if any(param_name.startswith(prefix) for prefix in boolean_prefixes):
-            value = is_boolean(value)
-            
-        if value != ZATO_NONE and (param_name == 'id' or param_name.endswith('_id') or \
-                                   param_name.endswith('_timeout') or param_name.endswith('_size')):
-            value = int(value)
-            
-        if isinstance(param, Boolean):
-            value = is_boolean(value)
-        elif isinstance(param, Integer):
-            value = int(value)
-            
-        params[param_name] = value
-
-    return params
 
 class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
@@ -223,7 +179,8 @@ class ServiceInput(Bunch):
 class Request(object):
     """ Wraps a service request and adds some useful meta-data.
     """
-    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid')
+    __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'int_parameters',
+                 'int_parameter_suffixes', 'bool_parameter_prefixes')
     
     def __init__(self, logger):
         self.logger = logger
@@ -231,6 +188,9 @@ class Request(object):
         self.raw_request = ''
         self.input = ServiceInput()
         self.cid = None
+        self.int_parameters = []
+        self.int_parameter_suffixes = []
+        self.bool_parameter_prefixes = []
         
     def init(self, cid, io):
         """ Initializes the object with an invocation-specific data.
@@ -238,15 +198,60 @@ class Request(object):
         path_prefix = getattr(io, 'path_prefix', 'data.')
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
+        use_text = getattr(io, 'use_text', True)
         
         if required_list:
-            params = _get_params(self.payload, required_list, path_prefix)
+            params = self.get_params(required_list, path_prefix, use_text=use_text)
             self.input.update(params)
             
         if optional_list:
             default_value = getattr(io, 'default_value', None)
-            params = _get_params(self.payload, optional_list, path_prefix, default_value)
+            params = self.get_params(optional_list, path_prefix, default_value, use_text)
             self.input.update(params)
+            
+    def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True):
+        """ Gets all requested parameters from a message. Will raise an exception
+        if any is missing.
+        """
+        params = {}
+        for param in request_params:
+            
+            if isinstance(param, ForceType):
+                param_name = param.name
+            else:
+                param_name = param
+    
+            elem = zato_path(path_prefix + param_name, True).get_from(self.payload)
+    
+            if use_text:
+                value = elem.text # We are interested in the text the elem contains ..
+            else:
+                return elem # .. or in the elem itself.
+    
+            # Use a default value if an element is empty and we're allowed to
+            # substitute its (empty) value with the default one.
+            if default_value != ZATO_NO_DEFAULT_VALUE and not value:
+                value = default_value
+            else:
+                if value is not None:
+                    value = unicode(value)
+    
+            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
+                value = asbool(value)
+                
+            if value != ZATO_NONE:
+                if any(param_name==elem for elem in self.int_parameters) or \
+                   any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
+                    value = int(value)
+                
+            if isinstance(param, Boolean):
+                value = asbool(value)
+            elif isinstance(param, Integer):
+                value = int(value)
+                
+            params[param_name] = value
+    
+        return params
     
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter 

@@ -36,7 +36,7 @@ from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_jms_wmq_list
 from zato.server.connection.jms_wmq.outgoing import start_connector
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
     """ Returns a list of outgoing JMS WebSphere MQ connections.
