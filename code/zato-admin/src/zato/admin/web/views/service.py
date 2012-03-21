@@ -101,7 +101,7 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
                 impl_name = msg_item.impl_name.text
                 is_internal = is_boolean(msg_item.is_internal.text)
-                usage_count = msg_item.usage_count.text
+                usage_count = msg_item.usage_count.text if hasattr(msg_item, 'usage_count') else 'TODO'
                 
                 item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
                 items.append(item)

@@ -30,6 +30,9 @@ from lxml.objectify import Element
 # validate
 from validate import is_boolean
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
@@ -42,25 +45,15 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
+        output_optional = ('zzz',)
+        output_repeated = True
         
     def handle(self):
         with closing(self.odb.session()) as session:
-            item_list = Element('item_list')
-            db_items = service_list(session, self.request.input.cluster_id, False)
+            for item in service_list(session, self.request.input.cluster_id, False):
+                self.response.payload.append(item)
 
-            for db_item in db_items:
-
-                item = Element('item')
-                item.id = db_item.id
-                item.name = db_item.name
-                item.is_active = db_item.is_active
-                item.impl_name = db_item.impl_name
-                item.is_internal = db_item.is_internal
-                item.usage_count = 'TODO getlist'
-    
-                item_list.append(item)
-    
-            self.response.payload = etree.tostring(item_list)
         
 class GetByID(AdminService):
     """ Returns a particular service.
