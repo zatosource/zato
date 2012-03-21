@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from httplib import OK
 from itertools import chain
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy.util import NamedTuple
@@ -38,7 +39,7 @@ from paste.util.converters import asbool
 from bunch import Bunch
 
 # Zato
-from zato.common import SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common import ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.util import TRACE1
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -210,8 +211,7 @@ class Request(object):
             self.input.update(params)
             
     def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True):
-        """ Gets all requested parameters from a message. Will raise an exception
-        if any is missing.
+        """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
         for param in request_params:
@@ -221,7 +221,12 @@ class Request(object):
             else:
                 param_name = param
     
-            elem = zato_path(path_prefix + param_name, True).get_from(self.payload)
+            try:
+                elem = zato_path(path_prefix + param_name, True).get_from(self.payload)
+            except ParsingException, e:
+                msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
+                    etree.tostring(self.payload), format_exc(e))
+                raise ParsingException(self.cid, msg)
     
             if use_text:
                 value = elem.text # We are interested in the text the elem contains ..

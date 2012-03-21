@@ -99,6 +99,7 @@ class GetList(AdminService):
                 item.method = db_item.method
                 item.soap_action = db_item.soap_action
                 item.soap_version = db_item.soap_version
+                item.data_format = db_item.data_format
                 item.service_id = db_item.service_id
                 item.service_name = db_item.service_name
                 item.security_id = db_item.security_id
@@ -115,7 +116,7 @@ class Create(AdminService, _HTTPSOAPService):
     class SimpleIO:
         input_required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
                     'url_path', 'service', 'security_id')
-        input_optional = ('method', 'soap_action', 'soap_version', 'host')
+        input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
     
     def handle(self):
         input = self.request.input
@@ -170,6 +171,7 @@ class Create(AdminService, _HTTPSOAPService):
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version
+                item.data_format = input.data_format
                 item.service = service
 
                 session.add(item)
@@ -206,7 +208,7 @@ class Edit(AdminService, _HTTPSOAPService):
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
                 'connection', 'service', 'transport', 'security_id')
-        input_optional = ('method', 'soap_action', 'soap_version', 'host')
+        input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
     
     def handle(self):
         input = self.request.input
@@ -263,6 +265,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version
+                item.data_format = input.data_format
 
                 session.add(item)
                 session.commit()
