@@ -222,7 +222,7 @@ class Response(object):
         self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details
-        self._payload = None
+        self._payload = ''
         self.content_type = content_type
         self.content_encoding = content_encoding
         self.data_format = data_format
