@@ -39,16 +39,17 @@ class AdminService(Service):
     def __init__(self):
         super(AdminService, self).__init__()
         
-        # Whether the responses are to be wrapped in a SOAP message
-        self.needs_xml = True
-        
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
 
 class Ping(AdminService):
-
+    class SimpleIO:
+        output_required = ('ping', 'zzz', 'aaa')
+        
     def handle(self):
-        return 'Pong'
+        self.response.payload.ping = 'pong'
+        self.response.payload.zzz = '111'
+        self.response.payload.aaa = '999'
     
 class Ping2(Ping):
     pass

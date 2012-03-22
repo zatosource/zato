@@ -84,30 +84,49 @@ class Outgoing(object):
         
 class SimpleIOPayload(object):
     """ Produces the actual response - XML or JSON - out of the user-provided
-    SimpleIO abstract data.
+    SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
+    they don't conflict with user-provided data.
     """
-    __slots__ = ('cid', 'logger', 'is_xml', 'output', 'required', 'optional', 'data_format')
-    
-    def __init__(self, cid, logger, data_format, required_list, optional_list):
-        self.cid = None
-        self.logger = logger
-        self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
-        self.output = []
-        self.required = [(True, name) for name in required_list]
-        self.optional = [(False, name) for name in optional_list]
-        self.data_format = data_format
+    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, is_repeated):
+        self.zato_cid = None
+        self.zato_logger = logger
+        self.zato_is_xml = data_format == SIMPLE_IO.FORMAT.XML
+        self.zato_output = []
+        self.zato_required = [(True, name) for name in required_list]
+        self.zato_optional = [(False, name) for name in optional_list]
+        self.zato_is_repeated = is_repeated
+        self.zato_all_attrs = set(required_list) | set(optional_list)
+        self.set_attrs(required_list, optional_list)
+        
+    def set_attrs(self, required_list, optional_list):
+        """ Dynamically assigns all the expected attributes to self. Setting a value
+        of an attribute will actually add data to self.zato_output.
+        """
+        for name in chain(required_list, optional_list):
+            setattr(self, name, ZATO_NONE)
         
     def append(self, item):
-        self.output.append(item)
+        self.zato_output.append(item)
         
-    def _getvalue(self, name, item, is_sa_namedtuple):
+    def _getvalue(self, name, item, is_sa_namedtuple, is_required):
         """ Returns an element's value if any has been provided while taking
         into account the differences between dictionaries and other formats.
         """
         if is_sa_namedtuple:
-            return getattr(item, name, ZATO_NONE)
+            elem_value = getattr(item, name, ZATO_NONE)
         else:
-            return item.get(required, ZATO_NONE)
+            elem_value = item.get(name, ZATO_NONE)
+            
+        if elem_value == ZATO_NONE:
+            msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
+            if is_required:
+                self.zato_logger.debug(msg)
+                raise ZatoException(self.zato_cid, msg)
+            else:
+                if self.zato_logger.isEnabledFor(TRACE1):
+                    self.zato_logger.log(TRACE1, msg)
+                    
+        return elem_value
             
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -123,39 +142,48 @@ class SimpleIOPayload(object):
         """ Gets the actual payload's value converted to a string representing
         either XML or JSON.
         """
-        if self.output:
-            if self.is_xml:
+        if self.zato_is_xml:
+            if self.zato_is_repeated:
                 value = Element('item_list')
             else:
+                value = Element('item')
+        else:
+            if self.zato_is_repeated:
                 value = []
+            else:
+                value = {}
                 
-            # All elements must be of the same type so it's OK to do it
-            is_sa_namedtuple = isinstance(self.output[0], NamedTuple) 
+        if self.zato_is_repeated:
+            output = self.zato_output
+        else:
+            output = set(dir(self)) & self.zato_all_attrs
+            output = [dict((name, getattr(self, name)) for name in output)]
+
+        if output:
             
-            for item in self.output:
-                if self.is_xml:
+            # All elements must be of the same type so it's OK to do it
+            is_sa_namedtuple = isinstance(output[0], NamedTuple) 
+            
+            for item in output:
+                if self.zato_is_xml:
                     out_item = Element('item')
                 else:
                     out_item = {}
-                for is_required, name in chain(self.required, self.optional):
-                    elem_value = self._getvalue(name, item, is_sa_namedtuple)
-                    if elem_value == ZATO_NONE:
-                        msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
-                        if is_required:
-                            self.logger.debug(msg)
-                            raise ZatoException(self.cid, msg)
-                        else:
-                            if self.logger.isEnabledFor(TRACE1):
-                                self.logger.log(TRACE1, msg)
+                for is_required, name in chain(self.zato_required, self.zato_optional):
+                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required)
+                    
+                    if self.zato_is_xml:
+                        setattr(out_item, name, elem_value)
                     else:
-                        if self.is_xml:
-                            setattr(out_item, name, elem_value)
-                        else:
-                            out_item[name] = elem_value
-                            
-                value.append(out_item)
-            
-        if self.is_xml:
+                        out_item[name] = elem_value                    
+
+                    if self.zato_is_repeated:
+                        value.append(out_item)
+                    else:
+                        value = out_item
+                        break
+
+        if self.zato_is_xml:
             return etree.tostring(value)
         else:
             return dumps(value)
@@ -188,10 +216,11 @@ class Response(object):
         self.data_format = data_format
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
+        is_repeated = getattr(io, 'output_repeated', [])
         
         if required_list or optional_list:
             self.payload = SimpleIOPayload(cid, self.logger, data_format, 
-                    required_list, optional_list)
+                    required_list, optional_list, is_repeated)
     
 class ServiceInput(Bunch):
     pass
