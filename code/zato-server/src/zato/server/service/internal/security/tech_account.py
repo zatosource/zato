@@ -37,7 +37,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common.odb.query import tech_acc_list
 from zato.common.util import tech_account_password
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are

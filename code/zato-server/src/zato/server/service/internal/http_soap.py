@@ -39,7 +39,7 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
 from zato.common.util import security_def_type
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.
@@ -99,6 +99,7 @@ class GetList(AdminService):
                 item.method = db_item.method
                 item.soap_action = db_item.soap_action
                 item.soap_version = db_item.soap_version
+                item.data_format = db_item.data_format
                 item.service_id = db_item.service_id
                 item.service_name = db_item.service_name
                 item.security_id = db_item.security_id
@@ -115,7 +116,7 @@ class Create(AdminService, _HTTPSOAPService):
     class SimpleIO:
         input_required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
                     'url_path', 'service', 'security_id')
-        input_optional = ('method', 'soap_action', 'soap_version', 'host')
+        input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
     
     def handle(self):
         input = self.request.input
@@ -170,6 +171,7 @@ class Create(AdminService, _HTTPSOAPService):
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version
+                item.data_format = input.data_format
                 item.service = service
 
                 session.add(item)
@@ -206,7 +208,7 @@ class Edit(AdminService, _HTTPSOAPService):
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
                 'connection', 'service', 'transport', 'security_id')
-        input_optional = ('method', 'soap_action', 'soap_version', 'host')
+        input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
     
     def handle(self):
         input = self.request.input
@@ -263,6 +265,8 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version
+                item.data_format = input.data_format
+                item.service = service
 
                 session.add(item)
                 session.commit()
@@ -352,7 +356,6 @@ class GetURLSecurity(AdminService):
     Zato channels.
     """
     def handle(self):
-        self.needs_xml = False
         response = {}
         response['url_sec'] = sorted(self.worker_store.request_handler.security.url_sec.items())
         response['plain_http_handler.http_soap'] = sorted(self.worker_store.request_handler.plain_http_handler.http_soap.items())

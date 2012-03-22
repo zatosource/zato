@@ -103,6 +103,7 @@ class ODBManager(SessionWrapper):
             _info = SimpleBunch()
             _info[item.soap_action] = SimpleBunch()
             _info[item.soap_action].transport = item.transport
+            _info[item.soap_action].data_format = item.data_format
 
             if item.security_id:
                 _info[item.soap_action].sec_def = SimpleBunch()

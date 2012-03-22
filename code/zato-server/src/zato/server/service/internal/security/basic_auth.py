@@ -36,7 +36,7 @@ from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
-from zato.server.service.internal import _get_params, AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.

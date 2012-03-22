@@ -35,40 +35,20 @@ from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_optional = ('zzz',)
+        output_repeated = True
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            definition_list = Element('definition_list')
-            definitions = def_jms_wmq_list(session, self.request.input.cluster_id, False)
-    
-            for definition in definitions:
-    
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.host = definition.host
-                definition_elem.port = definition.port
-                definition_elem.queue_manager = definition.queue_manager
-                definition_elem.channel = definition.channel
-                definition_elem.cache_open_send_queues = definition.cache_open_send_queues
-                definition_elem.cache_open_receive_queues = definition.cache_open_receive_queues
-                definition_elem.use_shared_connections = definition.use_shared_connections
-                definition_elem.ssl = definition.ssl
-                definition_elem.ssl_cipher_spec = definition.ssl_cipher_spec
-                definition_elem.ssl_key_repository = definition.ssl_key_repository
-                definition_elem.needs_mcd = definition.needs_mcd
-                definition_elem.max_chars_printed = definition.max_chars_printed
-    
-                definition_list.append(definition_elem)
-    
-            self.response.payload = etree.tostring(definition_list)
+            for item in def_jms_wmq_list(session, self.request.input.cluster_id, False):
+                self.response.payload.append(item)
         
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.

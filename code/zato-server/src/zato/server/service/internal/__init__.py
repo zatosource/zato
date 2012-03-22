@@ -28,7 +28,7 @@ from urlparse import parse_qs
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE
-from zato.server.service import _get_params, Service
+from zato.server.service import Service
 
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
@@ -39,17 +39,15 @@ class AdminService(Service):
     def __init__(self):
         super(AdminService, self).__init__()
         
-        # Whether the responses are to be wrapped in a SOAP message
-        self.needs_xml = True
-        
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
 
 class Ping(AdminService):
-
+    class SimpleIO:
+        output_required = ('ping',)
+        
     def handle(self):
-        out = self.outgoing.soap.get('ServerInfo').conn
-        print(333, out.post(self.cid, 'zzz'))
+        self.response.payload.ping = 'pong'
     
 class Ping2(Ping):
     pass
