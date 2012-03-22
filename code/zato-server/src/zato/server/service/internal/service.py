@@ -23,21 +23,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
-# validate
-from validate import is_boolean
-
-# Bunch
-from bunch import Bunch
-
 # Zato
 from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Cluster, Service
 from zato.common.odb.query import service, service_list
+from zato.server.service import Boolean
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
@@ -69,12 +60,12 @@ class Edit(AdminService):
     """
     class SimpleIO:
         input_required = ('id', 'is_active', 'name')
+        output_required = ('id', 'name', 'impl_name', 'is_internal',)
+        output_optional = (Boolean('usage_count'),)
     
     def handle(self):
         input = self.request.input
-        
         with closing(self.odb.session()) as session:
-            service_elem = Element('service')
             try:
                 service = session.query(Service).filter_by(id=input.id).one()
                 service.is_active = input.is_active
@@ -83,16 +74,10 @@ class Edit(AdminService):
                 session.add(service)
                 session.commit()
                 
-                service_elem.id = service.id
-                service_elem.name = service.name
-                service_elem.impl_name = service.impl_name
-                service_elem.is_internal = service.is_internal
-                service_elem.usage_count = 'TODO edit'
-                
                 input.action = SERVICE.EDIT
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
-                self.response.payload = etree.tostring(service_elem)
+                self.response.payload = service
                 
             except Exception, e:
                 msg = 'Could not update the service, e=[{e}]'.format(e=format_exc(e))
