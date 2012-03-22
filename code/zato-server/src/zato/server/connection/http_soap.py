@@ -574,7 +574,7 @@ class _BaseMessageHandler(object):
 
         service_instance.handle()
         response = service_instance.response
-        if data_format == SIMPLE_IO.FORMAT.XML:
+        if data_format == SIMPLE_IO.FORMAT.XML and not isinstance(response.payload, basestring):
             response.payload = response.payload.getvalue()
 
         if isinstance(service_instance, AdminService):
