@@ -266,6 +266,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version
                 item.data_format = input.data_format
+                item.service = service
 
                 session.add(item)
                 session.commit()
@@ -352,7 +353,6 @@ class GetURLSecurity(AdminService):
     Zato channels.
     """
     def handle(self):
-        self.needs_xml = False
         response = {}
         response['url_sec'] = self.worker_store.request_handler.security.url_sec
         response['plain_http_handler.http_soap'] = sorted(self.worker_store.request_handler.plain_http_handler.http_soap.items())

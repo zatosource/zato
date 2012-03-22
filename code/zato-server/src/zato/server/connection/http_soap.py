@@ -552,7 +552,7 @@ class _BaseMessageHandler(object):
         if not isinstance(response.payload, basestring):
             response.payload = response.payload.getvalue()
 
-        if isinstance(service_instance, AdminService) and service_instance.needs_xml:
+        if isinstance(service_instance, AdminService) and data_format == SIMPLE_IO.FORMAT.XML:
             response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
                 result=response.result, details=response.result_details, data=response.payload)
 
