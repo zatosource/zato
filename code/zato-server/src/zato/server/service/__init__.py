@@ -317,7 +317,7 @@ class SimpleIOPayload(ValueConverter):
         return '{} elem:[{}] not found in item:[{}]'.format(
             'Expected' if is_required else 'Optional', name, msg_item)
 
-    def getvalue(self):
+    def getvalue(self, serialize=True):
         """ Gets the actual payload's value converted to a string representing
         either XML or JSON.
         """
@@ -364,10 +364,13 @@ class SimpleIOPayload(ValueConverter):
                     else:
                         value = out_item
 
-        if self.zato_is_xml:
-            return etree.tostring(value)
+        if serialize:
+            if self.zato_is_xml:
+                return etree.tostring(value)
+            else:
+                return dumps(value)
         else:
-            return dumps(value)
+            return value
 
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter 
