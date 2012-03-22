@@ -65,7 +65,7 @@ class ValueConverter(object):
         if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
             value = asbool(value)
             
-        if value != ZATO_NONE and has_simple_io_config:
+        if value and value != ZATO_NONE and has_simple_io_config:
             if any(param_name==elem for elem in self.int_parameters) or \
                any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
                 value = int(value)
