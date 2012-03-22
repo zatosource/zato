@@ -81,34 +81,15 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'connection', 'transport')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'host', 
+            'url_path', 'method', 'soap_action', 'soap_version', 'data_format', 
+            'service_id', 'service_name', 'security_id', 'security_name', 'sec_type')
+        output_repeated = True
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            item_list = Element('item_list')
-            db_items = http_soap_list(session, self.request.input.cluster_id,
+            self.response.payload[:] = http_soap_list(session, self.request.input.cluster_id,
                 self.request.input.connection, self.request.input.transport, False)
-            
-            for db_item in db_items:
-                item = Element('item')
-                item.id = db_item.id
-                item.name = db_item.name
-                item.is_active = db_item.is_active
-                item.is_internal = db_item.is_internal
-                item.host = db_item.host
-                item.url_path = db_item.url_path
-                item.method = db_item.method
-                item.soap_action = db_item.soap_action
-                item.soap_version = db_item.soap_version
-                item.data_format = db_item.data_format
-                item.service_id = db_item.service_id
-                item.service_name = db_item.service_name
-                item.security_id = db_item.security_id
-                item.security_name = db_item.security_name
-                item.sec_type = db_item.sec_type
-
-                item_list.append(item)
-
-            self.response.payload = etree.tostring(item_list)
 
 class Create(AdminService, _HTTPSOAPService):
     """ Creates a new HTTP/SOAP connection.
@@ -117,6 +98,7 @@ class Create(AdminService, _HTTPSOAPService):
         input_required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
                     'url_path', 'service', 'security_id')
         input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
+        output_required = ('id',)
     
     def handle(self):
         input = self.request.input
@@ -154,8 +136,6 @@ class Create(AdminService, _HTTPSOAPService):
             sec_info = self._handle_security_info(session, input.security_id, 
                 input.connection, input.transport)
             
-            created_elem = Element('http_soap')
-            
             try:
 
                 item = HTTPSOAP()
@@ -191,9 +171,7 @@ class Create(AdminService, _HTTPSOAPService):
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT
                 self.notify_worker_threads(input, action)
 
-                created_elem.id = item.id
-
-                self.response.payload = etree.tostring(created_elem)
+                self.response.payload.id = item.id
 
             except Exception, e:
                 msg = 'Could not create the object, e=[{e}]'.format(e=format_exc(e))
@@ -209,6 +187,7 @@ class Edit(AdminService, _HTTPSOAPService):
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
                 'connection', 'service', 'transport', 'security_id')
         input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
+        output_required = ('id',)
     
     def handle(self):
         input = self.request.input
@@ -247,8 +226,6 @@ class Edit(AdminService, _HTTPSOAPService):
             # type and transport
             sec_info = self._handle_security_info(session, input.security_id, input.connection, input.transport)
 
-            xml_item = Element('http_soap')
-
             try:
                 item = session.query(HTTPSOAP).filter_by(id=input.id).one()
                 old_name = item.name
@@ -271,8 +248,6 @@ class Edit(AdminService, _HTTPSOAPService):
                 session.add(item)
                 session.commit()
                 
-                xml_item.id = item.id
-                
                 if input.connection == 'channel':
                     input.impl_name = service.impl_name
                     input.service_id = service.id
@@ -290,7 +265,7 @@ class Edit(AdminService, _HTTPSOAPService):
                     action = OUTGOING.HTTP_SOAP_CREATE_EDIT
                 self.notify_worker_threads(input, action)
 
-                self.response.payload = etree.tostring(xml_item)
+                self.response.payload.id = item.id
 
             except Exception, e:
                 msg = 'Could not update the object, e=[{e}]'.format(e=format_exc(e))
@@ -318,7 +293,7 @@ class Delete(AdminService, _HTTPSOAPService):
                 old_soap_action = item.soap_action
 
                 session.delete(item)
-                #session.commit()
+                session.commit()
                 
                 if item.connection == 'channel':
                     action = CHANNEL.HTTP_SOAP_DELETE
@@ -340,16 +315,13 @@ class Ping(AdminService):
     """
     class SimpleIO:
         input_required = ('id',)
+        output_required = ('info',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
-            
-            info_elem = etree.Element('info')
             config_dict = getattr(self.outgoing, item.transport)
-            info_elem.text = config_dict.get(item.name).ping(self.cid)
-            
-            self.response.payload = etree.tostring(info_elem)
+            self.response.payload.info = config_dict.get(item.name).ping(self.cid)
 
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
