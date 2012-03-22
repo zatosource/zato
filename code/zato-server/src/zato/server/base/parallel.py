@@ -98,7 +98,9 @@ class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb=None, odb_data=None, singleton_server=None, worker_config=None, 
                  repo_location=None, ftp=None, sql_pool_store=None, int_parameters=None, 
-                 int_parameter_suffixes=None, bool_parameter_prefixes=None):
+                 int_parameter_suffixes=None, bool_parameter_prefixes=None,
+                 soap11_content_type=None, soap12_content_type=None, 
+                 plain_xml_content_type=None, json_content_type=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -113,6 +115,10 @@ class ParallelServer(BrokerMessageReceiver):
         self.int_parameters = int_parameters
         self.int_parameter_suffixes = int_parameter_suffixes
         self.bool_parameter_prefixes = bool_parameter_prefixes
+        self.soap11_content_type = soap11_content_type
+        self.soap12_content_type = soap12_content_type
+        self.plain_xml_content_type = plain_xml_content_type
+        self.json_content_type = json_content_type
         
         # The main config store
         self.config = ConfigStore()

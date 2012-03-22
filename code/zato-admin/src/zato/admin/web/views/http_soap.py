@@ -235,7 +235,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.create', zato_message)
 
-        return _edit_create_response(zato_message.data.http_soap.id.text,
+        return _edit_create_response(zato_message.data.item.id.text,
                                      'created',
                                      req.POST['transport'],
                                      req.POST['connection'],
@@ -255,7 +255,7 @@ def edit(req):
         zato_message = _get_edit_create_message(req.POST, 'edit-')
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.edit', zato_message)
 
-        return _edit_create_response(zato_message.data.http_soap.id.text,
+        return _edit_create_response(zato_message.data.item.id.text,
                                      'updated',
                                      req.POST['transport'],
                                      req.POST['connection'],
@@ -293,4 +293,4 @@ def ping(req, id, cluster_id):
     ret = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
-    return HttpResponse(ret.data.info.text)
+    return HttpResponse(ret.data.item.info.text)

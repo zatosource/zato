@@ -193,17 +193,19 @@ class Request(ValueConverter):
 class Response(object):
     """ A response from the service's invocation.
     """
-    __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload', 'content_type', 'content_encoding',
+    __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload', 
+                 '_content_type', 'content_type', 'content_type_changed', 'content_encoding', 
                  'headers', 'status_code', 'data_format', 'simple_io_config',)
 
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
-            content_type='text/plain', content_encoding=None, data_format=None, headers=None, 
+            _content_type='text/plain', content_encoding=None, data_format=None, headers=None, 
             status_code=OK, simple_io_config={}):
         self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details
         self._payload = ''
-        self.content_type = content_type
+        self._content_type = _content_type
+        self.content_type_changed = False
         self.content_encoding = content_encoding
         self.data_format = data_format
 
@@ -215,6 +217,15 @@ class Response(object):
 
     def __len__(self):
         return len(self._payload)
+    
+    def _get_content_type(self):
+        return self._content_type
+    
+    def _set_content_type(self, value):
+        self._content_type = value
+        self.content_type_changed = True
+        
+    content_type = property(_get_content_type, _set_content_type)
 
     def _get_payload(self):
         return self._payload

@@ -463,8 +463,8 @@ class RequestHandler(object):
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
 
-                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, 
-                    self.simple_io_config, url_data['data_format'])
+                data_format = url_data['data_format']
+                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, self.simple_io_config, data_format)
                 task.response_headers['Content-Type'] = response.content_type
           
                 return response.payload
@@ -532,7 +532,7 @@ class _BaseMessageHandler(object):
             # TODO: Remove the call to .keys() when this pull request is merged in
             #       https://github.com/dsc/bunch/pull/4
             if soap_action in _soap_action_info.keys():
-                _service_info = _soap_action_info[soap_action]
+                service_info = _soap_action_info[soap_action]
                 break
         else:
             msg = '[{0}] Could not find the service config for URL:[{1}], SOAP action:[{2}]'.format(
@@ -540,10 +540,10 @@ class _BaseMessageHandler(object):
             logger.warn(msg)
             raise NotFound(cid, msg)
 
-        logger.debug('[{0}] impl_name:[{1}]'.format(cid, _service_info.impl_name))
+        logger.debug('[{0}] impl_name:[{1}]'.format(cid, service_info.impl_name))
 
         logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, self.server.service_store.services))
-        service_data = self.server.service_store.service_data(_service_info.impl_name)
+        service_data = self.server.service_store.service_data(service_info.impl_name)
 
         if data_format == SIMPLE_IO.FORMAT.XML:
             if transport == 'soap':
@@ -559,15 +559,15 @@ class _BaseMessageHandler(object):
         else:
             payload = request
         
-        return payload, _service_info.impl_name, service_data
+        return payload, service_info, service_data
     
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
     def handle(self, cid, task, raw_request, headers, transport, thread_ctx, simple_io_config, data_format):
-        payload, impl_name, service_data = self.init(cid, task, raw_request, headers, transport, data_format)
+        payload, service_info, service_data = self.init(cid, task, raw_request, headers, transport, data_format)
 
-        service_instance = self.server.service_store.new_instance(impl_name)
+        service_instance = self.server.service_store.new_instance(service_info.impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
             thread_ctx.store, cid, payload, raw_request, transport, simple_io_config,
             data_format)
@@ -592,7 +592,31 @@ class _BaseMessageHandler(object):
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
 
-        logger.debug('[{0}] Returning response.payload:[{1}]'.format(cid, response.payload))
+        # A user provided their own content type ..
+        if response.content_type_changed:
+            content_type = response.content_type
+        else:
+            
+            # .. or they did not so let's find out if we're using SimpleIO ..
+            if data_format == SIMPLE_IO.FORMAT.XML:
+                if transport == url_type.soap:
+                    if service_info['soap_version'] == '1.1':
+                        content_type = self.server.soap11_content_type
+                    else:
+                        content_type = self.server.soap12_content_type
+                else:
+                    content_type = self.server.plain_xml_content_type
+    
+            elif data_format == SIMPLE_IO.FORMAT.JSON:
+                content_type = self.server.json_content_type
+            
+            # .. alright, let's use the default value after all.
+            else:
+                content_type = response.content_type
+                
+        response.content_type = content_type
+
+        logger.debug('[{}] Returning content_type:[{}], response.payload:[{}]'.format(cid, content_type, response.payload))
         return response
     
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
