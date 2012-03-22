@@ -98,6 +98,12 @@ class SimpleIOPayload(object):
         self.zato_all_attrs = set(required_list) | set(optional_list)
         self.set_attrs(required_list, optional_list)
         
+    def __setslice__(self, i, j, seq):
+        """ Assigns a list of output elements to self.zato_output, so that they
+        don't have to be each individually appended.
+        """
+        self.zato_output[i:j] = seq
+        
     def set_attrs(self, required_list, optional_list):
         """ Dynamically assigns all the expected attributes to self. Setting a value
         of an attribute will actually add data to self.zato_output.

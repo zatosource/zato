@@ -44,12 +44,10 @@ class AdminService(Service):
 
 class Ping(AdminService):
     class SimpleIO:
-        output_required = ('ping', 'zzz', 'aaa')
+        output_required = ('ping',)
         
     def handle(self):
         self.response.payload.ping = 'pong'
-        self.response.payload.zzz = '111'
-        self.response.payload.aaa = '999'
     
 class Ping2(Ping):
     pass

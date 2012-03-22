@@ -46,13 +46,11 @@ class GetList(AdminService):
     class SimpleIO:
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
-        output_optional = ('zzz',)
         output_repeated = True
         
     def handle(self):
         with closing(self.odb.session()) as session:
-            for item in service_list(session, self.request.input.cluster_id, False):
-                self.response.payload.append(item)
+            self.response.payload[:] = service_list(session, self.request.input.cluster_id, False)
         
 class GetByID(AdminService):
     """ Returns a particular service.
