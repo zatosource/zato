@@ -68,9 +68,6 @@ def _edit_create_response(verb, service_elem):
                    'usage_count':str(service_elem.usage_count.text),
                    'message': 'Successfully {0} the service [{1}]'.format(verb, service_elem.name.text),
                 }
-
-    print(dumps(return_data))
-    
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @meth_allowed('GET')
@@ -101,7 +98,7 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
                 impl_name = msg_item.impl_name.text
                 is_internal = is_boolean(msg_item.is_internal.text)
-                usage_count = msg_item.usage_count.text
+                usage_count = msg_item.usage_count.text if hasattr(msg_item, 'usage_count') else 'TODO'
                 
                 item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
                 items.append(item)
@@ -132,7 +129,7 @@ def edit(req):
         zato_message = _get_edit_create_message(req.POST, 'edit-')
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.edit', zato_message)
 
-        return _edit_create_response('updated', zato_message.data.service)
+        return _edit_create_response('updated', zato_message.data.item)
     except Exception, e:
         msg = "Could not update the service, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)

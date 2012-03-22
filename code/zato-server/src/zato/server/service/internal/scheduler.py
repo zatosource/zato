@@ -38,7 +38,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_list
-from zato.server.service import _get_params
+#from zato.server.service import _get_params # TODO: _get_params is no more
 from zato.server.service.internal import AdminService
 
 PREDEFINED_CRON_DEFINITIONS = {

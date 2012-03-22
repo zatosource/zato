@@ -88,6 +88,7 @@ def _get_edit_create_message(params, prefix=''):
     zato_message.data.method = params.get(prefix + 'method')
     zato_message.data.soap_action = params.get(prefix + 'soap_action', '')
     zato_message.data.soap_version = params.get(prefix + 'soap_version', '')
+    zato_message.data.data_format = params.get(prefix + 'data_format', None)
     zato_message.data.service = params.get(prefix + 'service')
 
     security = params[prefix + 'security']
@@ -181,6 +182,7 @@ def index(req):
                 method = msg_item.method.text if msg_item.method else ''
                 soap_action = msg_item.soap_action.text if msg_item.soap_action else ''
                 soap_version = msg_item.soap_version.text if msg_item.soap_version else ''
+                data_format = msg_item.data_format.text if msg_item.data_format else ''
                 service_id = msg_item.service_id.text
                 service_name = msg_item.service_name.text
                 sec_type = msg_item.sec_type.text
@@ -199,7 +201,7 @@ def index(req):
                 
                 item = HTTPSOAP(id, name, is_active, is_internal, connection, 
                         transport, host, url_path, method, soap_action, soap_version, 
-                        service_id=service_id, service_name=service_name,
+                        data_format, service_id=service_id, service_name=service_name,
                         security_id=security_id, security_name=security_name)
                 items.append(item)
 

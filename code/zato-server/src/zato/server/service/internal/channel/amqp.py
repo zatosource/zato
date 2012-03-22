@@ -36,7 +36,7 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.connection.amqp.channel import start_connector
-from zato.server.service.internal import _get_params, AdminService
+from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
     """ Returns a list of AMQP channels.

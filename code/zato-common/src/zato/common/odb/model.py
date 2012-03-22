@@ -262,6 +262,8 @@ class HTTPSOAP(Base):
     soap_action = Column(String(200), nullable=False)
     soap_version = Column(String(20), nullable=True)
     
+    data_format = Column(String(20), nullable=True)
+    
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
     
@@ -273,7 +275,7 @@ class HTTPSOAP(Base):
     
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
                  connection=None, transport=None, host=None, url_path=None, method=None, 
-                 soap_action=None, soap_version=None, service_id=None, service=None,
+                 soap_action=None, soap_version=None, data_format=None, service_id=None, service=None,
                  security=None, cluster_id=None, cluster=None, service_name=None,
                  security_id=None, security_name=None):
         self.id = id
@@ -287,6 +289,7 @@ class HTTPSOAP(Base):
         self.method = method
         self.soap_action = soap_action
         self.soap_version = soap_version
+        self.data_format = data_format
         self.service_id = service_id
         self.service = service
         self.security = security

@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from httplib import responses
 from string import Template
+from traceback import format_exc
 
 # lxml
 from lxml import etree
@@ -129,6 +130,11 @@ SOAP_VERSIONS = ('1.1', '1.2')
 
 SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}
 
+class SIMPLE_IO:
+    class FORMAT:
+        XML = 'xml'
+        JSON = 'json'
+
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks
 # with whom and over what ports.
@@ -181,7 +187,7 @@ class path(object):
             return value
         except(ValueError, AttributeError), e:
             if self.raise_on_not_found:
-                raise
+                raise ParsingException(None, format_exc(e))
             else:
                 return None
 
@@ -215,3 +221,8 @@ class HTTPException(ZatoException):
         super(HTTPException, self).__init__(cid, msg)
         self.status = status
         self.reason = responses[status]
+        
+class ParsingException(ZatoException):
+    """ Raised when the error is to do with parsing of documents, such as an input
+    XML document.
+    """

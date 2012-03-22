@@ -29,6 +29,7 @@ from uuid import uuid4
 from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_zato_admin, create_broker, create_server, create_zato_admin
+from zato.common import SIMPLE_IO
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb import ping_queries
 from zato.common.odb.model import *
@@ -177,7 +178,7 @@ class Quickstart(ZatoCommand):
         # .. no security ..
         #
         ping_no_sec_channel = HTTPSOAP(None, 'zato.ping', True, True, 'channel', 
-                                       'plain_http', None, '/zato/ping', None, '', None, service=ping_service, cluster=cluster)
+            'plain_http', None, '/zato/ping', None, '', None, SIMPLE_IO.FORMAT.JSON, service=ping_service, cluster=cluster)
         session.add(ping_no_sec_channel)
 
 
@@ -193,6 +194,11 @@ class Quickstart(ZatoCommand):
         wss_types = ['clear_text']
         
         for transport in transports:
+            
+            if transport == 'plain_http':
+                data_format = SIMPLE_IO.FORMAT.JSON
+            else:
+                data_format = SIMPLE_IO.FORMAT.XML
 
             base_name = 'ping.{0}.basic_auth'.format(transport)
             zato_name = 'zato.{0}'.format(base_name)
@@ -204,7 +210,7 @@ class Quickstart(ZatoCommand):
             session.add(sec)
             
             channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
-                               soap_version, service=ping_service, security=sec, cluster=cluster)
+                               soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
             session.add(channel)
             
             if transport == 'soap':
@@ -218,7 +224,7 @@ class Quickstart(ZatoCommand):
                     session.add(sec)
                     
                     channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
-                                       soap_version, service=ping_service, security=sec, cluster=cluster)
+                                       soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
                     session.add(channel)
                 
     def add_soap_services(self, session, cluster, tech_account):
@@ -363,8 +369,8 @@ class Quickstart(ZatoCommand):
             session.add(service)
             
             zato_soap = HTTPSOAP(None, soap_action, True, True, 'channel', 
-                'soap', None, '/zato/soap', None, soap_action, '1.1', service=service, cluster=cluster,
-                security=tech_account)
+                'soap', None, '/zato/soap', None, soap_action, '1.1', 
+                SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=tech_account)
             session.add(zato_soap)
             
             zato_soap_channels.append(zato_soap)
@@ -387,7 +393,7 @@ class Quickstart(ZatoCommand):
             session.add(service)
         
             http_soap = HTTPSOAP(None, service_name, True, True, 'channel', 'plain_http', 
-                None, url_path, None, '', None, service=service, cluster=cluster, security=tech_account)
+                None, url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=tech_account)
             session.add(http_soap)
                     
     def execute(self, args):
