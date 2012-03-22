@@ -23,7 +23,7 @@ from copy import deepcopy
 from cStringIO import StringIO
 from datetime import datetime
 from hashlib import sha256
-from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNAUTHORIZED
 from string import Template
 from threading import RLock
 from traceback import format_exc
@@ -113,6 +113,11 @@ class Forbidden(ClientHTTPError):
 class NotFound(ClientHTTPError):
     def __init__(self, cid, msg):
         super(NotFound, self).__init__(cid, msg, NOT_FOUND)
+        
+class Unauthorized(ClientHTTPError):
+    def __init__(self, cid, msg, challenge):
+        super(Unauthorized, self).__init__(cid, msg, UNAUTHORIZED)
+        self.challenge = challenge
 
 class Security(object):
     """ Performs all the HTTP/SOAP-related security checks.
@@ -143,14 +148,17 @@ class Security(object):
         result = on_basic_auth(env, url_config, False)
         
         if not result:
-            msg = 'FORBIDDEN cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
+            msg = 'UNAUTHORIZED cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
                 cid, result.code, result.description)
             logger.error(msg)
-            raise Forbidden(cid, msg)
+            raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
         
     def _handle_security_wss(self, cid, sec_def, request_data, body, headers):
         """ Performs the authentication using WS-Security.
         """
+        if not body:
+            raise Unauthorized(cid, 'No message body found in [{}]'.format(body), 'zato-wss')
+            
         url_config = {}
         
         url_config['wsse-pwd-password'] = sec_def['password']
@@ -160,13 +168,17 @@ class Security(object):
         url_config['wsse-pwd-reject-expiry-limit'] = sec_def['reject_expiry_limit']
         url_config['wsse-pwd-nonce-freshness-time'] = sec_def['nonce_freshness_time']
         
-        result = on_wsse_pwd(self._wss, url_config, body, False)
+        try:
+            result = on_wsse_pwd(self._wss, url_config, body, False)
+        except Exception, e:
+            msg = 'Could not parse the WS-Security data, body:[{}], e:[{}]'.format(body, format_exc(e))
+            raise Unauthorized(cid, msg, 'zato-wss')
         
         if not result:
-            msg = 'FORBIDDEN cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
+            msg = 'UNAUTHORIZED cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
                 cid, result.code, result.description)
             logger.error(msg)
-            raise Forbidden(cid, msg)
+            raise Unauthorized(cid, msg, 'zato-wss')
         
     def _handle_security_tech_acc(self, cid, sec_def, request_data, body, headers):
         """ Performs the authentication using technical accounts.
@@ -179,7 +191,7 @@ class Security(object):
                       "headers=[{3}]]").\
                         format(cid, header, request_data.uri, headers)
                 logger.error(error_msg)
-                raise Forbidden(cid, error_msg)
+                raise Unauthorized(cid, error_msg, 'zato-tech-acc')
 
         # Note that logs get a specific information what went wrong whereas the
         # user gets a generic 'username or password' message
@@ -189,7 +201,7 @@ class Security(object):
             error_msg = msg_template.format(cid, 'username', request_data.uri, headers['X_ZATO_USER'])
             user_msg = msg_template.format(cid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
             logger.error(error_msg)
-            raise Forbidden(cid, user_msg)
+            raise Unauthorized(cid, user_msg, 'zato-tech-acc')
         
         incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
         
@@ -197,7 +209,7 @@ class Security(object):
             error_msg = msg_template.format(cid, 'password', request_data.uri, headers['X_ZATO_USER'])
             user_msg = msg_template.format(cid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
             logger.error(error_msg)
-            raise Forbidden(cid, user_msg)
+            raise Unauthorized(cid, user_msg, 'zato-tech-acc')
         
 # ##############################################################################
         
@@ -475,6 +487,8 @@ class RequestHandler(object):
                     response = e.msg
                     status = e.status
                     reason = e.reason
+                    if isinstance(e, Unauthorized):
+                        task.response_headers['WWW-Authenticate'] = e.challenge
                 else:
                     response = _format_exc
                     status = INTERNAL_SERVER_ERROR
