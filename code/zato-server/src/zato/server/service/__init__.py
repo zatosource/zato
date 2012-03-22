@@ -96,7 +96,7 @@ class SimpleIOPayload(object):
         self.zato_optional = [(False, name) for name in optional_list]
         self.zato_is_repeated = is_repeated
         self.zato_all_attrs = set(required_list) | set(optional_list)
-        self.set_attrs(required_list, optional_list)
+        self.set_expected_attrs(required_list, optional_list)
         
     def __setslice__(self, i, j, seq):
         """ Assigns a list of output elements to self.zato_output, so that they
@@ -104,12 +104,19 @@ class SimpleIOPayload(object):
         """
         self.zato_output[i:j] = seq
         
-    def set_attrs(self, required_list, optional_list):
+    def set_expected_attrs(self, required_list, optional_list):
         """ Dynamically assigns all the expected attributes to self. Setting a value
         of an attribute will actually add data to self.zato_output.
         """
         for name in chain(required_list, optional_list):
             setattr(self, name, ZATO_NONE)
+            
+    def set_payload_attrs(self, attrs):
+        """ Called when the user wants to set the payload to a bunch of attributes.
+        """
+        if isinstance(attrs, NamedTuple):
+            for name in attrs.keys():
+                setattr(self, name, getattr(attrs, name))
         
     def append(self, item):
         self.zato_output.append(item)
@@ -168,7 +175,7 @@ class SimpleIOPayload(object):
         if output:
             
             # All elements must be of the same type so it's OK to do it
-            is_sa_namedtuple = isinstance(output[0], NamedTuple) 
+            is_sa_namedtuple = isinstance(output[0], NamedTuple)
             
             for item in output:
                 if self.zato_is_xml:
@@ -186,8 +193,7 @@ class SimpleIOPayload(object):
                     if self.zato_is_repeated:
                         value.append(out_item)
                     else:
-                        value = out_item
-                        break
+                        value.update(out_item)
 
         if self.zato_is_xml:
             return etree.tostring(value)
@@ -197,7 +203,7 @@ class SimpleIOPayload(object):
 class Response(object):
     """ A response from the service's invocation.
     """
-    __slots__ = ('logger', 'result', 'result_details', 'payload', 'content_type', 'content_encoding',
+    __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload', 'content_type', 'content_encoding',
                  'headers', 'status_code', 'data_format')
     
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
@@ -206,7 +212,7 @@ class Response(object):
         self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details
-        self.payload = payload
+        self._payload = None
         self.content_type = content_type
         self.content_encoding = content_encoding
         self.data_format = data_format
@@ -216,7 +222,18 @@ class Response(object):
         self.status_code = status_code
         
     def __len__(self):
-        return len(self.payload)
+        return len(self._payload)
+    
+    def _get_payload(self):
+        return self._payload
+    
+    def _set_payload(self, value):
+        if isinstance(value, basestring):
+            self._payload = value
+        else:
+            self._payload.set_payload_attrs(value)
+        
+    payload = property(_get_payload, _set_payload)
     
     def init(self, cid, io, data_format):
         self.data_format = data_format
@@ -225,8 +242,7 @@ class Response(object):
         is_repeated = getattr(io, 'output_repeated', [])
         
         if required_list or optional_list:
-            self.payload = SimpleIOPayload(cid, self.logger, data_format, 
-                    required_list, optional_list, is_repeated)
+            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, is_repeated)
     
 class ServiceInput(Bunch):
     pass

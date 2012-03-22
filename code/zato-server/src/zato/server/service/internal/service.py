@@ -57,21 +57,12 @@ class GetByID(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'id')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', )
+        output_optional = ('usage_count',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-
-            db_item = service(session, self.request.input.cluster_id, self.request.input.id)
-            
-            item = Element('item')
-            item.id = db_item.id
-            item.name = db_item.name
-            item.is_active = db_item.is_active
-            item.impl_name = db_item.impl_name
-            item.is_internal = db_item.is_internal
-            item.usage_count = 'TODO getbyid'
-    
-            self.response.payload = etree.tostring(item)
+            self.response.payload = service(session, self.request.input.cluster_id, self.request.input.id)
 
 class Edit(AdminService):
     """ Updates a service.

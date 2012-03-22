@@ -559,7 +559,7 @@ class _BaseMessageHandler(object):
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
 
-        logger.debug('[{0}] Returning response=[{1}]'.format(cid, response.payload))
+        logger.debug('[{0}] Returning response.payload:[{1}]'.format(cid, response.payload))
         return response
     
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
