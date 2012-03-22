@@ -545,17 +545,18 @@ class _BaseMessageHandler(object):
         logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, self.server.service_store.services))
         service_data = self.server.service_store.service_data(service_info.impl_name)
 
-        if data_format == SIMPLE_IO.FORMAT.XML:
-            if transport == 'soap':
-                soap = objectify.fromstring(request)
-                body = soap_body_xpath(soap)
-                if not body:
-                    raise BadRequest(cid, 'Client did not send the [{1}] element'.format(body_path))
-                payload = get_body_payload(body)
-            else:
-                payload = objectify.fromstring(request)
-        elif data_format == SIMPLE_IO.FORMAT.JSON:
-            payload = loads(request)
+        if request:
+            if data_format == SIMPLE_IO.FORMAT.XML:
+                if transport == 'soap':
+                    soap = objectify.fromstring(request)
+                    body = soap_body_xpath(soap)
+                    if not body:
+                        raise BadRequest(cid, 'Client did not send the [{1}] element'.format(body_path))
+                    payload = get_body_payload(body)
+                else:
+                    payload = objectify.fromstring(request)
+            elif data_format == SIMPLE_IO.FORMAT.JSON:
+                payload = loads(request)
         else:
             payload = request
         
