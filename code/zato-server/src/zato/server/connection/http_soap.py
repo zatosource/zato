@@ -36,7 +36,7 @@ from lxml import objectify
 import requests
 
 # anyjson
-from anyjson import loads
+from anyjson import dumps, loads
 
 # Bunch
 from bunch import Bunch
@@ -574,12 +574,20 @@ class _BaseMessageHandler(object):
 
         service_instance.handle()
         response = service_instance.response
-        if not isinstance(response.payload, basestring):
+        if data_format == SIMPLE_IO.FORMAT.XML:
             response.payload = response.payload.getvalue()
 
-        if isinstance(service_instance, AdminService) and data_format == SIMPLE_IO.FORMAT.XML:
-            response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
-                result=response.result, details=response.result_details, data=response.payload)
+        if isinstance(service_instance, AdminService):
+            if data_format == SIMPLE_IO.FORMAT.XML:
+                response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
+                    result=response.result, details=response.result_details, data=response.payload)
+            else:
+                response.payload = dumps({
+                    'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details},
+                    'data':response.payload.getvalue(False)
+                    })
+        else:
+            response.payload = response.payload.getvalue()
 
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
