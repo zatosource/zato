@@ -43,18 +43,19 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common.odb.model import Base
 from zato.common.util import TRACE1
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 
-__all__ = ['Service', 'Request', 'Response', 'Outgoing']
+__all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
 
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 # TODO: Move it to zato.common.
-ZATO_NO_DEFAULT_VALUE = "ZATO_NO_DEFAULT_VALUE"
+ZATO_NO_DEFAULT_VALUE = 'ZATO_NO_DEFAULT_VALUE'
 
 class ForceType(object):
     def __init__(self, name):
@@ -71,7 +72,7 @@ class Outgoing(object):
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
     __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap', 's3')
-    
+
     def __init__(self, ftp=None, amqp=None, zmq=None, jms_wmq=None, sql=None, 
                  plain_http=None, soap=None, s3=None):
         self.ftp = ftp
@@ -81,7 +82,7 @@ class Outgoing(object):
         self.sql = sql
         self.plain_http = plain_http
         self.soap = soap
-        
+
 class SimpleIOPayload(object):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
@@ -97,30 +98,36 @@ class SimpleIOPayload(object):
         self.zato_is_repeated = is_repeated
         self.zato_all_attrs = set(required_list) | set(optional_list)
         self.set_expected_attrs(required_list, optional_list)
-        
+
     def __setslice__(self, i, j, seq):
         """ Assigns a list of output elements to self.zato_output, so that they
         don't have to be each individually appended.
         """
         self.zato_output[i:j] = seq
-        
+
     def set_expected_attrs(self, required_list, optional_list):
         """ Dynamically assigns all the expected attributes to self. Setting a value
         of an attribute will actually add data to self.zato_output.
         """
         for name in chain(required_list, optional_list):
+            if isinstance(name, ForceType):
+                name = name.name
             setattr(self, name, ZATO_NONE)
-            
+
     def set_payload_attrs(self, attrs):
         """ Called when the user wants to set the payload to a bunch of attributes.
         """
         if isinstance(attrs, NamedTuple):
-            for name in attrs.keys():
-                setattr(self, name, getattr(attrs, name))
-        
+            names = attrs.keys()
+        elif isinstance(attrs, Base):
+            names = attrs._sa_class_manager.keys()
+            
+        for name in names:
+            setattr(self, name, getattr(attrs, name))
+
     def append(self, item):
         self.zato_output.append(item)
-        
+
     def _getvalue(self, name, item, is_sa_namedtuple, is_required):
         """ Returns an element's value if any has been provided while taking
         into account the differences between dictionaries and other formats.
@@ -129,7 +136,7 @@ class SimpleIOPayload(object):
             elem_value = getattr(item, name, ZATO_NONE)
         else:
             elem_value = item.get(name, ZATO_NONE)
-            
+
         if elem_value == ZATO_NONE:
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
@@ -138,9 +145,9 @@ class SimpleIOPayload(object):
             else:
                 if self.zato_logger.isEnabledFor(TRACE1):
                     self.zato_logger.log(TRACE1, msg)
-                    
+
         return elem_value
-            
+
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
         """
@@ -150,7 +157,7 @@ class SimpleIOPayload(object):
             msg_item = item
         return '{} elem:[{}] not found in item:[{}]'.format(
             'Expected' if is_required else 'Optional', name, msg_item)
-        
+
     def getvalue(self):
         """ Gets the actual payload's value converted to a string representing
         either XML or JSON.
@@ -165,7 +172,7 @@ class SimpleIOPayload(object):
                 value = []
             else:
                 value = {}
-                
+
         if self.zato_is_repeated:
             output = self.zato_output
         else:
@@ -173,18 +180,21 @@ class SimpleIOPayload(object):
             output = [dict((name, getattr(self, name)) for name in output)]
 
         if output:
-            
+
             # All elements must be of the same type so it's OK to do it
             is_sa_namedtuple = isinstance(output[0], NamedTuple)
-            
+
             for item in output:
                 if self.zato_is_xml:
                     out_item = Element('item')
                 else:
                     out_item = {}
                 for is_required, name in chain(self.zato_required, self.zato_optional):
+                    if isinstance(name, ForceType):
+                        name = name.name
+
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required)
-                    
+
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
                     else:
@@ -193,7 +203,7 @@ class SimpleIOPayload(object):
                     if self.zato_is_repeated:
                         value.append(out_item)
                     else:
-                        value.update(out_item)
+                        value = out_item
 
         if self.zato_is_xml:
             return etree.tostring(value)
@@ -205,7 +215,7 @@ class Response(object):
     """
     __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload', 'content_type', 'content_encoding',
                  'headers', 'status_code', 'data_format')
-    
+
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
             content_type='text/plain', content_encoding=None, data_format=None, headers=None, 
             status_code=OK):
@@ -216,44 +226,44 @@ class Response(object):
         self.content_type = content_type
         self.content_encoding = content_encoding
         self.data_format = data_format
-        
+
         # Specific to HTTP/SOAP probably?
         self.headers = headers or Bunch()
         self.status_code = status_code
-        
+
     def __len__(self):
         return len(self._payload)
-    
+
     def _get_payload(self):
         return self._payload
-    
+
     def _set_payload(self, value):
         if isinstance(value, basestring):
             self._payload = value
         else:
             self._payload.set_payload_attrs(value)
-        
+
     payload = property(_get_payload, _set_payload)
-    
+
     def init(self, cid, io, data_format):
         self.data_format = data_format
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
         is_repeated = getattr(io, 'output_repeated', [])
-        
+
         if required_list or optional_list:
             self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, is_repeated)
-    
+
 class ServiceInput(Bunch):
     pass
-    
+
 class Request(object):
     """ Wraps a service request and adds some useful meta-data.
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
                  'simple_io_config', 'bool_parameter_prefixes', 'int_parameters', 
                  'int_parameter_suffixes', 'is_xml', 'data_format')
-    
+
     def __init__(self, logger, simple_io_config={}, data_format=None):
         self.logger = logger
         self.payload = ''
@@ -267,7 +277,7 @@ class Request(object):
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         self.is_xml = None
         self.data_format = data_format
-        
+
     def init(self, cid, io, data_format):
         """ Initializes the object with an invocation-specific data.
         """
@@ -277,7 +287,7 @@ class Request(object):
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
         use_text = getattr(io, 'use_text', True)
-        
+
         if self.simple_io_config:
             self.has_simple_io_config = True
             self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
