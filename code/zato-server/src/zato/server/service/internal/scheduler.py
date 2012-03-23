@@ -32,8 +32,7 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # Zato
-from zato.common import scheduler_date_time_format, \
-     scheduler_date_time_format, ZatoException, ZATO_OK, zato_path
+from zato.common import scheduler_date_time_format, ZatoException, ZATO_OK, zato_path
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
@@ -52,32 +51,20 @@ PREDEFINED_CRON_DEFINITIONS = {
 
 CRON_EXPRESSION_LEN = 5
 
-def _get_interval_based_start_date(payload):
-    start_date = zato_path('data.job.start_date', True).get_from(payload)
-    if start_date:
-        # Were optional date & time provided in a correct format?
-        strptime(str(start_date), scheduler_date_time_format)
-
-    return str(start_date)
-
-def _create_edit(action, payload, logger, session, broker_client, response):
+def _create_edit(action, cid, input, payload, logger, session, broker_client, response):
     """ Creating and updating a job requires a series of very similar steps
     so they've been all put here and depending on the 'action' parameter 
     (be it 'create'/'edit') some additional operations are performed.
     """
-    core_params = ['cluster_id', 'name', 'is_active', 'job_type', 'service',
-                   'start_date', 'extra']
-    params = _get_params(payload, core_params, 'data.', default_value='')
-    
-    job_type = params['job_type']
-    cluster_id = params['cluster_id']
-    name = params['name']
-    service_name = params['service']
+    job_type = input.job_type
+    cluster_id = input.cluster_id
+    name = input.name
+    service_name = input.service
     
     if job_type not in ('one_time', 'interval_based', 'cron_style'):
         msg = 'Unrecognized job type [{0}]'.format(job_type)
         logger.error(msg)
-        raise ZatoException(msg)
+        raise ZatoException(cid, msg)
     
     # For finding out if we don't have a job of that name already defined.
     existing_one_base = session.query(Job).\
@@ -87,13 +74,11 @@ def _create_edit(action, payload, logger, session, broker_client, response):
     if action == 'create':
         existing_one = existing_one_base.first()
     else:
-        edit_params = _get_params(payload, ['id'], 'data.')
-        job_id = edit_params['id']
+        job_id = input.id
         existing_one = existing_one_base.filter(Job.id != job_id).first()
     
     if existing_one:
-        raise Exception('Job [{0}] already exists on this cluster'.format(
-            name))
+        raise ZatoException(cid, 'Job [{0}] already exists on this cluster'.format(name))
     
     # Is the service's name correct?
     service = session.query(Service).\
@@ -103,21 +88,18 @@ def _create_edit(action, payload, logger, session, broker_client, response):
     if not service:
         msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
         logger.error(msg)
-        raise Exception(msg)
+        raise ZatoException(cid, msg)
     
     # We can create/edit a base Job object now and - optionally - another one
     # if the job type's is either interval-based or Cron-style. The base
     # instance will be enough if it's a one-time job.
     
-    extra = params['extra'].encode('utf-8')
-    is_active = is_boolean(params['is_active'])
-    start_date = params['start_date']
-    
+    extra = input.extra.encode('utf-8')
+    is_active = input.is_active
+    start_date = input.start_date
     
     if action == 'create':
-        job = Job(None, name, is_active, job_type, 
-                  start_date, extra, 
-                  cluster_id=cluster_id, service=service)
+        job = Job(None, name, is_active, job_type, start_date, extra, cluster_id=cluster_id, service=service)
     else:
         job = session.query(Job).filter_by(id=job_id).one()
         old_name = job.name
@@ -132,29 +114,26 @@ def _create_edit(action, payload, logger, session, broker_client, response):
         session.add(job)
 
         if job_type == 'interval_based':
-            request_params = ['weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats']
-            ib_params = _get_params(payload, request_params, 'data.', default_value='')
-
-            if not any(ib_params[key] for key in ('weeks', 'days', 'hours', 'minutes', 'seconds')):
-                msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given."
+            ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
+            if not any(input[key] for key in ib_params):
+                msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given"
                 logger.error(msg)
-                raise ZatoException(msg)
+                raise ZatoException(cid, msg)
             
             if action == 'create':
                 ib_job = IntervalBasedJob(None, job)
             else:
-                ib_job = session.query(IntervalBasedJob).filter_by(
-                    id=job.interval_based.id).one()
+                ib_job = session.query(IntervalBasedJob).filter_by(id=job.interval_based.id).one()
 
-            for param, value in ib_params.items():
+            for param in ib_params:
+                value = input[param]
                 if value:
                     setattr(ib_job, param, value)
             
             session.add(ib_job)
             
         elif job_type == 'cron_style':
-            cs_params = _get_params(payload, ['cron_definition'], 'data.')
-            cron_definition = cs_params['cron_definition'].strip()
+            cron_definition = input.cron_definition.strip()
             
             if cron_definition.startswith('@'):
                 if not cron_definition in PREDEFINED_CRON_DEFINITIONS:
@@ -163,24 +142,23 @@ def _create_edit(action, payload, logger, session, broker_client, response):
                                  sorted(PREDEFINED_CRON_DEFINITIONS), 
                                  cron_definition)
                     logger.error(msg)
-                    raise Exception(msg)
+                    raise ZatoException(cid, msg)
                 
                 cron_definition = PREDEFINED_CRON_DEFINITIONS[cron_definition]
             else:
                 splitted = cron_definition.strip().split()
                 if not len(splitted) == CRON_EXPRESSION_LEN:
-                    msg = ('Expression [{0}] in invalid, it needs to contain '
+                    msg = ('Expression [{0}] is invalid, it needs to contain '
                            'exactly {1} whitespace-separated fields').format(
                                cron_definition, CRON_EXPRESSION_LEN)
                     logger.error(msg)
-                    raise Exception(msg)
+                    raise ZatoException(cid, msg)
                 cron_definition = ' '.join(splitted)
             
             if action == 'create':
                 cs_job = CronStyleJob(None, job)
             else:
-                cs_job = session.query(CronStyleJob).filter_by(
-                    id=job.cron_style.id).one()
+                cs_job = session.query(CronStyleJob).filter_by(id=job.cron_style.id).one()
                 
             cs_job.cron_definition = cron_definition
             session.add(cs_job)
@@ -199,7 +177,8 @@ def _create_edit(action, payload, logger, session, broker_client, response):
                 msg['old_name'] = old_name
 
             if job_type == 'interval_based':
-                for param, value in ib_params.items():
+                for param in ib_params:
+                    value = input[param]
                     msg[param] = int(value) if value else 0
             elif job_type == 'cron_style':
                 msg['cron_definition'] = cron_definition
@@ -213,73 +192,57 @@ def _create_edit(action, payload, logger, session, broker_client, response):
         session.rollback()
         msg = 'Could not complete the request, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
-        
-        raise 
+        raise
     else:
-        job_elem = Element('job')
-        
         if action == 'create':
-            job_elem.id = job.id
+            response.payload.id = job.id
             
         if job_type == 'cron_style':
             # Needs to be returned because we might've been performing
             # a substitution like changing '@hourly' into '0 * * * *'.
-            job_elem.cron_definition = cs_job.cron_definition
-
-        response.payload = etree.tostring(job_elem)
+            response.payload.cron_definition = cs_job.cron_definition
 
 class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'service_id', 'service_name')
+        output_optional = ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_repeated = True
+        default_value = ''
+        date_time_format = scheduler_date_time_format
 
     def handle(self):
         
         with closing(self.odb.session()) as session:
-            
-            definition_list = Element('definition_list')
-            definitions = job_list(session, self.request.input.cluster_id, False)
-            
-            for definition in definitions:
-    
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.is_active = definition.is_active
-                definition_elem.job_type = definition.job_type
-                definition_elem.start_date = definition.start_date
-                definition_elem.extra = definition.extra.decode('utf-8')
-                definition_elem.service_id = definition.service_id
-                definition_elem.service_name = definition.service_name.decode('utf-8')
-                definition_elem.weeks = definition.weeks if definition.weeks else ''
-                definition_elem.days = definition.days if definition.days else ''
-                definition_elem.hours = definition.hours if definition.hours else ''
-                definition_elem.minutes = definition.minutes if definition.minutes else ''
-                definition_elem.seconds = definition.seconds if definition.seconds else ''
-                definition_elem.repeats = definition.repeats if definition.repeats else ''
-                definition_elem.cron_definition = (definition.cron_definition.decode('utf-8') if 
-                    definition.cron_definition else '')
-                
-                definition_list.append(definition_elem)
-    
-            self.response.payload = etree.tostring(definition_list)
+            self.response.payload[:] = job_list(session, self.request.input.cluster_id, False)
 
 class Create(AdminService):
     """ Creates a new scheduler's job.
     """
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', 'extra')
+        input_optional = ('id', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_optional = ('id', 'cron_definition')
+        default_value = ''
+
     def handle(self):
         with closing(self.odb.session()) as session:
-            return _create_edit('create', self.request.payload, self.logger, 
-                session, self.broker_client, self.response)
+            _create_edit('create', self.cid, self.request.input, self.request.payload, self.logger, session, self.broker_client, self.response)
         
 class Edit(AdminService):
     """ Update a new scheduler's job.
     """
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', 'extra')
+        input_optional = ('id', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_optional = ('id', 'cron_definition')
+        default_value = ''
+
     def handle(self):
         with closing(self.odb.session()) as session:
-            return _create_edit('edit', self.request.payload, self.logger, 
-                session, self.broker_client, self.response)
+            return _create_edit('edit', self.cid, self.request.input, self.request.payload, self.logger, session, self.broker_client, self.response)
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
