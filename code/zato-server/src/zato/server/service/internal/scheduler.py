@@ -202,6 +202,20 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             # a substitution like changing '@hourly' into '0 * * * *'.
             response.payload.cron_definition = cs_job.cron_definition
 
+class _CreateEdit(AdminService):
+    """ A base class for both creating and editing scheduler jobs.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', 'extra')
+        input_optional = ('id', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_optional = ('id', 'cron_definition')
+        default_value = ''
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            _create_edit(self.__class__.__name__.lower(), self.cid, self.request.input, self.request.payload, 
+                    self.logger, session, self.broker_client, self.response)
+
 class GetList(AdminService):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
@@ -218,31 +232,13 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = job_list(session, self.request.input.cluster_id, False)
 
-class Create(AdminService):
+class Create(_CreateEdit):
     """ Creates a new scheduler's job.
     """
-    class SimpleIO:
-        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', 'extra')
-        input_optional = ('id', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
-        output_optional = ('id', 'cron_definition')
-        default_value = ''
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            _create_edit('create', self.cid, self.request.input, self.request.payload, self.logger, session, self.broker_client, self.response)
         
-class Edit(AdminService):
-    """ Update a new scheduler's job.
+class Edit(_CreateEdit):
+    """ Updates a new scheduler's job.
     """
-    class SimpleIO:
-        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', 'extra')
-        input_optional = ('id', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
-        output_optional = ('id', 'cron_definition')
-        default_value = ''
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            return _create_edit('edit', self.cid, self.request.input, self.request.payload, self.logger, session, self.broker_client, self.response)
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
