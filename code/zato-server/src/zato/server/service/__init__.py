@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime
 from httplib import OK
 from itertools import chain
 from traceback import format_exc
@@ -61,7 +62,7 @@ class ValueConverter(object):
     """ A class which knows how to convert values into the types defined in
     a service's SimpleIO config.
     """
-    def convert(self, param, param_name, value, has_simple_io_config):
+    def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
         if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
             value = asbool(value)
             
@@ -74,6 +75,9 @@ class ValueConverter(object):
             value = asbool(value)
         elif isinstance(param, Integer):
             value = int(value)
+            
+        if date_time_format and isinstance(value, datetime):
+            value = value.strftime(date_time_format)
             
         return value
 
@@ -135,6 +139,7 @@ class Request(ValueConverter):
         path_prefix = getattr(io, 'path_prefix', 'data.')
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
+        default_value = getattr(io, 'default_value', None)
         use_text = getattr(io, 'use_text', True)
 
         if self.simple_io_config:
@@ -144,15 +149,14 @@ class Request(ValueConverter):
             self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
         
         if required_list:
-            params = self.get_params(required_list, path_prefix, use_text=use_text)
+            params = self.get_params(required_list, path_prefix, default_value, use_text)
             self.input.update(params)
             
         if optional_list:
-            default_value = getattr(io, 'default_value', None)
-            params = self.get_params(optional_list, path_prefix, default_value, use_text)
+            params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
             self.input.update(params)
             
-    def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True):
+    def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
@@ -165,18 +169,21 @@ class Request(ValueConverter):
 
             if self.is_xml:
                 try:
-                    elem = zato_path(path_prefix + param_name, True).get_from(self.payload)
+                    elem = zato_path(path_prefix + param_name, is_required).get_from(self.payload)
                 except ParsingException, e:
                     msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
                         etree.tostring(self.payload), format_exc(e))
                     raise ParsingException(self.cid, msg)
         
-                if use_text:
-                    value = elem.text # We are interested in the text the elem contains ..
+                if elem:
+                    if use_text:
+                        value = elem.text # We are interested in the text the elem contains ..
+                    else:
+                        return elem # .. or in the elem itself.
                 else:
-                    return elem # .. or in the elem itself.
+                    value = default_value
             else:
-                value = self.payload[param_name]
+                value = self.payload.get(param_name)
     
             # Use a default value if an element is empty and we're allowed to
             # substitute its (empty) value with the default one.
@@ -266,6 +273,7 @@ class SimpleIOPayload(ValueConverter):
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
+        self.date_time_format = simple_io_config.get('date_time_format', 'YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM')
         self.set_expected_attrs(required_list, optional_list)
 
     def __setslice__(self, i, j, seq):
