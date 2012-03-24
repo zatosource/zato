@@ -40,28 +40,13 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+        output_repeated = True
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            definition_list = Element('definition_list')
-            definitions = def_amqp_list(session, self.request.input.cluster_id, False)
-            
-            for definition in definitions:
-    
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.host = definition.host
-                definition_elem.port = definition.port
-                definition_elem.vhost = definition.vhost
-                definition_elem.username = definition.username
-                definition_elem.frame_max = definition.frame_max
-                definition_elem.heartbeat = definition.heartbeat
-    
-                definition_list.append(definition_elem)
-    
-            self.response.payload = etree.tostring(definition_list)
-        
+            self.response.payload[:] = def_amqp_list(session, self.request.input.cluster_id, False)
+
 class GetByID(AdminService):
     """ Returns a particular AMQP definition
     """
@@ -70,32 +55,18 @@ class GetByID(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-
-            definition = session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
+            self.response.payload = session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
                 ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
                 ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
                 filter(ConnDefAMQP.id==self.request.input.id).\
-                one()            
-            
-            definition_elem = Element('definition')
-            
-            definition_elem.id = definition.id
-            definition_elem.name = definition.name
-            definition_elem.host = definition.host
-            definition_elem.port = definition.port
-            definition_elem.vhost = definition.vhost
-            definition_elem.username = definition.username
-            definition_elem.frame_max = definition.frame_max
-            definition_elem.heartbeat = definition.heartbeat
-    
-            self.response.payload = etree.tostring(definition_elem)
+                one()
         
 class Create(AdminService):
     """ Creates a new AMQP definition.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'name', 'host', 'port', 'vhost', 
-            'username', 'frame_max', 'heartbeat')
+        input_required = ('cluster_id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -113,8 +84,6 @@ class Create(AdminService):
             if existing_one:
                 raise Exception('AMQP definition [{0}] already exists on this cluster'.format(input.name))
             
-            created_elem = Element('def_amqp')
-            
             try:
                 def_ = ConnDefAMQP(None, input.name, 'amqp', input.host, input.port, input.vhost, 
                     input.username, input.password, input.frame_max, input.heartbeat,
@@ -122,12 +91,10 @@ class Create(AdminService):
                 session.add(def_)
                 session.commit()
                 
-                created_elem.id = def_.id
-                
-                self.response.payload = etree.tostring(created_elem)
+                self.response.payload.id = def_.id
                 
             except Exception, e:
-                msg = "Could not create an AMQP definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not create an AMQP definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -137,8 +104,8 @@ class Edit(AdminService):
     """ Updates an AMQP definition.
     """
     class SimpleIO:
-        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 
-            'username', 'frame_max', 'heartbeat')
+        input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -173,16 +140,14 @@ class Edit(AdminService):
                 session.add(def_amqp)
                 session.commit()
                 
-                def_amqp_elem.id = def_amqp.id
-                
                 input.action = DEFINITION.AMQP_EDIT
                 input.old_name = old_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
-                self.response.payload = etree.tostring(def_amqp_elem)
+                self.response.payload.id = def_amqp.id
                 
             except Exception, e:
-                msg = "Could not update the AMQP definition, e=[{e}]".format(e=format_exc(e))
+                msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
