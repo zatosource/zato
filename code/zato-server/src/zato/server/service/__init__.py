@@ -202,7 +202,7 @@ class Response(object):
     """
     __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload', 
                  '_content_type', 'content_type', 'content_type_changed', 'content_encoding', 
-                 'headers', 'status_code', 'data_format', 'simple_io_config',)
+                 'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
 
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
             _content_type='text/plain', content_encoding=None, data_format=None, headers=None, 
@@ -221,6 +221,7 @@ class Response(object):
         self.status_code = status_code
         
         self.simple_io_config = simple_io_config
+        self.outgoing_declared = False
 
     def __len__(self):
         return len(self._payload)
@@ -241,6 +242,8 @@ class Response(object):
         if isinstance(value, basestring):
             self._payload = value
         else:
+            if not self.outgoing_declared:
+                raise Exception("Can't set payload, there's no output_required nor output_optional declared")
             self._payload.set_payload_attrs(value)
 
     payload = property(_get_payload, _set_payload)
@@ -249,26 +252,24 @@ class Response(object):
         self.data_format = data_format
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
-        is_repeated = getattr(io, 'output_repeated', [])
+        self.outgoing_declared = True if required_list or optional_list else False
         
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, is_repeated,
-                self.simple_io_config)
+            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config)
             
 class SimpleIOPayload(ValueConverter):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
     they don't conflict with user-provided data.
     """
-    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, is_repeated,
-                 simple_io_config):
+    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config):
         self.zato_cid = None
         self.zato_logger = logger
         self.zato_is_xml = data_format == SIMPLE_IO.FORMAT.XML
         self.zato_output = []
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
-        self.zato_is_repeated = is_repeated
+        self.zato_is_repeated = False
         self.zato_all_attrs = set(required_list) | set(optional_list)
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
@@ -278,9 +279,11 @@ class SimpleIOPayload(ValueConverter):
 
     def __setslice__(self, i, j, seq):
         """ Assigns a list of output elements to self.zato_output, so that they
-        don't have to be each individually appended.
+        don't have to be each individually appended. Also sets a flag indicating
+        that the payload is actually a list of repeated elements.
         """
         self.zato_output[i:j] = seq
+        self.zato_is_repeated = True
 
     def set_expected_attrs(self, required_list, optional_list):
         """ Dynamically assigns all the expected attributes to self. Setting a value
@@ -294,11 +297,15 @@ class SimpleIOPayload(ValueConverter):
     def set_payload_attrs(self, attrs):
         """ Called when the user wants to set the payload to a bunch of attributes.
         """
-        if isinstance(attrs, NamedTuple):
+        names = None
+        if isinstance(attrs, (dict, NamedTuple)):
             names = attrs.keys()
         elif isinstance(attrs, Base):
             names = attrs._sa_class_manager.keys()
             
+        if not names:
+            raise Exception('Could not get the keys out of attrs:[{}]'.format(attrs))
+
         for name in names:
             setattr(self, name, getattr(attrs, name))
 
@@ -356,7 +363,7 @@ class SimpleIOPayload(ValueConverter):
         else:
             output = set(dir(self)) & self.zato_all_attrs
             output = [dict((name, getattr(self, name)) for name in output)]
-
+            
         if output:
 
             # All elements must be of the same type so it's OK to do it
