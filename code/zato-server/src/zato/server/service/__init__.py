@@ -84,6 +84,9 @@ class ValueConverter(object):
 class ForceType(object):
     def __init__(self, name):
         self.name = name
+        
+    def __repr__(self):
+        return '<{} at {} name:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.name)
 
 class Boolean(ForceType):
     pass
@@ -270,11 +273,17 @@ class SimpleIOPayload(ValueConverter):
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
         self.zato_is_repeated = False
-        self.zato_all_attrs = set(required_list) | set(optional_list)
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         self.date_time_format = simple_io_config.get('date_time_format', 'YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM')
+
+        self.zato_all_attrs = set()
+        for name in chain(required_list, optional_list):
+            if isinstance(name, ForceType):
+                name = name.name
+            self.zato_all_attrs.add(name)
+        
         self.set_expected_attrs(required_list, optional_list)
 
     def __setslice__(self, i, j, seq):
@@ -368,7 +377,7 @@ class SimpleIOPayload(ValueConverter):
 
             # All elements must be of the same type so it's OK to do it
             is_sa_namedtuple = isinstance(output[0], NamedTuple)
-
+            
             for item in output:
                 if self.zato_is_xml:
                     out_item = Element('item')

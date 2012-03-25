@@ -98,7 +98,7 @@ class ZatoContext(PythonConfig):
     
     @Object
     def bool_parameter_prefixes(self):
-        return ['is_', 'should_']
+        return ['is_', 'needs_', 'should_']
 
     # #######################################################
     # Security

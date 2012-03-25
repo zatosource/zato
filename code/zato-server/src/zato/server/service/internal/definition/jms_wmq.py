@@ -23,10 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # validate
 from validate import is_boolean
 
@@ -35,6 +31,7 @@ from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
+from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
@@ -42,57 +39,40 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_optional = ('zzz',)
-        output_repeated = True
+        output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 
+            Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), 
+            Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
+            'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            for item in def_jms_wmq_list(session, self.request.input.cluster_id, False):
-                self.response.payload.append(item)
+            self.response.payload[:] = def_jms_wmq_list(session, self.request.input.cluster_id, False)
         
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id',)
+        output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 
+            Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), 
+            Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
+            'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
 
     def handle(self):
-        
         with closing(self.odb.session()) as session:
-            definition = def_jms_wmq(session, self.request.input.cluster_id, 
-                self.request.input.id)
-            
-            definition_elem = Element('definition')
-            
-            definition_elem.id = definition.id
-            definition_elem.name = definition.name
-            definition_elem.host = definition.host
-            definition_elem.port = definition.port
-            definition_elem.queue_manager = definition.queue_manager
-            definition_elem.channel = definition.channel
-            definition_elem.cache_open_send_queues = definition.cache_open_send_queues
-            definition_elem.cache_open_receive_queues = definition.cache_open_receive_queues
-            definition_elem.use_shared_connections = definition.use_shared_connections
-            definition_elem.ssl = definition.ssl
-            definition_elem.ssl_cipher_spec = definition.ssl_cipher_spec
-            definition_elem.ssl_key_repository = definition.ssl_key_repository
-            definition_elem.needs_mcd = definition.needs_mcd
-            definition_elem.max_chars_printed = definition.max_chars_printed
-    
-            self.response.payload = etree.tostring(definition_elem)
+            self.response.payload = def_jms_wmq(session, self.request.input.cluster_id, self.request.input.id)
         
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
-            'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
-            'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-            'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
+            'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
+            Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
+            'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
 
     def handle(self):
         input = self.request.input
-        
         with closing(self.odb.session()) as session:
             # Let's see if we already have an object of that name before committing
             # any stuff into the database.
@@ -104,26 +84,22 @@ class Create(AdminService):
             if existing_one:
                 raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(input.name))
             
-            created_elem = Element('def_jms_wmq')
-            
             try:
                 def_ = ConnDefWMQ(None, input.name, input.host, input.port, input.queue_manager, 
                     input.channel, input.cache_open_send_queues, input.cache_open_receive_queues,
                     input.use_shared_connections, input.ssl, input.ssl_cipher_spec, 
                     input.ssl_key_repository, input.needs_mcd, input.max_chars_printed,
-                    cluster_id)
+                    input.cluster_id)
                 session.add(def_)
                 session.commit()
-                
-                created_elem.id = def_.id
-                
-                self.response.payload = etree.tostring(created_elem)
-                
+
+                self.response.payload = def_.id
+
             except Exception, e:
                 msg = "Could not create a JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise 
 
 class Edit(AdminService):
@@ -131,9 +107,10 @@ class Edit(AdminService):
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
-            'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
-            'use_shared_connections', 'ssl', 'ssl_cipher_spec', 
-            'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
+            'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
+            Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
+            'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -149,8 +126,6 @@ class Edit(AdminService):
             
             if existing_one:
                 raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(input.name))
-            
-            def_jms_wmq_elem = Element('def_jms_wmq')
             
             try:
                 
@@ -173,14 +148,12 @@ class Edit(AdminService):
                 session.add(def_jms_wmq)
                 session.commit()
                 
-                def_jms_wmq_elem.id = def_jms_wmq.id
-                
-                input.id = id
+                input.id = def_jms_wmq.id
                 input.action = DEFINITION.JMS_WMQ_EDIT
                 input.old_name = old_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
-                self.response.payload = etree.tostring(def_jms_wmq_elem)
+                self.response.payload.id = def_jms_wmq.id
                 
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))

@@ -72,7 +72,7 @@ def _get_edit_create_message(params, prefix=''):
     return zato_message
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.def_jms_wmq.id.text,
+    return_data = {'id': zato_message.data.item.id.text,
                    'message': 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -97,9 +97,9 @@ def index(req):
         _, zato_message, soap_response  = invoke_admin_service(cluster,
                 'zato:definition.jms_wmq.get-list', zato_message)
         
-        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
+        if zato_path('data.item_list.item').get_from(zato_message) is not None:
             
-            for definition_elem in zato_message.data.definition_list.definition:
+            for definition_elem in zato_message.data.item_list.item:
 
                 id = definition_elem.id.text
                 name = definition_elem.name.text

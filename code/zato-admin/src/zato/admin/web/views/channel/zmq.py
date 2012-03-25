@@ -131,7 +131,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.zmq.create', zato_message)
         
-        return _edit_create_response('created', zato_message.data.channel_zmq.id.text, req.POST['name'])
+        return _edit_create_response('created', zato_message.data.item.id.text, req.POST['name'])
     
     except Exception, e:
         msg = "Could not create an ZeroMQ channel, e=[{e}]".format(e=format_exc(e))
