@@ -24,10 +24,6 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # Zato
 from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
@@ -52,6 +48,7 @@ class GetByID(AdminService):
     """
     class SimpleIO:
         input_required = ('id',)
+        output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -122,8 +119,6 @@ class Edit(AdminService):
             
             if existing_one:
                 raise Exception('AMQP definition [{0}] already exists on this cluster'.format(input.name))
-            
-            def_amqp_elem = Element('def_amqp')
             
             try:
                 
