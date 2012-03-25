@@ -56,8 +56,8 @@ def _get_def_ids(cluster):
     zato_message.data.cluster_id = cluster.id        
     _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-list', zato_message)
     
-    if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
-        for definition_elem in zato_message.data.definition_list.definition:
+    if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        for definition_elem in zato_message.data.item_list.item:
             id = definition_elem.id.text
             name = definition_elem.name.text
             out[id] = name
@@ -90,7 +90,7 @@ def _edit_create_response(cluster, verb, id, name, def_id):
     
     return_data = {'id': id,
                    'message': 'Successfully {0} the AMQP channel [{1}]'.format(verb, name),
-                   'def_name': zato_message.data.definition.name.text
+                   'def_name': zato_message.data.item.name.text
                 }
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
