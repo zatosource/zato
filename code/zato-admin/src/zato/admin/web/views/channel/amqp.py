@@ -159,7 +159,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.amqp.create', zato_message)
 
-        return _edit_create_response(cluster, 'created', zato_message.data.channel_amqp.id.text, 
+        return _edit_create_response(cluster, 'created', zato_message.data.item.id.text, 
             req.POST['name'], req.POST['def_id'])
     except Exception, e:
         msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))

@@ -454,7 +454,8 @@ class RequestHandler(object):
         is postponed until a concrete transport-specific handler is invoked.
         """
         headers = task.request_data.headers
-        url_data = self.security.url_sec_get(task.request_data.uri, headers.get('SOAPACTION', ''))
+        soap_action = headers.get('SOAPACTION', '')
+        url_data = self.security.url_sec_get(task.request_data.uri, soap_action)
 
         if url_data:
             transport = url_data['transport']
@@ -508,7 +509,7 @@ class RequestHandler(object):
                 task.setResponseStatus(status, reason)
                 return response
         else:
-            response = "[{0}] The URL [{1}] doesn't exist".format(cid, task.request_data.uri)
+            response = "[{}] The URL:[{}] doesn't exist, SOAP action:[{}]".format(cid, task.request_data.uri, soap_action)
             task.setResponseStatus(NOT_FOUND, _reason_not_found)
             
             logger.error(response)

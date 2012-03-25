@@ -56,8 +56,8 @@ def _get_def_ids(cluster):
     zato_message.data.cluster_id = cluster.id        
     _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.jms_wmq.get-list', zato_message)
     
-    if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
-        for definition_elem in zato_message.data.definition_list.definition:
+    if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        for definition_elem in zato_message.data.item_list.item:
             id = definition_elem.id.text
             name = definition_elem.name.text
             out[id] = name
@@ -90,7 +90,7 @@ def _edit_create_response(cluster, verb, id, name, cluster_id, def_id):
     
     return_data = {'id': id,
                    'message': 'Successfully {0} the JMS WebSphere MQ channel [{1}]'.format(verb, name),
-                   'def_name': zato_message.data.definition.name.text
+                   'def_name': zato_message.data.item.name.text
                 }
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -146,8 +146,7 @@ def index(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/channel/jms_wmq.html', return_data,
-                              context_instance=RequestContext(req))
+    return render_to_response('zato/channel/jms_wmq.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('POST')
 def create(req):
@@ -157,11 +156,11 @@ def create(req):
     try:
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.jms_wmq.create', zato_message)
-
-        return _edit_create_response(cluster, 'created', zato_message.data.channel_jms_wmq.id.text, 
+        
+        return _edit_create_response(cluster, 'created', zato_message.data.item.id.text, 
             req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
     except Exception, e:
-        msg = 'Could not create an JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create a JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 

@@ -23,10 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # validate
 from validate import is_boolean
 
@@ -46,24 +42,7 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            item_list = Element('item_list')
-            db_items = channel_amqp_list(session, self.request.input.cluster_id, False)
-    
-            for db_item in db_items:
-    
-                item = Element('item')
-                item.id = db_item.id
-                item.name = db_item.name
-                item.is_active = db_item.is_active
-                item.queue = db_item.queue
-                item.consumer_tag_prefix = db_item.consumer_tag_prefix
-                item.service_name = db_item.service_name
-                item.def_name = db_item.def_name
-                item.def_id = db_item.def_id
-    
-                item_list.append(item)
-
-            self.response.payload = etree.tostring(item_list)
+            self.response.payload[:] = channel_amqp_list(session, self.request.input.cluster_id, False)
         
 class Create(AdminService):
     """ Creates a new AMQP channel.
@@ -96,8 +75,6 @@ class Create(AdminService):
                 msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
             
-            created_elem = Element('channel_amqp')
-            
             try:
                 item = ChannelAMQP()
                 item.name = input.name
@@ -110,10 +87,9 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
                 
-                created_elem.id = item.id
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
-                self.response.payload = etree.tostring(created_elem)
+                self.response.payload = item.id
                 
             except Exception, e:
                 msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))
@@ -154,8 +130,6 @@ class Edit(AdminService):
                 msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
             
-            xml_item = Element('channel_amqp')
-            
             try:
                 item = session.query(ChannelAMQP).filter_by(id=input.id).one()
                 old_name = item.name
@@ -169,13 +143,11 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
                 
-                xml_item.id = item.id
-                
                 input.action = CHANNEL.AMQP_EDIT
                 old_name = old_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
-                self.response.payload = etree.tostring(xml_item)
+                self.response.payload = item.id
                 
             except Exception, e:
                 msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
