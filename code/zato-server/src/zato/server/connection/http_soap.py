@@ -597,7 +597,6 @@ class _BaseMessageHandler(object):
                 response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
                     result=response.result, details=response.result_details, data=response.payload)
             else:
-                print(33333333, response.payload.getvalue(False))
                 response.payload = dumps({
                     'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details},
                     'data':response.payload.getvalue(False) if response.payload else ''
