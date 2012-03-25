@@ -39,6 +39,7 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'def_name', 'def_id', 'service_name')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -48,8 +49,8 @@ class Create(AdminService):
     """ Creates a new AMQP channel.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 
-            'consumer_tag_prefix', 'service')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
+        output_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -89,7 +90,7 @@ class Create(AdminService):
                 
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
-                self.response.payload = item.id
+                self.response.payload.id = item.id
                 
             except Exception, e:
                 msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))
@@ -102,8 +103,8 @@ class Edit(AdminService):
     """ Updates an AMQP channel.
     """
     class SimpleIO:
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 
-            'consumer_tag_prefix', 'service')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -147,7 +148,7 @@ class Edit(AdminService):
                 old_name = old_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
-                self.response.payload = item.id
+                self.response.payload.id = item.id
                 
             except Exception, e:
                 msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
