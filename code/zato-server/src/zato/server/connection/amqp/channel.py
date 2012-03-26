@@ -103,7 +103,7 @@ class ConsumingConnector(BaseAMQPConnector):
         self.channel_amqp.is_active = item.is_active
         self.channel_amqp.queue = item.queue
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
-        self.channel_amqp.service = item.service_name
+        self.channel_amqp.service = item.service_impl_name
         
     def _setup_amqp(self):
         """ Sets up the AMQP listener on startup.
@@ -170,7 +170,7 @@ class ConsumingConnector(BaseAMQPConnector):
     def _stop_amqp_connection(self):
         """ Stops the AMQP connection.
         """
-        if self.channel_amqp.consumer:
+        if self.channel_amqp.get('consumer'):
             self.channel_amqp.consumer.close()
                 
     def _on_message(self, method_frame, header_frame, body):

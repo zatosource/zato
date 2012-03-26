@@ -40,6 +40,7 @@ import zmq
 from bunch import Bunch
 
 # Zato
+from zato.common import ZATO_ODB_POOL_NAME
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
 
@@ -149,6 +150,7 @@ class BaseConnector(BaseWorker):
         self.def_id = def_id
         self.odb = None
         self.broker_client_name = None
+        self.sql_pool_store = None
         
     def _close(self):
         """ Close the process, don't forget about the ODB connection if it exists.
@@ -172,17 +174,32 @@ class BaseConnector(BaseWorker):
         app_context = get_app_context(config)
         crypto_manager = get_crypto_manager(self.repo_location, app_context, config)
         
+        config_odb = config['odb']
         self.odb = app_context.get_object('odb_manager')
         self.odb.crypto_manager = crypto_manager
-        self.odb.odb_data = config['odb']
+        self.odb.odb_token = config_odb['token']
+        
+        odb_data = Bunch()
+        odb_data.db_name = config_odb['db_name']
+        odb_data.engine = config_odb['engine']
+        odb_data.extra = config_odb['extra']
+        odb_data.host = config_odb['host']
+        odb_data.password = self.odb.crypto_manager.decrypt(config_odb['password'])
+        odb_data.pool_size = config_odb['pool_size']
+        odb_data.username = config_odb['username']
+        odb_data.is_odb = True
+        
+        self.sql_pool_store = app_context.get_object('sql_pool_store')
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = odb_data
+        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
         
         self._setup_odb()
         
-        self.worker_data = Bunch()
-        self.worker_data.broker_config = Bunch()
-        self.worker_data.broker_config.name = self.broker_client_name
-        self.worker_data.broker_config.broker_token = self.server.cluster.broker_token
-        self.worker_data.broker_config.zmq_context = zmq.Context()
+        self.worker_config = Bunch()
+        self.worker_config.broker_config = Bunch()
+        self.worker_config.broker_config.name = self.broker_client_name
+        self.worker_config.broker_config.broker_token = self.server.cluster.broker_token
+        self.worker_config.broker_config.zmq_context = zmq.Context()
 
         broker_push_client_pull = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
             self.server.cluster.broker_start_port + self.broker_push_client_pull_port)
@@ -193,9 +210,9 @@ class BaseConnector(BaseWorker):
         broker_pub_client_sub = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
             self.server.cluster.broker_start_port + self.broker_pub_client_sub_port)
         
-        self.worker_data.broker_config.broker_push_client_pull = broker_push_client_pull
-        self.worker_data.broker_config.client_push_broker_pull = client_push_broker_pull
-        self.worker_data.broker_config.broker_pub_client_sub = broker_pub_client_sub
+        self.worker_config.broker_config.broker_push_client_pull = broker_push_client_pull
+        self.worker_config.broker_config.client_push_broker_pull = client_push_broker_pull
+        self.worker_config.broker_config.broker_pub_client_sub = broker_pub_client_sub
 
         # Connects to the broker
         super(BaseConnector, self)._init()
