@@ -35,41 +35,31 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_OK
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
 from zato.server.service.internal import AdminService, ChangePasswordBase
 
 class _FTPService(AdminService):
-    def update_facade(self, params, old_name=None):
-        self.ftp.update(params, old_name)
+    """ A common class for various FTP-related services.
+    """
+    def notify_worker_threads(self, params, action=OUTGOING.FTP_CREATE_EDIT):
+        """ Notify worker threads of new or updated parameters.
+        """
+        params['action'] = action
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
 
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'host', 'port', 'user', 
+            'acct', 'timeout', 'dircache')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            item_list = Element('item_list')
-            db_items = out_ftp_list(session, self.request.input.cluster_id, False)
-
-            for db_item in db_items:
-
-                item = Element('item')
-                item.id = db_item.id
-                item.name = db_item.name
-                item.is_active = db_item.is_active
-                item.host = db_item.host
-                item.port = db_item.port
-                item.user = db_item.user
-                item.acct = db_item.acct
-                item.timeout = db_item.timeout
-                item.dircache = db_item.dircache
-
-                item_list.append(item)
-
-            self.response.payload = etree.tostring(item_list)
+            self.response.payload[:] = out_ftp_list(session, self.request.input.cluster_id, False)
 
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
@@ -77,6 +67,7 @@ class Create(_FTPService):
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
         input_optional = ('user', 'acct', 'timeout')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -89,8 +80,6 @@ class Create(_FTPService):
 
             if existing_one:
                 raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(input.name))
-
-            created_elem = Element('out_ftp')
 
             try:
                 item = OutgoingFTP()
@@ -107,10 +96,9 @@ class Create(_FTPService):
                 session.add(item)
                 session.commit()
 
-                created_elem.id = item.id
-                self.update_facade(input)
+                self.notify_worker_threads(input)
 
-                self.response.payload = etree.tostring(created_elem)
+                self.response.payload.id = item.id
 
             except Exception, e:
                 msg = 'Could not create an outgoing FTP connection, e=[{e}]'.format(e=format_exc(e))
@@ -125,6 +113,7 @@ class Edit(_FTPService):
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
         input_optional = ('user', 'acct', 'timeout')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -137,8 +126,6 @@ class Edit(_FTPService):
 
             if existing_one:
                 raise Exception('An outgoing FTP connection [{0}] already exists on this cluster'.format(input.name))
-
-            xml_item = Element('out_ftp')
 
             try:
                 item = session.query(OutgoingFTP).filter_by(id=input.id).one()
@@ -156,10 +143,9 @@ class Edit(_FTPService):
                 session.add(item)
                 session.commit()
 
-                xml_item.id = item.id
-                self.update_facade(input, old_name)
+                self.notify_worker_threads(input)
 
-                self.response.payload = etree.tostring(xml_item)
+                self.response.payload.id = item.id
 
             except Exception, e:
                 msg = 'Could not update the outgoing FTP connection, e=[{e}]'.format(e=format_exc(e))
@@ -168,7 +154,7 @@ class Edit(_FTPService):
 
                 raise
 
-class Delete(AdminService):
+class Delete(_FTPService):
     """ Deletes an outgoing FTP connection.
     """
     class SimpleIO:
@@ -185,7 +171,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
                 
-                self.ftp.update(None, old_name)
+                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE)
 
             except Exception, e:
                 session.rollback()
@@ -198,11 +184,7 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing FTP connection.
     """
     def handle(self):
-
         with closing(self.odb.session()) as session:
-            
             def _auth(instance, password):
                 instance.password = password
-                self.ftp.update_password(instance.name, password)
-                
-            self._handle(OutgoingFTP, _auth, None, **kwargs)
+            self._handle(OutgoingFTP, _auth, OUTGOING.FTP_CHANGE_PASSWORD)
