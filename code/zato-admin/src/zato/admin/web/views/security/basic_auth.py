@@ -49,7 +49,7 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.basic_auth.id.text,
+    return_data = {'id': zato_message.data.item.id.text,
                    'message': 'Successfully {0} the definition [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -90,7 +90,7 @@ def index(req):
                 'zato:security.basic-auth.get-list', zato_message)
 
         if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
-            for definition_elem in zato_message.data.definition_list.definition:
+            for definition_elem in zato_message.data.item_list.item:
 
                 id = definition_elem.id.text
                 name = definition_elem.name.text
@@ -166,8 +166,7 @@ def delete(req, id, cluster_id):
         zato_message.data = Element('data')
         zato_message.data.id = id
         
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.basic-auth.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:security.basic-auth.delete', zato_message)
     
     except Exception, e:
         msg = "Could not delete the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))

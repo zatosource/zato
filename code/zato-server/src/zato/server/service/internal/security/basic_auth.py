@@ -24,10 +24,6 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # validate
 from validate import is_boolean
 
@@ -43,30 +39,18 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'username', 'realm')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            definition_list = Element('definition_list')
-            definitions = basic_auth_list(session, self.request.input.cluster_id, False)
-    
-            for definition in definitions:
-    
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.is_active = definition.is_active
-                definition_elem.username = definition.username
-                definition_elem.realm = definition.realm
-    
-                definition_list.append(definition_elem)
-    
-            self.response.payload = etree.tostring(definition_list)
+            self.response.payload[:] = basic_auth_list(session, self.request.input.cluster_id, False)
 
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'username', 'realm')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -85,15 +69,11 @@ class Create(AdminService):
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
                 
-                auth_elem = Element('basic_auth')
-                
                 auth = HTTPBasicAuth(None, input.name, input.is_active, input.username, 
                     input.realm, input.password, cluster)
                 
                 session.add(auth)
                 session.commit()
-                
-                auth_elem.id = auth.id
                 
             except Exception, e:
                 msg = 'Could not create an HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
@@ -106,13 +86,14 @@ class Create(AdminService):
                 input.sec_type = 'basic_auth'
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            self.response.payload = etree.tostring(auth_elem)
+            self.response.payload.id = auth.id
 
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 'realm')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -127,8 +108,6 @@ class Edit(AdminService):
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
                 
-                auth_elem = Element('basic_auth')
-                
                 definition = session.query(HTTPBasicAuth).filter_by(id=input.id).one()
                 old_name = definition.name
                 
@@ -139,8 +118,6 @@ class Edit(AdminService):
     
                 session.add(definition)
                 session.commit()
-                
-                auth_elem.id = definition.id
                 
             except Exception, e:
                 msg = 'Could not update the HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
@@ -154,7 +131,7 @@ class Edit(AdminService):
                 input.sec_type = 'basic_auth'
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
-            self.response.payload = etree.tostring(auth_elem)
+                self.response.payload.id = definition.id
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.

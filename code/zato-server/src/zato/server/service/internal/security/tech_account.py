@@ -24,10 +24,6 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # validate
 from validate import is_boolean
 
@@ -45,48 +41,32 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            
-            definition_list = Element('definition_list')
-            definitions = tech_acc_list(session, self.request.input.cluster_id, False)
-            
-            for definition in definitions:
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.is_active = definition.is_active
-    
-                definition_list.append(definition_elem)
-    
-            self.response.payload = etree.tostring(definition_list)
+            self.response.payload[:] = tech_acc_list(session, self.request.input.cluster_id, False)
     
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
     """
     class SimpleIO:
         input_required = ('tech_account_id',)
+        output_required = ('id', 'name', 'is_active')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            tech_account = session.query(TechnicalAccount.id, 
+            self.response.payload = session.query(TechnicalAccount.id, 
                 TechnicalAccount.name, TechnicalAccount.is_active).\
                 filter(TechnicalAccount.id==self.request.input.tech_account_id).\
                 one()
-            
-            tech_account_elem = Element('tech_account')
-            tech_account_elem.id = tech_account.id;
-            tech_account_elem.name = tech_account.name;
-            tech_account_elem.is_active = tech_account.is_active;
-            
-            self.response.payload = etree.tostring(tech_account_elem)
     
 class Create(AdminService):
     """ Creates a new technical account.
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active')
+        output_required = ('id',)
 
     def handle(self):
         salt = uuid4().hex
@@ -94,7 +74,7 @@ class Create(AdminService):
         input.password = tech_account_password(uuid4().hex, salt)
         
         with closing(self.odb.session()) as session:
-            cluster = session.query(Cluster).filter_by(id=cluster_id).first()
+            cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
             
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
@@ -105,14 +85,10 @@ class Create(AdminService):
             if existing_one:
                 raise Exception('Technical account [{0}] already exists on this cluster'.format(input.name))
             
-            tech_account_elem = Element('tech_account')
-            
             try:
                 tech_account = TechnicalAccount(None, input.name, input.is_active, input.password, salt, cluster=cluster)
                 session.add(tech_account)
                 session.commit()
-                
-                tech_account_elem.id = tech_account.id
                 
             except Exception, e:
                 msg = 'Could not create a technical account, e=[{e}]'.format(e=format_exc(e))
@@ -122,17 +98,18 @@ class Create(AdminService):
                 raise 
             else:
                 input.action = SECURITY.TECH_ACC_CREATE
-                input.password = password
+                input.password = input.password
                 input.sec_type = 'tech_acc'
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            self.response.payload = etree.tostring(tech_account_elem)
+                self.response.payload.id = tech_account.id
 
 class Edit(AdminService):
     """ Updates an existing technical account.
     """
     class SimpleIO:
         input_required = ('cluster_id', 'tech_account_id', 'name', 'is_active')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -151,17 +128,13 @@ class Edit(AdminService):
                 one()
             old_name = tech_account.name
             
-            tech_account.name = name
+            tech_account.name = input.name
             tech_account.is_active = input.is_active
 
-            tech_account_elem = Element('tech_account')            
-            
             try:
                 session.add(tech_account)
                 session.commit()
 
-                tech_account_elem.id = tech_account.id                
-                
             except Exception, e:
                 msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
@@ -174,7 +147,7 @@ class Edit(AdminService):
                 input.sec_type = 'tech_acc'
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            self.response.payload = etree.tostring(tech_account_elem)
+                self.response.payload.id = tech_account.id
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
