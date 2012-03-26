@@ -30,8 +30,6 @@ from sqlalchemy.sql import text
 logger = logging.getLogger(__name__)
 
 AMQP_DEFAULT_PRIORITY = 5
-S3_DEFAULT_SEPARATOR = '/'
-S3_DEFAULT_KEY_SYNC_TIMEOUT = 1
 WMQ_DEFAULT_PRIORITY = 5
 
 engine_def = '{engine}://{username}:{password}@{host}/{db_name}'

@@ -119,7 +119,7 @@ class ConfigStore(object):
     Note that much more should be stored in here but the work is not finished yet -
     for instance, connection definitions should be kept here.
     """
-    def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, out_s3=NotGiven, 
+    def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, 
                  out_sql=NotGiven, repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
                  url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven,
                  simple_io=NotGiven):
@@ -128,7 +128,6 @@ class ConfigStore(object):
         self.out_ftp = out_ftp
         self.out_plain_http = out_plain_http
         self.out_soap = out_soap
-        self.out_s3 = out_s3
         self.out_sql = out_sql
         
         # Local on-disk configuraion repository
@@ -157,7 +156,7 @@ class ConfigStore(object):
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
         """
-        return self.out_ftp, self.out_plain_http, self.out_soap, self.out_s3
+        return self.out_ftp, self.out_plain_http, self.out_soap
         
     def copy(self):
         """ Creates a copy of this ConfigStore. All configuration data is copied
@@ -217,7 +216,6 @@ class ConfigStore(object):
 
 # out_ftp = self.outgoing.ftp.get('aaa')
 # out_plain_http = self.outgoing.plain_http.get('aaa')
-# out_s3 = self.outgoing.s3.get('aaa')
 # out_soap = self.outgoing.soap.get('aaa')
 # out_sql_conn = self.sql_pool.get('aaa')
 # del self.outgoing.ftp['aaa']

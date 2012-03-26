@@ -25,7 +25,7 @@ from functools import wraps
 # Zato
 from zato.common.odb.model import(ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, 
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, 
-    Job, OutgoingAMQP,  OutgoingFTP, OutgoingS3, OutgoingWMQ, OutgoingZMQ, 
+    Job, OutgoingAMQP,  OutgoingFTP, OutgoingWMQ, OutgoingZMQ, 
     SecurityBase, Service, SQLConnectionPool, TechnicalAccount, WSSDefinition)
 
 def needs_columns(func):
@@ -358,29 +358,6 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, needs_c
         q = q.filter(HTTPSOAP.transport==transport)
         
     return q
-
-# ##############################################################################
-
-def _out_s3(session, cluster_id):
-    return session.query(OutgoingS3.id, OutgoingS3.name, OutgoingS3.is_active,
-            OutgoingS3.prefix, OutgoingS3.separator,
-            OutgoingS3.key_sync_timeout).\
-        filter(Cluster.id==OutgoingS3.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(OutgoingS3.name)
-
-def out_s3(session, cluster_id, id):
-    """ An outgoing S3 connection.
-    """
-    return _out_s3(session, cluster_id).\
-           filter(OutgoingS3.id==id).\
-           one()
-
-@needs_columns
-def out_s3_list(session, cluster_id, needs_columns=False):
-    """ Outgoing S3 connections.
-    """
-    return _out_s3(session, cluster_id)
 
 # ##############################################################################
 

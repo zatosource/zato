@@ -118,10 +118,10 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
-    __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap', 's3')
+    __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap')
 
     def __init__(self, ftp=None, amqp=None, zmq=None, jms_wmq=None, sql=None, 
-                 plain_http=None, soap=None, s3=None):
+                 plain_http=None, soap=None):
         self.ftp = ftp
         self.amqp = amqp
         self.zmq = zmq
@@ -457,8 +457,8 @@ class Service(object):
         out_zmq = ZMQFacade(self.broker_client)
         out_sql = self.worker_store.sql_pool_store
 
-        out_ftp, out_plain_http, out_soap, out_s3 = self.worker_store.worker_config.outgoing_connections()
-        self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap, out_s3)
+        out_ftp, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
+        self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap)
         
         if hasattr(self, 'SimpleIO'):
             self.request.init(self.cid, self.SimpleIO, self.data_format)

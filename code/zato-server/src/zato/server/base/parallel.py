@@ -189,10 +189,6 @@ class ParallelServer(BrokerMessageReceiver):
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query)
 
-        # S3
-        query = self.odb.get_out_s3_list(server.cluster.id, True)
-        self.config.out_s3 = ConfigDict.from_query('out_s3', query)
-        
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query)

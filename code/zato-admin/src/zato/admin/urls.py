@@ -36,7 +36,6 @@ from zato.admin.web.views import http_soap
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
-from zato.admin.web.views.outgoing import s3 as out_s3
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.security import basic_auth, tech_account, wss
@@ -152,12 +151,6 @@ urlpatterns = patterns('',
     url(r'^zato/outgoing/jms-wmq/create/$', out_jms_wmq.create, name='out-jms-wmq-create'),
     url(r'^zato/outgoing/jms-wmq/edit/$', out_jms_wmq.edit, name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_jms_wmq.delete, name='out-jms-wmq-delete'),
-
-    # .. S3
-    url(r'^zato/outgoing/s3/$', out_s3.index, name='out-s3'),
-    url(r'^zato/outgoing/s3/create/$', out_s3.create, name='out-s3-create'),
-    url(r'^zato/outgoing/s3/edit/$', out_s3.edit, name='out-s3-edit'),
-    url(r'^zato/outgoing/s3/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_s3.delete, name='out-s3-delete'),
     
     # SQL connection pools
     url(r'^zato/outgoing/sql/$', out_sql.index, name='out-sql'),
