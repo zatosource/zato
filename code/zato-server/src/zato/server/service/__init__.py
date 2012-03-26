@@ -62,40 +62,57 @@ class ValueConverter(object):
     """ A class which knows how to convert values into the types defined in
     a service's SimpleIO config.
     """
-    def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
+    def convert(self, param_name, value, has_simple_io_config, date_time_format=None):
         if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
             value = asbool(value)
             
-        if value and value != ZATO_NONE and has_simple_io_config:
-            if any(param_name==elem for elem in self.int_parameters) or \
-               any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
-                value = int(value)
-            
-        if isinstance(param, Boolean):
+        if isinstance(param_name, Boolean):
             value = asbool(value)
-        elif isinstance(param, Integer):
+        elif isinstance(param_name, Integer):
             value = int(value)
+        elif isinstance(param_name, Unicode):
+            value = unicode(value)
+        else:
+            if value and value != ZATO_NONE and has_simple_io_config:
+                if any(param_name==elem for elem in self.int_parameters) or \
+                   any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
+                    value = int(value)
             
         if date_time_format and isinstance(value, datetime):
             value = value.strftime(date_time_format)
             
         return value
-
+    
 class ForceType(object):
+    """ Forces a SimpleIO element to use a specific data type.
+    """
     def __init__(self, name):
         self.name = name
         
     def __repr__(self):
         return '<{} at {} name:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.name)
+    
+class AsIs(ForceType):
+    """ The object won't be converted by SimpleIO machinery even though normally
+    it would've been, for instance, because its name is 'user_id' and should've
+    been converted over to an int.
+    """
 
 class Boolean(ForceType):
-    pass
+    """ Gets transformed into a bool object.
+    """ 
 
 class Integer(ForceType):
-    pass
+    """ Gets transformed into an int object.
+    """
+    
+class Unicode(ForceType):
+    """ Gets transformed into an unicode object.
+    """
 
 class ServiceInput(Bunch):
-    pass
+    """ A Bunch holding the input to the service.
+    """
 
 class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
@@ -196,7 +213,10 @@ class Request(ValueConverter):
                 if value is not None:
                     value = unicode(value)
                     
-            params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
+            if not isinstance(param, AsIs):
+                params[param_name] = self.convert(param_name, value, self.has_simple_io_config)
+            else:
+                params[param_name] = value
     
         return params
 
@@ -321,7 +341,7 @@ class SimpleIOPayload(ValueConverter):
     def append(self, item):
         self.zato_output.append(item)
 
-    def _getvalue(self, name, item, is_sa_namedtuple, is_required):
+    def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is):
         """ Returns an element's value if any has been provided while taking
         into account the differences between dictionaries and other formats
         as well as the type conversions.
@@ -340,7 +360,10 @@ class SimpleIOPayload(ValueConverter):
                 if self.zato_logger.isEnabledFor(TRACE1):
                     self.zato_logger.log(TRACE1, msg)
 
-        return self.convert(item, name, elem_value, True)
+        if leave_as_is:
+            return elem_value
+        else:
+            return self.convert(name, elem_value, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -384,10 +407,11 @@ class SimpleIOPayload(ValueConverter):
                 else:
                     out_item = {}
                 for is_required, name in chain(self.zato_required, self.zato_optional):
+                    leave_as_is = isinstance(name, AsIs)
                     if isinstance(name, ForceType):
                         name = name.name
 
-                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required)
+                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
 
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
