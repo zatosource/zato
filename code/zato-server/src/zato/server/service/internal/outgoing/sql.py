@@ -22,10 +22,6 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # validate
 from validate import is_boolean
 
@@ -50,30 +46,12 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'engine', 'host', 'port',
+            'db_name', 'username', 'pool_size', 'extra')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            item_list = Element('item_list')
-            db_items = out_sql_list(session, self.request.input.cluster_id, False)
-            
-            for db_item in db_items:
-
-                item = Element('item')
-                item.id = db_item.id
-                item.name = db_item.name
-                item.is_active = db_item.is_active
-                
-                item.engine = db_item.engine
-                item.host = db_item.host
-                item.port = db_item.port
-                item.db_name = db_item.db_name
-                item.username = db_item.username
-                item.pool_size = db_item.pool_size
-                item.extra = db_item.extra.decode('utf-8') if db_item.extra else ''
-                
-                item_list.append(item)
-
-            self.response.payload = etree.tostring(item_list)
+            self.response.payload[:] = out_sql_list(session, self.request.input.cluster_id, False)
 
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
@@ -81,6 +59,7 @@ class Create(AdminService, _SQLService):
     class SimpleIO:
         input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
         input_optional = ('extra',)
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -95,8 +74,6 @@ class Create(AdminService, _SQLService):
 
             if existing_one:
                 raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
-
-            created_elem = Element('out_sql')
 
             try:
                 item = SQLConnectionPool()
@@ -115,11 +92,9 @@ class Create(AdminService, _SQLService):
                 session.add(item)
                 session.commit()
                 
-                created_elem.id = item.id
-                
                 self.notify_worker_threads(input)
                 
-                self.response.payload = etree.tostring(created_elem)
+                self.response.payload.id = item.id
 
             except Exception, e:
                 msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -134,6 +109,7 @@ class Edit(AdminService, _SQLService):
     class SimpleIO:
         input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
         input_optional = ('extra',)
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -149,8 +125,6 @@ class Edit(AdminService, _SQLService):
             if existing_one:
                 raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
 
-            xml_item = Element('out_sql')
-
             try:
                 item = session.query(SQLConnectionPool).filter_by(id=input.id).one()
                 old_name = item.name
@@ -163,18 +137,16 @@ class Edit(AdminService, _SQLService):
                 item.db_name = input.db_name
                 item.username = input.username
                 item.pool_size = input.pool_size
-                item.extra = extra
+                item.extra = input.extra
 
                 session.add(item)
                 session.commit()
-
-                xml_item.id = item.id
 
                 input.password = item.password
                 input.old_name = old_name
                 self.notify_worker_threads(input)
 
-                self.response.payload = etree.tostring(xml_item)
+                self.response.payload.id = item.id
 
             except Exception, e:
                 msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -229,6 +201,7 @@ class Ping(AdminService):
     """
     class SimpleIO:
         input_required = ('id',)
+        output_required = ('text',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -237,10 +210,7 @@ class Ping(AdminService):
                     filter(SQLConnectionPool.id==self.request.input.id).\
                     one()
 
-                xml_item = etree.Element('response_time')
-                xml_item.text = str(self.outgoing.sql.get(item.name).ping())
-                
-                self.response.payload = etree.tostring(xml_item)
+                self.response.payload.text = str(self.outgoing.sql.get(item.name).ping())
 
             except Exception, e:
                 session.rollback()
