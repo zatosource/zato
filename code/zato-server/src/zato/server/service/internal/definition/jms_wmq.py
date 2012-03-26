@@ -70,6 +70,7 @@ class Create(AdminService):
             'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
             'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -93,7 +94,7 @@ class Create(AdminService):
                 session.add(def_)
                 session.commit()
 
-                self.response.payload = def_.id
+                self.response.payload.id = def_.id
 
             except Exception, e:
                 msg = "Could not create a JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
