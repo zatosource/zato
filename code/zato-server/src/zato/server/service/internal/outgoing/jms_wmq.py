@@ -23,10 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # validate
 from validate import is_boolean
 
@@ -36,6 +32,7 @@ from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_jms_wmq_list
 from zato.server.connection.jms_wmq.outgoing import start_connector
+from zato.server.service import Integer
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
@@ -43,34 +40,20 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'delivery_mode', 
+            'priority', 'expiration', 'def_name', 'def_id')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            item_list = Element('item_list')
-            db_items = out_jms_wmq_list(session, self.request.input.cluster_id, False)
-    
-            for db_item in db_items:
-    
-                item = Element('item')
-                item.id = db_item.id
-                item.name = db_item.name
-                item.is_active = db_item.is_active
-                item.delivery_mode = db_item.delivery_mode
-                item.priority = db_item.priority
-                item.expiration = db_item.expiration
-                item.def_name = db_item.def_name
-                item.def_id = db_item.def_id
-    
-                item_list.append(item)
-    
-            self.response.payload = etree.tostring(item_list)
+            self.response.payload[:] = out_jms_wmq_list(session, self.request.input.cluster_id, False)
         
 class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
         input_optional = ('expiration',)
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -88,8 +71,6 @@ class Create(AdminService):
             if existing_one:
                 raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
             
-            created_elem = Element('out_jms_wmq')
-            
             try:
                 item = OutgoingWMQ()
                 item.name = input.name
@@ -102,10 +83,9 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
                 
-                created_elem.id = item.id
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
-                self.response.payload = etree.tostring(created_elem)
+                self.response.payload.id = item.id
                 
             except Exception, e:
                 msg = 'Could not create an outgoing JMS WebSphere MQ connection, e=[{e}]'.format(e=format_exc(e))
@@ -118,8 +98,9 @@ class Edit(AdminService):
     """ Updates an outgoing JMS WebSphere MQ connection.
     """
     class SimpleIO:
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
         input_optional = ('expiration',)
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -138,10 +119,8 @@ class Edit(AdminService):
             if existing_one:
                 raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
             
-            xml_item = Element('out_jms_wmq')
-            
             try:
-                item = session.query(OutgoingWMQ).filter_by(id=id).one()
+                item = session.query(OutgoingWMQ).filter_by(id=input.id).one()
                 old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
@@ -153,13 +132,11 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
                 
-                xml_item.id = item.id
-                
                 input.action = OUTGOING.JMS_WMQ_EDIT
                 input.old_name = old_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
-                self.response.payload = etree.tostring(xml_item)
+                self.response.payload.id = item.id
                 
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))

@@ -62,15 +62,15 @@ class ValueConverter(object):
     """ A class which knows how to convert values into the types defined in
     a service's SimpleIO config.
     """
-    def convert(self, param_name, value, has_simple_io_config, date_time_format=None):
+    def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
         if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
             value = asbool(value)
             
-        if isinstance(param_name, Boolean):
+        if isinstance(param, Boolean):
             value = asbool(value)
-        elif isinstance(param_name, Integer):
+        elif isinstance(param, Integer):
             value = int(value)
-        elif isinstance(param_name, Unicode):
+        elif isinstance(param, Unicode):
             value = unicode(value)
         else:
             if value and value != ZATO_NONE and has_simple_io_config:
@@ -194,8 +194,8 @@ class Request(ValueConverter):
                     msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
                         etree.tostring(self.payload), format_exc(e))
                     raise ParsingException(self.cid, msg)
-        
-                if elem:
+                
+                if elem is not None:
                     if use_text:
                         value = elem.text # We are interested in the text the elem contains ..
                     else:
@@ -204,7 +204,7 @@ class Request(ValueConverter):
                     value = default_value
             else:
                 value = self.payload.get(param_name)
-    
+                
             # Use a default value if an element is empty and we're allowed to
             # substitute its (empty) value with the default one.
             if default_value != ZATO_NO_DEFAULT_VALUE and not value:
@@ -214,7 +214,7 @@ class Request(ValueConverter):
                     value = unicode(value)
                     
             if not isinstance(param, AsIs):
-                params[param_name] = self.convert(param_name, value, self.has_simple_io_config)
+                params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
             else:
                 params[param_name] = value
     
@@ -363,7 +363,7 @@ class SimpleIOPayload(ValueConverter):
         if leave_as_is:
             return elem_value
         else:
-            return self.convert(name, elem_value, True)
+            return self.convert(item, name, elem_value, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
