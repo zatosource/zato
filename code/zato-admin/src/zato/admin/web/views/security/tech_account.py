@@ -51,7 +51,7 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.tech_account.id.text,
+    return_data = {'id': zato_message.data.item.id.text,
                    'message': 'Successfully {0} the technical account [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -77,9 +77,9 @@ def index(req):
         _, zato_message, soap_response  = invoke_admin_service(cluster,
                 'zato:security.tech-account.get-list', zato_message)
         
-        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
+        if zato_path('data.item_list.item').get_from(zato_message) is not None:
             
-            for definition_elem in zato_message.data.definition_list.definition:
+            for definition_elem in zato_message.data.item_list.item:
                 
                 id = definition_elem.id.text
                 name = definition_elem.name.text
@@ -150,7 +150,7 @@ def get_by_id(req, tech_account_id, cluster_id):
         return HttpResponseServerError(msg)
     else:
         tech_account = TechnicalAccount()
-        tech_account_elem = zato_message.data.tech_account
+        tech_account_elem = zato_message.data.item
         
         tech_account.id = tech_account_elem.id.text
         tech_account.name = tech_account_elem.name.text
@@ -204,8 +204,7 @@ def delete(req, tech_account_id, cluster_id):
         zato_message.data.tech_account_id = tech_account_id
         zato_message.data.zato_admin_tech_account_name = TECH_ACCOUNT_NAME
         
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.tech-account.delete', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:security.tech-account.delete', zato_message)
     
     except Exception, e:
         msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
