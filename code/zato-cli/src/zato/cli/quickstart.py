@@ -325,12 +325,6 @@ class Quickstart(ZatoCommand):
             'zato:outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
             'zato:outgoing.jms_wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
             'zato:outgoing.jms_wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
-
-            # Outgoing connections - S3
-            'zato:outgoing.s3.get-list':'zato.server.service.internal.outgoing.s3.GetList',
-            'zato:outgoing.s3.create':'zato.server.service.internal.outgoing.s3.Create',
-            'zato:outgoing.s3.edit':'zato.server.service.internal.outgoing.s3.Edit',
-            'zato:outgoing.s3.delete':'zato.server.service.internal.outgoing.s3.Delete',
             
             # Outgoing connections - SQL
             'zato:outgoing.sql.get-list':'zato.server.service.internal.outgoing.sql.GetList',
