@@ -44,28 +44,13 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'password_type', 'username', 
+            'reject_empty_nonce_creat', 'reject_stale_tokens', 'reject_expiry_limit', 
+            'nonce_freshness_time')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            definition_list = Element('definition_list')
-            definitions = wss_list(session, self.request.input.cluster_id, False)
-    
-            for definition in definitions:
-    
-                definition_elem = Element('definition')
-                definition_elem.id = definition.id
-                definition_elem.name = definition.name
-                definition_elem.is_active = definition.is_active
-                definition_elem.password_type = definition.password_type
-                definition_elem.username = definition.username
-                definition_elem.reject_empty_nonce_creat = definition.reject_empty_nonce_creat
-                definition_elem.reject_stale_tokens = definition.reject_stale_tokens
-                definition_elem.reject_expiry_limit = definition.reject_expiry_limit
-                definition_elem.nonce_freshness_time = definition.nonce_freshness_time
-    
-                definition_list.append(definition_elem)
-    
-            self.response.payload = etree.tostring(definition_list)
+            self.response.payload[:] = wss_list(session, self.request.input.cluster_id, False)
 
 class Create(AdminService):
     """ Creates a new WS-Security definition.
@@ -74,6 +59,7 @@ class Create(AdminService):
         input_required = ('cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -89,7 +75,6 @@ class Create(AdminService):
             if existing_one:
                 raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(input.name))
             
-            wss_elem = Element('wss')
             password = uuid4().hex
     
             try:
@@ -100,8 +85,6 @@ class Create(AdminService):
                 
                 session.add(wss)
                 session.commit()
-                
-                wss_elem.id = wss.id
                 
             except Exception, e:
                 msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
@@ -115,7 +98,7 @@ class Create(AdminService):
                 input.sec_type = 'wss'
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
-            self.response.payload = etree.tostring(wss_elem)
+            self.response.payload.id = wss.id
 
 class Edit(AdminService):
     """ Updates a WS-S definition.
@@ -124,6 +107,7 @@ class Edit(AdminService):
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -137,8 +121,6 @@ class Edit(AdminService):
             if existing_one:
                 raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(input.name))
             
-            wss_elem = Element('wss')
-    
             try:
                 wss = session.query(WSSDefinition).filter_by(id=input.id).one()
                 old_name = wss.name
@@ -155,8 +137,6 @@ class Edit(AdminService):
                 session.add(wss)
                 session.commit()
                 
-                wss_elem.id = wss.id
-                
             except Exception, e:
                 msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
@@ -169,7 +149,7 @@ class Edit(AdminService):
                 input.sec_type = 'wss'
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
-            self.response.payload = etree.tostring(wss_elem)
+            self.response.payload.id = wss.id
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a WS-Security definition.
