@@ -318,7 +318,7 @@ class ParallelServer(BrokerMessageReceiver):
         # This is the call that creates an SQLAlchemy connection
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         
-        self.odb.server = self
+        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
         self.odb.odb_token = self.odb_data['token']
         
         # Now try grabbing the basic server's data from the ODB. No point

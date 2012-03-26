@@ -50,20 +50,21 @@ class ODBManager(SessionWrapper):
     """ Manages connections to the server's Operational Database.
     """
     def __init__(self, well_known_data=None, odb_token=None, crypto_manager=None, 
-                 server=None, cluster=None, init=True):
+                 server=None, cluster=None, pool=None):
         super(ODBManager, self).__init__()
         self.well_known_data = well_known_data
         self.odb_token = odb_token
         self.crypto_manager = crypto_manager
         self.server = server
         self.cluster = cluster
+        self.pool = pool
         
     def fetch_server(self):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
         to the value pointed to by the server's .cluster attribute.
         """
         if not self.session_initialized:
-            self.init_session(self.server.sql_pool_store[ZATO_ODB_POOL_NAME])
+            self.init_session(self.pool)
             
         try:
             self.server = self._session.query(Server).\
