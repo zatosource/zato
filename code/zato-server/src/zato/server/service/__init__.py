@@ -346,7 +346,7 @@ class SimpleIOPayload(ValueConverter):
         into account the differences between dictionaries and other formats
         as well as the type conversions.
         """
-        if is_sa_namedtuple:
+        if is_sa_namedtuple or isinstance(item, Base):
             elem_value = getattr(item, name, ZATO_NONE)
         else:
             elem_value = item.get(name, ZATO_NONE)

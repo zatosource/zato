@@ -43,30 +43,18 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'address', 'socket_type')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            item_list = Element('item_list')
-            db_items = out_zmq_list(session, self.request.input.cluster_id, False)
-            
-            for db_item in db_items:
-    
-                item = Element('item')
-                item.id = db_item.id
-                item.name = db_item.name
-                item.is_active = db_item.is_active
-                item.address = db_item.address
-                item.socket_type = db_item.socket_type
-    
-                item_list.append(item)
-    
-            self.response.payload = etree.tostring(item_list)
+            self.response.payload[:] = out_zmq_list(session, self.request.input.cluster_id, False)
         
 class Create(AdminService):
     """ Creates a new outgoing ZeroMQ connection.
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -79,8 +67,6 @@ class Create(AdminService):
             if existing_one:
                 raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(input.name))
             
-            created_elem = Element('out_zmq')
-            
             try:
                 item = OutgoingZMQ()
                 item.name = input.name
@@ -92,10 +78,9 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
                 
-                created_elem.id = item.id
                 start_connector(self.server.repo_location, item.id)
                 
-                self.response.payload = etree.tostring(created_elem)
+                self.response.payload.id = item.id
                 
             except Exception, e:
                 msg = 'Could not create an outgoing ZeroMQ connection, e=[{e}]'.format(e=format_exc(e))
@@ -109,6 +94,7 @@ class Edit(AdminService):
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        output_required = ('id',)
 
     def handle(self):
         input = self.request.input
@@ -122,8 +108,6 @@ class Edit(AdminService):
             if existing_one:
                 raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(input.name))
             
-            xml_item = Element('out_zmq')
-            
             try:
                 item = session.query(OutgoingZMQ).filter_by(id=input.id).one()
                 old_name = item.name
@@ -135,13 +119,11 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
                 
-                xml_item.id = item.id
-                
                 input.action = OUTGOING.ZMQ_EDIT
                 input.old_name = old_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
-                self.response.payload = etree.tostring(xml_item)
+                self.response.payload.id = item.id
                 
             except Exception, e:
                 msg = 'Could not update the outgoing ZeroMQ connection, e=[{e}]'.format(e=format_exc(e))
@@ -154,7 +136,7 @@ class Delete(AdminService):
     """ Deletes an outgoing ZeroMQ connection.
     """
     class SimpleIO:
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_required = ('id',)
 
     def handle(self):
         with closing(self.odb.session()) as session:

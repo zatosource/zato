@@ -156,7 +156,7 @@ def create(req):
         engine = zato_message.data.engine
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.create', zato_message)
 
-        return _edit_create_response('created', zato_message.data.out_sql.id.text, req.POST['name'], engine, cluster.id)
+        return _edit_create_response('created', zato_message.data.item.id.text, req.POST['name'], engine, cluster.id)
 
     except Exception, e:
         msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -215,7 +215,7 @@ def ping(req, cluster_id, id):
         zato_message.data.id = id
 
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.ping', zato_message)
-        response_time = zato_path('data.response_time', True).get_from(zato_message)
+        response_time = zato_path('data.item.text', True).get_from(zato_message)
         
     except Exception, e:
         msg = 'Ping failed. e=[{}]'.format(format_exc(e))
