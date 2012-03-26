@@ -23,10 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # validate
 from validate import is_boolean
 
