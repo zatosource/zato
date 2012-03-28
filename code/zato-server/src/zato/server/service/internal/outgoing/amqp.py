@@ -35,6 +35,11 @@ from zato.server.connection.amqp.outgoing import start_connector
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService
 
+class _AMQPService(AdminService):
+    def delete_outgoing(self, outgoing):
+        msg = {'action': OUTGOING.AMQP_DELETE, 'name': outgoing.name, 'id':outgoing.id}
+        self.broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+
 class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.
     """
@@ -105,7 +110,7 @@ class Create(AdminService):
                 
                 raise 
 
-class Edit(AdminService):
+class Edit(_AMQPService):
     """ Updates an outgoing AMQP connection.
     """
     class SimpleIO:
@@ -154,9 +159,8 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
                 
-                input.action = OUTGOING.AMQP_EDIT
-                input.old_name = old_name
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                self.delete_outgoing(item)
+                start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
                 
@@ -167,7 +171,7 @@ class Edit(AdminService):
                 
                 raise  
         
-class Delete(AdminService):
+class Delete(_AMQPService):
     """ Deletes an outgoing AMQP connection.
     """
     class SimpleIO:
@@ -176,16 +180,15 @@ class Delete(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                def_ = session.query(OutgoingAMQP).\
+                channel = session.query(OutgoingAMQP).\
                     filter(OutgoingAMQP.id==self.request.input.id).\
                     one()
                 
-                session.delete(def_)
+                session.delete(channel)
                 session.commit()
-
-                msg = {'action': OUTGOING.AMQP_DELETE, 'name': def_.name, 'id':def_.id}
-                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
+                self.delete_outgoing(channel)
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the outgoing AMQP connection, e=[{e}]'.format(e=format_exc(e))
