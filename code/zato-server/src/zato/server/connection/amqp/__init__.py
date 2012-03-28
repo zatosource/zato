@@ -24,7 +24,11 @@ import logging
 from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
+logging.captureWarnings(True)
+
 # stdlib
+from datetime import datetime
+from os import getpid
 from threading import RLock
 
 # Pika
@@ -145,7 +149,8 @@ class BaseAMQPConnector(BaseConnector):
             
             with self.out_amqp_lock:
                 with self.channel_amqp_lock:
-                    self._recreate_amqp_publisher()
+                    recreate_meth = '_recreate_amqp_publisher' if hasattr(self, '_recreate_amqp_publisher') else '_recreate_consumer'
+                    getattr(self, recreate_meth)()
                     if self.logger.isEnabledFor(TRACE1):
                         log_msg = 'self.def_amqp [{0}]'.format(self.def_amqp)
                         self.logger.log(TRACE1, log_msg)
@@ -175,13 +180,13 @@ class BaseAMQPConnector(BaseConnector):
             username = self.def_amqp.username
             password = self.def_amqp.password
             
-        params = ConnectionParameters(self.def_amqp.host, self.def_amqp.port, vhost, 
+        params = ConnectionParameters(self.def_amqp.host, int(self.def_amqp.port), vhost, 
             PlainCredentials(username, password),
-            frame_max=self.def_amqp.frame_max)
+            frame_max=int(self.def_amqp.frame_max))
         
         # heartbeat is an integer but ConnectionParameter.__init__ insists it
         # be a boolean.
-        params.heartbeat = self.def_amqp.heartbeat
+        params.heartbeat = float(self.def_amqp.heartbeat)
         
         return params
 

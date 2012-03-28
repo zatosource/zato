@@ -39,7 +39,7 @@ from zope.server.taskthreads import ThreadedTaskDispatcher
 from paste.util.multidict import MultiDict
 
 # Zato
-from zato.common import url_type, ZATO_ODB_POOL_NAME
+from zato.common import SIMPLE_IO, url_type, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
 from zato.common.util import security_def_type, TRACE1
 from zato.server.base import BaseWorker
@@ -314,14 +314,17 @@ class WorkerStore(BaseWorker):
         creates a new service instance and invokes it.
         """
         service_instance = self.worker_config.server.service_store.new_instance(msg.service)
-        service_instance.update(service_instance, self.worker_config.server, self.broker_client, 
-            self.odb, self.sql_pool_store, channel, msg.get('payload'), raw_request, msg.cid)
+        service_instance.update(service_instance, self.worker_config.server, self.broker_client,
+            self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
+            msg.data_format)
         
-        response = service_instance.handle()
+        service_instance.handle()
+        if not isinstance(service_instance.response.payload, basestring):
+            service_instance.response.payload = service_instance.response.payload.getvalue()
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(
-                msg.service, channel, action, repr(response))
+                msg.service, channel, action, repr(service_instance.response.payload))
             logger.debug(msg)
 
     def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):

@@ -104,6 +104,7 @@ class ConsumingConnector(BaseAMQPConnector):
         self.channel_amqp.queue = item.queue
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
         self.channel_amqp.service = item.service_impl_name
+        self.channel_amqp.data_format = item.data_format
         
     def _setup_amqp(self):
         """ Sets up the AMQP listener on startup.
@@ -181,6 +182,7 @@ class ConsumingConnector(BaseAMQPConnector):
                 params = {}
                 params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED
                 params['service'] = self.channel_amqp.service
+                params['data_format'] = self.channel_amqp.data_format
                 params['cid'] = new_cid()
                 params['payload'] = body
                 
