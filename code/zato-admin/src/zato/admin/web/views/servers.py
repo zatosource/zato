@@ -107,9 +107,6 @@ def index(req):
         else:
             success_message = None
             error_message = current_form.errors
-            print(edit_form.errors, 2222)
-
-
     else:
         form = RegisterServerForm()
         edit_form = EditServerForm(prefix="edit")
