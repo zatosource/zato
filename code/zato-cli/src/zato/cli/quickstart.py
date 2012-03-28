@@ -245,6 +245,7 @@ class Quickstart(ZatoCommand):
             'zato:service.create':'zato.server.service.internal.service.Create',
             'zato:service.edit':'zato.server.service.internal.service.Edit',
             'zato:service.delete':'zato.server.service.internal.service.Delete',
+            'zato:service.get-wsdl':'zato.server.service.internal.service.GetWSDL',
 
             # SOAP channels
             'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
@@ -362,6 +363,12 @@ class Quickstart(ZatoCommand):
             service = Service(None, service_name, True, impl_name, True, cluster)
             session.add(service)
             
+            # Add the HTTP channel for WSDLs
+            if impl_name == 'zato.server.service.internal.service.GetWSDL':
+                http_soap = HTTPSOAP(None, service_name, True, True, 'channel', 'plain_http', 
+                    None, '/zato/wsdl', None, '', None, None, service=service, cluster=cluster)
+                session.add(http_soap)
+            
             zato_soap = HTTPSOAP(None, soap_action, True, True, 'channel', 
                 'soap', None, '/zato/soap', None, soap_action, '1.1', 
                 SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=tech_account)
@@ -389,7 +396,7 @@ class Quickstart(ZatoCommand):
             http_soap = HTTPSOAP(None, service_name, True, True, 'channel', 'plain_http', 
                 None, url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=tech_account)
             session.add(http_soap)
-                    
+            
     def execute(self, args):
         
         try:

@@ -351,12 +351,14 @@ class Service(Base):
     is_active = Column(Boolean(), nullable=False)
     impl_name = Column(String(2000), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
+    wsdl = Column(LargeBinary(500000), nullable=True)
+    wsdl_name = Column(String(200), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, impl_name=None, 
-                 is_internal=None, cluster=None, usage_count=None):
+                 is_internal=None, cluster=None, usage_count=None, wsdl=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -364,6 +366,7 @@ class Service(Base):
         self.is_internal = is_internal
         self.cluster = cluster
         self.usage_count = usage_count # Not used by the database
+        self.wsdl = wsdl
 
 class DeployedService(Base):
     """ A service living on a given server.
