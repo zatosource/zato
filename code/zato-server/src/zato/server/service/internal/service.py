@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from httplib import NOT_FOUND
 from mimetypes import guess_type
 from traceback import format_exc
 from urlparse import parse_qs
@@ -104,15 +105,25 @@ class GetWSDL(ServiceClass):
             with closing(self.odb.session()) as session:
                 service = session.query(Service).filter_by(name=service_name).one()
                 
-            # User-uploaded stuff has precedence over auto-generated WSDLs
+            # User-uploaded stuff has precedence over auto-generated WSDLs .. 
             if service.wsdl:
                 content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
                 self.response.content_type = content_type
                 self.response.payload = service.wsdl
                 self.response.headers['Content-Disposition'] = 'attachment; filename={}.wsdl'.format(service_name)
+                
+            # .. now let's find out whether the service uses SimpleIO ..
+            else:
+                if 0:
+                    print(333, self.server)
+                    
+                # .. give up, there's neither a WSDL from the user nor SimpleIO in use.
+                else:
+                    self.response.status_code = NOT_FOUND
+                    self.response.payload = 'No WSDL found'
             
         else:
-            print(33, self.request.input.get('service'))
+            print('zzz', self.request.input.get('service'))
         
 class Delete(AdminService):
     """ Deletes a service
