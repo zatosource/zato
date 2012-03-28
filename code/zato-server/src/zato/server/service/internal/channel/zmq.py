@@ -39,7 +39,7 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'sub_key', 'service_name')
+        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'sub_key', 'service_name', 'data_format')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -50,7 +50,7 @@ class Create(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
-        input_optional = ('sub_key',)
+        input_optional = ('sub_key', 'data_format')
         output_required = ('id',)
 
     def handle(self):
@@ -83,6 +83,7 @@ class Create(AdminService):
                 item.sub_key = input.sub_key
                 item.cluster_id = input.cluster_id
                 item.service = service
+                item.data_format = input.data_format
                 
                 session.add(item)
                 session.commit()
@@ -103,7 +104,7 @@ class Edit(AdminService):
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
-        input_optional = ('sub_key',)
+        input_optional = ('sub_key', 'data_format')
         output_required = ('id',)
 
     def handle(self):
@@ -137,12 +138,14 @@ class Edit(AdminService):
                 item.socket_type = input.socket_type
                 item.sub_key = input.sub_key
                 item.service = service
+                item.data_format = input.data_format
                 
                 session.add(item)
                 session.commit()
                 
                 input.action = CHANNEL.ZMQ_EDIT
                 input.sub_key = input.get('sub_key', b'')
+                input.service = service.impl_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
                 self.response.payload.id = item.id

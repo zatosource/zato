@@ -782,7 +782,7 @@ class ChannelZMQ(Base):
     cluster = relationship(Cluster, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, address=None,
-                 socket_type=None, sub_key=None, service_name=None):
+                 socket_type=None, sub_key=None, service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -790,3 +790,4 @@ class ChannelZMQ(Base):
         self.socket_type = socket_type
         self.sub_key = sub_key
         self.service_name = service_name # Not used by the DB
+        self.data_format = data_format

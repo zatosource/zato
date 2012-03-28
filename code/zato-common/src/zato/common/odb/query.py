@@ -297,8 +297,8 @@ def out_zmq_list(session, cluster_id, needs_columns=False):
 
 def _channel_zmq(session, cluster_id):
     return session.query(ChannelZMQ.id, ChannelZMQ.name, ChannelZMQ.is_active,
-            ChannelZMQ.address, ChannelZMQ.socket_type, ChannelZMQ.sub_key, 
-            Service.name.label('service_name')).\
+            ChannelZMQ.address, ChannelZMQ.socket_type, ChannelZMQ.sub_key, ChannelZMQ.data_format, 
+            Service.name.label('service_name'), Service.impl_name.label('service_impl_name')).\
         filter(Cluster.id==ChannelZMQ.cluster_id).\
         filter(Service.id==ChannelZMQ.service_id).\
         filter(Cluster.id==cluster_id).\

@@ -23,9 +23,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
+from zato.admin.web.forms import DataFormatForm
 from zato.common import ZMQ_CHANNEL_TYPES
 
-class CreateForm(forms.Form):
+class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))

@@ -90,8 +90,9 @@ class ConsumingConnector(BaseZMQConnector):
         self.channel.is_active = item.is_active
         self.channel.address = str(item.address)
         self.channel.socket_type = self.socket_type = item.socket_type
-        self.channel.service = item.service_name
+        self.channel.service = item.service_impl_name
         self.channel.sub_key = item.sub_key
+        self.channel.data_format = item.data_format
         self.channel.listener = None
         
     def _recreate_listener(self):
@@ -141,6 +142,7 @@ class ConsumingConnector(BaseZMQConnector):
             params['service'] = self.channel.service
             params['cid'] = new_cid()
             params['payload'] = msg
+            params['data_format'] = self.channel.data_format
             
             self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
                 
