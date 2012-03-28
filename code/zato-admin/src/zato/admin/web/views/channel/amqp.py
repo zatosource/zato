@@ -134,7 +134,7 @@ def index(req):
                 service_name = msg_item.service_name.text
                 data_format = msg_item.data_format.text
                 
-                item =  ChannelAMQP(id, name, is_active, queue, consumer_tag_prefix, def_id, def_name, service_name)
+                item =  ChannelAMQP(id, name, is_active, queue, consumer_tag_prefix, def_id, def_name, service_name, data_format)
                 items.append(item)
                 
     return_data = {'zato_clusters':zato_clusters,
