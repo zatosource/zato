@@ -25,7 +25,10 @@ from operator import itemgetter
 # Django
 from django import forms
 
-class CreateForm(forms.Form):
+# Zato
+from zato.admin.web.forms import DataFormatForm
+
+class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     def_id = forms.ChoiceField(widget=forms.Select())

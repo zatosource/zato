@@ -750,7 +750,7 @@ class ChannelWMQ(Base):
     def_ = relationship(ConnDefWMQ, backref=backref('channels_wmq', cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, queue=None,
-                 def_id=None, def_name=None, service_name=None):
+                 def_id=None, def_name=None, service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -758,6 +758,7 @@ class ChannelWMQ(Base):
         self.def_id = def_id
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
+        self.data_format = data_format
 
 class ChannelZMQ(Base):
     """ An incoming Zero MQ connection.
