@@ -710,6 +710,7 @@ class ChannelAMQP(Base):
     is_active = Column(Boolean(), nullable=False)
     queue = Column(String(200), nullable=False)
     consumer_tag_prefix = Column(String(200), nullable=False)
+    data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_amqp', order_by=name, cascade='all, delete, delete-orphan'))
@@ -719,7 +720,7 @@ class ChannelAMQP(Base):
 
     def __init__(self, id=None, name=None, is_active=None, queue=None,
                  consumer_tag_prefix=None, def_id=None, def_name=None,
-                 service_name=None):
+                 service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -728,6 +729,7 @@ class ChannelAMQP(Base):
         self.def_id = def_id
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
+        self.data_format = data_format
 
 class ChannelWMQ(Base):
     """ An incoming WebSphere MQ connection.
@@ -739,6 +741,7 @@ class ChannelWMQ(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     queue = Column(String(200), nullable=False)
+    data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_wmq', order_by=name, cascade='all, delete, delete-orphan'))
@@ -769,6 +772,7 @@ class ChannelZMQ(Base):
     address = Column(String(200), nullable=False)
     socket_type = Column(String(20), nullable=False)
     sub_key = Column(String(200), nullable=True)
+    data_format = Column(String(20), nullable=True)
     
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))

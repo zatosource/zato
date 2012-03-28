@@ -34,7 +34,8 @@
             '_delete',
             'id',
             'is_active',
-            'def_id'
+            'def_id',
+            'data_format',
         ]
     }
     </script>
@@ -108,6 +109,7 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.def_id }}</td>
+                        <td class='ignore'>{{ item.data_format }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -156,6 +158,11 @@
                         </tr>
                         
                         <tr>
+                            <td style="vertical-align:middle">Data format</td>
+                            <td>{{ create_form.data_format }}</td>
+                        </tr>
+                        
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -199,6 +206,11 @@
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Data format</td>
+                            <td>{{ edit_form.data_format }}</td>
                         </tr>
 
                         <tr>

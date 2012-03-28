@@ -24,6 +24,8 @@ import logging
 from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
+logging.captureWarnings(True)
+
 # stdlib
 import os, sys
 import logging.config
