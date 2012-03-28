@@ -250,7 +250,8 @@ def channel_amqp_list(session, cluster_id, needs_columns=False):
 def _channel_jms_wmq(session, cluster_id):
     return session.query(ChannelWMQ.id, ChannelWMQ.name, ChannelWMQ.is_active,
             ChannelWMQ.queue, ConnDefWMQ.name.label('def_name'), ChannelWMQ.def_id,
-            Service.name.label('service_name')).\
+            ChannelWMQ.data_format, Service.name.label('service_name'), 
+            Service.impl_name.label('service_impl_name')).\
         filter(ChannelWMQ.def_id==ConnDefWMQ.id).\
         filter(ChannelWMQ.service_id==Service.id).\
         filter(Cluster.id==ConnDefWMQ.cluster_id).\

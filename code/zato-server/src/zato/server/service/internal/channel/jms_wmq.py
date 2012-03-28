@@ -39,7 +39,7 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'queue', 'service_name', 'def_name', 'def_id')
+        output_required = ('id', 'name', 'is_active', 'queue', 'service_name', 'def_name', 'def_id', 'data_format')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -50,6 +50,7 @@ class Create(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+        input_optional = ('data_format',)
         output_required = ('id',)
 
     def handle(self):
@@ -85,6 +86,7 @@ class Create(AdminService):
                 item.queue = input.queue
                 item.def_id = input.def_id
                 item.service = service
+                item.data_format = input.data_format
                 
                 session.add(item)
                 session.commit()
@@ -105,6 +107,7 @@ class Edit(AdminService):
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+        input_optional = ('data_format',)
         output_required = ('id',)
 
     def handle(self):
@@ -140,12 +143,14 @@ class Edit(AdminService):
                 item.queue = input.queue
                 item.def_id = input.def_id
                 item.service = service
+                item.data_format = input.data_format
                 
                 session.add(item)
                 session.commit()
                 
                 input.action = CHANNEL.JMS_WMQ_EDIT
                 input.old_name = old_name
+                input.service = service.impl_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
                 self.response.payload.id = item.id
