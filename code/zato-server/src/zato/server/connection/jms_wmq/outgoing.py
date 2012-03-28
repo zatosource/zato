@@ -71,7 +71,7 @@ class WMQFacade(object):
 
 class OutgoingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, out_name):
-        super(OutgoingConnection, self).__init__()
+        super(OutgoingConnection, self).__init__(factory, out_name)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.jms_template = JmsTemplate(self.factory)
         

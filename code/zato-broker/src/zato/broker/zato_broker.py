@@ -89,23 +89,22 @@ class Broker(BaseBroker):
             
             sockets = []
             if msg_type == MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB:
-                sockets.extend((self.sockets['amqp-publishing-connector/sub'].pub,
-                           self.sockets['amqp-consuming-connector/sub'].pub))
+                sockets.append(self.sockets['amqp-consuming-connector/sub'].pub)
+                sockets.append(self.sockets['amqp-publishing-connector/sub'].pub)
                 
             if msg_type == MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB:
                 sockets.append(self.sockets['amqp-publishing-connector/sub'].pub)
                 
             if msg_type == MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB:
-                sockets.extend((self.sockets['jms-wmq-publishing-connector/sub'].pub,
-                           self.sockets['jms-wmq-consuming-connector/sub'].pub))
+                sockets.append(self.sockets['jms-wmq-consuming-connector/sub'].pub)
+                sockets.append(self.sockets['jms-wmq-publishing-connector/sub'].pub)
                 
             if msg_type == MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_SUB:
-                sockets.append((self.sockets['jms-wmq-publishing-connector/sub'].pub,
-                           self.sockets['jms-wmq-consuming-connector/sub'].pub))
+                sockets.append(self.sockets['jms-wmq-publishing-connector/sub'].pub)
                 
             if msg_type == MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB:
-                sockets.extend((self.sockets['zmq-publishing-connector/sub'].pub,
-                           self.sockets['zmq-consuming-connector/sub'].pub))
+                sockets.append(self.sockets['zmq-consuming-connector/sub'].pub)
+                sockets.append(self.sockets['zmq-publishing-connector/sub'].pub)
                 
             if msg_type == MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_SUB:
                 sockets.append(self.sockets['zmq-publishing-connector/sub'].pub)
