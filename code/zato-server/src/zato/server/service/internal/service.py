@@ -21,14 +21,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from mimetypes import guess_type
 from traceback import format_exc
+from urlparse import parse_qs
 
 # Zato
-from zato.common import ZATO_OK
+from zato.common import ZATO_OK, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Cluster, Service
 from zato.common.odb.query import service, service_list
-from zato.server.service import Boolean
+from zato.server.service import Boolean, Service as ServiceClass
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
@@ -85,6 +87,32 @@ class Edit(AdminService):
                 session.rollback()
                 
                 raise         
+            
+class GetWSDL(ServiceClass):
+    """ Returns a WSDL for the given service. Either uses a user-uploaded one,
+    or, optionally generates one on fly if the service uses SimpleIO.
+    """
+    input_optional = ('service',)
+    def handle(self):
+        if self.request.request_data.query:
+            query = parse_qs(self.request.request_data.query)
+            service_name = query.get('service')
+            if not service_name:
+                raise ZatoException(self.request.cid, "No 'service' parameter in the query string")
+            service_name = service_name[0]
+            
+            with closing(self.odb.session()) as session:
+                service = session.query(Service).filter_by(name=service_name).one()
+                
+            # User-uploaded stuff has precedence over auto-generated WSDLs
+            if service.wsdl:
+                content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
+                self.response.content_type = content_type
+                self.response.payload = service.wsdl
+                self.response.headers['Content-Disposition'] = 'attachment; filename={}.wsdl'.format(service_name)
+            
+        else:
+            print(33, self.request.input.get('service'))
         
 class Delete(AdminService):
     """ Deletes a service
@@ -111,4 +139,3 @@ class Delete(AdminService):
                 self.logger.error(msg)
                 
                 raise
-            

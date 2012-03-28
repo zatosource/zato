@@ -455,7 +455,7 @@ class RequestHandler(object):
         """
         headers = task.request_data.headers
         soap_action = headers.get('SOAPACTION', '')
-        url_data = self.security.url_sec_get(task.request_data.uri, soap_action)
+        url_data = self.security.url_sec_get(task.request_data.path, soap_action)
 
         if url_data:
             transport = url_data['transport']
@@ -477,8 +477,10 @@ class RequestHandler(object):
                 handler = getattr(self, '{0}_handler'.format(transport))
 
                 data_format = url_data['data_format']
-                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, self.simple_io_config, data_format)
+                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, 
+                    self.simple_io_config, data_format, task.request_data)
                 task.response_headers['Content-Type'] = response.content_type
+                task.response_headers.update(response.headers)
           
                 return response.payload
 
@@ -540,7 +542,7 @@ class _BaseMessageHandler(object):
         else:
             soap_action = ''
 
-        _soap_actions = self.http_soap.getall(task.request_data.uri)
+        _soap_actions = self.http_soap.getall(task.request_data.path)
         
         for _soap_action_info in _soap_actions:
             
@@ -580,13 +582,13 @@ class _BaseMessageHandler(object):
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, cid, task, raw_request, headers, transport, thread_ctx, simple_io_config, data_format):
+    def handle(self, cid, task, raw_request, headers, transport, thread_ctx, simple_io_config, data_format, request_data):
         payload, service_info, service_data = self.init(cid, task, raw_request, headers, transport, data_format)
 
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
             thread_ctx.store, cid, payload, raw_request, transport, simple_io_config,
-            data_format)
+            data_format, request_data)
 
         service_instance.handle()
         response = service_instance.response
@@ -602,8 +604,6 @@ class _BaseMessageHandler(object):
                     'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details},
                     'data':response.payload.getvalue(False) if response.payload else ''
                     })
-        else:
-            response.payload = response.payload.getvalue()
 
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
