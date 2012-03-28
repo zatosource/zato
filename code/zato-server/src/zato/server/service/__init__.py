@@ -225,12 +225,12 @@ class Response(object):
     """ A response from the service's invocation.
     """
     __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload', 
-                 '_content_type', 'content_type', 'content_type_changed', 'content_encoding', 
-                 'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
+        '_content_type', 'content_type', 'content_type_changed', 'content_encoding', 
+        'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
 
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
             _content_type='text/plain', content_encoding=None, data_format=None, headers=None, 
-            status_code=OK, simple_io_config={}):
+            status_code=OK, status_message='OK', simple_io_config={}):
         self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details

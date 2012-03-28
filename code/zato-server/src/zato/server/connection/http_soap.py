@@ -477,10 +477,10 @@ class RequestHandler(object):
                 handler = getattr(self, '{0}_handler'.format(transport))
 
                 data_format = url_data['data_format']
-                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, 
-                    self.simple_io_config, data_format, task.request_data)
+                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, self.simple_io_config, data_format, task.request_data)
                 task.response_headers['Content-Type'] = response.content_type
                 task.response_headers.update(response.headers)
+                task.setResponseStatus(response.status_code, responses[response.status_code])
           
                 return response.payload
 
