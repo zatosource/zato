@@ -60,8 +60,8 @@ class BaseZMQConnector(BaseConnector):
     def _get_factory(self, msg_handler, address, sub_key):
 
         zmq_client = ZMQClient()
-        zmq_client.name = self.worker_data.broker_config.name
-        zmq_client.token = self.worker_data.broker_config.broker_token
+        zmq_client.name = self.worker_config.broker_config.name
+        zmq_client.token = self.worker_config.broker_config.broker_token
         zmq_client.zmq_context = zmq.Context()
         
         if self.socket_type == 'PUSH':
@@ -84,7 +84,7 @@ class BaseZMQConnector(BaseConnector):
             return True
         
         elif msg.action == ZMQ_CONNECTOR.CLOSE:
-            return self.odb.odb_data['token'] == msg['odb_token']
+            return self.odb.odb_token == msg['odb_token']
         
         elif msg.action in(DEFINITION.ZMQ_EDIT, DEFINITION.ZMQ_DELETE):
             return self.def_.id == msg.id
