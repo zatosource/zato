@@ -34,11 +34,46 @@ from zato.common.odb.query import service, service_list
 from zato.server.service import Boolean, Service as ServiceClass
 from zato.server.service.internal import AdminService
 
-def generate_wsdl(service_name, sio):
-    """ Returns a WSDL automatically generated out of a service's name and its
-    accompanying SimpleIO configuration.
-    """
-    return 'aaa'
+wsdl_template = """
+<?xml version="1.0" encoding="utf-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+   xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="http://gefira.pl/zato">
+  
+   <message name="{service_name}Request">
+      <part name="input" element="{service_name}RequestElem"/>
+   </message>
+   
+   <message name="{service_name}Response">
+      <part name="output" element="{service_name}ResponseElem"/>
+   </message>
+ 
+   <portType name="{service_name}Interface">
+      <operation name="{service_name}">
+         <input message="{service_name}Request"/>
+         <output message="{service_name}Response"/>
+      </operation>
+   </portType>
+ 
+   <binding name="{service_name}SOAPBinding" type="{service_name}Interface">
+      <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+      <operation name="{service_name}">
+         <soap:operation soapAction="{service_name}"/>
+         <input>
+            <soap:body use="literal"/>
+         </input>
+         <output>
+            <soap:body use="literal"/>
+         </output>
+      </operation>
+   </binding>
+ 
+   <service name="{service_name}">
+      <port name="SoapBinding" binding="{service_name}SOAPBinding">
+         <soap:address location="http://host.invalid/zato/soap"/>
+      </port>
+   </service>
+</definitions>
+"""
 
 class GetList(AdminService):
     """ Returns a list of services.
@@ -128,7 +163,7 @@ class GetWSDL(ServiceClass):
             else:
                 service_class = self.server.service_store.service_data(service.impl_name)['service_class']
                 if hasattr(service_class, 'SimpleIO'):
-                    self.set_attachment(service_name, generate_wsdl(service_name, service_class.SimpleIO), 'application/wsdl+xml')
+                    self.set_attachment(service_name, self.generate_wsdl(service_name, service_class.SimpleIO), 'application/wsdl+xml')
                     
                 # .. give up, there's neither a WSDL from the user nor SimpleIO in use
                 else:
@@ -141,6 +176,21 @@ class GetWSDL(ServiceClass):
         self.response.content_type = content_type
         self.response.payload = payload
         self.response.headers['Content-Disposition'] = 'attachment; filename={}.wsdl'.format(service_name)
+        
+    def generate_wsdl(self, service_name, sio):
+        """ Returns a WSDL automatically generated out of a service's name and its
+        accompanying SimpleIO configuration.
+        """
+        print(self.response.simple_io_config._bunch.items())
+
+        path_prefix = getattr(io, 'path_prefix', 'data.')
+        required_list = getattr(io, 'input_required', [])
+        optional_list = getattr(io, 'input_optional', [])
+        required_list = getattr(io, 'output_required', [])
+        required_list = getattr(io, 'output_optional', [])
+        default_value = getattr(io, 'default_value', None)
+        
+        return 'aaa'
         
 class Delete(AdminService):
     """ Deletes a service
