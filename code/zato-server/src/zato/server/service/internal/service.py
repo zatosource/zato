@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from httplib import NOT_FOUND
+from httplib import BAD_REQUEST, NOT_FOUND
 from mimetypes import guess_type
 from traceback import format_exc
 from urlparse import parse_qs
@@ -33,6 +33,12 @@ from zato.common.odb.model import Cluster, Service
 from zato.common.odb.query import service, service_list
 from zato.server.service import Boolean, Service as ServiceClass
 from zato.server.service.internal import AdminService
+
+def generate_wsdl(service_name, sio):
+    """ Returns a WSDL automatically generated out of a service's name and its
+    accompanying SimpleIO configuration.
+    """
+    return 'aaa'
 
 class GetList(AdminService):
     """ Returns a list of services.
@@ -98,32 +104,43 @@ class GetWSDL(ServiceClass):
         if self.request.request_data.query:
             query = parse_qs(self.request.request_data.query)
             service_name = query.get('service')
+            
             if not service_name:
-                raise ZatoException(self.request.cid, "No 'service' parameter in the query string")
+                self.response.status_code = BAD_REQUEST
+                self.response.payload = 'No [service] parameter in the query string'
+                return
+            
             service_name = service_name[0]
             
             with closing(self.odb.session()) as session:
-                service = session.query(Service).filter_by(name=service_name).one()
+                service = session.query(Service).filter_by(name=service_name).first()
+                if not service:
+                    self.response.status_code = NOT_FOUND
+                    self.response.payload = 'Service [{}] not found'.format(service_name)
+                    return
                 
             # User-uploaded stuff has precedence over auto-generated WSDLs .. 
             if service.wsdl:
                 content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
-                self.response.content_type = content_type
-                self.response.payload = service.wsdl
-                self.response.headers['Content-Disposition'] = 'attachment; filename={}.wsdl'.format(service_name)
+                self.set_attachment(service_name, service.wsdl, content_type)
                 
             # .. now let's find out whether the service uses SimpleIO ..
             else:
-                if 0:
-                    print(333, self.server)
+                service_class = self.server.service_store.service_data(service.impl_name)['service_class']
+                if hasattr(service_class, 'SimpleIO'):
+                    self.set_attachment(service_name, generate_wsdl(service_name, service_class.SimpleIO), 'application/wsdl+xml')
                     
-                # .. give up, there's neither a WSDL from the user nor SimpleIO in use.
+                # .. give up, there's neither a WSDL from the user nor SimpleIO in use
                 else:
                     self.response.status_code = NOT_FOUND
                     self.response.payload = 'No WSDL found'
-            
-        else:
-            print('zzz', self.request.input.get('service'))
+                    
+    def set_attachment(self, service_name, payload, content_type):
+        """ Sets the information that we're returning an attachment to the user.
+        """
+        self.response.content_type = content_type
+        self.response.payload = payload
+        self.response.headers['Content-Disposition'] = 'attachment; filename={}.wsdl'.format(service_name)
         
 class Delete(AdminService):
     """ Deletes a service
