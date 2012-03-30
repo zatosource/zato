@@ -53,17 +53,17 @@ def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.host = params[prefix + 'host']
-    zato_message.data.user = params.get(prefix + 'user')
-    zato_message.data.timeout = params.get(prefix + 'timeout')
-    zato_message.data.acct = params.get(prefix + 'acct')
-    zato_message.data.port = params[prefix + 'port']
-    zato_message.data.dircache = bool(params.get(prefix + 'dircache'))
+    zato_message.request = Element('request')
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.request.host = params[prefix + 'host']
+    zato_message.request.user = params.get(prefix + 'user')
+    zato_message.request.timeout = params.get(prefix + 'timeout')
+    zato_message.request.acct = params.get(prefix + 'acct')
+    zato_message.request.port = params[prefix + 'port']
+    zato_message.request.dircache = bool(params.get(prefix + 'dircache'))
 
     return zato_message
 
@@ -90,14 +90,14 @@ def index(req):
 
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
 
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.ftp.get-list', zato_message)
 
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
 
-            for msg_item in zato_message.data.item_list.item:
+            for msg_item in zato_message.response.item_list.item:
 
                 id = msg_item.id.text
                 name = msg_item.name.text
@@ -138,7 +138,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.ftp.create', zato_message)
 
-        return _edit_create_response('created', zato_message.data.item.id.text, req.POST['name'])
+        return _edit_create_response('created', zato_message.response.item.id.text, req.POST['name'])
 
     except Exception, e:
         msg = "Could not create an outgoing FTP connection, e=[{e}]".format(e=format_exc(e))
@@ -169,8 +169,8 @@ def delete(req, id, cluster_id):
 
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.request = Element('request')
+        zato_message.request.id = id
 
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.ftp.delete', zato_message)
 

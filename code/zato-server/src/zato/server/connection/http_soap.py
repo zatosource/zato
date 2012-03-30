@@ -594,11 +594,12 @@ class _BaseMessageHandler(object):
         response = service_instance.response
 
         if isinstance(service_instance, AdminService):
-            payload = response.payload.getvalue(False)
             if data_format == SIMPLE_IO.FORMAT.JSON:
+                payload = response.payload.getvalue(False)
                 payload.update({'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}})
                 response.payload = dumps(payload)
             else:
+                payload = response.payload.getvalue() if response.payload else '<response/>'
                 response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
                     result=response.result, details=response.result_details, data=payload)
         else:

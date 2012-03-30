@@ -52,18 +52,18 @@ def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.engine = params[prefix + 'engine']
-    zato_message.data.host = params[prefix + 'host']
-    zato_message.data.port = params[prefix + 'port']
-    zato_message.data.db_name = params[prefix + 'db_name']
-    zato_message.data.username = params[prefix + 'username']
-    zato_message.data.pool_size = params[prefix + 'pool_size']
-    zato_message.data.extra = params.get(prefix + 'extra')
+    zato_message.request = Element('request')
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.request.engine = params[prefix + 'engine']
+    zato_message.request.host = params[prefix + 'host']
+    zato_message.request.port = params[prefix + 'port']
+    zato_message.request.db_name = params[prefix + 'db_name']
+    zato_message.request.username = params[prefix + 'username']
+    zato_message.request.pool_size = params[prefix + 'pool_size']
+    zato_message.request.extra = params.get(prefix + 'extra')
 
     return zato_message
 
@@ -95,14 +95,14 @@ def index(req):
 
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
 
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.sql.get-list', zato_message)
 
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
 
-            for msg_item in zato_message.data.item_list.item:
+            for msg_item in zato_message.response.item_list.item:
 
                 id = msg_item.id.text
                 name = msg_item.name.text
@@ -153,10 +153,10 @@ def create(req):
 
     try:
         zato_message = _get_edit_create_message(req.POST)
-        engine = zato_message.data.engine
+        engine = zato_message.request.engine
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.create', zato_message)
 
-        return _edit_create_response('created', zato_message.data.item.id.text, req.POST['name'], engine, cluster.id)
+        return _edit_create_response('created', zato_message.response.item.id.text, req.POST['name'], engine, cluster.id)
 
     except Exception, e:
         msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -172,7 +172,7 @@ def edit(req):
 
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        engine = zato_message.data.engine
+        engine = zato_message.request.engine
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.edit', zato_message)
 
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, cluster.id)
@@ -190,8 +190,8 @@ def delete(req, id, cluster_id):
 
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.request = Element('request')
+        zato_message.request.id = id
 
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.delete', zato_message)
 
@@ -211,11 +211,11 @@ def ping(req, cluster_id, id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.request = Element('request')
+        zato_message.request.id = id
 
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.ping', zato_message)
-        response_time = zato_path('data.item.text', True).get_from(zato_message)
+        response_time = zato_path('response.item.response_time', True).get_from(zato_message)
         
     except Exception, e:
         msg = 'Ping failed. e=[{}]'.format(format_exc(e))

@@ -52,12 +52,12 @@ def _get_def_ids(cluster):
     out = {}
     
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.cluster_id = cluster.id        
+    zato_message.request = Element('request')
+    zato_message.request.cluster_id = cluster.id        
     _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-list', zato_message)
     
-    if zato_path('data.item_list.item').get_from(zato_message) is not None:
-        for definition_elem in zato_message.data.item_list.item:
+    if zato_path('response.item_list.item').get_from(zato_message) is not None:
+        for definition_elem in zato_message.response.item_list.item:
             id = definition_elem.id.text
             name = definition_elem.name.text
             out[id] = name
@@ -68,30 +68,30 @@ def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.def_id = params[prefix + 'def_id']
-    zato_message.data.queue = params[prefix + 'queue']
-    zato_message.data.consumer_tag_prefix = params[prefix + 'consumer_tag_prefix']
-    zato_message.data.service = params[prefix + 'service']
-    zato_message.data.data_format = params.get(prefix + 'data_format')
+    zato_message.request = Element('request')
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.request.def_id = params[prefix + 'def_id']
+    zato_message.request.queue = params[prefix + 'queue']
+    zato_message.request.consumer_tag_prefix = params[prefix + 'consumer_tag_prefix']
+    zato_message.request.service = params[prefix + 'service']
+    zato_message.request.request_format = params.get(prefix + 'request_format')
 
     return zato_message
 
 def _edit_create_response(cluster, verb, id, name, def_id):
 
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = def_id
+    zato_message.request = Element('request')
+    zato_message.request.id = def_id
     
     _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-by-id', zato_message)    
     
     return_data = {'id': id,
                    'message': 'Successfully {0} the AMQP channel [{1}]'.format(verb, name),
-                   'def_name': zato_message.data.item.name.text
+                   'def_name': zato_message.response.item.name.text
                 }
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -115,14 +115,14 @@ def index(req):
         edit_form.set_def_id(def_ids)
 
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
         
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:channel.amqp.get-list', zato_message)
         
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
             
-            for msg_item in zato_message.data.item_list.item:
+            for msg_item in zato_message.response.item_list.item:
                 
                 id = msg_item.id.text
                 name = msg_item.name.text
@@ -161,7 +161,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.amqp.create', zato_message)
 
-        return _edit_create_response(cluster, 'created', zato_message.data.item.id.text, 
+        return _edit_create_response(cluster, 'created', zato_message.response.item.id.text, 
             req.POST['name'], req.POST['def_id'])
     except Exception, e:
         msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))
@@ -192,8 +192,8 @@ def delete(req, id, cluster_id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.request = Element('request')
+        zato_message.request.id = id
         
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.amqp.delete', zato_message)
         

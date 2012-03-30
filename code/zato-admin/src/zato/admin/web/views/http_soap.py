@@ -64,8 +64,8 @@ TRANSPORT = {
 
 def _get_security_list(cluster):
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.cluster_id = cluster.id
+    zato_message.request = Element('request')
+    zato_message.request.cluster_id = cluster.id
     
     _, zato_message, _  = invoke_admin_service(cluster, 'zato:security.get-list', zato_message)
     return zato_message
@@ -75,21 +75,21 @@ def _get_edit_create_message(params, prefix=''):
     for channels and outgoing connections.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.is_internal = False
-    zato_message.data.connection = params['connection']
-    zato_message.data.transport = params['transport']
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.host = params.get(prefix + 'host')
-    zato_message.data.url_path = params[prefix + 'url_path']
-    zato_message.data.method = params.get(prefix + 'method')
-    zato_message.data.soap_action = params.get(prefix + 'soap_action', '')
-    zato_message.data.soap_version = params.get(prefix + 'soap_version', '')
-    zato_message.data.data_format = params.get(prefix + 'data_format', None)
-    zato_message.data.service = params.get(prefix + 'service')
+    zato_message.request = Element('request')
+    zato_message.request.is_internal = False
+    zato_message.request.connection = params['connection']
+    zato_message.request.transport = params['transport']
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.request.host = params.get(prefix + 'host')
+    zato_message.request.url_path = params[prefix + 'url_path']
+    zato_message.request.method = params.get(prefix + 'method')
+    zato_message.request.soap_action = params.get(prefix + 'soap_action', '')
+    zato_message.request.soap_version = params.get(prefix + 'soap_version', '')
+    zato_message.request.data_format = params.get(prefix + 'data_format', None)
+    zato_message.request.service = params.get(prefix + 'service')
 
     security = params[prefix + 'security']
     if security != ZATO_NONE:
@@ -97,7 +97,7 @@ def _get_edit_create_message(params, prefix=''):
     else:
         _, security_id = ZATO_NONE, ZATO_NONE
         
-    zato_message.data.security_id = security_id
+    zato_message.request.security_id = security_id
 
     return zato_message
 
@@ -142,8 +142,8 @@ def index(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         security_list = _get_security_list(cluster)
         
-        if zato_path('data.definition_list.definition').get_from(security_list) is not None:
-            for def_item in security_list.data.definition_list.definition:
+        if zato_path('response.definition_list.definition').get_from(security_list) is not None:
+            for def_item in security_list.response.definition_list.definition:
 
                 # Outgoing plain HTTP connections may use HTTP Basic Auth only,
                 # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
@@ -162,16 +162,16 @@ def index(req):
         edit_form = EditForm(_security, prefix='edit')
         
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
-        zato_message.data.connection = connection
-        zato_message.data.transport = transport
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
+        zato_message.request.connection = connection
+        zato_message.request.transport = transport
 
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:http_soap.get-list', zato_message)
 
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
 
-            for msg_item in zato_message.data.item_list.item:
+            for msg_item in zato_message.response.item_list.item:
 
                 id = msg_item.id.text
                 name = msg_item.name.text
@@ -235,7 +235,7 @@ def create(req):
         zato_message = _get_edit_create_message(req.POST)
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.create', zato_message)
 
-        return _edit_create_response(zato_message.data.item.id.text,
+        return _edit_create_response(zato_message.response.item.id.text,
                                      'created',
                                      req.POST['transport'],
                                      req.POST['connection'],
@@ -255,7 +255,7 @@ def edit(req):
         zato_message = _get_edit_create_message(req.POST, 'edit-')
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.edit', zato_message)
 
-        return _edit_create_response(zato_message.data.item.id.text,
+        return _edit_create_response(zato_message.response.item.id.text,
                                      'updated',
                                      req.POST['transport'],
                                      req.POST['connection'],
@@ -271,8 +271,8 @@ def _delete_ping(req, id, cluster_id, service, error_template):
 
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.request = Element('request')
+        zato_message.request.id = id
 
         _, zato_message, soap_response = invoke_admin_service(cluster, service, zato_message)
 
@@ -293,4 +293,4 @@ def ping(req, id, cluster_id):
     ret = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
-    return HttpResponse(ret.data.item.info.text)
+    return HttpResponse(ret.response.item.info.text)
