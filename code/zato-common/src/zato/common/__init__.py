@@ -79,7 +79,7 @@ wsu_expires_xpath = etree.XPath(wsu_expires_path, namespaces=wss_namespaces)
 wsse_username_objectify = "{%s}Security" % wsse_namespace
 wsse_username_token_objectify = "{%s}UsernameToken" % wsse_namespace
 
-zato_data_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:data"
+zato_data_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:response"
 zato_data_xpath = etree.XPath(zato_data_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
 
 zato_result_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:zato_env/zato:result"

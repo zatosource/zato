@@ -47,7 +47,7 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(zato_message, action, name, password_type):
-    return_data = {'id': zato_message.data.item.id.text,
+    return_data = {'id': zato_message.response.item.id.text,
         'message': 'Successfully {0} the WS-Security definition [{1}]'.format(action, name),
         'password_type_raw':password_type,
         'password_type':ZATO_WSS_PASSWORD_TYPES[password_type]}
@@ -58,17 +58,17 @@ def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.username = params[prefix + 'username']
-    zato_message.data.password_type = 'clear_text'
-    zato_message.data.reject_empty_nonce_creat = bool(params.get(prefix + 'reject_empty_nonce_creat'))
-    zato_message.data.reject_stale_tokens = bool(params.get(prefix + 'reject_stale_tokens'))
-    zato_message.data.reject_expiry_limit = params[prefix + 'reject_expiry_limit']
-    zato_message.data.nonce_freshness_time = params[prefix + 'nonce_freshness_time']
+    zato_message.request = Element('request')
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.request.username = params[prefix + 'username']
+    zato_message.request.password_type = 'clear_text'
+    zato_message.request.reject_empty_nonce_creat = bool(params.get(prefix + 'reject_empty_nonce_creat'))
+    zato_message.request.reject_stale_tokens = bool(params.get(prefix + 'reject_stale_tokens'))
+    zato_message.request.reject_expiry_limit = params[prefix + 'reject_expiry_limit']
+    zato_message.request.nonce_freshness_time = params[prefix + 'nonce_freshness_time']
 
     return zato_message
 
@@ -88,14 +88,14 @@ def index(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
 
         _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
                 'zato:security.wss.get-list', zato_message)
 
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
-            for definition_elem in zato_message.data.item_list.item:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
+            for definition_elem in zato_message.response.item_list.item:
 
                 id = definition_elem.id.text
                 name = definition_elem.name.text
@@ -181,8 +181,8 @@ def delete(req, wss_id, cluster_id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.wss_id = wss_id
+        zato_message.request = Element('request')
+        zato_message.request.wss_id = wss_id
         
         _, zato_message, soap_response = invoke_admin_service(cluster,
                         'zato:security.wss.delete', zato_message)

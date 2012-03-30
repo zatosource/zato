@@ -157,7 +157,7 @@ class Request(ValueConverter):
         """
         self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
         self.data_format = data_format
-        path_prefix = getattr(io, 'request_elem', 'data.')
+        path_prefix = getattr(io, 'request_elem', 'request')
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
         default_value = getattr(io, 'default_value', None)
@@ -190,7 +190,7 @@ class Request(ValueConverter):
 
             if self.is_xml:
                 try:
-                    elem = zato_path(path_prefix + param_name, is_required).get_from(self.payload)
+                    elem = zato_path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
                 except ParsingException, e:
                     msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
                         etree.tostring(self.payload), format_exc(e))
@@ -341,9 +341,9 @@ class SimpleIOPayload(ValueConverter):
         for name in names:
             setattr(self, name, getattr(attrs, name))
 
-    def append(self, *items):
-        for item in items:
-            self.zato_output.append(item)
+    def append(self, item):
+        self.zato_output.append(item)
+        self.zato_is_repeated = True
 
     def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is):
         """ Returns an element's value if any has been provided while taking

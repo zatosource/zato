@@ -31,7 +31,7 @@ $.fn.zato.service.edit = function(id) {
 
 $.fn.zato.service.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Service channel [{0}] deleted',
+        'Service [{0}] deleted',
         'Are you sure you want to delete the service [{0}]?',
         true);
 }

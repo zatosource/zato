@@ -114,10 +114,10 @@ def change_password(req, service_name, field1='password1', field2='password2', s
 
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
-        zato_message.data.password1 = password1
-        zato_message.data.password2 = password2
+        zato_message.request = Element('request')
+        zato_message.request.id = id
+        zato_message.request.password1 = password1
+        zato_message.request.password2 = password2
 
         _, zato_message, soap_response = invoke_admin_service(cluster,
                         service_name, zato_message)

@@ -49,7 +49,7 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.item.id.text,
+    return_data = {'id': zato_message.response.item.id.text,
                    'message': 'Successfully {0} the definition [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -57,13 +57,13 @@ def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.data.username = params[prefix + 'username']
-    zato_message.data.realm = params[prefix + 'realm']
+    zato_message.request = Element('request')
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.request.username = params[prefix + 'username']
+    zato_message.request.realm = params[prefix + 'realm']
 
     return zato_message
 
@@ -83,14 +83,14 @@ def index(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
 
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
 
         _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
                 'zato:security.basic-auth.get-list', zato_message)
 
-        if zato_path('data.definition_list.definition').get_from(zato_message) is not None:
-            for definition_elem in zato_message.data.item_list.item:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
+            for definition_elem in zato_message.response.item_list.item:
 
                 id = definition_elem.id.text
                 name = definition_elem.name.text
@@ -163,8 +163,8 @@ def delete(req, id, cluster_id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.request = Element('request')
+        zato_message.request.id = id
         
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:security.basic-auth.delete', zato_message)
     

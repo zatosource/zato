@@ -112,7 +112,7 @@ def wss_list(session, cluster_id, needs_columns=False):
                          WSSDefinition.username, WSSDefinition.password, WSSDefinition.password_type, \
                          WSSDefinition.reject_empty_nonce_creat, WSSDefinition.reject_stale_tokens, \
                          WSSDefinition.reject_expiry_limit, WSSDefinition.nonce_freshness_time, \
-                         WSSDefinition.nonce_freshness_time, WSSDefinition.sec_type).\
+                         WSSDefinition.sec_type).\
         filter(Cluster.id==cluster_id).\
         order_by('sec_wss_def.name')
 

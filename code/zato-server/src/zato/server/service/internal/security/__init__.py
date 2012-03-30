@@ -32,7 +32,9 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'password')
+        output_required = ('id', 'name', 'is_active', 'sec_type')
+        output_optional = ('username', 'realm', 'password_type', 'reject_empty_nonce_creat', 
+            'reject_stale_tokens', 'reject_expiry_limit', 'nonce_freshness_time')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -40,5 +42,5 @@ class GetList(AdminService):
                      ('tech_acc', tech_acc_list), 
                      ('wss', wss_list))
             for def_type, meth in pairs:
-                definitions = meth(session, self.request.input.cluster_id, False)
-                self.response.payload.append(*definitions)
+                for definition in meth(session, self.request.input.cluster_id, False):
+                    self.response.payload.append(definition)

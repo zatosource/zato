@@ -52,11 +52,11 @@ def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.is_active = bool(params.get(prefix + 'is_active'))
+    zato_message.request = Element('request')
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
     
     return zato_message
 
@@ -84,14 +84,14 @@ def index(req):
         
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
         
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-list', zato_message)
         
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
             
-            for msg_item in zato_message.data.item_list.item:
+            for msg_item in zato_message.response.item_list.item:
                 
                 id = msg_item.id.text
                 name = msg_item.name.text
@@ -129,7 +129,7 @@ def edit(req):
         zato_message = _get_edit_create_message(req.POST, 'edit-')
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.edit', zato_message)
 
-        return _edit_create_response('updated', zato_message.data.item)
+        return _edit_create_response('updated', zato_message.response.item)
     except Exception, e:
         msg = "Could not update the service, e=[{e}]".format(e=format_exc(e))
         logger.error(msg)
@@ -149,16 +149,16 @@ def details(req, service_id):
         
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = service_id
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.id = service_id
+        zato_message.request.cluster_id = cluster_id
         
         
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-by-id', zato_message)
         
-        if zato_path('data.item').get_from(zato_message) is not None:
+        if zato_path('response.item').get_from(zato_message) is not None:
             
-            msg_item = zato_message.data.item
+            msg_item = zato_message.response.item
                 
             id = msg_item.id.text
             name = msg_item.name.text
@@ -198,8 +198,8 @@ def delete(req, service_id, cluster_id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = service_id
+        zato_message.request = Element('request')
+        zato_message.request.id = service_id
         
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.delete', zato_message)
         

@@ -52,27 +52,27 @@ def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.id = params.get('id')
-    zato_message.data.cluster_id = params['cluster_id']
-    zato_message.data.name = params[prefix + 'name']
-    zato_message.data.host = params[prefix + 'host']
-    zato_message.data.port = int(params[prefix + 'port'])
-    zato_message.data.queue_manager = params[prefix + 'queue_manager']
-    zato_message.data.channel = params[prefix + 'channel']
-    zato_message.data.cache_open_send_queues = bool(params.get(prefix + 'cache_open_send_queues'))
-    zato_message.data.cache_open_receive_queues = bool(params.get(prefix + 'cache_open_receive_queues'))
-    zato_message.data.use_shared_connections = bool(params.get(prefix + 'use_shared_connections'))
-    zato_message.data.ssl = bool(params.get(prefix + 'ssl'))
-    zato_message.data.ssl_cipher_spec = params.get(prefix + 'ssl_cipher_spec')
-    zato_message.data.ssl_key_repository = params.get(prefix + 'ssl_key_repository')
-    zato_message.data.needs_mcd = bool(params.get(prefix + 'needs_mcd'))
-    zato_message.data.max_chars_printed = params[prefix + 'max_chars_printed']
+    zato_message.request = Element('request')
+    zato_message.request.id = params.get('id')
+    zato_message.request.cluster_id = params['cluster_id']
+    zato_message.request.name = params[prefix + 'name']
+    zato_message.request.host = params[prefix + 'host']
+    zato_message.request.port = int(params[prefix + 'port'])
+    zato_message.request.queue_manager = params[prefix + 'queue_manager']
+    zato_message.request.channel = params[prefix + 'channel']
+    zato_message.request.cache_open_send_queues = bool(params.get(prefix + 'cache_open_send_queues'))
+    zato_message.request.cache_open_receive_queues = bool(params.get(prefix + 'cache_open_receive_queues'))
+    zato_message.request.use_shared_connections = bool(params.get(prefix + 'use_shared_connections'))
+    zato_message.request.ssl = bool(params.get(prefix + 'ssl'))
+    zato_message.request.ssl_cipher_spec = params.get(prefix + 'ssl_cipher_spec')
+    zato_message.request.ssl_key_repository = params.get(prefix + 'ssl_key_repository')
+    zato_message.request.needs_mcd = bool(params.get(prefix + 'needs_mcd'))
+    zato_message.request.max_chars_printed = params[prefix + 'max_chars_printed']
 
     return zato_message
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.item.id.text,
+    return_data = {'id': zato_message.response.item.id.text,
                    'message': 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -91,15 +91,15 @@ def index(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
         
         _, zato_message, soap_response  = invoke_admin_service(cluster,
                 'zato:definition.jms_wmq.get-list', zato_message)
         
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
             
-            for definition_elem in zato_message.data.item_list.item:
+            for definition_elem in zato_message.response.item_list.item:
 
                 id = definition_elem.id.text
                 name = definition_elem.name.text
@@ -178,8 +178,8 @@ def delete(req, id, cluster_id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.id = id
+        zato_message.request = Element('request')
+        zato_message.request.id = id
         
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.jms_wmq.delete', zato_message)
         

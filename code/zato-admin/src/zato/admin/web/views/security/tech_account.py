@@ -51,7 +51,7 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.data.item.id.text,
+    return_data = {'id': zato_message.response.item.id.text,
                    'message': 'Successfully {0} the technical account [{1}]'.format(action, name)}
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -71,15 +71,15 @@ def index(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
         
         _, zato_message, soap_response  = invoke_admin_service(cluster,
                 'zato:security.tech-account.get-list', zato_message)
         
-        if zato_path('data.item_list.item').get_from(zato_message) is not None:
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
             
-            for definition_elem in zato_message.data.item_list.item:
+            for definition_elem in zato_message.response.item_list.item:
                 
                 id = definition_elem.id.text
                 name = definition_elem.name.text
@@ -115,10 +115,10 @@ def create(req):
     cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     
     zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.data = Element('data')
-    zato_message.data.cluster_id = cluster_id
-    zato_message.data.name = name
-    zato_message.data.is_active = is_active
+    zato_message.request = Element('request')
+    zato_message.request.cluster_id = cluster_id
+    zato_message.request.name = name
+    zato_message.request.is_active = is_active
     
     try:
         _, zato_message, soap_response = invoke_admin_service(cluster,
@@ -136,8 +136,8 @@ def get_by_id(req, tech_account_id, cluster_id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.tech_account_id = tech_account_id
+        zato_message.request = Element('request')
+        zato_message.request.tech_account_id = tech_account_id
         
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         
@@ -150,7 +150,7 @@ def get_by_id(req, tech_account_id, cluster_id):
         return HttpResponseServerError(msg)
     else:
         tech_account = TechnicalAccount()
-        tech_account_elem = zato_message.data.item
+        tech_account_elem = zato_message.response.item
         
         tech_account.id = tech_account_elem.id.text
         tech_account.name = tech_account_elem.name.text
@@ -173,11 +173,11 @@ def edit(req):
 
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.cluster_id = cluster_id
-        zato_message.data.tech_account_id = tech_account_id
-        zato_message.data.name = name
-        zato_message.data.is_active = is_active
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = cluster_id
+        zato_message.request.tech_account_id = tech_account_id
+        zato_message.request.name = name
+        zato_message.request.is_active = is_active
         
         _, zato_message, soap_response = invoke_admin_service(cluster,
                         'zato:security.tech-account.edit', zato_message)
@@ -200,9 +200,9 @@ def delete(req, tech_account_id, cluster_id):
     
     try:
         zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.data = Element('data')
-        zato_message.data.tech_account_id = tech_account_id
-        zato_message.data.zato_admin_tech_account_name = TECH_ACCOUNT_NAME
+        zato_message.request = Element('request')
+        zato_message.request.tech_account_id = tech_account_id
+        zato_message.request.zato_admin_tech_account_name = TECH_ACCOUNT_NAME
         
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:security.tech-account.delete', zato_message)
     

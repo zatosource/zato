@@ -194,14 +194,14 @@ class ChangePassword(ChangePasswordBase):
             def _auth(instance, password):
                 instance.password = password
                 
-            self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD, **kwargs)
+            self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD)
             
 class Ping(AdminService):
     """ Pings an SQL database
     """
     class SimpleIO:
         input_required = ('id',)
-        output_required = ('text',)
+        output_required = ('response_time',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -210,7 +210,7 @@ class Ping(AdminService):
                     filter(SQLConnectionPool.id==self.request.input.id).\
                     one()
 
-                self.response.payload.text = str(self.outgoing.sql.get(item.name).ping())
+                self.response.payload.response_time = str(self.outgoing.sql.get(item.name).ping())
 
             except Exception, e:
                 session.rollback()
