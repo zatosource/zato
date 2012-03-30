@@ -36,25 +36,55 @@ from zato.server.service.internal import AdminService
 
 wsdl_template = """
 <?xml version="1.0" encoding="utf-8"?>
-<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
-   xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="http://gefira.pl/zato">
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" 
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+  xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+  xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" 
+  xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" 
+  xmlns:zato="http://gefira.pl/zato" 
+  xmlns:zato_types="http://gefira.pl/zato/types" 
+  targetNamespace="http://gefira.pl/zato">
   
-   <message name="{service_name}Request">
-      <part name="input" element="{service_name}RequestElem"/>
+   <types>
+     <xs:schema targetNamespace="http://gefira.pl/zato/types" xmlns="http://gefira.pl/zato/types" 
+         elementFormDefault="unqualified" attributeFormDefault="unqualified">
+       
+         <xs:complexType name="{service_name}Input">
+            <xs:sequence>
+               <xs:element name="a" type="xs:string"/>
+               <xs:element name="b" type="xs:string"/>
+            </xs:sequence>
+         </xs:complexType>
+         
+         <xs:complexType name="{service_name}Output">
+            <xs:sequence>
+               <xs:element name="c" type="xs:string"/>
+            </xs:sequence>
+         </xs:complexType>
+         
+         <xs:element name="request" type="{service_name}Input"/>
+         <xs:element name="response" type="{service_name}Output"/>
+         
+      </xs:schema>
+   </types>
+   
+   <message name="{service_name}MessageRequest">
+      <part name="parameters" element="zato_types:request"/>
    </message>
    
-   <message name="{service_name}Response">
-      <part name="output" element="{service_name}ResponseElem"/>
+   <message name="{service_name}ResponseMessage">
+      <part name="parameters" element="zato_types:response"/>
    </message>
- 
+   
    <portType name="{service_name}Interface">
       <operation name="{service_name}">
-         <input message="{service_name}Request"/>
-         <output message="{service_name}Response"/>
+         <input message="zato:{service_name}MessageRequest"/>
+         <output message="zato:{service_name}ResponseMessage"/>
       </operation>
    </portType>
- 
-   <binding name="{service_name}SOAPBinding" type="{service_name}Interface">
+   
+   <binding name="{service_name}SoapHttpBinding" type="zato:{service_name}Interface">
       <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
       <operation name="{service_name}">
          <soap:operation soapAction="{service_name}"/>
@@ -66,10 +96,10 @@ wsdl_template = """
          </output>
       </operation>
    </binding>
- 
-   <service name="{service_name}">
-      <port name="SoapBinding" binding="{service_name}SOAPBinding">
-         <soap:address location="http://host.invalid/zato/soap"/>
+   
+   <service name="{service_name}Service">
+      <port name="{service_name}Endpoint" binding="zato:{service_name}SoapHttpBinding">
+         <soap:address location="http://host.invalid/"/>
       </port>
    </service>
 </definitions>
@@ -181,16 +211,16 @@ class GetWSDL(ServiceClass):
         """ Returns a WSDL automatically generated out of a service's name and its
         accompanying SimpleIO configuration.
         """
-        print(self.response.simple_io_config._bunch.items())
+        #print(self.response.simple_io_config._bunch.items())
 
-        path_prefix = getattr(io, 'path_prefix', 'data.')
-        required_list = getattr(io, 'input_required', [])
-        optional_list = getattr(io, 'input_optional', [])
-        required_list = getattr(io, 'output_required', [])
-        required_list = getattr(io, 'output_optional', [])
-        default_value = getattr(io, 'default_value', None)
+        request_elem = getattr(sio, 'request_elem', 'request')
+        response_elem = getattr(sio, 'response_elem', 'response')
+        required_list = getattr(sio, 'input_required', [])
+        optional_list = getattr(sio, 'input_optional', [])
+        required_list = getattr(sio, 'output_required', [])
+        required_list = getattr(sio, 'output_optional', [])
         
-        return 'aaa'
+        return wsdl_template.format(service_name=service_name)
         
 class Delete(AdminService):
     """ Deletes a service

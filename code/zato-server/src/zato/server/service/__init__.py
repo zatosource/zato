@@ -157,7 +157,7 @@ class Request(ValueConverter):
         """
         self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
         self.data_format = data_format
-        path_prefix = getattr(io, 'path_prefix', 'data.')
+        path_prefix = getattr(io, 'request_elem', 'data.')
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
         default_value = getattr(io, 'default_value', None)
@@ -276,17 +276,18 @@ class Response(object):
         self.data_format = data_format
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
+        response_elem = getattr(io, 'response_elem', 'response')
         self.outgoing_declared = True if required_list or optional_list else False
         
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config)
+            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config, response_elem)
             
 class SimpleIOPayload(ValueConverter):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
     they don't conflict with user-provided data.
     """
-    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config):
+    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem):
         self.zato_cid = None
         self.zato_logger = logger
         self.zato_is_xml = data_format == SIMPLE_IO.FORMAT.XML
@@ -298,6 +299,7 @@ class SimpleIOPayload(ValueConverter):
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         self.date_time_format = simple_io_config.get('date_time_format', 'YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM')
+        self.response_elem = response_elem
 
         self.zato_all_attrs = set()
         for name in chain(required_list, optional_list):
@@ -339,8 +341,9 @@ class SimpleIOPayload(ValueConverter):
         for name in names:
             setattr(self, name, getattr(attrs, name))
 
-    def append(self, item):
-        self.zato_output.append(item)
+    def append(self, *items):
+        for item in items:
+            self.zato_output.append(item)
 
     def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is):
         """ Returns an element's value if any has been provided while taking
@@ -424,13 +427,19 @@ class SimpleIOPayload(ValueConverter):
                     else:
                         value = out_item
 
+        if self.zato_is_xml:
+            top = Element(self.response_elem)
+            top.append(value)
+        else:
+            top = {self.response_elem: value}
+
         if serialize:
             if self.zato_is_xml:
-                return etree.tostring(value)
+                return etree.tostring(top)
             else:
-                return dumps(value)
+                return dumps(top)
         else:
-            return value
+            return top
 
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter 

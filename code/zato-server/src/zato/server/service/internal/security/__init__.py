@@ -22,10 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # Zato
 from zato.common import ZATO_OK
 from zato.common.odb.query import basic_auth_list, tech_acc_list, wss_list
@@ -36,25 +32,13 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'password')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            
-            definition_list = Element('definition_list')
             pairs = (('basic_auth', basic_auth_list), 
                      ('tech_acc', tech_acc_list), 
                      ('wss', wss_list))
-            
             for def_type, meth in pairs:
-                
                 definitions = meth(session, self.request.input.cluster_id, False)
-                for definition in definitions:
-        
-                    definition_elem = Element('definition')
-                    definition_elem.id = definition.id
-                    definition_elem.name = definition.name
-                    definition_elem.def_type = def_type
-        
-                    definition_list.append(definition_elem)
-    
-            self.response.payload = etree.tostring(definition_list)
+                self.response.payload.append(*definitions)
