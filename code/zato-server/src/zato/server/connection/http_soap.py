@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 soap_doc = Template("""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>$body</soap:Body></soap:Envelope>""")
 zato_message = Template("""
 <zato_message xmlns="http://gefira.pl/zato">
-    <data>$data</data>
+    $data
     <zato_env>
         <result>$result</result>
         <cid>$cid</cid>
@@ -592,18 +592,17 @@ class _BaseMessageHandler(object):
 
         service_instance.handle()
         response = service_instance.response
-        if data_format == SIMPLE_IO.FORMAT.XML and not isinstance(response.payload, basestring):
-            response.payload = response.payload.getvalue()
 
         if isinstance(service_instance, AdminService):
-            if data_format == SIMPLE_IO.FORMAT.XML:
-                response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
-                    result=response.result, details=response.result_details, data=response.payload)
+            payload = response.payload.getvalue(False)
+            if data_format == SIMPLE_IO.FORMAT.JSON:
+                payload.update({'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}})
+                response.payload = dumps(payload)
             else:
-                response.payload = dumps({
-                    'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details},
-                    'data':response.payload.getvalue(False) if response.payload else ''
-                    })
+                response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
+                    result=response.result, details=response.result_details, data=payload)
+        else:
+            response.payload = response.payload.getvalue() if response.payload else ''
 
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
