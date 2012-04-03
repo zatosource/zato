@@ -34,77 +34,6 @@ from zato.common.odb.query import service, service_list
 from zato.server.service import Boolean, Service as ServiceClass
 from zato.server.service.internal import AdminService
 
-wsdl_template = """
-<?xml version="1.0" encoding="utf-8"?>
-<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" 
-  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
-  xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" 
-  xmlns:xs="http://www.w3.org/2001/XMLSchema" 
-  xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" 
-  xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" 
-  xmlns:zato="http://gefira.pl/zato" 
-  xmlns:zato_types="http://gefira.pl/zato/types" 
-  targetNamespace="http://gefira.pl/zato">
-  
-   <types>
-     <xs:schema targetNamespace="http://gefira.pl/zato/types" xmlns="http://gefira.pl/zato/types" 
-         elementFormDefault="unqualified" attributeFormDefault="unqualified">
-       
-         <xs:complexType name="{service_name}Input">
-            <xs:sequence>
-               <xs:element name="a" type="xs:string"/>
-               <xs:element name="b" type="xs:string"/>
-            </xs:sequence>
-         </xs:complexType>
-         
-         <xs:complexType name="{service_name}Output">
-            <xs:sequence>
-               <xs:element name="c" type="xs:string"/>
-            </xs:sequence>
-         </xs:complexType>
-         
-         <xs:element name="request" type="{service_name}Input"/>
-         <xs:element name="response" type="{service_name}Output"/>
-         
-      </xs:schema>
-   </types>
-   
-   <message name="{service_name}MessageRequest">
-      <part name="parameters" element="zato_types:request"/>
-   </message>
-   
-   <message name="{service_name}ResponseMessage">
-      <part name="parameters" element="zato_types:response"/>
-   </message>
-   
-   <portType name="{service_name}Interface">
-      <operation name="{service_name}">
-         <input message="zato:{service_name}MessageRequest"/>
-         <output message="zato:{service_name}ResponseMessage"/>
-      </operation>
-   </portType>
-   
-   <binding name="{service_name}SoapHttpBinding" type="zato:{service_name}Interface">
-      <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
-      <operation name="{service_name}">
-         <soap:operation soapAction="{service_name}"/>
-         <input>
-            <soap:body use="literal"/>
-         </input>
-         <output>
-            <soap:body use="literal"/>
-         </output>
-      </operation>
-   </binding>
-   
-   <service name="{service_name}Service">
-      <port name="{service_name}Endpoint" binding="zato:{service_name}SoapHttpBinding">
-         <soap:address location="http://host.invalid/"/>
-      </port>
-   </service>
-</definitions>
-"""
-
 class GetList(AdminService):
     """ Returns a list of services.
     """
@@ -184,21 +113,13 @@ class GetWSDL(ServiceClass):
                     self.response.payload = 'Service [{}] not found'.format(service_name)
                     return
                 
-            # User-uploaded stuff has precedence over auto-generated WSDLs .. 
             if service.wsdl:
                 content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
                 self.set_attachment(service_name, service.wsdl, content_type)
                 
-            # .. now let's find out whether the service uses SimpleIO ..
             else:
-                service_class = self.server.service_store.service_data(service.impl_name)['service_class']
-                if hasattr(service_class, 'SimpleIO'):
-                    self.set_attachment(service_name, self.generate_wsdl(service_name, service_class.SimpleIO), 'application/wsdl+xml')
-                    
-                # .. give up, there's neither a WSDL from the user nor SimpleIO in use
-                else:
-                    self.response.status_code = NOT_FOUND
-                    self.response.payload = 'No WSDL found'
+                self.response.status_code = NOT_FOUND
+                self.response.payload = 'No WSDL found'
                     
     def set_attachment(self, service_name, payload, content_type):
         """ Sets the information that we're returning an attachment to the user.
@@ -206,21 +127,6 @@ class GetWSDL(ServiceClass):
         self.response.content_type = content_type
         self.response.payload = payload
         self.response.headers['Content-Disposition'] = 'attachment; filename={}.wsdl'.format(service_name)
-        
-    def generate_wsdl(self, service_name, sio):
-        """ Returns a WSDL automatically generated out of a service's name and its
-        accompanying SimpleIO configuration.
-        """
-        #print(self.response.simple_io_config._bunch.items())
-
-        request_elem = getattr(sio, 'request_elem', 'request')
-        response_elem = getattr(sio, 'response_elem', 'response')
-        required_list = getattr(sio, 'input_required', [])
-        optional_list = getattr(sio, 'input_optional', [])
-        required_list = getattr(sio, 'output_required', [])
-        required_list = getattr(sio, 'output_optional', [])
-        
-        return wsdl_template.format(service_name=service_name)
         
 class Delete(AdminService):
     """ Deletes a service
