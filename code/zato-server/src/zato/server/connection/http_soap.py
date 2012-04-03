@@ -603,7 +603,8 @@ class _BaseMessageHandler(object):
                 response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
                     result=response.result, details=response.result_details, data=payload)
         else:
-            response.payload = response.payload.getvalue() if response.payload else ''
+            if not isinstance(response.payload, basestring):
+                response.payload = response.payload.getvalue() if response.payload else ''
 
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
