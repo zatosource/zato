@@ -50,7 +50,7 @@ urlpatterns = patterns('',
     url(r'^logout/$', main.logout, name='logout'),
     url(r'^accounts/self$', main.my_account, name='accounts-self'),
 
-    # Clusters.
+    # Clusters
     url(r'^zato/cluster/$', cluster.index, name='cluster'),
     url(r'^zato/cluster/create/$', cluster.create, name='cluster-create'),
     url(r'^zato/cluster/edit/$', cluster.edit, name='cluster-edit'),
@@ -69,20 +69,22 @@ urlpatterns = patterns('',
 
     # TODO: 'servers' should be 'server'
 
-    # Servers registry.
+    # Servers registry
     url(r'^zato/servers/$', servers.index, name='servers'),
     url(r'^zato/servers/status/(?P<server_id>.*)$', servers.status, name='server-status'),
     url(r'^zato/servers/ping/(?P<server_id>.*)$', servers.ping, name='server-ping'),
     url(r'^zato/servers/unregister/(?P<server_id>.*)$', servers.unregister, name='server-unregister'),
 
-    # Services.
+    # Services
     url(r'^zato/service/$', service.index, name='service'),
-    url(r'^zato/service/details/(?P<service_id>.*)/$', service.details, name='service-details'),
     url(r'^zato/service/create/$', service.create, name='service-create'),
     url(r'^zato/service/edit/$', service.edit, name='service-edit'),
     url(r'^zato/service/invoke/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.invoke, name='service-invoke'),
     url(r'^zato/service/delete/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.delete, name='service-delete'),
-    url(r'^zato/service/channel/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.channel, name='service-channel'),
+    url(r'^zato/service/details/(?P<service_name>.*)/$', service.details, name='service-details'),
+    url(r'^zato/service/source-code/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.source_code, name='service-source-code'),
+    url(r'^zato/service/wsdl/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.wsdl, name='service-wsdl'),
+    url(r'^zato/service/request-response/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.request_response, name='service-request-response'),
 
     # Security..
 

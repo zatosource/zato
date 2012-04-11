@@ -23,11 +23,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, os, sys
 from base64 import b64encode
 from cStringIO import StringIO
+from datetime import datetime
 from hashlib import sha1, sha256
 from importlib import import_module
 from itertools import ifilter
+from os import getuid
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint
+from pwd import getpwuid
 from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
@@ -43,6 +46,9 @@ from bunch import Bunch
 
 # ConfigObj
 from configobj import ConfigObj
+
+# anyjson
+from anyjson import dumps
 
 # Spring Python
 from springpython.context import ApplicationContext
@@ -316,3 +322,16 @@ def service_name_from_impl(impl_name):
     service name
     """
     return impl_name.replace('server.service.internal.', '')
+
+def deployment_info(method, remote_host='', remote_user=''):
+    """ Returns a JSON document containing information who deployed a service
+    onto a cluster, where from and when it was.
+    """
+    return dumps({
+            'method': method,
+            'remote_host': remote_host,
+            'remote_user': remote_user,
+            'current_host': current_host(),
+            'current_user': getpwuid(getuid()).pw_name,
+            'timestamp': datetime.utcnow().isoformat()
+        })
