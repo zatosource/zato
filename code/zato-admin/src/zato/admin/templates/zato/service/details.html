@@ -7,12 +7,13 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Services : <a href="{% url service-channel service.id cluster_id %}" class="common">Channels</a></h2>
+<h2 class="zato">Services : Overview : <a href="{% url service-details service.name %}?cluster={{ cluster_id }}" class="common">{{ service.name }}</a></h2>
 
 <div class='page_prompt'>
-    <a href="{% url service-channel service.id cluster_id %}" class="common">Channels</a>
+    <a href="{% url service-source-code service.name cluster_id %}" class="common">Source code</a>
+    <a href="{% url service-wsdl service.name cluster_id %}" class="common">WSDL</a>
+    <a href="{% url service-request-response service.name cluster_id %}" class="common">Request/response</a>
 </div>
-
 
 <div id="markup">
         <table id="data-table">
@@ -27,21 +28,12 @@
     <div class="item-details-body">
         Usage count: {{ service.usage_count }} <a class="common" href="#">(statistics)</a>
         <br/>
-        Response time min/max/avg/last (ms): 83/1876/212/735 <a class="common" href="#">(statistics)</a>
+        Response time min/max/avg/last (ms): 83/1876/212/735  <a class="common" href="#">(statistics)</a>
         <br/>
         Channels: <a class="common" href="#">SOAP</a>,
         <a class="common" href="#">JMS WebSphere MQ</a>
         <br/>
-        Request/response: <a class="common" href="#">Download a sample pair</a>,
-            <a class="common" href="#">Monitoring</a>
-        <br/>
-        Deployment time: {{ service.deployment_time|date:"D d M Y H:i:s"}} <!-- TODO: Should be customizable -->
-        by
-            <a class="common" href="#">{{ service.deployment_user }}</a>
-        <br/>
-        Duplicates: none
-        <br/>
-        .egg: <a class="common" href="#">{{ service.egg_path }}</a>
+        Deployment info: {{ service.deployment_info }}
         <br/>
         <br/>
 

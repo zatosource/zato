@@ -72,6 +72,9 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
                        has been returned in the response. Will raise a ZatoException if it hasn't
                        and 'needs_config_key' is True.
     """
+    url = ''
+    path = ''
+    soap_response = ''
     try:
         url = 'http://{0}:{1}'.format(cluster.lb_host, cluster.lb_port)
         path = '/zato/soap'

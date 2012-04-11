@@ -153,17 +153,16 @@ class ODBManager(SessionWrapper):
                 logger.debug('IntegrityError (Service), e=[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
                 
-                # We know the service exists in the ODB so we can now add
-                # information about its deployment status.
                 service = self._session.query(Service).\
                     join(Cluster, Service.cluster_id==Cluster.id).\
                     filter(Service.name==name).\
                     filter(Cluster.id==self.cluster.id).\
-                    one()
-                self.add_deployed_service(deployment_time, details, service)
+                    first()
+                if service:
+                    self.add_deployed_service(deployment_time, details, service)
 
         except Exception, e:
-            msg = 'Could not add the Service, e=[{e}]'.format(e=format_exc(e))
+            msg = 'Could not add the Service, name:[{}], e:[{}]'.format(name, format_exc(e))
             logger.error(msg)
             self._session.rollback()
 

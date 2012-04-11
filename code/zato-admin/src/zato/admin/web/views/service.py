@@ -98,9 +98,12 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
                 impl_name = msg_item.impl_name.text
                 is_internal = is_boolean(msg_item.is_internal.text)
+                deployment_info = msg_item.deployment_info.text
                 usage_count = msg_item.usage_count.text if hasattr(msg_item, 'usage_count') else 'TODO'
                 
-                item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
+                item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count,
+                                deployment_info=deployment_info)
+                print(333, item.deployment_info)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,
@@ -136,7 +139,7 @@ def edit(req):
         return HttpResponseServerError(msg)
 
 @meth_allowed('GET')
-def details(req, service_id):
+def details(req, service_name):
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
     choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
     cluster_id = req.GET.get('cluster')
@@ -150,11 +153,11 @@ def details(req, service_id):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.request = Element('request')
-        zato_message.request.id = service_id
+        zato_message.request.name = service_name
         zato_message.request.cluster_id = cluster_id
         
         
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-by-id', zato_message)
+        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-by-name', zato_message)
         
         if zato_path('response.item').get_from(zato_message) is not None:
             
@@ -165,9 +168,11 @@ def details(req, service_id):
             is_active = is_boolean(msg_item.is_active.text)
             impl_name = msg_item.impl_name.text
             is_internal = is_boolean(msg_item.is_internal.text)
+            deployment_info = msg_item.deployment_info.text
             usage_count = msg_item.usage_count.text
             
-            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count)
+            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count,
+                              deployment_info=deployment_info)
 
     return_data = {'zato_clusters':zato_clusters,
         'service': service,
@@ -188,7 +193,15 @@ def invoke(req, service_id, cluster_id):
     pass
 
 @meth_allowed('GET')
-def channel(req, service_id, cluster_id):
+def source_code(req, service_id, cluster_id):
+    pass
+
+@meth_allowed('GET')
+def wsdl(req, service_id, cluster_id):
+    pass
+
+@meth_allowed('GET')
+def request_response(req, service_id, cluster_id):
     pass
     
 @meth_allowed('POST')

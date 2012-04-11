@@ -266,7 +266,7 @@ class ServiceStore(InitializingObject):
 
     def read_internal_services(self):
 
-        # Import internal services here to avoid circular dependencies.
+        # Import internal services here to avoid circular dependencies
         from zato.server.service import internal
         from zato.server.service.internal import AdminService
         from zato.server.service.internal import http_soap, scheduler, service
@@ -299,9 +299,8 @@ class ServiceStore(InitializingObject):
                         if item is not AdminService and item is not Service:
 
                             # TODO: Interal services should in fact be stored in .eggs
-                            data = {'service_class': item, 'egg_path':'INTERNAL_SERVICE'}
-                            data['deployment_time'] = datetime.now().isoformat()
-                            data['deployment_user'] = 'INTERNAL_SERVICE'
+                            data = {'service_class': item}
+                            data['timestamp'] = datetime.utcnow().isoformat()
 
                             class_name = '%s.%s' % (item.__module__, item.__name__)
                             self.services[class_name] = data

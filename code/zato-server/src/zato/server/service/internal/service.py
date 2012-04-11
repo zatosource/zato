@@ -39,24 +39,37 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'deployment_info')
         output_repeated = True
         
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = service_list(session, self.request.input.cluster_id, False)
         
-class GetByID(AdminService):
+class GetByName(AdminService):
     """ Returns a particular service.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'id')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', )
+        input_required = ('cluster_id', 'name')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'deployment_info')
         output_optional = ('usage_count',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = service(session, self.request.input.cluster_id, self.request.input.id)
+            s = session.query(Service.id, Service.name, Service.is_active,
+                                Service.impl_name, Service.is_internal, 
+                                Service.deployment_info).\
+                            filter(Cluster.id==Service.cluster_id).\
+                            filter(Cluster.id==self.request.input.cluster_id).\
+                            filter(Service.name==self.request.input.name).one()
+            
+            self.response.payload.id = s.id
+            self.response.payload.name = s.name
+            self.response.payload.is_active = s.is_active
+            self.response.payload.impl_name = s.impl_name
+            self.response.payload.is_internal = s.is_internal
+            self.response.payload.deployment_info = s.deployment_info
+            self.response.payload.usage_count = 0
 
 class Edit(AdminService):
     """ Updates a service.
