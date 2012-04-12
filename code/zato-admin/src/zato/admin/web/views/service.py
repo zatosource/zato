@@ -70,6 +70,23 @@ def _edit_create_response(verb, service_elem):
                 }
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
+def _get_channels(cluster, id, channel_type):
+    """ Returns a list of channels of a given type for the given service.
+    """
+    zato_message = Element('{%s}zato_message' % zato_namespace)
+    zato_message.request = Element('request')
+    zato_message.request.id = id
+    zato_message.request.channel_type = channel_type
+    _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-channel-list', zato_message)
+    
+    response = []
+    
+    if zato_path('response.item_list.item').get_from(zato_message) is not None:
+        for msg_item in zato_message.response.item_list.item:
+            response.append((msg_item.id.text, msg_item.name.text))
+            
+    return response
+
 @meth_allowed('GET')
 def index(req):
     zato_clusters = req.odb.query(Cluster).order_by('name').all()
@@ -103,7 +120,6 @@ def index(req):
                 
                 item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count,
                                 deployment_info=deployment_info)
-                print(333, item.deployment_info)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,
@@ -156,7 +172,6 @@ def details(req, service_name):
         zato_message.request.name = service_name
         zato_message.request.cluster_id = cluster_id
         
-        
         _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-by-name', zato_message)
         
         if zato_path('response.item').get_from(zato_message) is not None:
@@ -171,8 +186,12 @@ def details(req, service_name):
             deployment_info = msg_item.deployment_info.text
             usage_count = msg_item.usage_count.text
             
-            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count,
-                              deployment_info=deployment_info)
+            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count, deployment_info=deployment_info)
+            
+            for channel_type in('plain_http', 'soap', 'amqp', 'wmq', 'zmq'):
+                channels = _get_channels(cluster, id, channel_type)
+                print(22, id, channel_type, channels)
+            
 
     return_data = {'zato_clusters':zato_clusters,
         'service': service,

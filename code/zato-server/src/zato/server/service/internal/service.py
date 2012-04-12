@@ -29,7 +29,7 @@ from urlparse import parse_qs
 # Zato
 from zato.common import ZATO_OK, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
-from zato.common.odb.model import Cluster, Service
+from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, HTTPSOAP, Service
 from zato.common.odb.query import service, service_list
 from zato.server.service import Boolean, Service as ServiceClass
 from zato.server.service.internal import AdminService
@@ -168,3 +168,36 @@ class Delete(AdminService):
                 self.logger.error(msg)
                 
                 raise
+
+class GetChannelList(AdminService):
+    """ Returns a list of channels of a given type through which the service
+    is being exposed.
+    """
+    class SimpleIO:
+        input_required = ('id', 'channel_type')
+        output_required = ('id', 'name')
+        
+    def handle(self):
+        channel_type_class = {
+            'plain_http': HTTPSOAP,
+            'soap': HTTPSOAP,
+            'amqp': ChannelAMQP,
+            'wmq': ChannelWMQ,
+            'zmq': ChannelZMQ,
+        }
+        
+        class_ = channel_type_class[self.request.input.channel_type]
+        q_attrs = (getattr(class_, 'id'), getattr(class_, 'name'))
+        
+        with closing(self.odb.session()) as session:
+            q = session.query(*q_attrs).\
+                filter(getattr(class_, 'service_id') == self.request.input.id)
+            
+            self.response.payload[:] = q.all()
+        
+class Invoke(AdminService):
+    """ Invokes the service directly, as though it was exposed through some channel
+    which doesn't necessarily have to be true.
+    """
+    def handle(self):
+        pass

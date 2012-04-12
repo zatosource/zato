@@ -370,6 +370,11 @@ class Service(Base):
         self.usage_count = usage_count # Not used by the database
         self.wsdl = wsdl
         self.deployment_info = deployment_info
+        self.plain_http_channels = [] # Not used by the database
+        self.soap_channels = [] # Not used by the database
+        self.amqp_channels = [] # Not used by the database
+        self.wmq_channels = [] # Not used by the database
+        self.zmq_channels = [] # Not used by the database
 
 class DeployedService(Base):
     """ A service living on a given server.

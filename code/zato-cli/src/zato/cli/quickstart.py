@@ -247,6 +247,8 @@ class Quickstart(ZatoCommand):
             'zato:service.edit':'zato.server.service.internal.service.Edit',
             'zato:service.delete':'zato.server.service.internal.service.Delete',
             'zato:service.get-wsdl':'zato.server.service.internal.service.GetWSDL',
+            'zato:service.get-channel-list':'zato.server.service.internal.service.GetChannelList',
+            'zato:service.invoke':'zato.server.service.internal.service.Invoke',
 
             # SOAP channels
             'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
