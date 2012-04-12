@@ -182,16 +182,21 @@ class GetChannelList(AdminService):
             'plain_http': HTTPSOAP,
             'soap': HTTPSOAP,
             'amqp': ChannelAMQP,
-            'wmq': ChannelWMQ,
+            'jms-wmq': ChannelWMQ,
             'zmq': ChannelZMQ,
         }
         
         class_ = channel_type_class[self.request.input.channel_type]
-        q_attrs = (getattr(class_, 'id'), getattr(class_, 'name'))
+        q_attrs = (class_.id, class_.name)
         
         with closing(self.odb.session()) as session:
             q = session.query(*q_attrs).\
-                filter(getattr(class_, 'service_id') == self.request.input.id)
+                filter(class_.service_id == self.request.input.id)
+            
+            if self.request.input.channel_type == 'soap':
+                q = q.filter(class_.soap_version != None)
+            elif self.request.input.channel_type == 'plain_http':
+                q = q.filter(class_.soap_version == None)
             
             self.response.payload[:] = q.all()
         

@@ -21,9 +21,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from collections import namedtuple
 from traceback import format_exc
 
 # Django
+from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -47,6 +49,8 @@ from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
+
+Channel = namedtuple('Channel', ['id', 'name', 'url'])
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
@@ -83,7 +87,19 @@ def _get_channels(cluster, id, channel_type):
     
     if zato_path('response.item_list.item').get_from(zato_message) is not None:
         for msg_item in zato_message.response.item_list.item:
-            response.append((msg_item.id.text, msg_item.name.text))
+
+            if channel_type in('plain_http', 'soap'):
+                url = reverse('http-soap')
+                url += '?connection=channel&transport={}'.format(channel_type)
+                url += '&cluster={}'.format(cluster.id)
+            else:
+                url = reverse('channel-' + channel_type)
+                url += '?cluster={}'.format(cluster.id)
+                
+            url += '&highlight={}'.format(msg_item.id.text)
+            
+            channel = Channel(msg_item.id.text, msg_item.name.text, url)
+            response.append(channel)
             
     return response
 
@@ -188,10 +204,9 @@ def details(req, service_name):
             
             service = Service(id, name, is_active, impl_name, is_internal, None, usage_count, deployment_info=deployment_info)
             
-            for channel_type in('plain_http', 'soap', 'amqp', 'wmq', 'zmq'):
+            for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(cluster, id, channel_type)
-                print(22, id, channel_type, channels)
-            
+                getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
     return_data = {'zato_clusters':zato_clusters,
         'service': service,
