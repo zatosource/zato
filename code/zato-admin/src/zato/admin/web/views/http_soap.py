@@ -142,20 +142,20 @@ def index(req):
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         security_list = _get_security_list(cluster)
         
-        if zato_path('response.definition_list.definition').get_from(security_list) is not None:
-            for def_item in security_list.response.definition_list.definition:
-
+        if zato_path('response.item_list.item').get_from(security_list) is not None:
+            for def_item in security_list.response.item_list.item:
+                
                 # Outgoing plain HTTP connections may use HTTP Basic Auth only,
                 # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
                 if connection == 'outgoing':
-                    if transport == url_type.plain_http and def_item.def_type != _security_def_type.basic_auth:
+                    if transport == url_type.plain_http and def_item.sec_type != _security_def_type.basic_auth:
                         continue
-                    elif transport == url_type.soap and def_item.def_type \
+                    elif transport == url_type.soap and def_item.sec_type \
                          not in(_security_def_type.basic_auth, _security_def_type.wss):
                         continue
                 
-                value = '{0}/{1}'.format(def_item.def_type, def_item.id)
-                label = '{0}/{1}'.format(SECURITY_TYPES[def_item.def_type], def_item.name)
+                value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
+                label = '{0}/{1}'.format(SECURITY_TYPES[def_item.sec_type], def_item.name)
                 _security.append((value, label))
         
         create_form = CreateForm(_security)
