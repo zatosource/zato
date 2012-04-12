@@ -218,6 +218,14 @@ $.fn.zato.data_table.parse = function() {
     if(_.size($.fn.zato.data_table.data) < 1) {
         $('#data-table').data('is_empty', true);
     }
+    else {
+        // Highlight the items specified in the query string to be highlighted
+        var highlight = $(document).getUrlParam('highlight');
+        if(highlight) {
+            var tr = $('#tr_'+ highlight);
+            tr.addClass('updated');
+        }
+    }
 }
 
 $.fn.zato.data_table.reset_form = function(form_id) {
