@@ -4,6 +4,10 @@
 {% endblock %}
 
 {% block extra_js %}
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/service/details.js"></script>
+
 {% endblock %}
 
 {% block content %}
@@ -36,11 +40,11 @@
             </tr>
             <tr>
                 <td>
-                    Plain HTTP: {% if not service.plain_http_channels %}(None) {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
-                    SOAP: {% if not service.soap_channels %}(None) {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
-                    AMQP: {% if not service.amqp_channels %}(None) {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
-                    JMS WebSphere MQ: {% if not service.wmq_channels %}(None) {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
-                    Zero MQ: {% if not service.zmq_channels %}(None) {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
+                    Plain HTTP: {% if not service.plain_http_channels %}(None) {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                    SOAP: {% if not service.soap_channels %}(None) {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                    AMQP: {% if not service.amqp_channels %}(None) {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                    JMS WebSphere MQ: {% if not service.wmq_channels %}(None) {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                    Zero MQ: {% if not service.zmq_channels %}(None) {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                 </td>
             </tr>
             <tr>
@@ -48,7 +52,7 @@
             </tr>
             <tr>
                 <td>
-                    <form action="{% url service-invoke service.id cluster_id %}" style="text-align:right">
+                    <form id="invoke_service_form" action="{% url service-invoke service.id cluster_id %}" style="text-align:right">
                         <textarea style="width:100%; height:350px"></textarea>
                         <br/><br/>
                         <input type="submit" value="Submit" />

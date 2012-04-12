@@ -224,7 +224,7 @@ def details(req, service_name):
 
 @meth_allowed('GET')
 def invoke(req, service_id, cluster_id):
-    pass
+    return HttpResponse()
 
 @meth_allowed('GET')
 def source_code(req, service_id, cluster_id):
