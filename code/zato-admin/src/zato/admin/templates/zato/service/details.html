@@ -18,33 +18,43 @@
 <div id="markup">
         <table id="data-table">
             <tr>
-                <td class='inline_header'>
-                    Overview
-                </td>
+                <td class='inline_header'>Overview</td>
             </tr>
             <tr>
                 <td>
-                
-    <div class="item-details-body">
-        Usage count: {{ service.usage_count }} <a class="common" href="#">(statistics)</a>
-        <br/>
-        Response time min/max/avg/last (ms): 83/1876/212/735  <a class="common" href="#">(statistics)</a>
-        <br/>
-        Channels: <a class="common" href="#">SOAP</a>,
-        <a class="common" href="#">JMS WebSphere MQ</a>
-        <br/>
-        Deployment info: {{ service.deployment_info }}
-        <br/>
-        <br/>
-
-        <form action="{% url service-invoke service.id cluster_id %}">
-            <textarea style="width:100%; height:350px"></textarea>
-            <br/>
-            <input type="submit" value="Invoke the service directly" />
-        </form>
-        
-        </div>                    
-
+                    <div class="item-details-body">
+                        Usage count: {{ service.usage_count }} <a class="common" href="#">(statistics)</a>
+                        <br/>
+                        Response time min/max/avg/last (ms): 83/1876/212/735  <a class="common" href="#">(statistics)</a>
+                        <br/>
+                        Deployment info: {{ service.deployment_info }}
+                    </div>                    
+                </td>
+            </tr>
+            <tr>
+                <td class='inline_header'>Channels</td>
+            </tr>
+            <tr>
+                <td>
+                    Plain HTTP: {% if not service.plain_http_channels %}(None) {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
+                    SOAP: {% if not service.soap_channels %}(None) {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
+                    AMQP: {% if not service.amqp_channels %}(None) {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
+                    JMS WebSphere MQ: {% if not service.wmq_channels %}(None) {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
+                    Zero MQ: {% if not service.zmq_channels %}(None) {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</br>
+                </td>
+            </tr>
+            <tr>
+                <td class='inline_header'>Invoke the service directly</td>
+            </tr>
+            <tr>
+                <td>
+                    <form action="{% url service-invoke service.id cluster_id %}" style="text-align:right">
+                        <textarea style="width:100%; height:350px"></textarea>
+                        <br/><br/>
+                        <input type="submit" value="Submit" />
+                    </form>
+                </td>
+            </tr>
         </table>
 </div>
 
