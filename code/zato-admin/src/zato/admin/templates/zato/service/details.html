@@ -53,8 +53,10 @@
             <tr>
                 <td>
                     <form id="invoke_service_form" action="{% url service-invoke service.id cluster_id %}" style="text-align:right">
-                        <textarea style="width:100%; height:350px"></textarea>
+                        <textarea style="width:100%; height:350px" id="payload"></textarea>
                         <br/><br/>
+                        <input type="hidden" id="service_id" value="{{ service.id }}" />
+                        <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
                         <input type="submit" value="Submit" />
                     </form>
                 </td>
