@@ -35,6 +35,9 @@ from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
 
+# lxml
+from lxml import objectify
+
 # M2Crypto
 from M2Crypto import BIO, RSA
 
@@ -48,7 +51,7 @@ from bunch import Bunch
 from configobj import ConfigObj
 
 # anyjson
-from anyjson import dumps
+from anyjson import dumps, loads
 
 # Spring Python
 from springpython.context import ApplicationContext
@@ -56,6 +59,7 @@ from springpython.remoting.http import CAValidatingHTTPSConnection
 from springpython.remoting.xmlrpc import SSLClientTransport
 
 # Zato
+from zato.common import SIMPLE_IO, soap_body_xpath, ZatoException
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
 
 logger = logging.getLogger(__name__)
@@ -335,3 +339,37 @@ def deployment_info(method, remote_host='', remote_user=''):
             'current_user': getpwuid(getuid()).pw_name,
             'timestamp': datetime.utcnow().isoformat()
         })
+
+def get_body_payload(body):
+    body_children_count = body[0].countchildren()
+
+    if body_children_count == 0:
+        body_payload = None
+    elif body_children_count == 1:
+        body_payload = body[0].getchildren()[0]
+    else:
+        body_payload = body[0].getchildren()
+
+    return body_payload
+
+def payload_from_request(request, data_format, transport):
+    """ Converts a raw request to a payload suitable for usage with SimpleIO.
+    """
+    if request:
+        if data_format == SIMPLE_IO.FORMAT.XML:
+            if transport == 'soap':
+                soap = objectify.fromstring(request)
+                body = soap_body_xpath(soap)
+                if not body:
+                    raise ZatoException(cid, 'Client did not send the [{1}] element'.format(body_path))
+                payload = get_body_payload(body)
+            else:
+                payload = objectify.fromstring(request)
+        elif data_format == SIMPLE_IO.FORMAT.JSON:
+            payload = loads(request)
+        else:
+            payload = request
+    else:
+        payload = request
+
+    return payload

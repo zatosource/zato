@@ -46,8 +46,8 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import HTTPException, SIMPLE_IO, soap_body_xpath, url_type, ZATO_NONE, ZATO_OK
-from zato.common.util import security_def_type, TRACE1
+from zato.common import HTTPException, SIMPLE_IO, url_type, ZATO_NONE, ZATO_OK
+from zato.common.util import payload_from_request, security_def_type, TRACE1
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
@@ -79,18 +79,6 @@ soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
 
 _reason_not_found = responses[NOT_FOUND]
 _reason_internal_server_error = responses[INTERNAL_SERVER_ERROR]
-
-def get_body_payload(body):
-    body_children_count = body[0].countchildren()
-
-    if body_children_count == 0:
-        body_payload = None
-    elif body_children_count == 1:
-        body_payload = body[0].getchildren()[0]
-    else:
-        body_payload = body[0].getchildren()
-
-    return body_payload
 
 def client_soap_error(cid, faultstring):
     return soap_error.safe_substitute(faultcode='Client', cid=cid, faultstring=faultstring)
@@ -561,23 +549,8 @@ class _BaseMessageHandler(object):
 
         logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, self.server.service_store.services))
         service_data = self.server.service_store.service_data(service_info.impl_name)
-
-        if request:
-            if data_format == SIMPLE_IO.FORMAT.XML:
-                if transport == 'soap':
-                    soap = objectify.fromstring(request)
-                    body = soap_body_xpath(soap)
-                    if not body:
-                        raise BadRequest(cid, 'Client did not send the [{1}] element'.format(body_path))
-                    payload = get_body_payload(body)
-                else:
-                    payload = objectify.fromstring(request)
-            elif data_format == SIMPLE_IO.FORMAT.JSON:
-                payload = loads(request)
-        else:
-            payload = request
         
-        return payload, service_info, service_data
+        return payload_from_request(request, data_format, transport), service_info, service_data
     
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')

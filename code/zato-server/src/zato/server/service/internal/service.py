@@ -31,6 +31,7 @@ from zato.common import ZATO_OK, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, HTTPSOAP, Service
 from zato.common.odb.query import service, service_list
+from zato.common.util import payload_from_request
 from zato.server.service import Boolean, Service as ServiceClass
 from zato.server.service.internal import AdminService
 
@@ -206,6 +207,7 @@ class Invoke(AdminService):
     """
     class SimpleIO:
         input_required = ('id', 'payload')
+        input_optional = ('data_format', 'transport')
         output_required = ('response',)
 
     def handle(self):
@@ -214,24 +216,16 @@ class Invoke(AdminService):
                 filter(Service.id==self.request.input.id).\
                 one()
             
+        payload = payload_from_request(self.request.input.payload, 'xml', 'soap')
+        
         service_instance = self.server.service_store.new_instance(service.impl_name)
         service_instance.update(service_instance, self.server, self.broker_client, 
-            self.worker_store, self.cid, self.request.input.payload, self.request.input.payload, 
-            'direct', self.request.simple_io_config, 'direct', self.request.request_data)
-        
+            self.worker_store, self.cid, payload, self.request.input.payload, 
+            'soap', self.request.simple_io_config, 'xml', self.request.request_data)
+
         service_instance.handle()
         response = service_instance.response.payload
         if not isinstance(response, basestring):
             response = response.getvalue()
-            
-        self.response.payload.response = response
-        
-        """
-        service_instance = self.server.service_store.new_instance(service_info.impl_name)
-        service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
-            thread_ctx.store, cid, payload, raw_request, transport, simple_io_config,
-            data_format, request_data)
 
-        service_instance.handle()
-        response = service_instance.response
-        """
+        self.response.payload.response = response

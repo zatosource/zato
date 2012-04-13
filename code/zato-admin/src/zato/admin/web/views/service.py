@@ -240,7 +240,8 @@ def invoke(req, service_id, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return HttpResponse(zato_message.response.item.response.text)
+        response = zato_message.response.item.response.text if zato_message.response.item.response else '(No output)'
+        return HttpResponse(response)
 
 @meth_allowed('GET')
 def source_code(req, service_id, cluster_id):

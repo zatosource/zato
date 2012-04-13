@@ -252,3 +252,4 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     _env.update(zato_env)
     
     Popen(program, close_fds=True, shell=True, env=_env)
+    
