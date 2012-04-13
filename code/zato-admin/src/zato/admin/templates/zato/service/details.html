@@ -57,12 +57,44 @@
             </tr>
             <tr>
                 <td>
-                    <form id="invoke_service_form" action="{% url service-invoke service.id cluster_id %}" style="text-align:right" method="post">
+                    <form id="invoke_service_form" action="{% url service-invoke service.id cluster_id %}" method="post">
                         <textarea style="width:100%; height:350px" id="payload" name="payload"></textarea>
                         <br/><br/>
+                        
+                        <table>
+                            <tr>
+                                <td>
+                                    Data format:
+                                </td>
+                                <td>
+                                    <select name="data_format" id="data_format">
+                                        <option value="" selected="selected">----------</option>
+                                        <option value="json">JSON</option>
+                                        <option value="xml">XML</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Transport:
+                                </td>
+                                <td>
+                                    <select name="transport" id="transport">
+                                        <option value="" selected="selected">----------</option>
+                                        <option value="plain_http">Plain HTTP</option>
+                                        <option value="soap">SOAP</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </table>
+                        
                         <input type="hidden" id="service_id" name="service_id" value="{{ service.id }}" />
-                        <input type="hidden" id="cluster_id" name="cluster_id"value="{{ cluster_id }}" />
-                        <input type="submit" value="Submit" />
+                        <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                        
+                        <div style="text-align:right">
+                            <input type="submit" value="Submit" />
+                        </div>
+                        
                     </form>
                 </td>
             </tr>

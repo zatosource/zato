@@ -216,12 +216,14 @@ class Invoke(AdminService):
                 filter(Service.id==self.request.input.id).\
                 one()
             
-        payload = payload_from_request(self.request.input.payload, 'xml', 'soap')
+        payload = payload_from_request(self.request.input.payload, self.request.input.data_format,
+                        self.request.input.transport)
         
         service_instance = self.server.service_store.new_instance(service.impl_name)
         service_instance.update(service_instance, self.server, self.broker_client, 
             self.worker_store, self.cid, payload, self.request.input.payload, 
-            'soap', self.request.simple_io_config, 'xml', self.request.request_data)
+            self.request.input.transport, self.request.simple_io_config, 
+            self.request.input.data_format, self.request.request_data)
 
         service_instance.handle()
         response = service_instance.response.payload
