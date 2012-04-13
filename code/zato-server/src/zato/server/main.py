@@ -64,6 +64,7 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.repo_location = repo_location
     parallel_server.internal_service_modules = app_context.get_object('internal_service_modules')
     parallel_server.service_modules = app_context.get_object('service_modules')
+    parallel_server.base_dir = base_dir
     
     if start_singleton:
         singleton_server = app_context.get_object('singleton_server')
