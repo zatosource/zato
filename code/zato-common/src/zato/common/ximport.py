@@ -46,6 +46,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 import imp
 import logging
+from inspect import getfile
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +64,9 @@ def import_module(module_name, autoreload=True, path=None):
 
         # Import the module
         if path:
-            s = "(Re)importing module '%s' with path set to '%s'" % (module_name, path)
+            s = '(Re)importing module [{}] with path set to [{}]'.format(module_name, path)
         else:
-            s = "(Re)importing module '%s'" % module_name
+            s = '(Re)importing module [{}]'.format(module_name)
         logger.debug(s)
 
         parent = None
@@ -82,11 +83,15 @@ def import_module(module_name, autoreload=True, path=None):
                 if f: f.close()
             if hasattr(module, "__path__"):
                 path = module.__path__
-
+                
             #if mtime == 0:
             mtime = module_mtime(module)
 
             module.__mtime__ = mtime
+
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = '(Re)importing module:[{}] from:[{}]'.format(module_name, getfile(module))
+            logger.debug(msg)
 
         return module
     finally:

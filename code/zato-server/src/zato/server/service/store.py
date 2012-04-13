@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import imp, logging, os, shutil, sys, tempfile, zipimport
 from datetime import datetime
+from importlib import import_module
 from os.path import getmtime
 from traceback import format_exc
 from uuid import uuid4
@@ -43,8 +44,7 @@ from springpython.context import InitializingObject
 # Zato
 from zato.common.util import service_name_from_impl, TRACE1
 from zato.server.service import Service
-
-__all__ = ['Service']
+from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 
@@ -264,41 +264,17 @@ class ServiceStore(InitializingObject):
 
         logger.debug('Services after an import [%s]' % self.services)
 
-    def read_internal_services(self):
-
-        # Import internal services here to avoid circular dependencies
-        from zato.server.service import internal
-        from zato.server.service.internal import AdminService
-        from zato.server.service.internal import http_soap, scheduler, service
-        from zato.server.service.internal.channel import amqp as channel_amqp
-        from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq
-        from zato.server.service.internal.channel import zmq as channel_zmq
-        from zato.server.service.internal.definition import amqp as def_amqp
-        from zato.server.service.internal.definition import jms_wmq as def_jms_wmq
-        from zato.server.service.internal.outgoing import amqp as out_amqp
-        from zato.server.service.internal.outgoing import ftp as out_ftp
-        from zato.server.service.internal.outgoing import jms_wmq as out_jms_wmq
-        from zato.server.service.internal.outgoing import sql as out_sql
-        from zato.server.service.internal.outgoing import zmq as out_zmq
-        from zato.server.service.internal.security import basic_auth, \
-             tech_account, wss
-        from zato.server.service.internal import security
-
-        # XXX: The list would be better read from the IoC container
-        modules = [basic_auth, channel_amqp, channel_jms_wmq, channel_zmq, def_amqp,
-                   def_jms_wmq, http_soap, internal, out_amqp, out_ftp, out_jms_wmq,
-                   out_sql, out_zmq, scheduler, security, 
-                   service, tech_account, wss]
-
-        # Read all definitions of Zato's own internal services.
-        for mod in modules:
+    def read_service_modules(self, service_modules):
+        
+        # Read all definitions of Zato's own internal and user-provided services
+        for mod_name in service_modules:
+            mod = import_module(mod_name)
             for name in dir(mod):
                 item = getattr(mod, name)
                 try:
                     if issubclass(item, Service):
                         if item is not AdminService and item is not Service:
 
-                            # TODO: Interal services should in fact be stored in .eggs
                             data = {'service_class': item}
                             data['timestamp'] = datetime.utcnow().isoformat()
 
@@ -310,7 +286,7 @@ class ServiceStore(InitializingObject):
 
                 except TypeError, e:
                     # Ignore non-class objects passed in to issubclass
-                    logger.log(TRACE1, 'Ignoring exception, name=[%s], item=[%s], e=[%s]' % (
+                    logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(
                         name, item, format_exc()))
 
         logger.debug('Internal services read=[%s]' % self.services)
