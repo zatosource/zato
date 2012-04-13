@@ -204,5 +204,20 @@ class Invoke(AdminService):
     """ Invokes the service directly, as though it was exposed through some channel
     which doesn't necessarily have to be true.
     """
+    class SimpleIO:
+        input_required = ('id', 'payload')
+        output_required = ('response',)
+
     def handle(self):
-        pass
+        
+        self.response.payload.response = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><ns0:zato_message xmlns:py="http://codespeak.net/lxml/objectify/pytype" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns0="http://gefira.pl/zato" py:pytype="TREE"><ns0:request py:pytype="TREE"><ns0:id py:pytype="str">1</ns0:id><ns0:payload py:pytype="str">id="cluster_id"</ns0:payload></ns0:request></ns0:zato_message></soap:Body></soap:Envelope>"""
+        
+        """
+        service_instance = self.server.service_store.new_instance(service_info.impl_name)
+        service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
+            thread_ctx.store, cid, payload, raw_request, transport, simple_io_config,
+            data_format, request_data)
+
+        service_instance.handle()
+        response = service_instance.response
+        """
