@@ -89,6 +89,33 @@ class ZatoContext(PythonConfig):
         return store
     
     @Object
+    def internal_service_modules(self):
+        return [
+            'zato.server.service.internal',
+            'zato.server.service.internal.http_soap',
+            'zato.server.service.internal.scheduler',
+            'zato.server.service.internal.service',
+            'zato.server.service.internal.channel.amqp',
+            'zato.server.service.internal.channel.jms_wmq',
+            'zato.server.service.internal.channel.zmq',
+            'zato.server.service.internal.definition.amqp',
+            'zato.server.service.internal.definition.jms_wmq',
+            'zato.server.service.internal.outgoing.amqp',
+            'zato.server.service.internal.outgoing.ftp',
+            'zato.server.service.internal.outgoing.jms_wmq',
+            'zato.server.service.internal.outgoing.sql',
+            'zato.server.service.internal.outgoing.zmq',
+            'zato.server.service.internal.security',
+            'zato.server.service.internal.security.basic_auth',
+            'zato.server.service.internal.security.tech_account',
+            'zato.server.service.internal.security.wss',
+        ]
+    
+    @Object
+    def service_modules(self):
+        return []
+    
+    @Object
     def int_parameters(self):
         return ['id']
     
