@@ -199,29 +199,3 @@ class ConfigStore(object):
         config_store.odb_data = deepcopy(self.odb_data)
                 
         return config_store
-    
-#
-# out_ftp = self.outgoing.out_ftp.get('aaa')
-# ------------------------------------
-# self.outgoing -> ConfigStore
-# self.outgoing.ftp -> ConfigDict
-# self.outgoing.ftp.get('aaa') -> Bunch
-# self.outgoing.ftp.get('aaa').config -> connection parameters
-# self.outgoing.ftp.get('aaa').conn -> connection object
-#
-
-# out_amqp = self.outgoing.amqp.get('aaa')
-# out_jms_wmq = self.outgoing.jms_wmq.get('aaa')
-# out_zmq = self.outgoing.zmq.get('aaa')
-
-# out_ftp = self.outgoing.ftp.get('aaa')
-# out_plain_http = self.outgoing.plain_http.get('aaa')
-# out_soap = self.outgoing.soap.get('aaa')
-# out_sql_conn = self.sql_pool.get('aaa')
-# del self.outgoing.ftp['aaa']
-
-# config_copy = copy.copy(outgoing)
-# out_ftp_copy = copy.copy(outgoing.ftp)
-
-# with closing(self.server.odb.session()) as session:
-# with self.odb.session() as session:
