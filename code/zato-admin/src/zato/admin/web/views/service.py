@@ -232,6 +232,8 @@ def invoke(req, service_id, cluster_id):
         zato_message.request = Element('request')
         zato_message.request.id = service_id
         zato_message.request.payload = req.POST.get('payload', '')
+        zato_message.request.data_format = req.POST.get('data_format', '')
+        zato_message.request.transport = req.POST.get('transport', '')
 
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.invoke', zato_message)
 
