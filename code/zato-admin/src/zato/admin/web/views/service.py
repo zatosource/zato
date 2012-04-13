@@ -222,9 +222,25 @@ def details(req, service_name):
 
     return render_to_response('zato/service/details.html', return_data, context_instance=RequestContext(req))
 
-@meth_allowed('GET')
+@meth_allowed('POST')
 def invoke(req, service_id, cluster_id):
-    return HttpResponse()
+    """ Executes a service directly, even if it isn't exposed through any channel.
+    """
+    try:
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.request = Element('request')
+        zato_message.request.id = service_id
+        zato_message.request.payload = req.POST.get('payload', '')
+
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.invoke', zato_message)
+
+    except Exception, e:
+        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e=[{}]'.format(service_id, cluster_id, format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return HttpResponse(zato_message.response.item.response.text)
 
 @meth_allowed('GET')
 def source_code(req, service_id, cluster_id):
