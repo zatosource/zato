@@ -30,6 +30,9 @@ from uuid import uuid4
 # Distribute
 import pkg_resources
 
+# pip
+from pip.download import is_archive_file
+
 # PyYAML
 try:
     from yaml import CDumper  # Looks awkward but
@@ -42,7 +45,7 @@ from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common.util import service_name_from_impl, TRACE1
+from zato.common.util import is_python_file, service_name_from_impl, TRACE1
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -223,6 +226,7 @@ class ServiceStore(InitializingObject):
         """
         return self.services[class_name]
 
+    '''
     @synchronized()
     def import_services_from_egg(self, egg_path, parallel_server):
         """ Imports new Zato services from their working dir and registers them
@@ -263,34 +267,72 @@ class ServiceStore(InitializingObject):
             logger.info(msg)
 
         logger.debug('Services after an import [%s]' % self.services)
+        '''
 
-    def read_service_modules(self, service_modules):
+    def import_services_from_fs(self, items, base_dir):
+        """ Imports services from all the specified resources, be it module names,
+        individual files or distutils2 packages.
+        """
+        for item_name in items:
+            logger.debug('About to import services from:[%s]', item_name)
+            
+            is_internal = item_name.startswith('zato')
+            
+            # distutils2 ..
+            if is_archive_file(item_name):
+                pass
+            
+            # .. a .py/.pyc/.pyw
+            elif is_python_file(item_name):
+                self.import_services_from_file(item_name, is_internal, base_dir)
+            
+            # .. must be a module object
+            else:
+                self.import_services_from_module(item_name, is_internal)
+
+    def import_services_from_file(self, file_name, is_internal, base_dir):
+        """ Imports all the services from the path to a file.
+        """
+        if not os.path.isabs(file_name):
+            file_name = os.path.normpath(os.path.join(base_dir, file_name))
+
+        if not os.path.exists(file_name):
+            raise ValueError("Could not import services, path:[{}] doesn't exist".format(file_name))
         
-        # Read all definitions of Zato's own internal and user-provided services
-        for mod_name in service_modules:
-            mod = import_module(mod_name)
-            for name in dir(mod):
-                item = getattr(mod, name)
-                try:
-                    if issubclass(item, Service):
-                        if item is not AdminService and item is not Service:
+        mod_dir, mod_file = os.path.split(file_name)
+        mod_name, mod_ext = os.path.splitext(mod_file)
+        
+        mod = imp.load_source(mod_name, file_name)
+        self._visit_module(mod, is_internal)
+        
+    def import_services_from_module(self, mod_name, is_internal):
+        """ Imports all the services from a module specified by the given name.
+        """
+        mod = import_module(mod_name)
+        self._visit_module(mod, is_internal)
+                
+    def _visit_module(self, mod, is_internal):
+        """ Actually imports services from a module object.
+        """
+        for name in dir(mod):
+            item = getattr(mod, name)
+            try:
+                if issubclass(item, Service):
+                    if item is not AdminService and item is not Service:
 
-                            data = {'service_class': item}
-                            data['timestamp'] = datetime.utcnow().isoformat()
+                        data = {'service_class': item}
+                        data['timestamp'] = datetime.utcnow().isoformat()
 
-                            class_name = '%s.%s' % (item.__module__, item.__name__)
-                            self.services[class_name] = data
+                        class_name = '%s.%s' % (item.__module__, item.__name__)
+                        self.services[class_name] = data
 
-                            last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                            self.odb.add_service(service_name_from_impl(class_name), class_name, True, last_mod, str(data))
+                        last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
+                        self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, last_mod, str(data))
 
-                except TypeError, e:
-                    # Ignore non-class objects passed in to issubclass
-                    logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(
-                        name, item, format_exc()))
-
-        logger.debug('Internal services read=[%s]' % self.services)
-
+            except TypeError, e:
+                # Ignore non-class objects passed in to issubclass
+                logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(
+                    name, item, format_exc()))
 
 class EggServiceImporter(object):
     """ A utility class for importing Zato services off the file system.

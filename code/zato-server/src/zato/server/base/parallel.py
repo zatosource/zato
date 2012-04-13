@@ -101,7 +101,7 @@ class ParallelServer(BrokerMessageReceiver):
                  int_parameter_suffixes=None, bool_parameter_prefixes=None,
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
-                 internal_service_modules=None, service_modules=None):
+                 internal_service_modules=None, service_modules=None, base_dir=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -122,6 +122,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.json_content_type = json_content_type
         self.internal_service_modules = internal_service_modules
         self.service_modules = service_modules
+        self.base_dir = base_dir
         
         # The main config store
         self.config = ConfigStore()
@@ -139,7 +140,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
         
-        self.service_store.read_service_modules(self.internal_service_modules + self.service_modules)
+        self.service_store.import_services_from_fs(self.internal_service_modules + self.service_modules, self.base_dir)
         
         if self.singleton_server:
             

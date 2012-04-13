@@ -109,6 +109,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.basic_auth',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.wss',
+            '/home/dsuch/tmp/zzz.py',
         ]
     
     @Object

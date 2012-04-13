@@ -373,3 +373,10 @@ def payload_from_request(request, data_format, transport):
         payload = request
 
     return payload
+
+def is_python_file(name):
+    """ Is it a Python file we can import Zato services from?
+    """
+    for suffix in('py', 'pyw', 'pyc', 'pyo'):
+        if name.endswith(suffix):
+            return True

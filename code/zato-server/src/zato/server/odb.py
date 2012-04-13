@@ -41,7 +41,7 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
     internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
     out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, wss_list
-from zato.common.util import security_def_type
+from zato.common.util import deployment_info, security_def_type
 from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
@@ -145,7 +145,8 @@ class ODBManager(SessionWrapper):
         """ Adds information about the server's service into the ODB.
         """
         try:
-            service = Service(None, name, True, impl_name, is_internal, self.cluster)
+            service = Service(None, name, True, impl_name, is_internal, self.cluster,
+                              deployment_info=deployment_info('ODBManager.add_service'))
             self._session.add(service)
             try:
                 self._session.commit()
