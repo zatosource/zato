@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import imp, logging, os, shutil, sys, tempfile, zipimport
+import imp, inspect, logging, os, shutil, sys, tempfile, zipimport
 from datetime import datetime
 from importlib import import_module
 from os.path import getmtime
@@ -303,15 +303,15 @@ class ServiceStore(InitializingObject):
         mod_name, mod_ext = os.path.splitext(mod_file)
         
         mod = imp.load_source(mod_name, file_name)
-        self._visit_module(mod, is_internal)
+        self._visit_module(mod, is_internal, file_name)
         
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
         """
         mod = import_module(mod_name)
-        self._visit_module(mod, is_internal)
+        self._visit_module(mod, is_internal, inspect.getfile(mod))
                 
-    def _visit_module(self, mod, is_internal):
+    def _visit_module(self, mod, is_internal, fs_location):
         """ Actually imports services from a module object.
         """
         for name in dir(mod):
@@ -322,12 +322,13 @@ class ServiceStore(InitializingObject):
 
                         data = {'service_class': item}
                         data['timestamp'] = datetime.utcnow().isoformat()
+                        data['fs_location'] = fs_location
 
-                        class_name = '%s.%s' % (item.__module__, item.__name__)
+                        class_name = '{}.{}'.format(item.__module__, item.__name__)
                         self.services[class_name] = data
 
                         last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                        self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, last_mod, str(data))
+                        self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, last_mod, str(data), fs_location)
 
             except TypeError, e:
                 # Ignore non-class objects passed in to issubclass

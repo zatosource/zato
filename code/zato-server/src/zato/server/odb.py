@@ -145,8 +145,7 @@ class ODBManager(SessionWrapper):
         """ Adds information about the server's service into the ODB.
         """
         try:
-            service = Service(None, name, True, impl_name, is_internal, self.cluster,
-                              deployment_info=deployment_info('ODBManager.add_service'))
+            service = Service(None, name, True, impl_name, is_internal, self.cluster, deployment_info=deployment_info('ODBManager.add_service'))
             self._session.add(service)
             try:
                 self._session.commit()
@@ -159,6 +158,7 @@ class ODBManager(SessionWrapper):
                     filter(Service.name==name).\
                     filter(Cluster.id==self.cluster.id).\
                     first()
+
                 if service:
                     self.add_deployed_service(deployment_time, details, service)
 
