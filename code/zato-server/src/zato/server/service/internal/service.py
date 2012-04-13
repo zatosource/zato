@@ -209,8 +209,22 @@ class Invoke(AdminService):
         output_required = ('response',)
 
     def handle(self):
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter(Service.id==self.request.input.id).\
+                one()
+            
+        service_instance = self.server.service_store.new_instance(service.impl_name)
+        service_instance.update(service_instance, self.server, self.broker_client, 
+            self.worker_store, self.cid, self.request.input.payload, self.request.input.payload, 
+            'direct', self.request.simple_io_config, 'direct', self.request.request_data)
         
-        self.response.payload.response = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><ns0:zato_message xmlns:py="http://codespeak.net/lxml/objectify/pytype" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns0="http://gefira.pl/zato" py:pytype="TREE"><ns0:request py:pytype="TREE"><ns0:id py:pytype="str">1</ns0:id><ns0:payload py:pytype="str">id="cluster_id"</ns0:payload></ns0:request></ns0:zato_message></soap:Body></soap:Envelope>"""
+        service_instance.handle()
+        response = service_instance.response.payload
+        if not isinstance(response, basestring):
+            response = response.getvalue()
+            
+        self.response.payload.response = response
         
         """
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
