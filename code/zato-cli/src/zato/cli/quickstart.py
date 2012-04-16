@@ -171,8 +171,7 @@ class Quickstart(ZatoCommand):
 
         ping_impl_name = 'zato.server.service.internal.Ping'
         ping_service_name = 'zato.Ping'
-        ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster,
-                               deployment_info=deployment_info('quickstart'))
+        ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
         session.add(ping_service)
         
         #
@@ -363,8 +362,7 @@ class Quickstart(ZatoCommand):
             # Make the actual name shorter so it better fits the screen's real estate
             service_name = service_name_from_impl(impl_name)
             
-            service = Service(None, service_name, True, impl_name, True, cluster,
-                              deployment_info=deployment_info('quickstart'))
+            service = Service(None, service_name, True, impl_name, True, cluster)
             session.add(service)
             
             # Add the HTTP channel for WSDLs
@@ -394,8 +392,7 @@ class Quickstart(ZatoCommand):
             # Make the actual name shorter so it better fits the screen's real estate
             service_name = service_name_from_impl(impl_name)
             
-            service = Service(None, service_name , True, impl_name, True, cluster,
-                              deployment_info=deployment_info('quickstart'))
+            service = Service(None, service_name , True, impl_name, True, cluster)
             session.add(service)
         
             http_soap = HTTPSOAP(None, service_name, True, True, 'channel', 'plain_http', 

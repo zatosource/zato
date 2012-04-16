@@ -145,7 +145,7 @@ class ODBManager(SessionWrapper):
         """ Adds information about the server's service into the ODB.
         """
         try:
-            service = Service(None, name, True, impl_name, is_internal, self.cluster, deployment_info=deployment_info('ODBManager.add_service'))
+            service = Service(None, name, True, impl_name, is_internal, self.cluster)
             self._session.add(service)
             try:
                 self._session.commit()
@@ -166,6 +166,14 @@ class ODBManager(SessionWrapper):
             msg = 'Could not add the Service, name:[{}], e:[{}]'.format(name, format_exc(e))
             logger.error(msg)
             self._session.rollback()
+
+    def drop_deployed_services(self, server_id):
+        """ Removes all the deployed services from a server.
+        """
+        services = self._session.query(DeployedService).\
+            filter(DeployedService.server_id==server_id).\
+            delete()
+        self._session.commit()
 
     def add_deployed_service(self, deployment_time, details, service):
         """ Adds information about the server's deployed service into the ODB.

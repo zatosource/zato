@@ -140,6 +140,10 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
         
+        # .. Remove all the deployed services from the DB ..
+        self.odb.drop_deployed_services(server.id)
+        
+        # .. and re-deploy the back from a clear state.
         self.service_store.import_services_from_fs(self.internal_service_modules + self.service_modules, self.base_dir)
         
         if self.singleton_server:

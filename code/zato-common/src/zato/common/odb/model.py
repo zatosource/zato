@@ -353,14 +353,12 @@ class Service(Base):
     is_internal = Column(Boolean(), nullable=False)
     wsdl = Column(LargeBinary(500000), nullable=True)
     wsdl_name = Column(String(200), nullable=True)
-    deployment_info = Column(String(2000), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, impl_name=None, 
-                 is_internal=None, cluster=None, usage_count=None, wsdl=None,
-                 deployment_info=None):
+                 is_internal=None, cluster=None, usage_count=None, wsdl=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -369,7 +367,6 @@ class Service(Base):
         self.cluster = cluster
         self.usage_count = usage_count # Not used by the database
         self.wsdl = wsdl
-        self.deployment_info = deployment_info
         self.plain_http_channels = [] # Not used by the database
         self.soap_channels = [] # Not used by the database
         self.amqp_channels = [] # Not used by the database
