@@ -79,7 +79,7 @@ class Edit(AdminService):
         input_required = ('id', 'is_active', 'name')
         output_required = ('id', 'name', 'impl_name', 'is_internal',)
         output_optional = (Boolean('usage_count'),)
-    
+
     def handle(self):
         input = self.request.input
         with closing(self.odb.session()) as session:

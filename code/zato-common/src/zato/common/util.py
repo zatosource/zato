@@ -51,7 +51,7 @@ from bunch import Bunch
 from configobj import ConfigObj
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import loads
 
 # Spring Python
 from springpython.context import ApplicationContext
@@ -327,18 +327,20 @@ def service_name_from_impl(impl_name):
     """
     return impl_name.replace('server.service.internal.', '')
 
-def deployment_info(method, remote_host='', remote_user=''):
+def deployment_info(method, service_class, timestamp, fs_location, remote_host='', remote_user=''):
     """ Returns a JSON document containing information who deployed a service
-    onto a cluster, where from and when it was.
+    onto a server, where from and when it was.
     """
-    return dumps({
+    return {
             'method': method,
+            'service_class':service_class,
+            'timestamp': timestamp,
+            'fs_location':fs_location,
             'remote_host': remote_host,
             'remote_user': remote_user,
             'current_host': current_host(),
             'current_user': getpwuid(getuid()).pw_name,
-            'timestamp': datetime.utcnow().isoformat()
-        })
+        }
 
 def get_body_payload(body):
     body_children_count = body[0].countchildren()

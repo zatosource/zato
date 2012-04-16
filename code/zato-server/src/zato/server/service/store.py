@@ -33,6 +33,9 @@ import pkg_resources
 # pip
 from pip.download import is_archive_file
 
+# anyjson
+from anyjson import dumps
+
 # PyYAML
 try:
     from yaml import CDumper  # Looks awkward but
@@ -45,7 +48,7 @@ from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common.util import is_python_file, service_name_from_impl, TRACE1
+from zato.common.util import deployment_info, is_python_file, service_name_from_impl, TRACE1
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -310,30 +313,33 @@ class ServiceStore(InitializingObject):
         """
         mod = import_module(mod_name)
         self._visit_module(mod, is_internal, inspect.getfile(mod))
+        
+    def _should_deploy(self, name, item):
+        """ Is an object something we can deploy on a server?
+        """
+        try:
+            if issubclass(item, Service):
+                if item is not AdminService and item is not Service:
+                    return True
+        except TypeError, e:
+            # Ignore non-class objects passed in to issubclass
+            logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(name, item, format_exc(e)))
+            
                 
     def _visit_module(self, mod, is_internal, fs_location):
         """ Actually imports services from a module object.
         """
         for name in dir(mod):
             item = getattr(mod, name)
-            try:
-                if issubclass(item, Service):
-                    if item is not AdminService and item is not Service:
-
-                        data = {'service_class': item}
-                        data['timestamp'] = datetime.utcnow().isoformat()
-                        data['fs_location'] = fs_location
-
-                        class_name = '{}.{}'.format(item.__module__, item.__name__)
-                        self.services[class_name] = data
-
-                        last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                        self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, last_mod, str(data), fs_location)
-
-            except TypeError, e:
-                # Ignore non-class objects passed in to issubclass
-                logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(
-                    name, item, format_exc()))
+            if self._should_deploy(name, item):
+                timestamp = datetime.utcnow().isoformat()
+                depl_info = deployment_info('ServiceStore', item, timestamp, fs_location)
+    
+                class_name = '{}.{}'.format(item.__module__, item.__name__)
+                self.services[class_name] = depl_info
+    
+                last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
+                self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)))
 
 class EggServiceImporter(object):
     """ A utility class for importing Zato services off the file system.
