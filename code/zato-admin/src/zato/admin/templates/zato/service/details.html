@@ -35,9 +35,26 @@
                         Usage count: {{ service.usage_count }} <a class="common" href="#">(statistics)</a>
                         <br/>
                         Response time min/max/avg/last (ms): 83/1876/212/735  <a class="common" href="#">(statistics)</a>
-                        <br/>
-                        Deployment info: {{ service.deployment_info }}
                     </div>                    
+                </td>
+            </tr>
+            <tr>
+                <td class='inline_header'>Deployment info</td>
+            </tr>
+            <tr>
+                <td>
+                    {% if service.deployment_info %}
+                        <table>
+                        {% for item in service.deployment_info %}
+                            <tr>
+                                <td>{{ item.server_name }}</td>
+                                <td>{{ item.details }}</td>
+                            </tr>
+                        {% endfor %}
+                        </table>
+                    {% else %}
+                        (Service isn't deployed on any servers)
+                    {% endif %}
                 </td>
             </tr>
             <tr>

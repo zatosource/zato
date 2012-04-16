@@ -32,7 +32,7 @@ from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.repo import RepoManager
 from zato.server.scheduler import Scheduler
-from zato.server.service.store import EggServiceImporter, ServiceStore
+from zato.server.service.store import ServiceStore
 from zato.server.connection.sql import PoolStore
 
 class ZatoContext(PythonConfig):
@@ -57,16 +57,8 @@ class ZatoContext(PythonConfig):
     @Object
     def pickup_event_processor(self):
         pickup_event_processor = PickupEventProcessor()
-        pickup_event_processor.importer = self.egg_importer()
 
         return pickup_event_processor
-
-    @Object
-    def egg_importer(self):
-        importer = EggServiceImporter()
-        importer.config_repo_manager = self.config_repo_manager()
-
-        return importer
 
     # #######################################################
     # Repository management
