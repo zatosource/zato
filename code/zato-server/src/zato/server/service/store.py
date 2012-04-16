@@ -143,6 +143,15 @@ class ServiceStore(InitializingObject):
             # Ignore non-class objects passed in to issubclass
             logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(name, item, format_exc(e)))
             
+    def _get_source_code_info(self, mod):
+        """ Returns the source code of and the FS path to the given module.
+        """
+        try:
+            return inspect.getsource(mod), inspect.getsourcefile(mod)
+        except IOError, e:
+            logger.log(TRACE1, 'Ignoring IOError, mod:[{}], e:[{}]'.format(mod, format_exc(e)))
+            
+        return None, None
                 
     def _visit_module(self, mod, is_internal, fs_location):
         """ Actually imports services from a module object.
@@ -155,6 +164,10 @@ class ServiceStore(InitializingObject):
     
                 class_name = '{}.{}'.format(item.__module__, item.__name__)
                 self.services[class_name] = depl_info
+                
+                source_code, source_code_path = self._get_source_code_info(mod)
     
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)))
+                self.odb.add_service(service_name_from_impl(class_name), 
+                        class_name, is_internal, timestamp, 
+                        dumps(str(depl_info)), source_code, source_code_path)
