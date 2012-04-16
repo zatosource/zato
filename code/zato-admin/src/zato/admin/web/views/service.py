@@ -37,7 +37,7 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # anyjson
-from anyjson import dumps
+from anyjson import dumps, loads
 
 # Zato
 from zato.admin.web import invoke_admin_service
@@ -51,6 +51,7 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 Channel = namedtuple('Channel', ['id', 'name', 'url'])
+DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
@@ -131,11 +132,9 @@ def index(req):
                 is_active = is_boolean(msg_item.is_active.text)
                 impl_name = msg_item.impl_name.text
                 is_internal = is_boolean(msg_item.is_internal.text)
-                deployment_info = msg_item.deployment_info.text
                 usage_count = msg_item.usage_count.text if hasattr(msg_item, 'usage_count') else 'TODO'
                 
-                item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count,
-                                deployment_info=deployment_info)
+                item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
                 items.append(item)
 
     return_data = {'zato_clusters':zato_clusters,
@@ -151,7 +150,6 @@ def index(req):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
     return render_to_response('zato/service/index.html', return_data, context_instance=RequestContext(req))
-
 
 @meth_allowed('POST')
 def create(req):
@@ -199,14 +197,26 @@ def details(req, service_name):
             is_active = is_boolean(msg_item.is_active.text)
             impl_name = msg_item.impl_name.text
             is_internal = is_boolean(msg_item.is_internal.text)
-            deployment_info = msg_item.deployment_info.text
             usage_count = msg_item.usage_count.text
             
-            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count, deployment_info=deployment_info)
+            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count)
             
             for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(cluster, id, channel_type)
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
+                
+            zato_message = Element('{%s}zato_message' % zato_namespace)
+            zato_message.request = Element('request')
+            zato_message.request.id = id
+            
+            _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-deployment-info-list', zato_message)
+            
+            if zato_path('response.item_list.item').get_from(zato_message) is not None:
+                for msg_item in zato_message.response.item_list.item:
+                    server_name = msg_item.server_name.text
+                    details = msg_item.details.text
+                    
+                    service.deployment_info.append(DeploymentInfo(server_name, loads(details)))
 
     return_data = {'zato_clusters':zato_clusters,
         'service': service,

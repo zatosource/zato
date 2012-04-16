@@ -72,7 +72,7 @@ soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
    <SOAP-ENV:Body>
      <SOAP-ENV:Fault>
      <faultcode>SOAP-ENV:$faultcode</faultcode>
-     <faultstring>[$cid] $faultstring</faultstring>
+     <faultstring><![CDATA[[$cid] $faultstring]]></faultstring>
       </SOAP-ENV:Fault>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>""")

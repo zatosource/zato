@@ -372,6 +372,7 @@ class Service(Base):
         self.amqp_channels = [] # Not used by the database
         self.wmq_channels = [] # Not used by the database
         self.zmq_channels = [] # Not used by the database
+        self.deployment_info = [] # Not used by the database
 
 class DeployedService(Base):
     """ A service living on a given server.

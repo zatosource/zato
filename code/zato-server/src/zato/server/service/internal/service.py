@@ -29,7 +29,8 @@ from urlparse import parse_qs
 # Zato
 from zato.common import ZATO_OK, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
-from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, HTTPSOAP, Service
+from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
+     DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service, service_list
 from zato.common.util import payload_from_request
 from zato.server.service import Boolean, Service as ServiceClass
@@ -40,7 +41,7 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'deployment_info')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
         output_repeated = True
         
     def handle(self):
@@ -52,14 +53,13 @@ class GetByName(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'deployment_info')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
         output_optional = ('usage_count',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             s = session.query(Service.id, Service.name, Service.is_active,
-                                Service.impl_name, Service.is_internal, 
-                                Service.deployment_info).\
+                                Service.impl_name, Service.is_internal).\
                             filter(Cluster.id==Service.cluster_id).\
                             filter(Cluster.id==self.request.input.cluster_id).\
                             filter(Service.name==self.request.input.name).one()
@@ -69,7 +69,6 @@ class GetByName(AdminService):
             self.response.payload.is_active = s.is_active
             self.response.payload.impl_name = s.impl_name
             self.response.payload.is_internal = s.is_internal
-            self.response.payload.deployment_info = s.deployment_info
             self.response.payload.usage_count = 0
 
 class Edit(AdminService):
@@ -231,3 +230,20 @@ class Invoke(AdminService):
             response = response.getvalue()
 
         self.response.payload.response = response
+
+class GetDeploymentInfoList(AdminService):
+    """ Returns detailed information regarding the service's deployment status
+    on each of the servers it's been deployed to.
+    """
+    class SimpleIO:
+        input_required = ('id',)
+        output_required = ('server_id', 'server_name', 'details')
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = session.query(DeployedService.details,
+                    Server.name.label('server_name'), 
+                    Server.id.label('server_id')).\
+                outerjoin(Server, DeployedService.server_id==Server.id).\
+                filter(DeployedService.service_id==self.request.input.id).\
+                all()
