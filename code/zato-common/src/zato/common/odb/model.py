@@ -382,8 +382,10 @@ class DeployedService(Base):
 
     deployment_time = Column(DateTime(), nullable=False)
     details = Column(String(2000), nullable=False)
-    source_code = Column(LargeBinary(500000), nullable=True)
-    source_code_path = Column(String(2000), nullable=True)
+    source = Column(LargeBinary(500000), nullable=True)
+    source_path = Column(String(2000), nullable=True)
+    source_hash = Column(String(512), nullable=True)
+    source_hash_method = Column(String(20), nullable=True)
 
     server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=True)
     server = relationship(Server, backref=backref('deployed_services', order_by=deployment_time, cascade='all, delete, delete-orphan'))
@@ -391,13 +393,16 @@ class DeployedService(Base):
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False, primary_key=True)
     service = relationship(Service, backref=backref('deployment_data', order_by=deployment_time, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, deployment_time, details, server, service, source_code, source_code_path):
+    def __init__(self, deployment_time, details, server, service, source, source_path,
+                 source_hash, source_hash_method):
         self.deployment_time = deployment_time
         self.details = details
         self.server = server
         self.service = service
-        self.source_code = source_code
-        self.source_code_path = source_code_path
+        self.source = source
+        self.source_path = source_path
+        self.source_hash = source_hash
+        self.source_hash_method = source_hash_method
 
 ################################################################################
 

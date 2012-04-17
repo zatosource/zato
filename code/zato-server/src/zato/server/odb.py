@@ -141,7 +141,7 @@ class ODBManager(SessionWrapper):
 
         return result, columns
 
-    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_code, source_code_path):
+    def add_service(self, name, impl_name, is_internal, deployment_time, details, source_info):
         """ Adds information about the server's service into the ODB.
         """
         try:
@@ -160,7 +160,7 @@ class ODBManager(SessionWrapper):
                     first()
 
                 if service:
-                    self.add_deployed_service(deployment_time, details, service, source_code, source_code_path)
+                    self.add_deployed_service(deployment_time, details, service, source_info)
 
         except Exception, e:
             msg = 'Could not add the Service, name:[{}], e:[{}]'.format(name, format_exc(e))
@@ -175,11 +175,12 @@ class ODBManager(SessionWrapper):
             delete()
         self._session.commit()
 
-    def add_deployed_service(self, deployment_time, details, service, source_code, source_code_path):
+    def add_deployed_service(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
         try:
-            service = DeployedService(deployment_time, details, self.server, service, source_code, source_code_path)
+            service = DeployedService(deployment_time, details, self.server, service, 
+                source_info.source, source_info.path, source_info.hash, source_info.hash_method)
             self._session.add(service)
             try:
                 self._session.commit()
