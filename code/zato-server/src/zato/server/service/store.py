@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import imp, inspect, logging, os, shutil, sys, tempfile, zipimport
 from datetime import datetime
+from hashlib import sha256
 from importlib import import_module
 from os.path import getmtime
 from traceback import format_exc
@@ -53,6 +54,15 @@ from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
+
+class SourceInfo(object):
+    """ A bunch of attributes the service's source code.
+    """
+    def __init__(self):
+        self.source = None
+        self.path = None
+        self.hash = None
+        self.hash_method = None
 
 def get_service_name(class_obj):
     """ Return the name of a service which will be either given us explicitly
@@ -146,12 +156,16 @@ class ServiceStore(InitializingObject):
     def _get_source_code_info(self, mod):
         """ Returns the source code of and the FS path to the given module.
         """
+        si = SourceInfo()
         try:
-            return inspect.getsource(mod), inspect.getsourcefile(mod)
+            si.source = inspect.getsource(mod)
+            si.path = inspect.getsourcefile(mod)
+            si.hash = sha256(si.source).hexdigest()
+            si.hash_method = 'SHA-256'
         except IOError, e:
             logger.log(TRACE1, 'Ignoring IOError, mod:[{}], e:[{}]'.format(mod, format_exc(e)))
             
-        return None, None
+        return si
                 
     def _visit_module(self, mod, is_internal, fs_location):
         """ Actually imports services from a module object.
@@ -165,9 +179,7 @@ class ServiceStore(InitializingObject):
                 class_name = '{}.{}'.format(item.__module__, item.__name__)
                 self.services[class_name] = depl_info
                 
-                source_code, source_code_path = self._get_source_code_info(mod)
+                si = self._get_source_code_info(mod)
     
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                self.odb.add_service(service_name_from_impl(class_name), 
-                        class_name, is_internal, timestamp, 
-                        dumps(str(depl_info)), source_code, source_code_path)
+                self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
