@@ -247,3 +247,28 @@ class GetDeploymentInfoList(AdminService):
                 outerjoin(Server, DeployedService.server_id==Server.id).\
                 filter(DeployedService.service_id==self.request.input.id).\
                 all()
+            
+class GetSourceInfo(AdminService):
+    """ Returns information on the service's source code.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'name')
+        output_optional = ('server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            si = session.query(Server.name.label('server_name'), 
+                              DeployedService.source, DeployedService.source_path,
+                              DeployedService.source_hash, DeployedService.source_hash_method).\
+                            filter(Cluster.id==Service.cluster_id).\
+                            filter(Cluster.id==self.request.input.cluster_id).\
+                            filter(Service.name==self.request.input.name).\
+                            filter(Service.id==DeployedService.service_id).\
+                            filter(Server.id==DeployedService.server_id).\
+                            one()
+            
+            self.response.payload.server_name = si.server_name
+            self.response.payload.source = si.source.encode('base64') if si.source else None
+            self.response.payload.source_path = si.source_path
+            self.response.payload.source_hash = si.source_hash
+            self.response.payload.source_hash_method = si.source_hash_method

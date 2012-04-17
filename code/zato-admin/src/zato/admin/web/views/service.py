@@ -33,6 +33,11 @@ from django.template import RequestContext
 # lxml
 from lxml.objectify import Element
 
+# Pygments
+from pygments import highlight
+from pygments.lexers import PythonLexer
+from pygments.formatters import HtmlFormatter
+
 # Validate
 from validate import is_boolean
 
@@ -44,8 +49,8 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
+from zato.common import SourceInfo, zato_namespace, zato_path
 from zato.common.odb.model import Cluster, Service
-from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
@@ -256,8 +261,43 @@ def invoke(req, service_id, cluster_id):
         return HttpResponse(response)
 
 @meth_allowed('GET')
-def source_code(req, service_id, cluster_id):
-    pass
+def source_info(req, service_name):
+    cluster_id = req.GET.get('cluster')
+    service = Service(name=service_name)
+    
+    if cluster_id:
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.request = Element('request')
+        zato_message.request.name = service_name
+        zato_message.request.cluster_id = cluster_id
+
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.get-source-info', zato_message)
+        
+        if zato_path('response.item').get_from(zato_message) is not None:
+            msg_item = zato_message.response.item
+            
+            source = msg_item.source.text.decode('base64') if msg_item.source else ''
+            source_html = highlight(source, PythonLexer(), HtmlFormatter(linenos='table'))
+            
+            service.source_info = SourceInfo()
+            service.source_info.source = source
+            service.source_info.source_html = source_html
+            service.source_info.path = msg_item.source_path.text
+            service.source_info.hash = msg_item.source_hash.text
+            service.source_info.hash_method = msg_item.source_hash_method.text
+            service.source_info.server_name = msg_item.server_name.text
+
+    return_data = {
+        'cluster_id':cluster_id,
+        'service':service,
+        }
+    
+    # TODO: Should really be done by a decorator.
+    if logger.isEnabledFor(TRACE1):
+        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
+
+    return render_to_response('zato/service/source-info.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('GET')
 def wsdl(req, service_id, cluster_id):
