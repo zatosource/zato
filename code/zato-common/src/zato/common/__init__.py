@@ -226,3 +226,14 @@ class ParsingException(ZatoException):
     """ Raised when the error is to do with parsing of documents, such as an input
     XML document.
     """
+    
+class SourceInfo(object):
+    """ A bunch of attributes dealing the service's source code.
+    """
+    def __init__(self):
+        self.source = None
+        self.source_html = None
+        self.path = None
+        self.hash = None
+        self.hash_method = None
+        self.server_name = None

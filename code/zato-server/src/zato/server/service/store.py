@@ -49,20 +49,12 @@ from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato
+from zato.common import SourceInfo
 from zato.common.util import deployment_info, is_python_file, service_name_from_impl, TRACE1
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
-
-class SourceInfo(object):
-    """ A bunch of attributes the service's source code.
-    """
-    def __init__(self):
-        self.source = None
-        self.path = None
-        self.hash = None
-        self.hash_method = None
 
 def get_service_name(class_obj):
     """ Return the name of a service which will be either given us explicitly
