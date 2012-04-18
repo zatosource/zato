@@ -278,15 +278,16 @@ def source_info(req, service_name):
             msg_item = zato_message.response.item
             
             source = msg_item.source.text.decode('base64') if msg_item.source else ''
-            source_html = highlight(source, PythonLexer(), HtmlFormatter(linenos='table'))
-            
-            service.source_info = SourceInfo()
-            service.source_info.source = source
-            service.source_info.source_html = source_html
-            service.source_info.path = msg_item.source_path.text
-            service.source_info.hash = msg_item.source_hash.text
-            service.source_info.hash_method = msg_item.source_hash_method.text
-            service.source_info.server_name = msg_item.server_name.text
+            if source:
+                source_html = highlight(source, PythonLexer(), HtmlFormatter(linenos='table'))
+                
+                service.source_info = SourceInfo()
+                service.source_info.source = source
+                service.source_info.source_html = source_html
+                service.source_info.path = msg_item.source_path.text
+                service.source_info.hash = msg_item.source_hash.text
+                service.source_info.hash_method = msg_item.source_hash_method.text
+                service.source_info.server_name = msg_item.server_name.text
 
     return_data = {
         'cluster_id':cluster_id,
