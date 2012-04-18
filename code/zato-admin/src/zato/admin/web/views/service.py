@@ -303,6 +303,7 @@ def source_info(req, service_name):
 @meth_allowed('GET')
 def wsdl(req, service_name):
     cluster_id = req.GET.get('cluster')
+    success = req.GET.get('success')
     service = Service(name=service_name)
     
     form = WSDLUploadForm(req.POST, req.FILES)
@@ -334,7 +335,8 @@ def wsdl(req, service_name):
     return_data = {
         'cluster_id':cluster_id,
         'service':service,
-        'form':form
+        'form':form,
+        'success':success
         }
     
     return render_to_response('zato/service/wsdl.html', return_data, context_instance=RequestContext(req))

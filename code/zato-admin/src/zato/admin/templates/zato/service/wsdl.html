@@ -2,20 +2,36 @@
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
 {% endblock %}
 
 {% block extra_js %}
 
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/service/details.js"></script>
-    
+    <script type="text/javascript" src="/static/js/fileuploader.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+    
+    <script>
+        function createUploader(){
+            var uploader = new qq.FileUploader({
+                element: document.getElementById('uploader'),
+                action: 'upload',
+                debug: true
+            });
+        }
+        window.onload = createUploader;
+        
+    </script>
+
 
 {% endblock %}
 
 {% block content %}
 
-<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+{% if success %}
+    <div id="user-message-div"><pre id="user-message" class="user-message user-message-success">WSDL uploaded</pre></div>
+{% endif %}
 
 <h2 class="zato">Services : Source code : <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">{{ service.name }}</a></h2>
 
@@ -43,13 +59,12 @@
             <td class='inline_header'>Upload</td>
         </tr>
         <tr>
-            <td style="width:100%">
-                <form action="upload/" method="post" enctype="multipart/form-data">
-                    {{ form.file }}
-                    <input type="hidden" name="cluster_id" value="{{ cluster_id }}" />
-                    <br/><br/>
-                    <input type="submit" value="Submit" />
-                </form>
+            <td style="padding-top:16px;padding-bottom:0px">
+                <div id="uploader">
+                    <noscript>
+                        <p>Please enable JavaScript to use file uploader.</p>
+                    </noscript>
+                </div>
             </td>
         </tr>
     </table>
