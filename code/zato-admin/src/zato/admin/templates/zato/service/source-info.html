@@ -26,32 +26,36 @@
 </div>
 
 <div id="markup">
-        <table id="data-table">
-            <tr>
-                <td class='inline_header'>Server</td>
-            </tr>
-            <tr>
-                <td>{{ service.source_info.server_name }}</td>
-            </tr>
-            <tr>
-                <td class='inline_header'>Path</td>
-            </tr>
-            <tr>
-                <td>{{ service.source_info.path }}</td>
-            </tr>
-            <tr>
-                <td class='inline_header'>Hash</td>
-            </tr>
-            <tr>
-                <td>{{ service.source_info.hash_method }} {{ service.source_info.hash }}</td>
-            </tr>
-            <tr>
-                <td class='inline_header'>Source</td>
-            </tr>
-            <tr>
-                <td style="background-color:#eeffcc">{{ service.source_info.source_html|safe }}</td>
-            </tr>
-        </table>
+    <table id="data-table">
+{% if service.source_info %}
+        <tr>
+            <td class='inline_header'>Server</td>
+        </tr>
+        <tr>
+            <td>{{ service.source_info.server_name }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Path</td>
+        </tr>
+        <tr>
+            <td>{{ service.source_info.path }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Hash</td>
+        </tr>
+        <tr>
+            <td>{{ service.source_info.hash_method }} {{ service.source_info.hash }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Source</td>
+        </tr>
+        <tr>
+            <td style="background-color:#eeffcc">{{ service.source_info.source_html|safe }}</td>
+        </tr>
+{% else %}
+    <tr><td>Service has no source code information available</td></tr>
+{% endif %}
+    </table>
 </div>
 
 
