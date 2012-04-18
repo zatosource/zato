@@ -20,8 +20,8 @@
 
 <div class='page_prompt'>
     <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url service-wsdl service.name cluster_id %}" class="common">WSDL</a>
-    <a href="{% url service-request-response service.name cluster_id %}" class="common">Request/response</a>
+    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url service-request-response service.name %}" class="common">Request/response</a>
 </div>
 
 <div id="markup">
