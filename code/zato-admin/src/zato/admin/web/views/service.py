@@ -26,7 +26,7 @@ from traceback import format_exc
 
 # Django
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
@@ -47,7 +47,7 @@ from anyjson import dumps, loads
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.forms.service import CreateForm, EditForm
+from zato.admin.web.forms.service import CreateForm, EditForm, WSDLUploadForm
 from zato.admin.web.views import meth_allowed
 from zato.common import SourceInfo, zato_namespace, zato_path
 from zato.common.odb.model import Cluster, Service
@@ -305,6 +305,8 @@ def wsdl(req, service_name):
     cluster_id = req.GET.get('cluster')
     service = Service(name=service_name)
     
+    form = WSDLUploadForm(req.POST, req.FILES)
+    
     if cluster_id:
         cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
@@ -332,9 +334,15 @@ def wsdl(req, service_name):
     return_data = {
         'cluster_id':cluster_id,
         'service':service,
+        'form':form
         }
     
     return render_to_response('zato/service/wsdl.html', return_data, context_instance=RequestContext(req))
+
+@meth_allowed('POST')
+def wsdl_upload(req, service_name):
+    cluster_id = req.POST['cluster_id']
+    return HttpResponseRedirect(reverse('service-wsdl', args=[service_name]) + '?success=1&cluster=' + cluster_id)
 
 @meth_allowed('GET')
 def request_response(req, service_id, cluster_id):

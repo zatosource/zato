@@ -83,6 +83,7 @@ urlpatterns = patterns('',
     url(r'^zato/service/delete/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.delete, name='service-delete'),
     url(r'^zato/service/details/(?P<service_name>.*)/$', service.details, name='service-details'),
     url(r'^zato/service/source-info/(?P<service_name>.*)/$', service.source_info, name='service-source-info'),
+    url(r'^zato/service/wsdl/(?P<service_name>.*)/upload/$', service.wsdl_upload, name='service-wsdl-upload'),
     url(r'^zato/service/wsdl/(?P<service_name>.*)/$', service.wsdl, name='service-wsdl'),
     url(r'^zato/service/request-response/(?P<service_name>.*)/$', service.request_response, name='service-request-response'),
 

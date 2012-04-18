@@ -48,3 +48,6 @@ class DataFormatForm(forms.Form):
         for name in sorted(dir(SIMPLE_IO.FORMAT)):
             if name.upper() == name:
                 self.fields['data_format'].choices.append([name.lower(), name])
+                
+class UploadForm(forms.Form):
+    file  = forms.FileField(widget=forms.FileInput(attrs={'size':'70'}))

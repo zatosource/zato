@@ -1,0 +1,59 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
+{% endblock %}
+
+{% block extra_js %}
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/service/details.js"></script>
+    
+    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
+
+{% endblock %}
+
+{% block content %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<h2 class="zato">Services : Source code : <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">{{ service.name }}</a></h2>
+
+<div class='page_prompt'>
+    <a href="{% url service-details service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
+    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common">Request/response</a>
+</div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header'>Download</td>
+        </tr>
+        <tr>
+            <td>
+            {% if service.wsdl %}
+                <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}&amp;download=1" class="common">Click to download</a>
+            {% else %}
+                No WSDL attached
+            {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Upload</td>
+        </tr>
+        <tr>
+            <td style="width:100%">
+                <form action="upload/" method="post" enctype="multipart/form-data">
+                    {{ form.file }}
+                    <input type="hidden" name="cluster_id" value="{{ cluster_id }}" />
+                    <br/><br/>
+                    <input type="submit" value="Submit" />
+                </form>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+{% endblock %}
