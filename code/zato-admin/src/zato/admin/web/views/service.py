@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from collections import namedtuple
+from cStringIO import StringIO
 from traceback import format_exc
 
 # Django
@@ -343,8 +344,29 @@ def wsdl(req, service_name):
 
 @meth_allowed('POST')
 def wsdl_upload(req, service_name, cluster_id):
-    #return HttpResponseRedirect(reverse('service-wsdl', args=[service_name]) + '?success=1&cluster=' + cluster_id)
-    return HttpResponse(dumps({'success': True}))
+    """ Handles a WSDL file upload.
+    """
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    wsdl = req.read().encode('base64')
+    wsdl_name = req.GET['qqfile']
+    
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.request = Element('request')
+        zato_message.request.name = service_name
+        zato_message.request.cluster_id = cluster_id
+        zato_message.request.wsdl = wsdl
+        zato_message.request.wsdl_name = wsdl_name
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.set-wsdl', zato_message)
+        
+        return HttpResponse(dumps({'success': True}))
+    
+    except Exception, e:
+        msg = 'Could not upload the WSDL, e:[{e}]'.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    
 
 @meth_allowed('GET')
 def request_response(req, service_id, cluster_id):
@@ -365,6 +387,6 @@ def delete(req, service_id, cluster_id):
         return HttpResponse()
     
     except Exception, e:
-        msg = "Could not delete the service, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not delete the service, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)

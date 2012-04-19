@@ -448,7 +448,12 @@ class RequestHandler(object):
         if url_data:
             transport = url_data['transport']
             try:
-                payload = task.request_data.getBodyStream().getvalue()
+                bs = task.request_data.getBodyStream()
+                if task.request_data.body_rcv:
+                    payload = bs.read()
+                else:
+                    payload = bs.getvalue()
+                    
                 headers = task.request_data.headers
                 
                 if url_data.sec_def != ZATO_NONE:

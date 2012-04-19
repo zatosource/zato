@@ -82,9 +82,12 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
         pool = SOAPPool(url)
         soap_response = pool.invoke(path, soap_action, soap_body, headers)
     
-    
-        logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
-        response = objectify.fromstring(soap_response)
+        try:
+            logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
+            response = objectify.fromstring(soap_response)
+        except Exception, e:
+            msg = 'Could not parse the SOAP response:[{}]'.format(soap_response)
+            raise Exception(msg)
     
         # Do we have a SOAP fault?
         if soap_fault_xpath(response):
