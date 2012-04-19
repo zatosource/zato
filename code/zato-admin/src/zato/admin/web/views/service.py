@@ -342,9 +342,9 @@ def wsdl(req, service_name):
     return render_to_response('zato/service/wsdl.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('POST')
-def wsdl_upload(req, service_name):
-    cluster_id = req.POST['cluster_id']
-    return HttpResponseRedirect(reverse('service-wsdl', args=[service_name]) + '?success=1&cluster=' + cluster_id)
+def wsdl_upload(req, service_name, cluster_id):
+    #return HttpResponseRedirect(reverse('service-wsdl', args=[service_name]) + '?success=1&cluster=' + cluster_id)
+    return HttpResponse(dumps({'success': True}))
 
 @meth_allowed('GET')
 def request_response(req, service_id, cluster_id):
