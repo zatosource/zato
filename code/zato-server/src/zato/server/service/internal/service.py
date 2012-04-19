@@ -102,47 +102,6 @@ class Edit(AdminService):
                 
                 raise         
             
-class GetWSDL(ServiceClass):
-    """ Returns a WSDL for the given service. Either uses a user-uploaded one,
-    or, optionally generates one on fly if the service uses SimpleIO.
-    """
-    input_optional = ('service',)
-    def handle(self):
-        if self.request.request_data.query:
-            query = parse_qs(self.request.request_data.query)
-            service_name = query.get('service')
-        else:
-            service_name = self.request.input.service
-            
-        if not service_name:
-            self.response.status_code = BAD_REQUEST
-            self.response.payload = 'The [service] parameter could not be found'
-            return
-        
-        service_name = service_name[0]
-        
-        with closing(self.odb.session()) as session:
-            service = session.query(Service).filter_by(name=service_name).first()
-            if not service:
-                self.response.status_code = NOT_FOUND
-                self.response.payload = 'Service [{}] not found'.format(service_name)
-                return
-            
-        if service.wsdl:
-            content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
-            self.set_attachment(service_name, service.wsdl, content_type)
-            
-        else:
-            self.response.status_code = NOT_FOUND
-            self.response.payload = 'No WSDL found'
-                    
-    def set_attachment(self, service_name, payload, content_type):
-        """ Sets the information that we're returning an attachment to the user.
-        """
-        self.response.content_type = content_type
-        self.response.payload = payload
-        self.response.headers['Content-Disposition'] = 'attachment; filename={}.wsdl'.format(service_name)
-        
 class Delete(AdminService):
     """ Deletes a service
     """
@@ -272,3 +231,64 @@ class GetSourceInfo(AdminService):
             self.response.payload.source_path = si.source_path
             self.response.payload.source_hash = si.source_hash
             self.response.payload.source_hash_method = si.source_hash_method
+
+class GetWSDL(ServiceClass):
+    """ Returns a WSDL for the given service. Either uses a user-uploaded one,
+    or, optionally generates one on fly if the service uses SimpleIO.
+    """
+    input_optional = ('service', 'cluster_id')
+    def handle(self):
+        if self.request.request_data.query:
+            query = parse_qs(self.request.request_data.query)
+            service_name = query.get('service', (None,))[0]
+            cluster_id = query.get('cluster_id', (None,))[0]
+        else:
+            service_name = self.request.input.service
+            cluster_id = self.request.input.cluster_id
+            
+        if not(service_name and cluster_id):
+            self.response.status_code = BAD_REQUEST
+            self.response.payload = 'Both [service] and [cluster_id] parameters are required'
+            return
+        
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter_by(name=service_name, cluster_id=cluster_id).\
+                first()
+            
+            if not service:
+                self.response.status_code = NOT_FOUND
+                self.response.payload = 'Service [{}] not found'.format(service_name)
+                return
+            
+        if service.wsdl:
+            content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
+            self.set_attachment(service.wsdl_name, service.wsdl, content_type)
+            
+        else:
+            self.response.status_code = NOT_FOUND
+            self.response.payload = 'No WSDL found'
+                    
+    def set_attachment(self, attachment_name, payload, content_type):
+        """ Sets the information that we're returning an attachment to the user.
+        """
+        self.response.content_type = content_type
+        self.response.payload = payload
+        self.response.headers['Content-Disposition'] = 'attachment; filename={}'.format(attachment_name)            
+            
+class SetWSDL(AdminService):
+    """ Updates the service's WSDL.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'wsdl', 'wsdl_name')
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
+                first()
+            service.wsdl = self.request.input.wsdl.decode('base64')
+            service.wsdl_name = self.request.input.wsdl_name
+            
+            session.add(service)
+            session.commit()

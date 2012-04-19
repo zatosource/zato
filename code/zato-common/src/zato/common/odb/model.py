@@ -351,7 +351,7 @@ class Service(Base):
     is_active = Column(Boolean(), nullable=False)
     impl_name = Column(String(2000), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
-    wsdl = Column(LargeBinary(500000), nullable=True)
+    wsdl = Column(LargeBinary(5000000), nullable=True)
     wsdl_name = Column(String(200), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)

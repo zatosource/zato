@@ -26,7 +26,7 @@
     
         function create_uploader(){
             var uploader = new qq.FileUploader({
-                element: document.getElementById('uploader'),
+                element: $('#uploader')[0],
                 action: 'cluster/{{ cluster_id }}/upload/',
                 onComplete: on_upload_complete,
                 debug: true
