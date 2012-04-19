@@ -82,8 +82,6 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
         pool = SOAPPool(url)
         soap_response = pool.invoke(path, soap_action, soap_body, headers)
         
-        print(333, soap_response)
-    
         try:
             logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
             response = objectify.fromstring(soap_response)
