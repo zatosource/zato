@@ -33,7 +33,7 @@ import urllib3
 # Zato
 from zato.common.util import TRACE1
 from zato.common import soap_doc, soap_fault_xpath, ZATO_OK
-from zato.common import ZatoException, zato_data_xpath, zato_result_path_xpath
+from zato.common import ZatoException, zato_data_path, zato_data_xpath, zato_result_path_xpath
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +81,8 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
         logger.log(TRACE1, 'About to invoke the admin service url=[{0}]'.format(url))
         pool = SOAPPool(url)
         soap_response = pool.invoke(path, soap_action, soap_body, headers)
+        
+        print(333, soap_response)
     
         try:
             logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
@@ -98,7 +100,7 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
         # Did server send a business payload, i.e. a <data> elem in the Zato's namespace?
         zato_data = zato_data_xpath(response)
         if not zato_data:
-            msg = "Server did not send a business payload (zato_message.data element is missing), soap_response=[%s]" % soap_response
+            msg = 'Server did not send a business payload ({} element is missing), soap_response:[{}]'.format(zato_data_path, soap_response)
             logger.error(msg)
             raise ZatoException(msg=msg)
     

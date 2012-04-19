@@ -181,44 +181,44 @@ class Request(ValueConverter):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
-        for param in request_params:
-            
-            if isinstance(param, ForceType):
-                param_name = param.name
-            else:
-                param_name = param
-
-            if self.is_xml:
-                try:
-                    elem = zato_path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
-                except ParsingException, e:
-                    msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
-                        etree.tostring(self.payload), format_exc(e))
-                    raise ParsingException(self.cid, msg)
+        if not isinstance(self.payload, basestring):
+            for param in request_params:
                 
-                if elem is not None:
-                    if use_text:
-                        value = elem.text # We are interested in the text the elem contains ..
-                    else:
-                        return elem # .. or in the elem itself.
+                if isinstance(param, ForceType):
+                    param_name = param.name
                 else:
-                    value = default_value
-            else:
-                value = self.payload.get(param_name)
-                
-            # Use a default value if an element is empty and we're allowed to
-            # substitute its (empty) value with the default one.
-            if default_value != ZATO_NO_DEFAULT_VALUE and not value:
-                value = default_value
-            else:
-                if value is not None:
-                    value = unicode(value)
-                    
-            if not isinstance(param, AsIs):
-                params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
-            else:
-                params[param_name] = value
+                    param_name = param
     
+                if self.is_xml:
+                    try:
+                        elem = zato_path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
+                    except ParsingException, e:
+                        msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
+                            etree.tostring(self.payload), format_exc(e))
+                        raise ParsingException(self.cid, msg)
+                    
+                    if elem is not None:
+                        if use_text:
+                            value = elem.text # We are interested in the text the elem contains ..
+                        else:
+                            return elem # .. or in the elem itself.
+                    else:
+                        value = default_value
+                else:
+                    value = self.payload.get(param_name)
+                    
+                # Use a default value if an element is empty and we're allowed to
+                # substitute its (empty) value with the default one.
+                if default_value != ZATO_NO_DEFAULT_VALUE and not value:
+                    value = default_value
+                else:
+                    if value is not None:
+                        value = unicode(value)
+                        
+                if not isinstance(param, AsIs):
+                    params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
+                else:
+                    params[param_name] = value
         return params
 
 class Response(object):
