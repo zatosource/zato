@@ -59,6 +59,11 @@ logger = logging.getLogger(__name__)
 Channel = namedtuple('Channel', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
 
+def get_public_wsdl_url(cluster, service_name):
+    """ Returns an address under which a service's WSDL is publically available.
+    """
+    return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host, cluster.lb_port, service_name, cluster.id)
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create' actions.
     """
@@ -304,13 +309,14 @@ def source_info(req, service_name):
 @meth_allowed('GET')
 def wsdl(req, service_name):
     cluster_id = req.GET.get('cluster')
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     service = Service(name=service_name)
     has_wsdl = False
+    wsdl_public_url = get_public_wsdl_url(cluster, service_name)
     
     form = WSDLUploadForm(req.POST, req.FILES)
     
     if cluster_id:
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.request = Element('request')
         zato_message.request.name = service_name
@@ -325,6 +331,7 @@ def wsdl(req, service_name):
         'cluster_id':cluster_id,
         'service':service,
         'has_wsdl':has_wsdl,
+        'wsdl_public_url':wsdl_public_url,
         'form':form,
         }
     
@@ -358,30 +365,7 @@ def wsdl_upload(req, service_name, cluster_id):
 @meth_allowed('GET')
 def wsdl_download(req, service_name, cluster_id):
     cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    if cluster_id:
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.service = service_name
-        zato_message.request.cluster_id = cluster_id
-
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.get-wsdl', zato_message)
-        
-        if zato_path('response.item').get_from(zato_message) is not None:
-            msg_item = zato_message.response.item
-            
-            wsdl = msg_item.wsdl.text.decode('base64')
-            wsdl_name = msg_item.wsdl_name.text
-            content_type = msg_item.content_type.text
-            
-            response = HttpResponse(mimetype=content_type)
-            response['Content-Disposition'] = 'attachment; filename={}'.format(wsdl_name)
-            response.write(wsdl)
-            
-            return response
-            
-        else:
-            return HttpResponseNotFound('No WSDL found')
+    return HttpResponseRedirect(get_public_wsdl_url(cluster, service_name))
 
 @meth_allowed('GET')
 def request_response(req, service_id, cluster_id):
