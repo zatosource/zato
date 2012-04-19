@@ -57,8 +57,8 @@
         </tr>
         <tr>
             <td>
-            {% if service.wsdl %}
-                <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}&amp;download=1" class="common">Click to download</a>
+            {% if has_wsdl %}
+                <a href="{% url service-wsdl-download service.name cluster_id %}" class="common">Click to download</a>
             {% else %}
                 No WSDL attached
             {% endif %}

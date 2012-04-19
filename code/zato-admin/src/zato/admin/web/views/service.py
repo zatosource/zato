@@ -27,7 +27,7 @@ from traceback import format_exc
 
 # Django
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
@@ -304,8 +304,8 @@ def source_info(req, service_name):
 @meth_allowed('GET')
 def wsdl(req, service_name):
     cluster_id = req.GET.get('cluster')
-    success = req.GET.get('success')
     service = Service(name=service_name)
+    has_wsdl = False
     
     form = WSDLUploadForm(req.POST, req.FILES)
     
@@ -316,28 +316,16 @@ def wsdl(req, service_name):
         zato_message.request.name = service_name
         zato_message.request.cluster_id = cluster_id
 
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.get-source-info', zato_message)
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.has-wsdl', zato_message)
         
         if zato_path('response.item').get_from(zato_message) is not None:
-            msg_item = zato_message.response.item
-            
-            source = msg_item.source.text.decode('base64') if msg_item.source else ''
-            if source:
-                source_html = highlight(source, PythonLexer(), HtmlFormatter(linenos='table'))
-                
-                service.source_info = SourceInfo()
-                service.source_info.source = source
-                service.source_info.source_html = source_html
-                service.source_info.path = msg_item.source_path.text
-                service.source_info.hash = msg_item.source_hash.text
-                service.source_info.hash_method = msg_item.source_hash_method.text
-                service.source_info.server_name = msg_item.server_name.text
-
+            has_wsdl = is_boolean(zato_message.response.item.has_wsdl.text)
+    
     return_data = {
         'cluster_id':cluster_id,
         'service':service,
+        'has_wsdl':has_wsdl,
         'form':form,
-        'success':success
         }
     
     return render_to_response('zato/service/wsdl.html', return_data, context_instance=RequestContext(req))
@@ -367,6 +355,33 @@ def wsdl_upload(req, service_name, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
     
+@meth_allowed('GET')
+def wsdl_download(req, service_name, cluster_id):
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    if cluster_id:
+        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.request = Element('request')
+        zato_message.request.service = service_name
+        zato_message.request.cluster_id = cluster_id
+
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.get-wsdl', zato_message)
+        
+        if zato_path('response.item').get_from(zato_message) is not None:
+            msg_item = zato_message.response.item
+            
+            wsdl = msg_item.wsdl.text.decode('base64')
+            wsdl_name = msg_item.wsdl_name.text
+            content_type = msg_item.content_type.text
+            
+            response = HttpResponse(mimetype=content_type)
+            response['Content-Disposition'] = 'attachment; filename={}'.format(wsdl_name)
+            response.write(wsdl)
+            
+            return response
+            
+        else:
+            return HttpResponseNotFound('No WSDL found')
 
 @meth_allowed('GET')
 def request_response(req, service_id, cluster_id):
