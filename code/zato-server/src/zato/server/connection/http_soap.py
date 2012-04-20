@@ -48,6 +48,7 @@ from secwall.wsse import WSSE
 # Zato
 from zato.common import HTTPException, SIMPLE_IO, url_type, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request, security_def_type, TRACE1
+from zato.server.connection.request_response import should_store, store
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
@@ -435,7 +436,7 @@ class RequestHandler(object):
         # to use.
         return msg        
     
-    def handle(self, cid, task, thread_ctx):
+    def handle(self, cid, req_timestamp, task, thread_ctx):
         """ Base method for handling incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth, 
         the security validation is being performed. Otherwise, that step 
@@ -470,10 +471,14 @@ class RequestHandler(object):
                 handler = getattr(self, '{0}_handler'.format(transport))
 
                 data_format = url_data['data_format']
-                response = handler.handle(cid, task, payload, headers, transport, thread_ctx, self.simple_io_config, data_format, task.request_data)
+                service_info, response = handler.handle(cid, task, payload, headers, transport, thread_ctx, self.simple_io_config, data_format, task.request_data)
                 task.response_headers['Content-Type'] = response.content_type
                 task.response_headers.update(response.headers)
                 task.setResponseStatus(response.status_code, responses[response.status_code])
+                
+                # Optionally store the sample request/response pair
+                if should_store(service_info.id):
+                    store(thread_ctx.broker_client, cid, service_info.id, req_timestamp, datetime.utcnow(), payload, response.payload)
           
                 return response.payload
 
@@ -595,7 +600,6 @@ class _BaseMessageHandler(object):
         if response.content_type_changed:
             content_type = response.content_type
         else:
-            
             # .. or they did not so let's find out if we're using SimpleIO ..
             if data_format == SIMPLE_IO.FORMAT.XML:
                 if transport == url_type.soap:
@@ -605,10 +609,8 @@ class _BaseMessageHandler(object):
                         content_type = self.server.soap12_content_type
                 else:
                     content_type = self.server.plain_xml_content_type
-    
             elif data_format == SIMPLE_IO.FORMAT.JSON:
                 content_type = self.server.json_content_type
-            
             # .. alright, let's use the default value after all.
             else:
                 content_type = response.content_type
@@ -616,7 +618,7 @@ class _BaseMessageHandler(object):
         response.content_type = content_type
 
         logger.debug('[{}] Returning content_type:[{}], response.payload:[{}]'.format(cid, content_type, response.payload))
-        return response
+        return service_info, response
     
     def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Updates the configuration so that there's a link between a URL

@@ -267,6 +267,7 @@ def new_cid():
     """
     
     # The number below (24) needs to be kept in sync with zato.common.log_message.CID_LENGTH
+    # and the Service.sample_cid column
     return '{0:0>24}'.format(getrandbits(64))
 
 def get_config(repo_location, config_name):
