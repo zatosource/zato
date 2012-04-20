@@ -67,6 +67,7 @@
                 <input type="text" id="sample_req_resp_freq" name="sample_req_resp_freq" style="width:5%" value="{{ service.sample_req_resp_freq }}"/>
                 <input type="hidden" id="service_name" name="service_name" value="{{ service.name }}"/>
                 <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}"/>
+                <input type="hidden" id="configure_url" name="configure_url" value="{% url service-request-response-configure service.name cluster_id %}"/>
                 <input type="submit" value="OK" />
             </td>
         </tr>

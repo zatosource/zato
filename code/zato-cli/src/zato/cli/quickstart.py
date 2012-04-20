@@ -253,6 +253,7 @@ class Quickstart(ZatoCommand):
             'zato:service.set-wsdl':'zato.server.service.internal.service.SetWSDL',
             'zato:service.has-wsdl':'zato.server.service.internal.service.HasWSDL',
             'zato:service.get-request-response':'zato.server.service.internal.service.GetRequestResponse',
+            'zato:service.configure-request-response':'zato.server.service.internal.service.ConfigureRequestResponse',
 
             # SOAP channels
             'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',
