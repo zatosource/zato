@@ -409,12 +409,12 @@ def request_response_configure(req, service_name, cluster_id):
         
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.configure-request-response', zato_message)
         
-        return HttpResponse(dumps({'success': True}))
+        return HttpResponse('Saved successfully')
     
     except Exception, e:
         msg = 'Could not update the configuration, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
-        return HttpResponseServerError(dumps({'success':False, 'msg':msg}))
+        return HttpResponseServerError(msg)
     
 @meth_allowed('POST')
 def delete(req, service_id, cluster_id):
