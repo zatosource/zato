@@ -94,13 +94,33 @@
             <td class='inline_header'>Request</td>
         </tr>
         <tr>
-            <td>{% if service.sample_request %}{{ service.sample_request }}{% else %}(None){% endif %}</td>
+            <td>
+                {% if service.sample_request_html %}
+                    {{ service.sample_request_html|safe }}
+                {% else %}
+                    {% if service.sample_request %}
+                        {{ service.sample_request }}
+                    {% else %}
+                        (None)
+                    {% endif %}
+                {% endif %}
+            </td>
         </tr>
         <tr>
             <td class='inline_header'>Response</td>
         </tr>
         <tr>
-            <td>{% if service.sample_response %}{{ service.sample_response }}{% else %}(None){% endif %}</td>
+            <td>
+                {% if service.sample_response_html %}
+                    {{ service.sample_response_html|safe }}
+                {% else %}
+                    {% if service.sample_response %}
+                        {{ service.sample_response }}
+                    {% else %}
+                        (None)
+                    {% endif %}
+                {% endif %}
+            </td>
         </tr>
     </table>
 </div>
