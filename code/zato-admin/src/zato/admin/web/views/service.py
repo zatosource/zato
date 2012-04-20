@@ -386,6 +386,9 @@ def request_response(req, service_name):
         if zato_path('response.item').get_from(zato_message) is not None:
             item = zato_message.response.item
             service.id = item.service_id.text
+            service.sample_cid = item.sample_cid.text
+            service.sample_req_timestamp = item.sample_req_timestamp.text
+            service.sample_resp_timestamp = item.sample_resp_timestamp.text
             service.sample_request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
             service.sample_response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
             service.sample_req_resp_freq = item.sample_req_resp_freq.text

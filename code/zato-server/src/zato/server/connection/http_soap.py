@@ -477,8 +477,8 @@ class RequestHandler(object):
                 task.setResponseStatus(response.status_code, responses[response.status_code])
                 
                 # Optionally store the sample request/response pair
-                if should_store(service_info.id):
-                    store(thread_ctx.broker_client, cid, service_info.id, req_timestamp, datetime.utcnow(), payload, response.payload)
+                if should_store(service_info.service_id):
+                    store(thread_ctx.broker_client, cid, service_info.service_id, req_timestamp, datetime.utcnow(), payload, response.payload)
           
                 return response.payload
 
