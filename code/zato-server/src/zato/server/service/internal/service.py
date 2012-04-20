@@ -339,3 +339,20 @@ class GetRequestResponse(AdminService):
             self.response.payload.sample_request = (result.sample_request if result.sample_request else '').encode('base64')
             self.response.payload.sample_response = (result.sample_response if result.sample_response else '').encode('base64')
             self.response.payload.sample_req_resp_freq = result.sample_req_resp_freq
+
+class ConfigureRequestResponse(AdminService):
+    """ Updates the request/response-related configuration.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'name', 'sample_req_resp_freq')
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
+                one()
+            
+            service.sample_req_resp_freq = int(self.request.input.sample_req_resp_freq)
+            
+            session.add(service)
+            session.commit()
