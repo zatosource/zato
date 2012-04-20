@@ -396,6 +396,25 @@ def request_response(req, service_name):
         }
     
     return render_to_response('zato/service/request-response.html', return_data, context_instance=RequestContext(req))
+
+@meth_allowed('POST')
+def request_response_configure(req, service_name, cluster_id):
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    try:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.request = Element('request')
+        zato_message.request.name = service_name
+        zato_message.request.cluster_id = cluster_id
+        zato_message.request.sample_req_resp_freq = req.POST['sample_req_resp_freq']
+        
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.configure-request-response', zato_message)
+        
+        return HttpResponse(dumps({'success': True}))
+    
+    except Exception, e:
+        msg = 'Could not update the configuration, e:[{e}]'.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(dumps({'success':False, 'msg':msg}))
     
 @meth_allowed('POST')
 def delete(req, service_id, cluster_id):
