@@ -282,6 +282,7 @@ def source_info(req, service_name):
         
         if zato_path('response.item').get_from(zato_message) is not None:
             msg_item = zato_message.response.item
+            service.id = msg_item.service_id.text
             
             source = msg_item.source.text.decode('base64') if msg_item.source else ''
             if source:
@@ -325,6 +326,7 @@ def wsdl(req, service_name):
         _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.has-wsdl', zato_message)
         
         if zato_path('response.item').get_from(zato_message) is not None:
+            service.id = zato_message.response.item.service_id.text
             has_wsdl = is_boolean(zato_message.response.item.has_wsdl.text)
     
     return_data = {
@@ -368,8 +370,32 @@ def wsdl_download(req, service_name, cluster_id):
     return HttpResponseRedirect(get_public_wsdl_url(cluster, service_name))
 
 @meth_allowed('GET')
-def request_response(req, service_id, cluster_id):
-    pass
+def request_response(req, service_name):
+    cluster_id = req.GET.get('cluster')
+    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    service = Service(name=service_name)
+
+    if cluster_id:
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.request = Element('request')
+        zato_message.request.name = service_name
+        zato_message.request.cluster_id = cluster_id
+
+        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.get-request-response', zato_message)
+        
+        if zato_path('response.item').get_from(zato_message) is not None:
+            item = zato_message.response.item
+            service.id = item.service_id.text
+            service.sample_request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
+            service.sample_response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
+            service.sample_req_resp_freq = item.sample_req_resp_freq.text
+    
+    return_data = {
+        'cluster_id':cluster_id,
+        'service':service,
+        }
+    
+    return render_to_response('zato/service/request-response.html', return_data, context_instance=RequestContext(req))
     
 @meth_allowed('POST')
 def delete(req, service_id, cluster_id):
