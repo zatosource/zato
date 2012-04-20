@@ -46,42 +46,41 @@
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : WSDL</h2>
+<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Sample request/response</h2>
 
 <div class='page_prompt'>
     <a href="{% url service-details service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
     <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common current">WSDL</a>
-    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
+    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common current">Sample request/response</a>
 </div>
 
 <div id="markup">
     <table id="data-table">
         <tr>
-            <td class='inline_header'>Download</td>
+            <td class='inline_header'>Configuration</td>
         </tr>
         <tr>
-            <td id="td_wsdl">
-            {% if has_wsdl %}
-                <a href="{% url service-wsdl-download service.name cluster_id %}" class="common">Click to download</a>
-                <br/>
-                <div style="margin-top:7px">Direct address: {{ wsdl_public_url }}</div>
-            {% else %}
-                No WSDL attached
-            {% endif %}
+            <td>
+                One in how many request/response pairs should be stored? 
+                
+                <input type="text" id="sample_req_resp_freq" name="sample_req_resp_freq" style="width:5%" value="{{ service.sample_req_resp_freq }}"/>
+                <input type="hidden" id="service_name" name="service_name" value="{{ service.name }}"/>
+                <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}"/>
+                <input type="submit" value="OK" />
             </td>
         </tr>
         <tr>
-            <td class='inline_header'>Upload</td>
+            <td class='inline_header'>Sample request</td>
         </tr>
         <tr>
-            <td style="padding-top:16px;padding-bottom:0px">
-                <div id="uploader">
-                    <noscript>
-                        <p>Please enable JavaScript to use file uploader.</p>
-                    </noscript>
-                </div>
-            </td>
+            <td>{% if service.sample_request %}{{ service.sample_request }}{% else %}(None){% endif %}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Sample response</td>
+        </tr>
+        <tr>
+            <td>{% if service.sample_response %}{{ service.sample_response }}{% else %}(None){% endif %}</td>
         </tr>
     </table>
 </div>

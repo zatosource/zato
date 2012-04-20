@@ -33,7 +33,7 @@ from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, 
      DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service, service_list
 from zato.common.util import payload_from_request
-from zato.server.service import Boolean, Service as ServiceClass
+from zato.server.service import Boolean, Integer, Service as ServiceClass
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
@@ -212,11 +212,11 @@ class GetSourceInfo(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name')
-        output_optional = ('server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
+        output_optional = ('service_id', 'server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
         
     def handle(self):
         with closing(self.odb.session()) as session:
-            si = session.query(Server.name.label('server_name'), 
+            si = session.query(Service.id.label('service_id'), Server.name.label('server_name'), 
                               DeployedService.source, DeployedService.source_path,
                               DeployedService.source_hash, DeployedService.source_hash_method).\
                             filter(Cluster.id==Service.cluster_id).\
@@ -226,6 +226,7 @@ class GetSourceInfo(AdminService):
                             filter(Server.id==DeployedService.server_id).\
                             one()
             
+            self.response.payload.service_id = si.service_id
             self.response.payload.server_name = si.server_name
             self.response.payload.source = si.source.encode('base64') if si.source else None
             self.response.payload.source_path = si.source_path
@@ -309,11 +310,32 @@ class HasWSDL(AdminService):
     """
     class SimpleIO:
         input_required = ('name', 'cluster_id')
-        output_required = ('has_wsdl',)
+        output_required = ('service_id', 'has_wsdl',)
         
     def handle(self):
         with closing(self.odb.session()) as session:
-            wsdl = session.query(Service.wsdl).\
+            result = session.query(Service.id, Service.wsdl).\
                 filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
                 one()
-            self.response.payload.has_wsdl = wsdl[0] is not None
+            self.response.payload.service_id = result.id
+            self.response.payload.has_wsdl = result.wsdl is not None
+
+class GetRequestResponse(AdminService):
+    """ Returns a sample request/response along with information on how often
+    the pairs should be stored in the DB.
+    """
+    class SimpleIO:
+        input_required = ('name', 'cluster_id')
+        output_required = ('service_id', 'sample_request', 'sample_response', Integer('sample_req_resp_freq'))
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            result = session.query(Service.id, Service.sample_request, Service.sample_response,
+                                 Service.sample_req_resp_freq).\
+                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
+                one()
+
+            self.response.payload.service_id = result.id
+            self.response.payload.sample_request = (result.sample_request if result.sample_request else '').encode('base64')
+            self.response.payload.sample_response = (result.sample_response if result.sample_response else '').encode('base64')
+            self.response.payload.sample_req_resp_freq = result.sample_req_resp_freq
