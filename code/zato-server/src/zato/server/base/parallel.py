@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import asyncore, logging, time
+from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
 from time import sleep
@@ -74,8 +75,8 @@ class ZatoHTTPListener(HTTPServer):
         
         try:
             # SOAP or plain HTTP.
-            payload = thread_local_ctx.store.request_handler.handle(cid, task, thread_local_ctx)
-
+            payload = thread_local_ctx.store.request_handler.handle(cid, 
+                            datetime.utcnow(), task, thread_local_ctx)
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)

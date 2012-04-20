@@ -73,13 +73,31 @@
             </td>
         </tr>
         <tr>
-            <td class='inline_header'>Sample request</td>
+            <td class='inline_header'>CID</td>
+        </tr>
+        <tr>
+            <td>{% if service.sample_cid %}{{ service.sample_cid }}{% else %}(None){% endif %}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Request timestamp (UTC)</td>
+        </tr>
+        <tr>
+            <td>{% if service.sample_req_timestamp %}{{ service.sample_req_timestamp }}{% else %}(None){% endif %}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Response timestamp (UTC)</td>
+        </tr>
+        <tr>
+            <td>{% if service.sample_resp_timestamp %}{{ service.sample_resp_timestamp }}{% else %}(None){% endif %}</td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Request</td>
         </tr>
         <tr>
             <td>{% if service.sample_request %}{{ service.sample_request }}{% else %}(None){% endif %}</td>
         </tr>
         <tr>
-            <td class='inline_header'>Sample response</td>
+            <td class='inline_header'>Response</td>
         </tr>
         <tr>
             <td>{% if service.sample_response %}{{ service.sample_response }}{% else %}(None){% endif %}</td>

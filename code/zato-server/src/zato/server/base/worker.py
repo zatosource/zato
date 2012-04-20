@@ -27,7 +27,7 @@ from threading import local, RLock
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, json
 
 # zope.server
 from zope.server.http.httpserverchannel import HTTPServerChannel
@@ -326,6 +326,8 @@ class WorkerStore(BaseWorker):
             msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(
                 msg.service, channel, action, repr(service_instance.response.payload))
             logger.debug(msg)
+            
+# ##############################################################################
 
     def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED', args)
@@ -422,6 +424,16 @@ class WorkerStore(BaseWorker):
         """
         self._delete_outgoing_http_soap(msg['name'], msg['transport'], logger.error)
             
+# ##############################################################################
+
+    def on_broker_pull_msg_SERVICE_SET_REQUEST_RESPONSE(self, msg, *args):
+        new_msg = Bunch()
+        new_msg.cid = msg.cid
+        new_msg.service = 'zato.server.service.internal.service.SetRequestResponse'
+        new_msg.data_format = SIMPLE_IO.FORMAT.JSON
+        new_msg.payload = msg
+        return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SAMPLE_REQUEST_RESPONSE', args)
+
 # ##############################################################################
             
 class _TaskDispatcher(ThreadedTaskDispatcher):

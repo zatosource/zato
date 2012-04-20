@@ -354,6 +354,9 @@ class Service(Base):
     wsdl = Column(LargeBinary(5000000), nullable=True)
     wsdl_name = Column(String(200), nullable=True)
     
+    sample_cid = Column(String(24), nullable=True)
+    sample_req_timestamp = Column(DateTime, nullable=True)
+    sample_resp_timestamp = Column(DateTime, nullable=True)
     sample_request = Column(LargeBinary(5000000), nullable=True)
     sample_response = Column(LargeBinary(5000000), nullable=True)
     sample_req_resp_freq = Column(Integer, nullable=False)

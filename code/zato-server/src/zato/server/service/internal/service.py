@@ -21,8 +21,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from datetime import datetime
 from httplib import BAD_REQUEST, NOT_FOUND
 from mimetypes import guess_type
+from time import strptime
 from traceback import format_exc
 from urlparse import parse_qs
 
@@ -354,5 +356,25 @@ class ConfigureRequestResponse(AdminService):
             
             service.sample_req_resp_freq = int(self.request.input.sample_req_resp_freq)
             
+            session.add(service)
+            session.commit()
+            
+class SetRequestResponse(AdminService):
+    """ Stores a new request/response pair.
+    """
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter_by(id=self.request.payload.service_id).\
+                one()
+            
+            # TODO: This double-parsing could be done away with
+            service.sample_req_timestamp = datetime.strptime(self.request.payload.req_timestamp, '%Y-%m-%dT%H:%M:%S.%f')
+            service.sample_resp_timestamp = datetime.strptime(self.request.payload.resp_timestamp, '%Y-%m-%dT%H:%M:%S.%f')
+            
+            service.sample_cid = self.request.payload.cid
+            service.sample_request = self.request.payload.request.encode('utf-8')
+            service.sample_response = self.request.payload.response.encode('utf-8')
+
             session.add(service)
             session.commit()
