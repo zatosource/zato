@@ -328,16 +328,21 @@ class GetRequestResponse(AdminService):
     """
     class SimpleIO:
         input_required = ('name', 'cluster_id')
-        output_required = ('service_id', 'sample_request', 'sample_response', Integer('sample_req_resp_freq'))
+        output_required = ('service_id', 'sample_cid', 'sample_req_timestamp', 'sample_resp_timestamp', 
+            'sample_request', 'sample_response', Integer('sample_req_resp_freq'))
         
     def handle(self):
         with closing(self.odb.session()) as session:
-            result = session.query(Service.id, Service.sample_request, Service.sample_response,
-                                 Service.sample_req_resp_freq).\
+            result = session.query(Service.id, Service.sample_cid, Service.sample_req_timestamp,
+                Service.sample_resp_timestamp, Service.sample_request, Service.sample_response,
+                Service.sample_req_resp_freq).\
                 filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
                 one()
 
             self.response.payload.service_id = result.id
+            self.response.payload.sample_cid = result.sample_cid
+            self.response.payload.sample_req_timestamp = result.sample_req_timestamp
+            self.response.payload.sample_resp_timestamp = result.sample_resp_timestamp
             self.response.payload.sample_request = (result.sample_request if result.sample_request else '').encode('base64')
             self.response.payload.sample_response = (result.sample_response if result.sample_response else '').encode('base64')
             self.response.payload.sample_req_resp_freq = result.sample_req_resp_freq
@@ -368,11 +373,9 @@ class SetRequestResponse(AdminService):
                 filter_by(id=self.request.payload.service_id).\
                 one()
             
-            # TODO: This double-parsing could be done away with
+            service.sample_cid = self.request.payload.cid
             service.sample_req_timestamp = datetime.strptime(self.request.payload.req_timestamp, '%Y-%m-%dT%H:%M:%S.%f')
             service.sample_resp_timestamp = datetime.strptime(self.request.payload.resp_timestamp, '%Y-%m-%dT%H:%M:%S.%f')
-            
-            service.sample_cid = self.request.payload.cid
             service.sample_request = self.request.payload.request.encode('utf-8')
             service.sample_response = self.request.payload.response.encode('utf-8')
 
