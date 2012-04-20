@@ -100,7 +100,7 @@
             {% if items %}
             {% for item in items %}
                 <tr 
-                    class="{% if not item.lb_config or not item.all_up %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
+                    class="{% if not item.lb_config or item.some_down or item.some_maint or item.all_down %}attention{% else %} {% cycle 'odd' 'even' %}{% endif %}"
                         id='tr_{{ item.id }}'>
                     
                     <td class='numbering'>&nbsp;</td>
