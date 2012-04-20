@@ -32,11 +32,12 @@ from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 # lxml
+from lxml import etree
 from lxml.objectify import Element
 
 # Pygments
 from pygments import highlight
-from pygments.lexers import PythonLexer
+from pygments.lexers import JSONLexer, MakoXmlLexer, PythonLexer
 from pygments.formatters import HtmlFormatter
 
 # Validate
@@ -58,6 +59,25 @@ logger = logging.getLogger(__name__)
 
 Channel = namedtuple('Channel', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
+
+data_format_lexer = {
+    'json': JSONLexer,
+    'xml': MakoXmlLexer
+}
+
+def known_data_format(data):
+    data_format = None
+    try:
+        etree.fromstring(data)
+        data_format = 'xml'
+    except etree.XMLSyntaxError:
+        try:
+            loads(data)
+            data_format = 'json'
+        except ValueError:
+            pass
+        
+    return data_format
 
 def get_public_wsdl_url(cluster, service_name):
     """ Returns an address under which a service's WSDL is publically available.
@@ -374,7 +394,7 @@ def request_response(req, service_name):
     cluster_id = req.GET.get('cluster')
     cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     service = Service(name=service_name)
-
+    
     if cluster_id:
         zato_message = Element('{%s}zato_message' % zato_namespace)
         zato_message.request = Element('request')
@@ -385,12 +405,24 @@ def request_response(req, service_name):
         
         if zato_path('response.item').get_from(zato_message) is not None:
             item = zato_message.response.item
+            
+            request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
+            request_data_format = known_data_format(request)
+            if request_data_format:
+                service.sample_request_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
+
+            response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
+            response_data_format = known_data_format(response)
+            if response_data_format:
+                service.sample_response_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
+            
+            service.sample_request = request
+            service.sample_response = response
+            
             service.id = item.service_id.text
             service.sample_cid = item.sample_cid.text
             service.sample_req_timestamp = item.sample_req_timestamp.text
             service.sample_resp_timestamp = item.sample_resp_timestamp.text
-            service.sample_request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
-            service.sample_response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
             service.sample_req_resp_freq = item.sample_req_resp_freq.text
     
     return_data = {

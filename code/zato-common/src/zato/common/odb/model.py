@@ -387,6 +387,8 @@ class Service(Base):
         self.zmq_channels = [] # Not used by the database
         self.deployment_info = [] # Not used by the database
         self.source_info = None # Not used by the database
+        self.sample_request_html = None # Not used by the database
+        self.sample_response_html = None # Not used by the database
 
 class DeployedService(Base):
     """ A service living on a given server.
