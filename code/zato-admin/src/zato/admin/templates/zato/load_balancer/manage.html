@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Load balancer : Config GUI view : <a href='{% url cluster %}'>{{ cluster.name }}</a></h2>
+<h2 class="zato">Clusters : Load balancer : <a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Config GUI view</h2>
 
 {% if messages %}
     {% for message in messages %}
@@ -16,6 +16,7 @@
 {% endif %}
 
 <div class='page_prompt'>
+    <a href="{% url lb-manage-source-code cluster.id %}" class="common current">Config GUI view</a>
     <a href="{% url lb-manage-source-code cluster.id %}" class="common">Config source code view</a>
 
     {% if haproxy_alive.status %}
