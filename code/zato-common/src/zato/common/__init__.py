@@ -89,6 +89,10 @@ scheduler_date_time_format = "%Y-%m-%d %H:%M:%S"
 
 soap_date_time_format = "%Y-%m-%dT%H:%M:%S.%fZ"
 
+# Classes that have this attribute defined (no matter the value) will not be deployed
+# onto servers.
+DONT_DEPLOY_ATTR_NAME = 'zato_dont_import'
+
 # A convenient constant used in several places, simplifies passing around
 # arguments which are, well, not given (as opposed to being None, an empty string etc.)
 ZATO_NOT_GIVEN = b"ZATO_NOT_GIVEN"
