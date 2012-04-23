@@ -102,7 +102,8 @@ class ParallelServer(BrokerMessageReceiver):
                  int_parameter_suffixes=None, bool_parameter_prefixes=None,
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
-                 internal_service_modules=None, service_modules=None, base_dir=None):
+                 internal_service_modules=None, service_modules=None, base_dir=None,
+                 work_dir=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -124,6 +125,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.internal_service_modules = internal_service_modules
         self.service_modules = service_modules
         self.base_dir = base_dir
+        self.work_dir = work_dir
         
         # The main config store
         self.config = ConfigStore()
@@ -145,7 +147,8 @@ class ParallelServer(BrokerMessageReceiver):
         self.odb.drop_deployed_services(server.id)
         
         # .. and re-deploy the back from a clear state.
-        self.service_store.import_services_from_fs(self.internal_service_modules + self.service_modules, self.base_dir)
+        self.service_store.import_services_from_fs(self.internal_service_modules + self.service_modules, 
+            self.base_dir, self.work_dir)
         
         if self.singleton_server:
             

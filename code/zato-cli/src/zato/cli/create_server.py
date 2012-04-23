@@ -107,7 +107,7 @@ frontend front_http_plain
 
 default_odb_pool_size = 1
 
-directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs')
+directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work')
 files = {ZATO_SERVER_DIR: '',
          'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
 }
