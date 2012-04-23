@@ -66,6 +66,12 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.service_modules = app_context.get_object('service_modules')
     parallel_server.base_dir = base_dir
     
+    work_dir = config['pickup']['work_dir']
+    if not os.path.isabs(work_dir):
+        work_dir = os.path.abspath(os.path.join(repo_location, work_dir))
+        
+    parallel_server.work_dir = work_dir
+    
     if start_singleton:
         singleton_server = app_context.get_object('singleton_server')
         singleton_server.initial_sleep_time = int(config['singleton']['initial_sleep_time']) / 1000.
@@ -96,10 +102,6 @@ def run(host, port, base_dir, start_singleton):
     config_repo_manager.job_list_location = job_list_location
     config_repo_manager.service_store_config_location = service_store_config_location
 
-    work_dir = config['pickup']['work_dir']
-    if not os.path.isabs(work_dir):
-        work_dir = os.path.join(repo_location, work_dir)
-
     egg_importer = app_context.get_object('egg_importer')
     egg_importer.work_dir = work_dir
 
@@ -109,7 +111,6 @@ def run(host, port, base_dir, start_singleton):
 
     pickup = app_context.get_object('pickup')
     pickup.pickup_dir = pickup_dir
-
     '''
 
 if __name__ == '__main__':

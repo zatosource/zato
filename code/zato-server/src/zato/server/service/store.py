@@ -20,16 +20,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import imp, inspect, logging, os, shutil, sys, tempfile, zipimport
+import imp, inspect, logging, os, re, shutil, sys, tempfile, zipimport
 from datetime import datetime
+from glob import glob
 from hashlib import sha256
 from importlib import import_module
 from os.path import getmtime
 from traceback import format_exc
 from uuid import uuid4
 
+# packaging/Distutils2
+try:
+    from packaging import Config
+    from packaging import Distribution
+    from packaging import Metadata
+except ImportError:
+    from distutils2.config import Config
+    from distutils2.dist import Distribution
+    from distutils2.metadata import Metadata
+
 # pip
-from pip.download import is_archive_file
+from pip.download import is_archive_file, unpack_file_url
 
 # anyjson
 from anyjson import dumps
@@ -52,6 +63,13 @@ from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
+
+class _DummyLink(object):
+    """ A dummy class for staying consistent with pip's API in certain places
+    below.
+    """
+    def __init__(self, url):
+        self.url = url
 
 def get_service_name(class_obj):
     """ Return the name of a service which will be either given us explicitly
@@ -88,8 +106,24 @@ class ServiceStore(InitializingObject):
         """ Returns all the service-related data.
         """
         return self.services[class_name]
+    
+    def decompress(self, archive, work_dir):
+        """ Decompresses an archive into a randomly named directory.
+        """
+        # Create a new directory for services ..
+        fs_safe_now = re.sub('[-:. ]', '_', str(datetime.utcnow()))
+        rand = uuid4().hex
+        dir_name = os.path.join(work_dir, '{}-{}-{}'.format(fs_safe_now, os.path.split(archive)[1], rand))
+        os.mkdir(dir_name)
+        
+        # .. unpack the archive into it ..
+        unpack_file_url(_DummyLink('file:' + archive), dir_name)
+        
+        # .. and return the name of the newly created directory so that the
+        # rest of the machinery can pick the services up
+        return dir_name
 
-    def import_services_from_fs(self, items, base_dir):
+    def import_services_from_fs(self, items, base_dir, work_dir):
         """ Imports services from all the specified resources, be it module names,
         individual files or distutils2 packages (compressed or not).
         """
@@ -98,15 +132,16 @@ class ServiceStore(InitializingObject):
             
             is_internal = item_name.startswith('zato')
             
-            # distutils2 ..
+            # distutils2 archive, decompress and import from the newly created directory ..
             if is_archive_file(item_name):
-                pass
+                new_path = self.decompress(item_name, work_dir)
+                self.import_services_from_directory(new_path)
             
             # distutils2 too ..
             elif os.path.isdir(item_name):
-                self.import_services_from_directory(item_name, is_internal)
+                self.import_services_from_directory(item_name)
             
-            # .. a .py/.pyc/.pyw
+            # .. a .py/.pyw
             elif is_python_file(item_name):
                 self.import_services_from_file(item_name, is_internal, base_dir)
             
@@ -129,24 +164,30 @@ class ServiceStore(InitializingObject):
         mod = imp.load_source(mod_name, file_name)
         self._visit_module(mod, is_internal, file_name)
         
-    def import_services_from_directory(self, dir_name, is_internal):
+    def import_services_from_directory(self, dir_name):
         """ dir_name points to a Distutils2 directory. Its setup.cfg file is read
         and all the modules from packages pointed to by the 'files' section 
         are scanned for services.
         """
         abs_dir = os.path.abspath(dir_name)
-        path = os.path.join(dir_name, 'MANIFEST')
+        path = os.path.join(dir_name, 'setup.cfg')
         if not os.path.exists(path):
-            msg = "Could not find MANIFEST in [{}], path:[{}] doesn't exist".format(dir_name, path)
+            msg = "Could not find setup.cfg in [{}], path:[{}] doesn't exist".format(dir_name, path)
             logger.error(msg)
             raise ValueError(msg)
-            
-        for line in open(path):
-            line = line.strip()
-            if line[0] != '#' and line.endswith('.py'):
-                full_path = os.path.join(abs_dir, line)
-                logger.debug('About to import services from [%s]' % full_path)
-                self.import_services_from_file(line, is_internal, abs_dir)
+        
+        dist = Distribution()
+        config = Config(dist)
+        config.parse_config_files([path])
+        
+        logger.debug('dist.packages:[%s]' % dist.packages)
+        
+        for package in dist.packages:
+            package_dir = os.path.abspath(os.path.join(dir_name, package.replace('.', os.path.sep)))
+            for pattern in('*.py', '*.pyw'):
+                glob_path = os.path.join(package_dir, pattern)
+                for py_path in glob(glob_path):
+                    self.import_services_from_file(py_path, False, None)
         
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
@@ -185,6 +226,7 @@ class ServiceStore(InitializingObject):
         """
         for name in dir(mod):
             item = getattr(mod, name)
+            #print(mod, name, self._should_deploy(name, item))
             if self._should_deploy(name, item):
                 timestamp = datetime.utcnow().isoformat()
                 depl_info = deployment_info('ServiceStore', item, timestamp, fs_location)
@@ -196,3 +238,7 @@ class ServiceStore(InitializingObject):
     
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
                 self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
+
+if __name__ == '__main__':
+    store = ServiceStore()
+    store.import_services_from_directory('/home/dsuch/tmp/zato-sample-project1')
