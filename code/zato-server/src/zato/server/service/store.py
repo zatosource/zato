@@ -28,9 +28,6 @@ from os.path import getmtime
 from traceback import format_exc
 from uuid import uuid4
 
-# Distribute
-import pkg_resources
-
 # pip
 from pip.download import is_archive_file
 
@@ -49,7 +46,7 @@ from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common import SourceInfo
+from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo
 from zato.common.util import deployment_info, is_python_file, service_name_from_impl, TRACE1
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
@@ -94,7 +91,7 @@ class ServiceStore(InitializingObject):
 
     def import_services_from_fs(self, items, base_dir):
         """ Imports services from all the specified resources, be it module names,
-        individual files or distutils2 packages.
+        individual files or distutils2 packages (compressed or not).
         """
         for item_name in items:
             logger.debug('About to import services from:[%s]', item_name)
@@ -104,6 +101,10 @@ class ServiceStore(InitializingObject):
             # distutils2 ..
             if is_archive_file(item_name):
                 pass
+            
+            # distutils2 too ..
+            elif os.path.isdir(item_name):
+                self.import_services_from_directory(item_name, is_internal)
             
             # .. a .py/.pyc/.pyw
             elif is_python_file(item_name):
@@ -128,6 +129,25 @@ class ServiceStore(InitializingObject):
         mod = imp.load_source(mod_name, file_name)
         self._visit_module(mod, is_internal, file_name)
         
+    def import_services_from_directory(self, dir_name, is_internal):
+        """ dir_name points to a Distutils2 directory. Its setup.cfg file is read
+        and all the modules from packages pointed to by the 'files' section 
+        are scanned for services.
+        """
+        abs_dir = os.path.abspath(dir_name)
+        path = os.path.join(dir_name, 'MANIFEST')
+        if not os.path.exists(path):
+            msg = "Could not find MANIFEST in [{}], path:[{}] doesn't exist".format(dir_name, path)
+            logger.error(msg)
+            raise ValueError(msg)
+            
+        for line in open(path):
+            line = line.strip()
+            if line[0] != '#' and line.endswith('.py'):
+                full_path = os.path.join(abs_dir, line)
+                logger.debug('About to import services from [%s]' % full_path)
+                self.import_services_from_file(line, is_internal, abs_dir)
+        
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
         """
@@ -140,7 +160,8 @@ class ServiceStore(InitializingObject):
         try:
             if issubclass(item, Service):
                 if item is not AdminService and item is not Service:
-                    return True
+                    if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
+                        return True
         except TypeError, e:
             # Ignore non-class objects passed in to issubclass
             logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(name, item, format_exc(e)))
@@ -170,22 +191,8 @@ class ServiceStore(InitializingObject):
     
                 class_name = '{}.{}'.format(item.__module__, item.__name__)
                 self.services[class_name] = depl_info
-                
+                 
                 si = self._get_source_code_info(mod)
     
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
                 self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
-
-if __name__ == '__main__':
-    
-    from distutils2.config import Config
-    from distutils2.dist import Distribution
-    from distutils2.metadata import Metadata
-    
-    path = '/home/dsuch/tmp/zato-sample-project1/setup.cfg'
-    dist = Distribution()
-    
-    config = Config(dist)
-    config.parse_config_files([path])
-    
-    print(dist.packages)
