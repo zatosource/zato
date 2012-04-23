@@ -175,3 +175,17 @@ class ServiceStore(InitializingObject):
     
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
                 self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
+
+if __name__ == '__main__':
+    
+    from distutils2.config import Config
+    from distutils2.dist import Distribution
+    from distutils2.metadata import Metadata
+    
+    path = '/home/dsuch/tmp/zato-sample-project1/setup.cfg'
+    dist = Distribution()
+    
+    config = Config(dist)
+    config.parse_config_files([path])
+    
+    print(dist.packages)
