@@ -64,7 +64,7 @@
                 One in how many request/response pairs should be stored? 
                 
                 <form action="{% url service-request-response-configure service.name cluster_id %}" id="request_response_configure_form" method="post" style="padding-top:6px">
-                    <input type="text" id="sample_req_resp_freq" name="sample_req_resp_freq" style="width:5%" value="{{ service.sample_req_resp_freq }}"/>
+                    <input type="text" id="sample_req_resp_freq" name="sample_req_resp_freq" style="width:120px" value="{{ service.sample_req_resp_freq }}"/>
                     <input type="hidden" id="service_name" name="service_name" value="{{ service.name }}"/>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}"/>
                     <input type="hidden" id="configure_url" name="configure_url" value=""/>
