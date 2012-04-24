@@ -159,7 +159,7 @@ class ODBManager(SessionWrapper):
                     filter(Cluster.id==self.cluster.id).\
                     one()
 
-                self.add_deployed_service(deployment_time, details, service, source_info)
+            self.add_deployed_service(deployment_time, details, service, source_info)
 
         except Exception, e:
             msg = 'Could not add the Service, name:[{}], e:[{}]'.format(name, format_exc(e))
@@ -169,10 +169,10 @@ class ODBManager(SessionWrapper):
     def drop_deployed_services(self, server_id):
         """ Removes all the deployed services from a server.
         """
-        #services = self._session.query(DeployedService).\
-        #    filter(DeployedService.server_id==server_id).\
-        #    delete()
-        #self._session.commit()
+        services = self._session.query(DeployedService).\
+            filter(DeployedService.server_id==server_id).\
+            delete()
+        self._session.commit()
 
     def add_deployed_service(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
@@ -184,7 +184,7 @@ class ODBManager(SessionWrapper):
             try:
                 self._session.commit()
             except IntegrityError, e:
-                logger.error('IntegrityError (DeployedService), e=[{e}]'.format(e=format_exc(e)))
+                logger.debug('IntegrityError (DeployedService), e=[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
         except Exception, e:
             msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
