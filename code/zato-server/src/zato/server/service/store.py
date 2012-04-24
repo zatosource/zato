@@ -112,9 +112,13 @@ class ServiceStore(InitializingObject):
         """
         # Create a new directory for services ..
         fs_safe_now = re.sub('[-:. ]', '_', str(datetime.utcnow()))
-        rand = uuid4().hex
-        dir_name = os.path.join(work_dir, '{}-{}-{}'.format(fs_safe_now, os.path.split(archive)[1], rand))
-        os.mkdir(dir_name)
+        
+        # 6 characters will do, we won't deploy millions of services
+        # in the very same (micro-)second after all
+        rand = uuid4().hex[:6] 
+        
+        dir_name = os.path.join(work_dir, '{}-{}'.format(fs_safe_now, rand), os.path.split(archive)[1])
+        os.makedirs(dir_name)
         
         # .. unpack the archive into it ..
         unpack_file_url(_DummyLink('file:' + archive), dir_name)
