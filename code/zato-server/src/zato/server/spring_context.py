@@ -56,9 +56,7 @@ class ZatoContext(PythonConfig):
 
     @Object
     def pickup_event_processor(self):
-        pickup_event_processor = PickupEventProcessor()
-
-        return pickup_event_processor
+        return PickupEventProcessor()
 
     # #######################################################
     # Repository management
@@ -180,6 +178,7 @@ class ZatoContext(PythonConfig):
     def singleton_server(self):
         server = SingletonServer()
         server.pickup = self.pickup()
+        server.pickup.pickup_event_processor.server = server
         server.config_repo_manager = self.config_repo_manager()
         server.scheduler = self.scheduler()
 

@@ -79,12 +79,9 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client.init()
         self.broker_client.start()
         
-        '''
-        # Start the pickup monitor.
-        self.logger.debug("Pickup notifier starting.")
+        # Start the hot-reload pickup monitor
+        self.logger.info('Pickup notifier starting')
         self.pickup.watch()
-        
-        '''
         
 ################################################################################
 
@@ -104,24 +101,3 @@ class SingletonServer(BrokerMessageReceiver):
         
     def on_broker_pull_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
         self.scheduler.execute(msg)
-
-################################################################################
-
-    def load_egg_services(self, egg_path):
-        """ Tells each of parallel servers to load Zato services off an .egg
-        distribution. The .egg is guaranteed to contain at least one service to
-        load.
-        """
-
-        # XXX: That loop could be refactored out to some common place.
-        for q in self.partner_request_queues.values():
-            req = self._create_ipc_config_request("LOAD_EGG_SERVICES", egg_path)
-            code, reason = self._send_config_request(req, q, timeout=1.0)
-
-            if code != ZATO_OK:
-                # XXX: Add the parallel server's PID/name here.
-                msg = "Could not update a parallel server, server may have been left in an unstable state, reason=[%s]" % reason
-                self.logger.error(msg)
-                raise ZatoException(msg)
-
-        return ZATO_OK, ""

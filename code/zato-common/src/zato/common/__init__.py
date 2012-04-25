@@ -138,6 +138,9 @@ class SIMPLE_IO:
     class FORMAT:
         XML = 'xml'
         JSON = 'json'
+        
+class DEPLOYMENT_STATUS:
+    DEPLOYED = 'deployed'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks
