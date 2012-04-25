@@ -103,7 +103,7 @@ class ParallelServer(BrokerMessageReceiver):
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
-                 work_dir=None):
+                 work_dir=None, pickup=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -126,6 +126,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.service_modules = service_modules
         self.base_dir = base_dir
         self.work_dir = work_dir
+        self.pickup = pickup
         
         # The main config store
         self.config = ConfigStore()
@@ -179,7 +180,6 @@ class ParallelServer(BrokerMessageReceiver):
 
             # Start the connectors only once throughout the whole cluster
             self._init_connectors(server)
-            
             
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
@@ -388,6 +388,7 @@ class ParallelServer(BrokerMessageReceiver):
             if self.singleton_server:
                 if getattr(self.singleton_server, 'broker_client', None):
                     self.singleton_server.broker_client.close()
+                self.singleton_server.pickup.stop()
                 
             self.zmq_context.term()
             self.odb.close()

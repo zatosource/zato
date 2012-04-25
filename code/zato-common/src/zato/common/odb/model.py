@@ -825,3 +825,50 @@ class ChannelZMQ(Base):
         self.sub_key = sub_key
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
+
+class DeploymentPackage(Base):
+    """ A package to be deployed onto a server, either a plain .py/.pyw or
+    a Distutils2 archive.
+    """
+    __tablename__ = 'deployment_package'
+    
+    id = Column(Integer,  Sequence('depl_package_seq'), primary_key=True)
+    deployment_time = Column(DateTime(), nullable=False)
+    details = Column(String(2000), nullable=False)
+    
+    payload_name = Column(String(200), nullable=False)
+    payload = Column(LargeBinary(5000000), nullable=False)
+    
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    server = relationship(Server, backref=backref('originating_deployment_packages', order_by=deployment_time, cascade='all, delete, delete-orphan'))
+    
+    def __init__(self, id=None, deployment_time=None, details=None, payload_name=None, payload=None):
+        self.id = id
+        self.deployment_time = deployment_time
+        self.details = details
+        self.payload_name = payload_name
+        self.payload = payload
+    
+class DeploymentStatus(Base):
+    """ Whether a server has already deployed a given package.
+    """
+    __tablename__ = 'deployment_status'
+    __table_args__ = (UniqueConstraint('package_id', 'server_id'), {})
+
+    id = Column(Integer,  Sequence('depl_status_seq'), primary_key=True)    
+    
+    package_id = Column(Integer, ForeignKey('deployment_package.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    package = relationship(DeploymentPackage, backref=backref('deployment_status_list', order_by=package_id, cascade='all, delete, delete-orphan'))
+    
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    server = relationship(Server, backref=backref('deployment_status_list', order_by=server_id, cascade='all, delete, delete-orphan'))
+
+    # See zato.common.DEPLOYMENT_STATUS
+    status = Column(String(20), nullable=False)
+    status_change_time = Column(DateTime(), nullable=False)
+    
+    def __init__(self, package_id, server_id, status, status_change_time):
+        self.package_id = package_id
+        self.server_id = server_id
+        self.status = status
+        self.status_change_time = status_change_time
