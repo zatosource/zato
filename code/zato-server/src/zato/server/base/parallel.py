@@ -163,6 +163,7 @@ class ParallelServer(BrokerMessageReceiver):
             
             # Let the scheduler fully initialize
             self.singleton_server.scheduler.wait_for_init()
+            self.singleton_server.server_id = server.id
     
     def _after_init_accepted(self, server):
         if self.singleton_server:
@@ -395,3 +396,8 @@ class ParallelServer(BrokerMessageReceiver):
             task_dispatcher.shutdown()
 
 # ##############################################################################
+
+    def notify_new_package(self, package_id):
+        """ Publishes a message on the broker so all the servers (this one including
+        can deploy a new package).
+        """
