@@ -31,7 +31,6 @@ from zato.server.base import BrokerMessageReceiver
 
 _scheduler_values = SCHEDULER.values()
 
-
 class SingletonServer(BrokerMessageReceiver):
     """ A server of which one instance only may be running in a Zato container.
     Holds and processes data which can't be made parallel, such as scheduler,
@@ -82,6 +81,14 @@ class SingletonServer(BrokerMessageReceiver):
         # Start the hot-reload pickup monitor
         self.logger.info('Pickup notifier starting')
         self.pickup.watch()
+
+################################################################################        
+
+    def hot_deploy(self, path):
+        """ Hot deploys a file pointed to by the 'path' parameter.
+        """
+        self.logger.info('About to hot-deploy [{}]'.format(path))
+        
         
 ################################################################################
 

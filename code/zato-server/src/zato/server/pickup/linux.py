@@ -56,7 +56,9 @@ class PickupEventProcessor(ApplicationContextAware):
         logger.debug('IN_MODIFY {}'.format(event_info))
         
         if self._should_process(event.name):
-            pass
+            path = os.path.abspath(os.path.join(self.pickup_dir, event.name))
+            self.server.hot_deploy(path)
+            os.remove(path)
         else:
             logger.info('Ignoring {}'.format(event_info))
 

@@ -78,6 +78,7 @@ def run(host, port, base_dir, start_singleton):
 
     pickup = app_context.get_object('pickup')
     pickup.pickup_dir = pickup_dir
+    pickup.pickup_event_processor.pickup_dir = pickup_dir
 
     if start_singleton:
         singleton_server = app_context.get_object('singleton_server')
