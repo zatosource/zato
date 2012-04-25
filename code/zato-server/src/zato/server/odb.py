@@ -34,8 +34,8 @@ from bunch import SimpleBunch
 
 # Zato
 from zato.common import ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common.odb.model import Cluster, DeployedService, HTTPBasicAuth, Server, \
-    Service, TechnicalAccount, WSSDefinition
+from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
+    HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, \
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
@@ -190,7 +190,19 @@ class ODBManager(SessionWrapper):
             msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
-
+            
+    def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
+        """ Inserts a hot-deployed data into the DB.
+        """
+        dp = DeploymentPackage()
+        dp.deployment_time = deployment_time
+        dp.details = details
+        dp.payload_name = payload_name
+        dp.payload = payload
+        dp.server_id = server_id
+        
+        self._session.add(dp)
+        self._session.commit()
 
 # ##############################################################################
 

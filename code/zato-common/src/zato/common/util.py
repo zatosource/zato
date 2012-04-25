@@ -328,13 +328,13 @@ def service_name_from_impl(impl_name):
     """
     return impl_name.replace('server.service.internal.', '')
 
-def deployment_info(method, service_class, timestamp, fs_location, remote_host='', remote_user=''):
+def deployment_info(method, object_, timestamp, fs_location, remote_host='', remote_user=''):
     """ Returns a JSON document containing information who deployed a service
     onto a server, where from and when it was.
     """
     return {
             'method': method,
-            'service_class':service_class,
+            'object': object_,
             'timestamp': timestamp,
             'fs_location':fs_location,
             'remote_host': remote_host,

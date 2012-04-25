@@ -57,7 +57,7 @@ class PickupEventProcessor(ApplicationContextAware):
         
         if self._should_process(event.name):
             path = os.path.abspath(os.path.join(self.pickup_dir, event.name))
-            self.server.hot_deploy(path)
+            self.server.hot_deploy(event.name, path)
             os.remove(path)
         else:
             logger.info('Ignoring {}'.format(event_info))
