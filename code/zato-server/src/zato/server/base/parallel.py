@@ -42,7 +42,7 @@ from bunch import Bunch, SimpleBunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
+from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
@@ -401,3 +401,5 @@ class ParallelServer(BrokerMessageReceiver):
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
+        msg = {'action': HOT_DEPLOY.CREATE, 'package_id': package_id}
+        self.broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)

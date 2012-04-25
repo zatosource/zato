@@ -150,6 +150,9 @@ SERVICE.EDIT = b'10900'
 SERVICE.DELETE = b'10901'
 SERVICE.SET_REQUEST_RESPONSE = b'10902'
 
+HOT_DEPLOY = Bunch()
+HOT_DEPLOY.CREATE = '11000'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

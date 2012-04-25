@@ -203,6 +203,8 @@ class ODBManager(SessionWrapper):
         
         self._session.add(dp)
         self._session.commit()
+        
+        return dp.id
 
 # ##############################################################################
 
