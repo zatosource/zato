@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import asyncore, logging, time
-from datetime import datetime
+from datetime import datetime, timedelta
 from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
 from time import sleep
@@ -185,6 +185,14 @@ class ParallelServer(BrokerMessageReceiver):
             connector_server_keep_alive_job_time = int(self.fs_server_config['singleton']['connector_server_keep_alive_job_time'])
             grace_time = int(self.fs_server_config['singleton']['grace_time_multiplier']) * connector_server_keep_alive_job_time
             
+            base_conn_srv_job_data = Bunch({
+                    'weeks': None, 'days': None, 
+                    'hours': None, 'minutes': None, 
+                    'seconds': connector_server_keep_alive_job_time, 
+                    'repeats': None, 
+                    'extra': 'server_id:{};cluster_id:{}'.format(server.id, server.cluster_id),
+                    })
+            
             if self.odb.become_connector_server(grace_time):
                 self.singleton_server.is_connector_server = True
                 self._init_connectors(server)
@@ -192,15 +200,20 @@ class ParallelServer(BrokerMessageReceiver):
                 # Schedule a job for letting the other servers know we're still alive
                 # (not that we're not using .utcnow() for start_date because the
                 # scheduler - for better or worse - doesn't use UTC.
-                job_data = Bunch({
-                    'start_date': datetime.now(), 'weeks': None, 'days': None, 
-                    'hours': None, 'minutes': None, 
-                    'seconds': connector_server_keep_alive_job_time, 
-                    'repeats': None, 'name': 'zato.ConnectorServerKeepAlive',
-                    'service': 'zato.server.service.internal.ConnectorServerKeepAlive',
-                    'extra': 'server_id:{};cluster_id:{}'.format(server.id, server.cluster_id),
-                    })
-                self.singleton_server.scheduler.create_interval_based(job_data)
+                conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
+                conn_srv_job_data.start_date = datetime.now()
+                conn_srv_job_data.name = 'zato.ConnectorServerKeepAlive'
+                conn_srv_job_data.service = 'zato.server.service.internal.ConnectorServerKeepAlive'
+                
+            else:
+                # All other singleton servers get this job for checking whether the connector
+                # server is alive or not
+                conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
+                conn_srv_job_data.start_date = datetime.now() + timedelta(seconds=10) # Let's give the other server some time to warm up
+                conn_srv_job_data.name = 'zato.CheckConnectorServer'
+                conn_srv_job_data.service = 'zato.server.service.internal.EnsureConnectorServer'
+
+            self.singleton_server.scheduler.create_interval_based(conn_srv_job_data)
 
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
