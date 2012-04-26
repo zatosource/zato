@@ -178,10 +178,24 @@ class ParallelServer(BrokerMessageReceiver):
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
+                    
+            # Let's see if we can become a connector server, the one to start all
+            # the connectors and start the connectors only once throughout the whole cluster.
+            if self.odb.become_connector_server():
+                self._init_connectors(server)
+                
+                # Schedule a job for letting the other servers know we're still alive
+                # (not that we're not using .utcnow() for start_date because the
+                # scheduler - for better or worse - doesn't use UTC.
+                job_data = Bunch({
+                    'start_date': datetime.now(), 'weeks': None, 'days': None, 
+                    'hours': None, 'minutes': None, 'seconds': 2, 'repeats': None,
+                    'name': 'zato.ConnectorServerKeepAlive',
+                    'service': 'zato.server.service.internal.ConnectorServerKeepAlive',
+                    'extra': 'server_id:{};cluster_id:{}'.format(server.id, server.cluster_id),
+                    })
+                self.singleton_server.scheduler.create_interval_based(job_data)
 
-            # Start the connectors only once throughout the whole cluster
-            self._init_connectors(server)
-            
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location

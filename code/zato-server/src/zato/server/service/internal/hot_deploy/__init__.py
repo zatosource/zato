@@ -24,6 +24,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common import DEPLOYMENT_STATUS
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.server.service.internal import AdminService
 
@@ -37,4 +38,6 @@ class Create(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            print(33, self.request.input.package_id)
+            dp = session.query(DeploymentPackage).\
+                filter(id=self.request.input.package_id).\
+                one()

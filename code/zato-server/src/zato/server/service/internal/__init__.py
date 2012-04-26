@@ -22,12 +22,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from contextlib import closing
+from datetime import datetime
 from traceback import format_exc
 from urlparse import parse_qs
 
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE
+from zato.common.odb.model import Cluster
 from zato.server.service import Service
 
 success_code = 0
@@ -96,3 +98,27 @@ class ChangePasswordBase(AdminService):
                 session.rollback()
 
                 raise
+
+class ConnectorServerKeepAlive(AdminService):
+    """ Makes all the other servers know that this particular one, the one that
+    manages the connectors, is indeed still alive.
+    """
+    def handle(self):
+        s1, s2 = self.request.payload.split(';')
+        server_id = int(s1.split(':')[1])
+        cluster_id = int(s2.split(':')[1])
+        
+        with closing(self.odb.session()) as session:
+            cluster = session.query(Cluster).\
+                with_lockmode('update').\
+                filter(Cluster.id == cluster_id).\
+                one()
+            
+            if server_id == cluster.cn_srv_id:
+                cluster.cn_srv_keep_alive_dt = datetime.utcnow()
+                session.add(cluster)
+                session.commit()
+            else:
+                raise ZatoException(self.cid,
+                    'Could not set the connector server keep alive timestamp, current server_id:[{}] != cluster.cn_srv_id:[{}]'.format(
+                        server_id, cluster.cn_srv_id))

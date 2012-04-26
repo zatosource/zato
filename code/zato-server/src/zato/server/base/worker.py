@@ -316,7 +316,7 @@ class WorkerStore(BaseWorker):
         service_instance = self.worker_config.server.service_store.new_instance(msg.service)
         service_instance.update(service_instance, self.worker_config.server, self.broker_client,
             self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
-            msg.data_format)
+            msg.data_format if hasattr(msg, 'data_format') else None)
         
         service_instance.handle()
         if not isinstance(service_instance.response.payload, basestring):
