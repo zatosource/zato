@@ -141,6 +141,7 @@ class SIMPLE_IO:
         
 class DEPLOYMENT_STATUS:
     DEPLOYED = 'deployed'
+    AWAITING_DEPLOYMENT = 'awaiting-deployment'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

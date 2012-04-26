@@ -145,9 +145,6 @@ class Server(Base):
         self.last_join_mod_date = last_join_mod_date
         self.last_join_mod_by = last_join_mod_by
 
-    def __repr__(self):
-        return make_repr(self)
-
 ################################################################################
 
 class SecurityBase(Base):
@@ -867,7 +864,7 @@ class DeploymentStatus(Base):
     status = Column(String(20), nullable=False)
     status_change_time = Column(DateTime(), nullable=False)
     
-    def __init__(self, package_id, server_id, status, status_change_time):
+    def __init__(self, package_id=None, server_id=None, status=None, status_change_time=None):
         self.package_id = package_id
         self.server_id = server_id
         self.status = status
