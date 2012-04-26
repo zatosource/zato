@@ -26,6 +26,9 @@ from datetime import datetime
 from traceback import format_exc
 from urlparse import parse_qs
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE
@@ -122,3 +125,11 @@ class ConnectorServerKeepAlive(AdminService):
                 raise ZatoException(self.cid,
                     'Could not set the connector server keep alive timestamp, current server_id:[{}] != cluster.cn_srv_id:[{}]'.format(
                         server_id, cluster.cn_srv_id))
+
+class EnsureConnectorServer(AdminService):
+    """ Makes all the other servers know that this particular one, the one that
+    manages the connectors, is indeed still alive.
+    """
+    def handle(self):
+        if self.server.odb.become_connector_server(2):
+            self.server.singleton_server.scheduler.delete(Bunch(name='zato.EnsureConnectorServer'))
