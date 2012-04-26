@@ -227,6 +227,23 @@ class ODBManager(SessionWrapper):
         
         return dp.id
 
+    def become_connector_server(self):
+        """ Makes an attempt for the server to become a connector one, that is,
+        the server to start all the connectors.
+        """
+        cluster = self._session.query(Cluster).\
+            with_lockmode('update').\
+            filter(Cluster.id == self.server.cluster_id).\
+            one()
+        
+        cluster.cn_srv_id = self.server.id
+        cluster.cn_srv_keep_alive_dt = datetime.utcnow()
+
+        self._session.add(cluster)
+        self._session.commit()
+        
+        return True
+
 # ##############################################################################
 
     def get_internal_channel_list(self, cluster_id, needs_columns=False):
