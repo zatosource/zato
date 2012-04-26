@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime
 from traceback import format_exc
 
 # SQLAlchemy
@@ -33,9 +34,9 @@ from paste.util.multidict import MultiDict
 from bunch import SimpleBunch
 
 # Zato
-from zato.common import ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
-    HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
+     DeploymentStatus, HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, \
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
@@ -192,8 +193,11 @@ class ODBManager(SessionWrapper):
             self._session.rollback()
             
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
-        """ Inserts a hot-deployed data into the DB.
+        """ Inserts a hot-deployed data into the DB along with setting the preliminary
+        AWAITING_DEPLOYMENT status for each of the servers this server's cluster
+        is aware of.
         """
+        # Create the deployment package info ..
         dp = DeploymentPackage()
         dp.deployment_time = deployment_time
         dp.details = details
@@ -201,7 +205,24 @@ class ODBManager(SessionWrapper):
         dp.payload = payload
         dp.server_id = server_id
         
+        # .. add it to the session ..
         self._session.add(dp)
+
+        # .. for each of the servers in this cluster set the initial status ..
+        #servers = self._session.
+        servers = self._session.query(Cluster).\
+               filter(Cluster.id == self.server.cluster_id).\
+               one().servers
+        
+        for server in servers:
+            ds = DeploymentStatus()
+            ds.package_id = dp.id
+            ds.server_id = server.id
+            ds.status = DEPLOYMENT_STATUS.AWAITING_DEPLOYMENT
+            ds.status_change_time = datetime.utcnow()
+            
+            self._session.add(ds)
+        
         self._session.commit()
         
         return dp.id
