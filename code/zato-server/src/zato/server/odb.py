@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from traceback import format_exc
 
 # SQLAlchemy
@@ -227,7 +227,37 @@ class ODBManager(SessionWrapper):
         
         return dp.id
 
-    def become_connector_server(self):
+    def _become_connector_server(self, cluster):
+        """ Update all the Cluster's attributes that are related to connector servers.
+        """
+        cluster.cn_srv_id = self.server.id
+        cluster.cn_srv_keep_alive_dt = datetime.utcnow()
+
+        self._session.add(cluster)
+        self._session.commit()
+        
+        msg = 'Server id:[{}], name:[{}] is now a connector server for cluster id:[{}], name:[{}]'.format(
+            self.server.id, self.server.name, cluster.id, cluster.name)
+        logger.info(msg)
+        
+        return True
+    
+    def conn_server_past_grace_time(self, cluster, grace_time):
+        """ Whether it's already past the grace time the connector server had
+        for updating its keep-alive timestamp.
+        """
+        last_keep_alive = cluster.cn_srv_keep_alive_dt
+        max_allowed = last_keep_alive + timedelta(seconds=grace_time)
+        now = datetime.utcnow()
+
+        if now > max_allowed:
+            return True
+        else:
+            msg = 'last_keep_alive:[{}], grace_time:[{}], max_allowed:[{}], now:[{}]'.format(
+                last_keep_alive, grace_time, max_allowed, now)
+            logger.info(msg)
+
+    def become_connector_server(self, grace_time):
         """ Makes an attempt for the server to become a connector one, that is,
         the server to start all the connectors.
         """
@@ -236,13 +266,31 @@ class ODBManager(SessionWrapper):
             filter(Cluster.id == self.server.cluster_id).\
             one()
         
-        cluster.cn_srv_id = self.server.id
-        cluster.cn_srv_keep_alive_dt = datetime.utcnow()
+        # No connection server at all so we made it first
+        if not cluster.cn_srv_id:
+            return self._become_connector_server(cluster)
+        elif self.conn_server_past_grace_time(cluster, grace_time):
+            return self._become_connector_server(cluster)
+        else:
+            msg = ('Server id:[{}], name:[{}] will not be a connector server for '
+            'cluster id:[{}], name:[{}], cluster.cn_srv_id:[{}], cluster.cn_srv_keep_alive_dt:[{}]').format(
+                self.server.id, self.server.name, cluster.id, cluster.name, cluster.cn_srv_id, cluster.cn_srv_keep_alive_dt)
+            logger.info(msg)
+            
+    def clear_connector_server(self):
+        """ Invoked when the connector server is making a clean shutdown, sets
+        all the relevant data to NULL in the ODB.
+        """
+        cluster = self._session.query(Cluster).\
+            with_lockmode('update').\
+            filter(Cluster.id == self.server.cluster_id).\
+            one()
+        
+        cluster.cn_srv_id = None
+        cluster.cn_srv_keep_alive_dt = None
 
         self._session.add(cluster)
         self._session.commit()
-        
-        return True
 
 # ##############################################################################
 

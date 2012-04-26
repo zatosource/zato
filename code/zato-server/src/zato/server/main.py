@@ -65,6 +65,7 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.internal_service_modules = app_context.get_object('internal_service_modules')
     parallel_server.service_modules = app_context.get_object('service_modules')
     parallel_server.base_dir = base_dir
+    parallel_server.fs_server_config = config
 
     work_dir = config['pickup']['work_dir']
     if not os.path.isabs(work_dir):
