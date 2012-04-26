@@ -272,6 +272,7 @@ class ODBManager(SessionWrapper):
         elif self.conn_server_past_grace_time(cluster, grace_time):
             return self._become_connector_server(cluster)
         else:
+            self._session.rollback()
             msg = ('Server id:[{}], name:[{}] will not be a connector server for '
             'cluster id:[{}], name:[{}], cluster.cn_srv_id:[{}], cluster.cn_srv_keep_alive_dt:[{}]').format(
                 self.server.id, self.server.name, cluster.id, cluster.name, cluster.cn_srv_id, cluster.cn_srv_keep_alive_dt)

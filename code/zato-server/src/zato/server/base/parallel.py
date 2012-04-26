@@ -103,7 +103,7 @@ class ParallelServer(BrokerMessageReceiver):
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
-                 work_dir=None, pickup=None, fs_server_config=None):
+                 work_dir=None, pickup=None, fs_server_config=None, conn_srv_grace_time=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -128,6 +128,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.work_dir = work_dir
         self.pickup = pickup
         self.fs_server_config = fs_server_config
+        self.conn_srv_grace_time = conn_srv_grace_time
         
         # The main config store
         self.config = ConfigStore()
@@ -183,17 +184,17 @@ class ParallelServer(BrokerMessageReceiver):
             # Let's see if we can become a connector server, the one to start all
             # the connectors and start the connectors only once throughout the whole cluster.
             connector_server_keep_alive_job_time = int(self.fs_server_config['singleton']['connector_server_keep_alive_job_time'])
-            grace_time = int(self.fs_server_config['singleton']['grace_time_multiplier']) * connector_server_keep_alive_job_time
+            self.conn_srv_grace_time = int(self.fs_server_config['singleton']['grace_time_multiplier']) * connector_server_keep_alive_job_time
             
             base_conn_srv_job_data = Bunch({
                     'weeks': None, 'days': None, 
                     'hours': None, 'minutes': None, 
-                    'seconds': connector_server_keep_alive_job_time, 
+                    'seconds': 3, #connector_server_keep_alive_job_time, 
                     'repeats': None, 
                     'extra': 'server_id:{};cluster_id:{}'.format(server.id, server.cluster_id),
                     })
             
-            if self.odb.become_connector_server(grace_time):
+            if self.odb.become_connector_server(self.conn_srv_grace_time):
                 self.singleton_server.is_connector_server = True
                 self._init_connectors(server)
                 
@@ -210,7 +211,7 @@ class ParallelServer(BrokerMessageReceiver):
                 # server is alive or not
                 conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
                 conn_srv_job_data.start_date = datetime.now() + timedelta(seconds=10) # Let's give the other server some time to warm up
-                conn_srv_job_data.name = 'zato.CheckConnectorServer'
+                conn_srv_job_data.name = 'zato.EnsureConnectorServer'
                 conn_srv_job_data.service = 'zato.server.service.internal.EnsureConnectorServer'
 
             self.singleton_server.scheduler.create_interval_based(conn_srv_job_data)
