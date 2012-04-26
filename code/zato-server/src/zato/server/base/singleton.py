@@ -46,7 +46,8 @@ class SingletonServer(BrokerMessageReceiver):
     
     def __init__(self, parallel_server=None, server_id=None, scheduler=None, 
                  broker_token=None, zmq_context=None, broker_host=None, broker_push_singleton_pull_port=None, 
-                 singleton_push_broker_pull_port=None, initial_sleep_time=None):
+                 singleton_push_broker_pull_port=None, initial_sleep_time=None,
+                 is_connector_server=False):
         self.parallel_server = parallel_server
         self.server_id = server_id
         self.scheduler = scheduler
@@ -56,6 +57,7 @@ class SingletonServer(BrokerMessageReceiver):
         self.singleton_push_broker_pull_port = singleton_push_broker_pull_port
         self.zmq_context = zmq_context
         self.initial_sleep_time = initial_sleep_time
+        self.is_connector_server = is_connector_server
 
     def run(self, *ignored_args, **kwargs):
         # So that other moving parts - like connector subprocesses - have time

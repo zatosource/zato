@@ -103,7 +103,7 @@ class ParallelServer(BrokerMessageReceiver):
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
-                 work_dir=None, pickup=None):
+                 work_dir=None, pickup=None, fs_server_config=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -127,6 +127,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.base_dir = base_dir
         self.work_dir = work_dir
         self.pickup = pickup
+        self.fs_server_config = fs_server_config
         
         # The main config store
         self.config = ConfigStore()
@@ -181,7 +182,11 @@ class ParallelServer(BrokerMessageReceiver):
                     
             # Let's see if we can become a connector server, the one to start all
             # the connectors and start the connectors only once throughout the whole cluster.
-            if self.odb.become_connector_server():
+            connector_server_keep_alive_job_time = int(self.fs_server_config['singleton']['connector_server_keep_alive_job_time'])
+            grace_time = int(self.fs_server_config['singleton']['grace_time_multiplier']) * connector_server_keep_alive_job_time
+            
+            if self.odb.become_connector_server(grace_time):
+                self.singleton_server.is_connector_server = True
                 self._init_connectors(server)
                 
                 # Schedule a job for letting the other servers know we're still alive
@@ -189,8 +194,9 @@ class ParallelServer(BrokerMessageReceiver):
                 # scheduler - for better or worse - doesn't use UTC.
                 job_data = Bunch({
                     'start_date': datetime.now(), 'weeks': None, 'days': None, 
-                    'hours': None, 'minutes': None, 'seconds': 2, 'repeats': None,
-                    'name': 'zato.ConnectorServerKeepAlive',
+                    'hours': None, 'minutes': None, 
+                    'seconds': connector_server_keep_alive_job_time, 
+                    'repeats': None, 'name': 'zato.ConnectorServerKeepAlive',
                     'service': 'zato.server.service.internal.ConnectorServerKeepAlive',
                     'extra': 'server_id:{};cluster_id:{}'.format(server.id, server.cluster_id),
                     })
@@ -404,6 +410,9 @@ class ParallelServer(BrokerMessageReceiver):
                 if getattr(self.singleton_server, 'broker_client', None):
                     self.singleton_server.broker_client.close()
                 self.singleton_server.pickup.stop()
+                
+                if self.singleton_server.is_connector_server:
+                    self.odb.clear_connector_server()
                 
             self.zmq_context.term()
             self.odb.close()

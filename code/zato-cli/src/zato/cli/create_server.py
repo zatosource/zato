@@ -59,9 +59,15 @@ work_dir=../../work
 [singleton]
 initial_sleep_time=500
 
+# If a server doesn't update its keep alive data in 
+# connector_server_keep_alive_job_time * grace_time_multiplier seconds
+# it will be considered down and another server from the cluster will assume
+# the control of connectors
+connector_server_keep_alive_job_time=30 # In seconds
+grace_time_multiplier=3
+
 [spring]
 context_class=zato.server.spring_context.ZatoContext
-
 """
 
 haproxy_conf_contents = """
