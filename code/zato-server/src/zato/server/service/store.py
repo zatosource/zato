@@ -236,7 +236,9 @@ class ServiceStore(InitializingObject):
                 depl_info = deployment_info('ServiceStore', item, timestamp, fs_location)
     
                 class_name = '{}.{}'.format(item.__module__, item.__name__)
-                self.services[class_name] = depl_info
+                self.services[class_name] = {}
+                self.services[class_name]['deployment_info'] = depl_info
+                self.services[class_name]['service_class'] = item
                  
                 si = self._get_source_code_info(mod)
     

@@ -41,7 +41,7 @@ from paste.util.multidict import MultiDict
 # Zato
 from zato.common import SIMPLE_IO, url_type, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
-from zato.common.util import security_def_type, TRACE1
+from zato.common.util import new_cid, security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
@@ -432,7 +432,24 @@ class WorkerStore(BaseWorker):
         new_msg.service = 'zato.server.service.internal.service.SetRequestResponse'
         new_msg.data_format = SIMPLE_IO.FORMAT.JSON
         new_msg.payload = msg
-        return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SAMPLE_REQUEST_RESPONSE', args)
+        return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SET_REQUEST_RESPONSE', args)
+
+# ##############################################################################
+
+    def on_broker_pull_msg_HOT_DEPLOY_CREATE(self, msg, *args):
+        msg.cid = new_cid()
+        msg.service = 'zato.server.service.internal.hot_deploy.Create'
+        msg.payload = {'package_id': msg.package_id}
+        msg.data_format = SIMPLE_IO.FORMAT.JSON
+        return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+    
+        '''new_msg = Bunch()
+        new_msg.cid = msg.cid
+        new_msg.service = 'zato.server.service.internal.service.SetRequestResponse'
+        new_msg.data_format = SIMPLE_IO.FORMAT.JSON
+        new_msg.payload = msg
+        return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SET_REQUEST_RESPONSE', args)
+        '''
 
 # ##############################################################################
             
