@@ -421,8 +421,8 @@ class ParallelServer(BrokerMessageReceiver):
                     self.singleton_server.broker_client.close()
                 self.singleton_server.pickup.stop()
                 
-                #if self.singleton_server.is_connector_server:
-                #    self.odb.clear_connector_server()
+                if self.singleton_server.is_connector_server:
+                    self.odb.clear_connector_server()
                 
             self.zmq_context.term()
             self.odb.close()
