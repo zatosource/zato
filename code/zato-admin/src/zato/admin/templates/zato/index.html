@@ -63,7 +63,11 @@
                     </ul>
                 </li>
                 <li><a href="#">Servers</a></li>
-                <li><a href="{% url service %}">Services</a></li>
+                <li><span class="like-a">Services &darr;</span>
+                    <ul>
+                        <li class='wide'><a href="{% url service %}">Show all</a></li>
+                        <li class='wide'><a href="{% url service-sources %}">Service sources</a></li>
+                    </ul>
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
                         <li><a href="{% url security-basic-auth %}">HTTP Basic Auth</a></li>
