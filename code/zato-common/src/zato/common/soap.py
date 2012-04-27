@@ -122,7 +122,7 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
                 logger.error(msg)
                 raise ZatoException(msg=msg)
     
-        return ZATO_OK, zato_message, soap_response
+        return zato_message, soap_response
     except Exception, e:
         log_msg = 'Could not invoke the service. url:[{}] path:[{}] soap_action:[{}] '\
                   'soap_body:[{}] headers:[{}] soap_response:[{}], e:[{}]'.format(

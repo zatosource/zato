@@ -76,7 +76,7 @@ urlpatterns = patterns('',
     url(r'^zato/servers/unregister/(?P<server_id>.*)$', servers.unregister, name='server-unregister'),
 
     # Services
-    url(r'^zato/service/$', service.index, name='service'),
+    url(r'^zato/service/$', service.Index(), name=service.Index.url_name),
     url(r'^zato/service/soureces/$', service.sources, name='service-sources'),
     url(r'^zato/service/create/$', service.create, name='service-create'),
     url(r'^zato/service/edit/$', service.edit, name='service-edit'),
