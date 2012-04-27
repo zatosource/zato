@@ -42,7 +42,7 @@ from bunch import Bunch, SimpleBunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, ZMQ_CONNECTOR, MESSAGE_TYPE
+from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
@@ -103,7 +103,8 @@ class ParallelServer(BrokerMessageReceiver):
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
-                 work_dir=None, pickup=None, fs_server_config=None, conn_srv_grace_time=None):
+                 work_dir=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
+                 id=None, name=None, cluster_id=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -128,7 +129,10 @@ class ParallelServer(BrokerMessageReceiver):
         self.work_dir = work_dir
         self.pickup = pickup
         self.fs_server_config = fs_server_config
-        self.conn_srv_grace_time = conn_srv_grace_time
+        self.connector_server_grace_time = connector_server_grace_time
+        self.id = id
+        self.name = name
+        self.cluster_id = cluster_id
         
         # The main config store
         self.config = ConfigStore()
@@ -180,42 +184,17 @@ class ParallelServer(BrokerMessageReceiver):
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
-                    
+
             # Let's see if we can become a connector server, the one to start all
             # the connectors and start the connectors only once throughout the whole cluster.
-            connector_server_keep_alive_job_time = int(self.fs_server_config['singleton']['connector_server_keep_alive_job_time'])
-            self.conn_srv_grace_time = int(self.fs_server_config['singleton']['grace_time_multiplier']) * connector_server_keep_alive_job_time
+            self.connector_server_keep_alive_job_time = int(self.fs_server_config['singleton']['connector_server_keep_alive_job_time'])
+            self.connector_server_grace_time = int(self.fs_server_config['singleton']['grace_time_multiplier']) * self.connector_server_keep_alive_job_time
             
-            base_conn_srv_job_data = Bunch({
-                    'weeks': None, 'days': None, 
-                    'hours': None, 'minutes': None, 
-                    'seconds': 3, #connector_server_keep_alive_job_time, 
-                    'repeats': None, 
-                    'extra': 'server_id:{};cluster_id:{}'.format(server.id, server.cluster_id),
-                    })
-            
-            if self.odb.become_connector_server(self.conn_srv_grace_time):
-                self.singleton_server.is_connector_server = True
-                self._init_connectors(server)
+            if self.singleton_server.become_connector_server(
+                self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
+                server.id, server.cluster_id, True):
+                self.init_connectors()
                 
-                # Schedule a job for letting the other servers know we're still alive
-                # (not that we're not using .utcnow() for start_date because the
-                # scheduler - for better or worse - doesn't use UTC.
-                conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
-                conn_srv_job_data.start_date = datetime.now()
-                conn_srv_job_data.name = 'zato.ConnectorServerKeepAlive'
-                conn_srv_job_data.service = 'zato.server.service.internal.ConnectorServerKeepAlive'
-                
-            else:
-                # All other singleton servers get this job for checking whether the connector
-                # server is alive or not
-                conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
-                conn_srv_job_data.start_date = datetime.now() + timedelta(seconds=10) # Let's give the other server some time to warm up
-                conn_srv_job_data.name = 'zato.EnsureConnectorServer'
-                conn_srv_job_data.service = 'zato.server.service.internal.EnsureConnectorServer'
-
-            self.singleton_server.scheduler.create_interval_based(conn_srv_job_data)
-
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location
@@ -318,33 +297,46 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_client.init()
         self.broker_client.start()
         
-    def _init_connectors(self, server):
+    def init_connectors(self):
         """ Starts all the connector subprocesses.
         """
+        logger.info('Initializing connectors')
 
         # AMQP - channels    
-        for item in self.odb.get_channel_amqp_list(server.cluster.id):
+        for item in self.odb.get_channel_amqp_list(self.cluster_id):
             amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
+        else:
+            logger.info('No AMQP channels to start')
         
         # AMQP - outgoing
-        for item in self.odb.get_out_amqp_list(server.cluster.id):
+        for item in self.odb.get_out_amqp_list(self.cluster_id):
             amqp_out_start_connector(self.repo_location, item.id, item.def_id)
+        else:
+            logger.info('No AMQP outgoing connections to start')
             
         # JMS WMQ - channels
-        for item in self.odb.get_channel_jms_wmq_list(server.cluster.id):
+        for item in self.odb.get_channel_jms_wmq_list(self.cluster_id):
             jms_wmq_channel_start_connector(self.repo_location, item.id, item.def_id)
+        else:
+            logger.info('No JMS WebSphere MQ channels to start')
     
         # JMS WMQ - outgoing
-        for item in self.odb.get_out_jms_wmq_list(server.cluster.id):
+        for item in self.odb.get_out_jms_wmq_list(self.cluster_id):
             jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
+        else:
+            logger.info('No JMS WebSphere MQ outgoing connections to start')
             
         # ZMQ - channels
-        for item in self.odb.get_channel_zmq_list(server.cluster.id):
+        for item in self.odb.get_channel_zmq_list(self.cluster_id):
             zmq_channel_start_connector(self.repo_location, item.id)
+        else:
+            logger.info('No Zero MQ channels to start')
             
         # ZMQ - outgoimg
-        for item in self.odb.get_out_zmq_list(server.cluster.id):
+        for item in self.odb.get_out_zmq_list(self.cluster_id):
             zmq_outgoing_start_connector(self.repo_location, item.id)
+        else:
+            logger.info('No Zero MQ outgoing connections to start')
             
     def _after_init_non_accepted(self, server):
         pass    
@@ -374,6 +366,10 @@ class ParallelServer(BrokerMessageReceiver):
         
         if not server:
             raise Exception('Server does not exist in the ODB')
+        
+        self.id = server.id
+        self.name = server.name
+        self.cluster_id = server.cluster_id
         
         self._after_init_common(server)
         
@@ -425,8 +421,8 @@ class ParallelServer(BrokerMessageReceiver):
                     self.singleton_server.broker_client.close()
                 self.singleton_server.pickup.stop()
                 
-                if self.singleton_server.is_connector_server:
-                    self.odb.clear_connector_server()
+                #if self.singleton_server.is_connector_server:
+                #    self.odb.clear_connector_server()
                 
             self.zmq_context.term()
             self.odb.close()

@@ -21,16 +21,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
 # anyjson
 from anyjson import dumps
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import ZATO_OK, ZatoException
-from zato.common.broker_message import SCHEDULER
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import deployment_info
 from zato.server.base import BrokerMessageReceiver
 
@@ -90,8 +93,6 @@ class SingletonServer(BrokerMessageReceiver):
         logger.info('Pickup notifier starting')
         self.pickup.watch()
 
-################################################################################        
-
     def hot_deploy(self, file_name, path):
         """ Hot deploys a file pointed to by the 'path' parameter.
         """
@@ -105,6 +106,45 @@ class SingletonServer(BrokerMessageReceiver):
         
         # .. and notify all the servers they're to pick up a delivery
         self.parallel_server.notify_new_package(package_id)
+        
+    def become_connector_server(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
+            server_id, cluster_id, starting_up):
+        """ Attempts to become a connector server, the one to start the connector
+        processes.
+        """
+        base_conn_srv_job_data = Bunch({
+                'weeks': None, 'days': None, 
+                'hours': None, 'minutes': None, 
+                'seconds': connector_server_keep_alive_job_time, 
+                'repeats': None, 
+                'extra': 'server_id:{};cluster_id:{}'.format(server_id, cluster_id),
+                })
+        conn_srv_job_data = None
+        
+        if self.parallel_server.odb.become_connector_server(connector_server_grace_time):
+            self.is_connector_server = True
+            
+            # Schedule a job for letting the other servers know we're still alive
+            # (not that we're not using .utcnow() for start_date because the
+            # scheduler - for better or worse - doesn't use UTC.
+            conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
+            conn_srv_job_data.start_date = datetime.now()
+            conn_srv_job_data.name = 'zato.ConnectorServerKeepAlive'
+            conn_srv_job_data.service = 'zato.server.service.internal.connector_server.ConnectorServerKeepAlive'
+            
+        else:
+            # All other singleton servers that are just starting up get this job
+            # for checking whether the connector server is alive or not
+            if starting_up:
+                conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
+                conn_srv_job_data.start_date = datetime.now() + timedelta(seconds=10) # Let's give the other server some time to warm up
+                conn_srv_job_data.name = 'zato.EnsureConnectorServer'
+                conn_srv_job_data.service = 'zato.server.service.internal.connector_server.EnsureConnectorServer'
+
+        if conn_srv_job_data:
+            self.scheduler.create_interval_based(conn_srv_job_data, MESSAGE_TYPE.TO_PARALLEL_SUB)
+
+        return self.is_connector_server
         
 ################################################################################
 
