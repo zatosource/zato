@@ -469,3 +469,7 @@ def delete(req, service_id, cluster_id):
         msg = 'Could not delete the service, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
+    
+@meth_allowed('GET')
+def sources(req):
+    pass
