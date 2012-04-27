@@ -255,7 +255,7 @@ class ODBManager(SessionWrapper):
         else:
             msg = 'last_keep_alive:[{}], grace_time:[{}], max_allowed:[{}], now:[{}]'.format(
                 last_keep_alive, grace_time, max_allowed, now)
-            logger.info(msg)
+            logger.debug(msg)
 
     def become_connector_server(self, grace_time):
         """ Makes an attempt for the server to become a connector one, that is,
@@ -276,7 +276,7 @@ class ODBManager(SessionWrapper):
             msg = ('Server id:[{}], name:[{}] will not be a connector server for '
             'cluster id:[{}], name:[{}], cluster.cn_srv_id:[{}], cluster.cn_srv_keep_alive_dt:[{}]').format(
                 self.server.id, self.server.name, cluster.id, cluster.name, cluster.cn_srv_id, cluster.cn_srv_keep_alive_dt)
-            logger.info(msg)
+            logger.debug(msg)
             
     def clear_connector_server(self):
         """ Invoked when the connector server is making a clean shutdown, sets

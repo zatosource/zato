@@ -29,7 +29,7 @@ from apscheduler.scheduler import Scheduler as APScheduler
 
 # Zato 
 from zato.common import scheduler_date_time_format
-from zato.common.broker_message import SCHEDULER
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import new_cid
 
 logger = logging.getLogger(__name__)
@@ -63,21 +63,21 @@ class Scheduler(object):
         minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
         return minute, hour, day_of_month, month, day_of_week
         
-    def _on_job_execution(self, name, service, extra):
+    def _on_job_execution(self, name, service, extra, broker_msg_type):
         """ Invoked by the underlying APScheduler when a job is executed. Sends
         the actual execution request to the broker so it can be picked up by
         one of the parallel server's broker clients.
         """
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'payload':extra,
                'cid':new_cid()}
-        self.singleton.broker_client.send_json(msg)
+        self.singleton.broker_client.send_json(msg, msg_type=broker_msg_type)
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(
                 name, service, extra)
             logger.debug(msg)
 
-    def create_edit(self, action, job_data):
+    def create_edit(self, action, job_data, broker_msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL):
         """ Invokes a handler appropriate for the given action and job_data.job_type.
         """
         if logger.isEnabledFor(logging.DEBUG):
@@ -92,21 +92,21 @@ class Scheduler(object):
         handler = getattr(self, handler)
         
         try:
-            handler(job_data)
+            handler(job_data, broker_msg_type)
         except Exception, e:
             msg = 'Caught exception [{0}]'.format(format_exc(e))
             logger.error(msg)
         
-    def create_one_time(self, job_data):
+    def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
         """
         start_date = _start_date(job_data)
         self._sched.add_date_job(self._on_job_execution, start_date, 
-            [job_data.name, job_data.service, job_data.extra], name=job_data.name)
+            [job_data.name, job_data.service, job_data.extra, broker_msg_type], name=job_data.name)
         
         logger.info('One-time job [{0}] scheduled'.format(job_data.name))
         
-    def create_interval_based(self, job_data):
+    def create_interval_based(self, job_data, broker_msg_type):
         """ Schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
@@ -119,12 +119,12 @@ class Scheduler(object):
         
         self._sched.add_interval_job(self._on_job_execution, 
             weeks, days, hours, minutes,  seconds, start_date, 
-            [job_data.name, job_data.service, job_data.extra], 
+            [job_data.name, job_data.service, job_data.extra, broker_msg_type], 
             name=job_data.name, max_runs=max_runs)
         
         logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))
         
-    def create_cron_style(self, job_data):
+    def create_cron_style(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
         """
         start_date = _start_date(job_data)
@@ -132,7 +132,7 @@ class Scheduler(object):
         self._sched.add_cron_job(self._on_job_execution, 
             year=None, month=month, day=day_of_month, hour=hour,
             minute=minute, second=None, start_date=start_date, 
-            args=[job_data.name, job_data.service, job_data.extra], 
+            args=[job_data.name, job_data.service, job_data.extra, broker_msg_type], 
             name=job_data.name)
         
         logger.info('Cron-style job [{0}] scheduled'.format(job_data.name))
@@ -151,26 +151,26 @@ class Scheduler(object):
         else:
             logger.warn('Job [{0}] was not scheduled, could not unschedule it'.format(_name))
             
-    def edit_one_time(self, job_data):
+    def edit_one_time(self, job_data, broker_msg_type):
         """ First deletes a one-time job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.delete(job_data)
-        self.create_one_time(job_data)
+        self.create_one_time(job_data, broker_msg_type)
         
     def edit_interval_based(self, job_data):
         """ First deletes an interval-based job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.delete(job_data)
-        self.create_interval_based(job_data)
+        self.create_interval_based(job_data, broker_msg_type)
         
     def edit_cron_style(self, job_data):
         """ First deletes a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.delete(job_data)
-        self.create_cron_style(job_data)
+        self.create_cron_style(job_data, broker_msg_type)
             
     def execute(self, job_data):
         for job in self._sched.get_jobs():
