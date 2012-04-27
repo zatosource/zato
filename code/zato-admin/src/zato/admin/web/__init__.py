@@ -19,11 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # lxml
 from lxml import etree
+from lxml.objectify import Element
 
 # Zato
 from zato.admin.settings import TECH_ACCOUNT_NAME, TECH_ACCOUNT_PASSWORD
 from zato.common.soap import invoke_admin_service as _invoke_admin_service
-
 
 def invoke_admin_service(cluster, service, zato_message):
     """ A thin wrapper around zato.common.soap.invoke_admin_service that adds

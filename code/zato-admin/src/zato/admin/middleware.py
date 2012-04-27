@@ -24,6 +24,9 @@ from django.conf import settings
 from django.contrib.auth.views import login
 from django.http import HttpResponseRedirect
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.admin.settings import SASession
 
@@ -86,5 +89,8 @@ class ZatoMiddleware(object):
         # Makes each Django view have an access to an 'odb' attribute of the
         # request object. The attribute is an SQLAlchemy session to the database
         # defined in app's settings.py
-        req.odb = SASession()
+        req.zato = Bunch()
+        req.zato.odb = SASession()
+        
+        print(333, dir(req))
             

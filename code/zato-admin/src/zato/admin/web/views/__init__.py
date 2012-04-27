@@ -26,14 +26,22 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
+from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 # lxml
+from lxml import etree
 from lxml.objectify import Element
+
+# Validate
+from validate import is_boolean
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.common import zato_namespace
+from zato.admin.web.forms import ChooseClusterForm
+from zato.common import zato_namespace, zato_path
 from zato.common.odb.model import Cluster
+from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +70,7 @@ def meth_allowed(*meths):
     """
     def inner_meth_allowed(view):
         def inner_view(*args, **kwargs):
-            req = args[0]
+            req = args[1]
             if req.method not in meths:
                 msg = "Method [{method}] is not allowed here [{view}], methods allowed=[{meths}]"
                 msg = msg.format(method=req.method, view=view.func_name, meths=meths)
@@ -128,3 +136,103 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         return HttpResponseServerError(msg)
     else:
         return HttpResponse(dumps({'message':success_msg}))
+
+class View(object):
+    """ A base class upon which other views are based. Takes care of all the tedious
+    repetitive stuff common to almost all of the views.
+    """
+    meth_allowed = 'meth_allowed-must-be-defined-in-a-subclass'
+    url_name = 'url_name-must-be-defined-in-a-subclass'
+    template = 'template-must-be-defined-in-a-subclass'
+    
+    needs_clusters = False
+    service = None
+    output_class = None
+
+    class SimpleIO:
+        input_required = []
+        output_required = []
+        output_optional = []
+        output_repeated = False
+        
+    def __init__(self):
+        self.req = None
+        self.cluster_id = None
+        self.items = []
+        self.item = None
+        
+    def fetch_cluster_id(self):
+        # Doesn't look overtly smart right now but more code will follow to sanction
+        # the existence of this function
+        cluster_id = self.req.GET.get('cluster')
+        
+        if cluster_id:
+            self.cluster_id = cluster_id
+        
+    def invoke_admin_service(self):
+        cluster = self.req.zato.odb.query(Cluster).filter_by(id=self.cluster_id).first()
+        zato_message = Element('{%s}zato_message' % zato_namespace)
+        zato_message.request = Element('request')
+        zato_message.request.cluster_id = self.cluster_id
+        
+        zato_message, soap_response  = invoke_admin_service(cluster, self.service, zato_message)
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug('Request:[{}], response:[{}]'.format(etree.tostring(zato_message), soap_response))
+            
+        return zato_message
+    
+    def _handle_item_list(self, item_list):
+        for msg_item in item_list.item:
+            id = msg_item.id.text
+            name = msg_item.name.text
+            is_active = is_boolean(msg_item.is_active.text)
+            impl_name = msg_item.impl_name.text
+            is_internal = is_boolean(msg_item.is_internal.text)
+            usage_count = msg_item.usage_count.text if hasattr(msg_item, 'usage_count') else 'TODO'
+            
+            item =  self.output_class(id, name, is_active, impl_name, is_internal, None, usage_count)
+            self.items.append(item)
+    
+    def _handle_item(self, item):
+        pass
+    
+    def __call__(self, req, *args, **kwargs):
+        """ Handles the request, taking care of common things and delegating 
+        control to the subclass for fetching this view-specific data.
+        """
+        self.req = req
+        self.fetch_cluster_id()
+        return_data = {'cluster_id':self.cluster_id}
+        
+        if self.needs_clusters:
+            zato_clusters = req.zato.odb.query(Cluster).order_by('name').all()
+            return_data['zato_clusters'] = zato_clusters
+            return_data['choose_cluster_form'] = ChooseClusterForm(zato_clusters, self.req.GET)
+            
+        output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
+        zato_path_needed = 'response.item_list.item' if output_repeated else 'response.item'
+        
+        if self.service and self.cluster_id:
+            zato_message = self.invoke_admin_service()
+            if zato_path(zato_path_needed).get_from(zato_message) is not None:
+                if output_repeated:
+                    self._handle_item_list(zato_message.response.item_list)
+                else:
+                    self._handle_item(zato_message.response.item)
+
+        return_data['items'] = self.items
+        return_data['item'] = self.item
+
+        view_specific = self.handle()
+        if view_specific:
+            return_data.update(view_specific)
+        
+        if logger.isEnabledFor(TRACE1):
+            logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
+    
+        return render_to_response(self.template, return_data, context_instance=RequestContext(req))
+
+    def handle(self, req, *args, **kwargs):
+        raise NotImplementedError('Must be overloaded by a subclass')
+    

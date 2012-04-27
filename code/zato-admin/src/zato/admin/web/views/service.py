@@ -29,7 +29,6 @@ from traceback import format_exc
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect, HttpResponseServerError
 from django.shortcuts import render_to_response
-from django.template import RequestContext
 
 # lxml
 from lxml import etree
@@ -40,9 +39,6 @@ from pygments import highlight
 from pygments.lexers import JSONLexer, MakoXmlLexer, PythonLexer
 from pygments.formatters import HtmlFormatter
 
-# Validate
-from validate import is_boolean
-
 # anyjson
 from anyjson import dumps, loads
 
@@ -50,7 +46,7 @@ from anyjson import dumps, loads
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.service import CreateForm, EditForm, WSDLUploadForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import meth_allowed, View
 from zato.common import SourceInfo, zato_namespace, zato_path
 from zato.common.odb.model import Cluster, Service
 from zato.common.util import TRACE1
@@ -135,52 +131,28 @@ def _get_channels(cluster, id, channel_type):
             
     return response
 
-@meth_allowed('GET')
-def index(req):
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
-    items = []
+class Index(View):
+    """ A view for listing the services and their basic management.
+    """
+    meth_allowed = 'GET'
+    url_name = 'service'
+    template = 'zato/service/index.html'
     
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
-
-    if cluster_id and req.method == 'GET':
-        
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-        
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-list', zato_message)
-        
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            
-            for msg_item in zato_message.response.item_list.item:
-                
-                id = msg_item.id.text
-                name = msg_item.name.text
-                is_active = is_boolean(msg_item.is_active.text)
-                impl_name = msg_item.impl_name.text
-                is_internal = is_boolean(msg_item.is_internal.text)
-                usage_count = msg_item.usage_count.text if hasattr(msg_item, 'usage_count') else 'TODO'
-                
-                item =  Service(id, name, is_active, impl_name, is_internal, None, usage_count)
-                items.append(item)
-
-    return_data = {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
-        'items':items,
-        'create_form':create_form,
-        'edit_form':edit_form,
+    needs_clusters = True
+    service = 'zato:service.get-list'
+    output_class = Service
+    
+    class SimpleIO(View.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'is_internal')
+        output_optional = ('usage_count',)
+        output_repeated = True
+    
+    def handle(self):
+        return_data = {
+            'create_form': CreateForm(),
+            'edit_form': EditForm(prefix='edit')
         }
-    
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
-
-    return render_to_response('zato/service/index.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('POST')
 def create(req):
