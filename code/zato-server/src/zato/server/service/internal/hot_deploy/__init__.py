@@ -39,5 +39,5 @@ class Create(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             dp = session.query(DeploymentPackage).\
-                filter(id=self.request.input.package_id).\
+                filter(id==self.request.input.package_id).\
                 one()
