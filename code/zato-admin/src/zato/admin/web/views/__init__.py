@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
+from itertools import chain
 from traceback import format_exc
 
 # Django
@@ -35,6 +35,9 @@ from lxml.objectify import Element
 
 # Validate
 from validate import is_boolean
+
+# anyjson
+from anyjson import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
@@ -70,7 +73,7 @@ def meth_allowed(*meths):
     """
     def inner_meth_allowed(view):
         def inner_view(*args, **kwargs):
-            req = args[1]
+            req = args[1] if len(args) > 1 else args[0]
             if req.method not in meths:
                 msg = "Method [{method}] is not allowed here [{view}], methods allowed=[{meths}]"
                 msg = msg.format(method=req.method, view=view.func_name, meths=meths)
@@ -136,8 +139,33 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         return HttpResponseServerError(msg)
     else:
         return HttpResponse(dumps({'message':success_msg}))
+    
+class _BaseView(object):
+    soap_action = None
+    
+    class SimpleIO:
+        input_required = []
+        output_required = []
+        output_optional = []
+        output_repeated = False
 
-class View(object):
+    def fetch_cluster_id(self):
+        # Doesn't look overtly smart right now but more code will follow to sanction
+        # the existence of this function
+        cluster_id = self.req.zato.cluster_id
+        
+        if cluster_id:
+            self.cluster_id = cluster_id
+            
+    def __init__(self):
+        self.req = None
+        self.cluster_id = None
+        
+    def __call__(self, req, *args, **kwargs):
+        self.req = req
+        self.fetch_cluster_id()
+
+class View(_BaseView):
     """ A base class upon which other views are based. Takes care of all the tedious
     repetitive stuff common to almost all of the views.
     """
@@ -146,52 +174,26 @@ class View(object):
     template = 'template-must-be-defined-in-a-subclass'
     
     needs_clusters = False
-    service = None
     output_class = None
-
-    class SimpleIO:
-        input_required = []
-        output_required = []
-        output_optional = []
-        output_repeated = False
-        
+    
     def __init__(self):
-        self.req = None
-        self.cluster_id = None
+        super(View, self).__init__()
         self.items = []
         self.item = None
         
-    def fetch_cluster_id(self):
-        # Doesn't look overtly smart right now but more code will follow to sanction
-        # the existence of this function
-        cluster_id = self.req.GET.get('cluster')
-        
-        if cluster_id:
-            self.cluster_id = cluster_id
-        
     def invoke_admin_service(self):
-        cluster = self.req.zato.odb.query(Cluster).filter_by(id=self.cluster_id).first()
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = self.cluster_id
-        
-        zato_message, soap_response  = invoke_admin_service(cluster, self.service, zato_message)
-        
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('Request:[{}], response:[{}]'.format(etree.tostring(zato_message), soap_response))
-            
+        zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, {'cluster_id':self.cluster_id})
         return zato_message
     
     def _handle_item_list(self, item_list):
+        """ Creates a new instance of the model class for each of the element received
+        and fills it in with received attributes.
+        """
+        names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
         for msg_item in item_list.item:
-            id = msg_item.id.text
-            name = msg_item.name.text
-            is_active = is_boolean(msg_item.is_active.text)
-            impl_name = msg_item.impl_name.text
-            is_internal = is_boolean(msg_item.is_internal.text)
-            usage_count = msg_item.usage_count.text if hasattr(msg_item, 'usage_count') else 'TODO'
-            
-            item =  self.output_class(id, name, is_active, impl_name, is_internal, None, usage_count)
+            item = self.output_class()
+            for name in names:
+                setattr(item, name, getattr(msg_item, name, None))
             self.items.append(item)
     
     def _handle_item(self, item):
@@ -201,8 +203,7 @@ class View(object):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
-        self.req = req
-        self.fetch_cluster_id()
+        super(View, self).__call__(req, *args, **kwargs)
         return_data = {'cluster_id':self.cluster_id}
         
         if self.needs_clusters:
@@ -213,7 +214,7 @@ class View(object):
         output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
         zato_path_needed = 'response.item_list.item' if output_repeated else 'response.item'
         
-        if self.service and self.cluster_id:
+        if self.soap_action and self.cluster_id:
             zato_message = self.invoke_admin_service()
             if zato_path(zato_path_needed).get_from(zato_message) is not None:
                 if output_repeated:
@@ -227,7 +228,7 @@ class View(object):
         view_specific = self.handle()
         if view_specific:
             return_data.update(view_specific)
-        
+            
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
     
@@ -236,3 +237,28 @@ class View(object):
     def handle(self, req, *args, **kwargs):
         raise NotImplementedError('Must be overloaded by a subclass')
     
+    
+class CreateEdit(_BaseView):
+    """ Subclasses of this class will handle the creation/updates of Zato objects.
+    """
+    form_prefix = ''
+    
+    def __init__(self):
+        super(CreateEdit, self).__init__()
+        
+    def __call__(self, req, *args, **kwargs):
+        """ Handles the request, taking care of common things and delegating 
+        control to the subclass for fetching this view-specific data.
+        """
+        super(CreateEdit, self).__call__(req, *args, **kwargs)
+        input_dict = {
+            'id': self.req.POST.get('id'),
+            'cluster_id': self.cluster_id
+        }
+        for name in self.SimpleIO.input_required:
+            input_dict[name] = self.req.POST.get(self.form_prefix + name)
+        
+        zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+        
+    # id
+    # cluster_id

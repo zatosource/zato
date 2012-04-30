@@ -17,21 +17,39 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+# stdlib
+import logging
+
 # lxml
 from lxml import etree
 from lxml.objectify import Element
 
 # Zato
 from zato.admin.settings import TECH_ACCOUNT_NAME, TECH_ACCOUNT_PASSWORD
+from zato.common import zato_namespace
 from zato.common.soap import invoke_admin_service as _invoke_admin_service
 
-def invoke_admin_service(cluster, service, zato_message):
+logger = logging.getLogger(__name__)
+
+def invoke_admin_service(cluster, soap_action, input_dict):
     """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
     Django session-related information to the request headers.
     """
+    zato_message = Element('{%s}zato_message' % zato_namespace)
+    zato_message.request = Element('request')
+    
+    for k, v in input_dict.items():
+        setattr(zato_message.request, k, v)
+
     headers = {'x-zato-session-type':'zato-admin/tech_acc', 
                'x-zato-user': TECH_ACCOUNT_NAME,
                'x-zato-password': TECH_ACCOUNT_PASSWORD
                }
-    return _invoke_admin_service(cluster, service, etree.tostring(zato_message),
-                                 headers)
+    
+    request = etree.tostring(zato_message)
+    zato_message, soap_response = _invoke_admin_service(cluster, soap_action, request, headers)
+    
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('Request:[{}], response:[{}]'.format(request, soap_response))
+        
+    return zato_message, soap_response
