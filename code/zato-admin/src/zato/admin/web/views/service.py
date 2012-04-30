@@ -214,15 +214,13 @@ def invoke(req, service_id, cluster_id):
     """ Executes a service directly, even if it isn't exposed through any channel.
     """
     try:
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = service_id
-        zato_message.request.payload = req.POST.get('payload', '')
-        zato_message.request.data_format = req.POST.get('data_format', '')
-        zato_message.request.transport = req.POST.get('transport', '')
-
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.invoke', zato_message)
+        input_dict = {
+            'id': service_id,
+            'payload': req.POST.get('payload', ''),
+            'data_format': req.POST.get('data_format', ''),
+            'transport': req.POST.get('transport', ''),
+        }
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.invoke', input_dict)
 
     except Exception, e:
         msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e=[{}]'.format(service_id, cluster_id, format_exc(e))
@@ -315,64 +313,55 @@ def wsdl_upload(req, service_name, cluster_id):
     
 @meth_allowed('GET')
 def wsdl_download(req, service_name, cluster_id):
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    return HttpResponseRedirect(get_public_wsdl_url(cluster, service_name))
+    return HttpResponseRedirect(get_public_wsdl_url(req.zato.cluster, service_name))
 
 @meth_allowed('GET')
 def request_response(req, service_name):
-    cluster_id = req.GET.get('cluster')
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     service = Service(name=service_name)
+    input_dict = {
+        'name': service_name,
+        'cluster_id': req.zato.cluster_id
+    }
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-request-response', input_dict)
     
-    if cluster_id:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.name = service_name
-        zato_message.request.cluster_id = cluster_id
-
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.get-request-response', zato_message)
+    if zato_path('response.item').get_from(zato_message) is not None:
+        item = zato_message.response.item
         
-        if zato_path('response.item').get_from(zato_message) is not None:
-            item = zato_message.response.item
-            
-            request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
-            request_data_format = known_data_format(request)
-            if request_data_format:
-                service.sample_request_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
+        request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
+        request_data_format = known_data_format(request)
+        if request_data_format:
+            service.sample_request_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
 
-            response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
-            response_data_format = known_data_format(response)
-            if response_data_format:
-                service.sample_response_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
-            
-            service.sample_request = request
-            service.sample_response = response
-            
-            service.id = item.service_id.text
-            service.sample_cid = item.sample_cid.text
-            service.sample_req_timestamp = item.sample_req_timestamp.text
-            service.sample_resp_timestamp = item.sample_resp_timestamp.text
-            service.sample_req_resp_freq = item.sample_req_resp_freq.text
+        response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
+        response_data_format = known_data_format(response)
+        if response_data_format:
+            service.sample_response_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
+        
+        service.sample_request = request
+        service.sample_response = response
+        
+        service.id = item.service_id.text
+        service.sample_cid = item.sample_cid.text
+        service.sample_req_timestamp = item.sample_req_timestamp.text
+        service.sample_resp_timestamp = item.sample_resp_timestamp.text
+        service.sample_req_resp_freq = item.sample_req_resp_freq.text
     
     return_data = {
-        'cluster_id':cluster_id,
-        'service':service,
+        'cluster_id': req.zato.cluster_id,
+        'service': service,
         }
     
     return render_to_response('zato/service/request-response.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('POST')
 def request_response_configure(req, service_name, cluster_id):
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.name = service_name
-        zato_message.request.cluster_id = cluster_id
-        zato_message.request.sample_req_resp_freq = req.POST['sample_req_resp_freq']
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.configure-request-response', zato_message)
-        
+        input_dict = {
+            'name': service_name,
+            'cluster_id': req.zato.cluster_id,
+            'sample_req_resp_freq': req.POST['sample_req_resp_freq']
+        }
+        invoke_admin_service(req.zato.cluster, 'zato:service.configure-request-response', input_dict)
         return HttpResponse('Saved successfully')
     
     except Exception, e:
@@ -382,16 +371,8 @@ def request_response_configure(req, service_name, cluster_id):
     
 @meth_allowed('POST')
 def delete(req, service_id, cluster_id):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = service_id
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.delete', zato_message)
-        
+        invoke_admin_service(req.zato.cluster, 'zato:service.delete', {'id': service_id})
         return HttpResponse()
     
     except Exception, e:

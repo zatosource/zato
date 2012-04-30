@@ -22,6 +22,8 @@ from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 
 def should_store(service_id):
     """ Decides whether a service's request/response pair should be kept in the DB.
+    TODO: Make sure only actual service requests and responses are getting added
+    and not, say, WSDLs.
     """
     return True
 
