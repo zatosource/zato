@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django.conf import settings
 from django.contrib.auth.views import login
+from django.core.urlresolvers import resolve
 from django.http import HttpResponseRedirect
 
 # Bunch
@@ -94,8 +95,9 @@ class ZatoMiddleware(object):
         req.zato = Bunch()
         req.zato.odb = SASession()
         
-        req.zato.cluster_id = req.GET.get('cluster') or req.POST.get('cluster_id')
+        req.zato.cluster_id = req.GET.get('cluster') or req.POST.get('cluster_id') or resolve(req.path).kwargs.get('cluster_id')
         if req.zato.cluster_id:
             req.zato.cluster = req.zato.odb.query(Cluster).filter_by(id=req.zato.cluster_id).one()
-            req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
-            req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)
+            
+        req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
+        req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)
