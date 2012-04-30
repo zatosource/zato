@@ -29,6 +29,7 @@ from bunch import Bunch
 
 # Zato
 from zato.admin.settings import SASession
+from zato.admin.web.forms import ChooseClusterForm
 from zato.common.odb.model import Cluster
 
 
@@ -94,4 +95,7 @@ class ZatoMiddleware(object):
         req.zato.odb = SASession()
         
         req.zato.cluster_id = req.GET.get('cluster') or req.POST.get('cluster_id')
-        req.zato.cluster = req.zato.odb.query(Cluster).filter_by(id=req.zato.cluster_id).one()
+        if req.zato.cluster_id:
+            req.zato.cluster = req.zato.odb.query(Cluster).filter_by(id=req.zato.cluster_id).one()
+            req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
+            req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)

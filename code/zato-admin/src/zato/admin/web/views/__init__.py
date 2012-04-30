@@ -173,7 +173,6 @@ class View(_BaseView):
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass'
     
-    needs_clusters = False
     output_class = None
     
     def __init__(self):
@@ -206,11 +205,6 @@ class View(_BaseView):
         super(View, self).__call__(req, *args, **kwargs)
         return_data = {'cluster_id':self.cluster_id}
         
-        if self.needs_clusters:
-            zato_clusters = req.zato.odb.query(Cluster).order_by('name').all()
-            return_data['zato_clusters'] = zato_clusters
-            return_data['choose_cluster_form'] = ChooseClusterForm(zato_clusters, self.req.GET)
-            
         output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
         zato_path_needed = 'response.item_list.item' if output_repeated else 'response.item'
         
@@ -224,6 +218,8 @@ class View(_BaseView):
 
         return_data['items'] = self.items
         return_data['item'] = self.item
+        return_data['zato_clusters'] = req.zato.clusters
+        return_data['choose_cluster_form'] = req.zato.choose_cluster_form
 
         view_specific = self.handle()
         if view_specific:
@@ -236,7 +232,6 @@ class View(_BaseView):
 
     def handle(self, req, *args, **kwargs):
         raise NotImplementedError('Must be overloaded by a subclass')
-    
     
 class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
@@ -259,6 +254,26 @@ class CreateEdit(_BaseView):
             input_dict[name] = self.req.POST.get(self.form_prefix + name)
         
         zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+
+        return_data = {
+            'message': self.success_message(zato_message.response.item)
+            }
+        for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
+            value = getattr(zato_message.response.item, name, None)
+            if value:
+                value = value.text
+            return_data[name] = value
+        
+        return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    
+    def success_message(self, zato_message):
+        raise NotImplementedError('Must be implemented by a subclass')
+        
+    @property
+    def verb(self):
+        if self.form_prefix:
+            return 'updated'
+        return 'created'
         
     # id
     # cluster_id

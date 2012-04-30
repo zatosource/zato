@@ -226,6 +226,7 @@ class GetSourceInfo(AdminService):
                             filter(Service.name==self.request.input.name).\
                             filter(Service.id==DeployedService.service_id).\
                             filter(Server.id==DeployedService.server_id).\
+                            filter(Server.id==self.server.id).\
                             one()
             
             self.response.payload.service_id = si.service_id
