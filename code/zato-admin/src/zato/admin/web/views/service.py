@@ -46,7 +46,7 @@ from anyjson import dumps, loads
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.service import CreateForm, EditForm, WSDLUploadForm
-from zato.admin.web.views import meth_allowed, View
+from zato.admin.web.views import CreateEdit, meth_allowed, View
 from zato.common import SourceInfo, zato_namespace, zato_path
 from zato.common.odb.model import Cluster, Service
 from zato.common.util import TRACE1
@@ -139,7 +139,7 @@ class Index(View):
     template = 'zato/service/index.html'
     
     needs_clusters = True
-    service = 'zato:service.get-list'
+    soap_action = 'zato:service.get-list'
     output_class = Service
     
     class SimpleIO(View.SimpleIO):
@@ -149,7 +149,7 @@ class Index(View):
         output_repeated = True
     
     def handle(self):
-        return_data = {
+        return {
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit')
         }
@@ -158,18 +158,45 @@ class Index(View):
 def create(req):
     pass
 
-@meth_allowed('POST')
-def edit(req):
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-    try:
-        zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.edit', zato_message)
+class Edit(CreateEdit):
+    meth_allowed = 'POST'
+    url_name = 'service-edit'
+    form_prefix = 'edit-'
+    
+    soap_action = 'zato:service.edit'
 
-        return _edit_create_response('updated', zato_message.response.item)
-    except Exception, e:
-        msg = "Could not update the service, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+    class SimpleIO(View.SimpleIO):
+        input_required = ('name', 'is_active')
+        output_required = ('id', 'is_internal', 'impl_name', 'usage_count')
+        
+        def message(self, output):
+            # 'message': 'Successfully {0} the service [{1}]'.format(verb, service_elem.name.text),
+            return 'zzz'
+        
+    '''
+    return_data = {'id': str(service_elem.id),
+                   'is_internal':is_boolean(service_elem.is_internal.text),
+                   'impl_name':service_elem.impl_name.text,
+                   'usage_count':str(service_elem.usage_count.text),
+                   'message': 'Successfully {0} the service [{1}]'.format(verb, service_elem.name.text),
+                }
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    '''
+    
+    
+    '''
+    def edit(req):
+        cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
+        try:
+            zato_message = _get_edit_create_message(req.POST, 'edit-')
+            _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:service.edit', zato_message)
+    
+            return _edit_create_response('updated', zato_message.response.item)
+        except Exception, e:
+            msg = "Could not update the service, e=[{e}]".format(e=format_exc(e))
+            logger.error(msg)
+            return HttpResponseServerError(msg)
+            '''
 
 @meth_allowed('GET')
 def details(req, service_name):

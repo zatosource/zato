@@ -29,6 +29,7 @@ from bunch import Bunch
 
 # Zato
 from zato.admin.settings import SASession
+from zato.common.odb.model import Cluster
 
 
 # Code below is taken from http://djangosnippets.org/snippets/136/
@@ -72,7 +73,7 @@ class ZatoMiddleware(object):
     page set by REQUIRE_LOGIN_PATH or /accounts/login/ by default.
     """
     def __init__(self):
-        self.require_login_path = getattr(settings, "REQUIRE_LOGIN_PATH", "/accounts/login/")
+        self.require_login_path = getattr(settings, 'REQUIRE_LOGIN_PATH', '/accounts/login/')
         self.dont_require_login = settings.DONT_REQUIRE_LOGIN
 
     def process_request(self, req):
@@ -84,7 +85,7 @@ class ZatoMiddleware(object):
             if req.POST:
                 return login(req)
             else:
-                return HttpResponseRedirect("%s?next=%s" % (self.require_login_path, req.path))
+                return HttpResponseRedirect('{}?next={}'.format(self.require_login_path, req.path))
             
         # Makes each Django view have an access to an 'odb' attribute of the
         # request object. The attribute is an SQLAlchemy session to the database
@@ -92,5 +93,5 @@ class ZatoMiddleware(object):
         req.zato = Bunch()
         req.zato.odb = SASession()
         
-        print(333, dir(req))
-            
+        req.zato.cluster_id = req.GET.get('cluster') or req.POST.get('cluster_id')
+        req.zato.cluster = req.zato.odb.query(Cluster).filter_by(id=req.zato.cluster_id).one()
