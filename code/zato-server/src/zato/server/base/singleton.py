@@ -39,8 +39,6 @@ from zato.server.base import BrokerMessageReceiver
 
 _scheduler_values = SCHEDULER.values()
 
-logger = logging.getLogger(__name__)
-
 class SingletonServer(BrokerMessageReceiver):
     """ A server of which one instance only may be running in a Zato container.
     Holds and processes data which can't be made parallel, such as scheduler,
@@ -61,11 +59,12 @@ class SingletonServer(BrokerMessageReceiver):
         self.zmq_context = zmq_context
         self.initial_sleep_time = initial_sleep_time
         self.is_connector_server = is_connector_server
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def run(self, *ignored_args, **kwargs):
         # So that other moving parts - like connector subprocesses - have time
         # to initialize before the singleton server starts the scheduler.
-        logger.debug('Sleeping for {0} s'.format(self.initial_sleep_time))
+        self.logger.debug('Sleeping for {0} s'.format(self.initial_sleep_time))
         sleep(self.initial_sleep_time)
 
         for name in('broker_token', 'zmq_context', 'broker_host', 'broker_push_singleton_pull_port', 
@@ -90,13 +89,13 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client.start()
         
         # Start the hot-reload pickup monitor
-        logger.info('Pickup notifier starting')
+        self.logger.info('Pickup notifier starting')
         self.pickup.watch()
 
     def hot_deploy(self, file_name, path):
         """ Hot deploys a file pointed to by the 'path' parameter.
         """
-        logger.debug('About to hot-deploy [{}]'.format(path))
+        self.logger.debug('About to hot-deploy [{}]'.format(path))
         now = datetime.utcnow()
         di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
         

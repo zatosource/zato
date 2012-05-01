@@ -110,12 +110,12 @@ class Scheduler(object):
         """ Schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
-        weeks = job_data.weeks if job_data.weeks else 0
-        days = job_data.days if job_data.days else 0
-        hours = job_data.hours if job_data.hours else 0
-        minutes = job_data.minutes if job_data.minutes else 0
-        seconds = job_data.seconds if job_data.seconds else 0
-        max_runs = job_data.repeats if job_data.repeats else None
+        weeks = job_data.weeks if job_data.get('weeks') else 0
+        days = job_data.days if job_data.get('days') else 0
+        hours = job_data.hours if job_data.get('hours') else 0
+        minutes = job_data.minutes if job_data.get('minutes') else 0
+        seconds = job_data.seconds if job_data.get('seconds') else 0
+        max_runs = job_data.repeats if job_data.get('repeats') else None
         
         self._sched.add_interval_job(self._on_job_execution, 
             weeks, days, hours, minutes,  seconds, start_date, 
@@ -158,14 +158,14 @@ class Scheduler(object):
         self.delete(job_data)
         self.create_one_time(job_data, broker_msg_type)
         
-    def edit_interval_based(self, job_data):
+    def edit_interval_based(self, job_data, broker_msg_type):
         """ First deletes an interval-based job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.delete(job_data)
         self.create_interval_based(job_data, broker_msg_type)
         
-    def edit_cron_style(self, job_data):
+    def edit_cron_style(self, job_data, broker_msg_type):
         """ First deletes a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """

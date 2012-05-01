@@ -63,43 +63,36 @@ TRANSPORT = {
     }
 
 def _get_security_list(cluster):
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.cluster_id = cluster.id
-    
-    _, zato_message, _  = invoke_admin_service(cluster, 'zato:security.get-list', zato_message)
+    zato_message, _  = invoke_admin_service(cluster, 'zato:security.get-list', {'cluster_id': cluster.id})
     return zato_message
 
 def _get_edit_create_message(params, prefix=''):
-    """ Creates a base document which can be used by both 'edit' and 'create' actions
+    """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
     """
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.is_internal = False
-    zato_message.request.connection = params['connection']
-    zato_message.request.transport = params['transport']
-    zato_message.request.id = params.get('id')
-    zato_message.request.cluster_id = params['cluster_id']
-    zato_message.request.name = params[prefix + 'name']
-    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.request.host = params.get(prefix + 'host')
-    zato_message.request.url_path = params[prefix + 'url_path']
-    zato_message.request.method = params.get(prefix + 'method')
-    zato_message.request.soap_action = params.get(prefix + 'soap_action', '')
-    zato_message.request.soap_version = params.get(prefix + 'soap_version', '')
-    zato_message.request.data_format = params.get(prefix + 'data_format', None)
-    zato_message.request.service = params.get(prefix + 'service')
-
     security = params[prefix + 'security']
     if security != ZATO_NONE:
         _, security_id = security.split('/')
     else:
         _, security_id = ZATO_NONE, ZATO_NONE
-        
-    zato_message.request.security_id = security_id
-
-    return zato_message
+    
+    return {
+        'is_internal': False,
+        'connection': params['connection'],
+        'transport': params['transport'],
+        'id': params.get('id'),
+        'cluster_id': params['cluster_id'],
+        'name': params[prefix + 'name'],
+        'is_active': bool(params.get(prefix + 'is_active')),
+        'host': params.get(prefix + 'host'),
+        'url_path': params[prefix + 'url_path'],
+        'method': params.get(prefix + 'method'),
+        'soap_action': params.get(prefix + 'soap_action', ''),
+        'soap_version': params.get(prefix + 'soap_version', ''),
+        'data_format': params.get(prefix + 'data_format', None),
+        'service': params.get(prefix + 'service'),
+        'security_id': security_id,
+    }
 
 def _edit_create_response(id, verb, transport, connection, name):
 
@@ -116,9 +109,6 @@ def _edit_create_response(id, verb, transport, connection, name):
 
 @meth_allowed('GET')
 def index(req):
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
     connection = req.GET.get('connection')
     transport = req.GET.get('transport')
     items = []
@@ -137,11 +127,8 @@ def index(req):
     if transport == 'soap':
         colspan += 2
 
-    if cluster_id and req.method == 'GET':
-        
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        security_list = _get_security_list(cluster)
-        
+    if req.zato.cluster_id:
+        security_list = _get_security_list(req.zato.cluster)
         if zato_path('response.item_list.item').get_from(security_list) is not None:
             for def_item in security_list.response.item_list.item:
                 
@@ -160,19 +147,16 @@ def index(req):
         
         create_form = CreateForm(_security)
         edit_form = EditForm(_security, prefix='edit')
-        
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-        zato_message.request.connection = connection
-        zato_message.request.transport = transport
-
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:http_soap.get-list', zato_message)
-
+    
+        input_dict = {
+            'cluster_id': req.zato.cluster_id,
+            'connection': connection,
+            'transport': transport,
+        }
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.get-list', input_dict)
+    
         if zato_path('response.item_list.item').get_from(zato_message) is not None:
-
             for msg_item in zato_message.response.item_list.item:
-
                 id = msg_item.id.text
                 name = msg_item.name.text
                 is_active = is_boolean(msg_item.is_active.text)
@@ -205,9 +189,9 @@ def index(req):
                         security_id=security_id, security_name=security_name)
                 items.append(item)
 
-    return_data = {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
+    return_data = {'zato_clusters':req.zato.clusters,
+        'cluster_id':req.zato.cluster_id,
+        'choose_cluster_form':ChooseClusterForm(req.zato.clusters, req.GET),
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
@@ -228,18 +212,10 @@ def index(req):
 
 @meth_allowed('POST')
 def create(req):
-
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-
     try:
-        zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.create', zato_message)
-
-        return _edit_create_response(zato_message.response.item.id.text,
-                                     'created',
-                                     req.POST['transport'],
-                                     req.POST['connection'],
-                                     req.POST['name'])
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.create', _get_edit_create_message(req.POST))
+        return _edit_create_response(zato_message.response.item.id.text, 'created',
+            req.POST['transport'], req.POST['connection'], req.POST['name'])
     except Exception, e:
         msg = 'Could not create the object, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -248,36 +224,19 @@ def create(req):
 
 @meth_allowed('POST')
 def edit(req):
-
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-
     try:
-        zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:http_soap.edit', zato_message)
-
-        return _edit_create_response(zato_message.response.item.id.text,
-                                     'updated',
-                                     req.POST['transport'],
-                                     req.POST['connection'],
-                                     req.POST['edit-name'])
-
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.edit', _get_edit_create_message(req.POST, 'edit-'))
+        return _edit_create_response(zato_message.response.item.id.text, 'updated',
+            req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
     except Exception, e:
         msg = 'Could not perform the update, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
 def _delete_ping(req, id, cluster_id, service, error_template):
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = id
-
-        _, zato_message, soap_response = invoke_admin_service(cluster, service, zato_message)
-
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, service, {'id': id})
         return zato_message
-
     except Exception, e:
         msg = error_template.format(e=format_exc(e))
         logger.error(msg)
