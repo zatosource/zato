@@ -63,7 +63,7 @@ class Create(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -89,6 +89,7 @@ class Create(AdminService):
                 session.commit()
                 
                 self.response.payload.id = def_.id
+                self.response.payload.name = def_.name
                 
             except Exception, e:
                 msg = 'Could not create an AMQP definition, e=[{e}]'.format(e=format_exc(e))
@@ -102,7 +103,7 @@ class Edit(AdminService):
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -140,6 +141,7 @@ class Edit(AdminService):
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
                 self.response.payload.id = def_amqp.id
+                self.response.payload.name = def_amqp.name
                 
             except Exception, e:
                 msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))

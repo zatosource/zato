@@ -114,24 +114,13 @@ def set_servers_state(cluster, client):
                 cluster.some_maint = True
 
 def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated'):
-
-    cluster_id = req.POST.get('cluster_id')
-    id = req.POST.get('id')
-
-    password1 = req.POST.get(field1, '')
-    password2 = req.POST.get(field2, '')
-
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = id
-        zato_message.request.password1 = password1
-        zato_message.request.password2 = password2
-
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        service_name, zato_message)
+        input_dict = {
+            'id': req.POST.get('id'),
+            'password1': req.POST.get(field1, ''),
+            'password2': req.POST.get(field2, ''),
+        }
+        invoke_admin_service(req.zato.cluster, service_name, input_dict)
 
     except Exception, e:
         msg = 'Could not change the password, e=[{e}]'.format(e=format_exc(e))
@@ -141,6 +130,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         return HttpResponse(dumps({'message':success_msg}))
     
 class _BaseView(object):
+    meth_allowed = 'meth_allowed-must-be-defined-in-a-subclass'
     soap_action = None
     
     class SimpleIO:
@@ -169,7 +159,6 @@ class View(_BaseView):
     """ A base class upon which other views are based. Takes care of all the tedious
     repetitive stuff common to almost all of the views.
     """
-    meth_allowed = 'meth_allowed-must-be-defined-in-a-subclass'
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass'
     
@@ -181,8 +170,9 @@ class View(_BaseView):
         self.item = None
         
     def invoke_admin_service(self):
-        zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, {'cluster_id':self.cluster_id})
-        return zato_message
+        if self.req.zato.get('cluster'):
+            zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, {'cluster_id':self.cluster_id})
+            return zato_message
     
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
@@ -203,6 +193,9 @@ class View(_BaseView):
         control to the subclass for fetching this view-specific data.
         """
         super(View, self).__call__(req, *args, **kwargs)
+        del self.items[:]
+        self.item = None
+
         return_data = {'cluster_id':self.cluster_id}
         
         output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
@@ -210,7 +203,7 @@ class View(_BaseView):
         
         if self.soap_action and self.cluster_id:
             zato_message = self.invoke_admin_service()
-            if zato_path(zato_path_needed).get_from(zato_message) is not None:
+            if zato_message and zato_path(zato_path_needed).get_from(zato_message) is not None:
                 if output_repeated:
                     self._handle_item_list(zato_message.response.item_list)
                 else:
@@ -238,9 +231,6 @@ class CreateEdit(_BaseView):
     """
     form_prefix = ''
     
-    def __init__(self):
-        super(CreateEdit, self).__init__()
-        
     def __call__(self, req, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
@@ -266,7 +256,7 @@ class CreateEdit(_BaseView):
         
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
     
-    def success_message(self, zato_message):
+    def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
         
     @property
@@ -274,6 +264,24 @@ class CreateEdit(_BaseView):
         if self.form_prefix:
             return 'updated'
         return 'created'
+
+class Delete(_BaseView):
+    """ Our subclasses will delete objects such as connections and others.
+    """
+    meth_allowed = 'POST'
+    error_message = 'error_message-must-be-defined-in-a-subclass'
+    
+    def __call__(self, req, *args, **kwargs):
+        super(Delete, self).__call__(req, *args, **kwargs)
         
-    # id
-    # cluster_id
+        try:
+            input_dict = {
+                'id': self.req.zato.id,
+                'cluster_id': self.cluster_id
+            }
+            invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+            return HttpResponse()
+        except Exception, e:
+            msg = '{}, e=[{}]'.format(self.error_message, format_exc(e))
+            logger.error(msg)
+            return HttpResponseServerError(msg)

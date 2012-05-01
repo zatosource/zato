@@ -50,7 +50,7 @@ from anyjson import dumps, loads
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.service import CreateForm, EditForm, WSDLUploadForm
-from zato.admin.web.views import CreateEdit, meth_allowed, View
+from zato.admin.web.views import CreateEdit, Delete as _Delete, meth_allowed, View
 from zato.common import SourceInfo, zato_namespace, zato_path
 from zato.common.odb.model import Cluster, Service
 from zato.common.util import TRACE1
@@ -369,17 +369,11 @@ def request_response_configure(req, service_name, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
     
-@meth_allowed('POST')
-def delete(req, service_id, cluster_id):
-    try:
-        invoke_admin_service(req.zato.cluster, 'zato:service.delete', {'id': service_id})
-        return HttpResponse()
-    
-    except Exception, e:
-        msg = 'Could not delete the service, e:[{e}]'.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    
+class Delete(_Delete):
+    url_name = 'service-delete'
+    error_message = 'Could not delete the service'
+    soap_action = 'zato:service.delete'
+
 @meth_allowed('GET')
 def sources(req):
     pass
