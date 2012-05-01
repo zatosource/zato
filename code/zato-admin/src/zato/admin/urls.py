@@ -132,10 +132,10 @@ urlpatterns = patterns('',
     url(r'^zato/definition/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_amqp.Delete(), name=def_amqp.Delete.url_name),
 
     # .. JMS WebSphere MQ
-    url(r'^zato/definition/jms-wmq/$', def_jms_wmq.index, name='def-jms-wmq'),
-    url(r'^zato/definition/jms-wmq/create/$', def_jms_wmq.create, name='def-jms-wmq-create'),
-    url(r'^zato/definition/jms-wmq/edit/$', def_jms_wmq.edit, name='def-jms-wmq-edit'),
-    url(r'^zato/definition/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_jms_wmq.delete, name='def-jms-wmq-delete'),
+    url(r'^zato/definition/jms-wmq/$', def_jms_wmq.Index(), name=def_jms_wmq.Index.url_name),
+    url(r'^zato/definition/jms-wmq/create/$', def_jms_wmq.Create(), name=def_jms_wmq.Create.url_name),
+    url(r'^zato/definition/jms-wmq/edit/$', def_jms_wmq.Edit(), name=def_jms_wmq.Edit.url_name),
+    url(r'^zato/definition/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', def_jms_wmq.Delete(), name=def_jms_wmq.Delete.url_name),
 
     # Outgoing connections
 

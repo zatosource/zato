@@ -50,7 +50,7 @@ from anyjson import dumps, loads
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.service import CreateForm, EditForm, WSDLUploadForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, meth_allowed, View
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common import SourceInfo, zato_namespace, zato_path
 from zato.common.odb.model import Cluster, Service
 from zato.common.util import TRACE1
@@ -113,7 +113,7 @@ def _get_channels(cluster, id, channel_type):
             
     return response
 
-class Index(View):
+class Index(_Index):
     """ A view for listing the services and their basic management.
     """
     meth_allowed = 'GET'
@@ -123,7 +123,7 @@ class Index(View):
     soap_action = 'zato:service.get-list'
     output_class = Service
     
-    class SimpleIO(View.SimpleIO):
+    class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name')
         output_optional = ('usage_count',)
@@ -146,7 +146,7 @@ class Edit(CreateEdit):
     
     soap_action = 'zato:service.edit'
 
-    class SimpleIO(View.SimpleIO):
+    class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active')
         output_required = ('id', 'is_internal', 'impl_name', 'usage_count')
         

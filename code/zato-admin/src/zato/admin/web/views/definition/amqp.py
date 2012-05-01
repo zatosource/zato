@@ -39,7 +39,7 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, meth_allowed, View
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1
@@ -49,14 +49,14 @@ logger = logging.getLogger(__name__)
 class AMQPCreateEdit(CreateEdit):
     meth_allowed = 'POST'
 
-    class SimpleIO(View.SimpleIO):
+    class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_required = ('id',)
         
     def success_message(self, item):
         return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name.text)
 
-class Index(View):
+class Index(_Index):
     meth_allowed = 'GET'
     url_name = 'def-amqp'
     template = 'zato/definition/amqp.html'
@@ -64,7 +64,7 @@ class Index(View):
     soap_action = 'zato:definition.amqp.get-list'
     output_class = ConnDefAMQP
     
-    class SimpleIO(View.SimpleIO):
+    class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_repeated = True
