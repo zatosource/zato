@@ -41,7 +41,7 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.channel.amqp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, meth_allowed, View
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common.odb.model import Cluster, ChannelAMQP
 from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1

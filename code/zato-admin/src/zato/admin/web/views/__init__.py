@@ -155,9 +155,8 @@ class _BaseView(object):
         self.req = req
         self.fetch_cluster_id()
 
-class View(_BaseView):
-    """ A base class upon which other views are based. Takes care of all the tedious
-    repetitive stuff common to almost all of the views.
+class Index(_BaseView):
+    """ A base class upon which other index views are based.
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass'
@@ -165,7 +164,7 @@ class View(_BaseView):
     output_class = None
     
     def __init__(self):
-        super(View, self).__init__()
+        super(Index, self).__init__()
         self.items = []
         self.item = None
         
@@ -182,7 +181,8 @@ class View(_BaseView):
         for msg_item in item_list.item:
             item = self.output_class()
             for name in names:
-                setattr(item, name, getattr(msg_item, name, None))
+                value = getattr(msg_item, name, '') or ''
+                setattr(item, name, value)
             self.items.append(item)
     
     def _handle_item(self, item):
@@ -192,36 +192,39 @@ class View(_BaseView):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
-        super(View, self).__call__(req, *args, **kwargs)
-        del self.items[:]
-        self.item = None
-
-        return_data = {'cluster_id':self.cluster_id}
-        
-        output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
-        zato_path_needed = 'response.item_list.item' if output_repeated else 'response.item'
-        
-        if self.soap_action and self.cluster_id:
-            zato_message = self.invoke_admin_service()
-            if zato_message and zato_path(zato_path_needed).get_from(zato_message) is not None:
-                if output_repeated:
-                    self._handle_item_list(zato_message.response.item_list)
-                else:
-                    self._handle_item(zato_message.response.item)
-
-        return_data['items'] = self.items
-        return_data['item'] = self.item
-        return_data['zato_clusters'] = req.zato.clusters
-        return_data['choose_cluster_form'] = req.zato.choose_cluster_form
-
-        view_specific = self.handle()
-        if view_specific:
-            return_data.update(view_specific)
-            
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
+        try:
+            super(Index, self).__call__(req, *args, **kwargs)
+            del self.items[:]
+            self.item = None
     
-        return render_to_response(self.template, return_data, context_instance=RequestContext(req))
+            return_data = {'cluster_id':self.cluster_id}
+            
+            output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
+            zato_path_needed = 'response.item_list.item' if output_repeated else 'response.item'
+            
+            if self.soap_action and self.cluster_id:
+                zato_message = self.invoke_admin_service()
+                if zato_message is not None and zato_path(zato_path_needed).get_from(zato_message) is not None:
+                    if output_repeated:
+                        self._handle_item_list(zato_message.response.item_list)
+                    else:
+                        self._handle_item(zato_message.response.item)
+    
+            return_data['items'] = self.items
+            return_data['item'] = self.item
+            return_data['zato_clusters'] = req.zato.clusters
+            return_data['choose_cluster_form'] = req.zato.choose_cluster_form
+    
+            view_specific = self.handle()
+            if view_specific:
+                return_data.update(view_specific)
+                
+            if logger.isEnabledFor(TRACE1):
+                logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
+    
+            return render_to_response(self.template, return_data, context_instance=RequestContext(req))
+        except Exception, e:
+            return HttpResponseServerError(format_exc(e))
 
     def handle(self, req, *args, **kwargs):
         raise NotImplementedError('Must be overloaded by a subclass')
@@ -235,26 +238,33 @@ class CreateEdit(_BaseView):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
-        super(CreateEdit, self).__call__(req, *args, **kwargs)
-        input_dict = {
-            'id': self.req.POST.get('id'),
-            'cluster_id': self.cluster_id
-        }
-        for name in self.SimpleIO.input_required:
-            input_dict[name] = self.req.POST.get(self.form_prefix + name)
-        
-        zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
-
-        return_data = {
-            'message': self.success_message(zato_message.response.item)
+        try:
+            super(CreateEdit, self).__call__(req, *args, **kwargs)
+            input_dict = {
+                'id': self.req.POST.get('id'),
+                'cluster_id': self.cluster_id
             }
-        for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
-            value = getattr(zato_message.response.item, name, None)
-            if value:
-                value = value.text
-            return_data[name] = value
-        
-        return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    
+            print(3333, self.SimpleIO.input_required)
+            
+            for name in self.SimpleIO.input_required:
+                input_dict[name] = self.req.POST.get(self.form_prefix + name)
+                print(999, name, self.form_prefix + name, self.req.POST.get(self.form_prefix + name))
+            
+            zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+    
+            return_data = {
+                'message': self.success_message(zato_message.response.item)
+                }
+            for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
+                value = getattr(zato_message.response.item, name, None)
+                if value:
+                    value = value.text
+                return_data[name] = value
+            
+            return HttpResponse(dumps(return_data), mimetype='application/javascript')
+        except Exception, e:
+            return HttpResponseServerError(format_exc(e))
     
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
@@ -272,9 +282,8 @@ class Delete(_BaseView):
     error_message = 'error_message-must-be-defined-in-a-subclass'
     
     def __call__(self, req, *args, **kwargs):
-        super(Delete, self).__call__(req, *args, **kwargs)
-        
         try:
+            super(Delete, self).__call__(req, *args, **kwargs)
             input_dict = {
                 'id': self.req.zato.id,
                 'cluster_id': self.cluster_id

@@ -214,11 +214,17 @@ class Request(ValueConverter):
                 else:
                     if value is not None:
                         value = unicode(value)
-                        
-                if not isinstance(param, AsIs):
-                    params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
-                else:
-                    params[param_name] = value
+
+                try:
+                    if not isinstance(param, AsIs):
+                        params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
+                    else:
+                        params[param_name] = value
+                except Exception, e:
+                    msg = 'Caught an exception, param:[{}], param_name:[{}], value:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
+                        param, param_name, value, self.has_simple_io_config, format_exc(e))
+                    self.logger.error(msg)
+                    raise Exception(msg)
         return params
 
 class Response(object):

@@ -70,7 +70,7 @@ class Create(AdminService):
             'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
             'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -95,6 +95,7 @@ class Create(AdminService):
                 session.commit()
 
                 self.response.payload.id = def_.id
+                self.response.payload.name = def_.name
 
             except Exception, e:
                 msg = "Could not create a JMS WebSphere MQ definition, e=[{e}]".format(e=format_exc(e))
@@ -111,7 +112,7 @@ class Edit(AdminService):
             'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
             'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -129,7 +130,6 @@ class Edit(AdminService):
                 raise Exception('JMS WebSphere MQ definition [{0}] already exists on this cluster'.format(input.name))
             
             try:
-                
                 def_jms_wmq = session.query(ConnDefWMQ).filter_by(id=input.id).one()
                 old_name = def_jms_wmq.name
                 def_jms_wmq.name = input.name
@@ -155,6 +155,7 @@ class Edit(AdminService):
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
                 
                 self.response.payload.id = def_jms_wmq.id
+                self.response.payload.name = def_jms_wmq.name
                 
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))
