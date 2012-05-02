@@ -41,7 +41,7 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common.odb.model import Cluster, SQLConnectionPool
 from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1
@@ -49,23 +49,21 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 def _get_edit_create_message(params, prefix=''):
-    """ Creates a base document which can be used by both 'edit' and 'create' actions.
+    """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
     """
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.id = params.get('id')
-    zato_message.request.cluster_id = params['cluster_id']
-    zato_message.request.name = params[prefix + 'name']
-    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.request.engine = params[prefix + 'engine']
-    zato_message.request.host = params[prefix + 'host']
-    zato_message.request.port = params[prefix + 'port']
-    zato_message.request.db_name = params[prefix + 'db_name']
-    zato_message.request.username = params[prefix + 'username']
-    zato_message.request.pool_size = params[prefix + 'pool_size']
-    zato_message.request.extra = params.get(prefix + 'extra')
-
-    return zato_message
+    return {
+        'id': params.get('id'),
+        'cluster_id': params['cluster_id'],
+        'name': params[prefix + 'name'],
+        'is_active': bool(params.get(prefix + 'is_active')),
+        'engine': params[prefix + 'engine'],
+        'host': params[prefix + 'host'],
+        'port': params[prefix + 'port'],
+        'db_name': params[prefix + 'db_name'],
+        'username': params[prefix + 'username'],
+        'pool_size': params[prefix + 'pool_size'],
+        'extra': params.get(prefix + 'extra'),
+    }
 
 def _edit_create_response(verb, id, name, engine, cluster_id):
     """ A common function for producing return data for create and edit actions.
@@ -82,24 +80,13 @@ def _edit_create_response(verb, id, name, engine, cluster_id):
 def index(req):
     """ Lists all the SQL connections.
     """
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
     items = []
-
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
     change_password_form = ChangePasswordForm()
 
-    if cluster_id and req.method == 'GET':
-
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.sql.get-list', zato_message)
-
+    if req.zato.cluster_id and req.method == 'GET':
+        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id})
         if zato_path('response.item_list.item').get_from(zato_message) is not None:
 
             for msg_item in zato_message.response.item_list.item:
@@ -129,9 +116,9 @@ def index(req):
                 item.extra = extra
                 items.append(item)
 
-    return_data = {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
+    return_data = {'zato_clusters':req.zato.clusters,
+        'cluster_id':req.zato.cluster_id,
+        'choose_cluster_form':req.zato.choose_cluster_form,
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
@@ -149,14 +136,12 @@ def index(req):
 def create(req):
     """ Creates a new SQL connection.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-
     try:
         zato_message = _get_edit_create_message(req.POST)
-        engine = zato_message.request.engine
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.create', zato_message)
+        engine = zato_message['engine']
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.create', zato_message)
 
-        return _edit_create_response('created', zato_message.response.item.id.text, req.POST['name'], engine, cluster.id)
+        return _edit_create_response('created', zato_message.response.item.id.text, req.POST['name'], engine, req.zato.cluster.id)
 
     except Exception, e:
         msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
@@ -168,55 +153,30 @@ def create(req):
 def edit(req):
     """ Updates an SQL connection.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        engine = zato_message.request.engine
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.edit', zato_message)
+        engine = zato_message['engine']
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.edit', zato_message)
 
-        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, cluster.id)
+        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, req.zato.cluster.id)
 
     except Exception, e:
         msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-@meth_allowed('POST')
-def delete(req, id, cluster_id):
-    """ Deletes an SQL connection.
-    """
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
-    try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = id
-
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.delete', zato_message)
-
-        return HttpResponse()
-
-    except Exception, e:
-        msg = 'Could not delete the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-
+class Delete(_Delete):
+    url_name = 'out-sql-delete'
+    error_message = 'Could not delete the SQL connection'
+    soap_action = 'zato:outgoing.sql.delete'
 
 @meth_allowed('POST')
 def ping(req, cluster_id, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = id
-
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.sql.ping', zato_message)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.ping', {'id':id})
         response_time = zato_path('response.item.response_time', True).get_from(zato_message)
-        
     except Exception, e:
         msg = 'Ping failed. e=[{}]'.format(format_exc(e))
         logger.error(msg)

@@ -57,7 +57,7 @@ class Create(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
         input_optional = ('data_format',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -99,6 +99,7 @@ class Create(AdminService):
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))
@@ -113,7 +114,7 @@ class Edit(_AMQPService):
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
         input_optional = ('data_format',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -158,6 +159,7 @@ class Edit(_AMQPService):
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))

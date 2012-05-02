@@ -41,131 +41,52 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.outgoing.zmq import CreateForm, EditForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common.odb.model import Cluster, OutgoingZMQ
 from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
- 
 
-def _get_edit_create_message(params, prefix=''):
-    """ Creates a base document which can be used by both 'edit' and 'create' actions.
-    """
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.id = params.get('id')
-    zato_message.request.cluster_id = params['cluster_id']
-    zato_message.request.name = params[prefix + 'name']
-    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.request.address = params[prefix + 'address']
-    zato_message.request.socket_type = params[prefix + 'socket_type']
+class Index(_Index):
+    meth_allowed = 'GET'
+    url_name = 'out-zmq'
+    template = 'zato/outgoing/zmq.html'
     
-    return zato_message
-
-def _edit_create_response(verb, id, name):
-
-    return_data = {'id': id,
-                   'message': 'Successfully {0} the outgoing ZeroMQ connection [{1}]'.format(verb, name),
-                }
+    soap_action = 'zato:outgoing.zmq.get-list'
+    output_class = OutgoingZMQ
     
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
-
-@meth_allowed('GET')
-def index(req):
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
-    items = []
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'address', 'socket_type')
+        output_repeated = True
     
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
-
-    if cluster_id and req.method == 'GET':
-        
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-        
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:outgoing.zmq.get-list', zato_message)
-        
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            
-            for msg_item in zato_message.response.item_list.item:
-                
-                id = msg_item.id.text
-                name = msg_item.name.text
-                is_active = is_boolean(msg_item.is_active.text)
-                address = msg_item.address.text
-                socket_type = msg_item.socket_type.text
-                
-                item =  OutgoingZMQ(id, name, is_active, address, socket_type)
-                items.append(item)
-
-    return_data = {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
-        'items':items,
-        'create_form':create_form,
-        'edit_form':edit_form,
+    def handle(self):
+        return {
+            'create_form': CreateForm(),
+            'edit_form': EditForm(prefix='edit'),
         }
-    
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
 
-    return render_to_response('zato/outgoing/zmq.html', return_data,
-                              context_instance=RequestContext(req))
+class _CreateEdit(CreateEdit):
+    meth_allowed = 'POST'
 
-@meth_allowed('POST')
-def create(req):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-    
-    try:
-        zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.zmq.create', zato_message)
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('name', 'is_active', 'address', 'socket_type')
+        output_required = ('id',)
         
-        return _edit_create_response('created', zato_message.response.item.id.text, req.POST['name'])
-    
-    except Exception, e:
-        msg = "Could not create an outgoing ZeroMQ connection, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+    def success_message(self, item):
+        return 'Successfully {0} the outgoing Zero MQ connection [{1}]'.format(self.verb, item.name.text)
 
-    
-@meth_allowed('POST')
-def edit(req):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-    
-    try:
-        zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.zmq.edit', zato_message)
+class Create(_CreateEdit):
+    url_name = 'out-zmq-create'
+    soap_action = 'zato:outgoing.zmq.create'
 
-        return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'])
-        
-    except Exception, e:
-        msg = "Could not update the outgoing ZeroMQ connection, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    
-@meth_allowed('POST')
-def delete(req, id, cluster_id):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
-    try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = id
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:outgoing.zmq.delete', zato_message)
-        
-        return HttpResponse()
-    
-    except Exception, e:
-        msg = "Could not delete the outgoing ZeroMQ connection, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+class Edit(_CreateEdit):
+    url_name = 'out-zmq-edit'
+    form_prefix = 'edit-'
+    soap_action = 'zato:outgoing.zmq.edit'
+
+class Delete(_Delete):
+    url_name = 'out-zmq-delete'
+    error_message = 'Could not delete the outgoing Zero MQ connection'
+    soap_action = 'zato:outgoing.zmq.delete'

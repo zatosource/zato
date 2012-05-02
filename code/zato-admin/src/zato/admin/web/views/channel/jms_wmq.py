@@ -41,7 +41,7 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.channel.jms_wmq import CreateForm, EditForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common.odb.model import Cluster, ChannelWMQ
 from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1
@@ -50,11 +50,7 @@ logger = logging.getLogger(__name__)
 
 def _get_def_ids(cluster):
     out = {}
-    
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.cluster_id = cluster.id        
-    _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.jms_wmq.get-list', zato_message)
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.jms_wmq.get-list', {'cluster_id':cluster.id})
     
     if zato_path('response.item_list.item').get_from(zato_message) is not None:
         for definition_elem in zato_message.response.item_list.item:
@@ -65,30 +61,21 @@ def _get_def_ids(cluster):
     return out
         
 def _get_edit_create_message(params, prefix=''):
-    """ Creates a base document which can be used by both 'edit' and 'create' actions.
+    """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
     """
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.id = params.get('id')
-    zato_message.request.cluster_id = params['cluster_id']
-    zato_message.request.name = params[prefix + 'name']
-    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.request.def_id = params[prefix + 'def_id']
-    zato_message.request.queue = params[prefix + 'queue']
-    zato_message.request.service = params[prefix + 'service']
-    zato_message.request.request_format = params.get(prefix + 'request_format')
-
-    return zato_message
+    return {
+        'id': params.get('id'),
+        'cluster_id': params['cluster_id'],
+        'name': params[prefix + 'name'],
+        'is_active': bool(params.get(prefix + 'is_active')),
+        'def_id': params[prefix + 'def_id'],
+        'queue': params[prefix + 'queue'],
+        'service': params[prefix + 'service'],
+        'data_format': params.get(prefix + 'data_format'),
+    }
 
 def _edit_create_response(cluster, verb, id, name, cluster_id, def_id):
-
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.id = def_id
-    zato_message.request.cluster_id = cluster_id
-    
-    _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.jms_wmq.get-by-id', zato_message)    
-    
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.jms_wmq.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
     return_data = {'id': id,
                    'message': 'Successfully {0} the JMS WebSphere MQ channel [{1}]'.format(verb, name),
                    'def_name': zato_message.response.item.name.text
@@ -96,71 +83,38 @@ def _edit_create_response(cluster, verb, id, name, cluster_id, def_id):
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-@meth_allowed('GET')
-def index(req):
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
-    items = []
+class Index(_Index):
+    meth_allowed = 'GET'
+    url_name = 'channel-jms-wmq'
+    template = 'zato/channel/jms_wmq.html'
     
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
-
-    if cluster_id and req.method == 'GET':
+    soap_action = 'zato:channel.jms_wmq.get-list'
+    output_class = ChannelWMQ
+    
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'queue', 'def_name', 'def_id', 'service_name', 'data_format')
+        output_repeated = True
+    
+    def handle(self):
+        create_form = CreateForm()
+        edit_form = EditForm(prefix='edit')
         
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+        if self.req.zato.cluster_id:
+            def_ids = _get_def_ids(self.req.zato.cluster)
+            create_form.set_def_id(def_ids)
+            edit_form.set_def_id(def_ids)
         
-        def_ids = _get_def_ids(cluster)
-        create_form.set_def_id(def_ids)
-        edit_form.set_def_id(def_ids)
-
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-        
-        _, zato_message, soap_response  = invoke_admin_service(cluster, 'zato:channel.jms_wmq.get-list', zato_message)
-        
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            
-            for msg_item in zato_message.response.item_list.item:
-                
-                id = msg_item.id.text
-                name = msg_item.name.text
-                is_active = is_boolean(msg_item.is_active.text)
-                queue = msg_item.queue.text
-                def_name = msg_item.def_name.text
-                def_id = msg_item.def_id.text
-                service_name = msg_item.service_name.text
-                data_format = msg_item.data_format.text
-                
-                item =  ChannelWMQ(id, name, is_active, queue, def_id, def_name, service_name, data_format)
-                items.append(item)
-                
-    return_data = {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
-        'items':items,
-        'create_form':create_form,
-        'edit_form':edit_form,
+        return {
+            'create_form': create_form,
+            'edit_form': edit_form,
         }
-    
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
-
-    return render_to_response('zato/channel/jms_wmq.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('POST')
 def create(req):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-    
     try:
-        zato_message = _get_edit_create_message(req.POST)
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.jms_wmq.create', zato_message)
-        
-        return _edit_create_response(cluster, 'created', zato_message.response.item.id.text, 
-            req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:channel.jms_wmq.create', _get_edit_create_message(req.POST))
+        return _edit_create_response(req.zato.cluster, 'created', zato_message.response.item.id.text, req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
     except Exception, e:
         msg = 'Could not create a JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -169,36 +123,15 @@ def create(req):
     
 @meth_allowed('POST')
 def edit(req):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=req.POST['cluster_id']).first()
-    
     try:
-        zato_message = _get_edit_create_message(req.POST, 'edit-')
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.jms_wmq.edit', zato_message)
-
-        return _edit_create_response(cluster, 'updated', req.POST['id'], req.POST['edit-name'], 
-                                     req.POST['cluster_id'], req.POST['edit-def_id'])
-        
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:channel.jms_wmq.edit', _get_edit_create_message(req.POST, 'edit-'))
+        return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
     except Exception, e:
         msg = 'Could not update the JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     
-@meth_allowed('POST')
-def delete(req, id, cluster_id):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
-    try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = id
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:channel.jms_wmq.delete', zato_message)
-        
-        return HttpResponse()
-    
-    except Exception, e:
-        msg = 'Could not delete the JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+class Delete(_Delete):
+    url_name = 'channel-jms-wmq-delete'
+    error_message = 'Could not delete the JMS WebSphere MQ channel'
+    soap_action = 'zato:channel.jms_wmq.delete'

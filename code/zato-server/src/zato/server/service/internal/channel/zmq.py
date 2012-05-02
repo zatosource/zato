@@ -51,7 +51,7 @@ class Create(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
         input_optional = ('sub_key', 'data_format')
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -91,6 +91,7 @@ class Create(AdminService):
                 start_connector(self.server.repo_location, item.id)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not create a ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))
@@ -105,7 +106,7 @@ class Edit(AdminService):
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service')
         input_optional = ('sub_key', 'data_format')
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -149,6 +150,7 @@ class Edit(AdminService):
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not update the ZeroMQ channel, e=[{e}]'.format(e=format_exc(e))

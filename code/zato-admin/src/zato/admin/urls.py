@@ -163,34 +163,34 @@ urlpatterns = patterns('',
     url(r'^zato/outgoing/sql/create/$', out_sql.create, name='out-sql-create'),
     url(r'^zato/outgoing/sql/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_sql.ping, name='out-sql-ping'),
     url(r'^zato/outgoing/sql/edit/$', out_sql.edit, name='out-sql-edit'),
-    url(r'^zato/outgoing/sql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_sql.delete, name='out-sql-delete'),
+    url(r'^zato/outgoing/sql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_sql.Delete(), name=out_sql.Delete.url_name),
     url(r'^zato/outgoing/sql/change-password/$', out_sql.change_password, name='out-sql-change-password'),
     
     # .. ZeroMQ
-    url(r'^zato/outgoing/zmq/$', out_zmq.index, name='out-zmq'),
-    url(r'^zato/outgoing/zmq/create/$', out_zmq.create, name='out-zmq-create'),
-    url(r'^zato/outgoing/zmq/edit/$', out_zmq.edit, name='out-zmq-edit'),
-    url(r'^zato/outgoing/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_zmq.delete, name='out-zmq-delete'),
+    url(r'^zato/outgoing/zmq/$', out_zmq.Index(), name=out_zmq.Index.url_name),
+    url(r'^zato/outgoing/zmq/create/$', out_zmq.Create(), name=out_zmq.Create.url_name),
+    url(r'^zato/outgoing/zmq/edit/$', out_zmq.Edit(), name=out_zmq.Edit.url_name),
+    url(r'^zato/outgoing/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_zmq.Delete(), name=out_zmq.Delete.url_name),
 
     # Channels
 
     # .. AMQP
-    url(r'^zato/channel/amqp/$', channel_amqp.index, name='channel-amqp'),
+    url(r'^zato/channel/amqp/$', channel_amqp.Index(), name=channel_amqp.Index.url_name),
     url(r'^zato/channel/amqp/create/$', channel_amqp.create, name='channel-amqp-create'),
     url(r'^zato/channel/amqp/edit/$', channel_amqp.edit, name='channel-amqp-edit'),
-    url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.delete, name='channel-amqp-delete'),
+    url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_amqp.Delete(), name=channel_amqp.Delete.url_name),
 
     # .. JMS WebSphere MQ
-    url(r'^zato/channel/jms-wmq/$', channel_jms_wmq.index, name='channel-jms-wmq'),
+    url(r'^zato/channel/jms-wmq/$', channel_jms_wmq.Index(), name=channel_jms_wmq.Index.url_name),
     url(r'^zato/channel/jms-wmq/create/$', channel_jms_wmq.create, name='channel-jms-wmq-create'),
     url(r'^zato/channel/jms-wmq/edit/$', channel_jms_wmq.edit, name='channel-jms-wmq-edit'),
-    url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_jms_wmq.delete, name='channel-jms-wmq-delete'),
+    url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_jms_wmq.Delete(), name=channel_jms_wmq.Delete.url_name),
 
     # .. ZeroMQ
-    url(r'^zato/channel/zmq/$', channel_zmq.index, name='channel-zmq'),
-    url(r'^zato/channel/zmq/create/$', channel_zmq.create, name='channel-zmq-create'),
-    url(r'^zato/channel/zmq/edit/$', channel_zmq.edit, name='channel-zmq-edit'),
-    url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_zmq.delete, name='channel-zmq-delete'),
+    url(r'^zato/channel/zmq/$', channel_zmq.Index(), name=channel_zmq.Index.url_name),
+    url(r'^zato/channel/zmq/create/$', channel_zmq.Create(), name=channel_zmq.Create.url_name),
+    url(r'^zato/channel/zmq/edit/$', channel_zmq.Edit(), name=channel_zmq.Edit.url_name),
+    url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', channel_zmq.Delete(), name=channel_zmq.Delete.url_name),
 
     # HTTP/SOAP
     url(r'^zato/http-soap/$', http_soap.index, name='http-soap'),
