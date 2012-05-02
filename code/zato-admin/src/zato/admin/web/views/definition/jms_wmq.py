@@ -48,17 +48,6 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
-class JMSWMQCreateEdit(CreateEdit):
-    meth_allowed = 'POST'
-
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues', 'cache_open_receive_queues', 
-            'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
-        output_required = ('id',)
-        
-    def success_message(self, item):
-        return 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(self.verb, item.name.text)
-
 class Index(_Index):
     meth_allowed = 'GET'
     url_name = 'def-jms-wmq'
@@ -79,11 +68,22 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit'),
         }
 
-class Create(JMSWMQCreateEdit):
+class _CreateEdit(CreateEdit):
+    meth_allowed = 'POST'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues', 'cache_open_receive_queues', 
+            'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
+        output_required = ('id',)
+        
+    def success_message(self, item):
+        return 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(self.verb, item.name.text)
+
+class Create(_CreateEdit):
     url_name = 'def-jms-wmq-create'
     soap_action = 'zato:definition.jms_wmq.create'
     
-class Edit(JMSWMQCreateEdit):
+class Edit(_CreateEdit):
     url_name = 'def-jms-wmq-edit'
     form_prefix = 'edit-'
     soap_action = 'zato:definition.jms_wmq.edit'

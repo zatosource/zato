@@ -140,23 +140,23 @@ urlpatterns = patterns('',
     # Outgoing connections
 
     # .. AMQP
-    url(r'^zato/outgoing/amqp/$', out_amqp.index, name='out-amqp'),
+    url(r'^zato/outgoing/amqp/$', out_amqp.Index(), name=out_amqp.Index.url_name),
     url(r'^zato/outgoing/amqp/create/$', out_amqp.create, name='out-amqp-create'),
     url(r'^zato/outgoing/amqp/edit/$', out_amqp.edit, name='out-amqp-edit'),
-    url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_amqp.delete, name='out-amqp-delete'),
+    url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_amqp.Delete(), name=out_amqp.Delete.url_name),
     
     # .. FTP
-    url(r'^zato/outgoing/ftp/$', out_ftp.index, name='out-ftp'),
-    url(r'^zato/outgoing/ftp/create/$', out_ftp.create, name='out-ftp-create'),
-    url(r'^zato/outgoing/ftp/edit/$', out_ftp.edit, name='out-ftp-edit'),
-    url(r'^zato/outgoing/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_ftp.delete, name='out-ftp-delete'),
+    url(r'^zato/outgoing/ftp/$', out_ftp.Index(), name=out_ftp.Index.url_name),
+    url(r'^zato/outgoing/ftp/create/$', out_ftp.Create(), name=out_ftp.Create.url_name),
+    url(r'^zato/outgoing/ftp/edit/$', out_ftp.Edit(), name=out_ftp.Edit.url_name),
+    url(r'^zato/outgoing/ftp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_ftp.Delete(), name=out_ftp.Delete.url_name),
     url(r'^zato/outgoing/ftp/change-password/$', out_ftp.change_password, name='out-ftp-change-password'),
 
     # .. JMS WebSphere MQ
     url(r'^zato/outgoing/jms-wmq/$', out_jms_wmq.index, name='out-jms-wmq'),
     url(r'^zato/outgoing/jms-wmq/create/$', out_jms_wmq.create, name='out-jms-wmq-create'),
     url(r'^zato/outgoing/jms-wmq/edit/$', out_jms_wmq.edit, name='out-jms-wmq-edit'),
-    url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_jms_wmq.delete, name='out-jms-wmq-delete'),
+    url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_jms_wmq.Delete(), name=out_jms_wmq.Delete.url_name),
     
     # SQL connection pools
     url(r'^zato/outgoing/sql/$', out_sql.index, name='out-sql'),
