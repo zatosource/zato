@@ -112,7 +112,7 @@ urlpatterns = patterns('',
     url(r'^zato/security/wss/create/$', wss.create, name='security-wss-create'),
     url(r'^zato/security/wss/edit/$', wss.edit, name='security-wss-edit'),
     url(r'^zato/security/wss/change-password/$', wss.change_password, name='security-wss-change-password'),
-    url(r'^zato/security/wss/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', wss.delete, name='security-wss-delete'),
+    url(r'^zato/security/wss/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', wss.Delete(), name=wss.Delete.url_name),
 
     # Scheduler
     url(r'^zato/scheduler/$', scheduler.index, name='scheduler'),

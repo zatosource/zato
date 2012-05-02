@@ -164,14 +164,14 @@ class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
     class SimpleIO:
-        input_required = ('wss_id',)
+        input_required = ('id',)
 
     def handle(self):
         
         with closing(self.odb.session()) as session:
             try:
                 wss = session.query(WSSDefinition).\
-                    filter(WSSDefinition.id==self.request.input.wss_id).\
+                    filter(WSSDefinition.id==self.request.input.id).\
                     one()
 
                 session.delete(wss)
