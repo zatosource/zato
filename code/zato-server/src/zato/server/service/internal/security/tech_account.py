@@ -66,7 +66,7 @@ class Create(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active')
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         salt = uuid4().hex
@@ -103,13 +103,14 @@ class Create(AdminService):
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
                 self.response.payload.id = tech_account.id
+                self.response.payload.name = tech_account.name
 
 class Edit(AdminService):
     """ Updates an existing technical account.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'tech_account_id', 'name', 'is_active')
-        output_required = ('id',)
+        input_required = ('cluster_id', 'id', 'name', 'is_active')
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -117,14 +118,14 @@ class Edit(AdminService):
             existing_one = session.query(TechnicalAccount).\
                 filter(Cluster.id==input.cluster_id).\
                 filter(TechnicalAccount.name==input.name).\
-                filter(TechnicalAccount.id!=input.tech_account_id).\
+                filter(TechnicalAccount.id!=input.id).\
                 first()
             
             if existing_one:
                 raise Exception('Technical account [{0}] already exists on this cluster'.format(input.name))
             
             tech_account = session.query(TechnicalAccount).\
-                filter(TechnicalAccount.id==input.tech_account_id).\
+                filter(TechnicalAccount.id==input.id).\
                 one()
             old_name = tech_account.name
             
@@ -148,6 +149,7 @@ class Edit(AdminService):
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
                 self.response.payload.id = tech_account.id
+                self.response.payload.name = tech_account.name
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
@@ -165,13 +167,13 @@ class Delete(AdminService):
     """ Deletes a technical account.
     """
     class SimpleIO:
-        input_required = ('tech_account_id', 'zato_admin_tech_account_name')
+        input_required = ('id', 'zato_admin_tech_account_name')
 
     def handle(self):
         input = self.request.input
         with closing(self.odb.session()) as session:
             tech_account = session.query(TechnicalAccount).\
-                filter(TechnicalAccount.id==input.tech_account_id).\
+                filter(TechnicalAccount.id==input.id).\
                 one()
             
             if tech_account.name == input.zato_admin_tech_account_name:
