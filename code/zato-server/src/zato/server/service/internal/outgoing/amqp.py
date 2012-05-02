@@ -59,7 +59,7 @@ class Create(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
-        output_required = ('id',)
+        output_required = ('id', 'name')
     
     def handle(self):
         input = self.request.input
@@ -81,7 +81,7 @@ class Create(AdminService):
                 first()
             
             if existing_one:
-                raise Exception('An outgoing AMQP connection[{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing AMQP connection [{0}] already exists on this cluster'.format(input.name))
             
             try:
                 item = OutgoingAMQP()
@@ -102,6 +102,7 @@ class Create(AdminService):
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = "Could not create an outgoing AMQP connection, e=[{e}]".format(e=format_exc(e))
@@ -116,7 +117,7 @@ class Edit(_AMQPService):
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
-        output_required = ('id',)
+        output_required = ('id', 'name')
     
     def handle(self):
         
@@ -163,6 +164,7 @@ class Edit(_AMQPService):
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))

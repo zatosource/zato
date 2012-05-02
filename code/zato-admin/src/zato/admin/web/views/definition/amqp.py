@@ -46,16 +46,6 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
-class AMQPCreateEdit(CreateEdit):
-    meth_allowed = 'POST'
-
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
-        output_required = ('id',)
-        
-    def success_message(self, item):
-        return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name.text)
-
 class Index(_Index):
     meth_allowed = 'GET'
     url_name = 'def-amqp'
@@ -76,11 +66,21 @@ class Index(_Index):
             'change_password_form': ChangePasswordForm()
         }
 
-class Create(AMQPCreateEdit):
+class _CreateEdit(CreateEdit):
+    meth_allowed = 'POST'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+        output_required = ('id',)
+        
+    def success_message(self, item):
+        return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name.text)
+
+class Create(_CreateEdit):
     url_name = 'def-amqp-create'
     soap_action = 'zato:definition.amqp.create'
 
-class Edit(AMQPCreateEdit):
+class Edit(_CreateEdit):
     url_name = 'def-amqp-edit'
     form_prefix = 'edit-'
     soap_action = 'zato:definition.amqp.edit'

@@ -153,6 +153,7 @@ class _BaseView(object):
         
     def __call__(self, req, *args, **kwargs):
         self.req = req
+        self.cluster_id = None
         self.fetch_cluster_id()
 
 class Index(_BaseView):
@@ -245,12 +246,9 @@ class CreateEdit(_BaseView):
                 'cluster_id': self.cluster_id
             }
     
-            print(3333, self.SimpleIO.input_required)
-            
             for name in self.SimpleIO.input_required:
                 input_dict[name] = self.req.POST.get(self.form_prefix + name)
-                print(999, name, self.form_prefix + name, self.req.POST.get(self.form_prefix + name))
-            
+
             zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
     
             return_data = {
