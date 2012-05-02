@@ -50,7 +50,7 @@ class Create(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name', 'is_active', 'username', 'realm')
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -87,13 +87,14 @@ class Create(AdminService):
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
             
             self.response.payload.id = auth.id
+            self.response.payload.name = auth.name
 
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
     class SimpleIO:
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 'realm')
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -132,6 +133,7 @@ class Edit(AdminService):
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
     
                 self.response.payload.id = definition.id
+                self.response.payload.name = definition.name
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.

@@ -233,6 +233,9 @@ class TechnicalAccount(SecurityBase):
         self.password = password
         self.salt = salt
         self.cluster = cluster
+        
+    def to_json(self):
+        return to_json(self)
 
 ################################################################################
 

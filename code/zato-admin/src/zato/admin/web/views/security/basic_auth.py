@@ -40,7 +40,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.security.basic_auth import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, meth_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common import zato_namespace, zato_path
 from zato.admin.web import invoke_admin_service
 from zato.common.odb.model import Cluster, HTTPBasicAuth
@@ -48,129 +48,50 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
-def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.response.item.id.text,
-                   'message': 'Successfully {0} the definition [{1}]'.format(action, name)}
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
-
-def _get_edit_create_message(params, prefix=''):
-    """ Creates a base document which can be used by both 'edit' and 'create' actions.
-    """
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.id = params.get('id')
-    zato_message.request.cluster_id = params['cluster_id']
-    zato_message.request.name = params[prefix + 'name']
-    zato_message.request.is_active = bool(params.get(prefix + 'is_active'))
-    zato_message.request.username = params[prefix + 'username']
-    zato_message.request.realm = params[prefix + 'realm']
-
-    return zato_message
-
-@meth_allowed('GET')
-def index(req):
-
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
-    items = []
+class Index(_Index):
+    meth_allowed = 'GET'
+    url_name = 'security-basic-auth'
+    template = 'zato/security/basic-auth.html'
     
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
-    change_password_form = ChangePasswordForm()
+    soap_action = 'zato:security.basic-auth.get-list'
+    output_class = HTTPBasicAuth
+    
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'username', 'realm')
+        output_repeated = True
 
-    if cluster_id and req.method == 'GET':
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-
-        _ignored, zato_message, soap_response  = invoke_admin_service(cluster,
-                'zato:security.basic-auth.get-list', zato_message)
-
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            for definition_elem in zato_message.response.item_list.item:
-
-                id = definition_elem.id.text
-                name = definition_elem.name.text
-                is_active = is_boolean(definition_elem.is_active.text)
-                username = definition_elem.username.text
-                realm = definition_elem.realm.text
-
-                items.append(HTTPBasicAuth(id, name, is_active, username, realm))
-
-    return_data = {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
-        'items':items,
-        'create_form': create_form,
-        'edit_form': edit_form,
-        'change_password_form': change_password_form
+    def handle(self):
+        return {
+            'create_form': CreateForm(),
+            'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm()
         }
 
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)
+class _CreateEdit(CreateEdit):
+    meth_allowed = 'POST'
 
-    return render_to_response('zato/security/basic-auth.html', return_data,
-                              context_instance=RequestContext(req))
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('name', 'is_active', 'username', 'realm')
+        output_required = ('id', 'name')
+        
+    def success_message(self, item):
+        return 'Successfully {0} the HTTP Basic Auth definition [{1}]'.format(self.verb, item.name.text)
 
-@meth_allowed('POST')
-def edit(req):
-    """ Updates the HTTP Basic Auth definition's parameters (everything except
-    for the password).
-    """
-    try:
-        cluster_id = req.POST.get('cluster_id')
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        zato_message = _get_edit_create_message(req.POST, prefix='edit-')
+class Create(_CreateEdit):
+    url_name = 'security-basic-auth-create'
+    soap_action = 'zato:security.basic-auth.create'
 
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                                    'zato:security.basic-auth.edit', zato_message)
-    except Exception, e:
-        msg = "Could not update the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        return _edit_create_response(zato_message, 'updated', req.POST['edit-name'])
+class Edit(_CreateEdit):
+    url_name = 'security-basic-auth-edit'
+    form_prefix = 'edit-'
+    soap_action = 'zato:security.basic-auth.edit'
 
-@meth_allowed('POST')
-def create(req):
-    try:
-        cluster_id = req.POST.get('cluster_id')
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-
-        zato_message = _get_edit_create_message(req.POST)
-
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                            'zato:security.basic-auth.create', zato_message)
-    except Exception, e:
-        msg = "Could not create an HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        return _edit_create_response(zato_message, 'created', req.POST['name'])
+class Delete(_Delete):
+    url_name = 'security-basic-auth-delete'
+    error_message = 'Could not delete the HTTP Basic Auth definition'
+    soap_action = 'zato:security.basic-auth.delete'
     
 @meth_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato:security.basic-auth.change-password')
-
-@meth_allowed('POST')
-def delete(req, id, cluster_id):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
-    try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.id = id
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:security.basic-auth.delete', zato_message)
-    
-    except Exception, e:
-        msg = "Could not delete the HTTP Basic Auth definition, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        return HttpResponse()

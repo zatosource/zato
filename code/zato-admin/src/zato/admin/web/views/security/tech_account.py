@@ -43,109 +43,24 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
 from zato.admin.web.forms.security.tech_account import CreateForm, EditForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common import zato_namespace, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
-
-def _edit_create_response(zato_message, action, name):
-    return_data = {'id': zato_message.response.item.id.text,
-                   'message': 'Successfully {0} the technical account [{1}]'.format(action, name)}
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
-
-@meth_allowed('GET')
-def index(req):
-    zato_clusters = req.odb.query(Cluster).order_by('name').all()
-    choose_cluster_form = ChooseClusterForm(zato_clusters, req.GET)
-    cluster_id = req.GET.get('cluster')
-    items = []
     
-    create_form = CreateForm()
-    edit_form = EditForm(prefix='edit')
-    change_password_form = ChangePasswordForm()
-
-    if cluster_id and req.method == 'GET':
-        
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-        
-        _, zato_message, soap_response  = invoke_admin_service(cluster,
-                'zato:security.tech-account.get-list', zato_message)
-        
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            
-            for definition_elem in zato_message.response.item_list.item:
-                
-                id = definition_elem.id.text
-                name = definition_elem.name.text
-                is_active = is_boolean(definition_elem.is_active.text)
-                
-                account = TechnicalAccount(id, name, is_active=is_active)
-                items.append(account)
-                
-
-    return_data = {'zato_clusters':zato_clusters,
-        'cluster_id':cluster_id,
-        'choose_cluster_form':choose_cluster_form,
-        'items':items,
-        'create_form':create_form,
-        'edit_form':edit_form,
-        'change_password_form':change_password_form
-        }
-    
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
-
-    return render_to_response('zato/security/tech-account.html', return_data,
-                              context_instance=RequestContext(req))
-
 @meth_allowed('POST')
-def create(req):
+def change_password(req):
+    return _change_password(req, 'zato:security.tech-account.change-password')
     
-    cluster_id = req.POST.get('cluster_id')
-    name = req.POST.get('name')
-    is_active = req.POST.get('is_active', False)
     
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
-    zato_message.request.cluster_id = cluster_id
-    zato_message.request.name = name
-    zato_message.request.is_active = is_active
-    
-    try:
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-        'zato:security.tech-account.create', zato_message)
-    except Exception, e:
-        msg = "Could not create a technical account, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        # 200 OK
-        return _edit_create_response(zato_message, 'created', req.POST['name'])
-
 @meth_allowed('GET')
 def get_by_id(req, tech_account_id, cluster_id):
-    
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.tech_account_id = tech_account_id
-        
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.tech-account.get-by-id', zato_message)
-        
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:security.tech-account.get-by-id', {'tech_account_id': tech_account_id})
     except Exception, e:
-        msg = "Could not fetch the technical account, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not fetch the technical account, e=[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -158,56 +73,51 @@ def get_by_id(req, tech_account_id, cluster_id):
 
         return HttpResponse(tech_account.to_json(), mimetype='application/javascript')
     
-@meth_allowed('POST')
-def edit(req):
+class Index(_Index):
+    meth_allowed = 'GET'
+    url_name = 'security-tech-account'
+    template = 'zato/security/tech-account.html'
     
-    prefix = 'edit-'
-
-    cluster_id = req.POST['cluster_id']
-    tech_account_id = req.POST['id']
-    name = req.POST[prefix + 'name']
-    is_active = req.POST.get(prefix + 'is_active')
-    is_active = True if is_active else False
+    soap_action = 'zato:security.tech-account.get-list'
+    output_class = TechnicalAccount
     
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active')
+        output_repeated = True
 
-    try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.cluster_id = cluster_id
-        zato_message.request.tech_account_id = tech_account_id
-        zato_message.request.name = name
-        zato_message.request.is_active = is_active
+    def handle(self):
+        return {
+            'create_form': CreateForm(),
+            'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm()
+        }
+
+class _CreateEdit(CreateEdit):
+    meth_allowed = 'POST'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('name', 'is_active')
+        output_required = ('id', 'name')
         
-        _, zato_message, soap_response = invoke_admin_service(cluster,
-                        'zato:security.tech-account.edit', zato_message)
-    
-    except Exception, e:
-        msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        return _edit_create_response(zato_message, 'updated', name)
+    def success_message(self, item):
+        return 'Successfully {0} the technical account [{1}]'.format(self.verb, item.name.text)
+
+class Create(_CreateEdit):
+    url_name = 'security-tech-account-create'
+    soap_action = 'zato:security.tech-account.create'
+
+class Edit(_CreateEdit):
+    url_name = 'security-tech-account-edit'
+    form_prefix = 'edit-'
+    soap_action = 'zato:security.tech-account.edit'
 
 @meth_allowed('POST')
-def change_password(req):
-    return _change_password(req, 'zato:security.tech-account.change-password')
-    
-@meth_allowed('POST')
-def delete(req, tech_account_id, cluster_id):
-    
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).first()
-    
+def delete(req, id, cluster_id):
     try:
-        zato_message = Element('{%s}zato_message' % zato_namespace)
-        zato_message.request = Element('request')
-        zato_message.request.tech_account_id = tech_account_id
-        zato_message.request.zato_admin_tech_account_name = TECH_ACCOUNT_NAME
-        
-        _, zato_message, soap_response = invoke_admin_service(cluster, 'zato:security.tech-account.delete', zato_message)
-    
+        invoke_admin_service(req.zato.cluster, 'zato:security.tech-account.delete', {'id': id, 'zato_admin_tech_account_name':TECH_ACCOUNT_NAME})
     except Exception, e:
-        msg = "Could not delete the account, e=[{e}]".format(e=format_exc(e))
+        msg = 'Could not delete the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

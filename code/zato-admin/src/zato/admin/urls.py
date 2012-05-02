@@ -93,16 +93,16 @@ urlpatterns = patterns('',
     # Security..
 
     # .. HTTP Basic Auth
-    url(r'^zato/security/basic-auth/$', basic_auth.index, name='security-basic-auth'),
-    url(r'^zato/security/basic-auth/create/$', basic_auth.create, name='security-basic-auth-create'),
-    url(r'^zato/security/basic-auth/edit/$', basic_auth.edit, name='security-basic-auth-edit'),
+    url(r'^zato/security/basic-auth/$', basic_auth.Index(), name=basic_auth.Index.url_name),
+    url(r'^zato/security/basic-auth/create/$', basic_auth.Create(), name=basic_auth.Create.url_name),
+    url(r'^zato/security/basic-auth/edit/$', basic_auth.Edit(), name=basic_auth.Edit.url_name),
     url(r'^zato/security/basic-auth/change-password/$', basic_auth.change_password, name='security-basic-auth-change-password'),
-    url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', basic_auth.delete, name='security-basic-auth-delete'),
+    url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', basic_auth.Delete(), name=basic_auth.Delete.url_name),
 
     # .. Technical accounts
-    url(r'^zato/security/tech-account/$', tech_account.index, name='security-tech-account'),
-    url(r'^zato/security/tech-account/create/$', tech_account.create, name='security-tech-account-create'),
-    url(r'^zato/security/tech-account/edit/$', tech_account.edit, name='security-tech-account-edit'),
+    url(r'^zato/security/tech-account/$', tech_account.Index(), name=tech_account.Index.url_name),
+    url(r'^zato/security/tech-account/create/$', tech_account.Create(), name=tech_account.Create.url_name),
+    url(r'^zato/security/tech-account/edit/$', tech_account.Edit(), name=tech_account.Edit.url_name),
     url(r'^zato/security/tech-account/change-password/$', tech_account.change_password, name='security-tech-account-change-password'),
     url(r'^zato/security/tech-account/get/by-id/(?P<tech_account_id>.*)/cluster/(?P<cluster_id>.*)/$', tech_account.get_by_id, name='security-tech-account-get-by-id'),
     url(r'^zato/security/tech-account/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', tech_account.delete, name='security-tech-account-delete'),
