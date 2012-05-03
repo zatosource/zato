@@ -116,7 +116,7 @@ def create(req):
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:channel.jms_wmq.create', _get_edit_create_message(req.POST))
         return _edit_create_response(req.zato.cluster, 'created', zato_message.response.item.id.text, req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
     except Exception, e:
-        msg = 'Could not create a JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create a JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -127,7 +127,7 @@ def edit(req):
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:channel.jms_wmq.edit', _get_edit_create_message(req.POST, 'edit-'))
         return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
     except Exception, e:
-        msg = 'Could not update the JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not update the JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     

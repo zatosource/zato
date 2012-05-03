@@ -123,6 +123,6 @@ class Config(object):
             maxconn = data[0]
             self.frontend['front_http_plain']['maxconn'] = maxconn
         else:
-            msg = 'Could not parse config, name=[{name}], data=[{data}]'.format(name=name, data=data)
+            msg = 'Could not parse config, name:[{name}], data:[{data}]'.format(name=name, data=data)
             logger.error(msg)
             raise Exception(msg)

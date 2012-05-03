@@ -191,7 +191,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             
     except Exception, e:
         session.rollback()
-        msg = 'Could not complete the request, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not complete the request, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         raise
     else:
@@ -262,7 +262,7 @@ class Delete(AdminService):
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the job, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the job, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise
@@ -285,7 +285,7 @@ class Execute(AdminService):
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not execute the job, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not execute the job, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise

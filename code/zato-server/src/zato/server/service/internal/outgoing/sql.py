@@ -97,7 +97,7 @@ class Create(AdminService, _SQLService):
                 self.response.payload.id = item.id
 
             except Exception, e:
-                msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
@@ -149,7 +149,7 @@ class Edit(AdminService, _SQLService):
                 self.response.payload.id = item.id
 
             except Exception, e:
-                msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
@@ -176,7 +176,7 @@ class Delete(AdminService, _SQLService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
 
                 raise
@@ -214,7 +214,7 @@ class Ping(AdminService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
 
                 raise

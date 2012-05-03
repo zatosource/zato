@@ -138,7 +138,7 @@ class BaseConnection(object):
                     self.connection_attempts += 1
                     time.sleep(self.reconnect_sleep_time)
                 else:
-                    msg = 'No connection for {0}, e=[{1}]'.format(self._conn_info(), format_exc(e))
+                    msg = 'No connection for {0}, e:[{1}]'.format(self._conn_info(), format_exc(e))
                     self.logger.error(msg)
                     raise
 

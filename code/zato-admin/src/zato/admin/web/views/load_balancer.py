@@ -86,7 +86,7 @@ def _get_validate_save_flag(cluster_id, req_post):
     elif "validate" in req_post:
         save = False
     else:
-        msg = "Expected a flag indicating what to do with input data. cluster_id=[{cluster_id}] req.POST=[{post}]"
+        msg = "Expected a flag indicating what to do with input data. cluster_id:[{cluster_id}] req.POST:[{post}]"
         msg = msg.format(cluster_id=cluster_id, post=req_post)
         logger.error(msg)
         raise Exception(msg)
@@ -308,7 +308,7 @@ def get_addresses(req, cluster_id):
     try:
         lb_config = client.get_config()
     except Exception, e:
-        msg = "Could not get load balancer's config, client=[{client!r}], e=[{e}]".format(client=client,
+        msg = "Could not get load balancer's config, client:[{client!r}], e:[{e}]".format(client=client,
                                                             e=format_exc(e))
         logger.error(msg)
         lb_config = None

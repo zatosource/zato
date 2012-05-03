@@ -43,14 +43,14 @@ class SOAPPool(object):
         self._pool = urllib3.connection_from_url(self.url, **kwargs)
 
     def __str__(self):
-        return '<{0} object at {1}, url=[{2}]>'.format(self.__class__.__name__, hex(id(self)), self.url)
+        return '<{0} object at {1}, url:[{2}]>'.format(self.__class__.__name__, hex(id(self)), self.url)
 
     def invoke(self, script_path, soap_action, soap_body, headers={}):
         msg_headers = {'content-type': 'text/xml', 'SOAPAction': soap_action}
         msg_headers.update(**headers)
         payload = soap_doc.safe_substitute(body=soap_body)
 
-        msg = 'About to invoke a service. url=[{0}] script_path=[{1}] msg_headers=[{2}] soap_body=[{3}]'.format(
+        msg = 'About to invoke a service. url:[{0}] script_path:[{1}] msg_headers:[{2}] soap_body:[{3}]'.format(
             self.url, script_path, msg_headers, soap_body)
         logger.debug(msg)
         
@@ -78,12 +78,12 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
     try:
         url = 'http://{0}:{1}'.format(cluster.lb_host, cluster.lb_port)
         path = '/zato/soap'
-        logger.log(TRACE1, 'About to invoke the admin service url=[{0}]'.format(url))
+        logger.log(TRACE1, 'About to invoke the admin service url:[{0}]'.format(url))
         pool = SOAPPool(url)
         soap_response = pool.invoke(path, soap_action, soap_body, headers)
         
         try:
-            logger.log(TRACE1, 'soap_response=[{0}]'.format(soap_response))
+            logger.log(TRACE1, 'soap_response:[{0}]'.format(soap_response))
             response = objectify.fromstring(soap_response)
         except Exception, e:
             msg = 'Could not parse the SOAP response:[{}]'.format(soap_response)
@@ -91,7 +91,7 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
     
         # Do we have a SOAP fault?
         if soap_fault_xpath(response):
-            msg = "Server returned a SOAP fault, soap_response=[%s]" % soap_response
+            msg = "Server returned a SOAP fault, soap_response:[%s]" % soap_response
             logger.error(msg)
             raise ZatoException(msg=msg)
     
@@ -103,12 +103,12 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
             raise ZatoException(msg=msg)
     
         zato_message = zato_data[0].getparent()
-        logger.log(TRACE1, "zato_message=[%s]" % etree.tostring(zato_message))
+        logger.log(TRACE1, "zato_message:[%s]" % etree.tostring(zato_message))
     
         # We have a payload but hadn't there been any errors at the server's side?
         zato_result = zato_result_path_xpath(response)
         if zato_result[0] != ZATO_OK:
-            logger.log(TRACE1, "zato_result=[%s]" % zato_result)
+            logger.log(TRACE1, "zato_result:[%s]" % zato_result)
             raise ZatoException(msg=soap_response)
     
         # Check whether the key has been received, if one has been requested.
@@ -118,7 +118,7 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
             except AttributeError, e:
                 logger.error(e)
                 msg = "A server's config crypto key has been requested but none has " \
-                      "been received from the server, soap_response=[%s], traceback=[%s]" % (soap_response, format_exc())
+                      "been received from the server, soap_response:[%s], traceback:[%s]" % (soap_response, format_exc())
                 logger.error(msg)
                 raise ZatoException(msg=msg)
     

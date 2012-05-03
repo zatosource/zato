@@ -96,7 +96,7 @@ class Create(AdminService):
                 self.response.payload.id = item.id
                 
             except Exception, e:
-                msg = 'Could not create a WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create a WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -156,7 +156,7 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 
             except Exception, e:
-                msg = 'Could not update the JMS WebSphere MQ definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the JMS WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -183,7 +183,7 @@ class Delete(AdminService):
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the JMS WebSphere MQ channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise

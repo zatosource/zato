@@ -102,7 +102,7 @@ class Create(AdminService):
                 self.response.payload.name = item.name
                 
             except Exception, e:
-                msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create an AMQP channel, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -162,7 +162,7 @@ class Edit(_AMQPService):
                 self.response.payload.name = item.name
                 
             except Exception, e:
-                msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the AMQP definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -188,7 +188,7 @@ class Delete(_AMQPService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the AMQP channel, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the AMQP channel, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise

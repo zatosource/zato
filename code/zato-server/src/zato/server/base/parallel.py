@@ -380,7 +380,7 @@ class ParallelServer(BrokerMessageReceiver):
         if server.last_join_status == ZATO_JOIN_REQUEST_ACCEPTED:
             self._after_init_accepted(server)
         else:
-            msg = 'Server has not been accepted, last_join_status=[{0}]'
+            msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
             
             self._after_init_non_accepted(server)
@@ -390,7 +390,7 @@ class ParallelServer(BrokerMessageReceiver):
         task_dispatcher = _TaskDispatcher(self, self.config, self.on_broker_msg, self.zmq_context)
         task_dispatcher.setThreadCount(1) # TODO: Make it configurable
 
-        logger.debug('host=[{0}], port=[{1}]'.format(self.host, self.port))
+        logger.debug('host:[{0}], port:[{1}]'.format(self.host, self.port))
 
         ZatoHTTPListener(self, task_dispatcher)
 

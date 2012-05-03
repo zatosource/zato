@@ -98,7 +98,7 @@ class Edit(AdminService):
                 self.response.payload = service
                 
             except Exception, e:
-                msg = 'Could not update the service, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the service, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -125,7 +125,7 @@ class Delete(AdminService):
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the service, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the service, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise

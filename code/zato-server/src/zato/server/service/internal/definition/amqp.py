@@ -92,7 +92,7 @@ class Create(AdminService):
                 self.response.payload.name = def_.name
                 
             except Exception, e:
-                msg = 'Could not create an AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create an AMQP definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -144,7 +144,7 @@ class Edit(AdminService):
                 self.response.payload.name = def_amqp.name
                 
             except Exception, e:
-                msg = 'Could not update the AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the AMQP definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -171,7 +171,7 @@ class Delete(AdminService):
                 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the AMQP definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the AMQP definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 
                 raise

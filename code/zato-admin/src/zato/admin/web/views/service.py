@@ -223,7 +223,7 @@ def invoke(req, service_id, cluster_id):
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.invoke', input_dict)
 
     except Exception, e:
-        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e=[{}]'.format(service_id, cluster_id, format_exc(e))
+        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e:[{}]'.format(service_id, cluster_id, format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

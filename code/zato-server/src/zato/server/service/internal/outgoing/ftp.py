@@ -98,7 +98,7 @@ class Create(_FTPService):
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not create an outgoing FTP connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create an outgoing FTP connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
@@ -146,7 +146,7 @@ class Edit(_FTPService):
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not update the outgoing FTP connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the outgoing FTP connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
@@ -173,7 +173,7 @@ class Delete(_FTPService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing FTP connection, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the outgoing FTP connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
 
                 raise

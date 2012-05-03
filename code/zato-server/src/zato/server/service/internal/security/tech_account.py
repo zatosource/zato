@@ -91,7 +91,7 @@ class Create(AdminService):
                 session.commit()
                 
             except Exception, e:
-                msg = 'Could not create a technical account, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create a technical account, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -137,7 +137,7 @@ class Edit(AdminService):
                 session.commit()
 
             except Exception, e:
-                msg = "Could not update the technical account, e=[{e}]".format(e=format_exc(e))
+                msg = "Could not update the technical account, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -185,7 +185,7 @@ class Delete(AdminService):
                 session.delete(tech_account)
                 session.commit()
             except Exception, e:
-                msg = 'Could not delete the account, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the account, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
