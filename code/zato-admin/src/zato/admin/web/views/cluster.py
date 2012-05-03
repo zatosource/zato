@@ -93,13 +93,13 @@ def _create_edit(req, verb, item, form_class, prefix=''):
                 item.lb_config = get_lb_client(item).get_config()
             except Exception, e:
                 item.lb_config = None
-                msg = "Exception caught while fetching the load balancer's config, e=[{0}]".format(format_exc(e))
+                msg = "Exception caught while fetching the load balancer's config, e:[{0}]".format(format_exc(e))
                 logger.error(msg)                    
             
             return _edit_create_response(item, verb)
         
         except Exception, e:
-            msg = 'Exception caught, e=[{0}]'.format(format_exc(e))
+            msg = 'Exception caught, e:[{0}]'.format(format_exc(e))
             logger.error(msg)
 
             return HttpResponseServerError(msg)
@@ -134,7 +134,7 @@ def index(req):
             set_servers_state(item, client)
 
         except Exception, e:
-            msg = 'Could not invoke agent, client=[{client!r}], e=[{e}]'.format(client=client,
+            msg = 'Could not invoke agent, client:[{client!r}], e:[{e}]'.format(client=client,
                                                                 e=format_exc(e))
             logger.error(msg)
             item.lb_config = None
@@ -179,7 +179,7 @@ def get_servers_state(req, cluster_id):
     try:
         set_servers_state(cluster, client)
     except Exception, e:
-        msg = "Failed to invoke the load-balancer's agent and set the state of servers, e=[{e}]".format(e=format_exc(e))
+        msg = "Failed to invoke the load-balancer's agent and set the state of servers, e:[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -201,7 +201,7 @@ def delete(req, cluster_id):
         req.odb.commit()
 
     except Exception, e:
-        msg = 'Could not delete the cluster, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not delete the cluster, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

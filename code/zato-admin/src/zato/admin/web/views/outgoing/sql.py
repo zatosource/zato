@@ -144,7 +144,7 @@ def create(req):
         return _edit_create_response('created', zato_message.response.item.id.text, req.POST['name'], engine, req.zato.cluster.id)
 
     except Exception, e:
-        msg = 'Could not create an outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -161,7 +161,7 @@ def edit(req):
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, req.zato.cluster.id)
 
     except Exception, e:
-        msg = 'Could not update the outgoing SQL connection, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not update the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -178,7 +178,7 @@ def ping(req, cluster_id, id):
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.ping', {'id':id})
         response_time = zato_path('response.item.response_time', True).get_from(zato_message)
     except Exception, e:
-        msg = 'Ping failed. e=[{}]'.format(format_exc(e))
+        msg = 'Ping failed. e:[{}]'.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

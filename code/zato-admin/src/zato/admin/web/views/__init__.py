@@ -75,7 +75,7 @@ def meth_allowed(*meths):
         def inner_view(*args, **kwargs):
             req = args[1] if len(args) > 1 else args[0]
             if req.method not in meths:
-                msg = "Method [{method}] is not allowed here [{view}], methods allowed=[{meths}]"
+                msg = "Method [{method}] is not allowed here [{view}], methods allowed:[{meths}]"
                 msg = msg.format(method=req.method, view=view.func_name, meths=meths)
                 logger.error(msg)
                 raise Exception(msg)
@@ -123,7 +123,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         invoke_admin_service(req.zato.cluster, service_name, input_dict)
 
     except Exception, e:
-        msg = 'Could not change the password, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not change the password, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
@@ -289,6 +289,6 @@ class Delete(_BaseView):
             invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
             return HttpResponse()
         except Exception, e:
-            msg = '{}, e=[{}]'.format(self.error_message, format_exc(e))
+            msg = '{}, e:[{}]'.format(self.error_message, format_exc(e))
             logger.error(msg)
             return HttpResponseServerError(msg)

@@ -74,7 +74,7 @@ class ODBManager(SessionWrapper):
             self.cluster = self.server.cluster
             return self.server
         except Exception, e:
-            msg = 'Could not find the server in the ODB, token=[{0}]'.format(
+            msg = 'Could not find the server in the ODB, token:[{0}]'.format(
                 self.odb_token)
             logger.error(msg)
             raise
@@ -151,7 +151,7 @@ class ODBManager(SessionWrapper):
             try:
                 self._session.commit()
             except IntegrityError, e:
-                logger.debug('IntegrityError (Service), e=[{e}]'.format(e=format_exc(e)))
+                logger.debug('IntegrityError (Service), e:[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
                 
                 service = self._session.query(Service).\
@@ -185,10 +185,10 @@ class ODBManager(SessionWrapper):
             try:
                 self._session.commit()
             except IntegrityError, e:
-                logger.debug('IntegrityError (DeployedService), e=[{e}]'.format(e=format_exc(e)))
+                logger.debug('IntegrityError (DeployedService), e:[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
         except Exception, e:
-            msg = 'Could not add the DeployedService, e=[{e}]'.format(e=format_exc(e))
+            msg = 'Could not add the DeployedService, e:[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
             

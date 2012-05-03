@@ -217,7 +217,7 @@ def create(req):
         return _edit_create_response(zato_message.response.item.id.text, 'created',
             req.POST['transport'], req.POST['connection'], req.POST['name'])
     except Exception, e:
-        msg = 'Could not create the object, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -229,7 +229,7 @@ def edit(req):
         return _edit_create_response(zato_message.response.item.id.text, 'updated',
             req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
     except Exception, e:
-        msg = 'Could not perform the update, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not perform the update, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -244,12 +244,12 @@ def _delete_ping(req, id, cluster_id, service, error_template):
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
-    _delete_ping(req, id, cluster_id, 'zato:http_soap.delete', 'Could not delete the object, e=[{e}]')
+    _delete_ping(req, id, cluster_id, 'zato:http_soap.delete', 'Could not delete the object, e:[{e}]')
     return HttpResponse()
 
 @meth_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e=[{e}]')
+    ret = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.response.item.info.text)

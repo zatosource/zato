@@ -76,7 +76,7 @@ class Create(AdminService):
                 session.commit()
                 
             except Exception, e:
-                msg = 'Could not create an HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create an HTTP Basic Auth definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -121,7 +121,7 @@ class Edit(AdminService):
                 session.commit()
                 
             except Exception, e:
-                msg = 'Could not update the HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the HTTP Basic Auth definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -160,7 +160,7 @@ class Delete(AdminService):
                 session.delete(auth)
                 session.commit()
             except Exception, e:
-                msg = 'Could not delete the HTTP Basic Auth definition, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the HTTP Basic Auth definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 

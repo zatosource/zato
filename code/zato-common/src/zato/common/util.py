@@ -122,7 +122,7 @@ def encrypt(data, pub_key, padding=RSA.pkcs1_padding, b64=True):
     b64 - should the encrypted data be BASE64-encoded before being returned,
                 defaults to True
     """
-    logger.debug("Using pub_key=[%s]" % pub_key)
+    logger.debug("Using pub_key:[%s]" % pub_key)
 
     bio = BIO.MemoryBuffer(pub_key)
     bio.close()
@@ -211,12 +211,12 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list="repr_to_avo
     for attr in attrs:
 
         #if logger.isEnabledFor(TRACE1):
-        #    logger.log(TRACE1, "attr=[%s]" % attr)
+        #    logger.log(TRACE1, "attr:[%s]" % attr)
 
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
             buff.write(" ")
-            buff.write("%r=[%r]" % (attr, attr_obj))
+            buff.write("%r:[%r]" % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(class_name=_object.__class__.__name__,
                             mem_loc=hex(id(_object)), attrs=buff.getvalue())

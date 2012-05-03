@@ -94,7 +94,7 @@ class ServiceStore(InitializingObject):
             hook()
         except Exception:
             msg = 'Error while invoking [%s] on service [%s] ' \
-                ' e=[%s]' % (hook_name, service_name, format_exc())
+                ' e:[%s]' % (hook_name, service_name, format_exc())
             logger.error(msg)
 
     def new_instance(self, class_name):

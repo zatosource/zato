@@ -250,6 +250,6 @@ class BrokerClient(object):
         logger.debug('Closed [{0}]'.format(self.get_connection_info()))
             
     def get_connection_info(self):
-        return 'name=[{0}] client_pull=[{1}] client_push=[{2}] client_sub=[{3}] sub_key=[{4}]'.format(
+        return 'name:[{0}] client_pull:[{1}] client_push:[{2}] client_sub:[{3}] sub_key:[{4}]'.format(
             self.name, self.broker_push_client_pull, self.client_push_broker_pull, self.broker_pub_client_sub,
             self.sub_key)

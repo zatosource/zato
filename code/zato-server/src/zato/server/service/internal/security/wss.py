@@ -87,7 +87,7 @@ class Create(AdminService):
                 session.commit()
                 
             except Exception, e:
-                msg = "Could not create a WS-Security definition, e=[{e}]".format(e=format_exc(e))
+                msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -138,7 +138,7 @@ class Edit(AdminService):
                 session.commit()
                 
             except Exception, e:
-                msg = "Could not update the WS-Security definition, e=[{e}]".format(e=format_exc(e))
+                msg = "Could not update the WS-Security definition, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
@@ -177,7 +177,7 @@ class Delete(AdminService):
                 session.delete(wss)
                 session.commit()
             except Exception, e:
-                msg = "Could not delete the WS-Security definition, e=[{e}]".format(e=format_exc(e))
+                msg = "Could not delete the WS-Security definition, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 

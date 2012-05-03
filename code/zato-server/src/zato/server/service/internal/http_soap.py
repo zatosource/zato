@@ -174,7 +174,7 @@ class Create(AdminService, _HTTPSOAPService):
                 self.response.payload.id = item.id
 
             except Exception, e:
-                msg = 'Could not create the object, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
@@ -268,7 +268,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 self.response.payload.id = item.id
 
             except Exception, e:
-                msg = 'Could not update the object, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not update the object, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
@@ -305,7 +305,7 @@ class Delete(AdminService, _HTTPSOAPService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the object, e=[{e}]'.format(e=format_exc(e))
+                msg = 'Could not delete the object, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
 
                 raise

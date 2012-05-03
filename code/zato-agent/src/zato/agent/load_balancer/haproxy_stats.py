@@ -58,7 +58,7 @@ class HAProxyStats(object):
                 else:
                     return buff.getvalue()
         except Exception, e:
-            msg = 'An error has occurred, e=[{e}]'.format(e=format_exc(e))
+            msg = 'An error has occurred, e:[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             raise
         finally:

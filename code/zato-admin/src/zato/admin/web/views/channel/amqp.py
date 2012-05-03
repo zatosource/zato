@@ -118,7 +118,7 @@ def create(req):
         return _edit_create_response(req.zato.cluster, 'created', zato_message.response.item.id.text, 
             req.POST['name'], req.POST['def_id'])
     except Exception, e:
-        msg = 'Could not create an AMQP channel, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create an AMQP channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -130,7 +130,7 @@ def edit(req):
         return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['edit-def_id'])
         
     except Exception, e:
-        msg = 'Could not update the AMQP channel, e=[{e}]'.format(e=format_exc(e))
+        msg = 'Could not update the AMQP channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     

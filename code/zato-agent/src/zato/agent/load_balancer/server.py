@@ -122,7 +122,7 @@ class LoadBalancerAgent(SSLServer):
 
                 # Build it up front here, who knows, maybe we'll need it and if we
                 # do it may be needed in several places.
-                common_error_details = "command=[{command}], config_file=[{config_file}]"
+                common_error_details = "command:[{command}], config_file:[{config_file}]"
                 common_error_details = common_error_details.format(command=command, config_file=open(tf.name).read())
 
                 sleep(HAPROXY_VALIDATE_TIMEOUT)
@@ -140,7 +140,7 @@ class LoadBalancerAgent(SSLServer):
                     if p.returncode != 0:
                         stdout, stderr = p.communicate()
                         msg = "Failed to validate the config file using HAProxy. "
-                        msg += "return code=[{returncode}], stdout=[{stdout}], stderr=[{stderr}] "
+                        msg += "return code:[{returncode}], stdout:[{stdout}], stderr:[{stderr}] "
                         msg += common_error_details
                         msg = msg.format(returncode=p.returncode, stdout=stdout, stderr=stderr)
                         raise Exception(msg)
@@ -148,7 +148,7 @@ class LoadBalancerAgent(SSLServer):
                 # All went fine, config was valid.
                 return True
         except Exception, e:
-            msg = "Caught an exception, e=[{e}]".format(e=format_exc(e))
+            msg = "Caught an exception, e:[{e}]".format(e=format_exc(e))
             logger.error(msg)
             raise Exception(msg)
 
@@ -296,7 +296,7 @@ class LoadBalancerAgent(SSLServer):
         try:
             conn = urllib.urlopen(url)
         except Exception, e:
-            msg = "Could not open URL [{url}], e=[{e}]".format(url=url, e=format_exc(e))
+            msg = "Could not open URL [{url}], e:[{e}]".format(url=url, e=format_exc(e))
             logger.error(msg)
             raise Exception(msg)
         else:
@@ -305,7 +305,7 @@ class LoadBalancerAgent(SSLServer):
                 if code  == httplib.OK:
                     return ZATO_OK
                 else:
-                    msg = "Could not open URL [{url}], HTTP code=[{code}]".format(url=url, code=code)
+                    msg = "Could not open URL [{url}], HTTP code:[{code}]".format(url=url, code=code)
                     logger.error(msg)
                     raise Exception(msg)
             finally:
