@@ -37,10 +37,10 @@ import psycopg2
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 
 def run(host, port, base_dir, start_singleton):
-    
+
     # We're doing it here even if someone doesn't use PostgreSQL at all
     # so we're not suprised when someone suddenly starts using PG.
-    # TODO: Make sure it's registered for each subprocess when the code's 
+    # TODO: Make sure it's registered for each subprocess when the code's
     #       finally modified to use subprocesses.
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
@@ -85,36 +85,13 @@ def run(host, port, base_dir, start_singleton):
         singleton_server = app_context.get_object('singleton_server')
         singleton_server.initial_sleep_time = int(config['singleton']['initial_sleep_time']) / 1000.
         parallel_server.singleton_server = singleton_server
-        
+
         # Wow, this line looks weird. What it does is simply assigning a parallel
         # server instance to the singleton server.
         parallel_server.singleton_server.parallel_server = parallel_server
-        
+
     parallel_server.after_init()
-
-    print('OK..')
     parallel_server.run_forever()
-    
-    # $ sudo netstat -an | grep TIME_WAIT | wc -l
-    
-    # cat /proc/sys/net/core/wmem_max - 109568
-    # /sbin/sysctl net.ipv4.tcp_mem="109568 109568 109568"
-    # echo 0 > /proc/sys/net/ipv4/conf/eth0/rp_filter
-
-
-    '''
-    job_list_location = os.path.join(repo_location, config['scheduler']['job_list_location'])
-    service_store_config_location = os.path.join(repo_location, config['services']['service_store_config_location'])
-
-    config_repo_manager = app_context.get_object('config_repo_manager')
-    config_repo_manager.repo_location = repo_location
-    config_repo_manager.job_list_location = job_list_location
-    config_repo_manager.service_store_config_location = service_store_config_location
-
-    egg_importer = app_context.get_object('egg_importer')
-    egg_importer.work_dir = work_dir
-
-    '''
 
 if __name__ == '__main__':
     host, port, base_dir = sys.argv[1:4]
