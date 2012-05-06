@@ -173,6 +173,8 @@ class ZatoContext(PythonConfig):
         server.soap12_content_type = self.soap12_content_type()
         server.plain_xml_content_type = self.plain_xml_content_type()
         server.json_content_type = self.json_content_type()
+        server.internal_service_modules = self.internal_service_modules()
+        server.service_modules = self.service_modules()
 
         return server
 

@@ -98,7 +98,7 @@ class ZatoHTTPListener(HTTPServer):
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
                  odb=None, odb_data=None, singleton_server=None, worker_config=None, 
-                 repo_location=None, ftp=None, sql_pool_store=None, int_parameters=None, 
+                 repo_location=None, sql_pool_store=None, int_parameters=None, 
                  int_parameter_suffixes=None, bool_parameter_prefixes=None,
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
@@ -114,7 +114,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.singleton_server = singleton_server
         self.config = worker_config
         self.repo_location = repo_location
-        self.ftp = ftp
         self.sql_pool_store = sql_pool_store
         self.int_parameters = int_parameters
         self.int_parameter_suffixes = int_parameter_suffixes

@@ -269,7 +269,6 @@ def wsdl(req, service_name):
     service = Service(name=service_name)
     has_wsdl = False
     wsdl_public_url = get_public_wsdl_url(req.zato.cluster, service_name)
-    form = WSDLUploadForm(req.POST, req.FILES)
     
     input_dict = {
         'name': service_name,
@@ -286,7 +285,6 @@ def wsdl(req, service_name):
         'service':service,
         'has_wsdl':has_wsdl,
         'wsdl_public_url':wsdl_public_url,
-        'form':form,
         }
     
     return render_to_response('zato/service/wsdl.html', return_data, context_instance=RequestContext(req))
