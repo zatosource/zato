@@ -58,22 +58,20 @@ def run(host, port, base_dir, start_singleton):
 
     parallel_server = app_context.get_object('parallel_server')
     parallel_server.crypto_manager = crypto_manager
-    parallel_server.odb_data = config['odb']
+    parallel_server.odb_data = config.odb
     parallel_server.host = host
     parallel_server.port = port
     parallel_server.repo_location = repo_location
-    parallel_server.internal_service_modules = app_context.get_object('internal_service_modules')
-    parallel_server.service_modules = app_context.get_object('service_modules')
     parallel_server.base_dir = base_dir
     parallel_server.fs_server_config = config
 
-    work_dir = config['pickup']['work_dir']
+    work_dir = config.pickup.work_dir
     if not os.path.isabs(work_dir):
         work_dir = os.path.abspath(os.path.join(repo_location, work_dir))
 
     parallel_server.work_dir = work_dir
 
-    pickup_dir = config['pickup']['pickup_dir']
+    pickup_dir = config.pickup.pickup_dir
     if not os.path.isabs(pickup_dir):
         pickup_dir = os.path.join(repo_location, pickup_dir)
 
@@ -83,7 +81,7 @@ def run(host, port, base_dir, start_singleton):
 
     if start_singleton:
         singleton_server = app_context.get_object('singleton_server')
-        singleton_server.initial_sleep_time = int(config['singleton']['initial_sleep_time']) / 1000.
+        singleton_server.initial_sleep_time = int(config.singleton.initial_sleep_time) / 1000.
         parallel_server.singleton_server = singleton_server
 
         # Wow, this line looks weird. What it does is simply assigning a parallel

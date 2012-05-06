@@ -45,7 +45,7 @@ from M2Crypto import BIO, RSA
 from configobj import ConfigObj
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
 
 # ConfigObj
 from configobj import ConfigObj
@@ -273,7 +273,7 @@ def new_cid():
 def get_config(repo_location, config_name):
     """ Returns the configuration object.
     """
-    return ConfigObj(os.path.join(repo_location, config_name))
+    return bunchify(ConfigObj(os.path.join(repo_location, config_name)))
 
 def _get_ioc_config(location, config_class):
     """ Instantiates an Inversion of Control container from the given location
