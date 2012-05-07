@@ -48,7 +48,7 @@ class SingletonServer(BrokerMessageReceiver):
     def __init__(self, parallel_server=None, server_id=None, scheduler=None, 
                  broker_token=None, zmq_context=None, broker_host=None, broker_push_singleton_pull_port=None, 
                  singleton_push_broker_pull_port=None, initial_sleep_time=None,
-                 is_connector_server=False):
+                 is_cluster_wide=False):
         self.parallel_server = parallel_server
         self.server_id = server_id
         self.scheduler = scheduler
@@ -58,7 +58,7 @@ class SingletonServer(BrokerMessageReceiver):
         self.singleton_push_broker_pull_port = singleton_push_broker_pull_port
         self.zmq_context = zmq_context
         self.initial_sleep_time = initial_sleep_time
-        self.is_connector_server = is_connector_server
+        self.is_cluster_wide = is_cluster_wide
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def run(self, *ignored_args, **kwargs):
@@ -106,48 +106,50 @@ class SingletonServer(BrokerMessageReceiver):
         # .. and notify all the servers they're to pick up a delivery
         self.parallel_server.notify_new_package(package_id)
         
-    def become_connector_server(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
+    def become_cluster_wide(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
             server_id, cluster_id, starting_up):
         """ Attempts to become a connector server, the one to start the connector
         processes.
         """
-        base_conn_srv_job_data = Bunch({
+        base_job_data = Bunch({
                 'weeks': None, 'days': None, 
                 'hours': None, 'minutes': None, 
                 'seconds': connector_server_keep_alive_job_time, 
                 'repeats': None, 
                 'extra': 'server_id:{};cluster_id:{}'.format(server_id, cluster_id),
                 })
-        conn_srv_job_data = None
+        job_data = None
         
-        if self.parallel_server.odb.become_connector_server(connector_server_grace_time):
-            self.is_connector_server = True
+        if self.parallel_server.odb.become_cluster_wide(connector_server_grace_time):
+            self.is_cluster_wide = True
             
             # Schedule a job for letting the other servers know we're still alive
             # (not that we're not using .utcnow() for start_date because the
             # scheduler - for better or worse - doesn't use UTC.
-            conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
-            conn_srv_job_data.start_date = datetime.now()
-            conn_srv_job_data.name = 'zato.ConnectorServerKeepAlive'
-            conn_srv_job_data.service = 'zato.server.service.internal.connector_server.ConnectorServerKeepAlive'
+            job_data = Bunch(base_job_data.copy())
+            job_data.start_date = datetime.now()
+            job_data.name = 'zato.ClusterWideSingletonKeepAlive'
+            job_data.service = 'zato.server.service.internal.server.ClusterWideSingletonKeepAlive'
             
         else:
             # All other singleton servers that are just starting up get this job
             # for checking whether the connector server is alive or not
             if starting_up:
-                conn_srv_job_data = Bunch(base_conn_srv_job_data.copy())
-                conn_srv_job_data.start_date = datetime.now() + timedelta(seconds=10) # Let's give the other server some time to warm up
-                conn_srv_job_data.name = 'zato.EnsureConnectorServer'
-                conn_srv_job_data.service = 'zato.server.service.internal.connector_server.EnsureConnectorServer'
+                job_data = Bunch(base_job_data.copy())
+                job_data.start_date = datetime.now() + timedelta(seconds=10) # Let's give the other server some time to warm up
+                job_data.name = 'zato.EnsureClusterWideSingleton'
+                job_data.service = 'zato.server.service.internal.server.EnsureClusterWideSingleton'
 
-        if conn_srv_job_data:
-            self.scheduler.create_interval_based(conn_srv_job_data, MESSAGE_TYPE.TO_PARALLEL_SUB)
+        if job_data:
+            self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_PARALLEL_SUB)
 
-        return self.is_connector_server
+        return self.is_cluster_wide
         
 ################################################################################
 
     def filter(self, msg):
+        """ Filters out messages meant to be received by a singleton server.
+        """
         if msg.action in _scheduler_values:
             return True
         return False

@@ -82,10 +82,10 @@ class ZatoContext(PythonConfig):
     def internal_service_modules(self):
         return [
             'zato.server.service.internal',
-            'zato.server.service.internal.connector_server',
             'zato.server.service.internal.hot_deploy',
             'zato.server.service.internal.http_soap',
             'zato.server.service.internal.scheduler',
+            'zato.server.service.internal.server',
             'zato.server.service.internal.service',
             'zato.server.service.internal.channel.amqp',
             'zato.server.service.internal.channel.jms_wmq',

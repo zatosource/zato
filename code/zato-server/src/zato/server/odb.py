@@ -227,11 +227,11 @@ class ODBManager(SessionWrapper):
         
         return dp.id
 
-    def _become_connector_server(self, cluster):
+    def _become_cluster_wide(self, cluster):
         """ Update all the Cluster's attributes that are related to connector servers.
         """
-        cluster.cn_srv_id = self.server.id
-        cluster.cn_srv_keep_alive_dt = datetime.utcnow()
+        cluster.cw_srv_id = self.server.id
+        cluster.cw_srv_keep_alive_dt = datetime.utcnow()
 
         self._session.add(cluster)
         self._session.commit()
@@ -246,7 +246,7 @@ class ODBManager(SessionWrapper):
         """ Whether it's already past the grace time the connector server had
         for updating its keep-alive timestamp.
         """
-        last_keep_alive = cluster.cn_srv_keep_alive_dt
+        last_keep_alive = cluster.cw_srv_keep_alive_dt
         max_allowed = last_keep_alive + timedelta(seconds=grace_time)
         now = datetime.utcnow()
 
@@ -257,7 +257,7 @@ class ODBManager(SessionWrapper):
                 last_keep_alive, grace_time, max_allowed, now)
             logger.debug(msg)
 
-    def become_connector_server(self, grace_time):
+    def become_cluster_wide(self, grace_time):
         """ Makes an attempt for the server to become a connector one, that is,
         the server to start all the connectors.
         """
@@ -267,19 +267,19 @@ class ODBManager(SessionWrapper):
             one()
         
         # No connection server at all so we made it first
-        if not cluster.cn_srv_id:
-            return self._become_connector_server(cluster)
+        if not cluster.cw_srv_id:
+            return self._become_cluster_wide(cluster)
         elif self.conn_server_past_grace_time(cluster, grace_time):
-            return self._become_connector_server(cluster)
+            return self._become_cluster_wide(cluster)
         else:
             self._session.rollback()
             msg = ('Server id:[{}], name:[{}] will not be a connector server for '
-            'cluster id:[{}], name:[{}], cluster.cn_srv_id:[{}], cluster.cn_srv_keep_alive_dt:[{}]').format(
-                self.server.id, self.server.name, cluster.id, cluster.name, cluster.cn_srv_id, cluster.cn_srv_keep_alive_dt)
+            'cluster id:[{}], name:[{}], cluster.cw_srv_id:[{}], cluster.cw_srv_keep_alive_dt:[{}]').format(
+                self.server.id, self.server.name, cluster.id, cluster.name, cluster.cw_srv_id, cluster.cw_srv_keep_alive_dt)
             logger.debug(msg)
             
-    def clear_connector_server(self):
-        """ Invoked when the connector server is making a clean shutdown, sets
+    def clear_cluster_wide(self):
+        """ Invoked when the cluster-wide singleton server is making a clean shutdown, sets
         all the relevant data to NULL in the ODB.
         """
         cluster = self._session.query(Cluster).\
@@ -287,8 +287,8 @@ class ODBManager(SessionWrapper):
             filter(Cluster.id == self.server.cluster_id).\
             one()
         
-        cluster.cn_srv_id = None
-        cluster.cn_srv_keep_alive_dt = None
+        cluster.cw_srv_id = None
+        cluster.cw_srv_keep_alive_dt = None
 
         self._session.add(cluster)
         self._session.commit()

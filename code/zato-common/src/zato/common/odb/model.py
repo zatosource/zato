@@ -88,14 +88,14 @@ class Cluster(Base):
     lb_host = Column(String(200), nullable=False)
     lb_agent_port = Column(Integer(), nullable=False)
     lb_port = Column(Integer(), nullable=False)
-    cn_srv_id = Column(Integer(), nullable=True)
-    cn_srv_keep_alive_dt = Column(DateTime(), nullable=True)
+    cw_srv_id = Column(Integer(), nullable=True)
+    cw_srv_keep_alive_dt = Column(DateTime(), nullable=True)
 
     def __init__(self, id=None, name=None, description=None, odb_type=None,
                  odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
                  odb_schema=None, broker_host=None, broker_start_port=None,
                  broker_token=None, lb_host=None, lb_agent_port=None,
-                 lb_port=None, cn_srv_id=None, cn_srv_keep_alive_dt=None):
+                 lb_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
         self.id = id
         self.name = name
         self.description = description
@@ -111,8 +111,8 @@ class Cluster(Base):
         self.lb_host = lb_host
         self.lb_agent_port = lb_agent_port
         self.lb_port = lb_port
-        self.cn_srv_id = cn_srv_id
-        self.cn_srv_keep_alive_dt = cn_srv_keep_alive_dt
+        self.cw_srv_id = cw_srv_id
+        self.cw_srv_keep_alive_dt = cw_srv_keep_alive_dt
 
     def to_json(self):
         return to_json(self)
