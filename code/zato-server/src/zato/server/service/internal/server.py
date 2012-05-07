@@ -72,9 +72,8 @@ class EnsureClusterWideSingleton(AdminService):
                     self.server.connector_server_keep_alive_job_time, self.server.connector_server_grace_time,
                     self.server.id, self.server.cluster_id, False):
                     
-                    #self.server.singleton_server.scheduler.delete(Bunch(name='zato.EnsureClusterWideSingleton'))
-                    #self.server.init_connectors()
-                    pass
+                    self.server.singleton_server.scheduler.delete(Bunch(name='zato.EnsureClusterWideSingleton'))
+                    self.server.init_connectors()
         else:
             msg = 'Ignoring event, cid:[{}], server id:[{}], name:[{}] has no singleton attached'.format(self.cid, self.server.id, self.server.name)
             self.logger.debug(msg)

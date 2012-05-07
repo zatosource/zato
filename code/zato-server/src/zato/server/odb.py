@@ -266,7 +266,7 @@ class ODBManager(SessionWrapper):
             filter(Cluster.id == self.server.cluster_id).\
             one()
         
-        # No connection server at all so we made it first
+        # No cluster-wide singleton server at all so we made it first
         if not cluster.cw_srv_id:
             return self._become_cluster_wide(cluster)
         elif self.conn_server_past_grace_time(cluster, grace_time):
