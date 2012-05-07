@@ -1,0 +1,20 @@
+--- apscheduler/scheduler.py.orig	2012-05-07 17:53:44.731846237 +0200
++++ apscheduler/scheduler.py	2012-05-07 16:11:26.000000000 +0200
+@@ -479,7 +479,7 @@
+                                    'reached (%d)', job, job.max_instances)
+                     break
+ 
+-                logger.info('Running job "%s" (scheduled at %s)', job,
++                logger.debug('Running job "%s" (scheduled at %s)', job,
+                             run_time)
+ 
+                 try:
+@@ -498,7 +498,7 @@
+                                      retval=retval)
+                     self._notify_listeners(event)
+ 
+-                    logger.info('Job "%s" executed successfully', job)
++                    logger.debug('Job "%s" executed successfully', job)
+ 
+                 job.remove_instance()
+ 
