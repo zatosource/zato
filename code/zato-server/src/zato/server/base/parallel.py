@@ -186,10 +186,10 @@ class ParallelServer(BrokerMessageReceiver):
 
             # Let's see if we can become a connector server, the one to start all
             # the connectors and start the connectors only once throughout the whole cluster.
-            self.connector_server_keep_alive_job_time = int(self.fs_server_config['singleton']['connector_server_keep_alive_job_time'])
-            self.connector_server_grace_time = int(self.fs_server_config['singleton']['grace_time_multiplier']) * self.connector_server_keep_alive_job_time
+            self.connector_server_keep_alive_job_time = int(self.fs_server_config.singleton.connector_server_keep_alive_job_time)
+            self.connector_server_grace_time = int(self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
             
-            if self.singleton_server.become_connector_server(
+            if self.singleton_server.become_cluster_wide(
                 self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
                 server.id, server.cluster_id, True):
                 self.init_connectors()
@@ -420,8 +420,8 @@ class ParallelServer(BrokerMessageReceiver):
                     self.singleton_server.broker_client.close()
                 self.singleton_server.pickup.stop()
                 
-                if self.singleton_server.is_connector_server:
-                    self.odb.clear_connector_server()
+                if self.singleton_server.is_cluster_wide:
+                    self.odb.clear_cluster_wide()
                 
             self.zmq_context.term()
             self.odb.close()
