@@ -48,9 +48,14 @@ class SessionWrapper(object):
     def __init__(self):
         self.session_initialized = False
         
-    def init_session(self, pool):
+    def init_session(self, pool, use_scoped_session=True):
         pool.ping()
-        self._Session = scoped_session(sessionmaker(bind=pool.engine))
+        
+        if use_scoped_session:
+            self._Session = scoped_session(sessionmaker(bind=pool.engine))
+        else:
+            self._Session = sessionmaker(bind=pool.engine)
+            
         self._session = self._Session()
         self.session_initialized = True
     
@@ -59,7 +64,7 @@ class SessionWrapper(object):
     
     def close(self):
         self._session.close()
-
+    
 class SQLConnectionPool(object):
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
