@@ -23,14 +23,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from copy import deepcopy
 from threading import RLock
 
-# mx
-from mx.Tools import NotGiven
-
 # Paste
 from paste.util.multidict import MultiDict
 
 # Bunch
 from bunch import Bunch
+
+# Zato
+from zato.common import ZATO_NONE
 
 class ConfigDict(object):
     """ Stores configuration of a particular item of interest, such as an
@@ -119,10 +119,10 @@ class ConfigStore(object):
     Note that much more should be stored in here but the work is not finished yet -
     for instance, connection definitions should be kept here.
     """
-    def __init__(self, out_ftp=NotGiven, out_plain_http=NotGiven, out_soap=NotGiven, 
-                 out_sql=NotGiven, repo_location=NotGiven, basic_auth=NotGiven, wss=NotGiven, tech_acc=NotGiven,
-                 url_sec=NotGiven, http_soap=NotGiven, broker_config=NotGiven, odb_data=NotGiven,
-                 simple_io=NotGiven):
+    def __init__(self, out_ftp=ZATO_NONE, out_plain_http=ZATO_NONE, out_soap=ZATO_NONE, 
+                 out_sql=ZATO_NONE, repo_location=ZATO_NONE, basic_auth=ZATO_NONE, wss=ZATO_NONE, tech_acc=ZATO_NONE,
+                 url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE, odb_data=ZATO_NONE,
+                 simple_io=ZATO_NONE):
         
         # Outgoing connections
         self.out_ftp = out_ftp
@@ -164,14 +164,14 @@ class ConfigStore(object):
         """
         config_store = ConfigStore()
         
-        # Grab all ConfigDicts - even if they're actually NotGiven - and make their copies
+        # Grab all ConfigDicts - even if they're actually ZATO_NONE - and make their copies
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if isinstance(attr, ConfigDict):
                 copy_meth = getattr(attr, 'copy')
                 setattr(config_store, attr_name, copy_meth())
-            elif attr is NotGiven:
-                setattr(config_store, attr_name, NotGiven)
+            elif attr is ZATO_NONE:
+                setattr(config_store, attr_name, ZATO_NONE)
                 
         http_soap = MultiDict()
         dict_of_lists = self.http_soap.dict_of_lists()
