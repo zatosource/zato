@@ -47,20 +47,15 @@ class GetListTestCase(ServiceTestCase):
     def test_response(self):
         request = {'cluster_id': rand_int()}
         
+        expected_keys = get_data().keys()
         expected_data = tuple(get_data() for x in range(rand_int(10)))
         expected = Expected()
         
         for datum in expected_data:
             item = ChannelAMQP()
-            item.id = datum.id
-            item.name = datum.name
-            item.is_active = datum.is_active
-            item.queue = datum.queue
-            item.consumer_tag_prefix = datum.consumer_tag_prefix
-            item.def_name = datum.def_name
-            item.def_id = datum.def_id
-            item.service_name = datum.service_name
-            item.data_format = datum.data_format
+            for key in expected_keys:
+                value = getattr(datum, key)
+                setattr(item, key, value)
             expected.add(item)
             
         instance = self.invoke(GetList, request, expected)
@@ -70,12 +65,7 @@ class GetListTestCase(ServiceTestCase):
             expected = expected_data[idx]
             given = Bunch(item)
             
-            eq_(given.id, expected.id)
-            eq_(given.name, expected.name)
-            eq_(given.is_active, expected.is_active)
-            eq_(given.queue, expected.queue)
-            eq_(given.consumer_tag_prefix, expected.consumer_tag_prefix)
-            eq_(given.def_name, expected.def_name)
-            eq_(given.def_id, expected.def_id)
-            eq_(given.service_name, expected.service_name)
-            eq_(given.data_format, expected.data_format)
+            for key in expected_keys:
+                given_value = getattr(given, key)
+                expected_value = getattr(expected, key)
+                eq_(given_value, expected_value)

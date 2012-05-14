@@ -44,16 +44,15 @@ class GetListTestCase(ServiceTestCase):
     def test_response(self):
         request = {'cluster_id': rand_int()}
         
+        expected_keys = get_data().keys()
         expected_data = tuple(get_data() for x in range(rand_int(10)))
         expected = Expected()
         
         for datum in expected_data:
             item = Service()
-            item.id = datum.id
-            item.name = datum.name
-            item.is_active = datum.is_active
-            item.impl_name = datum.impl_name
-            item.is_internal = datum.is_internal
+            for key in expected_keys:
+                value = getattr(datum, key)
+                setattr(item, key, value)
             expected.add(item)
             
         instance = self.invoke(GetList, request, expected)
@@ -63,11 +62,10 @@ class GetListTestCase(ServiceTestCase):
             expected = expected_data[idx]
             given = Bunch(item)
             
-            eq_(given.id, expected.id)
-            eq_(given.name, expected.name)
-            eq_(given.is_active, expected.is_active)
-            eq_(given.impl_name, expected.impl_name)
-            eq_(given.is_internal, expected.is_internal)
+            for key in expected_keys:
+                given_value = getattr(given, key)
+                expected_value = getattr(expected, key)
+                eq_(given_value, expected_value)
 
 class GetByNameTestCase(ServiceTestCase):
     def test_response(self):
