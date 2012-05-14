@@ -17,69 +17,30 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
 from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
 
 # anyjson
-from anyjson import dumps, loads
-
-# mock
-from mock import MagicMock
+from anyjson import loads
 
 # nose
-from nose.tools import assert_true, eq_
+from nose.tools import eq_
 
 # Bunch
 from bunch import Bunch
 
 # Zato
 from zato.common.odb.model import Service
-from zato.common.util import new_cid
+from zato.common.test import Expected, ServiceTestCase
 from zato.server.service.internal.service import GetByName
 
-class Expected(object):
-    """ A container for the data a test expects the service to return.
-    """
-    def __init__(self):
-        self.data = []
-        
-    def add(self, item):
-        self.data.append(item)
-        
-    def get_data(self):
-        if not self.data or len(self.data) > 1:
-            return self.data
-        else:
-            return self.data[0]
-        
-class ServiceTestCase(TestCase):
-    
-    def invoke(self, class_, request, expected):
-        """ Sets up a service's invocation environment, then invokes and returns
-        an instance of the service.
-        """
-        request_string = dumps(request)
-        instance = class_()
-        worker_store = MagicMock()
-        worker_store.worker_config = MagicMock
-        worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None))
-        
-        class_.update(instance, None, None, worker_store, new_cid(), request, request_string, 
-            simple_io_config={})
-
-        def get_data(self, *ignored_args, **ignored_kwargs):
-            return expected.get_data()
-
-        instance.get_data = get_data
-        instance.handle()
-        
-        return instance
-
 class GetByNameTestCase(ServiceTestCase):
+    
     def test(self):
-
         request = {'cluster_id': randint(1, 100), 'name': uuid4().hex}
         
         expected_id = randint(1, 100)
