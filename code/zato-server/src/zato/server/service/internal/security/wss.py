@@ -47,10 +47,13 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'password_type', 'username', 
             'reject_empty_nonce_creat', 'reject_stale_tokens', 'reject_expiry_limit', 
             'nonce_freshness_time')
+        
+    def get_data(self, session):
+        return wss_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = wss_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
 
 class Create(AdminService):
     """ Creates a new WS-Security definition.

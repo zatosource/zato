@@ -42,10 +42,13 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'delivery_mode', 
             'priority', 'expiration', 'def_name', 'def_id')
+        
+    def get_data(self, session):
+        return out_jms_wmq_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = out_jms_wmq_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
         
 class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.

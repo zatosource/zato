@@ -40,10 +40,13 @@ class GetList(AdminService):
     class SimpleIO:
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'username', 'realm')
+        
+    def get_data(self, session):
+        return basic_auth_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = basic_auth_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
 
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.

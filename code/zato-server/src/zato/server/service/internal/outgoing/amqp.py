@@ -48,10 +48,13 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority',
             'content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'),
             'def_name', 'def_id')
+        
+    def get_data(self, session):
+        return out_amqp_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = out_amqp_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
         
 class Create(AdminService):
     """ Creates a new outgoing AMQP connection.

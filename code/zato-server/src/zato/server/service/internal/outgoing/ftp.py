@@ -52,10 +52,13 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'host', 'port', 'user', 
             'acct', 'timeout', 'dircache')
+        
+    def get_data(self, session):
+        return out_ftp_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = out_ftp_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
 
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
