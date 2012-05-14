@@ -43,10 +43,13 @@ class GetList(AdminService):
             Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), 
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
             'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
+        
+    def get_data(self, session):
+        return def_jms_wmq_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = def_jms_wmq_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
         
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
@@ -57,10 +60,13 @@ class GetByID(AdminService):
             Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), 
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
             'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
+        
+    def get_data(self, session):
+        return def_jms_wmq(session, self.request.input.cluster_id, self.request.input.id)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = def_jms_wmq(session, self.request.input.cluster_id, self.request.input.id)
+            self.response.payload = self.get_data(session)
         
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.

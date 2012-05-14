@@ -85,11 +85,14 @@ class GetList(AdminService):
             'url_path', 'method', 'soap_action', 'soap_version', 'data_format', 
             'service_id', 'service_name', 'security_id', 'security_name', 'sec_type')
         output_repeated = True
+        
+    def get_data(self, session):
+        return http_soap_list(session, self.request.input.cluster_id,
+            self.request.input.connection, self.request.input.transport, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = http_soap_list(session, self.request.input.cluster_id,
-                self.request.input.connection, self.request.input.transport, False)
+            self.response.payload[:] = self.get_data(session)
 
 class Create(AdminService, _HTTPSOAPService):
     """ Creates a new HTTP/SOAP connection.

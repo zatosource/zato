@@ -48,10 +48,13 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'engine', 'host', 'port',
             'db_name', 'username', 'pool_size', 'extra')
+        
+    def get_data(self, session):
+        return out_sql_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = out_sql_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
 
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.

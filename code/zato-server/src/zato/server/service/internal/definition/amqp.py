@@ -38,10 +38,13 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_repeated = True
+        
+    def get_data(self, session):
+        return def_amqp_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = def_amqp_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
 
 class GetByID(AdminService):
     """ Returns a particular AMQP definition
@@ -49,14 +52,17 @@ class GetByID(AdminService):
     class SimpleIO:
         input_required = ('id',)
         output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+        
+    def get_data(self, session):
+        return session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
+            ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
+            ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
+            filter(ConnDefAMQP.id==self.request.input.id).\
+            one()
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
-                ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
-                ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
-                filter(ConnDefAMQP.id==self.request.input.id).\
-                one()
+            self.response.payload = self.get_data(session)
         
 class Create(AdminService):
     """ Creates a new AMQP definition.

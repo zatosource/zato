@@ -227,11 +227,13 @@ class GetList(AdminService):
         output_repeated = True
         default_value = ''
         date_time_format = scheduler_date_time_format
+        
+    def get_data(self, session):
+        return job_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
-        
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = job_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
 
 class Create(_CreateEdit):
     """ Creates a new scheduler's job.

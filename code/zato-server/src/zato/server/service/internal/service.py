@@ -206,14 +206,17 @@ class GetDeploymentInfoList(AdminService):
         input_required = ('id',)
         output_required = ('server_id', 'server_name', 'details')
         
+    def get_data(self, session):
+        return session.query(DeployedService.details,
+            Server.name.label('server_name'), 
+            Server.id.label('server_id')).\
+            outerjoin(Server, DeployedService.server_id==Server.id).\
+            filter(DeployedService.service_id==self.request.input.id).\
+            all()
+        
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = session.query(DeployedService.details,
-                    Server.name.label('server_name'), 
-                    Server.id.label('server_id')).\
-                outerjoin(Server, DeployedService.server_id==Server.id).\
-                filter(DeployedService.service_id==self.request.input.id).\
-                all()
+            self.response.payload[:] = self.get_data(session)
             
 class GetSourceInfo(AdminService):
     """ Returns information on the service's source code.
@@ -222,19 +225,21 @@ class GetSourceInfo(AdminService):
         input_required = ('cluster_id', 'name')
         output_optional = ('service_id', 'server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
         
+    def get_data(self, session):
+        return session.query(Service.id.label('service_id'), Server.name.label('server_name'), 
+            DeployedService.source, DeployedService.source_path,
+            DeployedService.source_hash, DeployedService.source_hash_method).\
+            filter(Cluster.id==Service.cluster_id).\
+            filter(Cluster.id==self.request.input.cluster_id).\
+            filter(Service.name==self.request.input.name).\
+            filter(Service.id==DeployedService.service_id).\
+            filter(Server.id==DeployedService.server_id).\
+            filter(Server.id==self.server.id).\
+            one()
+        
     def handle(self):
         with closing(self.odb.session()) as session:
-            si = session.query(Service.id.label('service_id'), Server.name.label('server_name'), 
-                              DeployedService.source, DeployedService.source_path,
-                              DeployedService.source_hash, DeployedService.source_hash_method).\
-                            filter(Cluster.id==Service.cluster_id).\
-                            filter(Cluster.id==self.request.input.cluster_id).\
-                            filter(Service.name==self.request.input.name).\
-                            filter(Service.id==DeployedService.service_id).\
-                            filter(Server.id==DeployedService.server_id).\
-                            filter(Server.id==self.server.id).\
-                            one()
-            
+            si = self.get_data(session)
             self.response.payload.service_id = si.service_id
             self.response.payload.server_name = si.server_name
             self.response.payload.source = si.source.encode('base64') if si.source else None
@@ -338,14 +343,16 @@ class GetRequestResponse(AdminService):
         output_required = ('service_id', 'sample_cid', 'sample_req_timestamp', 'sample_resp_timestamp', 
             'sample_request', 'sample_response', Integer('sample_req_resp_freq'))
         
+    def get_data(self, session):
+        return session.query(Service.id, Service.sample_cid, Service.sample_req_timestamp,
+            Service.sample_resp_timestamp, Service.sample_request, Service.sample_response,
+            Service.sample_req_resp_freq).\
+            filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
+            one()
+        
     def handle(self):
         with closing(self.odb.session()) as session:
-            result = session.query(Service.id, Service.sample_cid, Service.sample_req_timestamp,
-                Service.sample_resp_timestamp, Service.sample_request, Service.sample_response,
-                Service.sample_req_resp_freq).\
-                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
-                one()
-
+            result = self.get_data(session)
             self.response.payload.service_id = result.id
             self.response.payload.sample_cid = result.sample_cid
             self.response.payload.sample_req_timestamp = result.sample_req_timestamp

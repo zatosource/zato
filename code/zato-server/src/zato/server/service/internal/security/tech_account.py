@@ -42,10 +42,13 @@ class GetList(AdminService):
     class SimpleIO:
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active')
+        
+    def get_data(self, session):
+        return tech_acc_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = tech_acc_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
     
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
@@ -53,13 +56,16 @@ class GetByID(AdminService):
     class SimpleIO:
         input_required = ('tech_account_id',)
         output_required = ('id', 'name', 'is_active')
+        
+    def get_data(self, session):
+        return session.query(TechnicalAccount.id, 
+            TechnicalAccount.name, TechnicalAccount.is_active).\
+            filter(TechnicalAccount.id==self.request.input.tech_account_id).\
+            one()
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload = session.query(TechnicalAccount.id, 
-                TechnicalAccount.name, TechnicalAccount.is_active).\
-                filter(TechnicalAccount.id==self.request.input.tech_account_id).\
-                one()
+            self.response.payload = self.get_data(session)
     
 class Create(AdminService):
     """ Creates a new technical account.

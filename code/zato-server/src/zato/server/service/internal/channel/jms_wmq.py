@@ -40,10 +40,13 @@ class GetList(AdminService):
     class SimpleIO:
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'service_name', 'def_name', 'def_id', 'data_format')
+        
+    def get_data(self, session):
+        return channel_jms_wmq_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = channel_jms_wmq_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
         
 class Create(AdminService):
     """ Creates a new WebSphere MQ channel.
