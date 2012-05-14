@@ -46,9 +46,12 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
         output_repeated = True
         
+    def get_data(self, session):
+        return service_list(session, self.request.input.cluster_id, False)
+        
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = service_list(session, self.request.input.cluster_id, False)
+            self.response.payload[:] = self.get_data(session)
         
 class GetByName(AdminService):
     """ Returns a particular service.

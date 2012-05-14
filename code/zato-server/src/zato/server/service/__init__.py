@@ -422,17 +422,17 @@ class SimpleIOPayload(ValueConverter):
                         name = name.name
 
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
-
+                    
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
                     else:
                         out_item[name] = elem_value                    
-
-                    if self.zato_is_repeated:
-                        value.append(out_item)
-                    else:
-                        value = out_item
-
+    
+                if self.zato_is_repeated:
+                    value.append(out_item)
+                else:
+                    value = out_item
+                        
         if self.zato_is_xml:
             top = Element(self.response_elem)
             top.append(value)

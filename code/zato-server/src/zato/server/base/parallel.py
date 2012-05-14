@@ -421,7 +421,6 @@ class ParallelServer(BrokerMessageReceiver):
                 self.singleton_server.pickup.stop()
                 
                 if self.singleton_server.is_cluster_wide:
-                    print(777)
                     self.odb.clear_cluster_wide()
                 
             self.zmq_context.term()
