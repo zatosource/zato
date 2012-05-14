@@ -20,9 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from random import choice, randint
 from unittest import TestCase
-from uuid import uuid4
 
 # anyjson
 from anyjson import loads
@@ -35,19 +33,51 @@ from bunch import Bunch
 
 # Zato
 from zato.common.odb.model import Service
-from zato.common.test import Expected, ServiceTestCase
-from zato.server.service.internal.service import GetByName
+from zato.common.test import Expected, rand_bool, rand_int, rand_string, ServiceTestCase
+from zato.server.service.internal.service import GetList, GetByName
+
+def get_service_data():
+    return Bunch({'id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 
+        'impl_name':rand_string() 'is_internal':rand_bool()})
+
+class GetListTestCase(ServiceTestCase):
+    def test_response(self):
+        request = {'cluster_id': rand_int()}
+        
+        expected_data = (get_service_data(), get_service_data())
+        expected = Expected()
+        
+        for datum in expected_data:
+            service = Service()
+            service.id = datum.id
+            service.name = datum.name
+            service.is_active = datum.is_active
+            service.impl_name = datum.impl_name
+            service.is_internal = datum.is_internal
+            expected.add(service)
+            
+        instance = self.invoke(GetList, request, expected)
+        response = loads(instance.response.payload.getvalue())['response']
+        
+        for idx, item in enumerate(response):
+            expected = expected_data[idx]
+            given = Bunch(item)
+            
+            eq_(given.id, expected.id)
+            eq_(given.name, expected.name)
+            eq_(given.is_active, expected.is_active)
+            eq_(given.impl_name, expected.impl_name)
+            eq_(given.is_internal, expected.is_internal)
 
 class GetByNameTestCase(ServiceTestCase):
-    
-    def test(self):
-        request = {'cluster_id': randint(1, 100), 'name': uuid4().hex}
+    def xtest_response(self):
+        request = {'cluster_id':rand_int(), 'name':rand_string()}
         
-        expected_id = randint(1, 100)
-        expected_name = uuid4().hex
-        expected_is_active = choice((True, False))
-        expected_impl_name = uuid4().hex
-        expected_is_internal = choice((True, False))
+        expected_id = rand_int()
+        expected_name = rand_string()
+        expected_is_active = rand_bool()
+        expected_impl_name = rand_string()
+        expected_is_internal = rand_bool()
         
         service = Service()
         service.id = expected_id

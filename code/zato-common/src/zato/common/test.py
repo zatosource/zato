@@ -20,7 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from random import choice, randint
 from unittest import TestCase
+from uuid import uuid4
 
 # anyjson
 from anyjson import dumps
@@ -30,6 +32,15 @@ from mock import MagicMock
 
 # Zato
 from zato.common.util import new_cid
+
+def rand_int(start=1, stop=100):
+    return randint(start, stop)
+
+def rand_string():
+    return uuid4().hex
+
+def rand_bool():
+    return choice((True, False))
 
 class Expected(object):
     """ A container for the data a test expects the service to return.
