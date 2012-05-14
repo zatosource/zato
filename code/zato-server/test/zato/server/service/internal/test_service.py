@@ -36,15 +36,15 @@ from zato.common.odb.model import Service
 from zato.common.test import Expected, rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal.service import GetList, GetByName
 
-def get_service_data():
+def get_data():
     return Bunch({'id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 
-        'impl_name':rand_string() 'is_internal':rand_bool()})
+        'impl_name':rand_string(), 'is_internal':rand_bool()})
 
 class GetListTestCase(ServiceTestCase):
     def test_response(self):
         request = {'cluster_id': rand_int()}
         
-        expected_data = (get_service_data(), get_service_data())
+        expected_data = (get_data(), get_data())
         expected = Expected()
         
         for datum in expected_data:
