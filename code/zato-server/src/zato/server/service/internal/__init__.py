@@ -39,10 +39,15 @@ success = '<error_code>{}</error_code>'.format(success_code)
 logger = logging.getLogger(__name__)
 
 class AdminService(Service):
+    """ A Zato admin service, part of the API.
+    """
     def __init__(self):
         super(AdminService, self).__init__()
         
     def handle(self, *args, **kwargs):
+        raise NotImplementedError('Should be overridden by subclasses')
+    
+    def get_data(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
 
 class Ping(AdminService):

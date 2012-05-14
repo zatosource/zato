@@ -109,17 +109,30 @@ DONT_REQUIRE_LOGIN = [
 # here by the 'zato start /path/to/zato/admin' command. The command in turn
 # fetches values from the 'zato-admin.conf' file.
 
-DATABASES['default']['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
-
-# SQLAlchemy setup
-SASession = scoped_session(sessionmaker())
-engine = create_engine(engine_def.format(engine=db_type, username=DATABASE_USER,
-                password=DATABASE_PASSWORD, host=DATABASE_HOST, db_name=DATABASE_NAME))
-SASession.configure(bind=engine)
-
-# Crypto
-ssl_key_file = os.path.join(config_dir, SSL_KEY_FILE)
-ssl_cert_file = os.path.join(config_dir, SSL_CERT_FILE)
-ssl_ca_certs = os.path.join(config_dir, SSL_CA_CERTS)
-
-TEMPLATE_DEBUG = True
+if 'DATABASES' in globals():
+    DATABASES['default']['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
+    
+    # SQLAlchemy setup
+    SASession = scoped_session(sessionmaker())
+    engine = create_engine(engine_def.format(engine=db_type, username=DATABASE_USER,
+                    password=DATABASE_PASSWORD, host=DATABASE_HOST, db_name=DATABASE_NAME))
+    SASession.configure(bind=engine)
+    
+    # Crypto
+    ssl_key_file = os.path.join(config_dir, SSL_KEY_FILE)
+    ssl_cert_file = os.path.join(config_dir, SSL_CERT_FILE)
+    ssl_ca_certs = os.path.join(config_dir, SSL_CA_CERTS)
+    
+    TEMPLATE_DEBUG = True
+else:
+    TECH_ACCOUNT_NAME = 'dummy'
+    TECH_ACCOUNT_PASSWORD = 'dummy'
+    DATABASES = {}
+    DATABASES['default'] = {}
+    DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
+    
+    ssl_key_file = 'dummy'
+    ssl_cert_file = 'dummy'
+    ssl_ca_certs = 'dummy'
+    
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'

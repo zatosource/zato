@@ -61,6 +61,7 @@ django_sqlalchemy_engine = {
     'postgresql': 'postgresql_psycopg2',
     'mysql':'mysql',
     'oracle':'oracle',
+    'dummy':'dummy'
 }
 
 sqlalchemy_django_engine = dict((v,k) for k,v in django_sqlalchemy_engine.items())

@@ -57,20 +57,23 @@ class GetByName(AdminService):
         input_required = ('cluster_id', 'name')
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
         output_optional = ('usage_count',)
-
+        
+    def get_data(self, session):
+        return session.query(Service.id, Service.name, Service.is_active,
+            Service.impl_name, Service.is_internal).\
+            filter(Cluster.id==Service.cluster_id).\
+            filter(Cluster.id==self.request.input.cluster_id).\
+            filter(Service.name==self.request.input.name).\
+            one()
+        
     def handle(self):
         with closing(self.odb.session()) as session:
-            s = session.query(Service.id, Service.name, Service.is_active,
-                                Service.impl_name, Service.is_internal).\
-                            filter(Cluster.id==Service.cluster_id).\
-                            filter(Cluster.id==self.request.input.cluster_id).\
-                            filter(Service.name==self.request.input.name).one()
-            
-            self.response.payload.id = s.id
-            self.response.payload.name = s.name
-            self.response.payload.is_active = s.is_active
-            self.response.payload.impl_name = s.impl_name
-            self.response.payload.is_internal = s.is_internal
+            service = self.get_data(session)
+            self.response.payload.id = service.id
+            self.response.payload.name = service.name
+            self.response.payload.is_active = service.is_active
+            self.response.payload.impl_name = service.impl_name
+            self.response.payload.is_internal = service.is_internal
             self.response.payload.usage_count = 0
 
 class Edit(AdminService):
