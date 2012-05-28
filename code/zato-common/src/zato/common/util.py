@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, sys
+import logging, os, re, sys
 from base64 import b64encode
 from cStringIO import StringIO
 from datetime import datetime
@@ -383,3 +383,9 @@ def is_python_file(name):
     for suffix in('py', 'pyw'):
         if name.endswith(suffix):
             return True
+        
+def fs_safe_now():
+    """ Returns a UTC timestamp with any characters unsafe for filesystem names
+    removed.
+    """
+    return re.sub('[-:. ]', '_', str(datetime.utcnow()))

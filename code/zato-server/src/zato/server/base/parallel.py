@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, logging, time
+import asyncore, logging, os, time
 from datetime import datetime, timedelta
 from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
@@ -103,7 +103,7 @@ class ParallelServer(BrokerMessageReceiver):
                  soap11_content_type=None, soap12_content_type=None, 
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
-                 work_dir=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
+                 hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
                  id=None, name=None, cluster_id=None):
         self.host = host
         self.port = port
@@ -125,7 +125,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.internal_service_modules = internal_service_modules
         self.service_modules = service_modules
         self.base_dir = base_dir
-        self.work_dir = work_dir
+        self.hot_deploy_config = hot_deploy_config
         self.pickup = pickup
         self.fs_server_config = fs_server_config
         self.connector_server_grace_time = connector_server_grace_time
@@ -153,17 +153,27 @@ class ParallelServer(BrokerMessageReceiver):
         self.odb.drop_deployed_services(server.id)
         
         # .. and re-deploy the back from a clear state.
-        self.service_store.import_services_from_fs(self.internal_service_modules + self.service_modules, 
-            self.base_dir, self.work_dir)
+        self.service_store.import_services_from_anywhere(self.internal_service_modules + self.service_modules, 
+            self.base_dir)
         
         if self.singleton_server:
             
+            # Normalize hot-deploy configuration
+            if not self.hot_deploy_config:
+                self.hot_deploy_config = Bunch()
+                self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(self.repo_location, self.fs_server_config.hot_deploy.work_dir))
+                self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
+                self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
+                self.hot_deploy_config.current_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.current_work_dir))
+                self.hot_deploy_config.backup_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.backup_work_dir))
+                self.hot_deploy_config.last_backup_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
+                
             kwargs = {'zmq_context':self.zmq_context,
-            'broker_host': server.cluster.broker_host,
-            'broker_push_singleton_pull_port': server.cluster.broker_start_port + PORTS.BROKER_PUSH_SINGLETON_PULL,
-            'singleton_push_broker_pull_port': server.cluster.broker_start_port + PORTS.SINGLETON_PUSH_BROKER_PULL,
-            'broker_token':self.broker_token,
-                    }
+                'broker_host': server.cluster.broker_host,
+                'broker_push_singleton_pull_port': server.cluster.broker_start_port + PORTS.BROKER_PUSH_SINGLETON_PULL,
+                'singleton_push_broker_pull_port': server.cluster.broker_start_port + PORTS.SINGLETON_PUSH_BROKER_PULL,
+                'broker_token':self.broker_token,
+                }
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
             
             # Let the scheduler fully initialize
