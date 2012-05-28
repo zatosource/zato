@@ -52,9 +52,16 @@ pool_size={odb_pool_size}
 username={odb_user}
 token={odb_token}
 
-[pickup]
+[hot_deploy]
 pickup_dir=../../pickup-dir
 work_dir=../../work
+backup_history=100
+backup_format=bztar
+
+# These three are relative to work_dir
+current_work_dir=./hot-deploy/current
+backup_work_dir=./hot-deploy/backup
+last_backup_work_dir=./hot-deploy/backup/last
 
 [singleton]
 initial_sleep_time=500
@@ -113,7 +120,8 @@ frontend front_http_plain
 
 default_odb_pool_size = 1
 
-directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work')
+directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work',
+               'work/hot-deploy', 'work/hot-deploy/current', 'work/hot-deploy/backup', 'work/hot-deploy/backup/last')
 files = {ZATO_SERVER_DIR: '',
          'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
 }

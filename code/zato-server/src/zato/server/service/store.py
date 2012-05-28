@@ -58,7 +58,7 @@ from springpython.context import InitializingObject
 
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo
-from zato.common.util import deployment_info, is_python_file, service_name_from_impl, TRACE1
+from zato.common.util import deployment_info, fs_safe_now, is_python_file, service_name_from_impl, TRACE1
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -110,14 +110,11 @@ class ServiceStore(InitializingObject):
     def decompress(self, archive, work_dir):
         """ Decompresses an archive into a randomly named directory.
         """
-        # Create a new directory for services ..
-        fs_safe_now = re.sub('[-:. ]', '_', str(datetime.utcnow()))
-        
         # 6 characters will do, we won't deploy millions of services
         # in the very same (micro-)second after all
         rand = uuid4().hex[:6] 
         
-        dir_name = os.path.join(work_dir, '{}-{}'.format(fs_safe_now, rand), os.path.split(archive)[1])
+        dir_name = os.path.join(work_dir, '{}-{}'.format(fs_safe_now(), rand), os.path.split(archive)[1])
         os.makedirs(dir_name)
         
         # .. unpack the archive into it ..
@@ -127,8 +124,8 @@ class ServiceStore(InitializingObject):
         # rest of the machinery can pick the services up
         return dir_name
 
-    def import_services_from_fs(self, items, base_dir, work_dir):
-        """ Imports services from all the specified resources, be it module names,
+    def import_services_from_anywhere(self, items, base_dir, work_dir=None):
+        """ Imports services from any of the supported sources, be it module names,
         individual files or distutils2 packages (compressed or not).
         """
         for item_name in items:

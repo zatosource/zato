@@ -98,11 +98,11 @@ class SingletonServer(BrokerMessageReceiver):
         self.logger.debug('About to hot-deploy [{}]'.format(path))
         now = datetime.utcnow()
         di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
-        
+
         # Insert the package into the DB ..
         package_id = self.parallel_server.odb.hot_deploy(now, di, file_name, 
             open(path, 'rb').read(), self.server_id)
-        
+
         # .. and notify all the servers they're to pick up a delivery
         self.parallel_server.notify_new_package(package_id)
         

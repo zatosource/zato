@@ -65,13 +65,13 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.base_dir = base_dir
     parallel_server.fs_server_config = config
 
-    work_dir = config.pickup.work_dir
+    '''work_dir = config.hot_deploy.work_dir
     if not os.path.isabs(work_dir):
         work_dir = os.path.abspath(os.path.join(repo_location, work_dir))
 
-    parallel_server.work_dir = work_dir
+    parallel_server.work_dir = work_dir'''
 
-    pickup_dir = config.pickup.pickup_dir
+    pickup_dir = config.hot_deploy.pickup_dir
     if not os.path.isabs(pickup_dir):
         pickup_dir = os.path.join(repo_location, pickup_dir)
 
