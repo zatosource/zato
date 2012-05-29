@@ -24,6 +24,7 @@ import logging, os, re, sys
 from base64 import b64encode
 from cStringIO import StringIO
 from datetime import datetime
+from glob import glob
 from hashlib import sha1, sha256
 from importlib import import_module
 from itertools import ifilter
@@ -34,6 +35,14 @@ from pwd import getpwuid
 from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
+
+# packaging/Distutils2
+try:
+    from packaging import Config
+    from packaging import Distribution
+except ImportError:
+    from distutils2.config import Config
+    from distutils2.dist import Distribution
 
 # lxml
 from lxml import objectify
@@ -400,7 +409,30 @@ class _DummyLink(object):
     def __init__(self, url):
         self.url = url
 
-def decompress(self, archive, dir_name):
+def decompress(archive, dir_name):
     """ Decompresses an archive into a directory, the directory must already exist.
     """
     unpack_file_url(_DummyLink('file:' + archive), dir_name)
+
+def visit_py_source_from_distribution(dir_name):
+    """ Yields all the Python source modules from a Distutils2 distribution.
+    """
+    abs_dir = os.path.abspath(dir_name)
+    path = os.path.join(dir_name, 'setup.cfg')
+    if not os.path.exists(path):
+        msg = "Could not find setup.cfg in [{}], path:[{}] doesn't exist".format(dir_name, path)
+        logger.error(msg)
+        raise ValueError(msg)
+    
+    dist = Distribution()
+    config = Config(dist)
+    config.parse_config_files([path])
+    
+    logger.debug('dist.packages:[%s]' % dist.packages)
+    
+    for package in dist.packages:
+        package_dir = os.path.abspath(os.path.join(dir_name, package.replace('.', os.path.sep)))
+        for pattern in('*.py', '*.pyw'):
+            glob_path = os.path.join(package_dir, pattern)
+            for py_path in glob(glob_path):
+                yield py_path
