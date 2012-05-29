@@ -122,16 +122,18 @@ class Create(AdminService):
         # Now store the same thing in the linear log of backups
         self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
         
+    def _deploy_file(self, file_name, current_work_dir, payload):
+        f = open(file_name, 'wb')
+        f.write(payload)
+        f.close()
+        self.server.service_store.import_services_from_file(file_name, False, current_work_dir)
+        
     def _deploy_package(self, session, package_id, payload_name, payload):
         current_work_dir = self.server.hot_deploy_config.current_work_dir
         
         if is_python_file(payload_name):
             file_name = os.path.join(current_work_dir, payload_name)
-            f = open(file_name, 'wb')
-            f.write(payload)
-            f.close()
-            
-            self.server.service_store.import_services_from_file(payload_name, False, current_work_dir)
+            self._deploy_file(file_name, current_work_dir, payload)
             
         self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
     
