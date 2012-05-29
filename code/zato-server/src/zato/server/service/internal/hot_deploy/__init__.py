@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, shutil
 from contextlib import closing
 from datetime import datetime
+from errno import EEXIST
 from tempfile import mkdtemp, NamedTemporaryFile
 from traceback import format_exc
 
@@ -132,7 +133,10 @@ class Create(AdminService):
         return True
     
     def _deploy_archive(self, current_work_dir, payload, payload_name):
-        
+        """ Creates a temporary file containing the archive and decompresses it
+        into a temporary directory. The directory is scanned for Distutils2 modules,
+        each is then copied over to the work directory and hot-(re)loaded.
+        """
         with NamedTemporaryFile(prefix='zato-hd', suffix=payload_name) as tf:
             tf.write(payload)
             tf.flush()
@@ -140,12 +144,26 @@ class Create(AdminService):
             tmp_dir = mkdtemp(prefix='zato-hd-')
             decompress(tf.name, tmp_dir)
 
-            for py_path in visit_py_source_from_distribution(tmp_dir):
-                print(333, py_path)
-            
+            for tmp_py_path in visit_py_source_from_distribution(tmp_dir):
+                
+                # Get the path the stuff needs to be copied over to and create
+                # all the directories needed along
+
+                dest_py_path = os.path.join(current_work_dir, os.path.relpath(tmp_py_path, tmp_dir))
+                dest_py_dir = os.path.dirname(dest_py_path)
+
+                try:
+                    os.mkdir(dest_py_dir)
+                except OSError, e:
+                    if e.errno != EEXIST:
+                        raise
+
+                self._deploy_file(current_work_dir, open(tmp_py_path).read(), dest_py_path)
+
+            # Clean up
             shutil.rmtree(tmp_dir)
             
-            return True
+        return True
         
     def _deploy_package(self, session, package_id, payload_name, payload):
         """ Deploy a package, either a plain Python file or an archive, and update
