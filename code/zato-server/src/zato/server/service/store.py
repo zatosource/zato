@@ -51,25 +51,18 @@ try:
     Dumper = CDumper          # it's to make import checkers happy
 except ImportError:
     from yaml import Dumper
-
+    
 # Spring Python
 from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo
-from zato.common.util import deployment_info, fs_safe_now, is_python_file, service_name_from_impl, TRACE1
+from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, service_name_from_impl, TRACE1
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
-
-class _DummyLink(object):
-    """ A dummy class for staying consistent with pip's API in certain places
-    below.
-    """
-    def __init__(self, url):
-        self.url = url
 
 def get_service_name(class_obj):
     """ Return the name of a service which will be either given us explicitly
@@ -118,7 +111,7 @@ class ServiceStore(InitializingObject):
         os.makedirs(dir_name)
         
         # .. unpack the archive into it ..
-        unpack_file_url(_DummyLink('file:' + archive), dir_name)
+        decompress(archive, dir_name)
         
         # .. and return the name of the newly created directory so that the
         # rest of the machinery can pick the services up
@@ -159,8 +152,15 @@ class ServiceStore(InitializingObject):
         if not os.path.exists(file_name):
             raise ValueError("Could not import services, path:[{}] doesn't exist".format(file_name))
         
-        mod_dir, mod_file = os.path.split(file_name)
-        mod_name, mod_ext = os.path.splitext(mod_file)
+        _, mod_file = os.path.split(file_name)
+        mod_name, _ = os.path.splitext(mod_file)
+        
+        # Delete compiled bytecode if it exists so that imp.load_source 
+        # actually picks up the source module
+        for suffix in('c', 'o'):
+            path = file_name + suffix
+            if os.path.exists(path):
+                os.remove(path)
         
         mod = imp.load_source(mod_name, file_name)
         self._visit_module(mod, is_internal, file_name)
@@ -213,7 +213,10 @@ class ServiceStore(InitializingObject):
         """
         si = SourceInfo()
         try:
-            si.source = inspect.getsource(mod)
+            # We would've used inspect.getsource(mod) hadn't it been apparently using
+            # cached copies of the source code
+            si.source = open(mod.__file__, 'r').read()
+            
             si.path = inspect.getsourcefile(mod)
             si.hash = sha256(si.source).hexdigest()
             si.hash_method = 'SHA-256'
@@ -227,7 +230,6 @@ class ServiceStore(InitializingObject):
         """
         for name in dir(mod):
             item = getattr(mod, name)
-            #print(mod, name, self._should_deploy(name, item))
             if self._should_deploy(name, item):
                 timestamp = datetime.utcnow().isoformat()
                 depl_info = deployment_info('ServiceStore', item, timestamp, fs_location)

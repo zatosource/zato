@@ -179,14 +179,31 @@ class ODBManager(SessionWrapper):
         """ Adds information about the server's deployed service into the ODB.
         """
         try:
-            service = DeployedService(deployment_time, details, self.server, service, 
+            ds = DeployedService(deployment_time, details, self.server, service, 
                 source_info.source, source_info.path, source_info.hash, source_info.hash_method)
-            self._session.add(service)
+            self._session.add(ds)
             try:
                 self._session.commit()
             except IntegrityError, e:
+                
                 logger.debug('IntegrityError (DeployedService), e:[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
+
+                ds = self._session.query(DeployedService).\
+                    filter(DeployedService.service_id==service.id).\
+                    filter(DeploymentStatus.server_id==self.server.id).\
+                    one()
+                
+                ds.deployment_time = deployment_time
+                ds.details = details
+                ds.source = source_info.source
+                ds.source_path = source_info.path
+                ds.source_hash = source_info.hash
+                ds.source_hash_method = source_info.hash_method
+
+                self._session.add(ds)                
+                self._session.commit()
+                
         except Exception, e:
             msg = 'Could not add the DeployedService, e:[{e}]'.format(e=format_exc(e))
             logger.error(msg)
