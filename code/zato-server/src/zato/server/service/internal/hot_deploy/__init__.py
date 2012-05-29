@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, shutil
 from contextlib import closing
 from datetime import datetime
+from tempfile import mkdtemp, NamedTemporaryFile
 from traceback import format_exc
 
 # pip
@@ -31,7 +32,7 @@ from pip.download import is_archive_file
 # Zato
 from zato.common import DEPLOYMENT_STATUS
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util import fs_safe_now, is_python_file
+from zato.common.util import decompress, fs_safe_now, is_python_file, visit_py_source_from_distribution
 from zato.server.service.internal import AdminService
 
 MAX_BACKUPS = 1000
@@ -122,20 +123,48 @@ class Create(AdminService):
         # Now store the same thing in the linear log of backups
         self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
         
-    def _deploy_file(self, file_name, current_work_dir, payload):
+    def _deploy_file(self, current_work_dir, payload, file_name):
         f = open(file_name, 'wb')
         f.write(payload)
         f.close()
         self.server.service_store.import_services_from_file(file_name, False, current_work_dir)
         
+        return True
+    
+    def _deploy_archive(self, current_work_dir, payload, payload_name):
+        
+        with NamedTemporaryFile(prefix='zato-hd', suffix=payload_name) as tf:
+            tf.write(payload)
+            tf.flush()
+
+            tmp_dir = mkdtemp(prefix='zato-hd-')
+            decompress(tf.name, tmp_dir)
+
+            for py_path in visit_py_source_from_distribution(tmp_dir):
+                print(333, py_path)
+            
+            shutil.rmtree(tmp_dir)
+            
+            return True
+        
     def _deploy_package(self, session, package_id, payload_name, payload):
+        """ Deploy a package, either a plain Python file or an archive, and update
+        the deployment status.
+        """
+        success = False
         current_work_dir = self.server.hot_deploy_config.current_work_dir
         
         if is_python_file(payload_name):
             file_name = os.path.join(current_work_dir, payload_name)
-            self._deploy_file(file_name, current_work_dir, payload)
+            success = self._deploy_file(current_work_dir, payload, file_name)
+        elif is_archive_file(payload_name):
+            success = self._deploy_archive(current_work_dir, payload, payload_name)
             
-        self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
+        if success:
+            self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
+        else:
+            msg = 'Package id:[{}], payload_name:[{}] has not been deployed'.format(package_id, payload_name)
+            self.logger.warn(msg)
     
     def _update_deployment_status(self, session, package_id, status):
         ds = session.query(DeploymentStatus).\

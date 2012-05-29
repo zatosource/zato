@@ -22,22 +22,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import imp, inspect, logging, os, re, shutil, sys, tempfile, zipimport
 from datetime import datetime
-from glob import glob
 from hashlib import sha256
 from importlib import import_module
 from os.path import getmtime
 from traceback import format_exc
 from uuid import uuid4
-
-# packaging/Distutils2
-try:
-    from packaging import Config
-    from packaging import Distribution
-    from packaging import Metadata
-except ImportError:
-    from distutils2.config import Config
-    from distutils2.dist import Distribution
-    from distutils2.metadata import Metadata
 
 # pip
 from pip.download import is_archive_file, unpack_file_url
@@ -58,7 +47,7 @@ from springpython.context import InitializingObject
 
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo
-from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, service_name_from_impl, TRACE1
+from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, service_name_from_impl, TRACE1, visit_py_source_from_distribution
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -170,25 +159,8 @@ class ServiceStore(InitializingObject):
         and all the modules from packages pointed to by the 'files' section 
         are scanned for services.
         """
-        abs_dir = os.path.abspath(dir_name)
-        path = os.path.join(dir_name, 'setup.cfg')
-        if not os.path.exists(path):
-            msg = "Could not find setup.cfg in [{}], path:[{}] doesn't exist".format(dir_name, path)
-            logger.error(msg)
-            raise ValueError(msg)
-        
-        dist = Distribution()
-        config = Config(dist)
-        config.parse_config_files([path])
-        
-        logger.debug('dist.packages:[%s]' % dist.packages)
-        
-        for package in dist.packages:
-            package_dir = os.path.abspath(os.path.join(dir_name, package.replace('.', os.path.sep)))
-            for pattern in('*.py', '*.pyw'):
-                glob_path = os.path.join(package_dir, pattern)
-                for py_path in glob(glob_path):
-                    self.import_services_from_file(py_path, False, None)
+        for py_path in visit_py_source_from_distribution(dir_name):
+            self.import_services_from_file(py_path, False, None)
         
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
