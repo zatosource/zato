@@ -389,3 +389,18 @@ def fs_safe_now():
     removed.
     """
     return re.sub('[-:. ]', '_', str(datetime.utcnow()))
+
+# pip
+from pip.download import unpack_file_url
+
+class _DummyLink(object):
+    """ A dummy class for staying consistent with pip's API in certain places
+    below.
+    """
+    def __init__(self, url):
+        self.url = url
+
+def decompress(self, archive, dir_name):
+    """ Decompresses an archive into a directory, the directory must already exist.
+    """
+    unpack_file_url(_DummyLink('file:' + archive), dir_name)

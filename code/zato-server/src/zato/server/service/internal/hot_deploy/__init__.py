@@ -22,12 +22,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os, shutil
 from contextlib import closing
+from datetime import datetime
 from traceback import format_exc
+
+# pip
+from pip.download import is_archive_file
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util import fs_safe_now
+from zato.common.util import fs_safe_now, is_python_file
 from zato.server.service.internal import AdminService
 
 MAX_BACKUPS = 1000
@@ -117,15 +121,45 @@ class Create(AdminService):
             
         # Now store the same thing in the linear log of backups
         self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
+        
+    def _deploy_package(self, session, package_id, payload_name, payload):
+        current_work_dir = self.server.hot_deploy_config.current_work_dir
+        
+        if is_python_file(payload_name):
+            file_name = os.path.join(current_work_dir, payload_name)
+            f = open(file_name, 'wb')
+            f.write(payload)
+            f.close()
+            
+            self.server.service_store.import_services_from_file(payload_name, False, current_work_dir)
+            
+        self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
     
+    def _update_deployment_status(self, session, package_id, status):
+        ds = session.query(DeploymentStatus).\
+            filter(DeploymentStatus.package_id==package_id).\
+            filter(DeploymentStatus.server_id==self.server.id).\
+            one()
+        ds.status = status
+        ds.status_change_time = datetime.utcnow()
+        
+        session.add(ds)
+        session.commit()
+        
     def deploy_package(self, package_id):
         with closing(self.odb.session()) as session:
             dp = session.query(DeploymentPackage).\
                 filter(DeploymentPackage.id==package_id).\
                 one()
             
-            print(22, dp.payload_name, dp.payload)
-
+            if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
+                self._deploy_package(session, package_id, dp.payload_name, dp.payload)
+            else:
+                # This shouldn't really happen at all because the pickup notifier is to 
+                # filter such things out but life is full of surprises
+                self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
+                self.logger.warn('Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
+                
     def handle(self):
         self.backup_current_work_dir()
         self.deploy_package(self.request.input.package_id)
