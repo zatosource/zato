@@ -98,7 +98,7 @@ class Edit(AdminService):
     """ Updates a service.
     """
     class SimpleIO:
-        input_required = ('id', 'is_active', 'name')
+        input_required = ('id', 'is_active')
         output_required = ('id', 'name', 'impl_name', 'is_internal',)
         output_optional = (Boolean('usage_count'),)
 
@@ -108,7 +108,6 @@ class Edit(AdminService):
             try:
                 service = session.query(Service).filter_by(id=input.id).one()
                 service.is_active = input.is_active
-                service.name = input.name
                 
                 session.add(service)
                 session.commit()

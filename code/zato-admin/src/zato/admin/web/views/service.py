@@ -147,8 +147,8 @@ class Edit(CreateEdit):
     soap_action = 'zato:service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active')
-        output_required = ('id', 'is_internal', 'impl_name', 'usage_count')
+        input_required = ('is_active',)
+        output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage_count')
         
     def success_message(self, item):
         return 'Successfully {0} the service [{1}]'.format(self.verb, item.name.text)
