@@ -161,6 +161,8 @@ class ODBManager(SessionWrapper):
                     one()
 
             self.add_deployed_service(deployment_time, details, service, source_info)
+            
+            return service.id
 
         except Exception, e:
             msg = 'Could not add the Service, name:[{}], e:[{}]'.format(name, format_exc(e))
@@ -174,7 +176,7 @@ class ODBManager(SessionWrapper):
             filter(DeployedService.server_id==server_id).\
             delete()
         self._session.commit()
-
+        
     def add_deployed_service(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
@@ -208,6 +210,13 @@ class ODBManager(SessionWrapper):
             msg = 'Could not add the DeployedService, e:[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
+            
+    def is_service_active(self, service_id):
+        """ Returns whether the given service is active or not.
+        """
+        return self._session.query(Service.is_active).\
+            filter(Service.id==service_id).\
+            one()[0]
             
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
         """ Inserts a hot-deployed data into the DB along with setting the preliminary

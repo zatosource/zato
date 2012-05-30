@@ -113,6 +113,7 @@ class Edit(AdminService):
                 session.commit()
                 
                 input.action = SERVICE.EDIT
+                input.impl_name = service.impl_name
                 self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
                 self.response.payload = service
