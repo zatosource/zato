@@ -20,8 +20,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, socket
+import logging, os, socket
+from contextlib import closing
 from copy import deepcopy
+from errno import ENOENT
 from thread import start_new_thread
 from threading import local, RLock
 from traceback import format_exc
@@ -41,6 +43,7 @@ from paste.util.multidict import MultiDict
 # Zato
 from zato.common import SIMPLE_IO, url_type, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
+from zato.common.odb.model import DeployedService
 from zato.common.util import new_cid, security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
@@ -433,7 +436,29 @@ class WorkerStore(BaseWorker):
         new_msg.data_format = SIMPLE_IO.FORMAT.JSON
         new_msg.payload = msg
         return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SET_REQUEST_RESPONSE', args)
-
+    
+    def on_broker_pull_msg_SERVICE_DELETE(self, msg, *args):
+        """ Deletes the service from the service store and removes it from the filesystem.
+        """
+        # Where to delete it from in the second step
+        fs_location = self.worker_config.server.service_store.services[msg.impl_name]['deployment_info']['fs_location']
+        
+        # Delete it from the service store
+        del self.worker_config.server.service_store.services[msg.impl_name]
+        
+        # Delete it from the filesystem, including any bytecode left over. Note that
+        # other parallel servers may wish to do exactly the same so we just ignore
+        # the error if any files are missing
+        all_ext = ('py', 'pyc', 'pyo')
+        no_ext = '.'.join(fs_location.split('.')[:-1])
+        for ext in all_ext:
+            path = '{}.{}'.format(no_ext, ext)
+            try:
+                os.remove(path)
+            except OSError, e:
+                if e.errno != ENOENT:
+                    raise
+        
 # ##############################################################################
 
     def on_broker_pull_msg_HOT_DEPLOY_CREATE(self, msg, *args):

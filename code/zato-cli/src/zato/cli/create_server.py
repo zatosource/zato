@@ -75,6 +75,9 @@ grace_time_multiplier=3
 
 [spring]
 context_class=zato.server.spring_context.ZatoContext
+
+[misc]
+internal_services_may_be_deleted=False
 """
 
 haproxy_conf_contents = """
