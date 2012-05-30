@@ -438,7 +438,8 @@ class WorkerStore(BaseWorker):
         return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SET_REQUEST_RESPONSE', args)
     
     def on_broker_pull_msg_SERVICE_DELETE(self, msg, *args):
-        """ Deletes the service from the service store and removes it from the filesystem.
+        """ Deletes the service from the service store and removes it from the filesystem
+        if it's not an internal one.
         """
         # Where to delete it from in the second step
         fs_location = self.worker_config.server.service_store.services[msg.impl_name]['deployment_info']['fs_location']
@@ -448,16 +449,18 @@ class WorkerStore(BaseWorker):
         
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore
-        # the error if any files are missing
-        all_ext = ('py', 'pyc', 'pyo')
-        no_ext = '.'.join(fs_location.split('.')[:-1])
-        for ext in all_ext:
-            path = '{}.{}'.format(no_ext, ext)
-            try:
-                os.remove(path)
-            except OSError, e:
-                if e.errno != ENOENT:
-                    raise
+        # the error if any files are missing. Also note that internal services won't
+        # be ever deleted from the FS.
+        if msg.is_internal:
+            all_ext = ('py', 'pyc', 'pyo')
+            no_ext = '.'.join(fs_location.split('.')[:-1])
+            for ext in all_ext:
+                path = '{}.{}'.format(no_ext, ext)
+                try:
+                    os.remove(path)
+                except OSError, e:
+                    if e.errno != ENOENT:
+                        raise
                 
     def on_broker_pull_msg_SERVICE_EDIT(self, msg, *args):
         self.worker_config.server.service_store.services[msg.impl_name]['is_active'] = msg.is_active

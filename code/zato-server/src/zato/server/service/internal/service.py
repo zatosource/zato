@@ -137,12 +137,20 @@ class Delete(AdminService):
                 service = session.query(Service).\
                     filter(Service.id==self.request.input.id).\
                     one()
+
+                internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+                
+                if service.is_internal and not internal_del:
+                    msg = "Can't delete service:[{}], it's an internal one and internal_services_may_be_deleted is not True".format(
+                        service.name)
+                    raise ZatoException(self.cid, msg)
                 
                 # This will also cascade to delete the related DeployedService objects
                 session.delete(service)
                 session.commit()
 
-                msg = {'action': SERVICE.DELETE, 'id': self.request.input.id, 'impl_name':service.impl_name}
+                msg = {'action': SERVICE.DELETE, 'id': self.request.input.id, 'impl_name':service.impl_name, 
+                       'is_internal':service.is_internal}
                 self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
             except Exception, e:
