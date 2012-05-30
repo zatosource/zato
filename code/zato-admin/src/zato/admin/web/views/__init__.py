@@ -37,7 +37,7 @@ from lxml.objectify import Element
 from validate import is_boolean
 
 # anyjson
-from anyjson import dumps
+from json import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
@@ -258,8 +258,9 @@ class CreateEdit(_BaseView):
                 value = getattr(zato_message.response.item, name, None)
                 if value:
                     value = value.text
-                return_data[name] = value
-            
+                    
+                return_data[name] = str(value)
+                
             return HttpResponse(dumps(return_data), mimetype='application/javascript')
         except Exception, e:
             return HttpResponseServerError(format_exc(e))

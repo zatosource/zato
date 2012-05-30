@@ -42,21 +42,22 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
-
-    var is_active = item.is_active == true;
-    var is_internal = data.is_internal == true;
+    
+    var is_active = $.fn.zato.like_bool(item.is_active) == true;
+    var is_internal = $.fn.zato.like_bool(data.is_internal) == true;
+    
     var cluster_id = $(document).getUrlParam('cluster');
     
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.name, cluster_id));
+    row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(data.name, cluster_id));
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.impl_name);
     row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.usage_count);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.service.delete_({0});'>Delete</a>", item.id));
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.edit('{0}')\">Edit</a>", data.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.service.delete_({0});'>Delete</a>", data.id));
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_internal);
 

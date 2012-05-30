@@ -635,7 +635,11 @@ $.fn.zato.like_bool = function(item) {
     var s = new String(item).toLowerCase();
 
     // 'on' too because it may be a form's field
-    return(s == "true" || s == 'false' || s == 'on' || _.isBoolean(item));
+    if(s == 'false') {
+        return false;
+    }
+
+    return(s == "true" || s == 'on' || _.isBoolean(item));
 }
 
 String.prototype.capitalize = function() {

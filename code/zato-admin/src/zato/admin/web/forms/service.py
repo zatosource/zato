@@ -26,11 +26,10 @@ from django import forms
 from zato.admin.web.forms import UploadForm
 
 class CreateForm(forms.Form):
-    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
 class EditForm(CreateForm):
-    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'style':'text-align:left'}))
     
 class WSDLUploadForm(UploadForm):
     pass
