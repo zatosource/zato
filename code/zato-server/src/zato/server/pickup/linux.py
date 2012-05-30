@@ -23,9 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, os
 from time import sleep
 
-# pip
-from pip.download import is_archive_file
-
 # inotifyx
 import inotifyx
 
@@ -33,7 +30,7 @@ import inotifyx
 from springpython.context import ApplicationContextAware
 
 # Zato
-from zato.common.util import is_python_file, TRACE1
+from zato.common.util import hot_deploy, TRACE1
 
 __all__ = ['Pickup', 'PickupEventProcessor']
 
@@ -55,12 +52,7 @@ class PickupEventProcessor(ApplicationContextAware):
         event_info = 'event:[{}], event.name:[{}]'.format(event, event.name)
         logger.debug('IN_MODIFY {}'.format(event_info))
         
-        if self._should_process(event.name):
-            path = os.path.abspath(os.path.join(self.pickup_dir, event.name))
-            self.server.hot_deploy(event.name, path)
-            os.remove(path)
-        else:
-            logger.info('Ignoring {}'.format(event_info))
+        hot_deploy(self.server.parallel_server, event.name, os.path.abspath(os.path.join(self.pickup_dir, event.name)))
 
 class Pickup(object):
     def __init__(self, pickup_dir=None, pickup_event_processor=None):

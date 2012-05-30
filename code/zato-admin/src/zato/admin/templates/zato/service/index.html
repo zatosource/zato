@@ -2,6 +2,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
 {% endblock %}
 
 {% block extra_js %}
@@ -10,6 +11,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    <script type="text/javascript" src="/static/js/fileuploader.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/service/index.js"></script>
@@ -32,6 +34,35 @@
             'is_internal',
         ]
     }
+
+    var on_upload_complete = function(id, file_name, response){
+        if(response.success) {
+            var html = '<a href="{% url service-wsdl-download service.name cluster_id %}" class="common">Click to download</a>';
+            html += '<br/>';
+            html += '<div style="margin-top:7px">Direct address: {{ wsdl_public_url }}</div>';
+            $('#td_wsdl').html(html);
+            $.fn.zato.user_message(true, 'WSDL uploaded');
+        }
+        else {
+            $.fn.zato.user_message(false, response.response);
+        }
+    };    
+
+    function create_uploader(){
+        var uploader = new qq.FileUploader({
+            element: $('#uploader')[0],
+            action: 'cluster/{{ cluster_id }}/upload/',
+            onComplete: on_upload_complete,
+            debug: true,
+            template: '<div class="qq-uploader" style="width:150px">' + 
+                    '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
+                    '<div class="qq-upload-button" style="width:150px">Upload a service package</div>' +
+                    '<ul class="qq-upload-list"></ul>' + 
+                 '</div>'
+        });
+    }
+    window.onload = create_uploader;
+    
     </script>
 
 {% endblock %}
@@ -63,10 +94,13 @@
 
     {% if cluster_id %}
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.service.create()">Upload a package</a>
+            <div id="uploader">
+                <noscript>
+                    <p>Please enable JavaScript to use file uploader</p>
+                </noscript>
+            </div>
         </div>
         
-
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -161,6 +195,8 @@
                 </form>
             </div>
         </div>
+
+
     {% endif %}
 
 
