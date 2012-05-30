@@ -77,6 +77,7 @@ urlpatterns = patterns('',
 
     # Services
     url(r'^zato/service/$', service.Index(), name=service.Index.url_name),
+    url(r'^zato/service/cluster/(?P<cluster_id>.*)/upload/$', service.package_upload, name='service-package-upload'),
     url(r'^zato/service/create/$', service.create, name='service-create'),
     url(r'^zato/service/edit/$', service.Edit(), name=service.Edit.url_name),
     url(r'^zato/service/invoke/(?P<service_id>.*)/cluster/(?P<cluster_id>.*)/$', service.invoke, name='service-invoke'),

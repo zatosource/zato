@@ -255,6 +255,7 @@ class Quickstart(ZatoCommand):
             'zato:service.get-request-response':'zato.server.service.internal.service.GetRequestResponse',
             'zato:service.set-request-response':'zato.server.service.internal.service.SetRequestResponse',
             'zato:service.configure-request-response':'zato.server.service.internal.service.ConfigureRequestResponse',
+            'zato:service.upload-package':'zato.server.service.internal.service.UploadPackage',
 
             # SOAP channels
             'zato:channel.soap.get-list':'zato.server.service.internal.channel.soap.GetList',

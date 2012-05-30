@@ -50,6 +50,9 @@ from lxml import objectify
 # M2Crypto
 from M2Crypto import BIO, RSA
 
+# pip
+from pip.download import is_archive_file
+
 # ConfigObj
 from configobj import ConfigObj
 
@@ -60,7 +63,7 @@ from bunch import Bunch, bunchify
 from configobj import ConfigObj
 
 # anyjson
-from anyjson import loads
+from anyjson import dumps, loads
 
 # Spring Python
 from springpython.context import ApplicationContext
@@ -436,3 +439,28 @@ def visit_py_source_from_distribution(dir_name):
             glob_path = os.path.join(package_dir, pattern)
             for py_path in glob(glob_path):
                 yield py_path
+
+def hot_deploy(parallel_server, file_name, path, delete_path=True):
+    """ Hot-deploys a package if it looks like a Python module or an archive
+    which might contain a Distutils2 distribution.
+    """
+    if is_python_file(file_name) or is_archive_file(file_name):
+        
+        logger.debug('About to hot-deploy [{}]'.format(path))
+        now = datetime.utcnow()
+        di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
+
+        # Insert the package into the DB ..
+        package_id = parallel_server.odb.hot_deploy(now, di, file_name, 
+            open(path, 'rb').read(), parallel_server.id)
+
+        # .. and notify all the servers they're to pick up a delivery
+        parallel_server.notify_new_package(package_id)
+        
+        if delete_path:
+            os.remove(path)
+        
+        return True
+        
+    else:
+        logger.warn('Ignoring {}'.format(path))

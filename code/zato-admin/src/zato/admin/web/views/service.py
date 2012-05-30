@@ -372,6 +372,22 @@ class Delete(_Delete):
     error_message = 'Could not delete the service'
     soap_action = 'zato:service.delete'
 
-@meth_allowed('GET')
-def sources(req):
-    pass
+
+@meth_allowed('POST')
+def package_upload(req, cluster_id):
+    """ Handles a service package file upload.
+    """
+    try:
+        input_dict = {
+            'cluster_id': cluster_id,
+            'payload': req.read().encode('base64'),
+            'payload_name': req.GET['qqfile']
+        }
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.upload-package', input_dict)
+        
+        return HttpResponse(dumps({'success': True}))
+    
+    except Exception, e:
+        msg = 'Could not upload the service package, e:[{e}]'.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)

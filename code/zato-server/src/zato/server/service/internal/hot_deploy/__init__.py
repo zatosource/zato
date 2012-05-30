@@ -137,10 +137,10 @@ class Create(AdminService):
         into a temporary directory. The directory is scanned for Distutils2 modules,
         each is then copied over to the work directory and hot-(re)loaded.
         """
-        with NamedTemporaryFile(prefix='zato-hd', suffix=payload_name) as tf:
+        with NamedTemporaryFile(prefix='zato-hd-', suffix=payload_name) as tf:
             tf.write(payload)
             tf.flush()
-
+            
             tmp_dir = mkdtemp(prefix='zato-hd-')
             decompress(tf.name, tmp_dir)
 

@@ -24,6 +24,7 @@ from contextlib import closing
 from datetime import datetime
 from httplib import BAD_REQUEST, NOT_FOUND
 from mimetypes import guess_type
+from tempfile import NamedTemporaryFile
 from time import strptime
 from traceback import format_exc
 from urlparse import parse_qs
@@ -37,7 +38,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
      DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service, service_list
-from zato.common.util import payload_from_request
+from zato.common.util import hot_deploy, payload_from_request
 from zato.server.service import Boolean, Integer, Service as ServiceClass
 from zato.server.service.internal import AdminService
 
@@ -419,3 +420,16 @@ class SetRequestResponse(AdminService):
 
             session.add(service)
             session.commit()
+            
+class UploadPackage(AdminService):
+    """ Returns a boolean flag indicating whether the server has a WSDL attached.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'payload_name', 'payload')
+        
+    def handle(self):
+        with NamedTemporaryFile(prefix='zato-hd-', suffix=self.request.input.payload_name) as tf:
+            tf.write(self.request.input.payload.decode('base64'))
+            tf.flush()
+
+            success = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
