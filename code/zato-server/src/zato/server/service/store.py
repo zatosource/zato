@@ -214,7 +214,8 @@ class ServiceStore(InitializingObject):
                 si = self._get_source_code_info(mod)
     
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
+                service_id = self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
+                self.services[class_name]['is_active'] = self.odb.is_service_active(service_id)
 
 if __name__ == '__main__':
     store = ServiceStore()

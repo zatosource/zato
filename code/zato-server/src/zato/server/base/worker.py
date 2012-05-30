@@ -458,6 +458,9 @@ class WorkerStore(BaseWorker):
             except OSError, e:
                 if e.errno != ENOENT:
                     raise
+                
+    def on_broker_pull_msg_SERVICE_EDIT(self, msg, *args):
+        self.worker_config.server.service_store.services[msg.impl_name]['is_active'] = msg.is_active
         
 # ##############################################################################
 
