@@ -389,6 +389,7 @@ class Service(Base):
         self.source_info = None # Not used by the database
         self.sample_request_html = None # Not used by the database
         self.sample_response_html = None # Not used by the database
+        self.may_be_deleted = False # Not used by the database
 
 class DeployedService(Base):
     """ A service living on a given server.

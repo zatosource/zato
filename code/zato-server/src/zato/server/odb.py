@@ -191,7 +191,7 @@ class ODBManager(SessionWrapper):
 
                 ds = self._session.query(DeployedService).\
                     filter(DeployedService.service_id==service.id).\
-                    filter(DeploymentStatus.server_id==self.server.id).\
+                    filter(DeployedService.server_id==self.server.id).\
                     one()
                 
                 ds.deployment_time = deployment_time

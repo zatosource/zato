@@ -28,6 +28,9 @@ from time import strptime
 from traceback import format_exc
 from urlparse import parse_qs
 
+# validate
+from validate import is_boolean
+
 # Zato
 from zato.common import ZATO_OK, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
@@ -43,11 +46,23 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'))
         output_repeated = True
         
     def get_data(self, session):
-        return service_list(session, self.request.input.cluster_id, False)
+        out = []
+        sl = service_list(session, self.request.input.cluster_id, False)
+        
+        internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+        
+        for item in sl:
+            if item.is_internal:
+                item.may_be_deleted = internal_del
+            else:
+                item.may_be_deleted = True
+            out.append(item)
+        
+        return out
         
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -123,10 +138,11 @@ class Delete(AdminService):
                     filter(Service.id==self.request.input.id).\
                     one()
                 
+                # This will also cascade to delete the related DeployedService objects
                 session.delete(service)
                 session.commit()
 
-                msg = {'action': SERVICE.DELETE, 'id': self.request.input.id}
+                msg = {'action': SERVICE.DELETE, 'id': self.request.input.id, 'impl_name':service.impl_name}
                 self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
                 
             except Exception, e:
