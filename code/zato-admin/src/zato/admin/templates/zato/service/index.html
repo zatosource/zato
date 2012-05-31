@@ -41,7 +41,7 @@
             html += '<br/>';
             html += '<div style="margin-top:7px">Direct address: {{ wsdl_public_url }}</div>';
             $('#td_wsdl').html(html);
-            $.fn.zato.user_message(true, 'WSDL uploaded');
+            $.fn.zato.user_message(true, 'Service package uploaded, check the server logs for details');
         }
         else {
             $.fn.zato.user_message(false, response.response);
@@ -57,7 +57,7 @@
             template: '<div class="qq-uploader" style="width:150px">' + 
                     '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
                     '<div class="qq-upload-button" style="width:150px">Upload a service package</div>' +
-                    '<ul class="qq-upload-list"></ul>' + 
+                    '<ul class="qq-upload-list" style="width:500px"></ul>' + 
                  '</div>'
         });
     }
