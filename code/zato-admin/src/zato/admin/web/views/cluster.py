@@ -34,10 +34,10 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.web.forms.cluster import CreateClusterForm, EditClusterForm, DeleteClusterForm
-from zato.admin.web.views import get_lb_client, meth_allowed, set_servers_state
+from zato.admin.web.views import Index as _Index, get_lb_client, meth_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
      DATABASE_USER, sqlalchemy_django_engine
-from zato.common.odb.model import Cluster
+from zato.common.odb.model import Cluster, Server
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
@@ -206,3 +206,21 @@ def delete(req, cluster_id):
         return HttpResponseServerError(msg)
     else:
         return HttpResponse()
+    
+class Servers(_Index):
+    """ A list of servers belonging to a cluster.
+    """
+    meth_allowed = 'GET'
+    url_name = 'cluster-servers'
+    template = 'zato/cluster/servers.html'
+    
+    soap_action = 'zato:server.get-list'
+    output_class = Server
+    
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name',)
+        output_repeated = True
+    
+    def handle(self):
+        return {}

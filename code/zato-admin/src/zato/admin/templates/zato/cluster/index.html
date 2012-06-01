@@ -28,7 +28,7 @@
             '_edit',
             '_delete',
             '_manage_lb',
-            '_add_remove_servers',
+            '_servers',
             
             'id',
             'name',
@@ -142,7 +142,7 @@
                     </td>
                     <td>
                         {% if item.lb_config %}
-                            <a href="javascript:$.fn.zato.cluster.add_remove_servers('{{ item.id }}')">Add/remove servers</a>
+                            <a href="{% url cluster-servers %}?cluster={{ item.id }}">Servers</a>
                         {% endif %}
                         
                     </td>
