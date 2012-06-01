@@ -185,13 +185,18 @@ class ServiceStore(InitializingObject):
         """
         si = SourceInfo()
         try:
+            file_name = mod.__file__
+            if file_name[-1] in('c', 'o'):
+                file_name = file_name[:-1]
+
             # We would've used inspect.getsource(mod) hadn't it been apparently using
             # cached copies of the source code
-            si.source = open(mod.__file__, 'r').read()
+            si.source = open(file_name, 'rb').read()
             
             si.path = inspect.getsourcefile(mod)
             si.hash = sha256(si.source).hexdigest()
             si.hash_method = 'SHA-256'
+            
         except IOError, e:
             logger.log(TRACE1, 'Ignoring IOError, mod:[{}], e:[{}]'.format(mod, format_exc(e)))
             
