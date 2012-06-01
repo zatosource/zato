@@ -29,7 +29,7 @@ from uuid import uuid4
 from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_zato_admin, create_broker, create_server, create_zato_admin
-from zato.common import SIMPLE_IO
+from zato.common import SERVER_JOIN_STATUS, SIMPLE_IO
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb import ping_queries
 from zato.common.odb.model import *
@@ -515,10 +515,12 @@ class Quickstart(ZatoCommand):
             #
             # Servers
             #
-            server1 = Server(None,  'zato-quickstart-server-01', cluster, cs1.odb_token, 'ACCEPTED', datetime.now(), 'zato-quickstart/' + current_host())
+            server1 = Server(None, 'zato-quickstart-server-01', cluster, cs1.odb_token, SERVER_JOIN_STATUS.ACCEPTED, 
+                             datetime.now(), 'zato-quickstart/' + current_host())
             session.add(server1)
             
-            server2 = Server(None,  'zato-quickstart-server-02', cluster, cs2.odb_token, 'ACCEPTED', datetime.now(), 'zato-quickstart/' + current_host())
+            server2 = Server(None, 'zato-quickstart-server-02', cluster, cs2.odb_token, SERVER_JOIN_STATUS.ACCEPTED, 
+                             datetime.now(), 'zato-quickstart/' + current_host())
             session.add(server2)
             
             #

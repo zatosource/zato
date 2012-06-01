@@ -106,9 +106,6 @@ ZATO_NONE = b"ZATO_NONE"
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 
-# Status of a server's join request
-ZATO_JOIN_REQUEST_ACCEPTED = 'ACCEPTED'
-
 # All URL types Zato understands.
 url_type = Bunch()
 url_type.soap = 'soap'
@@ -143,6 +140,9 @@ class DEPLOYMENT_STATUS:
     DEPLOYED = 'deployed'
     AWAITING_DEPLOYMENT = 'awaiting-deployment'
     IGNORED = 'ignored'
+    
+class SERVER_JOIN_STATUS:
+    ACCEPTED = 'accepted'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

@@ -115,7 +115,7 @@ def _client_validate_save(req, meth, *args):
 def remote_command(req, cluster_id):
     """ Execute a HAProxy command.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
     haproxy_alive = _haproxy_alive(client)
@@ -154,7 +154,7 @@ def remote_command(req, cluster_id):
 def manage(req, cluster_id):
     """ GUI for managing HAProxy configuration.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
     lb_start_time = datetime.fromtimestamp(client.get_uptime_info())
@@ -215,7 +215,7 @@ def validate_save(req, cluster_id):
     """
     save = _get_validate_save_flag(cluster_id, req.POST)
 
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
     lb_config = Config()
@@ -265,7 +265,7 @@ def validate_save(req, cluster_id):
 def manage_source_code(req, cluster_id):
     """ Source code view for managing HAProxy configuration.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
     cluster.stats_uri, cluster.stats_port = _haproxy_stat_config(client=client)
 
@@ -286,7 +286,7 @@ def validate_save_source_code(req, cluster_id):
     """ A common handler for both validating and saving a HAProxy config using
     the raw HAProxy config file's view.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     save = _get_validate_save_flag(cluster_id, req.POST)
 
     # Invoke the LB agent
@@ -299,7 +299,7 @@ def validate_save_source_code(req, cluster_id):
 def get_addresses(req, cluster_id):
     """ Return JSON-formatted addresses known to HAProxy.
     """
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
     addresses = {}
