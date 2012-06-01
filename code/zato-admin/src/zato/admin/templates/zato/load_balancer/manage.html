@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Clusters : Load balancer : <a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Config GUI view</h2>
+<h2 class="zato">Clusters : <a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Load balancer : Config GUI view</h2>
 
 {% if messages %}
     {% for message in messages %}
