@@ -34,15 +34,7 @@
     }
     
     th {
-		background: #eee; /* Old browsers */
-		background: -moz-linear-gradient(top, #eee 0%, #ddd 40%, #bbb 100%); /* FF3.6+ */
-		background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#eee), color-stop(40%,#ddd), color-stop(100%,#bbb)); /* Chrome,Safari4+ */
-		background: -webkit-linear-gradient(top, #eee 0%,#ddd 40%,#bbb 100%); /* Chrome10+,Safari5.1+ */
-		background: -o-linear-gradient(top, #eee 0%,#ddd 40%,#bbb 100%); /* Opera 11.10+ */
-		background: -ms-linear-gradient(top, #eee 0%,#ddd 40%,#bbb 100%); /* IE10+ */
-		background: linear-gradient(top, #eee 0%,#ddd 40%,#bbb 100%); /* W3C */
-		filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eee', endColorstr='#bbb',GradientType=0 ); /* IE6-9 */
-
+		background: #ddd;
         font-size:11px;
     }
     
@@ -51,7 +43,7 @@
     }
 	
     td.inline_header {
-        background-color:#d0d0d0
+		background: #ddd;
     }
 	
 	td.numbering:before { 
