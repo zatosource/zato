@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Clusters : Load balancer : <a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Remote commands</h2>
+<h2 class="zato">Clusters : <a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Load balancer : Remote commands</h2>
 
 <div class='page_prompt'>
     <a href="{% url lb-manage cluster.id %}" class="common">Config GUI view</a>
