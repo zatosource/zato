@@ -247,7 +247,7 @@ def source_info(req, service_name):
         
         source = msg_item.source.text.decode('base64') if msg_item.source else ''
         if source:
-            source_html = highlight(source, PythonLexer(), HtmlFormatter(linenos='table'))
+            source_html = highlight(source, PythonLexer(stripnl=False), HtmlFormatter(linenos='table'))
             
             service.source_info = SourceInfo()
             service.source_info.source = source
