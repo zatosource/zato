@@ -41,7 +41,7 @@ from bunch import Bunch, SimpleBunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import PORTS, ZATO_JOIN_REQUEST_ACCEPTED, ZATO_ODB_POOL_NAME
+from zato.common import PORTS, SERVER_JOIN_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
@@ -348,7 +348,7 @@ class ParallelServer(BrokerMessageReceiver):
             logger.info('No Zero MQ outgoing connections to start')
             
     def _after_init_non_accepted(self, server):
-        pass    
+        raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
         
     def after_init(self):
         
@@ -379,14 +379,16 @@ class ParallelServer(BrokerMessageReceiver):
         self.id = server.id
         self.name = server.name
         self.cluster_id = server.cluster_id
-        
-        self._after_init_common(server)
-        
+
         # A server which hasn't been approved in the cluster still needs to fetch
         # all the config data but it won't start any MQ/AMQP/ZMQ/etc. listeners
         # except for a ZMQ config subscriber that will listen for an incoming approval.
         
-        if server.last_join_status == ZATO_JOIN_REQUEST_ACCEPTED:
+        self._after_init_common(server)
+        
+        # For now, all the servers are always ACCEPTED but future versions
+        # might introduce more join states
+        if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
             self._after_init_accepted(server)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'

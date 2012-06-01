@@ -25,8 +25,7 @@ from django.contrib.auth.views import login
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import cluster, load_balancer, main, scheduler, \
-    service, servers
+from zato.admin.web.views import cluster, load_balancer, main, scheduler, service
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
@@ -66,14 +65,6 @@ urlpatterns = patterns('',
     url(r'^zato/load-balancer/manage/source-code/cluster/(?P<cluster_id>.*)/validate-save$', load_balancer.validate_save_source_code, name='lb-manage-source-code-validate-save'),
     url(r'^zato/load-balancer/manage/source-code/cluster/(?P<cluster_id>.*)/$', load_balancer.manage_source_code, name='lb-manage-source-code'),
     url(r'^zato/load-balancer/remote-command/(?P<cluster_id>.*)/$', load_balancer.remote_command, name='lb-remote-command'),
-
-    # TODO: 'servers' should be 'server'
-
-    # Servers registry
-    url(r'^zato/servers/$', servers.index, name='servers'),
-    url(r'^zato/servers/status/(?P<server_id>.*)$', servers.status, name='server-status'),
-    url(r'^zato/servers/ping/(?P<server_id>.*)$', servers.ping, name='server-ping'),
-    url(r'^zato/servers/unregister/(?P<server_id>.*)$', servers.unregister, name='server-unregister'),
 
     # Services
     url(r'^zato/service/$', service.Index(), name=service.Index.url_name),

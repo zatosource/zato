@@ -25,7 +25,6 @@ from multiprocessing import cpu_count
 
 # Zato
 from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents
-from zato.common import ZATO_JOIN_REQUEST_ACCEPTED
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
@@ -215,14 +214,15 @@ class CreateServer(ZatoCommand):
         cluster = session.query(Cluster).filter(Cluster.name==cluster_name).first()
         if not cluster:
             should_add = True # A new cluster so it can't have any services yet.
-        else:
+        '''else:
             # .Need to add the list if there aren't any servers yet.
             should_add = not session.query(Server).\
                    filter(Server.cluster_id==cluster.id).\
-                   filter(Server.last_join_status==ZATO_JOIN_REQUEST_ACCEPTED+'a').\
+                   filter(Server.last_join_status==SERVER_JOIN_CONFIRMATION.+'a').\
                    count()
         
         #if should_add
+        '''
         
         msg = """\nSuccessfully created a new server.
 You can now start it with the 'zato start {path}' command.

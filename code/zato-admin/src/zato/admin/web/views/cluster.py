@@ -86,8 +86,8 @@ def _create_edit(req, verb, item, form_class, prefix=''):
         item.broker_token = req.POST[prefix + join + 'broker_token'].strip()
 
         try:
-            req.odb.add(item)
-            req.odb.commit()
+            req.zato.odb.add(item)
+            req.zato.odb.commit()
             
             try:
                 item.lb_config = get_lb_client(item).get_config()
@@ -105,7 +105,7 @@ def _create_edit(req, verb, item, form_class, prefix=''):
             return HttpResponseServerError(msg)
 
     except Exception, e:
-        req.odb.rollback()
+        req.zato.odb.rollback()
         return HttpResponseServerError(str(format_exc(e)))
 
 
@@ -122,7 +122,7 @@ def index(req):
     create_form = CreateClusterForm(initial=initial)
     delete_form = DeleteClusterForm(prefix='delete')
 
-    items = req.odb.query(Cluster).order_by('name').all()
+    items = req.zato.odb.query(Cluster).order_by('name').all()
     for item in items:
         client = get_lb_client(item)
 
@@ -156,10 +156,10 @@ def create(req):
 @meth_allowed('POST')
 def edit(req):
     return _create_edit(req, 'updated', 
-        req.odb.query(Cluster).filter_by(id=req.POST['id']).one(), EditClusterForm, 'edit')
+        req.zato.odb.query(Cluster).filter_by(id=req.POST['id']).one(), EditClusterForm, 'edit')
 
 def _get(req, **filter):
-    cluster = req.odb.query(Cluster).filter_by(**filter).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(**filter).one()
     return HttpResponse(cluster.to_json(), mimetype='application/javascript')
 
 @meth_allowed('GET')
@@ -172,7 +172,7 @@ def get_by_name(req, cluster_name):
 
 @meth_allowed('GET')
 def get_servers_state(req, cluster_id):
-    cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+    cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
     # Assign the flags indicating whether servers are DOWN or in the MAINT mode.
@@ -195,10 +195,10 @@ def get_servers_state(req, cluster_id):
 def delete(req, cluster_id):
 
     try:
-        cluster = req.odb.query(Cluster).filter_by(id=cluster_id).one()
+        cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
 
-        req.odb.delete(cluster)
-        req.odb.commit()
+        req.zato.odb.delete(cluster)
+        req.zato.odb.commit()
 
     except Exception, e:
         msg = 'Could not delete the cluster, e:[{e}]'.format(e=format_exc(e))
