@@ -83,3 +83,6 @@ class DeleteClusterForm(forms.Form):
             raise Exception(msg)
 
         return data
+    
+class EditServerForm(forms.Form):
+    name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))

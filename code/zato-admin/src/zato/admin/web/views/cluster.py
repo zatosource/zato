@@ -33,7 +33,7 @@ from django.template import loader, RequestContext
 from anyjson import dumps
 
 # Zato
-from zato.admin.web.forms.cluster import CreateClusterForm, EditClusterForm, DeleteClusterForm
+from zato.admin.web.forms.cluster import CreateClusterForm, DeleteClusterForm, EditClusterForm, EditServerForm
 from zato.admin.web.views import Index as _Index, get_lb_client, meth_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
      DATABASE_USER, sqlalchemy_django_engine
@@ -213,9 +213,9 @@ def servers(req):
     """ A view for server management.
     """
     items = req.zato.odb.query(Server).order_by('name').all()
-    client = get_lb_client(req.zato.cluster)
     
     try:
+        client = get_lb_client(req.zato.get('cluster'))
         server_data_dict = client.get_server_data_dict()
         bck_http_plain = client.get_config()['backend']['bck_http_plain']
         lb_client_invoked = True
@@ -238,10 +238,15 @@ def servers(req):
         'items':items,
         'choose_cluster_form':req.zato.choose_cluster_form,
         'zato_clusters':req.zato.clusters,
-        'cluster':req.zato.cluster,
+        'cluster':req.zato.get('cluster'),
+        'edit_form':EditServerForm(prefix='edit')
     }
     
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(return_data))
 
     return render_to_response('zato/cluster/servers.html', return_data, context_instance=RequestContext(req))
+
+@meth_allowed('POST')
+def servers_edit(req):
+    return HttpResponse('')
