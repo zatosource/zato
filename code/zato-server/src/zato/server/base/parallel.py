@@ -41,7 +41,7 @@ from bunch import Bunch, SimpleBunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import PORTS, SERVER_JOIN_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import PORTS, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
@@ -395,6 +395,8 @@ class ParallelServer(BrokerMessageReceiver):
             logger.warn(msg.format(server.last_join_status))
             
             self._after_init_non_accepted(server)
+            
+        self.odb.server_up_down(server.id, SERVER_UP_STATUS.RUNNING, True)
 
     def run_forever(self):
         
@@ -435,10 +437,12 @@ class ParallelServer(BrokerMessageReceiver):
                 if self.singleton_server.is_cluster_wide:
                     self.odb.clear_cluster_wide()
                 
-            self.zmq_context.term()
+            self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
-            task_dispatcher.shutdown()
 
+            self.zmq_context.term()
+            task_dispatcher.shutdown()
+            
 # ##############################################################################
 
     def notify_new_package(self, package_id):

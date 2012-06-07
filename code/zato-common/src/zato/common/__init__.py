@@ -143,6 +143,10 @@ class DEPLOYMENT_STATUS:
     
 class SERVER_JOIN_STATUS:
     ACCEPTED = 'accepted'
+    
+class SERVER_UP_STATUS:
+    RUNNING = 'running'
+    CLEAN_DOWN = 'clean-down'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

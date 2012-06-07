@@ -43,7 +43,7 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
     internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
     out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, wss_list
-from zato.common.util import deployment_info, security_def_type
+from zato.common.util import current_host, deployment_info, security_def_type
 from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
@@ -78,6 +78,24 @@ class ODBManager(SessionWrapper):
                 self.odb_token)
             logger.error(msg)
             raise
+
+    def server_up_down(self, server_id, status, update_host=False):
+        """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
+        and what host it's running on.
+        """
+        with closing(self.session()) as session:
+            server = session.query(Server).\
+            filter(Server.id==server_id).\
+            one()
+
+            server.up_status = status
+            server.up_mod_date = datetime.utcnow()
+            
+            if update_host:
+                server.host = current_host()
+            
+            session.add(server)
+            session.commit()
 
     def get_url_security(self, server):
         """ Returns the security configuration of HTTP URLs.
