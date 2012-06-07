@@ -28,6 +28,7 @@
             '_edit',
             '_delete',
             'id',
+            'old_name',
         ]
     }
     
@@ -76,7 +77,6 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -100,11 +100,12 @@
                         <td><a href="javascript:$.fn.zato.cluster.servers.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cluster.servers.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.name }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='10'>No results</td>
+                        <td colspan='11'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -119,7 +120,10 @@
                     
                         <tr>
                             <td style="vertical-align:middle;width:10%">Name</td>
-                            <td>{{ edit_form.name }}</td>
+                            <td>
+                                {{ edit_form.name }}
+                                {{ edit_form.old_name }}
+                            </td>
                         </tr>
                         
                         <tr>
@@ -129,7 +133,7 @@
                             </td>
                         </tr>                        
                     </table>
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster.id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>

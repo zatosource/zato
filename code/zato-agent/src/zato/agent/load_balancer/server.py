@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import httplib, json, logging, logging.config, os, ssl, urllib
+from collections import Counter
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
 from time import sleep, time
@@ -102,12 +103,16 @@ class LoadBalancerAgent(SSLServer):
                 msg = "Registering [{attr}] under public name [{public_name}]"
                 logger.info(msg.format(attr=attr, public_name=public_name)) # TODO: Add logging config
                 self.register_function(attr, public_name)
+                
+    def _read_config_string(self):
+        """ Returns the HAProxy config as a string.
+        """
+        return open(self.config_path).read()
 
     def _read_config(self):
         """ Read and parse the HAProxy configuration.
         """
-        data = open(self.config_path).read()
-        return config_from_string(data)
+        return config_from_string(self._read_config_string())
 
     def _validate(self, config_string):
 
@@ -163,8 +168,6 @@ class LoadBalancerAgent(SSLServer):
         
         self.config = self._read_config()
         
-        print(self.config)
-
     def _validate_save_config_string(self, config_string, save):
         """ Given a string representing the HAProxy config file it first validates
         it and then optionally saves it.
@@ -186,8 +189,6 @@ class LoadBalancerAgent(SSLServer):
                 continue
             line = line.split(',')
             
-            print(555, line)
-
             haproxy_name = line[0]
             haproxy_type_or_name = line[1]
 
@@ -241,11 +242,59 @@ class LoadBalancerAgent(SSLServer):
         return servers_state
     
     def _lb_agent_get_server_data_dict(self):
+        """ Returns a dictionary whose keys are server names and values are their
+        access types and the server's status as reported by HAProxy.
+        """
         servers = {}
         for access_type, server_name, state in self._show_stat():
             servers[server_name] = {'access_type':access_type, 'state':state}
             
         return servers
+    
+    def _lb_agent_rename_server(self, old_name, new_name):
+        """ Renames the server, validates and saves the config.
+        """
+        if old_name == new_name:
+            msg = 'Skipped renaming, old_name:[{}] is the same as new_name:[{}]'.format(old_name, new_name)
+            self.logger.warn(msg)
+            return True
+            
+        new_config = []
+        config_string = self._read_config_string()
+        old_servers = Counter()
+        new_servers = Counter()
+
+        def _get_lines():
+            for line in config_string.splitlines():
+                yield line
+               
+        old_server = '# ZATO backend bck_http_plain:server--{}'.format(old_name)
+        new_server = '# ZATO backend bck_http_plain:server--{}'.format(new_name)
+        
+        for line in _get_lines():
+            if old_server in line:
+                old_servers[old_name] += 1
+
+            if new_server in line:
+                new_servers[new_name] += 1
+                
+        if not old_servers[old_name]:
+            raise Exception("old_name:[{}] not found in the load balancer's configuration".format(old_name))
+        
+        if new_servers[new_name]:
+            raise Exception('new_name:[{}] is not unique'.format(new_name))
+        
+        for line in _get_lines():
+            if old_server in line:
+                line = line.replace(old_name, new_name)
+            new_config.append(line)
+            
+        self._validate_save_config_string('\n'.join(new_config), True)
+        
+        return True
+    
+    # def _lb_agent_restart_haproxy
+    # haproxy -D -f /home/dsuch/tmp/qs-1/load-balancer/config/zato.config -p /tmp/zato.pid -sf $(cat /tmp/zato.pid)
 
     def _lb_agent_execute_command(self, command, timeout, extra=""):
         """ Execute an HAProxy command through its UNIX socket interface.
@@ -268,7 +317,6 @@ class LoadBalancerAgent(SSLServer):
         """ Return a three-element tuple describing HAProxy's version,
         similar to what stdlib's sys.version_info does.
         """
-
         # 'show info' is always available and we use it for determining the HAProxy version.
         info = self.haproxy_stats.execute("show info")
         for line in info.splitlines():
@@ -286,11 +334,11 @@ class LoadBalancerAgent(SSLServer):
         by Zato.
         """
         return self.config
-
+    
     def _lb_agent_get_config_source_code(self):
         """ Return the HAProxy configuration file's source.
         """
-        return open(self.config_path).read()
+        return self._read_config_string()
 
     def _lb_agent_get_uptime_info(self):
         """ Return the agent's (not HAProxy's) uptime info, currently returns

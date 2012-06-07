@@ -16,7 +16,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Server;
     $.fn.zato.data_table.new_row_func = $.fn.zato.cluster.servers.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name']);
+    $.fn.zato.data_table.setup_forms(['name', 'old_name']);
 })
 
 $.fn.zato.cluster.servers.edit = function(id) {
