@@ -81,3 +81,42 @@ class EnsureClusterWideSingleton(AdminService):
         else:
             msg = 'Ignoring event, cid:[{}], server id:[{}], name:[{}] has no singleton attached'.format(self.cid, self.server.id, self.server.name)
             self.logger.debug(msg)
+
+
+class Edit(AdminService):
+    """ Updates a server.
+    """
+    class SimpleIO:
+        input_required = ('id', 'name')
+        output_optional = ('id', 'name', 'host', 'up_status', 'up_mod_date')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            existing_one = session.query(Server).\
+                filter(Server.id!=self.request.input.id).\
+                filter(Server.name==self.request.input.name).\
+                first()
+
+            if existing_one:
+                raise Exception('A server of that name [{0}] already exists on this cluster'.format(self.request.input.name))
+
+            try:
+                item = session.query(Server).filter_by(id=self.request.input.id).one()
+                item.name = self.request.input.name
+
+                session.add(item)
+                session.commit()
+                
+                self.response.payload.id = item.id
+                self.response.payload.name = item.name
+                self.response.payload.host = item.host
+                self.response.payload.up_status = item.up_status
+                self.response.payload.up_mod_date = item.up_mod_date
+                
+            except Exception, e:
+                msg = 'Could not update the server, id:[{}], e:[{}]'.format(self.request.input.id, format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+
+                raise
+            

@@ -33,6 +33,7 @@ from django.template import loader, RequestContext
 from anyjson import dumps
 
 # Zato
+from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.cluster import CreateClusterForm, DeleteClusterForm, EditClusterForm, EditServerForm
 from zato.admin.web.views import Index as _Index, get_lb_client, meth_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
@@ -249,4 +250,16 @@ def servers(req):
 
 @meth_allowed('POST')
 def servers_edit(req):
+    try:
+        client = get_lb_client(req.zato.cluster)
+        client.rename_server(req.POST['edit-old_name'], req.POST['edit-name'])
+
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
+            'zato:cluster.server.Edit', {'id':req.POST['id'], 'name':req.POST['edit-name']})
+        
+        print(3333, zato_message)
+        
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
+
     return HttpResponse('')

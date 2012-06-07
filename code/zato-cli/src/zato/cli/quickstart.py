@@ -232,6 +232,9 @@ class Quickstart(ZatoCommand):
         """
         soap_services = {
 
+            # Cluster - servers
+            'zato:cluster.server.Edit':'zato.server.service.internal.server.Edit',
+
             # Scheduler
             'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
             'zato:scheduler.job.create':'zato.server.service.internal.scheduler.Create',
