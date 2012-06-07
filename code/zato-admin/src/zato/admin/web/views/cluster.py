@@ -193,7 +193,8 @@ def get_servers_state(req, cluster_id):
 
 @meth_allowed('POST')
 def delete(req, cluster_id):
-
+    """ Deletes a cluster *permanently*.
+    """
     try:
         cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
 
@@ -207,20 +208,40 @@ def delete(req, cluster_id):
     else:
         return HttpResponse()
     
-class Servers(_Index):
-    """ A list of servers belonging to a cluster.
+@meth_allowed('GET')
+def servers(req):
+    """ A view for server management.
     """
-    meth_allowed = 'GET'
-    url_name = 'cluster-servers'
-    template = 'zato/cluster/servers.html'
+    items = req.zato.odb.query(Server).order_by('name').all()
+    client = get_lb_client(req.zato.cluster)
     
-    soap_action = 'zato:server.get-list'
-    output_class = Server
+    try:
+        server_data_dict = client.get_server_data_dict()
+        bck_http_plain = client.get_config()['backend']['bck_http_plain']
+        lb_client_invoked = True
+    except Exception, e:
+        lb_client_invoked = False
     
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name',)
-        output_repeated = True
+    if lb_client_invoked:
+        def _update_item(server_name, lb_address, lb_state):
+            for item in items:
+                if item.name == server_name:
+                    item.in_lb = True
+                    item.lb_address = lb_address
+                    item.lb_state = lb_state
+        
+        for server_name in bck_http_plain:
+            lb_address = '{}:{}'.format(bck_http_plain[server_name]['address'], bck_http_plain[server_name]['port'])
+            _update_item(server_name, lb_address, server_data_dict[server_name]['state'])
     
-    def handle(self):
-        return {}
+    return_data = {
+        'items':items,
+        'choose_cluster_form':req.zato.choose_cluster_form,
+        'zato_clusters':req.zato.clusters,
+        'cluster':req.zato.cluster,
+    }
+    
+    if logger.isEnabledFor(TRACE1):
+        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(return_data))
+
+    return render_to_response('zato/cluster/servers.html', return_data, context_instance=RequestContext(req))

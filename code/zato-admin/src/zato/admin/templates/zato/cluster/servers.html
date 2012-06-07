@@ -1,0 +1,116 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block extra_js %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            'name',
+            'host',
+            'in_lb',
+            'lb_state',
+            'lb_address',
+            'up_status',
+            'up_mod_date',
+            '_add_remove_lb',
+            '_edit',
+        ]
+    }
+    
+    </script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">Clusters : {% if cluster %}<a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> :{% endif %} Servers</h2>
+
+{% if not zato_clusters %}
+    <p>
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url cluster %}" class="common">Click here</a> to register a new cluster first.
+    <br/><br/>
+    </p>
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    <div class="prompt">
+    {% if not cluster.id %}
+        Choose a cluster to manage servers
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_cluster_form.cluster }}
+        <input type="submit" value="Show servers" />
+    </form>
+    </div>
+
+
+    {% if cluster.id %}
+        
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">Server host/FQDN</a></th>
+                        <th><a href="#">Server state</a></th>
+                        <th><a href="#">Server state update (UTC)</a></th>
+                        <th><a href="#">In LB</a></th>
+                        <th><a href="#">LB state</a></th>
+                        <th><a href="#">LB address</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.host|default:'(unknown)' }}</td>
+                        <td>{{ item.up_status|default:'(unknown)' }}</td>
+                        <td>{{ item.up_mod_date|default:'(unknown)' }}</td>
+                        <td>{{ item.in_lb|default:'(unknown)' }}</td>
+                        <td>{{ item.lb_state|default:'(unknown)' }}</td>
+                        <td>{{ item.lb_address|default:'(unknown)' }}</td>
+                        <td>
+                            {% if item.in_lb %}
+                                <a href="javascript:$.fn.zato.cluster.server.remove_from_lb('{{ item.id }}')">Remove from LB</a>
+                            {% else %}
+                                <a href="javascript:$.fn.zato.cluster.server.add_to_lb('{{ item.id }}')">Add to LB</a>
+                            {% endif %}
+                        </td>
+                        <td><a href="javascript:$.fn.zato.cluster.server.edit('{{ item.id }}')">Edit</a></td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='10'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+    {% endif %}
+
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

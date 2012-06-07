@@ -125,10 +125,17 @@ class Server(Base):
 
     id = Column(Integer,  Sequence('server_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+    host = Column(String(400), nullable=True)
 
+    # If the server's request to join a cluster has been accepted, and for now
+    # it will always be.
     last_join_status = Column(String(40), nullable=True)
-    last_join_mod_date = Column(DateTime(timezone=True), nullable=True)
+    last_join_mod_date = Column(DateTime(), nullable=True)
     last_join_mod_by = Column(String(200), nullable=True)
+    
+    # Whether the server's up or not
+    up_status = Column(String(40), nullable=True)
+    up_mod_date = Column(DateTime(), nullable=True)
 
     odb_token = Column(String(32), nullable=False)
 
@@ -144,6 +151,10 @@ class Server(Base):
         self.last_join_status = last_join_status
         self.last_join_mod_date = last_join_mod_date
         self.last_join_mod_by = last_join_mod_by
+        self.has_lb_config = False # Not used by the database
+        self.in_lb = False # Not used by the database
+        self.lb_state = None # Not used by the database
+        self.lb_address = None # Not used by the database
 
 ################################################################################
 

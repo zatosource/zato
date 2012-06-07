@@ -95,12 +95,12 @@ class LoadBalancerAgent(SSLServer):
         becomes a 'ping' method, self._lb_agent_get_uptime_info -> 'get_uptime_info'
         etc.
         """
-        for item in dir(self):
+        for item in sorted(dir(self)):
             if item.startswith(public_method_prefix):
                 public_name = item.split(public_method_prefix)[1]
                 attr = getattr(self, item)
                 msg = "Registering [{attr}] under public name [{public_name}]"
-                logger.debug(msg.format(attr=attr, public_name=public_name)) # TODO: Add logging config
+                logger.info(msg.format(attr=attr, public_name=public_name)) # TODO: Add logging config
                 self.register_function(attr, public_name)
 
     def _read_config(self):
@@ -160,8 +160,10 @@ class LoadBalancerAgent(SSLServer):
         f = open(self.config_path, "wb")
         f.write(config_string)
         f.close()
-
+        
         self.config = self._read_config()
+        
+        print(self.config)
 
     def _validate_save_config_string(self, config_string, save):
         """ Given a string representing the HAProxy config file it first validates
@@ -176,6 +178,25 @@ class LoadBalancerAgent(SSLServer):
 
 # ##############################################################################
 
+    def _show_stat(self):
+        stat = self.haproxy_stats.execute('show stat')
+
+        for line in stat.splitlines():
+            if line.startswith('#') or not line.strip():
+                continue
+            line = line.split(',')
+            
+            print(555, line)
+
+            haproxy_name = line[0]
+            haproxy_type_or_name = line[1]
+
+            if haproxy_name.startswith('bck') and not haproxy_type_or_name == 'BACKEND':
+                backend_name, state = line[1], line[17]
+                access_type, server_name = backend_name.split('--')
+                
+                yield access_type, server_name, state
+
     def _lb_agent_validate_save_source_code(self, source_code, save=False):
         """ Validate or validates & saves (if 'save' flag is True) an HAProxy
         configuration passed in as a string. Note that the validation step is always performed.
@@ -183,7 +204,7 @@ class LoadBalancerAgent(SSLServer):
         return self._validate_save_config_string(source_code, save)
 
     def _lb_agent_validate_save(self, lb_config, save=False):
-        """ Validate or validates & saves (if 'save' flag is True) an HAProxy
+        """ Validate or validates /and/ saves (if 'save' flag is True) an HAProxy
         configuration. Note that the validation step is always performed.
         """
         config_string = string_from_config(lb_config, open(self.config_path).readlines())
@@ -198,40 +219,33 @@ class LoadBalancerAgent(SSLServer):
         third one is MAINT, the result will be:
 
         {
-          "UP": {"http_plain": ["SERVER.1"]},
-          "DOWN": {"http_plain": ["SERVER.2"]},
-          "MAINT": {"http_plain": ["SERVER.3"]},
+          'UP': {'http_plain': ['SERVER.1']},
+          'DOWN': {'http_plain': ['SERVER.2']},
+          'MAINT': {'http_plain': ['SERVER.3']},
         }
         """
-
         servers_state = {
-            "UP": {"http_plain":[]},
-            "DOWN": {"http_plain":[]},
-            "MAINT": {"http_plain":[]},
+            'UP': {'http_plain':[]},
+            'DOWN': {'http_plain':[]},
+            'MAINT': {'http_plain':[]},
         }
-        stat = self.haproxy_stats.execute("show stat")
-
-        for line in stat.splitlines():
-            if line.startswith("#") or not line.strip():
-                continue
-            line = line.split(",")
-
-            haproxy_name = line[0]
-            haproxy_type_or_name = line[1]
-
-            if haproxy_name.startswith("bck") and not haproxy_type_or_name == "BACKEND":
-                backend_name, state = line[1], line[17]
-                access_type, server_name = backend_name.split("--")
-
-                # Don't bail out when future HAProxy versions introduce states
-                # we aren't currently aware of.
-                if state not in servers_state:
-                    msg = "Encountered unknown state [{state}], recognized ones are [{states}]"
-                    logger.warning(msg.format(state=state, states=str(sorted(servers_state))))
-                else:
-                    servers_state[state][access_type].append(server_name)
-
+        
+        for access_type, server_name, state in self._show_stat():
+            # Don't bail out when future HAProxy versions introduce states
+            # we aren't currently aware of.
+            if state not in servers_state:
+                msg = 'Encountered unknown state [{state}], recognized ones are [{states}]'
+                logger.warning(msg.format(state=state, states=str(sorted(servers_state))))
+            else:
+                servers_state[state][access_type].append(server_name)
         return servers_state
+    
+    def _lb_agent_get_server_data_dict(self):
+        servers = {}
+        for access_type, server_name, state in self._show_stat():
+            servers[server_name] = {'access_type':access_type, 'state':state}
+            
+        return servers
 
     def _lb_agent_execute_command(self, command, timeout, extra=""):
         """ Execute an HAProxy command through its UNIX socket interface.

@@ -57,7 +57,7 @@ urlpatterns = patterns('',
     url(r'^zato/cluster/servers-state/(?P<cluster_id>.*)$', cluster.get_servers_state, name='cluster-servers-state'),
     url(r'^zato/cluster/get/by-id/(?P<cluster_id>.*)$', cluster.get_by_id, name='cluster-get-by-id'),
     url(r'^zato/cluster/get/by-name/(?P<cluster_name>.*)/$', cluster.get_by_name, name='cluster-get-by-name'),
-    url(r'^zato/cluster/servers/$', cluster.Servers(), name=cluster.Servers.url_name),
+    url(r'^zato/cluster/servers/$', cluster.servers, name='cluster-servers'),
 
     # Load balancer
     url(r'^zato/load-balancer/get-addresses/cluster/(?P<cluster_id>.*)/$', load_balancer.get_addresses, name='lb-get-addresses'),
