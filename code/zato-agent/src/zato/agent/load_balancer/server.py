@@ -67,12 +67,10 @@ class LoadBalancerAgent(SSLServer):
 
         log_config = os.path.abspath(os.path.join(config_dir, self.json_config['log_config']))
         work_dir = os.path.abspath(os.path.join(config_dir, self.json_config['work_dir']))
-        haproxy_command = self.json_config['haproxy_command']
 
         logging.config.fileConfig(log_config)
 
         self.work_dir = os.path.abspath(work_dir)
-        self.haproxy_command = haproxy_command
         self.config_path = os.path.join(self.work_dir, config_file)
         self.config = self._read_config()
         self.start_time = time()
@@ -82,6 +80,16 @@ class LoadBalancerAgent(SSLServer):
                 port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
                 ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
                 verify_fields=self.verify_fields)
+        
+    def start_load_balancer(self):
+        """ Starts the HAProxy load balancer in background.
+        """
+        # def _lb_agent_restart_haproxy
+        # haproxy -D -f /home/dsuch/tmp/qs-1/load-balancer/config/zato.config -p /tmp/zato.pid -sf $(cat /tmp/zato.pid)
+        
+    def restart_load_balancer(self):
+        """ Restarts the HAProxy load balancer without disrupting existing connections.
+        """
 
     def _dispatch(self, method, params):
         try:
@@ -113,6 +121,24 @@ class LoadBalancerAgent(SSLServer):
         """ Read and parse the HAProxy configuration.
         """
         return config_from_string(self._read_config_string())
+    
+    def _popen(self, command, timeout):
+        """ Runs a command in background and returns its return_code, stdout and stderr.
+        stdout and stderr will be None if return code = 0
+        """
+        stdout, stderr = None, None 
+        
+        # Run the command
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
+        
+        # Sleep as long as requested and poll for results
+        sleep(timeout)
+        p.poll()
+        
+        if p.returncode:
+            stdout, stderr = p.communicate()
+            
+        return p.returncode, stdout, stderr
 
     def _validate(self, config_string):
 
@@ -123,18 +149,15 @@ class LoadBalancerAgent(SSLServer):
                 tf.flush()
 
                 command = [self.haproxy_command, "-c", "-f", tf.name]
-                p = Popen(command, stdout=PIPE, stderr=PIPE)
-
+                return_code, stdout, stderr = self._popen(command, HAPROXY_VALIDATE_TIMEOUT)
+                
                 # Build it up front here, who knows, maybe we'll need it and if we
                 # do it may be needed in several places.
                 common_error_details = "command:[{command}], config_file:[{config_file}]"
                 common_error_details = common_error_details.format(command=command, config_file=open(tf.name).read())
 
-                sleep(HAPROXY_VALIDATE_TIMEOUT)
-                p.poll()
-
                 # returncode can be 0 (and we actually hope it is :-))
-                if p.returncode is None:
+                if return_code is None:
                     msg = "HAProxy didn't respond in [{HAPROXY_VALIDATE_TIMEOUT}] seconds. "
                     msg += common_error_details
                     msg = msg.format(HAPROXY_VALIDATE_TIMEOUT=HAPROXY_VALIDATE_TIMEOUT)
@@ -142,12 +165,11 @@ class LoadBalancerAgent(SSLServer):
                 else:
                     # returncode not being equal to 0 means there were problems with
                     # validating the config file, stdout & stderr will have details.
-                    if p.returncode != 0:
-                        stdout, stderr = p.communicate()
+                    if return_code != 0:
                         msg = "Failed to validate the config file using HAProxy. "
                         msg += "return code:[{returncode}], stdout:[{stdout}], stderr:[{stderr}] "
                         msg += common_error_details
-                        msg = msg.format(returncode=p.returncode, stdout=stdout, stderr=stderr)
+                        msg = msg.format(returncode=return_code, stdout=stdout, stderr=stderr)
                         raise Exception(msg)
 
                 # All went fine, config was valid.

@@ -96,7 +96,7 @@ Examples:
 
     def _on_lb(self):
 
-        # First the agent.
+        # Start the agent which will in turn start the load balancer
         config_path = os.path.join(self.config_dir, 'lb-agent.conf')
 
         zdaemon_conf_name = 'zdaemon-lb.conf'
