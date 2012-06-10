@@ -155,6 +155,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var form_elem_name = null;
     var form_elem = null;
     var fields = $.fn.zato.form.serialize(form);
+    var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
 
     for(field_name in fields) {
         if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
@@ -165,11 +166,16 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
-                        if($.fn.zato.to_bool(value)) {
-                            form_elem.attr('checked', 'checked');
+                        if(_.include(skip_boolean, field_name)) {
+                            form_elem.val(value);
                         }
-                        else {
-                            form_elem.removeAttr('checked');
+                            else {
+                            if($.fn.zato.to_bool(value)) {
+                                form_elem.attr('checked', 'checked');
+                            }
+                            else {
+                                form_elem.removeAttr('checked');
+                            }
                         }
                     }
                     else if(form_elem.is('select')) {
