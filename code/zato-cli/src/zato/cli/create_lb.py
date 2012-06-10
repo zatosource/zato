@@ -33,9 +33,10 @@ config_template = """{
   "keyfile": "./lba-priv-key.pem",
   "certfile": "./lba-cert.pem",
   "ca_certs": "./ca-chain.pem",
-  "work_dir": ".",
+  "work_dir": "../",
   "verify_fields": {},
-  "log_config": "./logging.conf"
+  "log_config": "./logging.conf",
+  "pid_file": "zato-lb-agent.pid"
 }
 """
 
