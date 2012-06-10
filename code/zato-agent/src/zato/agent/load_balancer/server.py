@@ -54,24 +54,23 @@ HAPROXY_VALIDATE_TIMEOUT=0.3
 class LoadBalancerAgent(SSLServer):
     def __init__(self, json_config_path):
 
-        config_dir = os.path.dirname(json_config_path)
+        self.config_dir = os.path.dirname(json_config_path)
         self.json_config = json.loads(open(json_config_path).read())
 
-        self.work_dir = os.path.abspath(os.path.join(config_dir, self.json_config['work_dir']))
+        self.work_dir = os.path.abspath(os.path.join(self.config_dir, self.json_config['work_dir']))
         self.haproxy_command = self.json_config['haproxy_command']
         self.verify_fields = self.json_config['verify_fields']
 
-        self.keyfile = os.path.abspath(os.path.join(config_dir, self.json_config['keyfile']))
-        self.certfile = os.path.abspath(os.path.join(config_dir, self.json_config['certfile']))
-        self.ca_certs = os.path.abspath(os.path.join(config_dir, self.json_config['ca_certs']))
+        self.keyfile = os.path.abspath(os.path.join(self.config_dir, self.json_config['keyfile']))
+        self.certfile = os.path.abspath(os.path.join(self.config_dir, self.json_config['certfile']))
+        self.ca_certs = os.path.abspath(os.path.join(self.config_dir, self.json_config['ca_certs']))
+        
+        self.pid_path = os.path.abspath(os.path.join(self.work_dir, self.json_config['pid_file']))
 
-        log_config = os.path.abspath(os.path.join(config_dir, self.json_config['log_config']))
-        work_dir = os.path.abspath(os.path.join(config_dir, self.json_config['work_dir']))
-
+        log_config = os.path.abspath(os.path.join(self.config_dir, self.json_config['log_config']))
         logging.config.fileConfig(log_config)
 
-        self.work_dir = os.path.abspath(work_dir)
-        self.config_path = os.path.join(self.work_dir, config_file)
+        self.config_path = os.path.join(self.config_dir, config_file)
         self.config = self._read_config()
         self.start_time = time()
         self.haproxy_stats = HAProxyStats(self.config.global_["stats_socket"])
@@ -81,15 +80,48 @@ class LoadBalancerAgent(SSLServer):
                 ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
                 verify_fields=self.verify_fields)
         
+    def _popen(self, command, timeout, timeout_msg, rc_non_zero_msg, common_msg=''):
+        """ Runs a command in background and returns its return_code, stdout and stderr.
+        stdout and stderr will be None if return code = 0
+        """
+        stdout, stderr = None, None 
+        
+        # Run the command
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
+        
+        # Sleep as long as requested and poll for results
+        sleep(timeout)
+        p.poll()
+
+        if p.returncode is None:
+            msg = timeout_msg + common_msg + 'command:[{}]'.format(command)
+            raise Exception(msg.format(timeout))
+        else:
+            if p.returncode != 0:
+                stdout, stderr = p.communicate()
+                msg = rc_non_zero_msg + common_msg + 'command:[{}], return code:[{}], stdout:[{}], stderr:[{}] '.format(
+                    command, p.returncode, stdout, stderr)
+                raise Exception(msg)
+            
+        return p.returncode
+
+    def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
+        """ A common method for (re-)starting HAProxy.
+        """
+        command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.pid_path]
+        command.extend(additional_params)
+        self._popen(command, 5.0, timeout_msg, rc_non_zero_msg)
+        
     def start_load_balancer(self):
         """ Starts the HAProxy load balancer in background.
         """
-        # def _lb_agent_restart_haproxy
-        # haproxy -D -f /home/dsuch/tmp/qs-1/load-balancer/config/zato.config -p /tmp/zato.pid -sf $(cat /tmp/zato.pid)
-        
+        self._re_start_load_balancer("HAProxy didn't start in [{}] seconds. ", 'Failed to start HAProxy. ')
+
     def restart_load_balancer(self):
         """ Restarts the HAProxy load balancer without disrupting existing connections.
         """
+        additional_params = ['-sf', open(self.pid_path).read().strip()]
+        self._re_start_load_balancer("Could not restart in [{}] seconds. ", 'Failed to restart HAProxy. ', additional_params)
 
     def _dispatch(self, method, params):
         try:
@@ -122,31 +154,6 @@ class LoadBalancerAgent(SSLServer):
         """
         return config_from_string(self._read_config_string())
     
-    def _popen(self, command, timeout, timeout_msg, rc_non_zero_msg, common_msg=''):
-        """ Runs a command in background and returns its return_code, stdout and stderr.
-        stdout and stderr will be None if return code = 0
-        """
-        stdout, stderr = None, None 
-        
-        # Run the command
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        
-        # Sleep as long as requested and poll for results
-        sleep(timeout)
-        p.poll()
-
-        if p.returncode is None:
-            msg = timeout_msg + common_msg + 'command:[{}]'.format(command)
-            raise Exception(msg.format(timeout))
-        else:
-            if p.returncode != 0:
-                stdout, stderr = p.communicate()
-                msg = rc_non_zero_msg + common_msg + 'command:[{}], return code:[{}], stdout:[{}], stderr:[{}] '.format(
-                    command, p.returncode, stdout, stderr)
-                raise Exception(msg)
-            
-        return p.returncode
-
     def _validate(self, config_string):
         """ Writes the config into a temporary file and validates it using the HAProxy's
         -c check mode.
@@ -184,12 +191,13 @@ class LoadBalancerAgent(SSLServer):
         
     def _validate_save_config_string(self, config_string, save):
         """ Given a string representing the HAProxy config file it first validates
-        it and then optionally saves it.
+        it and then optionally saves it and restarts the load balancer.
         """
         self._validate(config_string)
 
         if save:
             self._save_config(config_string)
+            self.restart_load_balancer()
 
         return True
 
