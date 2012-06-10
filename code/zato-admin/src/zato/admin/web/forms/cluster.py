@@ -87,6 +87,3 @@ class DeleteClusterForm(forms.Form):
 class EditServerForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     old_name = forms.CharField(widget=forms.HiddenInput(attrs={'class':'required'}))
-    lb_state = forms.CharField(widget=forms.HiddenInput(attrs={'class':'required'}))
-    lb_address = forms.CharField(widget=forms.HiddenInput(attrs={'class':'required'}))
-    in_lb = forms.CharField(widget=forms.HiddenInput(attrs={'class':'required'}))
