@@ -122,7 +122,7 @@ class LoadBalancerAgent(SSLServer):
         """
         return config_from_string(self._read_config_string())
     
-    def _popen(self, command, timeout):
+    def _popen(self, command, timeout, timeout_msg, rc_non_zero_msg, common_msg=''):
         """ Runs a command in background and returns its return_code, stdout and stderr.
         stdout and stderr will be None if return code = 0
         """
@@ -134,48 +134,40 @@ class LoadBalancerAgent(SSLServer):
         # Sleep as long as requested and poll for results
         sleep(timeout)
         p.poll()
-        
-        if p.returncode:
-            stdout, stderr = p.communicate()
+
+        if p.returncode is None:
+            msg = timeout_msg + common_msg + 'command:[{}]'.format(command)
+            raise Exception(msg.format(timeout))
+        else:
+            if p.returncode != 0:
+                stdout, stderr = p.communicate()
+                msg = rc_non_zero_msg + common_msg + 'command:[{}], return code:[{}], stdout:[{}], stderr:[{}] '.format(
+                    command, p.returncode, stdout, stderr)
+                raise Exception(msg)
             
-        return p.returncode, stdout, stderr
+        return p.returncode
 
     def _validate(self, config_string):
-
+        """ Writes the config into a temporary file and validates it using the HAProxy's
+        -c check mode.
+        """
         try:
-            with NamedTemporaryFile(prefix="zato-tmp", dir=self.work_dir) as tf:
+            with NamedTemporaryFile(prefix='zato-tmp', dir=self.work_dir) as tf:
 
                 tf.write(config_string)
                 tf.flush()
-
-                command = [self.haproxy_command, "-c", "-f", tf.name]
-                return_code, stdout, stderr = self._popen(command, HAPROXY_VALIDATE_TIMEOUT)
                 
-                # Build it up front here, who knows, maybe we'll need it and if we
-                # do it may be needed in several places.
-                common_error_details = "command:[{command}], config_file:[{config_file}]"
-                common_error_details = common_error_details.format(command=command, config_file=open(tf.name).read())
+                common_msg = 'config_file:[{}]'
+                common_msg = common_msg.format(open(tf.name).read())
+                
+                timeout_msg = "HAProxy didn't respond in [{}] seconds. "
+                rc_non_zero_msg = 'Failed to validate the config file using HAProxy. '
+                
+                command = [self.haproxy_command, '-c', '-f', tf.name]
+                self._popen(command, HAPROXY_VALIDATE_TIMEOUT, timeout_msg, rc_non_zero_msg, common_msg)
 
-                # returncode can be 0 (and we actually hope it is :-))
-                if return_code is None:
-                    msg = "HAProxy didn't respond in [{HAPROXY_VALIDATE_TIMEOUT}] seconds. "
-                    msg += common_error_details
-                    msg = msg.format(HAPROXY_VALIDATE_TIMEOUT=HAPROXY_VALIDATE_TIMEOUT)
-                    raise Exception(msg)
-                else:
-                    # returncode not being equal to 0 means there were problems with
-                    # validating the config file, stdout & stderr will have details.
-                    if return_code != 0:
-                        msg = "Failed to validate the config file using HAProxy. "
-                        msg += "return code:[{returncode}], stdout:[{stdout}], stderr:[{stderr}] "
-                        msg += common_error_details
-                        msg = msg.format(returncode=return_code, stdout=stdout, stderr=stderr)
-                        raise Exception(msg)
-
-                # All went fine, config was valid.
-                return True
         except Exception, e:
-            msg = "Caught an exception, e:[{e}]".format(e=format_exc(e))
+            msg = 'Caught an exception, e:[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             raise Exception(msg)
 

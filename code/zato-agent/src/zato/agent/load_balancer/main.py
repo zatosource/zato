@@ -28,5 +28,5 @@ from zato.agent.load_balancer.server import LoadBalancerAgent
 if __name__ == '__main__':
     json_config_path = sys.argv[1]
     lba = LoadBalancerAgent(json_config_path)
-    #lba.start_load_balancer()
+    lba.start_load_balancer()
     lba.serve_forever()
