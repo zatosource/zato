@@ -16,7 +16,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Server;
     $.fn.zato.data_table.new_row_func = $.fn.zato.cluster.servers.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'old_name']);
+    $.fn.zato.data_table.setup_forms(['name', 'old_name', 'lb_state', 'lb_address', 'in_lb']);
 })
 
 $.fn.zato.cluster.servers.edit = function(id) {
@@ -37,29 +37,37 @@ $.fn.zato.cluster.servers.data_table.new_row = function(item, data, include_tr) 
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
     
-    /*
-    var is_active = $.fn.zato.like_bool(item.is_active) == true;
-    var is_internal = $.fn.zato.like_bool(data.is_internal) == true;
+    var in_lb = $.fn.zato.like_bool(data.in_lb) == true;
+    var in_lb_link = '';
     
-    var cluster_id = $(document).getUrlParam('cluster');
+    if(in_lb) {
+        in_lb_link += String.format("<a href=\"javascript:$.fn.zato.cluster.servers.remove_from_lb('{0}')\">Remove from LB</a>", data.id);
+    }
+    else {
+        in_lb_link += String.format("<a href=\"javascript:$.fn.zato.cluster.servers.add_to_lb('{0}')\">Add to LB</a>", data.id);
+    }
     
     row += "<td class='numbering'>&nbsp;</td>";
-    row += "<td><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', $.fn.zato.data_table.Server_text(data.name, cluster_id));
-    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', data.impl_name);
-    row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', data.usage_count);
+    row += String.format('<td>{0}</td>', data.name);
+    row += String.format('<td>{0}</td>', data.host);
+    row += String.format('<td>{0}</td>', data.up_status);
+    row += String.format('<td>{0}</td>', data.up_mod_date);
+    row += String.format('<td>{0}</td>', data.lb_state);
+    row += String.format('<td>{0}</td>', data.lb_address);
+    
+    row += String.format('<td>{0}</td>', in_lb_link);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cluster.servers.edit('{0}')\">Edit</a>", data.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cluster.servers.delete_({0});'>Delete</a>", data.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cluster.servers.delete_('{0}')\">Delete</a>", data.id));
+
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
-    row += String.format("<td class='ignore'>{0}</td>", is_active);
-    row += String.format("<td class='ignore'>{0}</td>", is_internal);
-    */
+    row += String.format("<td class='ignore'>{0}</td>", data.name);
+    row += String.format("<td class='ignore'>{0}</td>", data.in_lb);
 
     if(include_tr) {
         row += '</tr>';
     }
+    
+    $.fn.zato.data_table.data[data.id].old_name = data.name;
 
     return row;
 }
