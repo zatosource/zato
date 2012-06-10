@@ -104,10 +104,10 @@ Examples:
         program = 'python -m zato.agent.load_balancer.main {0}'.format(config_path)
         logfile_path_prefix = 'zdaemon-lb-agent'
 
-        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
-                            logfile_path_prefix, program)
+        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
 
         # Now start HAProxy.
+        '''
         config_path = os.path.join(self.config_dir, 'zato.config')
 
         zdaemon_conf_name = 'zdaemon-haproxy.conf'
@@ -117,6 +117,7 @@ Examples:
 
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                             logfile_path_prefix, program)
+                            '''
 
         print('Zato load balancer and agent started at {0}'.format(self.component_dir))
 
