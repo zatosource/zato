@@ -259,6 +259,17 @@ def servers_edit(req):
         
         msg_item = zato_message.response.item
         name = msg_item.name.text
+        
+        lb_server_data = client.get_server_data_dict(name)
+        
+        if lb_server_data:
+            in_lb = True
+            state = lb_server_data[name]['state']
+            lb_address = lb_server_data[name]['address']
+        else:
+            in_lb = False
+            state = '(unknown)'
+            lb_address = '(unknown)'
 
         return_data = {
             'id': msg_item.id.text,
@@ -266,9 +277,9 @@ def servers_edit(req):
             'host': msg_item.host.text or '(unknown)',
             'up_status': msg_item.up_status.text or '(unknown)',
             'up_mod_date': msg_item.up_mod_date.text or '(unknown)',
-            'lb_state': req.POST['edit-lb_state'],
-            'lb_address': req.POST['edit-lb_address'],
-            'in_lb': req.POST['edit-in_lb'],
+            'lb_state': state,
+            'lb_address': lb_address,
+            'in_lb': in_lb,
             'message': 'Server [{}] updated'.format(name),
         }
         return HttpResponse(dumps(return_data), mimetype='application/javascript')

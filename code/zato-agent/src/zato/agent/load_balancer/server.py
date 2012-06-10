@@ -263,13 +263,26 @@ class LoadBalancerAgent(SSLServer):
                 servers_state[state][access_type].append(server_name)
         return servers_state
     
-    def _lb_agent_get_server_data_dict(self):
+    def _lb_agent_get_server_data_dict(self, name=None):
         """ Returns a dictionary whose keys are server names and values are their
         access types and the server's status as reported by HAProxy.
         """
+        backend_config = self.config.backend['bck_http_plain']
         servers = {}
+        
+        def _dict(access_type, state, server_name):
+            return {
+                'access_type':access_type, 
+                'state':state,
+                'address': '{}:{}'.format(backend_config[server_name]['address'], backend_config[server_name]['port'])
+            }
+        
         for access_type, server_name, state in self._show_stat():
-            servers[server_name] = {'access_type':access_type, 'state':state}
+            if name:
+                if name == server_name:
+                    servers[server_name] = _dict(access_type, state, server_name)
+            else:
+                servers[server_name] = _dict(access_type, state, server_name)
             
         return servers
     
