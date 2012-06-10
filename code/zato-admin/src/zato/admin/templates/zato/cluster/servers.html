@@ -29,6 +29,7 @@
             '_delete',
             'id',
             'old_name',
+            'in_lb',
         ]
     }
     
@@ -101,11 +102,12 @@
                         <td><a href="javascript:$.fn.zato.cluster.servers.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.name }}</td>
+                        <td class='ignore'>{{ item.in_lb }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='11'>No results</td>
+                        <td colspan='12'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -123,6 +125,9 @@
                             <td>
                                 {{ edit_form.name }}
                                 {{ edit_form.old_name }}
+                                {{ edit_form.lb_state }}
+                                {{ edit_form.lb_address }}
+                                {{ edit_form.in_lb }}
                             </td>
                         </tr>
                         

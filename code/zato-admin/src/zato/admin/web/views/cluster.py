@@ -254,10 +254,24 @@ def servers_edit(req):
         client = get_lb_client(req.zato.cluster)
         client.rename_server(req.POST['edit-old_name'], req.POST['edit-name'])
 
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
+        zato_message, _ = invoke_admin_service(req.zato.cluster, 
             'zato:cluster.server.Edit', {'id':req.POST['id'], 'name':req.POST['edit-name']})
         
-        print(3333, zato_message)
+        msg_item = zato_message.response.item
+        name = msg_item.name.text
+
+        return_data = {
+            'id': msg_item.id.text,
+            'name': name,
+            'host': msg_item.host.text or '(unknown)',
+            'up_status': msg_item.up_status.text or '(unknown)',
+            'up_mod_date': msg_item.up_mod_date.text or '(unknown)',
+            'lb_state': req.POST['edit-lb_state'],
+            'lb_address': req.POST['edit-lb_address'],
+            'in_lb': req.POST['edit-in_lb'],
+            'message': 'Server [{}] updated'.format(name),
+        }
+        return HttpResponse(dumps(return_data), mimetype='application/javascript')
         
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
