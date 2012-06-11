@@ -93,9 +93,9 @@
                         <td>{{ item.lb_address|default:'(unknown)' }}</td>
                         <td>
                             {% if item.in_lb %}
-                                <a href="javascript:$.fn.zato.cluster.servers.remove_from_lb('{{ item.id }}')">Remove from LB</a>
+                                <a href="javascript:$.fn.zato.cluster.servers.add_remove_lb('remove', '{{ item.id }}', '{{ cluster.id }}')">Remove from LB</a>
                             {% else %}
-                                <a href="javascript:$.fn.zato.cluster.servers.add_to_lb('{{ item.id }}')">Add to LB</a>
+                                <a href="javascript:$.fn.zato.cluster.servers.add_remove_lb('add', '{{ item.id }}', '{{ cluster.id }}')">Add to LB</a>
                             {% endif %}
                         </td>
                         <td><a href="javascript:$.fn.zato.cluster.servers.edit('{{ item.id }}')">Edit</a></td>

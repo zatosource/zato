@@ -71,3 +71,20 @@ $.fn.zato.cluster.servers.data_table.new_row = function(item, data, include_tr) 
 
     return row;
 }
+
+$.fn.zato.cluster.servers.add_remove_lb = function(action, id, cluster_id) {
+
+    var _callback = function(data, status) {
+        var success = status == 'success';
+        msg = data.responseText;
+        $.fn.zato.user_message(success, msg);
+    }
+
+    $.ajax({
+        type: 'POST',
+        url: String.format('./load-balancer/{0}/{1}/cluster/{2}/', action, id, cluster_id),
+        data: '',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        complete: _callback
+    });
+}
