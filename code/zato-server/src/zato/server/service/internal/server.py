@@ -120,3 +120,19 @@ class Edit(AdminService):
 
                 raise
             
+class GetByID(AdminService):
+    """ Returns a particular server
+    """
+    class SimpleIO:
+        input_required = ('id',)
+        output_required = ('id', 'cluster_id', 'name', 'host')
+        output_optional = ('last_join_status', 'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
+        
+    def get_data(self, session):
+        return session.query(Server).\
+            filter(Server.id==self.request.input.id).\
+            one()
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = self.get_data(session)

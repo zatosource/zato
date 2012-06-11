@@ -250,12 +250,14 @@ def servers(req):
 
 @meth_allowed('POST')
 def servers_edit(req):
+    """ Updates a server in both ODB and the load balancer.
+    """
     try:
         client = get_lb_client(req.zato.cluster)
         client.rename_server(req.POST['edit-old_name'], req.POST['edit-name'])
 
         zato_message, _ = invoke_admin_service(req.zato.cluster, 
-            'zato:cluster.server.Edit', {'id':req.POST['id'], 'name':req.POST['edit-name']})
+            'zato:cluster.server.edit', {'id':req.POST['id'], 'name':req.POST['edit-name']})
         
         msg_item = zato_message.response.item
         name = msg_item.name.text
@@ -287,4 +289,14 @@ def servers_edit(req):
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
 
-    return HttpResponse('')
+
+@meth_allowed('POST')
+def servers_add_remove_lb(req, action, server_id, cluster_id):
+    """ Adds or removes a server from the load balancer's configuration.
+    """
+    client = get_lb_client(req.zato.cluster)
+    zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.get-by-id', {'id':server_id})
+    
+    print(333, _)
+    
+    return HttpResponse('zzz')
