@@ -34,18 +34,25 @@ $.fn.zato.cluster.servers.data_table.new_row = function(item, data, include_tr) 
     var row = '';
 
     if(include_tr) {
-        row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+        row += String.format("<tr id='tr_{0}' class='updated'>", data.id);
     }
     
     var in_lb = $.fn.zato.like_bool(data.in_lb) == true;
     var in_lb_link = '';
+    var action = '';
+    var action_text = '';
     
     if(in_lb) {
-        in_lb_link += String.format("<a href=\"javascript:$.fn.zato.cluster.servers.remove_from_lb('{0}')\">Remove from LB</a>", data.id);
+        action = 'remove';
+        action_text = 'Remove from LB';
     }
     else {
-        in_lb_link += String.format("<a href=\"javascript:$.fn.zato.cluster.servers.add_to_lb('{0}')\">Add to LB</a>", data.id);
+        action = 'add';
+        action_text = 'Add to LB';
     }
+    
+    in_lb_link += String.format("<a href=\"javascript:$.fn.zato.cluster.servers.add_remove_lb('{0}', '{1}', '{2}')\">{3}</a>", 
+        action, data.id, data.cluster_id, action_text);
     
     row += "<td class='numbering'>&nbsp;</td>";
     row += String.format('<td>{0}</td>', data.name);
@@ -75,9 +82,7 @@ $.fn.zato.cluster.servers.data_table.new_row = function(item, data, include_tr) 
 $.fn.zato.cluster.servers.add_remove_lb = function(action, id, cluster_id) {
 
     var _callback = function(data, status) {
-        var success = status == 'success';
-        msg = data.responseText;
-        $.fn.zato.user_message(success, msg);
+        $.fn.zato.data_table.on_submit_complete(data, status, 'edit');
     }
 
     $.ajax({
@@ -85,6 +90,7 @@ $.fn.zato.cluster.servers.add_remove_lb = function(action, id, cluster_id) {
         url: String.format('./load-balancer/{0}/{1}/cluster/{2}/', action, id, cluster_id),
         data: '',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        complete: _callback
+        complete: _callback,
+        dataType: 'json',
     });
 }
