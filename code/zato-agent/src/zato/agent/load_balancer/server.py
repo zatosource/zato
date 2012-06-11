@@ -31,7 +31,7 @@ from traceback import format_exc
 from springpython.remoting.xmlrpc import SSLServer
 
 # Zato
-from zato.agent.load_balancer.config import config_from_string, string_from_config
+from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
 from zato.common import ZATO_OK
 from zato.common.haproxy import haproxy_stats
@@ -328,8 +328,46 @@ class LoadBalancerAgent(SSLServer):
         
         return True
     
-    # def _lb_agent_restart_haproxy
-    # haproxy -D -f /home/dsuch/tmp/qs-1/load-balancer/config/zato.config -p /tmp/zato.pid -sf $(cat /tmp/zato.pid)
+    def _lb_agent_add_remove_server(self, action, server_name):
+        bck_http_plain = self.config.backend['bck_http_plain']
+        
+        if action == 'remove':
+            del bck_http_plain[server_name]
+        elif action == 'add':
+            bck_http_plain[server_name] = {}
+            bck_http_plain[server_name]['extra'] = 'check inter 2s rise 2 fall 2'
+            bck_http_plain[server_name]['address'] = 'example.com'
+            bck_http_plain[server_name]['port'] = '123456'
+        else:
+            raise Exception('Unrecognized action:[{}]'.format(action))
+        
+        new_config = []
+        config_string = self._read_config_string()
+
+        for line in config_string.splitlines():
+            if '# ZATO backend bck_http_plain' in line:
+                continue
+            else:
+                backends = []
+                if '# ZATO begin backend bck_http_plain' in line:
+                    for server_name in bck_http_plain:
+                        data_dict = {
+                            'server_type':'http_plain',
+                            'server_name':server_name,
+                            'address':bck_http_plain[server_name]['address'],
+                            'port':bck_http_plain[server_name]['port'],
+                            'extra':bck_http_plain[server_name]['extra'],
+                            'zato_item_token':zato_item_token,
+                            'backend_type':'bck_http_plain',
+                            
+                        }
+                        backends.append(backend_template.format(**data_dict))
+                line += ('\n' * 2) + '\n'.join(backends)
+            new_config.append(line.rstrip())
+        
+        self._validate_save_config_string('\n'.join(new_config), True)
+        
+        return True
 
     def _lb_agent_execute_command(self, command, timeout, extra=""):
         """ Execute an HAProxy command through its UNIX socket interface.

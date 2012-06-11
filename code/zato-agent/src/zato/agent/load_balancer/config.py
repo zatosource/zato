@@ -68,9 +68,11 @@ config_tokens_grammar = {
     "frontend front_http_plain:option log-http-requests":simple_option,
     "frontend front_http_plain:bind":frontend_bind,
     "frontend front_http_plain:maxconn":maxconn,
-
-
 }
+
+backend_template = 'server {server_type}--{server_name} '
+backend_template += '{address}:{port} {extra} '
+backend_template += '{zato_item_token}backend {backend_type}:server--{server_name}'
 
 def config_from_string(data):
     """ Given a string representing a HAProxy configuration, returns a Config
@@ -120,12 +122,6 @@ def string_from_config(config, config_template):
         "frontend front_http_plain:option log-http-requests":
             ("option {value}", dict(value=http_log[int(config["frontend"]["front_http_plain"]["log_http_requests"])][0])),
     }
-
-    # The backend template has completely different semantics so we didn't put
-    # it in the generic dispatch dict above.
-    backend_template = "server {server_type}--{server_name} "
-    backend_template += "{address}:{port} {extra} "
-    backend_template += "{zato_item_token}backend {backend_type}:server--{server_name}"
 
     new_config = []
     for line in config_template:

@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Zato
+from zato.common.util import make_repr
+
 # Statistics commands understood by HAproxy 1.3.x and newer. Note that the
 # command numbers must be consecutively increasing across HAProxy versions.
 haproxy_stats = {
