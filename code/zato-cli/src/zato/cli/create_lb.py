@@ -73,7 +73,12 @@ defaults
 backend bck_http_plain
     mode http
     balance roundrobin
+    
+# ZATO begin backend bck_http_plain
+
 {default_backend}
+
+# ZATO end backend bck_http_plain
 
 # ##############################################################################
 

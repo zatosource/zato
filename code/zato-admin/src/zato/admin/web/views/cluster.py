@@ -312,8 +312,10 @@ def servers_edit(req):
 def servers_add_remove_lb(req, action, server_id, cluster_id):
     """ Adds or removes a server from the load balancer's configuration.
     """
-    client = get_lb_client(req.zato.cluster)
     zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.get-by-id', {'id':server_id})
+    
+    client = get_lb_client(req.zato.cluster)
+    client.add_remove_server(action, zato_message.response.item.name.text)
     
     return _common_edit_message(zato_message, client, 'Server [{{}}] {} the load balancer'.format('removed from' if action == 'remove' else 'added to'))
     
