@@ -28,7 +28,7 @@ from uuid import uuid4
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
      create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, create_broker, create_server, create_zato_admin
+     ca_create_zato_admin, create_broker, create_server, create_zato_admin, nosql_opts
 from zato.common import SERVER_JOIN_STATUS, SIMPLE_IO
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb import ping_queries
@@ -114,7 +114,7 @@ class Quickstart(ZatoCommand):
         super(Quickstart, self).__init__()
         self.target_dir = target_dir
 
-    opts = deepcopy(common_odb_opts) + deepcopy(broker_opts)
+    opts = deepcopy(common_odb_opts) + deepcopy(broker_opts) + deepcopy(nosql_opts)
     description = "Quickly sets up a working Zato environment."
     
     def create_scripts(self):

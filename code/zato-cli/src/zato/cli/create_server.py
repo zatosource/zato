@@ -77,6 +77,17 @@ context_class=zato.server.spring_context.ZatoContext
 
 [misc]
 internal_services_may_be_deleted=False
+
+[nosql]
+host={nosql_host}
+port={nosql_port}
+path=
+password={nosql_password}
+db=0
+socket_timeout=
+encoding=
+encoding_errors=
+parser_class=
 """
 
 haproxy_conf_contents = """
@@ -195,14 +206,23 @@ class CreateServer(ZatoCommand):
 
         server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
         server_conf = open(server_conf_loc, 'w')
-        server_conf.write(server_conf_template.format(starting_port=starting_port,
-            parallel_count=parallel_count, odb_db_name=args.odb_dbname, odb_engine=args.odb_type, odb_host=args.odb_host,
-            odb_password=encrypt(args.odb_password, pub_key), odb_pool_size=default_odb_pool_size, 
-            odb_user=args.odb_user, odb_token=self.odb_token))
+        server_conf.write(
+            server_conf_template.format(
+                starting_port=starting_port,
+                parallel_count=parallel_count, 
+                odb_db_name=args.odb_dbname, 
+                odb_engine=args.odb_type, 
+                odb_host=args.odb_host,
+                odb_password=encrypt(args.odb_password, pub_key), 
+                odb_pool_size=default_odb_pool_size, 
+                odb_user=args.odb_user, 
+                odb_token=self.odb_token, 
+                nosql_host=args.nosql_host,
+                nosql_port=args.nosql_port, 
+                nosql_password=encrypt(args.nosql_password, pub_key) if args.nosql_password else ''))
         server_conf.close()
         
         print('Core configuration stored in {server_conf_loc}'.format(server_conf_loc=server_conf_loc))
-
         
         # Service list 2)
         # We'll need to add the list of services to the ODB depending on just 
