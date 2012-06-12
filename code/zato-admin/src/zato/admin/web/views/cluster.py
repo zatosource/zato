@@ -38,9 +38,10 @@ from bunch import Bunch
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.cluster import CreateClusterForm, DeleteClusterForm, EditClusterForm, EditServerForm
-from zato.admin.web.views import Index as _Index, get_lb_client, meth_allowed, set_servers_state
+from zato.admin.web.views import Delete as _Delete, Index as _Index, get_lb_client, meth_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
      DATABASE_USER, sqlalchemy_django_engine
+from zato.common import SERVER_UP_STATUS
 from zato.common.odb.model import Cluster, Server
 from zato.common.util import TRACE1
 
@@ -273,6 +274,10 @@ def servers(req):
                     item.in_lb = True
                     item.lb_address = lb_address
                     item.lb_state = lb_state
+                    if item.up_status == SERVER_UP_STATUS.RUNNING:
+                        item.may_be_deleted = False
+                    else:
+                        item.may_be_deleted = True
         
         for server_name in bck_http_plain:
             lb_address = '{}:{}'.format(bck_http_plain[server_name]['address'], bck_http_plain[server_name]['port'])
@@ -325,3 +330,8 @@ def servers_add_remove_lb(req, action, server_id):
         'Server [{{}}] {} the load balancer'.format('removed from' if action == 'remove' else 'added to'),
         server.id, server.name, server.host, server.up_status, server.up_mod_date,
         server.cluster_id)
+
+class ServerDelete(_Delete):
+    url_name = 'cluster-servers-delete'
+    error_message = 'Could not delete the server'
+    soap_action = 'zato:cluster.server.delete'

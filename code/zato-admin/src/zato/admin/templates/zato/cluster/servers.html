@@ -99,7 +99,11 @@
                             {% endif %}
                         </td>
                         <td><a href="javascript:$.fn.zato.cluster.servers.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.cluster.servers.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>
+                            {% if item.may_be_deleted %}
+                                <a href="javascript:$.fn.zato.cluster.servers.delete_('{{ item.id }}')">Delete</a>
+                            {% endif %}
+                        </td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.name }}</td>
                         <td class='ignore'>{{ item.in_lb }}</td>
@@ -135,6 +139,7 @@
                             </td>
                         </tr>                        
                     </table>
+                    <input type="hidden" id="cluster_id" name="ignored" value="{{ cluster.id }}" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster.id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

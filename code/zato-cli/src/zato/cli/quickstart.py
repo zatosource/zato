@@ -235,6 +235,7 @@ class Quickstart(ZatoCommand):
             # Cluster - servers
             'zato:cluster.server.edit':'zato.server.service.internal.server.Edit',
             'zato:cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
+            'zato:cluster.server.delete':'zato.server.service.internal.server.Delete',
 
             # Scheduler
             'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',

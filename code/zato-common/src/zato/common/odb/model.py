@@ -155,6 +155,7 @@ class Server(Base):
         self.in_lb = False # Not used by the database
         self.lb_state = None # Not used by the database
         self.lb_address = None # Not used by the database
+        self.may_be_deleted = None # Not used by the database
 
 ################################################################################
 
