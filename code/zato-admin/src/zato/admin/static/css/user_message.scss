@@ -32,3 +32,13 @@
     font-weight:600;
     color:#993333
 }
+
+.loading {
+    background: url(/static/gfx/ajax-loader.gif) no-repeat;
+    height: 16px;
+}
+
+.loading:after {
+    content: "Please wait ...";
+    padding-left:30px;
+}

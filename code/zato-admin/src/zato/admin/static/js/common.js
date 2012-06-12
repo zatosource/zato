@@ -82,6 +82,8 @@ $.fn.zato.post = function(url, callback, data, data_type) {
         data_type = 'json';
     }
     
+    $.fn.zato.user_message(false, '', true);
+    
     $.ajax({
         type: 'POST',
         url: url,
@@ -92,19 +94,26 @@ $.fn.zato.post = function(url, callback, data, data_type) {
     });
 }
 
-$.fn.zato.user_message = function(is_success, msg) {
+$.fn.zato.user_message = function(is_success, msg, loading) {
     var pre = $('#user-message');
     var new_css_class = ''
 
-    if(is_success) {
-        css_class = 'user-message-success';
+    if(!loading) {
+        if(is_success) {
+            css_class = 'user-message-success';
+        }
+        else {
+            css_class = 'user-message-failure';
+        }
     }
     else {
-        css_class = 'user-message-failure';
+        css_class = 'loading';
     }
 
     pre.removeClass('user-message-success').
-        removeClass('user-message-failure').addClass(css_class);
+        removeClass('user-message-failure').
+        removeClass('loading').
+        addClass(css_class);
     pre.text(msg);
 
     var div = $('#user-message-div');
@@ -306,14 +315,7 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
 }
 
 $.fn.zato.data_table._on_submit = function(form, callback) {
-
-    $.ajax({
-        type: 'POST',
-        url: form.attr('action'),
-        data: form.serialize(),
-        dataType: 'json',
-        complete: callback
-    });
+    $.fn.zato.post(form.attr('action'), callback, form.serialize());
 }
 
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
