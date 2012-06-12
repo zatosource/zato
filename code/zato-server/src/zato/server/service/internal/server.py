@@ -156,10 +156,9 @@ class Delete(AdminService):
                     self.logger.error(msg)
                     raise ZatoException(self.cid, msg)
                 
-                
                 # This will cascade and delete every related object
-                #session.delete(Server)
-                #session.commit()
+                session.delete(server)
+                session.commit()
                 
             except Exception, e:
                 session.rollback()
