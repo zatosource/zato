@@ -86,13 +86,5 @@ $.fn.zato.cluster.servers.add_remove_lb = function(action, id, cluster_id) {
         $.fn.zato.data_table.on_submit_complete(data, status, 'edit');
         $.fn.zato.data_table.data[json.id].name = json.name;
     }
-
-    $.ajax({
-        type: 'POST',
-        url: String.format('./load-balancer/{0}/{1}/', action, id),
-        data: {'cluster_id':cluster_id},
-        headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        complete: _callback,
-        dataType: 'json',
-    });
+    $.fn.zato.post(String.format('./load-balancer/{0}/{1}/', action, id), _callback, {'cluster_id':cluster_id});
 }

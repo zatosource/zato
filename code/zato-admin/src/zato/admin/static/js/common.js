@@ -73,9 +73,13 @@ $.namespace('zato.security.wss');
 $.namespace('zato.service');
 
 
-$.fn.zato.post = function(url, callback, data) {
+$.fn.zato.post = function(url, callback, data, data_type) {
     if(!data) {
         data = '';
+    }
+    
+    if(!data_type) {
+        data_type = 'json';
     }
     
     $.ajax({
@@ -83,7 +87,8 @@ $.fn.zato.post = function(url, callback, data) {
         url: url,
         data: data,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        complete: callback
+        complete: callback,
+        dataType: data_type
     });
 }
 
