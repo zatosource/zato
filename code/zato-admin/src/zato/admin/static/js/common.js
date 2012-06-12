@@ -505,7 +505,7 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     if(item.is_internal) {
         item.is_internal = $.fn.zato.to_bool(item.is_internal);
     }
-
+    
     $.fn.zato.data_table.data[item.id] = item;
     return new_row_func(item, data, include_tr);
 }

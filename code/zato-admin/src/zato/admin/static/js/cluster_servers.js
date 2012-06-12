@@ -82,7 +82,9 @@ $.fn.zato.cluster.servers.data_table.new_row = function(item, data, include_tr) 
 $.fn.zato.cluster.servers.add_remove_lb = function(action, id, cluster_id) {
 
     var _callback = function(data, status) {
+        var json = $.parseJSON(data.responseText);
         $.fn.zato.data_table.on_submit_complete(data, status, 'edit');
+        $.fn.zato.data_table.data[json.id].name = json.name;
     }
 
     $.ajax({

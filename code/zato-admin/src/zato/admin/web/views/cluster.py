@@ -131,24 +131,23 @@ def _get_server_data(client, server_name):
         'lb_address': lb_address,
         })
 
-def _common_edit_message(zato_message, client, success_msg):
+def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_date, cluster_id):
     """ Returns a common JSON message for both the actual 'edit' and 'add/remove to/from LB' actions.
     """
-    msg_item = zato_message.response.item
-    name = msg_item.name.text
-    
-    server_data = _get_server_data(client, name)
+    lb_server_data = _get_server_data(client, name)
     
     return_data = {
-        'id': msg_item.id.text,
+        'id': id,
         'name': name,
-        'host': msg_item.host.text or '(unknown)',
-        'up_status': msg_item.up_status.text or '(unknown)',
-        'up_mod_date': msg_item.up_mod_date.text or '(unknown)',
-        'cluster_id': msg_item.cluster_id.text if hasattr(msg_item, 'cluster_id') else '',
-        'lb_state': server_data.state,
-        'lb_address': server_data.lb_address,
-        'in_lb': server_data.in_lb,
+
+        'host': host if host else '(unknown)',
+        'up_status': up_status if up_status else '(unknown)',
+        'up_mod_date': up_mod_date if up_mod_date else '(unknown)',
+        'cluster_id': cluster_id if cluster_id else '',
+
+        'lb_state': lb_server_data.state,
+        'lb_address': lb_server_data.lb_address,
+        'in_lb': lb_server_data.in_lb,
         'message': success_msg.format(name),
     }
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -303,21 +302,26 @@ def servers_edit(req):
         zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.edit', 
             {'id':req.POST['id'], 'name':req.POST['edit-name']})
         
-        return _common_edit_message(zato_message, client, 'Server [{}] updated')
+        msg_item = zato_message.response.item
         
+        return _common_edit_message(client, 'Server [{}] updated', 
+            msg_item.id.text, msg_item.name.text, msg_item.host.text,
+            msg_item.up_status.text, msg_item.up_mod_date.text,
+            msg_item.cluster_id.text if hasattr(msg_item, 'cluster_id') else '')
+    
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
-
 
 @meth_allowed('POST')
 def servers_add_remove_lb(req, action, server_id):
     """ Adds or removes a server from the load balancer's configuration.
     """
-    zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.get-by-id', {'id':server_id})
+    server = req.zato.odb.query(Server).filter_by(id=server_id).one()
     
     client = get_lb_client(req.zato.cluster)
-    client.add_remove_server(action, zato_message.response.item.name.text)
+    client.add_remove_server(action, server.name)
     
-    return _common_edit_message(zato_message, client, 'Server [{{}}] {} the load balancer'.format('removed from' if action == 'remove' else 'added to'))
-    
-    return HttpResponse('zzz')
+    return _common_edit_message(client, 
+        'Server [{{}}] {} the load balancer'.format('removed from' if action == 'remove' else 'added to'),
+        server.id, server.name, server.host, server.up_status, server.up_mod_date,
+        server.cluster_id)
