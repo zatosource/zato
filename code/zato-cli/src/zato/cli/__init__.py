@@ -39,49 +39,57 @@ ZATO_ADMIN_DIR = b'.zato-admin-dir'
 ZATO_BROKER_DIR = b'.zato-broker-dir'
 ZATO_SERVER_DIR = b'.zato-server-dir'
 
-_opts_odb_type = "ODB database type"
-_opts_odb_host = "ODB database host"
-_opts_odb_port = "ODB database port"
-_opts_odb_user = "ODB database user"
-_opts_odb_schema = "ODB database schema"
-_opts_odb_dbname = "ODB database name"
-_opts_broker_host = "broker host"
-_opts_broker_start_port = "broker starting port"
+_opts_odb_type = 'ODB database type'
+_opts_odb_host = 'ODB database host'
+_opts_odb_port = 'ODB database port'
+_opts_odb_user = 'ODB database user'
+_opts_odb_schema = 'ODB database schema'
+_opts_odb_dbname = 'ODB database name'
+_opts_broker_host = 'broker host'
+_opts_broker_start_port = 'broker starting port'
+_opts_nosql_host = 'NoSQL database host'
+_opts_nosql_port = 'NoSQL database port'
 
-supported_db_types = ("oracle", "postgresql", "sqlserver", "mysql")
+supported_db_types = ('oracle', 'postgresql')
 
 ca_defaults = {
-    "organization": "My Company",
-    "organizational_unit": "My Unit",
-    "locality": "My Town",
-    "state_or_province": "My State",
-    "country": "US"
+    'organization': 'My Company',
+    'organizational_unit': 'My Unit',
+    'locality': 'My Town',
+    'state_or_province': 'My State',
+    'country': 'US'
 }
 
-default_ca_name = "Sample CA"
-default_common_name = "localhost"
+default_ca_name = 'Sample CA'
+default_common_name = 'localhost'
 
 common_odb_opts = [
-        dict(name="odb_type", help=_opts_odb_type, choices=supported_db_types),
-        dict(name="odb_host", help=_opts_odb_host),
-        dict(name="odb_port", help=_opts_odb_port),
-        dict(name="odb_user", help=_opts_odb_user),
-        dict(name="odb_dbname", help=_opts_odb_dbname),
-        dict(name="--odb-schema", help=_opts_odb_schema + " (PostgreSQL only)"),
-        dict(name="--odb-password", help="ODB database password"),
+        dict(name='odb_type', help=_opts_odb_type, choices=supported_db_types),
+        dict(name='odb_host', help=_opts_odb_host),
+        dict(name='odb_port', help=_opts_odb_port),
+        dict(name='odb_user', help=_opts_odb_user),
+        dict(name='odb_dbname', help=_opts_odb_dbname),
+        dict(name='--odb-schema', help=_opts_odb_schema + ' (PostgreSQL only)'),
+        dict(name='--odb-password', help='ODB database password'),
 ]
 
 broker_opts = [
-    dict(name="broker_host", help=_opts_broker_host),
-    dict(name="broker_start_port", help=_opts_broker_start_port),
+    dict(name='broker_host', help=_opts_broker_host),
+    dict(name='broker_start_port', help=_opts_broker_start_port),
 ]
 
 common_ca_create_opts = [
-    dict(name="--organization", help="Organization name (defaults to {organization})".format(**ca_defaults)),
-    dict(name="--locality", help="Locality name (defaults to {locality})".format(**ca_defaults)),
-    dict(name="--state-or-province", help="State or province name (defaults to {state_or_province})".format(**ca_defaults)),
-    dict(name="--country", help="Country (defaults to {country})".format(**ca_defaults)),
-    dict(name="--common-name", help="Common name (defaults to {default})".format(default=default_common_name)),
+    dict(name='--organization', help='Organization name (defaults to {organization})'.format(**ca_defaults)),
+    dict(name='--locality', help='Locality name (defaults to {locality})'.format(**ca_defaults)),
+    dict(name='--state-or-province', help='State or province name (defaults to {state_or_province})'.format(**ca_defaults)),
+    dict(name='--country', help='Country (defaults to {country})'.format(**ca_defaults)),
+    dict(name='--common-name', help='Common name (defaults to {default})'.format(default=default_common_name)),
+]
+
+nosql_opts = [
+    dict(name='nosql_host', help=_opts_nosql_host),
+    dict(name='nosql_port', help=_opts_nosql_port),
+    dict(name='--nosql-password', help='NoSQL database password'),
 ]
 
 common_logging_conf_contents = """

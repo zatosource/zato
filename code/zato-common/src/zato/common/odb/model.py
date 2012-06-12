@@ -93,8 +93,8 @@ class Cluster(Base):
 
     def __init__(self, id=None, name=None, description=None, odb_type=None,
                  odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
-                 odb_schema=None, broker_host=None, broker_start_port=None,
-                 broker_token=None, lb_host=None, lb_agent_port=None,
+                 odb_schema=None, broker_host=None, 
+                 broker_start_port=None, broker_token=None, lb_host=None, lb_agent_port=None,
                  lb_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
         self.id = id
         self.name = name
