@@ -145,7 +145,7 @@ def _common_edit_message(zato_message, client, success_msg):
         'host': msg_item.host.text or '(unknown)',
         'up_status': msg_item.up_status.text or '(unknown)',
         'up_mod_date': msg_item.up_mod_date.text or '(unknown)',
-        'cluster_id': msg_item.cluster_id.text,
+        'cluster_id': msg_item.cluster_id.text if hasattr(msg_item, 'cluster_id') else '',
         'lb_state': server_data.state,
         'lb_address': server_data.lb_address,
         'in_lb': server_data.in_lb,
@@ -300,7 +300,8 @@ def servers_edit(req):
         client = get_lb_client(req.zato.cluster)
         client.rename_server(req.POST['edit-old_name'], req.POST['edit-name'])
 
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.edit', {'id':req.POST['id'], 'name':req.POST['edit-name']})
+        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.edit', 
+            {'id':req.POST['id'], 'name':req.POST['edit-name']})
         
         return _common_edit_message(zato_message, client, 'Server [{}] updated')
         
@@ -309,7 +310,7 @@ def servers_edit(req):
 
 
 @meth_allowed('POST')
-def servers_add_remove_lb(req, action, server_id, cluster_id):
+def servers_add_remove_lb(req, action, server_id):
     """ Adds or removes a server from the load balancer's configuration.
     """
     zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.get-by-id', {'id':server_id})
