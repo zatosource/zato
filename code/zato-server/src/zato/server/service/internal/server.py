@@ -136,3 +136,34 @@ class GetByID(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload = self.get_data(session)
+
+class Delete(AdminService):
+    """ Deletes a server.
+    """
+    class SimpleIO:
+        input_required = ('id',)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            try:
+                server = session.query(Server).\
+                    filter(Server.id==self.request.input.id).\
+                    one()
+                
+                # Sanity check
+                if server.id == self.server.id:
+                    msg = 'A server cannot delete itself, id:[{}], name:[{}]'.format(server.id, server.name)
+                    self.logger.error(msg)
+                    raise ZatoException(self.cid, msg)
+                
+                
+                # This will cascade and delete every related object
+                #session.delete(Server)
+                #session.commit()
+                
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not delete the server, e:[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+                
+                raise

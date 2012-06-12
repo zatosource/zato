@@ -60,6 +60,7 @@ urlpatterns = patterns('',
     url(r'^zato/cluster/servers/$', cluster.servers, name='cluster-servers'),
     url(r'^zato/cluster/servers/edit/$', cluster.servers_edit, name='cluster-servers-edit'),
     url(r'^zato/cluster/servers/load-balancer/(?P<action>.*)/(?P<server_id>.*)/$', cluster.servers_add_remove_lb, name='cluster-servers-add-remove-lb'),
+    url(r'^zato/cluster/servers/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', cluster.ServerDelete(), name=cluster.ServerDelete.url_name),
 
     # Load balancer
     url(r'^zato/load-balancer/get-addresses/cluster/(?P<cluster_id>.*)/$', load_balancer.get_addresses, name='lb-get-addresses'),

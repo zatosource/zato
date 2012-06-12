@@ -22,3 +22,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 class GetList(AdminService):
     """ Returns a list of keys, optionally including their values.
     """
+    # KEYS, then
+    # HGETALL
+    # GET
+    # LRANGE
+    # SMEMBERS
