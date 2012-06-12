@@ -336,7 +336,7 @@ class LoadBalancerAgent(SSLServer):
         elif action == 'add':
             bck_http_plain[server_name] = {}
             bck_http_plain[server_name]['extra'] = 'check inter 2s rise 2 fall 2'
-            bck_http_plain[server_name]['address'] = 'example.com'
+            bck_http_plain[server_name]['address'] = '127.0.0.1'
             bck_http_plain[server_name]['port'] = '123456'
         else:
             raise Exception('Unrecognized action:[{}]'.format(action))
