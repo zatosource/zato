@@ -335,3 +335,11 @@ class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
     soap_action = 'zato:cluster.server.delete'
+    
+    def __call__(self, req, *args, **kwargs):
+        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.get-by-id', {'id':req.zato.id})
+
+        client = get_lb_client(req.zato.cluster)
+        client.add_remove_server('remove', zato_message.response.item.name.text)
+
+        return super(ServerDelete, self).__call__(req, *args, **kwargs)
