@@ -47,8 +47,8 @@ _opts_odb_schema = 'ODB database schema'
 _opts_odb_dbname = 'ODB database name'
 _opts_broker_host = 'broker host'
 _opts_broker_start_port = 'broker starting port'
-_opts_nosql_host = 'NoSQL database host'
-_opts_nosql_port = 'NoSQL database port'
+_opts_kvdb_host = 'kvdb database host'
+_opts_kvdb_port = 'kvdb database port'
 
 supported_db_types = ('oracle', 'postgresql')
 
@@ -86,10 +86,10 @@ common_ca_create_opts = [
     dict(name='--common-name', help='Common name (defaults to {default})'.format(default=default_common_name)),
 ]
 
-nosql_opts = [
-    dict(name='nosql_host', help=_opts_nosql_host),
-    dict(name='nosql_port', help=_opts_nosql_port),
-    dict(name='--nosql-password', help='NoSQL database password'),
+kvdb_opts = [
+    dict(name='kvdb_host', help=_opts_kvdb_host),
+    dict(name='kvdb_port', help=_opts_kvdb_port),
+    dict(name='--kvdb-password', help='kvdb database password'),
 ]
 
 common_logging_conf_contents = """

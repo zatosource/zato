@@ -27,13 +27,14 @@ from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
+from zato.server.connection.sql import PoolStore
 from zato.server.crypto import CryptoManager
+from zato.server.kvdb import KVDB
 from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.repo import RepoManager
 from zato.server.scheduler import Scheduler
 from zato.server.service.store import ServiceStore
-from zato.server.connection.sql import PoolStore
 
 class ZatoContext(PythonConfig):
 
@@ -136,6 +137,11 @@ class ZatoContext(PythonConfig):
     @Object
     def sql_pool_store(self):
         return PoolStore()
+
+    # #######################################################
+    # Key-value DB
+    def kvdb(self):
+        return KVDB()
     
     # #######################################################
     # Channels
@@ -175,6 +181,7 @@ class ZatoContext(PythonConfig):
         server.json_content_type = self.json_content_type()
         server.internal_service_modules = self.internal_service_modules()
         server.service_modules = self.service_modules()
+        server.kvdb = self.kvdb()
 
         return server
 

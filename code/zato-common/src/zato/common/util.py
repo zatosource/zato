@@ -117,15 +117,6 @@ def pprint(obj):
 
     return value
 
-def decrypt(data, priv_key, padding=RSA.pkcs1_padding, hexlified=True):
-    """ Decrypt data using the given private key.
-    data - data to be decrypted
-    priv_key - private key to use
-    padding - padding to use, defaults to PKCS#1
-    hexlified - should the data be hex-decoded before being decrypted,
-                defaults to True
-    """
-
 def encrypt(data, pub_key, padding=RSA.pkcs1_padding, b64=True):
     """ Encrypt data using the given public key.
     data - data to be encrypted
