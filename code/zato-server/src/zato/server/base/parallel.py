@@ -64,8 +64,7 @@ class ZatoHTTPListener(HTTPServer):
     def __init__(self, server, task_dispatcher, broker_client=None):
         self.server = server
         self.broker_client = broker_client
-        super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, 
-                                               task_dispatcher)
+        super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, task_dispatcher)
 
     def executeRequest(self, task, thread_local_ctx):
         """ Handles incoming HTTP requests. Each request is being handled by one
@@ -104,7 +103,7 @@ class ParallelServer(BrokerMessageReceiver):
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
                  hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
-                 id=None, name=None, cluster_id=None):
+                 id=None, name=None, cluster_id=None, kvdb=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -132,6 +131,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.id = id
         self.name = name
         self.cluster_id = cluster_id
+        self.kvdb = kvdb
         
         # The main config store
         self.config = ConfigStore()
@@ -153,8 +153,12 @@ class ParallelServer(BrokerMessageReceiver):
         self.odb.drop_deployed_services(server.id)
         
         # .. and re-deploy the back from a clear state.
-        self.service_store.import_services_from_anywhere(self.internal_service_modules + self.service_modules, 
-            self.base_dir)
+        self.service_store.import_services_from_anywhere(self.internal_service_modules + self.service_modules, self.base_dir)
+        
+        # Key-value DB
+        self.kvdb.config = self.fs_server_config.kvdb
+        self.kvdb.server = self
+        self.kvdb.init()
         
         if self.singleton_server:
             

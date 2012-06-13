@@ -78,16 +78,15 @@ context_class=zato.server.spring_context.ZatoContext
 [misc]
 internal_services_may_be_deleted=False
 
-[nosql]
-host={nosql_host}
-port={nosql_port}
-path=
-password={nosql_password}
+[kvdb]
+host={kvdb_host}
+port={kvdb_port}
+unix_socket_path=
+password={kvdb_password}
 db=0
 socket_timeout=
-encoding=
-encoding_errors=
-parser_class=
+charset=
+errors=
 """
 
 haproxy_conf_contents = """
@@ -217,9 +216,9 @@ class CreateServer(ZatoCommand):
                 odb_pool_size=default_odb_pool_size, 
                 odb_user=args.odb_user, 
                 odb_token=self.odb_token, 
-                nosql_host=args.nosql_host,
-                nosql_port=args.nosql_port, 
-                nosql_password=encrypt(args.nosql_password, pub_key) if args.nosql_password else ''))
+                kvdb_host=args.kvdb_host,
+                kvdb_port=args.kvdb_port, 
+                kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else ''))
         server_conf.close()
         
         print('Core configuration stored in {server_conf_loc}'.format(server_conf_loc=server_conf_loc))
