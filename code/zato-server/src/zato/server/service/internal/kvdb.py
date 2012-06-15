@@ -19,18 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from traceback import format_exc
+
 # Zato
 from zato.common import ZatoException
+from zato.common.kvdb import redis_grammar
 from zato.server.service.internal import AdminService
-
-COMMANDS_AVAILABLE = (
-    'CONFIG GET', 'CONFIG SET', 'CONFIG RESETSTAT', 'DBSIZE', 'DEBUG OBJECT', 'DECR', 
-    'DECRBY', 'DEL', 'DUMP', 'ECHO', 'EXISTS', 'EXPIRE', 'EXPIREAT', 'FLUSHDB', 'GET', 'HDEL', 
-    'HEXISTS', 'HGET', 'HGETALL', 'HINCRBY', 'HKEYS', 'HLEN', 'HSETNX', 'HVALS', 'INCR', 
-    'INCRBY', 'INFO', 'KEYS', 'LLEN', 'LPOP', 'LPUSH', 'LPUSHX', 'LRANGE', 'LREM', 'LSET', 'LTRIM', 
-    'MGET', 'MSET', 'MSETNX', 'OBJECT', 'PERSIST', 'PEXPIRE', 'PEXPIREAT', 'PING', 'PSETEX', 
-    'PTTL', 'RANDOMKEY', 'RENAME', 'RENAMENX', 'RESTORE', 'RPOP', 'SADD', 'SET', 'SMEMBERS', 
-    'SREM', 'TIME', 'TTL', 'TYPE', 'ZADD', 'ZRANGE', 'ZREM')
 
 class ExecuteCommand(AdminService):
     """ Executes a command against the key/value DB.
@@ -40,20 +35,39 @@ class ExecuteCommand(AdminService):
         output_required = ('result',)
         
     def handle(self):
-        command = self.request.input.command or ''
+        input_command = self.request.input.command or ''
         
-        if not command:
+        if not input_command:
             msg = 'No command sent'
             raise ZatoException(self.cid, msg)
-        
-        # Can we handle it at all? This won't catch everything but it's OK for
-        # filtering out most of the noise.
-        if not any(command.startswith(elem) for elem in COMMANDS_AVAILABLE):
-            msg = 'Invalid command:[{}], not one of [{}]'.format(command, COMMANDS_AVAILABLE)
+
+        try:
+            parse_result = redis_grammar.parseString(input_command)
+            
+            options = {}
+            command = parse_result.command
+            parameters = parse_result.parameters if parse_result.parameters else []
+            
+            if command == 'CONFIG':
+                options['parse'] = parameters[0]
+            elif command == 'OBJECT':
+                options['infotype'] = parameters[0]
+                
+            response = self.server.kvdb.conn.execute_command(command, *parameters, **options) or ''
+            
+            if response and command == 'KEYS':
+                response = unicode(response).encode('utf-8')
+            elif command in('HLEN', 'LLEN'):
+                response = str(response)
+                
+            print(3333, repr(response))
+            
+            self.response.payload.result = response
+            
+        except Exception, e:
+            msg = 'Command parsing error, command:[{}], e:[{}]'.format(input_command, format_exc(e))
+            self.logger.error(msg)
             raise ZatoException(self.cid, msg)
-                   
-        self.response.payload.result = 'aaa'
-        print(333, self.server.kvdb.conn)
 
 '''
 class GetList(AdminService):

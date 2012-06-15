@@ -19,7 +19,6 @@ $.fn.zato.kvdb.CommandInfo = new Class({
         ['CONFIG SET', 'CONFIG SET parameter value', 'Set a configuration parameter to the given value'],
         ['CONFIG RESETSTAT', 'CONFIG RESETSTAT', 'Reset the stats returned by INFO'],
         ['DBSIZE', 'DBSIZE', 'Return the number of keys in the selected database'],
-        ['DEBUG OBJECT', 'DEBUG OBJECT key', 'Get debugging information about a key'],
         ['DECR', 'DECR key', 'Decrement the integer value of a key by one'],
         ['DECRBY', 'DECRBY key decrement', 'Decrement the integer value of a key by the given number'],
         ['DEL', 'DEL key [key ...]', 'Delete a key'],
@@ -94,6 +93,7 @@ $(document).ready(function() {
 
     var _callback = function(data, status, xhr){
         var success = status == 'success';
+        $("#id_result").text('');
         
         if(success) {
             var div = $('#user-message-div');
