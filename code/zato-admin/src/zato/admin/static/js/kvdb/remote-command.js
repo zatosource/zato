@@ -11,8 +11,8 @@ $.fn.zato.kvdb.CommandInfo = new Class({
     }
 });
 
-$(document).ready(function() {
-    
+// /////////////////////////////////////////////////////////////////////////////
+
     $.fn.zato.kvdb.command_info = new Object();
     var ci_list = [
         ['CONFIG GET', 'CONFIG GET parameter', 'Get the value of a configuration parameter'],
@@ -86,8 +86,38 @@ $(document).ready(function() {
         ci.desc = elem[2];
         $.fn.zato.kvdb.command_info[ci.name] = ci;
     });
-    
-})
+
+// /////////////////////////////////////////////////////////////////////////////
+
+
+$(document).ready(function() { 
+
+    var _callback = function(data, status, xhr){
+        var success = status == 'success';
+        
+        if(success) {
+            var div = $('#user-message-div');
+            div.fadeOut(100);
+            $("#id_result").text(data.message);
+        }
+        else {
+            $.fn.zato.user_message(false, data.responseText);
+        }
+    }    
+
+    var options = { 
+        success: _callback,
+        error:  _callback,
+        resetForm: false,
+        dataType: 'json',
+    }; 
+
+    $('#command-form').submit(function() { 
+        $(this).ajaxSubmit(options); 
+        return false; 
+    });
+
+}); 
 
 
 $.fn.zato.kvdb.command_help = function(command) {

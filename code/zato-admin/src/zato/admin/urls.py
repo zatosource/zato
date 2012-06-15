@@ -196,6 +196,7 @@ urlpatterns = patterns('',
     
     # Key/value DB
     url(r'^zato/kvdb/remote-command/$', kvdb.remote_command, name='kvdb-remote-command'),
+    url(r'^zato/kvdb/remote-command/execute/$', kvdb.remote_command_execute, name='kvdb-remote-command-execute'),
 
 )
 

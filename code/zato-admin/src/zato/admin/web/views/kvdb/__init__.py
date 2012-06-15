@@ -26,7 +26,6 @@ from cStringIO import StringIO
 from traceback import format_exc
 
 # Django
-from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect, HttpResponseServerError
 from django.template import RequestContext
 from django.shortcuts import render_to_response
@@ -50,28 +49,10 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
-@meth_allowed('GET', 'POST')
+@meth_allowed('GET')
 def remote_command(req):
     
-    if req.method == "POST":
-        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 
-            'zato:kvdb.remote-command.execute', {'command': req.POST['command']})
-        
-        result = zato_message.response.item.result.text
-        
-        if not result.strip():
-            result = '(empty result)'
-
-        initial = {'result':result}
-        for k, v in req.POST.items():
-            if k != 'result':
-                initial[k] = v
-                
-        form = RemoteCommandForm(initial)
-    else:
-        form = RemoteCommandForm()
-
-    return_data = {'form':form, 
+    return_data = {'form':RemoteCommandForm(), 
                    'cluster':req.zato.get('cluster'),
                    'choose_cluster_form':ChooseClusterForm(req.zato.clusters, req.GET),
                    'zato_clusters':req.zato.clusters,
@@ -82,3 +63,15 @@ def remote_command(req):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(return_data))
 
     return render_to_response('zato/kvdb/remote-command.html', return_data, context_instance=RequestContext(req))
+
+@meth_allowed('POST')
+def remote_command_execute(req):
+    """ Executes a command against the key/value DB.
+    """
+    try:
+        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.remote-command.execute', {'command': req.POST['command']})
+        return_data = {'message': zato_message.response.item.result.text}
+        
+        return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
