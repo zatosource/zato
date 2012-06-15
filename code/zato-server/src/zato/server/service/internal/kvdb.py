@@ -20,7 +20,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common import ZatoException
 from zato.server.service.internal import AdminService
+
+COMMANDS_AVAILABLE = (
+    'CONFIG GET', 'CONFIG SET', 'CONFIG RESETSTAT', 'DBSIZE', 'DEBUG OBJECT', 'DECR', 
+    'DECRBY', 'DEL', 'DUMP', 'ECHO', 'EXISTS', 'EXPIRE', 'EXPIREAT', 'FLUSHDB', 'GET', 'HDEL', 
+    'HEXISTS', 'HGET', 'HGETALL', 'HINCRBY', 'HKEYS', 'HLEN', 'HSETNX', 'HVALS', 'INCR', 
+    'INCRBY', 'INFO', 'KEYS', 'LLEN', 'LPOP', 'LPUSH', 'LPUSHX', 'LRANGE', 'LREM', 'LSET', 'LTRIM', 
+    'MGET', 'MSET', 'MSETNX', 'OBJECT', 'PERSIST', 'PEXPIRE', 'PEXPIREAT', 'PING', 'PSETEX', 
+    'PTTL', 'RANDOMKEY', 'RENAME', 'RENAMENX', 'RESTORE', 'RPOP', 'SADD', 'SET', 'SMEMBERS', 
+    'SREM', 'TIME', 'TTL', 'TYPE', 'ZADD', 'ZRANGE', 'ZREM')
 
 class ExecuteCommand(AdminService):
     """ Executes a command against the key/value DB.
@@ -30,7 +40,18 @@ class ExecuteCommand(AdminService):
         output_required = ('result',)
         
     def handle(self):
-        self.response.result.result = 'aaa'
+        command = self.request.input.command or ''
+        
+        if not command:
+            msg = 'No command sent'
+            raise ZatoException(self.cid, msg)
+        
+        # Can we handle it at all?
+        if not any(command.startswith(elem) for elem in COMMANDS_AVAILABLE):
+            msg = 'Invalid command:[{}], not one of [{}]'.format(command, COMMANDS_AVAILABLE)
+            raise ZatoException(self.cid, msg)
+                   
+        self.response.payload.result = 'aaa'
         print(333, self.server.kvdb.conn)
 
 '''

@@ -57,6 +57,8 @@ def remote_command(req):
         zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 
             'zato:kvdb.remote-command.execute', {'command': req.POST['command']})
         
+        result = zato_message.response.item.result.text
+        
         if not result.strip():
             result = '(empty result)'
 
