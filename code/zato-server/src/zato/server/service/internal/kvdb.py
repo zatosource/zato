@@ -46,7 +46,8 @@ class ExecuteCommand(AdminService):
             msg = 'No command sent'
             raise ZatoException(self.cid, msg)
         
-        # Can we handle it at all?
+        # Can we handle it at all? This won't catch everything but it's OK for
+        # filtering out most of the noise.
         if not any(command.startswith(elem) for elem in COMMANDS_AVAILABLE):
             msg = 'Invalid command:[{}], not one of [{}]'.format(command, COMMANDS_AVAILABLE)
             raise ZatoException(self.cid, msg)
