@@ -19,27 +19,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Zato
-from zato.server.service.internal import AdminService
-
-class ExecuteCommand(AdminService):
-    """ Executes a command against the key/value DB.
-    """
-    class SimpleIO:
-        input_required = ('command',)
-        output_required = ('result',)
-        
-    def handle(self):
-        self.response.result.result = 'aaa'
-        print(333, self.server.kvdb.conn)
-
-'''
-class GetList(AdminService):
-    """ Returns a list of keys, optionally including their values.
-    """
-    # KEYS, then
-    # HGETALL
-    # GET
-    # LRANGE
-    # SMEMBERS
-'''
+# Django
+from django import forms

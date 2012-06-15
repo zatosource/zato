@@ -58,6 +58,7 @@ $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
 $.namespace('zato.definition.jms_wmq');
 $.namespace('zato.form');
+$.namespace('zato.kvdb');
 $.namespace('zato.http_soap');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
@@ -152,7 +153,7 @@ $.fn.zato.form.serialize = function(form) {
 
 /* Takes a form (ID or a jQuery object), a business object and populates the
 form with values read off the object. The 'name' and 'id' attributes of the
-form's fields may use custom prefixes that will be taken into account.
+form's fields may use custom prefixes that will be taken into account accordingly.
 */
 $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 

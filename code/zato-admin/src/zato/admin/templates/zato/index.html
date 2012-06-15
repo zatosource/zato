@@ -22,14 +22,14 @@
     </script>
 
 
-    {% block extra_css %}{% endblock %}
-
     <link rel="stylesheet" media="screen" href="/static/css/formalize.css" />
     <link rel="stylesheet" media="screen" href="/static/superfish/css/superfish.css" />
     <link rel="stylesheet" media="screen" href="/static/css/bvalidator.css" />
 
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+    
+    {% block extra_css %}{% endblock %}
 
 
     {% block extra_js %}
@@ -99,8 +99,8 @@
                 </li>
                 <li><a href="#">Key/value DB &darr;</a>
                     <ul>
-                        <li><a href="#">Data browser</a></li>
                         <li><a href="#">Dictionaries</a></li>
+                        <li><a href="{% url kvdb-remote-command %}">Remote commands</a></li>
                     </ul>
                 </li>
                 <li><a href="{% url scheduler %}">Schedulers</a></li>

@@ -25,7 +25,7 @@ from django.contrib.auth.views import login
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import cluster, load_balancer, main, scheduler, service
+from zato.admin.web.views import cluster, kvdb, load_balancer, main, scheduler, service
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
@@ -193,6 +193,9 @@ urlpatterns = patterns('',
     url(r'^zato/http-soap/edit/$', http_soap.edit, name='http-soap-edit'),
     url(r'^zato/http-soap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', http_soap.delete, name='http-soap-delete'),
     url(r'^zato/http-soap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', http_soap.ping, name='http-soap-ping'),
+    
+    # Key/value DB
+    url(r'^zato/kvdb/remote-command/$', kvdb.remote_command, name='kvdb-remote-command'),
 
 )
 
