@@ -21,3 +21,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Django
 from django import forms
+
+class CreateForm(forms.Form):
+    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+
+class EditForm(CreateForm):
+    pass

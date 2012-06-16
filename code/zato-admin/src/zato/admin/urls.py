@@ -25,13 +25,13 @@ from django.contrib.auth.views import login
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import cluster, kvdb, load_balancer, main, scheduler, service
+from zato.admin.web.views import cluster, http_soap, kvdb, load_balancer, main, scheduler, service
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
-from zato.admin.web.views import http_soap
+from zato.admin.web.views.kvdb.data_dict import dictionary, system, translation
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
@@ -197,6 +197,12 @@ urlpatterns = patterns('',
     # Key/value DB
     url(r'^zato/kvdb/remote-command/$', kvdb.remote_command, name='kvdb-remote-command'),
     url(r'^zato/kvdb/remote-command/execute/$', kvdb.remote_command_execute, name='kvdb-remote-command-execute'),
+    url(r'^zato/kvdb/data-dict/dictionary/$', dictionary.Index(), name=dictionary.Index.url_name),
+    url(r'^zato/kvdb/data-dict/system/$', system.Index(), name=system.Index.url_name),
+    url(r'^zato/kvdb/data-dict/system/create/$', system.Create(), name=system.Create.url_name),
+    url(r'^zato/kvdb/data-dict/system/edit/$', system.Edit(), name=system.Edit.url_name),
+    url(r'^zato/kvdb/data-dict/system/delete/$', system.Delete(), name=system.Delete.url_name),
+    url(r'^zato/kvdb/data-dict/translation/$', translation.Index(), name=translation.Index.url_name),
 
 )
 
