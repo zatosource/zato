@@ -147,6 +147,9 @@ class SERVER_JOIN_STATUS:
 class SERVER_UP_STATUS:
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'
+    
+class KVDB:
+    SYSTEM_LIST = 'zato:kvdb:data-dict:system'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks
