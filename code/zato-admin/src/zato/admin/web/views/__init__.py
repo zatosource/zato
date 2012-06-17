@@ -235,7 +235,7 @@ class CreateEdit(_BaseView):
     """
     form_prefix = ''
     
-    def __call__(self, req, *args, **kwargs):
+    def __call__(self, req, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
@@ -254,6 +254,8 @@ class CreateEdit(_BaseView):
             return_data = {
                 'message': self.success_message(zato_message.response.item)
                 }
+            return_data.update(initial_return_data)
+
             for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
                 value = getattr(zato_message.response.item, name, None)
                 if value:
