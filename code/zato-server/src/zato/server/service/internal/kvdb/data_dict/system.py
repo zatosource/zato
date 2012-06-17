@@ -20,10 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import re
 from contextlib import closing
 
 # Zato
-from zato.common import KVDB
+from zato.common import KVDB, ZatoException
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
@@ -33,7 +34,10 @@ class GetList(AdminService):
         output_required = ('name',)
         
     def get_data(self):
-        return self.server.kvdb.conn.lrange(KVDB.SYSTEM_LIST, 0, -1)
+        out = []
+        for name in sorted(self.server.kvdb.conn.smembers(KVDB.SYSTEM_LIST)):
+            out.append({'name': name})
+        return out
 
     def handle(self):
         self.response.payload[:] = self.get_data()
@@ -41,13 +45,35 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new translation system.
     """
+    SYSTEM_NAME_PATTERN = '\w+'
+    SYSTEM_NAME_RE = re.compile(SYSTEM_NAME_PATTERN)
+
     class SimpleIO:
         input_required = ('name',)
         output_required = ('name',)
 
     def handle(self):
-        already_exists = self.server.kvdb.conn.sismember(KVDB.SYSTEM_LIST, self.request.input.name)
-        print(3333, already_exists)
-        
-        self.response.payload.name = self.request.input.name
+        name = self.request.input.name
+        match = self.SYSTEM_NAME_RE.match(name)
+        if match and match.group() == name:
+            already_exists = self.server.kvdb.conn.sismember(KVDB.SYSTEM_LIST, name)
+            if already_exists:
+                msg = 'System [{}] already exists'.format(name)
+                raise ZatoException(self.cid, msg)
+            
+            self.server.kvdb.conn.sadd(KVDB.SYSTEM_LIST, name)
+            self.response.payload.name = name
+        else:
+            msg = "Name [{}] may contain only letters, digits and an underscore, the regular expression is {}".format(name, self.SYSTEM_NAME_PATTERN)
+            raise ZatoException(self.cid, msg)
 
+class Delete(AdminService):
+    """ Deletes a translation system.
+    """
+    class SimpleIO:
+        input_required = ('name',)
+        output_required = ('name',)
+        
+    def handle(self):
+        self.server.kvdb.conn.srem(KVDB.SYSTEM_LIST, self.request.input.name)
+        self.response.payload.name = self.request.input.name

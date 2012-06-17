@@ -377,7 +377,7 @@ class Quickstart(ZatoCommand):
             'zato:kvdb.data-dict.system.get-list':'zato.server.service.internal.kvdb.data_dict.system.GetList',
             'zato:kvdb.data-dict.system.create':'zato.server.service.internal.kvdb.data_dict.system.Create',
             'zato:kvdb.data-dict.system.edit':'zato.server.service.internal.kvdb.data_dict.system.Edit',
-            'zato:kvdb.data-dict.system.Delete':'zato.server.service.internal.kvdb.data_dict.system.Delete',
+            'zato:kvdb.data-dict.system.delete':'zato.server.service.internal.kvdb.data_dict.system.Delete',
         }
         
         #

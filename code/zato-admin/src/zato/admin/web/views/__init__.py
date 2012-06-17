@@ -280,13 +280,16 @@ class Delete(_BaseView):
     meth_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
     
-    def __call__(self, req, *args, **kwargs):
+    def __call__(self, req, initial_input_dict={}, *args, **kwargs):
         try:
             super(Delete, self).__call__(req, *args, **kwargs)
             input_dict = {
                 'id': self.req.zato.id,
                 'cluster_id': self.cluster_id
             }
+            input_dict.update(initial_input_dict)
+            
+            print(1010, input_dict)
             invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
             return HttpResponse()
         except Exception, e:

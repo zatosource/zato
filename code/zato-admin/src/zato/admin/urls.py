@@ -201,7 +201,7 @@ urlpatterns = patterns('',
     url(r'^zato/kvdb/data-dict/system/$', system.Index(), name=system.Index.url_name),
     url(r'^zato/kvdb/data-dict/system/create/$', system.Create(), name=system.Create.url_name),
     url(r'^zato/kvdb/data-dict/system/edit/$', system.Edit(), name=system.Edit.url_name),
-    url(r'^zato/kvdb/data-dict/system/delete/$', system.Delete(), name=system.Delete.url_name),
+    url(r'^zato/kvdb/data-dict/system/delete/(?P<name>.*)/cluster/(?P<cluster_id>.*)/$', system.Delete(), name=system.Delete.url_name),
     url(r'^zato/kvdb/data-dict/translation/$', translation.Index(), name=translation.Index.url_name),
 
 )

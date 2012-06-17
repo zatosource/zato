@@ -72,24 +72,24 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th style="width:3%">&nbsp;</th>
+                        <th style="width:6%">&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th style="width:6%">&nbsp;</th>
+                        <th style="width:6%">&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.name }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td><a href="javascript:$.fn.zato.outgoing.amqp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.amqp.delete_('{{ item.id }}')">Delete</a></td>
-                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td><a href="javascript:$.fn.zato.kvdb.data_dict.system.edit('{{ item.name }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.kvdb.data_dict.system.delete_('{{ item.name }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.name }}'>{{ item.name }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
