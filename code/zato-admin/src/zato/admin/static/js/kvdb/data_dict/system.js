@@ -13,7 +13,7 @@ $.fn.zato.data_table.System = new Class({
 
 $(document).ready(function() { 
 	$('#data-table').tablesorter(); 
-	$.fn.zato.data_table.class_ = $.fn.zato.data_table.OutgoingAMQP;
+	$.fn.zato.data_table.class_ = $.fn.zato.data_table.System;
 	$.fn.zato.data_table.new_row_func = $.fn.zato.kvdb.data_dict.system.data_table.new_row;
 	$.fn.zato.data_table.parse();
 	$.fn.zato.data_table.setup_forms(['name']);

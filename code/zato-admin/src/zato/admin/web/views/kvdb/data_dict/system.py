@@ -19,13 +19,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Django
+from django.core.urlresolvers import resolve
+
 # Zato
 from zato.admin.web.forms.kvdb.data_dict.system import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 
 class System(object):
-    def __init__(self, name):
-        self.id = self.name = name
+    def __init__(self, id=None, name=None):
+        self.id = id
+        self.name = name
 
 class Index(_Index):
     meth_allowed = 'GET'
@@ -36,7 +40,7 @@ class Index(_Index):
     output_class = System
     
     class SimpleIO(_Index.SimpleIO):
-        output_required = ('name', )
+        output_required = ('id', 'name',)
         output_repeated = True
 
     def handle(self):
@@ -67,3 +71,6 @@ class Delete(_Delete):
     url_name = 'kvdb-data-dict-system-delete'
     error_message = 'Could not delete the system'
     soap_action = 'zato:kvdb.data-dict.system.delete'
+
+    def __call__(self, req, *args, **kwargs):
+        return super(Delete, self).__call__(req, {'name': resolve(req.path).kwargs.get('name')}, *args, **kwargs)
