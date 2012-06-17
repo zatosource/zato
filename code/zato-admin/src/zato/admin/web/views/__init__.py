@@ -235,7 +235,7 @@ class CreateEdit(_BaseView):
     """
     form_prefix = ''
     
-    def __call__(self, req, initial_return_data={}, *args, **kwargs):
+    def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
@@ -245,6 +245,7 @@ class CreateEdit(_BaseView):
                 'id': self.req.POST.get('id'),
                 'cluster_id': self.cluster_id
             }
+            input_dict.update(initial_input_dict)
     
             for name in self.SimpleIO.input_required:
                 input_dict[name] = self.req.POST.get(self.form_prefix + name)
