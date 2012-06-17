@@ -290,8 +290,6 @@ class Delete(_BaseView):
                 'cluster_id': self.cluster_id
             }
             input_dict.update(initial_input_dict)
-            
-            print(1010, input_dict)
             invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
             return HttpResponse()
         except Exception, e:
