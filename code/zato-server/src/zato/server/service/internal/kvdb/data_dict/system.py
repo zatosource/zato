@@ -64,7 +64,7 @@ class Create(AdminService):
             self.server.kvdb.conn.sadd(KVDB.SYSTEM_LIST, name)
             self.response.payload.name = name
         else:
-            msg = "Name [{}] may contain only letters, digits and an underscore, the regular expression is {}".format(name, self.SYSTEM_NAME_PATTERN)
+            msg = "System name may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(name, self.SYSTEM_NAME_PATTERN)
             raise ZatoException(self.cid, msg)
 
 class Delete(AdminService):
