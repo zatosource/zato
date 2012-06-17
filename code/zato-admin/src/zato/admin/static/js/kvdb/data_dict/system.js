@@ -31,16 +31,15 @@ $.fn.zato.kvdb.data_dict.system.data_table.new_row = function(item, data, includ
     var row = '';
 	
 	if(include_tr) {
-		row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+		row += String.format("<tr id='tr_{0}' class='updated'>", item.name);
 	}
 	
 	row += "<td class='numbering'>&nbsp;</td>";
 	row += "<td><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', item.name);
-	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.kvdb.data_dict.system.edit('{0}')\">Edit</a>", item.id));
-	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.kvdb.data_dict.system.delete_({0});'>Delete</a>", item.id));
-	row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-
+	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.kvdb.data_dict.system.edit('{0}')\">Edit</a>", item.name));
+	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.kvdb.data_dict.system.delete_('{0}')\">Delete</a>", item.name));
+	row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.name);
 	
 	if(include_tr) {
 		row += '</tr>';

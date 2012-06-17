@@ -61,6 +61,10 @@ class _CreateEdit(CreateEdit):
 class Create(_CreateEdit):
     url_name = 'kvdb-data-dict-system-create'
     soap_action = 'zato:kvdb.data-dict.system.create'
+    
+    def __call__(self, req, *args, **kwargs):
+        initial_return_data = {'id':req.POST['name']}
+        return super(Create, self).__call__(req, initial_return_data, *args, **kwargs)
 
 class Edit(_CreateEdit):
     url_name = 'kvdb-data-dict-system-edit'
