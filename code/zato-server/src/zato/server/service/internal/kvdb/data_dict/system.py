@@ -42,30 +42,46 @@ class GetList(AdminService):
     def handle(self):
         self.response.payload[:] = self.get_data()
 
-class Create(AdminService):
-    """ Creates a new translation system.
-    """
+class _CreateEdit(AdminService):
     SYSTEM_NAME_PATTERN = '\w+'
     SYSTEM_NAME_RE = re.compile(SYSTEM_NAME_PATTERN)
 
     class SimpleIO:
         input_required = ('name',)
+        input_optional = ('old_name',)
         output_required = ('name',)
 
-    def handle(self):
+    def _handle(self, validate_exists=True, remove_old_name=False):
         name = self.request.input.name
         match = self.SYSTEM_NAME_RE.match(name)
         if match and match.group() == name:
-            already_exists = self.server.kvdb.conn.sismember(KVDB.SYSTEM_LIST, name)
-            if already_exists:
-                msg = 'System [{}] already exists'.format(name)
-                raise ZatoException(self.cid, msg)
+            if validate_exists:
+                already_exists = self.server.kvdb.conn.sismember(KVDB.SYSTEM_LIST, name)
+                if already_exists:
+                    msg = 'System [{}] already exists'.format(name)
+                    raise ZatoException(self.cid, msg)
+                
+            if remove_old_name:
+                self.server.kvdb.conn.srem(KVDB.SYSTEM_LIST, self.request.input.old_name)
             
             self.server.kvdb.conn.sadd(KVDB.SYSTEM_LIST, name)
             self.response.payload.name = name
         else:
             msg = "System name may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(name, self.SYSTEM_NAME_PATTERN)
             raise ZatoException(self.cid, msg)
+        
+class Create(_CreateEdit):
+    """ Creates a new translation system.
+    """
+    def handle(self):
+        return self._handle()
+        
+class Edit(_CreateEdit):
+    """ Updates a translation system..
+    """
+    def handle(self):
+        print(44444, self.request.input)
+        return self._handle(False, True)
 
 class Delete(AdminService):
     """ Deletes a translation system.

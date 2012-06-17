@@ -519,6 +519,9 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     }
     
     $.fn.zato.data_table.data[item.id] = item;
+
+    alert(item);    
+    
     return new_row_func(item, data, include_tr);
 }
 
