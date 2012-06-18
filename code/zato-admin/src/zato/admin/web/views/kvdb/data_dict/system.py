@@ -54,6 +54,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name',)
+        output_optional = ('id', 'name',)
         
     def success_message(self, item):
         return 'Successfully {0} the system [{1}]'.format(self.verb, item.name.text)
@@ -61,9 +62,6 @@ class _CreateEdit(CreateEdit):
 class Create(_CreateEdit):
     url_name = 'kvdb-data-dict-system-create'
     soap_action = 'zato:kvdb.data-dict.system.create'
-    
-    def __call__(self, req, *args, **kwargs):
-        return super(Create, self).__call__(req, initial_return_data=initial_return_data, *args, **kwargs)
 
 class Edit(_CreateEdit):
     url_name = 'kvdb-data-dict-system-edit'
