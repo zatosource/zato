@@ -94,9 +94,9 @@ class Delete(AdminService):
     """ Deletes a translation system.
     """
     class SimpleIO:
-        input_required = ('name',)
-        output_required = ('name',)
+        input_required = ('id',)
+        output_required = ('id',)
         
     def handle(self):
-        self.server.kvdb.conn.srem(KVDB.SYSTEM_LIST, self.request.input.name)
-        self.response.payload.name = self.request.input.name
+        self.server.kvdb.conn.hdel(KVDB.SYSTEM_LIST, self.request.input.id)
+        self.response.payload.id = self.request.input.id
