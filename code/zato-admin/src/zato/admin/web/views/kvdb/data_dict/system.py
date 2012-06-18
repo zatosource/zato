@@ -72,6 +72,3 @@ class Delete(_Delete):
     url_name = 'kvdb-data-dict-system-delete'
     error_message = 'Could not delete the system'
     soap_action = 'zato:kvdb.data-dict.system.delete'
-
-    def __call__(self, req, *args, **kwargs):
-        return super(Delete, self).__call__(req, {'name': resolve(req.path).kwargs.get('name')}, *args, **kwargs)
