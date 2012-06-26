@@ -21,6 +21,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # TODO: Document it properly
 
-# zato:kvdb:data-dict:system - a list of systems
-# zato:kvdb:data-dict:dictionary - a dictionary of list of dictionaries for each of the systems
-# zato:kvdb:data-dict:$SYSTEM_NAME:dictionary - a dictionary for each of the systems
+# zato:kvdb:data-dict:items
+# [
+#  {'id':'1', 'system':'ESB', 'key':'currency', 'value':'EUR'},
+#  {'id':'2', 'system':'ESB', 'key':'currency', 'value':'JPY'},
+#  {'id':'3', 'system':'ESB', 'key':'country_code', 'value':'CH'},
+#  {'id':'4', 'system':'CRM', 'key':'CURRENCY', 'value':'978'},
+# ]
+#
+# zato:kvdb:data-dict:items:hierarchy
+# {
+#  'ESB': {'currency':[{'id':'1', 'value':'EUR'}, {'id':'2', 'value':'JPY'}], 'country_code':[{'id':'3', 'value':'CH'}]},
+#  'CRM': {'CURRENCY':[{'id':'4', 'value':'978'}]},
+# }
+#
+# 'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY:::978':{'item1':'1', 'item2':'4'}

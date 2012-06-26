@@ -24,15 +24,7 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
-# validate
-from validate import is_boolean
-
 # Zato
-from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, SECURITY
 from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.odb.query import wss_list

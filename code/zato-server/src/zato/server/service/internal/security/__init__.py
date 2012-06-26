@@ -23,7 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.common import ZATO_OK
 from zato.common.odb.query import basic_auth_list, tech_acc_list, wss_list
 from zato.server.service.internal import AdminService
 

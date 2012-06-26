@@ -26,7 +26,7 @@ from multiprocessing import cpu_count
 # Zato
 from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents
 from zato.common.defaults import http_plain_server_port
-from zato.common.odb.model import Cluster, Server
+from zato.common.odb.model import Cluster
 from zato.common.util import encrypt
 from zato.server.repo import RepoManager
 

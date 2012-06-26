@@ -23,7 +23,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 class CreateForm(forms.Form):
-    pass
+    system = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    value = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
 class EditForm(CreateForm):
     pass

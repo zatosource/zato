@@ -24,17 +24,12 @@ import logging
 from datetime import datetime, timedelta
 from time import sleep
 
-# anyjson
-from anyjson import dumps
-
 # Bunch
 from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common import ZATO_OK, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
-from zato.common.util import deployment_info
 from zato.server.base import BrokerMessageReceiver
 
 _scheduler_values = SCHEDULER.values()

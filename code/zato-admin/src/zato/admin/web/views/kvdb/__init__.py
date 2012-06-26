@@ -21,24 +21,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from collections import namedtuple
-from cStringIO import StringIO
 from traceback import format_exc
 
 # Django
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseServerError
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
-# validate
-from validate import is_boolean
-
 # anyjson
-from anyjson import dumps, loads
+from anyjson import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service

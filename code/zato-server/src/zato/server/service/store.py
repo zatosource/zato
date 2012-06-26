@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import imp, inspect, logging, os, re, shutil, sys, tempfile, zipimport
+import imp, inspect, logging, os
 from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
@@ -29,7 +29,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # pip
-from pip.download import is_archive_file, unpack_file_url
+from pip.download import is_archive_file
 
 # anyjson
 from anyjson import dumps
@@ -42,7 +42,6 @@ except ImportError:
     from yaml import Dumper
     
 # Spring Python
-from springpython.util import synchronized
 from springpython.context import InitializingObject
 
 # Zato

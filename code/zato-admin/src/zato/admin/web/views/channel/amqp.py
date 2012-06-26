@@ -25,26 +25,16 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
-from django.template import RequestContext
-
-# lxml
-from lxml.objectify import Element
-
-# Validate
-from validate import is_boolean
 
 # anyjson
 from anyjson import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.channel.amqp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
-from zato.common.odb.model import Cluster, ChannelAMQP
-from zato.common import zato_namespace, zato_path
-from zato.common.util import TRACE1
+from zato.admin.web.views import Delete as _Delete, Index as _Index, meth_allowed
+from zato.common.odb.model import ChannelAMQP
+from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
 

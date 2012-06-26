@@ -26,9 +26,6 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-# lxml
-from lxml.objectify import Element
-
 # Validate
 from validate import is_boolean
 
@@ -39,11 +36,11 @@ from anyjson import dumps
 from zato.admin.settings import odb_engine_friendly_name
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
-from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
-from zato.common.odb.model import Cluster, SQLConnectionPool
-from zato.common import zato_namespace, zato_path
+from zato.common.odb.model import SQLConnectionPool
+from zato.common import zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)

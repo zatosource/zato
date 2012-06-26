@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os, socket
-from contextlib import closing
 from copy import deepcopy
 from errno import ENOENT
 from thread import start_new_thread
@@ -29,7 +28,7 @@ from threading import local, RLock
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch, json
+from bunch import Bunch
 
 # zope.server
 from zope.server.http.httpserverchannel import HTTPServerChannel
@@ -41,9 +40,8 @@ from zope.server.taskthreads import ThreadedTaskDispatcher
 from paste.util.multidict import MultiDict
 
 # Zato
-from zato.common import SIMPLE_IO, url_type, ZATO_ODB_POOL_NAME
+from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name
-from zato.common.odb.model import DeployedService
 from zato.common.util import new_cid, security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler

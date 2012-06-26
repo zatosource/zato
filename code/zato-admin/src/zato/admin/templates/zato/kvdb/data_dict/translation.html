@@ -72,9 +72,8 @@
 
     {% if cluster_id %}
 <div class='page_prompt'>
-    <a href="{% url kvdb-data-dict-translation %}?cluster={{ cluster_id }}" class="common current">Translations</a>
     <a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
-    <a href="{% url kvdb-data-dict-system %}?cluster={{ cluster_id }}" class="common">Systems</a>
+    <a href="{% url kvdb-data-dict-translation %}?cluster={{ cluster_id }}" class="common current">Translations</a>
 </div>
 
 

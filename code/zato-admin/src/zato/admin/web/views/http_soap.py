@@ -28,9 +28,6 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-# lxml
-from lxml.objectify import Element
-
 # Validate
 from validate import is_boolean
 
@@ -41,9 +38,9 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common import SECURITY_TYPES, url_type, zato_namespace, zato_path, ZATO_NONE
-from zato.common.odb.model import Cluster, HTTPSOAP
-from zato.common.util import security_def_type as _security_def_type, TRACE1
+from zato.common import SECURITY_TYPES, url_type, ZATO_NONE
+from zato.common.odb.model import HTTPSOAP
+from zato.common.util import security_def_type as _security_def_type
 
 logger = logging.getLogger(__name__)
 

@@ -19,28 +19,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Django
-from django.core.urlresolvers import resolve
+# stdlib
+import logging
 
 # Zato
-from zato.admin.web.forms.kvdb.data_dict.system import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 
-class System(object):
-    def __init__(self, id=None, name=None):
-        self.id = id
+logger = logging.getLogger(__name__)
+
+class DictItem(object):
+    def __init__(self, system, name, value):
+        self.system = system
         self.name = name
+        self.value = value
 
 class Index(_Index):
     meth_allowed = 'GET'
-    url_name = 'kvdb-data-dict-system'
-    template = 'zato/kvdb/data_dict/system.html'
+    url_name = 'kvdb-data-dict-import-export'
+    template = 'zato/kvdb/data_dict/dictionary.html'
     
-    soap_action = 'zato:kvdb.data-dict.system.get-list'
-    output_class = System
+    soap_action = 'zato:kvdb.data-dict.dictionary.get-list'
+    output_class = DictItem
     
     class SimpleIO(_Index.SimpleIO):
-        output_required = ('id', 'name',)
+        output_required = ('name', 'source_system', 'target_system', 'source_name', 'target_name', 'source_value', 'target_value')
         output_repeated = True
 
     def handle(self):
@@ -51,24 +54,23 @@ class Index(_Index):
 
 class _CreateEdit(CreateEdit):
     meth_allowed = 'POST'
-
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name',)
-        output_optional = ('id', 'name',)
+        input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
+        output_required = ('id', 'name')
         
     def success_message(self, item):
-        return 'Successfully {0} the system [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the dictionary [{1}]'.format(self.verb, item.name.text)
 
 class Create(_CreateEdit):
-    url_name = 'kvdb-data-dict-system-create'
-    soap_action = 'zato:kvdb.data-dict.system.create'
+    url_name = 'kvdb-data-dict-create'
+    soap_action = 'zato:kvdb.data-dict.dictionary.create'
 
 class Edit(_CreateEdit):
-    url_name = 'kvdb-data-dict-system-edit'
+    url_name = 'kvdb-data-dict-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:kvdb.data-dict.system.edit'
+    soap_action = 'zato:kvdb.data-dict.dictionary.edit'
 
 class Delete(_Delete):
-    url_name = 'kvdb-data-dict-system-delete'
-    error_message = 'Could not delete the system'
-    soap_action = 'zato:kvdb.data-dict.system.delete'
+    url_name = 'kvdb-data-dict-delete'
+    error_message = 'Could not delete the data dictionary'
+    soap_action = 'zato:kvdb.data-dict.dictionary.delete'

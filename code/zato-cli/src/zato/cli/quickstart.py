@@ -33,7 +33,7 @@ from zato.common import SERVER_JOIN_STATUS, SIMPLE_IO
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb import ping_queries
 from zato.common.odb.model import *
-from zato.common.util import current_host, deployment_info, service_name_from_impl, tech_account_password
+from zato.common.util import current_host, service_name_from_impl, tech_account_password
 from zato.server import main
 
 zato_qs_start_template = """#!/usr/bin/env sh
@@ -374,10 +374,6 @@ class Quickstart(ZatoCommand):
             'zato:kvdb.data-dict.dictionary.create':'zato.server.service.internal.kvdb.data_dict.dictionary.Create',
             'zato:kvdb.data-dict.dictionary.edit':'zato.server.service.internal.kvdb.data_dict.dictionary.Edit',
             'zato:kvdb.data-dict.dictionary.Delete':'zato.server.service.internal.kvdb.data_dict.dictionary.Delete',
-            'zato:kvdb.data-dict.system.get-list':'zato.server.service.internal.kvdb.data_dict.system.GetList',
-            'zato:kvdb.data-dict.system.create':'zato.server.service.internal.kvdb.data_dict.system.Create',
-            'zato:kvdb.data-dict.system.edit':'zato.server.service.internal.kvdb.data_dict.system.Edit',
-            'zato:kvdb.data-dict.system.delete':'zato.server.service.internal.kvdb.data_dict.system.Delete',
         }
         
         #

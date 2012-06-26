@@ -35,10 +35,6 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
 # Validate
 from validate import is_boolean
 
@@ -47,13 +43,12 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.views import meth_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
-from zato.common import scheduler_date_time_format, zato_namespace, zato_path, ZatoException
-from zato.common.odb.model import Cluster, CronStyleJob, IntervalBasedJob, Job
+from zato.common import scheduler_date_time_format, zato_path, ZatoException
+from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint, TRACE1
 
 logger = logging.getLogger(__name__)

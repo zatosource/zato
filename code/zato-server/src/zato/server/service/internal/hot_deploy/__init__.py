@@ -25,7 +25,6 @@ from contextlib import closing
 from datetime import datetime
 from errno import EEXIST
 from tempfile import mkdtemp, NamedTemporaryFile
-from traceback import format_exc
 
 # pip
 from pip.download import is_archive_file

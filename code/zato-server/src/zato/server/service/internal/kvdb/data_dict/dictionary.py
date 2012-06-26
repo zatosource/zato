@@ -16,3 +16,21 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Zato
+from zato.server.service.internal import AdminService
+
+class GetList(AdminService):
+    """ Returns a list of translations.
+    """
+    class SimpleIO:
+        output_required = ('name', 'source_system', 'target_system', 'source_name', 
+            'target_name', 'source_value', 'target_value')
+        
+    def get_data(self):
+        return []
+
+    def handle(self):
+        self.response.payload[:] = self.get_data()

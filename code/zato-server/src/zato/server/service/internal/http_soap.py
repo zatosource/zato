@@ -23,18 +23,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
-# validate
-from validate import is_boolean
-
 # anyjson
 from json import dumps
 
 # Zato
-from zato.common import url_type, ZATO_NONE, ZATO_OK
+from zato.common import url_type, ZATO_NONE
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list

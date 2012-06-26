@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import asyncore, logging, os, time
-from datetime import datetime, timedelta
+from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
 from time import sleep

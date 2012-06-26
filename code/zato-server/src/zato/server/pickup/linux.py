@@ -30,7 +30,7 @@ import inotifyx
 from springpython.context import ApplicationContextAware
 
 # Zato
-from zato.common.util import hot_deploy, TRACE1
+from zato.common.util import hot_deploy
 
 __all__ = ['Pickup', 'PickupEventProcessor']
 

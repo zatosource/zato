@@ -38,7 +38,7 @@ from bunch import Bunch
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.cluster import CreateClusterForm, DeleteClusterForm, EditClusterForm, EditServerForm
-from zato.admin.web.views import Delete as _Delete, Index as _Index, get_lb_client, meth_allowed, set_servers_state
+from zato.admin.web.views import Delete as _Delete, get_lb_client, meth_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
      DATABASE_USER, sqlalchemy_django_engine
 from zato.common import SERVER_UP_STATUS

@@ -28,7 +28,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, ZatoException
+from zato.common import ZatoException
 from zato.common.odb.model import Cluster, Server
 from zato.server.service.internal import AdminService
 

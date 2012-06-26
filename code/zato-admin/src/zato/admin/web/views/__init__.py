@@ -29,21 +29,12 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-# lxml
-from lxml import etree
-from lxml.objectify import Element
-
-# Validate
-from validate import is_boolean
-
 # anyjson
 from json import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms import ChooseClusterForm
-from zato.common import zato_namespace, zato_path
-from zato.common.odb.model import Cluster
+from zato.common import zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
