@@ -25,12 +25,14 @@ from django import forms
 # Zato
 from zato.common import SIMPLE_IO
 
+INITIAL_CHOICES = ('', '----------')
+
 class ChooseClusterForm(forms.Form):
     cluster = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, clusters, data=None):
         super(ChooseClusterForm, self).__init__(data)
-        self.fields['cluster'].choices = [('', '----------')]
+        self.fields['cluster'].choices = [INITIAL_CHOICES]
         for cluster in clusters:
             server_info = '{0} - http://{1}:{2}'.format(cluster.name, cluster.lb_host, cluster.lb_port)
             self.fields['cluster'].choices.append([cluster.id, server_info])
@@ -44,7 +46,7 @@ class DataFormatForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super(DataFormatForm, self).__init__(*args, **kwargs)
         self.fields['data_format'].choices = []
-        self.fields['data_format'].choices.append(['', '----------'])
+        self.fields['data_format'].choices.append(INITIAL_CHOICES)
         for name in sorted(dir(SIMPLE_IO.FORMAT)):
             if name.upper() == name:
                 self.fields['data_format'].choices.append([name.lower(), name])

@@ -23,25 +23,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
+from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 
 logger = logging.getLogger(__name__)
 
 class DictItem(object):
-    def __init__(self, system, name, value):
-        self.system = system
-        self.name = name
-        self.value = value
-
-class Translation(object):
-    def __init__(self, source_system, target_system, source_name, target_name, source_value, target_value):
-        self.source_system = source_system
-        self.target_system = target_system
-        self.source_name = source_name
-        self.target_name = target_name
-        self.source_value = source_value
-        self.target_value = target_value
+    pass
 
 class Index(_Index):
     meth_allowed = 'GET'
@@ -49,10 +37,10 @@ class Index(_Index):
     template = 'zato/kvdb/data_dict/translation.html'
     
     soap_action = 'zato:kvdb.data-dict.translation.get-list'
-    output_class = Translation
+    output_class = DictItem
     
     class SimpleIO(_Index.SimpleIO):
-        output_required = ('name', 'source_system', 'target_system', 'source_name', 'target_name', 'source_value', 'target_value')
+        output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_repeated = True
 
     def handle(self):
@@ -64,14 +52,16 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     meth_allowed = 'POST'
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
-        output_required = ('id', 'name')
+        input_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
+        output_required = ('id',)
         
     def success_message(self, item):
-        return 'Successfully {0} the dictionary [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {} the translation system1:[{}], key1:[{}], value1:[{}] system2:[{}], key2:[{}], value2:[{}]'.format(
+            self.verb, self.input_dict['system1'], self.input_dict['key1'], self.input_dict['value1'],
+            self.input_dict['system2'], self.input_dict['key2'], self.input_dict['value2'])
 
 class Create(_CreateEdit):
-    url_name = 'kvdb-data-dict-translationcreate'
+    url_name = 'kvdb-data-dict-translation-create'
     soap_action = 'zato:kvdb.data-dict.translation.create'
 
 class Edit(_CreateEdit):
@@ -81,5 +71,5 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'kvdb-data-dict-translation-delete'
-    error_message = 'Could not delete the data dictionary'
+    error_message = 'Could not delete the data translation'
     soap_action = 'zato:kvdb.data-dict.translation.delete'

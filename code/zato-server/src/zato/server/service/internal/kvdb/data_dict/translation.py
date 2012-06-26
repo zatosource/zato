@@ -26,12 +26,10 @@ class GetList(AdminService):
     """ Returns a list of translations.
     """
     class SimpleIO:
-        output_required = ('name', 'source_system', 'target_system', 'source_name', 
-            'target_name', 'source_value', 'target_value')
+        output_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         
-    def get_data(self, session):
+    def get_data(self):
         return []
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+        self.response.payload[:] = self.get_data()
