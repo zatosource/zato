@@ -149,7 +149,9 @@ class SERVER_UP_STATUS:
     CLEAN_DOWN = 'clean-down'
     
 class KVDB:
-    SYSTEM_LIST = 'zato:kvdb:data-dict:system'
+    DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
+    TRANSLATION = 'zato:kvdb:data-dict:translation'
+    SEPARATOR = ':::'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

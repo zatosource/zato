@@ -47,7 +47,7 @@ $.fn.zato.kvdb.data_dict.dictionary.data_table.new_row = function(item, data, in
     row += "<td class='numbering'>&nbsp;</td>";
     row += String.format('<td>{0}</td>', item.system);
     row += String.format('<td>{0}</td>', item.key);
-    row += String.format('<td>{0}</td>', item.value);
+    row += String.format('<td><pre>{0}</pre></td>', item.value);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.kvdb.data_dict.dictionary.edit({0})'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.kvdb.data_dict.dictionary.delete_({0})'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

@@ -89,7 +89,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td>{{ item.system }}</td>
                         <td>{{ item.key }}</td>
-                        <td>{{ item.value }}</td>
+                        <td><pre>{{ item.value }}</pre></td>
                         <td><a href="javascript:$.fn.zato.kvdb.data_dict.dictionary.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.kvdb.data_dict.dictionary.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -166,6 +166,7 @@
                         </tr>
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
