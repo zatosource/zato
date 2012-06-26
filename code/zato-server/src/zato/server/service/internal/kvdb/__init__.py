@@ -60,8 +60,6 @@ class ExecuteCommand(AdminService):
             elif command in('HLEN', 'LLEN'):
                 response = str(response)
                 
-            print(3333, repr(response))
-            
             self.response.payload.result = response
             
         except Exception, e:
@@ -69,6 +67,8 @@ class ExecuteCommand(AdminService):
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
 
+
+# The data browser will most likely be implemented in a future version
 '''
 class GetList(AdminService):
     """ Returns a list of keys, optionally including their values.

@@ -368,12 +368,12 @@ class Quickstart(ZatoCommand):
             'zato:kvdb.data-dict.translation.get-list':'zato.server.service.internal.kvdb.data_dict.translation.GetList',
             'zato:kvdb.data-dict.translation.create':'zato.server.service.internal.kvdb.data_dict.translation.Create',
             'zato:kvdb.data-dict.translation.edit':'zato.server.service.internal.kvdb.data_dict.translation.Edit',
-            'zato:kvdb.data-dict.translation.Delete':'zato.server.service.internal.kvdb.data_dict.translation.Delete',
+            'zato:kvdb.data-dict.translation.delete':'zato.server.service.internal.kvdb.data_dict.translation.Delete',
             'zato:kvdb.data-dict.translation.translate':'zato.server.service.internal.kvdb.data_dict.translation.Translate',
             'zato:kvdb.data-dict.dictionary.get-list':'zato.server.service.internal.kvdb.data_dict.dictionary.GetList',
             'zato:kvdb.data-dict.dictionary.create':'zato.server.service.internal.kvdb.data_dict.dictionary.Create',
             'zato:kvdb.data-dict.dictionary.edit':'zato.server.service.internal.kvdb.data_dict.dictionary.Edit',
-            'zato:kvdb.data-dict.dictionary.Delete':'zato.server.service.internal.kvdb.data_dict.dictionary.Delete',
+            'zato:kvdb.data-dict.dictionary.delete':'zato.server.service.internal.kvdb.data_dict.dictionary.Delete',
         }
         
         #

@@ -43,7 +43,7 @@ class Index(_Index):
     output_class = DictItem
     
     class SimpleIO(_Index.SimpleIO):
-        output_required = ('name', 'source_system', 'target_system', 'source_name', 'target_name', 'source_value', 'target_value')
+        output_required = ('id', 'system', 'key', 'value')
         output_repeated = True
 
     def handle(self):
@@ -55,11 +55,12 @@ class Index(_Index):
 class _CreateEdit(CreateEdit):
     meth_allowed = 'POST'
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
-        output_required = ('id', 'name')
+        input_required = ('system', 'key', 'value')
+        output_required = ('id',)
         
     def success_message(self, item):
-        return 'Successfully {0} the dictionary [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {} the dictionary entry system:[{}], key:[{}], value:[{}]'.format(
+            self.verb, self.input_dict['system'], self.input_dict['key'], self.input_dict['value'])
 
 class Create(_CreateEdit):
     url_name = 'kvdb-data-dict-dictionary-create'
