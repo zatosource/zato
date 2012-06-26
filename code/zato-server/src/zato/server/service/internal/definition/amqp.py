@@ -25,7 +25,6 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common.odb.query import def_amqp_list

@@ -21,28 +21,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from traceback import format_exc
-
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
-from django.template import RequestContext
-
-# lxml
-from lxml.objectify import Element
-
-# anyjson
-from anyjson import dumps
 
 # Zato
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
-from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
-from zato.common.odb.model import Cluster, ConnDefAMQP
-from zato.common import zato_namespace, zato_path
-from zato.common.util import TRACE1
+from zato.common.odb.model import ConnDefAMQP
 
 logger = logging.getLogger(__name__)
 

@@ -29,20 +29,16 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
-# lxml
-from lxml.objectify import Element
-
 # Validate
 from validate import is_boolean
 
 # Zato
-from zato.admin.web.forms import ChangePasswordForm, ChooseClusterForm
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, Delete as _Delete, meth_allowed
-from zato.common import zato_namespace, zato_path, ZATO_WSS_PASSWORD_TYPES
+from zato.common import zato_path, ZATO_WSS_PASSWORD_TYPES
 from zato.admin.web import invoke_admin_service
-from zato.common.odb.model import Cluster, WSSDefinition
-from zato.common.util import TRACE1
+from zato.common.odb.model import WSSDefinition
 
 logger = logging.getLogger(__name__)
 

@@ -25,7 +25,6 @@ from datetime import datetime
 from httplib import BAD_REQUEST, NOT_FOUND
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
-from time import strptime
 from traceback import format_exc
 from urlparse import parse_qs
 
@@ -33,13 +32,13 @@ from urlparse import parse_qs
 from validate import is_boolean
 
 # Zato
-from zato.common import ZATO_OK, ZatoException
+from zato.common import ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
      DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service, service_list
 from zato.common.util import hot_deploy, payload_from_request
-from zato.server.service import Boolean, Integer, Service as ServiceClass
+from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):

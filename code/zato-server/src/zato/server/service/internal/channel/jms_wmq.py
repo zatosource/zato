@@ -23,11 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# validate
-from validate import is_boolean
-
 # Zato
-from zato.common import ZATO_OK
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_jms_wmq_list

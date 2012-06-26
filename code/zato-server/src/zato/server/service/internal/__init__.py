@@ -24,13 +24,8 @@ import logging
 from contextlib import closing
 from traceback import format_exc
 
-# Bunch
-from bunch import Bunch
-
 # Zato
-from zato.common import ZatoException, ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE
-from zato.common.odb.model import Cluster
 from zato.server.service import Service
 
 success_code = 0

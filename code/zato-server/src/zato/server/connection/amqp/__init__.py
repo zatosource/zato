@@ -27,8 +27,6 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-from datetime import datetime
-from os import getpid
 from threading import RLock
 
 # Pika

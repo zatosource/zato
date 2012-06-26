@@ -27,16 +27,12 @@ from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, re
 from string import Template
 from threading import RLock
 from traceback import format_exc
-from uuid import uuid4
-
-# lxml
-from lxml import objectify
 
 # Requests
 import requests
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import dumps
 
 # Bunch
 from bunch import Bunch
@@ -46,7 +42,7 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import HTTPException, SIMPLE_IO, url_type, ZATO_NONE, ZATO_OK
+from zato.common import HTTPException, SIMPLE_IO, url_type, ZATO_NONE
 from zato.common.util import payload_from_request, security_def_type, TRACE1
 from zato.server.connection.request_response import should_store, store
 from zato.server.service.internal import AdminService

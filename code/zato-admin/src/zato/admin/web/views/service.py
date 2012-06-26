@@ -22,18 +22,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from collections import namedtuple
-from cStringIO import StringIO
 from traceback import format_exc
 
 # Django
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 
 # lxml
 from lxml import etree
-from lxml.objectify import Element
 
 # Pygments
 from pygments import highlight
@@ -48,11 +46,10 @@ from anyjson import dumps, loads
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.forms.service import CreateForm, EditForm, WSDLUploadForm
+from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
-from zato.common import SourceInfo, zato_namespace, zato_path
-from zato.common.odb.model import Cluster, Service
+from zato.common import SourceInfo, zato_path
+from zato.common.odb.model import Service
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)

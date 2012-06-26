@@ -23,14 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# validate
-from validate import is_boolean
-
-# Bunch
-from bunch import Bunch
-
 # Zato
-from zato.common import ZATO_OK
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list

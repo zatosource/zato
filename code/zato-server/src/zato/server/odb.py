@@ -35,7 +35,7 @@ from paste.util.multidict import MultiDict
 from bunch import SimpleBunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, ZATO_NONE
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
      DeploymentStatus, HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
@@ -43,7 +43,7 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
     internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
     out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, wss_list
-from zato.common.util import current_host, deployment_info, security_def_type
+from zato.common.util import current_host, security_def_type
 from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
