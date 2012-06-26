@@ -327,6 +327,13 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
                         append_cluster, confirm_challenge) {
 
     var instance = $.fn.zato.data_table.data[id];
+    var name = '';
+    if('get_name' in instance) {
+        name = instance.get_name();
+    }
+    else {
+        name = instance.name;
+    }
 
     var _callback = function(data, status) {
         var success = status == 'success';
@@ -340,8 +347,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
                 $('#data-table > tbody:last').prepend(row);
                 $('#data-table').data('is_empty', true);
             }
-
-            msg = String.format(success_pattern, instance.name);
+            msg = String.format(success_pattern, name);
         }
         else {
             msg = data.responseText;
@@ -360,14 +366,14 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
         }
     }
     if(confirm_challenge) {
-        var q = String.format(confirm_pattern, instance.name, confirm_challenge);
+        var q = String.format(confirm_pattern, name, confirm_challenge);
         jPrompt(q, "I'd rather not to", 'Please confirm', function(r) {
             var ok = r == confirm_challenge;
             callback(ok);
         });
     }
     else {
-        var q = String.format(confirm_pattern, instance.name);
+        var q = String.format(confirm_pattern, name);
         jConfirm(q, 'Please confirm', callback);
     }
 }
@@ -519,7 +525,7 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     }
     
     $.fn.zato.data_table.data[item.id] = item;
-
+    
     return new_row_func(item, data, include_tr);
 }
 

@@ -226,6 +226,9 @@ class CreateEdit(_BaseView):
     """
     form_prefix = ''
     
+    def __init__(self):
+        self.input_dict = {}
+    
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
@@ -240,6 +243,8 @@ class CreateEdit(_BaseView):
     
             for name in self.SimpleIO.input_required:
                 input_dict[name] = self.req.POST.get(self.form_prefix + name)
+                
+            self.input_dict.update(input_dict)
 
             zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
     

@@ -23,14 +23,26 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.server.service.internal import AdminService
 
 class GetList(AdminService):
-    """ Returns a list of translations.
+    """ Returns a list of dictionary items.
     """
     class SimpleIO:
-        output_required = ('name', 'source_system', 'target_system', 'source_name', 
-            'target_name', 'source_value', 'target_value')
+        output_required = ('id', 'system', 'key', 'value')
         
     def get_data(self):
         return []
 
     def handle(self):
         self.response.payload[:] = self.get_data()
+
+
+class Create(AdminService):
+    """ Creates a new dictionary entry.
+    """
+    class SimpleIO:
+        input_required = ('system', 'key', 'value')
+        output_required = ('id', 'system')
+    
+    def handle(self):
+        print(1111111111111111111111111111444, self.request.input)
+        self.response.payload.id = 111
+        self.response.payload.system = self.request.input.system
