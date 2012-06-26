@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # TODO: Document it properly
 
-# zato:kvdb:data-dict:items
+# zato:kvdb:data-dict:item
 # {
 #  '1': 'ESB:::curreny::EUR',
 #  '2': 'ESB:::currency:::JPY',

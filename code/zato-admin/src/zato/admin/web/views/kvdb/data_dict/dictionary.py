@@ -29,10 +29,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 logger = logging.getLogger(__name__)
 
 class DictItem(object):
-    def __init__(self, system, name, value):
-        self.system = system
-        self.name = name
-        self.value = value
+    pass
 
 class Index(_Index):
     meth_allowed = 'GET'
