@@ -29,4 +29,4 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #  '4': 'CRM:::CURRENCY:::978',
 # }
 
-# 'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY:::978':{'item1':'1', 'item2':'4'}
+# 'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY:::978':{'id':'1', 'item1':'1', 'item2':'4'}

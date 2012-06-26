@@ -22,8 +22,22 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django import forms
 
+# Zato
+from zato.admin.web.forms import INITIAL_CHOICES
+
 class CreateForm(forms.Form):
-    pass
+    system1 = forms.ChoiceField()
+    key1 = forms.ChoiceField()
+    value1 = forms.ChoiceField()
+    system2 = forms.ChoiceField()
+    key2 = forms.ChoiceField()
+    value2 = forms.ChoiceField()
+    
+    def __init__(self, *args, **kwargs):
+        super(CreateForm, self).__init__(*args, **kwargs)
+        for name, value in self.fields.items():
+            if isinstance(value, forms.ChoiceField):
+                self.fields[name].choices = [INITIAL_CHOICES]
 
 class EditForm(CreateForm):
     pass
