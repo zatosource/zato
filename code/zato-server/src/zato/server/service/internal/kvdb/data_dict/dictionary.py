@@ -110,3 +110,15 @@ class Delete(AdminService):
     def handle(self):
         self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, self.request.input.id)
         self.response.payload.id = self.request.input.id
+
+class GetSystemList(_DictionaryService):
+    """ Returns a list of systems used in dictionaries.
+    """
+    class SimpleIO:
+        output_required = ('system',)
+        
+    def get_data(self):
+        return [{'system':'zzz'}]
+
+    def handle(self):
+        self.response.payload[:] = self.get_data()

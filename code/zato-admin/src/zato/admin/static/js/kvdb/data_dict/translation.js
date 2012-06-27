@@ -30,20 +30,20 @@ $.fn.zato.data_table.TranslationEntry = new Class({
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.DictEntry;
-    $.fn.zato.data_table.new_row_func = $.fn.zato.kvdb.data_dict.dictionary.data_table.new_row;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.kvdb.data_dict.translation.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['system1', 'key1', 'value1', 'system2', 'key2', 'value2']);
 })
 
-$.fn.zato.kvdb.data_dict.dictionary.create = function() {
+$.fn.zato.kvdb.data_dict.translation.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new translation', null);
 }
 
-$.fn.zato.kvdb.data_dict.dictionary.edit = function(id) {
+$.fn.zato.kvdb.data_dict.translation.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update the translation', id);
 }
 
-$.fn.zato.kvdb.data_dict.dictionary.data_table.new_row = function(item, data, include_tr) {
+$.fn.zato.kvdb.data_dict.translation.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
     if(include_tr) {
@@ -68,7 +68,7 @@ $.fn.zato.kvdb.data_dict.dictionary.data_table.new_row = function(item, data, in
     return row;
 }
 
-$.fn.zato.kvdb.data_dict.dictionary.delete_ = function(id) {
+$.fn.zato.kvdb.data_dict.translation.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Translation [{0}] deleted',
         'Are you sure you want to delete the translation [{0}]?',
