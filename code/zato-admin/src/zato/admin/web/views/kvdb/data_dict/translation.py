@@ -70,7 +70,7 @@ class _CreateEdit(CreateEdit):
         output_required = ('id',)
         
     def success_message(self, item):
-        return 'Successfully {} the translation system1:[{}], key1:[{}], value1:[{}] system2:[{}], key2:[{}], value2:[{}]'.format(
+        return 'Successfully {} the translation between system1:[{}], key1:[{}], value1:[{}] and system2:[{}], key2:[{}], value2:[{}]'.format(
             self.verb, self.input_dict['system1'], self.input_dict['key1'], self.input_dict['value1'],
             self.input_dict['system2'], self.input_dict['key2'], self.input_dict['value2'])
 

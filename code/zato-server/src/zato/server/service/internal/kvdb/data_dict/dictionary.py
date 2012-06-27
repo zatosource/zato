@@ -26,14 +26,9 @@ from operator import attrgetter
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.server.service.internal import AdminService
+from zato.server.service.internal.kvdb.data_dict import DataDictService
 
-class _DictionaryService(AdminService):
-    def _get_dict_items(self):
-        for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
-            system, key, value = item.split(KVDB.SEPARATOR)
-            yield {'id':id, 'system':system, 'key':key, 'value':value}
-
-class GetList(_DictionaryService):
+class GetList(DataDictService):
     """ Returns a list of dictionary items.
     """
     class SimpleIO:
@@ -45,7 +40,7 @@ class GetList(_DictionaryService):
     def handle(self):
         self.response.payload[:] = self.get_data()
 
-class _CreateEdit(_DictionaryService):
+class _CreateEdit(DataDictService):
     NAME_PATTERN = '\w+'
     NAME_RE = re.compile(NAME_PATTERN)
     
@@ -112,7 +107,7 @@ class Delete(AdminService):
         self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, self.request.input.id)
         self.response.payload.id = self.request.input.id
         
-class _DictionaryEntryService(_DictionaryService):
+class _DictionaryEntryService(DataDictService):
     """ Base class for returning a list of systems, keys and values.
     """
     def get_data(self, needs_systems=False, by_system=None, by_key=None):
