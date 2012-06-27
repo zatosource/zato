@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
+from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 
@@ -44,9 +45,15 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
+
+        zato_message, _  = invoke_admin_service(self.req.zato.cluster, 'zato:kvdb.data-dict.dictionary.get-system-list', {})
+        systems = []
+        for item in zato_message.response.item_list.item:
+            systems.append([item.system.text] * 2)
+            
         return {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(systems),
+            'edit_form': EditForm(systems, prefix='edit'),
         }
 
 class _CreateEdit(CreateEdit):

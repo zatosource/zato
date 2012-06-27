@@ -33,11 +33,15 @@ class CreateForm(forms.Form):
     key2 = forms.ChoiceField()
     value2 = forms.ChoiceField()
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, systems=[], *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
         for name, value in self.fields.items():
             if isinstance(value, forms.ChoiceField):
                 self.fields[name].choices = [INITIAL_CHOICES]
+                
+        for system_id, system in systems:
+            for name in('system1', 'system2'):
+                self.fields[name].choices.append([system_id, system])
 
 class EditForm(CreateForm):
     pass
