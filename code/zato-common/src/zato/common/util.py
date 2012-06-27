@@ -28,6 +28,7 @@ from glob import glob
 from hashlib import sha1, sha256
 from importlib import import_module
 from itertools import ifilter
+from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint
@@ -455,3 +456,16 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
         
     else:
         logger.warn('Ignoring {}'.format(path))
+
+
+# As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
+def multikeysort(items, columns):
+    comparers = [((itemgetter(col[1:].strip()), -1) if col.startswith('-') else (itemgetter(col.strip()), 1)) for col in columns]
+    def comparer(left, right):
+        for fn, mult in comparers:
+            result = cmp(fn(left), fn(right))
+            if result:
+                return mult * result
+        else:
+            return 0
+    return sorted(items, cmp=comparer)

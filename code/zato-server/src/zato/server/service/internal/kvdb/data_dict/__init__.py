@@ -17,8 +17,11 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# Zato Redis key layout
+# Zato
+from zato.common import KVDB, ZatoException
+from zato.server.service.internal import AdminService
 
+# Zato Redis key layout
 # TODO: Document it properly
 
 # zato:kvdb:data-dict:item
@@ -29,4 +32,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #  '4': 'CRM:::CURRENCY:::978',
 # }
 
-# 'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY:::978':{'id':'1', 'item1':'1', 'item2':'4'}
+# 'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY':{'id':'1', 'item1':'1', 'item2':'4', 'value2':'978'}
+
+
+class DataDictService(AdminService):
+    def _get_dict_items(self):
+        for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
+            system, key, value = item.split(KVDB.SEPARATOR)
+            yield {'id':id, 'system':system, 'key':key, 'value':value}
+            
+    def _get_translations(self):
+        '''for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
+            system, key, value = item.split(KVDB.SEPARATOR)
+            yield {'id':id, 'system':system, 'key':key, 'value':value}'''
+        
+        for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + '*'):
+            vals = self.server.kvdb.conn.hgetall(item)
+            id = vals.get('id')
+            value2 = vals.get('value2')
+            item = item.split(KVDB.SEPARATOR)
+            yield {'id':id, 'system1':item[1], 'key1':item[2], 'value1':item[3], 'system2':item[4], 'key2':item[5], 'value2':value2}

@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.TranslationEntry = new Class({
     toString: function() {
-        var s = '<DictEntry id:{0} system1:{1} key1:{2} value1:{3} system2:{4} key2:{5} value2:{6}>';
+        var s = '<TranslationEntry id:{0} system1:{1} key1:{2} value1:{3} system2:{4} key2:{5} value2:{6}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.system1 ? this.system1 : '(none)',
                                 this.key1 ? this.key1 : '(none)',
@@ -29,7 +29,7 @@ $.fn.zato.data_table.TranslationEntry = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.DictEntry;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.TranslationEntry;
     $.fn.zato.data_table.new_row_func = $.fn.zato.kvdb.data_dict.translation.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['system1', 'key1', 'value1', 'system2', 'key2', 'value2']);
