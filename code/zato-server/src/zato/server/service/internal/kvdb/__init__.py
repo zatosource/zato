@@ -55,7 +55,7 @@ class ExecuteCommand(AdminService):
                 
             response = self.server.kvdb.conn.execute_command(command, *parameters, **options) or ''
             
-            if response and command == 'KEYS':
+            if response and command in('KEYS', 'HKEYS', 'HVALS'):
                 response = unicode(response).encode('utf-8')
             elif command in('HLEN', 'LLEN'):
                 response = str(response)
