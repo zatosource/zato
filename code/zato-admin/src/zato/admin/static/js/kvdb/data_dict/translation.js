@@ -33,6 +33,41 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.kvdb.data_dict.translation.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['system1', 'key1', 'value1', 'system2', 'key2', 'value2']);
+    
+    var change_data = [
+        ['system1', 'key1', 'get-key-list', [{'system':'system1'}]],
+        ['system2', 'key2', 'get-key-list', [{'system':'system2'}]],
+        
+        ['key1', 'value1', 'get-value-list', [{'system':'system1', 'key':'key1'}]],
+        ['key2', 'value2', 'get-value-list', [{'system':'system2', 'key':'key2'}]],
+    ];
+    
+    _.each(change_data, function(elem) {
+        var source_id = elem[0];
+        var target_id = elem[1];
+        var url = elem[2];
+        
+        $('#id_'+ source_id).change(function() {
+
+            var query_string = {'cluster':$('#cluster_id').val()};
+            _.each(elem[3], function(item, _ignored) {
+                _.each(item, function(value, key) {
+                    query_string[key] = $('#id_'+ value).val();
+                })
+            });
+        
+            var target = $('#id_'+ target_id);
+            var value = '';
+            target.find('option:not([value=""])').remove();
+            $.getJSON('./'+ url + '/', query_string, function(result) {
+                $.each(result, function(idx) {
+                    value = '<option value="{0}">{1}</option>';
+                    target.append(String.format(value, result[idx]['name'], result[idx]['name']));
+                });
+            });
+        });
+    });
+
 })
 
 $.fn.zato.kvdb.data_dict.translation.create = function() {
