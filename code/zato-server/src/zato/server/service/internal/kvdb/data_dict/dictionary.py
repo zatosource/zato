@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import re
+from operator import attrgetter
 
 # Zato
 from zato.common import KVDB, ZatoException
@@ -110,15 +111,47 @@ class Delete(AdminService):
     def handle(self):
         self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, self.request.input.id)
         self.response.payload.id = self.request.input.id
+        
+class _DictionaryEntryService(_DictionaryService):
+    """ Base class for returning a list of systems, keys and values.
+    """
+    def get_data(self, needs_systems=False, by_system=None, by_key=None):
+        for triple in self.server.kvdb.conn.hvals(KVDB.DICTIONARY_ITEM):
+            system, key, value = triple.split(KVDB.SEPARATOR)
+            if needs_systems:
+                yield system
+            elif by_system:
+                if by_key:
+                    if system == by_system and key == by_key:
+                        yield value
+                elif system == by_system:
+                    yield key
 
-class GetSystemList(_DictionaryService):
+class GetSystemList(_DictionaryEntryService):
     """ Returns a list of systems used in dictionaries.
     """
     class SimpleIO:
-        output_required = ('system',)
+        output_required = ('name',)
         
-    def get_data(self):
-        return [{'system':'zzz'}]
-
     def handle(self):
-        self.response.payload[:] = self.get_data()
+        self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(True))))
+
+class GetKeyList(_DictionaryEntryService):
+    """ Returns a list of keys used in a system's dictionary.
+    """
+    class SimpleIO:
+        input_required = ('system',)
+        output_required = ('name',)
+        
+    def handle(self):
+        self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system))))
+
+class GetValueList(_DictionaryEntryService):
+    """ Returns a list of values used in a system dictionary's key.
+    """
+    class SimpleIO:
+        input_required = ('system', 'key')
+        output_required = ('name',)
+        
+    def handle(self):
+        self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system, self.request.input.key))))

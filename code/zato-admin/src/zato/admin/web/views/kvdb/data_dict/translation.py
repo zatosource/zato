@@ -22,10 +22,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# anyjson
+from anyjson import dumps
+
+# Django
+from django.http import HttpResponse
+
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +52,12 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-
         zato_message, _  = invoke_admin_service(self.req.zato.cluster, 'zato:kvdb.data-dict.dictionary.get-system-list', {})
         systems = []
-        for item in zato_message.response.item_list.item:
-            systems.append([item.system.text] * 2)
-            
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
+            for item in zato_message.response.item_list.item:
+                systems.append([item.name.text] * 2)
+
         return {
             'create_form': CreateForm(systems),
             'edit_form': EditForm(systems, prefix='edit'),
@@ -80,3 +87,21 @@ class Delete(_Delete):
     url_name = 'kvdb-data-dict-translation-delete'
     error_message = 'Could not delete the data translation'
     soap_action = 'zato:kvdb.data-dict.translation.delete'
+
+
+def _get_key_value_list(req, service_name, input_dict):
+    return_data = []
+    zato_message, _  = invoke_admin_service(req.zato.cluster, service_name, input_dict)
+    if zato_path('response.item_list.item').get_from(zato_message) is not None:
+        for item in zato_message.response.item_list.item:
+            return_data.append({'name':item.name.text})
+    
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+
+@meth_allowed('GET')
+def get_key_list(req):
+    return _get_key_value_list(req, 'zato:kvdb.data-dict.dictionary.get-key-list', {'system':req.GET['system']})
+
+@meth_allowed('GET')
+def get_value_list(req):
+    return _get_key_value_list(req, 'zato:kvdb.data-dict.dictionary.get-value-list', {'system':req.GET['system'], 'key':req.GET['key']})
