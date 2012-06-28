@@ -88,7 +88,6 @@ class Delete(_Delete):
     error_message = 'Could not delete the data translation'
     soap_action = 'zato:kvdb.data-dict.translation.delete'
 
-
 def _get_key_value_list(req, service_name, input_dict):
     return_data = []
     zato_message, _  = invoke_admin_service(req.zato.cluster, service_name, input_dict)
