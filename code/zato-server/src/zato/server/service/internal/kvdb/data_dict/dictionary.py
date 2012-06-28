@@ -76,8 +76,7 @@ class _CreateEdit(DataDictService):
         if self.request.input.get('id'):
             id = self.request.input.id
         else:
-            ids = self.server.kvdb.conn.hkeys(KVDB.DICTIONARY_ITEM)
-            id = (max(int(elem) for elem in ids) + 1) if ids else 1
+            id = self.server.kvdb.conn.incr(KVDB.DICTIONARY_ITEM_ID)
             
         id = str(id)
             

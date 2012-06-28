@@ -150,7 +150,9 @@ class SERVER_UP_STATUS:
     
 class KVDB:
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
+    DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id'
     TRANSLATION = 'zato:kvdb:data-dict:translation'
+    TRANSLATION_ID = TRANSLATION + ':id'
     SEPARATOR = ':::'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
