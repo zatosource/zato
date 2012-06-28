@@ -8,18 +8,19 @@ $.fn.zato.data_table.TranslationEntry = new Class({
                                 this.system1 ? this.system1 : '(none)',
                                 this.key1 ? this.key1 : '(none)',
                                 this.value1 ? this.value1 : '(none)',
-                                this.system2 ? this.system : '(none)',
+                                this.system2 ? this.system2 : '(none)',
                                 this.key2 ? this.key2 : '(none)',
                                 this.value2 ? this.value2 : '(none)');
     },
 
     get_name: function() {
+        
         var s = 'id:[{0}] system1:[{1}] key1:[{2}] value1:[{3}] system2:[{4}] key2:[{5}] value2:[{6}]';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.system1 ? this.system1 : '(none)',
                                 this.key1 ? this.key1 : '(none)',
                                 this.value1 ? this.value1 : '(none)',
-                                this.system2 ? this.system : '(none)',
+                                this.system2 ? this.system2 : '(none)',
                                 this.key2 ? this.key2 : '(none)',
                                 this.value2 ? this.value2 : '(none)');
     }

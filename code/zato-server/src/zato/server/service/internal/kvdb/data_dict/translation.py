@@ -28,14 +28,13 @@ class GetList(DataDictService):
     """ Returns a list of translations.
     """
     class SimpleIO:
-        output_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
+        output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         
     def get_data(self):
         return multikeysort(self._get_translations(), ['system1', 'key1', 'value1', 'system2', 'key2', 'value2'])
 
     def handle(self):
         self.response.payload[:] = self.get_data()
-
 
 class Create(DataDictService):
     """ Creates translations translations between dictionary entries. Note that
@@ -63,7 +62,6 @@ class Create(DataDictService):
             raise ZatoException(self.cid, msg)
         
         for item in self._get_dict_items():
-            existing_ids.append(item['id'])
             for idx in('1', '2'):
                 system = self.request.input.get('system' + idx)
                 key = self.request.input.get('key' + idx)
@@ -80,6 +78,9 @@ class Create(DataDictService):
                     self.request.input.get('system' + idx), self.request.input.get('key' + idx),
                     self.request.input.get('value' + idx))
                 raise ZatoException(self.cid, msg)
+
+        for item in self._get_translations():
+            existing_ids.append(item['id'])
             
         id = (max(int(elem) for elem in existing_ids) + 1) if existing_ids else 1
         
@@ -89,3 +90,16 @@ class Create(DataDictService):
         self.server.kvdb.conn.hset(hash_name, 'value2', value2)
         
         self.response.payload.id = id
+
+
+class Delete(DataDictService):
+    """ Deletes a translation between dictionary entries.
+    """
+    class SimpleIO:
+        input_required = ('id',)
+        
+    def handle(self):
+        for item in self._get_translations():
+            if int(item['id']) == self.request.input.id:
+                delete_key = KVDB.SEPARATOR.join((KVDB.TRANSLATION, item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
+                self.server.kvdb.conn.delete(delete_key)
