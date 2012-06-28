@@ -162,22 +162,34 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url kvdb-data-dict-dictionary-edit %}" method="post" id="edit-form">
+                <form action="{% url kvdb-data-dict-translation-edit %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle;width:20%">System</td>
-                            <td>{{ edit_form.system }}</td>
+                            <td style="vertical-align:middle;width:20%">System1</td>
+                            <td>{{ edit_form.system1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Key1</td>
+                            <td>{{ edit_form.key1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Value1</td>
+                            <td>{{ edit_form.value1 }}</td>
                         </tr>
                         
+
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Key</td>
-                            <td>{{ edit_form.key }}</td>
+                            <td style="vertical-align:middle;width:20%">System2</td>
+                            <td>{{ edit_form.system2 }}</td>
                         </tr>
-                        
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Value</td>
-                            <td>{{ edit_form.value }}</td>
+                            <td style="vertical-align:middle;width:20%">Key2</td>
+                            <td>{{ edit_form.key2 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Value2</td>
+                            <td>{{ edit_form.value2 }}</td>
                         </tr>
 
                         <tr>
@@ -192,6 +204,7 @@
                 </form>
             </div>
         </div>
+        
     {% endif %}
 
 
