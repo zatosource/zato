@@ -25,6 +25,7 @@ from operator import attrgetter
 
 # Zato
 from zato.common import KVDB, ZatoException
+from zato.common.util import multikeysort
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
@@ -35,7 +36,7 @@ class GetList(DataDictService):
         output_required = ('id', 'system', 'key', 'value')
         
     def get_data(self):
-        return self._get_dict_items()
+        return multikeysort(self._get_dict_items(), ['system', 'key', 'value'])
 
     def handle(self):
         self.response.payload[:] = self.get_data()
