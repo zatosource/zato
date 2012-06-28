@@ -42,10 +42,22 @@ from zato.server.service.internal import AdminService
 
 
 class DataDictService(AdminService):
+    def __init__(self, *args, **kwargs):
+        super(DataDictService, self).__init__(*args, **kwargs)
+        self._dict_items = []
+        
     def _get_dict_items(self):
-        for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
-            system, key, value = item.split(KVDB.SEPARATOR)
-            yield {'id':id, 'system':system, 'key':key, 'value':value}
+        if not self._dict_items:
+            for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
+                system, key, value = item.split(KVDB.SEPARATOR)
+                self._dict_items.append({'id':id, 'system':system, 'key':key, 'value':value})
+        for item in self._dict_items:
+            yield item
+            
+    def _get_item_id(self, system, key, value):
+        for item in self._get_dict_items():
+            if item['system'] == system and item['key'] == key and item['value'] == value:
+                return item['id']
             
     def _get_translations(self):
         for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + KVDB.SEPARATOR + '*'):

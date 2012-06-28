@@ -24,6 +24,9 @@ from zato.common import KVDB, ZatoException
 from zato.common.util import multikeysort
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
+def _name(system1, key1, value1, system2, key2):
+    return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
+
 class _DeletingService(DataDictService):
     """ Subclasses of this class know how to delete a translation.
     """
@@ -44,39 +47,30 @@ class GetList(DataDictService):
 
     def handle(self):
         self.response.payload[:] = self.get_data()
-
-class Create(DataDictService):
-    """ Creates translations translations between dictionary entries. Note that
-    the reverse mapping is always created.
+        
+class _CreateEdit(DataDictService):
+    """ A base class for both Create and Edit actions.
     """
-    class SimpleIO:
-        input_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
-        output_required = ('id',)
-        
-    def handle(self):
-        system1 = self.request.input.system1
-        key1 = self.request.input.key1
-        value1 = self.request.input.value1
-        system2 = self.request.input.system2
-        key2 = self.request.input.key2
-        value2 = self.request.input.value2
-        item_ids = {'id1':None, 'id2':None}
-        
-        hash_name = KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
-        if self.server.kvdb.conn.exists(hash_name):
+    def _validate_name(self, name, system1, key1, value1, system2, key2):
+        """ Makes sure the translation doesn't already exist.
+        """
+        if self.server.kvdb.conn.exists(name):
             msg = 'A mapping between system1:[{}], key1:[{}], value1:[{}] and system2:[{}], key2:[{}] already exists'.format(
                 system1, key1, value1, system2, key2)
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
+        return True
         
-        for item in self._get_dict_items():
-            for idx in('1', '2'):
-                system = self.request.input.get('system' + idx)
-                key = self.request.input.get('key' + idx)
-                value = self.request.input.get('value' + idx)
-                
-                if system == item['system'] and key == item['key'] and value == item['value']:
-                    item_ids['id' + idx] = item['id']
+    def _get_item_ids(self):
+        """ Returns IDs of the dictionary entries used in the translation.
+        """
+        item_ids = {'id1':None, 'id2':None}
+        
+        for idx in('1', '2'):
+            system = self.request.input.get('system' + idx)
+            key = self.request.input.get('key' + idx)
+            value = self.request.input.get('value' + idx)
+            item_ids['id' + idx] = self._get_item_id(system, key, value)
          
         # This is a sanity check, in theory the input data can't possibly be outside
         # of what's in the KVDB.DICTIONARY_ITEM key
@@ -87,6 +81,33 @@ class Create(DataDictService):
                     self.request.input.get('value' + idx))
                 raise ZatoException(self.cid, msg)
             
+        return item_ids
+    
+    def handle(self):
+        system1 = self.request.input.system1
+        key1 = self.request.input.key1
+        value1 = self.request.input.value1
+        system2 = self.request.input.system2
+        key2 = self.request.input.key2
+        value2 = self.request.input.value2
+        
+        item_ids = self._get_item_ids()
+        hash_name = _name(system1, key1, value1, system2, key2)
+        
+        if self._validate_name(hash_name, system1, key1, value1, system2, key2):
+            self.response.payload.id = self._handle(hash_name, item_ids)
+            
+    def _handle(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by a subclass')
+            
+class Create(_CreateEdit):
+    """ Creates a translation between dictionary entries.
+    """
+    class SimpleIO:
+        input_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
+        output_required = ('id',)
+        
+    def _handle(self, hash_name, item_ids):
         id = self.server.kvdb.conn.incr(KVDB.TRANSLATION_ID)
         
         self.server.kvdb.conn.hset(hash_name, 'id', id)
@@ -94,8 +115,17 @@ class Create(DataDictService):
         self.server.kvdb.conn.hset(hash_name, 'item2', item_ids['id2'])
         self.server.kvdb.conn.hset(hash_name, 'value2', value2)
         
-        self.response.payload.id = id
+        return id
 
+class Edit(_CreateEdit):
+    """ Updates a translation between dictionary entries.
+    """
+    class SimpleIO:
+        input_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
+        output_required = ('id',)
+        
+    def _handle(self, hash_name, item_ids):
+        return self.request.input.id
 
 class Delete(_DeletingService):
     """ Deletes a translation between dictionary entries.
