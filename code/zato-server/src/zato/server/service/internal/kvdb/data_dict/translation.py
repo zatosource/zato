@@ -24,6 +24,15 @@ from zato.common import KVDB, ZatoException
 from zato.common.util import multikeysort
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
+class _DeletingService(DataDictService):
+    """ Subclasses of this class know how to delete a translation.
+    """
+    def delete(self, id):
+        for item in self._get_translations():
+            if int(item['id']) == id:
+                delete_key = KVDB.SEPARATOR.join((KVDB.TRANSLATION, item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
+                self.server.kvdb.conn.delete(delete_key)
+
 class GetList(DataDictService):
     """ Returns a list of translations.
     """
@@ -52,7 +61,6 @@ class Create(DataDictService):
         key2 = self.request.input.key2
         value2 = self.request.input.value2
         item_ids = {'id1':None, 'id2':None}
-        existing_ids = []
         
         hash_name = KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
         if self.server.kvdb.conn.exists(hash_name):
@@ -78,11 +86,8 @@ class Create(DataDictService):
                     self.request.input.get('system' + idx), self.request.input.get('key' + idx),
                     self.request.input.get('value' + idx))
                 raise ZatoException(self.cid, msg)
-
-        for item in self._get_translations():
-            existing_ids.append(item['id'])
             
-        id = (max(int(elem) for elem in existing_ids) + 1) if existing_ids else 1
+        id = self.server.kvdb.conn.incr(KVDB.TRANSLATION_ID)
         
         self.server.kvdb.conn.hset(hash_name, 'id', id)
         self.server.kvdb.conn.hset(hash_name, 'item1', item_ids['id1'])
@@ -92,14 +97,11 @@ class Create(DataDictService):
         self.response.payload.id = id
 
 
-class Delete(DataDictService):
+class Delete(_DeletingService):
     """ Deletes a translation between dictionary entries.
     """
     class SimpleIO:
         input_required = ('id',)
         
     def handle(self):
-        for item in self._get_translations():
-            if int(item['id']) == self.request.input.id:
-                delete_key = KVDB.SEPARATOR.join((KVDB.TRANSLATION, item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
-                self.server.kvdb.conn.delete(delete_key)
+        self.delete(self.request.input.id)

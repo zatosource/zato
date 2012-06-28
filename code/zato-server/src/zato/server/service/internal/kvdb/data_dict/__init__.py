@@ -24,6 +24,9 @@ from zato.server.service.internal import AdminService
 # Zato Redis key layout
 # TODO: Document it properly
 
+#
+# zato:kvdb:data-dict:item:id: '1'
+#
 # zato:kvdb:data-dict:item
 # {
 #  '1': 'ESB:::curreny::EUR',
@@ -32,6 +35,9 @@ from zato.server.service.internal import AdminService
 #  '4': 'CRM:::CURRENCY:::978',
 # }
 
+#
+# zato:kvdb:data-dict:translation:id: '1'
+#
 # 'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY':{'id':'1', 'item1':'1', 'item2':'4', 'value2':'978'}
 
 
@@ -46,7 +52,7 @@ class DataDictService(AdminService):
             system, key, value = item.split(KVDB.SEPARATOR)
             yield {'id':id, 'system':system, 'key':key, 'value':value}'''
         
-        for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + '*'):
+        for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + KVDB.SEPARATOR + '*'):
             vals = self.server.kvdb.conn.hgetall(item)
             id = vals.get('id')
             value2 = vals.get('value2')
