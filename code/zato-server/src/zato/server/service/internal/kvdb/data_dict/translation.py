@@ -51,14 +51,26 @@ class GetList(DataDictService):
 class _CreateEdit(DataDictService):
     """ A base class for both Create and Edit actions.
     """
-    def _validate_name(self, name, system1, key1, value1, system2, key2):
+    def _validate_name(self, name, system1, key1, value1, system2, key2, id):
         """ Makes sure the translation doesn't already exist.
         """
-        if self.server.kvdb.conn.exists(name):
+        def _exception():
             msg = 'A mapping between system1:[{}], key1:[{}], value1:[{}] and system2:[{}], key2:[{}] already exists'.format(
                 system1, key1, value1, system2, key2)
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
+
+        if self.server.kvdb.conn.exists(name):
+            # No ID means it's a Create so it's a genuine match of an existing mapping
+            if not id:
+                _exception()
+            
+            # We've got an ID so it's an Edit and we need ignore it if we're
+            # editing ourself.
+            existing_id = self.server.kvdb.conn.hget(name, 'id')
+            if not str(existing_id) == str(id):
+                _exception()
+
         return True
         
     def _get_item_ids(self):
@@ -94,11 +106,16 @@ class _CreateEdit(DataDictService):
         item_ids = self._get_item_ids()
         hash_name = _name(system1, key1, value1, system2, key2)
         
-        if self._validate_name(hash_name, system1, key1, value1, system2, key2):
+        if self._validate_name(hash_name, system1, key1, value1, system2, key2, self.request.input.get('id')):
             self.response.payload.id = self._handle(hash_name, item_ids)
             
     def _handle(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by a subclass')
+    
+    def _set_hash_fields(self, hash_name, item_ids):
+        self.server.kvdb.conn.hset(hash_name, 'item1', item_ids['id1'])
+        self.server.kvdb.conn.hset(hash_name, 'item2', item_ids['id2'])
+        self.server.kvdb.conn.hset(hash_name, 'value2', self.request.input.value2)
             
 class Create(_CreateEdit):
     """ Creates a translation between dictionary entries.
@@ -109,14 +126,9 @@ class Create(_CreateEdit):
         
     def _handle(self, hash_name, item_ids):
         id = self.server.kvdb.conn.incr(KVDB.TRANSLATION_ID)
-        
         self.server.kvdb.conn.hset(hash_name, 'id', id)
-        self.server.kvdb.conn.hset(hash_name, 'item1', item_ids['id1'])
-        self.server.kvdb.conn.hset(hash_name, 'item2', item_ids['id2'])
-        self.server.kvdb.conn.hset(hash_name, 'value2', value2)
-        
         return id
-
+    
 class Edit(_CreateEdit):
     """ Updates a translation between dictionary entries.
     """
@@ -125,6 +137,14 @@ class Edit(_CreateEdit):
         output_required = ('id',)
         
     def _handle(self, hash_name, item_ids):
+        for item in self._get_translations():
+            if item['id'] == str(self.request.input.id):
+                existing_name = _name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
+                if existing_name != hash_name:
+                    self.server.kvdb.conn.renamenx(existing_name, hash_name)
+                    self._set_hash_fields(hash_name, item_ids)
+                break
+
         return self.request.input.id
 
 class Delete(_DeletingService):
