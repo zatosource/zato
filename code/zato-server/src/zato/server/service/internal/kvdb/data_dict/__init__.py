@@ -46,15 +46,26 @@ class DataDictService(AdminService):
         super(DataDictService, self).__init__(*args, **kwargs)
         self._dict_items = []
         
+    def _name(self, system1, key1, value1, system2, key2):
+        return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
+    
+    def _get_dict_item(self, id):
+        for item in self._get_dict_items():
+            if item['id'] == str(id):
+                return item
+        else:
+            msg = 'Could not find the dictionary by its ID:[{}}]'.format(id)
+            raise ZatoException(self.cid, msg)
+        
     def _get_dict_items(self):
         if not self._dict_items:
             for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
                 system, key, value = item.split(KVDB.SEPARATOR)
-                self._dict_items.append({'id':id, 'system':system, 'key':key, 'value':value})
+                self._dict_items.append({'id':str(id), 'system':system, 'key':key, 'value':value})
         for item in self._dict_items:
             yield item
             
-    def _get_item_id(self, system, key, value):
+    def _get_dict_item_id(self, system, key, value):
         for item in self._get_dict_items():
             if item['system'] == system and item['key'] == key and item['value'] == value:
                 return item['id']

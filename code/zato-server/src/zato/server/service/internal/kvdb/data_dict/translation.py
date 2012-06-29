@@ -24,9 +24,6 @@ from zato.common import KVDB, ZatoException
 from zato.common.util import multikeysort
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
-def _name(system1, key1, value1, system2, key2):
-    return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
-
 class _DeletingService(DataDictService):
     """ Subclasses of this class know how to delete a translation.
     """
@@ -82,7 +79,7 @@ class _CreateEdit(DataDictService):
             system = self.request.input.get('system' + idx)
             key = self.request.input.get('key' + idx)
             value = self.request.input.get('value' + idx)
-            item_ids['id' + idx] = self._get_item_id(system, key, value)
+            item_ids['id' + idx] = self._get_dict_item_id(system, key, value)
          
         # This is a sanity check, in theory the input data can't possibly be outside
         # of what's in the KVDB.DICTIONARY_ITEM key
@@ -104,7 +101,7 @@ class _CreateEdit(DataDictService):
         value2 = self.request.input.value2
         
         item_ids = self._get_item_ids()
-        hash_name = _name(system1, key1, value1, system2, key2)
+        hash_name = self._name(system1, key1, value1, system2, key2)
         
         if self._validate_name(hash_name, system1, key1, value1, system2, key2, self.request.input.get('id')):
             self.response.payload.id = self._handle(hash_name, item_ids)
@@ -140,7 +137,7 @@ class Edit(_CreateEdit):
     def _handle(self, hash_name, item_ids):
         for item in self._get_translations():
             if item['id'] == str(self.request.input.id):
-                existing_name = _name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
+                existing_name = self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
                 if existing_name != hash_name:
                     self.server.kvdb.conn.renamenx(existing_name, hash_name)
                     self._set_hash_fields(hash_name, item_ids)
