@@ -113,8 +113,8 @@ class _CreateEdit(DataDictService):
         raise NotImplementedError('Must be implemented by a subclass')
     
     def _set_hash_fields(self, hash_name, item_ids):
-        self.server.kvdb.conn.hset(hash_name, 'item1', item_ids['id1'])
-        self.server.kvdb.conn.hset(hash_name, 'item2', item_ids['id2'])
+        self.server.kvdb.conn.hset(hash_name, 'id1', item_ids['id1'])
+        self.server.kvdb.conn.hset(hash_name, 'id2', item_ids['id2'])
         self.server.kvdb.conn.hset(hash_name, 'value2', self.request.input.value2)
             
 class Create(_CreateEdit):
@@ -127,6 +127,7 @@ class Create(_CreateEdit):
     def _handle(self, hash_name, item_ids):
         id = self.server.kvdb.conn.incr(KVDB.TRANSLATION_ID)
         self.server.kvdb.conn.hset(hash_name, 'id', id)
+        self._set_hash_fields(hash_name, item_ids)
         return id
     
 class Edit(_CreateEdit):

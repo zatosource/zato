@@ -82,19 +82,29 @@ class _CreateEdit(DataDictService):
         id = str(id)
             
         if self._validate_entry(item, id):
-            self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)
+            self._handle(id)
             
         self.response.payload.id = id
+        
+    def _handle(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented by a subclass')
 
 class Create(_CreateEdit):
     """ Creates a new dictionary entry.
     """
-    # Does nothing more than the superclass already does
+    def _handle(self, ignored):
+        self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)
     
 class Edit(_CreateEdit):
     """ Creates a new dictionary entry.
     """
-    # Does nothing more than the superclass already does
+    def _handle(self, id):
+        for item in self._get_translations():
+            if item['id1'] == id or item['id2'] == id:
+                #self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)
+                print(item, id, self.request.input.system, self.request.input.key, self.request.input.value) 
+            else:
+                print(39393939, repr(item), repr(id))
 
 class Delete(AdminService):
     """ Deletes a dictionary entry by its ID.
