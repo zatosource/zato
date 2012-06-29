@@ -67,13 +67,13 @@ class _CreateEdit(DataDictService):
                 raise ZatoException(self.cid, msg)
 
         return True
-    
+
     def _get_item_name(self):
         return KVDB.SEPARATOR.join((self.request.input.system, self.request.input.key, self.request.input.value))
-    
+
     def handle(self):
         item = self._get_item_name()
-        
+
         if self.request.input.get('id'):
             id = self.request.input.id
         else:
@@ -83,7 +83,8 @@ class _CreateEdit(DataDictService):
             
         if self._validate_entry(item, id):
             self._handle(id)
-            
+        
+        self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)    
         self.response.payload.id = id
         
     def _handle(self, *args, **kwargs):
@@ -92,19 +93,30 @@ class _CreateEdit(DataDictService):
 class Create(_CreateEdit):
     """ Creates a new dictionary entry.
     """
-    def _handle(self, ignored):
-        self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)
+    def _handle(self, *ignored_args, **ignored_kwargs):
+        pass
+        
     
 class Edit(_CreateEdit):
-    """ Creates a new dictionary entry.
+    """ Updates a dictionary entry.
     """
     def _handle(self, id):
         for item in self._get_translations():
             if item['id1'] == id or item['id2'] == id:
-                #self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)
-                print(item, id, self.request.input.system, self.request.input.key, self.request.input.value) 
-            else:
-                print(39393939, repr(item), repr(id))
+                existing_name = self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
+                if item['id1'] == id:
+                    hash_name = self._name(self.request.input.system, self.request.input.key, self.request.input.value, item['system2'], item['key2'])
+                else:
+                    hash_name = self._name(item['system1'], item['key1'], item['value1'], self.request.input.system, self.request.input.key)
+                    
+                if existing_name == hash_name and item['value2'] == self.request.input:
+                    continue
+                
+                if existing_name != hash_name:
+                    self.server.kvdb.conn.renamenx(existing_name, hash_name)
+
+                if item['id2'] == id:
+                    self.server.kvdb.conn.hset(hash_name, 'value2', self.request.input.value)
 
 class Delete(AdminService):
     """ Deletes a dictionary entry by its ID.
