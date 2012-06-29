@@ -62,7 +62,7 @@ class DataDictService(AdminService):
     def _get_translations(self):
         for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + KVDB.SEPARATOR + '*'):
             vals = self.server.kvdb.conn.hgetall(item)
-            id = vals.get('id')
-            value2 = vals.get('value2')
             item = item.split(KVDB.SEPARATOR)
-            yield {'id':id, 'system1':item[1], 'key1':item[2], 'value1':item[3], 'system2':item[4], 'key2':item[5], 'value2':value2}
+            yield {'system1':item[1], 'key1':item[2], 'value1':item[3], 'system2':item[4], 
+                   'key2':item[5], 'id':str(vals.get('id')), 'value2':vals.get('value2'),
+                   'id1':str(vals.get('id1')), 'id2':str(vals.get('id2')),}
