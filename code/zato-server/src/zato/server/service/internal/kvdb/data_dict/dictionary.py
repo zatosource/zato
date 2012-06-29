@@ -96,7 +96,6 @@ class Create(_CreateEdit):
     def _handle(self, *ignored_args, **ignored_kwargs):
         pass
         
-    
 class Edit(_CreateEdit):
     """ Updates a dictionary entry.
     """
@@ -118,7 +117,7 @@ class Edit(_CreateEdit):
                 if item['id2'] == id:
                     self.server.kvdb.conn.hset(hash_name, 'value2', self.request.input.value)
 
-class Delete(AdminService):
+class Delete(DataDictService):
     """ Deletes a dictionary entry by its ID.
     """
     class SimpleIO:
@@ -126,7 +125,12 @@ class Delete(AdminService):
         output_required = ('id',)
         
     def handle(self):
-        self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, self.request.input.id)
+        id = str(self.request.input.id)
+        self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, id)
+        for item in self._get_translations():
+            if item['id1'] == id or item['id2'] == id:
+                self.server.kvdb.conn.delete(self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
+                
         self.response.payload.id = self.request.input.id
         
 class _DictionaryEntryService(DataDictService):
