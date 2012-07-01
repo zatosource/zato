@@ -27,14 +27,24 @@ from anyjson import dumps
 
 # Django
 from django.http import HttpResponse
+from django.shortcuts import render_to_response
+from django.template import RequestContext
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm
+from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm, TranslateForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
+
+def _get_systems(cluster):
+    systems = []
+    zato_message, _  = invoke_admin_service(cluster, 'zato:kvdb.data-dict.dictionary.get-system-list', {})
+    if zato_path('response.item_list.item').get_from(zato_message) is not None:
+        for item in zato_message.response.item_list.item:
+            systems.append([item.name.text] * 2)
+    return systems
 
 class DictItem(object):
     pass
@@ -42,7 +52,7 @@ class DictItem(object):
 class Index(_Index):
     meth_allowed = 'GET'
     url_name = 'kvdb-data-dict-translation'
-    template = 'zato/kvdb/data_dict/translation.html'
+    template = 'zato/kvdb/data_dict/translation/index.html'
     
     soap_action = 'zato:kvdb.data-dict.translation.get-list'
     output_class = DictItem
@@ -52,12 +62,7 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-        zato_message, _  = invoke_admin_service(self.req.zato.cluster, 'zato:kvdb.data-dict.dictionary.get-system-list', {})
-        systems = []
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            for item in zato_message.response.item_list.item:
-                systems.append([item.name.text] * 2)
-
+        systems = _get_systems(self.req.zato.cluster)
         return {
             'create_form': CreateForm(systems),
             'edit_form': EditForm(systems, prefix='edit'),
@@ -104,3 +109,24 @@ def get_key_list(req):
 @meth_allowed('GET')
 def get_value_list(req):
     return _get_key_value_list(req, 'zato:kvdb.data-dict.dictionary.get-value-list', {'system':req.GET['system'], 'key':req.GET['key']})
+
+
+@meth_allowed('GET', 'POST')
+def translate(req):
+    if req.zato.get('cluster'):
+        translate_form = TranslateForm(_get_systems(req.zato.cluster), req.POST)
+    else:
+        translate_form = None
+        
+    postback = {}
+    for name in('system1', 'key1', 'value1', 'system2', 'key2'):
+        postback[name] = req.POST.get(name, '')
+        
+    return_data = {
+        'zato_clusters':req.zato.clusters,
+        'cluster_id':req.zato.cluster_id,
+        'choose_cluster_form':req.zato.choose_cluster_form,
+        'translate_form':translate_form,
+        'postback':postback
+    }
+    return render_to_response('zato/kvdb/data_dict/translation/translate.html', return_data, context_instance=RequestContext(req))
