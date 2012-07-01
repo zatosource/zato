@@ -208,6 +208,7 @@ urlpatterns = patterns('',
     url(r'^zato/kvdb/data-dict/translation/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', translation.Delete(), name=translation.Delete.url_name),
     url(r'^zato/kvdb/data-dict/translation/get-key-list/$', translation.get_key_list, name='kvdb-data-dict-translation-get-key-list'),
     url(r'^zato/kvdb/data-dict/translation/get-value-list/$', translation.get_value_list, name='kvdb-data-dict-translation-get-value-list'),
+    url(r'^zato/kvdb/data-dict/translation/translate/$', translation.translate, name='kvdb-data-dict-translation-translate'),
     
     url(r'^zato/kvdb/data-dict/import-export/$', impexp.Index(), name=impexp.Index.url_name),
 

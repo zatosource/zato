@@ -161,7 +161,7 @@ form's fields may use custom prefixes that will be taken into account accordingl
 */
 $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 
-    if(_.isUndefined(name_prefix)) {
+    if(!name_prefix) {
         name_prefix = '';
     }
 
