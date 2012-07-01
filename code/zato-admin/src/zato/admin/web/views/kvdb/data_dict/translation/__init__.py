@@ -42,7 +42,7 @@ class DictItem(object):
 class Index(_Index):
     meth_allowed = 'GET'
     url_name = 'kvdb-data-dict-translation'
-    template = 'zato/kvdb/data_dict/translation.html'
+    template = 'zato/kvdb/data_dict/translation/index.html'
     
     soap_action = 'zato:kvdb.data-dict.translation.get-list'
     output_class = DictItem
