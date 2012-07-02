@@ -529,6 +529,11 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     return new_row_func(item, data, include_tr);
 }
 
+$.fn.zato.data_table.set_field_required = function(field_id) {
+    $(field_id).attr('data-bvalidator', 'required');
+    $(field_id).attr('data-bvalidator-msg', 'This is a required field');
+}
+
 $.fn.zato.data_table.setup_forms = function(attrs) {
     var actions = ['create', 'edit'];
 
@@ -568,9 +573,9 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             else {
                 field_id = String.format('#id_{0}-{1}', action, attr);
             }
+            
+            $.fn.zato.data_table.set_field_required(field_id);
 
-            $(field_id).attr('data-bvalidator', 'required');
-            $(field_id).attr('data-bvalidator-msg', 'This is a required field');
         });
 
         // Doh, not exactly the cleanest approach.
