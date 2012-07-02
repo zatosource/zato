@@ -25,6 +25,9 @@ from importlib import import_module
 # redis
 from redis import StrictRedis
 
+# Zato
+from zato.common import KVDB as _KVDB
+
 class KVDB(object):
     """ A wrapper around the Zato's key-value database.
     """
@@ -67,3 +70,6 @@ class KVDB(object):
             config['unix_socket_path'] = self.config.unix_socket_path
             
         self.conn = StrictRedis(**config)
+
+    def translate(self, system1, key1, value1, system2, key2, default=''):
+        return self.conn.hget(_KVDB.SEPARATOR.join((_KVDB.TRANSLATION, system1, key1, value1, system2, key2)), 'value2') or default

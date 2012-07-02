@@ -479,6 +479,9 @@ class Service(object):
         if hasattr(self, 'SimpleIO'):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
+            
+    def translate(self, *args, **kwargs):
+        raise NotImplementedError('An initializer should override this method')
         
     def handle(self, *args, **kwargs):
         """ The only method Zato services need to implement in order to process
@@ -562,6 +565,7 @@ class Service(object):
         service.request.request_data = request_data
         service.request.simple_io_config = simple_io_config
         service.response.simple_io_config = simple_io_config
+        service.translate = server.kvdb.translate
         
         if init:
             service._init()

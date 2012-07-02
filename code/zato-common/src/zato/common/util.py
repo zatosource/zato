@@ -27,7 +27,7 @@ from datetime import datetime
 from glob import glob
 from hashlib import sha1, sha256
 from importlib import import_module
-from itertools import ifilter
+from itertools import ifilter, izip_longest
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
@@ -189,7 +189,6 @@ class ColorFormatter(logging.Formatter):
 
         return logging.Formatter.format(self, record)
 
-
 def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
     attrs = dir(_object)
 
@@ -227,7 +226,6 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list="repr_to_avo
     buff.close()
 
     return out
-
 
 def to_form(_object):
     """ Reads public attributes of an object and creates a dictionary out of it;
@@ -469,3 +467,10 @@ def multikeysort(items, columns):
         else:
             return 0
     return sorted(items, cmp=comparer)
+
+    
+# From http://docs.python.org/release/2.7/library/itertools.html#recipes
+def grouper(n, iterable, fillvalue=None):
+    "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return izip_longest(fillvalue=fillvalue, *args)
