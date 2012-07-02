@@ -110,23 +110,38 @@ def get_key_list(req):
 def get_value_list(req):
     return _get_key_value_list(req, 'zato:kvdb.data-dict.dictionary.get-value-list', {'system':req.GET['system'], 'key':req.GET['key']})
 
-
 @meth_allowed('GET', 'POST')
 def translate(req):
+    
+    result_names = ('system1', 'key1', 'value1', 'system2', 'key2')
+    
+    post_data = {}
+    for name in result_names:
+        post_data[name] = req.POST.get(name, '')
+
+    def _translate(post):
+        result = dict((name, None) for name in result_names)
+        zato_message, _  = invoke_admin_service(cluster, 'zato:kvdb.data-dict.translation.translate', post_data)
+        
+        if zato_path('response.item').get_from(zato_message) is not None:
+            for name in result_names:
+                value = getattr(zato_message.response.item, name, None)
+                if value:
+                    result[name] = value.text
+        
+        return result
+
     if req.zato.get('cluster'):
         translate_form = TranslateForm(_get_systems(req.zato.cluster), req.POST)
     else:
         translate_form = None
-        
-    postback = {}
-    for name in('system1', 'key1', 'value1', 'system2', 'key2'):
-        postback[name] = req.POST.get(name, '')
         
     return_data = {
         'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
         'translate_form':translate_form,
-        'postback':postback
+        'postback':post_data,
+        'translation_result': _translate(req.POST) if req.method == 'POST' else None
     }
     return render_to_response('zato/kvdb/data_dict/translation/translate.html', return_data, context_instance=RequestContext(req))

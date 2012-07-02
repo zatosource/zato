@@ -82,36 +82,36 @@
             </td>
         </tr>
    
-{% if 0 %}
+{% if translation_result %}
         <tr>
             <td colspan="4" class='inline_header'>Value2</td>
         </tr>
         <tr>
-            <td colspan="4">{{ service.source_info.server_name }}</td>
+            <td colspan="4">{{ translation_result.value2|default:'(No such translation)' }}</td>
         </tr>
         <tr>
-            <td colspan="4" class='inline_header'>Repr</td>
+            <td colspan="4" class='inline_header'>repr(Value2)</td>
         </tr>
         <tr>
-            <td colspan="4">{{ service.source_info.server_name }}</td>
+            <td colspan="4">{{ translation_result.repr|default:'(None)' }}</td>
         </tr>
         <tr>
             <td colspan="4" class='inline_header'>Hex</td>
         </tr>
         <tr>
-            <td colspan="4">{{ service.source_info.path }}</td>
+            <td colspan="4">{{ translation_result.hex|default:'(None)' }}</td>
         </tr>
         <tr>
             <td colspan="4" class='inline_header'>SHA1</td>
         </tr>
         <tr>
-            <td colspan="4">{{ service.source_info.hash_method }} {{ service.source_info.hash }}</td>
+            <td colspan="4">{{ translation_result.sha1|default:'(None)' }} </td>
         </tr>
         <tr>
             <td colspan="4" class='inline_header'>SHA256</td>
         </tr>
         <tr>
-            <td colspan="4" style="background-color:#eeffcc">{{ service.source_info.source_html|safe }}</td>
+            <td colspan="4">{{ translation_result.sha256|default:'(None)' }}</td>
         </tr>
 {% endif %}
     </table>
