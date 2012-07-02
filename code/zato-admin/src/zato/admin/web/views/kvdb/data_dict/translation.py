@@ -34,7 +34,7 @@ from django.template import RequestContext
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm, TranslateForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
-from zato.common import zato_path
+from zato.common import ZATO_NONE, zato_path
 
 logger = logging.getLogger(__name__)
 
@@ -119,14 +119,14 @@ def translate(req):
     for name in result_names:
         post_data[name] = req.POST.get(name, '')
 
-    def _translate(post):
-        result = dict((name, None) for name in result_names)
-        zato_message, _  = invoke_admin_service(cluster, 'zato:kvdb.data-dict.translation.translate', post_data)
+    def _translate():
+        result = {}
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.translation.translate', post_data)
         
         if zato_path('response.item').get_from(zato_message) is not None:
-            for name in result_names:
+            for name in('value2', 'repr', 'hex', 'sha1', 'sha256'):
                 value = getattr(zato_message.response.item, name, None)
-                if value:
+                if value and value.text != ZATO_NONE:
                     result[name] = value.text
         
         return result
@@ -142,6 +142,7 @@ def translate(req):
         'choose_cluster_form':req.zato.choose_cluster_form,
         'translate_form':translate_form,
         'postback':post_data,
-        'translation_result': _translate(req.POST) if req.method == 'POST' else None
+        'translation_result': _translate() if req.method == 'POST' else None,
+        'show_translation': req.method == 'POST'
     }
     return render_to_response('zato/kvdb/data_dict/translation/translate.html', return_data, context_instance=RequestContext(req))

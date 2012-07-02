@@ -82,12 +82,12 @@
             </td>
         </tr>
    
-{% if translation_result %}
+{% if show_translation %}
         <tr>
             <td colspan="4" class='inline_header'>Value2</td>
         </tr>
         <tr>
-            <td colspan="4">{{ translation_result.value2|default:'(No such translation)' }}</td>
+            <td colspan="4"><pre>{{ translation_result.value2|default:'(No such translation)' }}</pre></td>
         </tr>
         <tr>
             <td colspan="4" class='inline_header'>repr(Value2)</td>

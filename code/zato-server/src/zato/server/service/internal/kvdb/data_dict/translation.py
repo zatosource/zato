@@ -19,9 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from hashlib import sha1, sha256
+
 # Zato
 from zato.common import KVDB, ZatoException
-from zato.common.util import multikeysort
+from zato.common.util import grouper, multikeysort
+from zato.server.service.internal import AdminService
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
 class _DeletingService(DataDictService):
@@ -153,3 +157,19 @@ class Delete(_DeletingService):
         
     def handle(self):
         self.delete(self.request.input.id)
+
+class Translate(AdminService):
+    class SimpleIO:
+        input_required = ('system1', 'key1', 'value1', 'system2', 'key2')
+        output_optional = ('value2', 'repr', 'hex', 'sha1', 'sha256')
+        
+    def handle(self):
+        result = self.translate(self.request.input.system1, self.request.input.key1, self.request.input.value1, 
+            self.request.input.system2, self.request.input.key2)
+        
+        if result:
+            self.response.payload.value2 = result
+            self.response.payload.repr = repr(result)
+            self.response.payload.hex = ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, result.encode('hex'))])
+            self.response.payload.sha1 = sha1(result).hexdigest()
+            self.response.payload.sha256 = sha256(result).hexdigest()
