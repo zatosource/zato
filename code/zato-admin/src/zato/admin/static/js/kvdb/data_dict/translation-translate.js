@@ -1,6 +1,10 @@
 
 $(document).ready(function() {
-    $.fn.zato.data_table.setup_forms(['system1', 'key1', 'value1', 'system2', 'key2', 'value2']);
+    _.each(['system1', 'key1', 'value1', 'system2', 'key2'], function(name) {
+        $.fn.zato.data_table.set_field_required('#id_' + name);
+    });
+    
+    $('#translate-form').bValidator();
     
     var change_data = [
         ['system1', 'key1', '../get-key-list', [{'system':'system1'}]],
@@ -42,5 +46,4 @@ $(document).ready(function() {
         };
         update_key1();
     }
-    
 })
