@@ -210,7 +210,9 @@ urlpatterns = patterns('',
     url(r'^zato/kvdb/data-dict/translation/get-value-list/$', translation.get_value_list, name='kvdb-data-dict-translation-get-value-list'),
     url(r'^zato/kvdb/data-dict/translation/translate/$', translation.translate, name='kvdb-data-dict-translation-translate'),
     
-    url(r'^zato/kvdb/data-dict/import-export/$', impexp.Index(), name=impexp.Index.url_name),
+    url(r'^zato/kvdb/data-dict/impexp/$', impexp.index, name='kvdb-data-dict-impexp'),
+    url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/import/$', impexp.import_, name='kvdb-data-dict-impexp-import'),
+    url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/export/$', impexp.export, name='kvdb-data-dict-impexp-export'),
 
 )
 
