@@ -41,7 +41,7 @@ class GetList(DataDictService):
     """ Returns a list of translations.
     """
     class SimpleIO:
-        output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
+        output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2', 'id1', 'id2')
         
     def get_data(self):
         return multikeysort(self._get_translations(), ['system1', 'key1', 'value1', 'system2', 'key2', 'value2'])
@@ -174,7 +174,12 @@ class Translate(AdminService):
             self.response.payload.sha1 = sha1(result).hexdigest()
             self.response.payload.sha256 = sha256(result).hexdigest()
 
-class GetNextID(AdminService):
-    """ Returns the value of the next dictionary's ID or nothing at all if the key
+class GetLastID(AdminService):
+    """ Returns the value of the last dictionary's ID or nothing at all if the key
     for holding its value doesn't exist.
     """
+    class SimpleIO:
+        output_optional = ('value',)
+        
+    def handle(self):
+        self.response.payload.value = self.server.kvdb.conn.get(KVDB.TRANSLATION_ID) or ''

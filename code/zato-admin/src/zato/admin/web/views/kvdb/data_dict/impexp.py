@@ -21,10 +21,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from bz2 import compress
 from datetime import datetime
-
-# anyjson
-from anyjson import dumps
+from json import dumps
 
 # Django
 from django.template import RequestContext
@@ -35,7 +34,8 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import meth_allowed
 from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
-from zato.common.util import current_host
+from zato.common import zato_path
+from zato.common.util import current_host, translation_name
 
 logger = logging.getLogger(__name__)
 
@@ -56,15 +56,45 @@ def import_(req, cluster_id):
 
 @meth_allowed('GET')
 def export(req, cluster_id):
-    # 'zato:kvdb.data-dict.dictionary.get-next-id':'zato.server.service.internal.kvdb.data_dict.dictionary.GetNextID',
-    # 'zato:kvdb.data-dict.dictionary.get-list':'zato.server.service.internal.kvdb.data_dict.dictionary.GetList',
-    # # 'zato:kvdb.data-dict.translation.get-next-id':'zato.server.service.internal.kvdb.data_dict.translation.GetNextID',
-    # 'zato:kvdb.data-dict.translation.get-list':'zato.server.service.internal.kvdb.data_dict.translation.GetList',
-    #zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.impexp.export', {})
+    
+    def _get_last_id(service):
+        zato_message, _  = invoke_admin_service(req.zato.cluster, service, {})
+        if zato_path('response.item').get_from(zato_message) is not None:
+            return zato_message.response.item.value.text
+        
+    def _get_last_dict_id():
+        return _get_last_id('zato:kvdb.data-dict.dictionary.get-last-id')
+    
+    def _get_last_translation_id():
+        return _get_last_id('zato:kvdb.data-dict.translation.get-last-id')
+
+    def _get_dict_list():
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.dictionary.get-list', {})
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
+            for item in zato_message.response.item_list.item:
+                yield item.id.text, item.system.text, item.key.text, item.value.text
+    
+    def _get_translation_list():
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.translation.get-list', {})
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
+            for item in zato_message.response.item_list.item:
+                yield item.id.text, item.system1.text, item.key1.text, item.value1.text, item.system2.text, \
+                      item.key2.text, item.value2.text, item.id1.text, item.id2.text
     
     return_data = {'meta': {'current_host':current_host(), 'timestamp_utc':datetime.utcnow().isoformat(), 'user':req.user.username}}
+    return_data['data'] = {'dict_list':[], 'translation_list':[]}
     
-    response = HttpResponse(dumps(return_data), mimetype='application/javascript') # TODO: /json
-    response['Content-Disposition'] = 'attachment; filename={}'.format('zato-data-dict-export.json')
+    return_data['data']['last_dict_id'] = _get_last_dict_id()
+    return_data['data']['last_translation_id'] = _get_last_translation_id()
+    
+    for id, system, key, value in _get_dict_list():
+        return_data['data']['dict_list'].append({'id':id, 'system':system, 'key':key, 'value':value})
+        
+    for id, system1, key1, value1, system2, key2, value2, id1, id2 in _get_translation_list():
+        return_data['data']['translation_list'].append(
+            {translation_name(system1, key1, value1, system2, key2): {'id':id, 'value2':value2, 'id1':id1, 'id2':id2}})
+    
+    response = HttpResponse(compress(dumps(return_data, indent=4)), mimetype='application/x-bzip2')
+    response['Content-Disposition'] = 'attachment; filename={}'.format('zato-data-dict-export.json.bz2')
 
     return response
