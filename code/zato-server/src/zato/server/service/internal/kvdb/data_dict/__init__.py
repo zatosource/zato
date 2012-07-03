@@ -50,14 +50,24 @@ class DataDictService(AdminService):
         return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
     
     def _get_dict_item(self, id):
+        """ Returns a dictionary entry by its ID.
+        """
         for item in self._get_dict_items():
             if item['id'] == str(id):
                 return item
         else:
             msg = 'Could not find the dictionary by its ID:[{}}]'.format(id)
             raise ZatoException(self.cid, msg)
+
+    def _get_dict_items_raw(self):
+        """ Yields dictionary items without formatting them into Python dictionaries.
+        """
+        for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
+            yield id, item
         
     def _get_dict_items(self):
+        """ Yields nicely formatted dictionary items defined in the KVDB.
+        """
         if not self._dict_items:
             for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
                 system, key, value = item.split(KVDB.SEPARATOR)
@@ -66,11 +76,15 @@ class DataDictService(AdminService):
             yield item
             
     def _get_dict_item_id(self, system, key, value):
+        """ Returns a dictionary entry ID by its system, key and value.
+        """
         for item in self._get_dict_items():
             if item['system'] == system and item['key'] == key and item['value'] == value:
                 return item['id']
             
     def _get_translations(self):
+        """ Yields nicely formatted translations defined in the KVDB.
+        """
         for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + KVDB.SEPARATOR + '*'):
             vals = self.server.kvdb.conn.hgetall(item)
             item = item.split(KVDB.SEPARATOR)

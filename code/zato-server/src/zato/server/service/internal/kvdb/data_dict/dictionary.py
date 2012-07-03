@@ -176,3 +176,8 @@ class GetValueList(_DictionaryEntryService):
         
     def handle(self):
         self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system, self.request.input.key))))
+
+class GetNextID(AdminService):
+    """ Returns the value of the next dictionary's ID or nothing at all if the key
+    for holding its value doesn't exist.
+    """

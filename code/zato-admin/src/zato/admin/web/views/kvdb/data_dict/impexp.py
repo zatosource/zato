@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime
 
 # anyjson
 from anyjson import dumps
@@ -30,9 +31,11 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response, HttpResponse
 
 # Zato
+from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import meth_allowed
 from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.common.util import current_host
 
 logger = logging.getLogger(__name__)
 
@@ -53,4 +56,15 @@ def import_(req, cluster_id):
 
 @meth_allowed('GET')
 def export(req, cluster_id):
-    return HttpResponse()
+    # 'zato:kvdb.data-dict.dictionary.get-next-id':'zato.server.service.internal.kvdb.data_dict.dictionary.GetNextID',
+    # 'zato:kvdb.data-dict.dictionary.get-list':'zato.server.service.internal.kvdb.data_dict.dictionary.GetList',
+    # # 'zato:kvdb.data-dict.translation.get-next-id':'zato.server.service.internal.kvdb.data_dict.translation.GetNextID',
+    # 'zato:kvdb.data-dict.translation.get-list':'zato.server.service.internal.kvdb.data_dict.translation.GetList',
+    #zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.impexp.export', {})
+    
+    return_data = {'meta': {'current_host':current_host(), 'timestamp_utc':datetime.utcnow().isoformat(), 'user':req.user.username}}
+    
+    response = HttpResponse(dumps(return_data), mimetype='application/javascript') # TODO: /json
+    response['Content-Disposition'] = 'attachment; filename={}'.format('zato-data-dict-export.json')
+
+    return response
