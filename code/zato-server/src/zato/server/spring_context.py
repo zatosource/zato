@@ -87,6 +87,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.http_soap',
             'zato.server.service.internal.kvdb',
             'zato.server.service.internal.kvdb.data_dict.dictionary',
+            'zato.server.service.internal.kvdb.data_dict.impexp',
             'zato.server.service.internal.kvdb.data_dict.translation',
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.server',
