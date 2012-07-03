@@ -173,3 +173,8 @@ class Translate(AdminService):
             self.response.payload.hex = ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, result.encode('hex'))])
             self.response.payload.sha1 = sha1(result).hexdigest()
             self.response.payload.sha256 = sha256(result).hexdigest()
+
+class GetNextID(AdminService):
+    """ Returns the value of the next dictionary's ID or nothing at all if the key
+    for holding its value doesn't exist.
+    """

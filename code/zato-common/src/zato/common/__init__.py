@@ -33,63 +33,63 @@ from lxml.objectify import ObjectPath as _ObjectPath
 from bunch import Bunch
 
 # The namespace for use in all Zato's own services.
-zato_namespace = "http://gefira.pl/zato" # TODO: Change it to a target URL when we finally have it
+zato_namespace = 'http://gefira.pl/zato' # TODO: Change it to a target URL when we finally have it
 zato_ns_map = {None: zato_namespace}
 
 # Convenience access functions and constants.
 
-lxml_py_namespace = "http://codespeak.net/lxml/objectify/pytype"
+lxml_py_namespace = 'http://codespeak.net/lxml/objectify/pytype'
 
-soapenv_namespace = "http://schemas.xmlsoap.org/soap/envelope/"
-soap_doc = Template("""<soap:Envelope xmlns:soap="%s"><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv_namespace)
+soapenv_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
+soap_doc = Template("""<soap:Envelope xmlns:soap='%s'><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv_namespace)
 
-soap_body_path = "/soapenv:Envelope/soapenv:Body"
-soap_body_xpath = etree.XPath(soap_body_path, namespaces={"soapenv":soapenv_namespace})
+soap_body_path = '/soapenv:Envelope/soapenv:Body'
+soap_body_xpath = etree.XPath(soap_body_path, namespaces={'soapenv':soapenv_namespace})
 
-soap_fault_path = "/soapenv:Envelope/soapenv:Body/soapenv:Fault"
-soap_fault_xpath = etree.XPath(soap_fault_path, namespaces={"soapenv":soapenv_namespace})
+soap_fault_path = '/soapenv:Envelope/soapenv:Body/soapenv:Fault'
+soap_fault_xpath = etree.XPath(soap_fault_path, namespaces={'soapenv':soapenv_namespace})
 
-wsse_namespace = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-wsu_namespace = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+wsse_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'
+wsu_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'
 
-wss_namespaces = {"soapenv":soapenv_namespace, "wsse":wsse_namespace, "wsu":wsu_namespace}
+wss_namespaces = {'soapenv':soapenv_namespace, 'wsse':wsse_namespace, 'wsu':wsu_namespace}
 
-wsse_password_type_text = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
+wsse_password_type_text = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'
 
 supported_wsse_password_types = (wsse_password_type_text, )
 
-wsse_username_path = "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username"
+wsse_username_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username'
 wsse_username_xpath = etree.XPath(wsse_username_path, namespaces=wss_namespaces)
 
-wsse_password_path = "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password"
+wsse_password_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password'
 wsse_password_xpath = etree.XPath(wsse_password_path, namespaces=wss_namespaces)
 
-wsse_password_type_path = "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password/@Type"
+wsse_password_type_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password/@Type'
 wsse_password_type_xpath = etree.XPath(wsse_password_type_path, namespaces=wss_namespaces)
 
-wsse_nonce_path = "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce"
+wsse_nonce_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce'
 wsse_nonce_xpath = etree.XPath(wsse_nonce_path, namespaces=wss_namespaces)
 
-wsu_username_created_path = "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created"
+wsu_username_created_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created'
 wsu_username_created_xpath = etree.XPath(wsu_username_created_path, namespaces=wss_namespaces)
 
-wsu_expires_path = "/soapenv:Envelope/soapenv:Header/wsse:Security/wsu:Timestamp/wsu:Expires"
+wsu_expires_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsu:Timestamp/wsu:Expires'
 wsu_expires_xpath = etree.XPath(wsu_expires_path, namespaces=wss_namespaces)
 
-wsse_username_objectify = "{%s}Security" % wsse_namespace
-wsse_username_token_objectify = "{%s}UsernameToken" % wsse_namespace
+wsse_username_objectify = '{%s}Security' % wsse_namespace
+wsse_username_token_objectify = '{%s}UsernameToken' % wsse_namespace
 
-zato_data_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:response"
-zato_data_xpath = etree.XPath(zato_data_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
+zato_data_path = '/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:response'
+zato_data_xpath = etree.XPath(zato_data_path, namespaces={'soapenv':soapenv_namespace, 'zato':zato_namespace})
 
-zato_result_path = "/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:zato_env/zato:result"
-zato_result_path_xpath = etree.XPath(zato_result_path, namespaces={"soapenv":soapenv_namespace, "zato":zato_namespace})
+zato_result_path = '/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:zato_env/zato:result'
+zato_result_path_xpath = etree.XPath(zato_result_path, namespaces={'soapenv':soapenv_namespace, 'zato':zato_namespace})
 
-scheduler_date_time_format = "%Y-%m-%d %H:%M:%S"
+scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
 
-soap_date_time_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 
-# Classes that have this attribute defined (no matter the value) will not be deployed
+# TODO: Classes that have this attribute defined (no matter the value) will not be deployed
 # onto servers.
 DONT_DEPLOY_ATTR_NAME = 'zato_dont_import'
 
