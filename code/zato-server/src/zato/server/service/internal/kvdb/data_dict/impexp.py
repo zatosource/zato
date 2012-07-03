@@ -20,4 +20,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import loads
+
+# Zato
+from zato.server.service.internal import AdminService
+
+class Import(AdminService):
+    """ Imports a bz2-compressed JSON document containing data dictionaries replacing
+    any other existing ones.
+    """
+    class SimpleIO:
+        input_required = ('data',)
+        
+    def handle(self):
+        pass

@@ -21,13 +21,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from bz2 import compress
+from bz2 import compress, decompress
 from datetime import datetime
 from json import dumps
+from traceback import format_exc
 
 # Django
+from django.http import HttpResponse, HttpResponseServerError
+from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.shortcuts import render_to_response, HttpResponse
 
 # Zato
 from zato.admin.web import invoke_admin_service
@@ -41,7 +43,6 @@ logger = logging.getLogger(__name__)
 
 @meth_allowed('GET')
 def index(req):
-    
     return_data = {
         'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
@@ -52,7 +53,16 @@ def index(req):
 
 @meth_allowed('POST')
 def import_(req, cluster_id):
-    return HttpResponse(dumps({'success': True}))
+    try:
+        data = req.read()
+        decompress(data)
+        invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.impexp.import', {'data':data.encode('base64')})
+    except Exception, e:
+        msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        return HttpResponse(dumps({'success': True}))
 
 @meth_allowed('GET')
 def export(req, cluster_id):
