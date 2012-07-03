@@ -28,12 +28,18 @@
         };    
     
         function create_uploader(){
-            var uploader = new qq.FileUploader({
+            var options = {
                 element: $('#uploader')[0],
                 action: 'cluster/{{ cluster_id }}/upload/',
                 onComplete: on_upload_complete,
-                debug: true
-            });
+                debug: true,
+                template: '<div class="qq-uploader">' + 
+                        '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
+                        '<div class="qq-upload-button" style="width:90px">Upload a WSDL</div>' +
+                        '<ul class="qq-upload-list"></ul>' + 
+                     '</div>',
+            }
+            var uploader = new qq.FileUploader(options);
         }
         window.onload = create_uploader;
         
