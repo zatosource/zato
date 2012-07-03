@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Zato
 from zato.common import KVDB, ZatoException
+from zato.common.util import multikeysort, translation_name
 from zato.server.service.internal import AdminService
 
 # Zato Redis key layout
@@ -47,8 +48,8 @@ class DataDictService(AdminService):
         self._dict_items = []
         
     def _name(self, system1, key1, value1, system2, key2):
-        return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
-    
+        return translation_name(system1, key1, value1, system2, key2)
+
     def _get_dict_item(self, id):
         """ Returns a dictionary entry by its ID.
         """
@@ -72,6 +73,8 @@ class DataDictService(AdminService):
             for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
                 system, key, value = item.split(KVDB.SEPARATOR)
                 self._dict_items.append({'id':str(id), 'system':system, 'key':key, 'value':value})
+            self._dict_items = multikeysort(self._dict_items, ['system', 'key', 'value'])
+
         for item in self._dict_items:
             yield item
             

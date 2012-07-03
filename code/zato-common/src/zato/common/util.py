@@ -72,7 +72,7 @@ from springpython.remoting.http import CAValidatingHTTPSConnection
 from springpython.remoting.xmlrpc import SSLClientTransport
 
 # Zato
-from zato.common import SIMPLE_IO, soap_body_xpath, ZatoException
+from zato.common import KVDB, SIMPLE_IO, soap_body_xpath, ZatoException
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
 
 logger = logging.getLogger(__name__)
@@ -474,3 +474,6 @@ def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return izip_longest(fillvalue=fillvalue, *args)
+
+def translation_name(system1, key1, value1, system2, key2):
+    return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))

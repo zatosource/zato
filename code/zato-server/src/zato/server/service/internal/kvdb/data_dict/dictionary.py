@@ -25,7 +25,6 @@ from operator import attrgetter
 
 # Zato
 from zato.common import KVDB, ZatoException
-from zato.common.util import multikeysort
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
@@ -36,7 +35,7 @@ class GetList(DataDictService):
         output_required = ('id', 'system', 'key', 'value')
         
     def get_data(self):
-        return multikeysort(self._get_dict_items(), ['system', 'key', 'value'])
+        return self._get_dict_items()
 
     def handle(self):
         self.response.payload[:] = self.get_data()
@@ -177,7 +176,12 @@ class GetValueList(_DictionaryEntryService):
     def handle(self):
         self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system, self.request.input.key))))
 
-class GetNextID(AdminService):
-    """ Returns the value of the next dictionary's ID or nothing at all if the key
+class GetLastID(AdminService):
+    """ Returns the value of the last dictionary's ID or nothing at all if the key
     for holding its value doesn't exist.
     """
+    class SimpleIO:
+        output_optional = ('value',)
+        
+    def handle(self):
+        self.response.payload.value = self.server.kvdb.conn.get(KVDB.DICTIONARY_ITEM_ID) or ''
