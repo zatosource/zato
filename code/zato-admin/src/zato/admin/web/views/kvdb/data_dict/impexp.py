@@ -22,55 +22,35 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# anyjson
+from anyjson import dumps
+
+# Django
+from django.template import RequestContext
+from django.shortcuts import render_to_response, HttpResponse
+
 # Zato
+from zato.admin.web.views import meth_allowed
 from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 
 logger = logging.getLogger(__name__)
 
-class DictItem(object):
-    def __init__(self, system, name, value):
-        self.system = system
-        self.name = name
-        self.value = value
-
-class Index(_Index):
-    meth_allowed = 'GET'
-    url_name = 'kvdb-data-dict-import-export'
-    template = 'zato/kvdb/data_dict/dictionary.html'
+@meth_allowed('GET')
+def index(req):
     
-    soap_action = 'zato:kvdb.data-dict.dictionary.get-list'
-    output_class = DictItem
+    return_data = {
+        'zato_clusters':req.zato.clusters,
+        'cluster_id':req.zato.cluster_id,
+        'choose_cluster_form':req.zato.choose_cluster_form,
+    }
     
-    class SimpleIO(_Index.SimpleIO):
-        output_required = ('name', 'source_system', 'target_system', 'source_name', 'target_name', 'source_value', 'target_value')
-        output_repeated = True
+    return render_to_response('zato/kvdb/data_dict/impexp.html', return_data, context_instance=RequestContext(req))
 
-    def handle(self):
-        return {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
-        }
+@meth_allowed('POST')
+def import_(req, cluster_id):
+    return HttpResponse(dumps({'success': True}))
 
-class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
-        output_required = ('id', 'name')
-        
-    def success_message(self, item):
-        return 'Successfully {0} the dictionary [{1}]'.format(self.verb, item.name.text)
-
-class Create(_CreateEdit):
-    url_name = 'kvdb-data-dict-create'
-    soap_action = 'zato:kvdb.data-dict.dictionary.create'
-
-class Edit(_CreateEdit):
-    url_name = 'kvdb-data-dict-edit'
-    form_prefix = 'edit-'
-    soap_action = 'zato:kvdb.data-dict.dictionary.edit'
-
-class Delete(_Delete):
-    url_name = 'kvdb-data-dict-delete'
-    error_message = 'Could not delete the data dictionary'
-    soap_action = 'zato:kvdb.data-dict.dictionary.delete'
+@meth_allowed('GET')
+def export(req, cluster_id):
+    return HttpResponse()
