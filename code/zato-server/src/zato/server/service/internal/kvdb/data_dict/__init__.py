@@ -90,7 +90,7 @@ class DataDictService(AdminService):
         """
         for item in self.server.kvdb.conn.keys(KVDB.TRANSLATION + KVDB.SEPARATOR + '*'):
             vals = self.server.kvdb.conn.hgetall(item)
-            item = item.split(KVDB.SEPARATOR)
+            item = item.decode('utf-8').split(KVDB.SEPARATOR)
             yield {'system1':item[1], 'key1':item[2], 'value1':item[3], 'system2':item[4], 
-                   'key2':item[5], 'id':str(vals.get('id')), 'value2':vals.get('value2'),
+                   'key2':item[5], 'id':str(vals.get('id')), 'value2':vals.get('value2').decode('utf-8'),
                    'id1':str(vals.get('id1')), 'id2':str(vals.get('id2')),}

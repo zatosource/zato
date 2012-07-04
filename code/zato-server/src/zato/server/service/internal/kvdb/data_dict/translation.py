@@ -168,7 +168,7 @@ class Translate(AdminService):
             self.request.input.system2, self.request.input.key2)
         
         if result:
-            self.response.payload.value2 = result
+            self.response.payload.value2 = result.decode('utf-8')
             self.response.payload.repr = repr(result)
             self.response.payload.hex = ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, result.encode('hex'))])
             self.response.payload.sha1 = sha1(result).hexdigest()

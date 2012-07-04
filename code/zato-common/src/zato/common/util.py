@@ -477,3 +477,6 @@ def grouper(n, iterable, fillvalue=None):
 
 def translation_name(system1, key1, value1, system2, key2):
     return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
+
+def dict_item_name(system, key, value):
+    return KVDB.SEPARATOR.join((system, key, value))

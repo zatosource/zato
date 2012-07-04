@@ -25,6 +25,7 @@ from operator import attrgetter
 
 # Zato
 from zato.common import KVDB, ZatoException
+from zato.common.util import dict_item_name
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
@@ -68,7 +69,7 @@ class _CreateEdit(DataDictService):
         return True
 
     def _get_item_name(self):
-        return KVDB.SEPARATOR.join((self.request.input.system, self.request.input.key, self.request.input.value))
+        return dict_item_name(self.request.input.system, self.request.input.key, self.request.input.value)
 
     def handle(self):
         item = self._get_item_name()
@@ -83,7 +84,7 @@ class _CreateEdit(DataDictService):
         if self._validate_entry(item, id):
             self._handle(id)
         
-        self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)    
+        self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)
         self.response.payload.id = id
         
     def _handle(self, *args, **kwargs):
