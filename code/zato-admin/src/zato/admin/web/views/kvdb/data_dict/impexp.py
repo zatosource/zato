@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from bz2 import compress, decompress
 from datetime import datetime
 from json import dumps
 from traceback import format_exc
@@ -55,7 +54,7 @@ def index(req):
 def import_(req, cluster_id):
     try:
         data = req.read()
-        decompress(data)
+        data.decode('bz2') # A preliminary check to weed out files obviously incorrect
         invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.impexp.import', {'data':data.encode('base64')})
     except Exception, e:
         msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc(e))
@@ -104,7 +103,7 @@ def export(req, cluster_id):
         return_data['data']['translation_list'].append(
             {translation_name(system1, key1, value1, system2, key2): {'id':id, 'value2':value2, 'id1':id1, 'id2':id2}})
     
-    response = HttpResponse(compress(dumps(return_data, indent=4)), mimetype='application/x-bzip2')
+    response = HttpResponse(dumps(return_data, indent=4).encode('bz2'), mimetype='application/x-bzip2')
     response['Content-Disposition'] = 'attachment; filename={}'.format('zato-data-dict-export.json.bz2')
 
     return response
