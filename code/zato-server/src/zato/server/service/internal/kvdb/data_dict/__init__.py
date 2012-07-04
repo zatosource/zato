@@ -71,7 +71,7 @@ class DataDictService(AdminService):
         """
         if not self._dict_items:
             for id, item in self.server.kvdb.conn.hgetall(KVDB.DICTIONARY_ITEM).items():
-                system, key, value = item.split(KVDB.SEPARATOR)
+                system, key, value = item.decode('utf-8').split(KVDB.SEPARATOR)
                 self._dict_items.append({'id':str(id), 'system':system, 'key':key, 'value':value})
             self._dict_items = multikeysort(self._dict_items, ['system', 'key', 'value'])
 
