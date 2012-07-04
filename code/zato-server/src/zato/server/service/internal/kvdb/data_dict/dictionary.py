@@ -137,7 +137,7 @@ class _DictionaryEntryService(DataDictService):
     """
     def get_data(self, needs_systems=False, by_system=None, by_key=None):
         for triple in self.server.kvdb.conn.hvals(KVDB.DICTIONARY_ITEM):
-            system, key, value = triple.split(KVDB.SEPARATOR)
+            system, key, value = triple.decode('utf-8').split(KVDB.SEPARATOR)
             if needs_systems:
                 yield system
             elif by_system:

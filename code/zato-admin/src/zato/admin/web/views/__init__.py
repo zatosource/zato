@@ -174,7 +174,7 @@ class Index(_BaseView):
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, '') or ''
-                setattr(item, name, value)
+                setattr(item, name, value.text.encode('utf-8'))
             self.items.append(item)
     
     def _handle_item(self, item):
