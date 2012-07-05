@@ -1,5 +1,6 @@
 code/.installed.cfg
 code/bin/*
+code/build/*
 code/develop-eggs/*
 code/eggs/*
 code/downloads/*
