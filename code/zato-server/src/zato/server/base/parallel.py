@@ -53,6 +53,7 @@ from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_ch
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
 from zato.server.connection.zmq_.outgoing import start_connector as zmq_outgoing_start_connector
+from zato.server.stats import add_stats_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,7 @@ class ParallelServer(BrokerMessageReceiver):
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
                  hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
-                 id=None, name=None, cluster_id=None, kvdb=None):
+                 id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None):
         self.host = host
         self.port = port
         self.zmq_context = zmq_context or zmq.Context()
@@ -132,6 +133,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.name = name
         self.cluster_id = cluster_id
         self.kvdb = kvdb
+        self.stats_jobs = stats_jobs
         
         # The main config store
         self.config = ConfigStore()
@@ -140,7 +142,6 @@ class ParallelServer(BrokerMessageReceiver):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
-        
         self.broker_token = server.cluster.broker_token
         self.broker_push_worker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
@@ -154,6 +155,9 @@ class ParallelServer(BrokerMessageReceiver):
         
         # .. and re-deploy the back from a clear state.
         self.service_store.import_services_from_anywhere(self.internal_service_modules + self.service_modules, self.base_dir)
+        
+        # Add the statistics-related scheduler jobs to the ODB
+        add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
         
         # Key-value DB
         self.kvdb.config = self.fs_server_config.kvdb
@@ -186,13 +190,13 @@ class ParallelServer(BrokerMessageReceiver):
     
     def _after_init_accepted(self, server):
         if self.singleton_server:
-            for(_, name, is_active, job_type, start_date, extra, service,\
+            for(_, name, is_active, job_type, start_date, extra, service_name, service_impl_name,
                 _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
                     in self.odb.get_job_list(server.cluster.id):
                 if is_active:
                     job_data = SimpleBunch({'name':name, 'is_active':is_active, 
                         'job_type':job_type, 'start_date':start_date, 
-                        'extra':extra, 'service':service,  'weeks':weeks, 
+                        'extra':extra, 'service':service_impl_name, 'weeks':weeks, 
                         'days':days, 'hours':hours, 'minutes':minutes, 
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
