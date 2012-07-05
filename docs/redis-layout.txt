@@ -1,0 +1,26 @@
+Zato Redis key layout
+TODO: Document it properly
+
+ 
+Data ditionaries
+-----------------
+
+'zato:kvdb:data-dict:item:id': '1'
+'zato:kvdb:data-dict:translation:id':'1'
+
+'zato:kvdb:data-dict:item':
+ {
+  '1': 'ESB:::curreny::EUR',
+  '2': 'ESB:::currency:::JPY',
+  '3': 'ESB:::country_code:::CH',
+  '4': 'CRM:::CURRENCY:::978',
+ }
+'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY':{'id':'1', 'id1':'1', 'id2':'4', 'value2':'978'}
+
+Statistics
+----------
+'zato:stats:service:usage:zato.channel.amqp.Edit':'73501'
+'zato:stats:service:timer:basic:zato.channel.amqp.Edit':{'min':'21', 'max':'715', 'avg':'269', 'last':'341'}
+'zato:stats:service:timer:raw:zato.channel.amqp.Edit':['382', '447', '281', '89', '539']
+'zato:stats:service:timer:slow:zato.channel.amqp.Edit':[json({'cid':'000010429385681103291914', 'ts':'2012-07-04T21:10:18.897370', 'req':'...', 'resp':'...'}), ]
+'zato:stats:service:timer:slow-threshold:zato.channel.amqp.Edit': '1200'

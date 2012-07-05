@@ -83,18 +83,15 @@ class ZatoContext(PythonConfig):
     def internal_service_modules(self):
         return [
             'zato.server.service.internal',
-            'zato.server.service.internal.hot_deploy',
+            'zato.server.service.internal.channel.amqp',
+            'zato.server.service.internal.channel.jms_wmq',
+            'zato.server.service.internal.channel.zmq',
             'zato.server.service.internal.http_soap',
+            'zato.server.service.internal.hot_deploy',
             'zato.server.service.internal.kvdb',
             'zato.server.service.internal.kvdb.data_dict.dictionary',
             'zato.server.service.internal.kvdb.data_dict.impexp',
             'zato.server.service.internal.kvdb.data_dict.translation',
-            'zato.server.service.internal.scheduler',
-            'zato.server.service.internal.server',
-            'zato.server.service.internal.service',
-            'zato.server.service.internal.channel.amqp',
-            'zato.server.service.internal.channel.jms_wmq',
-            'zato.server.service.internal.channel.zmq',
             'zato.server.service.internal.definition.amqp',
             'zato.server.service.internal.definition.jms_wmq',
             'zato.server.service.internal.outgoing.amqp',
@@ -102,10 +99,14 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.jms_wmq',
             'zato.server.service.internal.outgoing.sql',
             'zato.server.service.internal.outgoing.zmq',
+            'zato.server.service.internal.scheduler',
             'zato.server.service.internal.security',
             'zato.server.service.internal.security.basic_auth',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.wss',
+            'zato.server.service.internal.server',
+            'zato.server.service.internal.service',
+            'zato.server.service.internal.stats',
         ]
     
     @Object
@@ -205,3 +206,11 @@ class ZatoContext(PythonConfig):
     @Object
     def scheduler(self):
         return Scheduler()
+
+    @Object
+    def stats_jobs(self):
+        return [
+            {'name': 'zato.stats.ProcessRawTimers', 'seconds':90, 
+             'service':'zato.server.service.internal.stats.ProcessRawTimers',
+             'extra':'global_slow_threshold=120\nmax_batch_size=100000'},
+        ]

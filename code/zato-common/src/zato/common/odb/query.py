@@ -67,7 +67,8 @@ def job_list(session, cluster_id, needs_columns=False):
     """
     return session.query(Job.id, Job.name, Job.is_active,
         Job.job_type, Job.start_date,  Job.extra,
-        Service.name.label('service_name'), Service.id.label('service_id'),
+        Service.name.label('service_name'), Service.impl_name.label('service_impl_name'),
+        Service.id.label('service_id'),
         IntervalBasedJob.weeks, IntervalBasedJob.days,
         IntervalBasedJob.hours, IntervalBasedJob.minutes,
         IntervalBasedJob.seconds, IntervalBasedJob.repeats,

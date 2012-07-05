@@ -64,6 +64,7 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.repo_location = repo_location
     parallel_server.base_dir = base_dir
     parallel_server.fs_server_config = config
+    parallel_server.stats_jobs = app_context.get_object('stats_jobs')
 
     '''work_dir = config.hot_deploy.work_dir
     if not os.path.isabs(work_dir):
