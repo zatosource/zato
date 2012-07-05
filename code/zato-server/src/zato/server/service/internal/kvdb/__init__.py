@@ -57,7 +57,7 @@ class ExecuteCommand(AdminService):
             
             if response and command in('KEYS', 'HKEYS', 'HVALS'):
                 response = unicode(response).encode('utf-8')
-            elif command in('HLEN', 'LLEN'):
+            elif command in('HLEN', 'LLEN', 'LRANGE', 'SMEMBERS', 'HGETALL'):
                 response = str(response)
                 
             self.response.payload.result = response

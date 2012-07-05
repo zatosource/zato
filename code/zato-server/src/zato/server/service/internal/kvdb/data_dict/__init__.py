@@ -22,26 +22,6 @@ from zato.common import KVDB, ZatoException
 from zato.common.util import multikeysort, translation_name
 from zato.server.service.internal import AdminService
 
-# Zato Redis key layout
-# TODO: Document it properly
-
-#
-# zato:kvdb:data-dict:item:id: '1'
-#
-# zato:kvdb:data-dict:item
-# {
-#  '1': 'ESB:::curreny::EUR',
-#  '2': 'ESB:::currency:::JPY',
-#  '3': 'ESB:::country_code:::CH',
-#  '4': 'CRM:::CURRENCY:::978',
-# }
-
-#
-# zato:kvdb:data-dict:translation:id: '1'
-#
-# 'zato:kvdb:data-dict:translation:::ESB:::currency:::EUR:::CRM:::CURRENCY':{'id':'1', 'item1':'1', 'item2':'4', 'value2':'978'}
-
-
 class DataDictService(AdminService):
     def __init__(self, *args, **kwargs):
         super(DataDictService, self).__init__(*args, **kwargs)

@@ -566,10 +566,12 @@ class _BaseMessageHandler(object):
 
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
-            thread_ctx.store, cid, payload, raw_request, transport, simple_io_config,
-            data_format, request_data)
+            thread_ctx.store, cid, payload, raw_request, transport, 
+            simple_io_config, data_format, request_data)
 
+        service_instance._pre_handle()
         service_instance.handle()
+        service_instance._post_handle()
         response = service_instance.response
 
         if isinstance(service_instance, AdminService):
