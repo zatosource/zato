@@ -32,7 +32,7 @@ from urlparse import parse_qs
 from validate import is_boolean
 
 # Zato
-from zato.common import ZatoException
+from zato.common import KVDB, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
      DeployedService, HTTPSOAP, Server, Service
@@ -46,7 +46,7 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'))
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 'usage_count')
         output_repeated = True
         
     def get_data(self, session):
@@ -56,10 +56,9 @@ class GetList(AdminService):
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
         
         for item in sl:
-            if item.is_internal:
-                item.may_be_deleted = internal_del
-            else:
-                item.may_be_deleted = True
+            item.may_be_deleted = internal_del if item.is_internal else True
+            item.usage_count = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
+            
             out.append(item)
         
         return out
@@ -73,8 +72,7 @@ class GetByName(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal')
-        output_optional = ('usage_count',)
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage_count', 'timer_min', 'timer_max', 'timer_avg', 'timer_last')
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
@@ -92,7 +90,11 @@ class GetByName(AdminService):
             self.response.payload.is_active = service.is_active
             self.response.payload.impl_name = service.impl_name
             self.response.payload.is_internal = service.is_internal
-            self.response.payload.usage_count = 0
+            self.response.payload.usage_count = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
+
+            timer_key = '{}{}'.format(KVDB.SERVICE_TIMER_BASIC, service.name)
+            for name in('min', 'max', 'avg', 'last'):
+                setattr(self.response.payload, 'timer_' + name, self.server.kvdb.conn.hget(timer_key, name) or 0)
 
 class Edit(AdminService):
     """ Updates a service.

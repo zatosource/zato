@@ -43,15 +43,14 @@ from anyjson import dumps
 from bunch import Bunch
 
 # Zato
-from zato.common import ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.odb.model import Base
-from zato.common.util import TRACE1
+from zato.common.util import service_name_from_impl, TRACE1
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 
 __all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
-
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
@@ -454,6 +453,7 @@ class Service(object):
     """
     def __init__(self, *ignored_args, **ignored_kwargs):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.server = None
         self.broker_client = None
         self.channel = None
         self.cid = None
@@ -463,6 +463,23 @@ class Service(object):
         self.data_format = None
         self.request = Request(self.logger)
         self.response = Response(self.logger)
+        self.invocation_time = None # When was the service invoked
+        self.handle_return_time = None # When did its 'handle' method finished processing the request
+        self.processing_time_raw = None # A timedelta object with the processing time up to microseconds
+        self.processing_time = None # Processing time in milliseconds
+        
+    @classmethod
+    def get_name(class_):
+        """ Returns a service's name, settings its .name attribute along. This will
+        be called once while the service is being deployed.
+        """
+        if not hasattr(class_, 'name'):
+            class_.name = service_name_from_impl(class_.get_impl_name())
+        return class_.name
+    
+    @classmethod
+    def get_impl_name(class_):
+        return '{}.{}'.format(class_.__module__, class_.__name__)
         
     def _init(self):
         """ Actually initializes the service.
@@ -479,6 +496,23 @@ class Service(object):
         if hasattr(self, 'SimpleIO'):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
+            
+    def _pre_handle(self):
+        """ An internal method for incrementing the service's usage count and
+        storing the service invocation time.
+        """
+        self.server.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
+        self.invocation_time = datetime.utcnow()
+        
+    def _post_handle(self):
+        """ An internal method for updating the service's timer statistics.
+        """
+        self.handle_return_time = datetime.utcnow()
+        self.processing_time_raw = self.handle_return_time - self.invocation_time
+        self.processing_time = int(round(self.processing_time_raw.microseconds / 1000.0))
+        
+        self.server.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIMER_BASIC, self.name), 'last', self.processing_time)
+        self.server.kvdb.conn.lpush('{}{}'.format(KVDB.SERVICE_TIMER_RAW, self.name), self.processing_time)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
@@ -559,12 +593,12 @@ class Service(object):
         service.broker_client = broker_client
         service.worker_store = worker_store
         service.cid = cid
-        service.data_format = data_format
         service.request.payload = payload
         service.request.raw_request = raw_request
-        service.request.request_data = request_data
         service.request.simple_io_config = simple_io_config
         service.response.simple_io_config = simple_io_config
+        service.data_format = data_format
+        service.request.request_data = request_data
         service.translate = server.kvdb.translate
         
         if init:

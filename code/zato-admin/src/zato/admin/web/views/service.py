@@ -122,8 +122,7 @@ class Index(_Index):
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted')
-        output_optional = ('usage_count',)
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage_count')
         output_repeated = True
     
     def handle(self):
@@ -176,8 +175,13 @@ def details(req, service_name):
             impl_name = msg_item.impl_name.text
             is_internal = is_boolean(msg_item.is_internal.text)
             usage_count = msg_item.usage_count.text
+            timer_min = msg_item.timer_min.text
+            timer_max = msg_item.timer_max.text
+            timer_avg = msg_item.timer_avg.text
+            timer_last = msg_item.timer_last.text
             
-            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count)
+            service = Service(id, name, is_active, impl_name, is_internal, None, usage_count,
+                timer_min=timer_min, timer_max=timer_max, timer_avg=timer_avg, timer_last=timer_last)
             
             for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(req.zato.cluster, id, channel_type)

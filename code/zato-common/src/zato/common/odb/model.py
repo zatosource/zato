@@ -379,7 +379,7 @@ class Service(Base):
     def __init__(self, id=None, name=None, is_active=None, impl_name=None, 
                  is_internal=None, cluster=None, usage_count=None, wsdl=None,
                  wsdl_name=None, sample_request=None, sample_response=None,
-                 sample_req_resp_freq=0):
+                 sample_req_resp_freq=0, timer_min=None, timer_max=None, timer_avg=None, timer_last=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -402,6 +402,10 @@ class Service(Base):
         self.sample_request_html = None # Not used by the database
         self.sample_response_html = None # Not used by the database
         self.may_be_deleted = False # Not used by the database
+        self.timer_min = timer_min
+        self.timer_max = timer_max
+        self.timer_avg = timer_avg
+        self.timer_last = timer_last
 
 class DeployedService(Base):
     """ A service living on a given server.

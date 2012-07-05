@@ -34,7 +34,7 @@ from json import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.common import zato_path
+from zato.common import ZATO_NONE, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
@@ -173,8 +173,10 @@ class Index(_BaseView):
         for msg_item in item_list.item:
             item = self.output_class()
             for name in names:
-                value = getattr(msg_item, name, '') or ''
-                setattr(item, name, value.text.encode('utf-8'))
+                value = getattr(msg_item, name, None)
+                if value is not None:
+                    value = getattr(value, 'text', '') or value
+                setattr(item, name, value.encode('utf-8'))
             self.items.append(item)
     
     def _handle_item(self, item):

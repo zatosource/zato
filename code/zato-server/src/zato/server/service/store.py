@@ -210,15 +210,15 @@ class ServiceStore(InitializingObject):
                 timestamp = datetime.utcnow().isoformat()
                 depl_info = deployment_info('ServiceStore', item, timestamp, fs_location)
     
-                class_name = '{}.{}'.format(item.__module__, item.__name__)
+                class_name = item.get_impl_name()
                 self.services[class_name] = {}
                 self.services[class_name]['deployment_info'] = depl_info
                 self.services[class_name]['service_class'] = item
                  
                 si = self._get_source_code_info(mod)
-    
+                
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                service_id = self.odb.add_service(service_name_from_impl(class_name), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
+                service_id = self.odb.add_service(item.get_name(), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
                 self.services[class_name]['is_active'] = self.odb.is_service_active(service_id)
 
 if __name__ == '__main__':
