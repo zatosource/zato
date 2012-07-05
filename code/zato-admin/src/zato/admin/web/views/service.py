@@ -177,11 +177,11 @@ def details(req, service_name):
             usage_count = msg_item.usage_count.text
             timer_min = msg_item.timer_min.text
             timer_max = msg_item.timer_max.text
-            timer_avg = msg_item.timer_avg.text
+            timer_mean = msg_item.timer_mean.text
             timer_last = msg_item.timer_last.text
             
             service = Service(id, name, is_active, impl_name, is_internal, None, usage_count,
-                timer_min=timer_min, timer_max=timer_max, timer_avg=timer_avg, timer_last=timer_last)
+                timer_min=timer_min, timer_max=timer_max, timer_mean=timer_mean, timer_last=timer_last)
             
             for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(req.zato.cluster, id, channel_type)
