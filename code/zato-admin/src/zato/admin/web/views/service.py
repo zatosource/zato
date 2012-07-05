@@ -35,7 +35,8 @@ from lxml import etree
 
 # Pygments
 from pygments import highlight
-from pygments.lexers import JSONLexer, MakoXmlLexer, PythonLexer
+from pygments.lexers.web import JSONLexer
+from pygments.lexers import MakoXmlLexer, PythonLexer
 from pygments.formatters import HtmlFormatter
 
 # validate
@@ -73,7 +74,7 @@ def known_data_format(data):
             data_format = 'json'
         except ValueError:
             pass
-        
+
     return data_format
 
 def get_public_wsdl_url(cluster, service_name):
@@ -89,9 +90,9 @@ def _get_channels(cluster, id, channel_type):
         'channel_type': channel_type
     }
     zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-channel-list', input_dict)
-    
+
     response = []
-    
+
     if zato_path('response.item_list.item').get_from(zato_message) is not None:
         for msg_item in zato_message.response.item_list.item:
 
@@ -102,12 +103,12 @@ def _get_channels(cluster, id, channel_type):
             else:
                 url = reverse('channel-' + channel_type)
                 url += '?cluster={}'.format(cluster.id)
-                
+
             url += '&highlight={}'.format(msg_item.id.text)
-            
+
             channel = Channel(msg_item.id.text, msg_item.name.text, url)
             response.append(channel)
-            
+
     return response
 
 class Index(_Index):
@@ -116,15 +117,15 @@ class Index(_Index):
     meth_allowed = 'GET'
     url_name = 'service'
     template = 'zato/service/index.html'
-    
+
     soap_action = 'zato:service.get-list'
     output_class = Service
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage_count')
         output_repeated = True
-    
+
     def handle(self):
         return {
             'create_form': CreateForm(),
@@ -139,13 +140,13 @@ class Edit(CreateEdit):
     meth_allowed = 'POST'
     url_name = 'service-edit'
     form_prefix = 'edit-'
-    
+
     soap_action = 'zato:service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('is_active',)
         output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage_count')
-        
+
     def success_message(self, item):
         return 'Successfully {0} the service [{1}]'.format(self.verb, item.name.text)
 
@@ -153,22 +154,22 @@ class Edit(CreateEdit):
 def details(req, service_name):
     cluster_id = req.GET.get('cluster')
     service = None
-    
+
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
 
     if cluster_id and req.method == 'GET':
-        
+
         input_dict = {
             'name': service_name,
             'cluster_id': req.zato.cluster_id
         }
         zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
-        
+
         if zato_path('response.item').get_from(zato_message) is not None:
-            
+
             msg_item = zato_message.response.item
-                
+
             id = msg_item.id.text
             name = msg_item.name.text
             is_active = is_boolean(msg_item.is_active.text)
@@ -179,21 +180,21 @@ def details(req, service_name):
             timer_max = msg_item.timer_max.text
             timer_mean = msg_item.timer_mean.text
             timer_last = msg_item.timer_last.text
-            
+
             service = Service(id, name, is_active, impl_name, is_internal, None, usage_count,
                 timer_min=timer_min, timer_max=timer_max, timer_mean=timer_mean, timer_last=timer_last)
-            
+
             for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(req.zato.cluster, id, channel_type)
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
             zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-deployment-info-list', {'id': id})
-            
+
             if zato_path('response.item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.response.item_list.item:
                     server_name = msg_item.server_name.text
                     details = msg_item.details.text
-                    
+
                     service.deployment_info.append(DeploymentInfo(server_name, loads(details)))
 
     return_data = {'zato_clusters':req.zato.clusters,
@@ -203,7 +204,7 @@ def details(req, service_name):
         'create_form':create_form,
         'edit_form':edit_form,
         }
-    
+
     # TODO: Should really be done by a decorator.
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
@@ -233,7 +234,7 @@ def invoke(req, service_id, cluster_id):
 
 @meth_allowed('GET')
 def source_info(req, service_name):
-    
+
     service = Service(name=service_name)
     input_dict = {
         'cluster_id': req.zato.cluster_id,
@@ -241,15 +242,15 @@ def source_info(req, service_name):
     }
 
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-source-info', input_dict)
-    
+
     if zato_path('response.item').get_from(zato_message) is not None:
         msg_item = zato_message.response.item
         service.id = msg_item.service_id.text
-        
+
         source = msg_item.source.text.decode('base64') if msg_item.source else ''
         if source:
             source_html = highlight(source, PythonLexer(stripnl=False), HtmlFormatter(linenos='table'))
-            
+
             service.source_info = SourceInfo()
             service.source_info.source = source
             service.source_info.source_html = source_html
@@ -270,24 +271,24 @@ def wsdl(req, service_name):
     service = Service(name=service_name)
     has_wsdl = False
     wsdl_public_url = get_public_wsdl_url(req.zato.cluster, service_name)
-    
+
     input_dict = {
         'name': service_name,
         'cluster_id': req.zato.cluster_id
     }
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.has-wsdl', input_dict)
-    
+
     if zato_path('response.item').get_from(zato_message) is not None:
         service.id = zato_message.response.item.service_id.text
         has_wsdl = is_boolean(zato_message.response.item.has_wsdl.text)
-    
+
     return_data = {
         'cluster_id':req.zato.cluster_id,
         'service':service,
         'has_wsdl':has_wsdl,
         'wsdl_public_url':wsdl_public_url,
         }
-    
+
     return render_to_response('zato/service/wsdl.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('POST')
@@ -302,14 +303,14 @@ def wsdl_upload(req, service_name, cluster_id):
             'wsdl_name': req.GET['qqfile']
         }
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.set-wsdl', input_dict)
-        
+
         return HttpResponse(dumps({'success': True}))
-    
+
     except Exception, e:
         msg = 'Could not upload the WSDL, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
+
 @meth_allowed('GET')
 def wsdl_download(req, service_name, cluster_id):
     return HttpResponseRedirect(get_public_wsdl_url(req.zato.cluster, service_name))
@@ -322,10 +323,10 @@ def request_response(req, service_name):
         'cluster_id': req.zato.cluster_id
     }
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-request-response', input_dict)
-    
+
     if zato_path('response.item').get_from(zato_message) is not None:
         item = zato_message.response.item
-        
+
         request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
         request_data_format = known_data_format(request)
         if request_data_format:
@@ -335,21 +336,21 @@ def request_response(req, service_name):
         response_data_format = known_data_format(response)
         if response_data_format:
             service.sample_response_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
-        
+
         service.sample_request = request
         service.sample_response = response
-        
+
         service.id = item.service_id.text
         service.sample_cid = item.sample_cid.text
         service.sample_req_timestamp = item.sample_req_timestamp.text
         service.sample_resp_timestamp = item.sample_resp_timestamp.text
         service.sample_req_resp_freq = item.sample_req_resp_freq.text
-    
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'service': service,
         }
-    
+
     return render_to_response('zato/service/request-response.html', return_data, context_instance=RequestContext(req))
 
 @meth_allowed('POST')
@@ -362,12 +363,12 @@ def request_response_configure(req, service_name, cluster_id):
         }
         invoke_admin_service(req.zato.cluster, 'zato:service.configure-request-response', input_dict)
         return HttpResponse('Saved successfully')
-    
+
     except Exception, e:
         msg = 'Could not update the configuration, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
+
 class Delete(_Delete):
     url_name = 'service-delete'
     error_message = 'Could not delete the service'
@@ -385,9 +386,9 @@ def package_upload(req, cluster_id):
             'payload_name': req.GET['qqfile']
         }
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.upload-package', input_dict)
-        
+
         return HttpResponse(dumps({'success': True}))
-    
+
     except Exception, e:
         msg = 'Could not upload the service package, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)

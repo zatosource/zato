@@ -9,6 +9,7 @@ code/lib/*
 code/local/*
 code/parts/*
 code/sec-wall-trunk-src/*
+code/zato_extra_paths/*
 docs/sphinx/1/build/*
 docs/sphinx/2/docs/_build/
 code/zato-admin/src/zato/admin/static/css/.sass-cache/
