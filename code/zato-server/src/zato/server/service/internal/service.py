@@ -72,7 +72,7 @@ class GetByName(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage_count', 'timer_min', 'timer_max', 'timer_avg', 'timer_last')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage_count', 'timer_min', 'timer_max', 'timer_mean', 'timer_last')
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
@@ -93,7 +93,7 @@ class GetByName(AdminService):
             self.response.payload.usage_count = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
             timer_key = '{}{}'.format(KVDB.SERVICE_TIMER_BASIC, service.name)
-            for name in('min', 'max', 'avg', 'last'):
+            for name in('min', 'max', 'mean', 'last'):
                 setattr(self.response.payload, 'timer_' + name, self.server.kvdb.conn.hget(timer_key, name) or 0)
 
 class Edit(AdminService):

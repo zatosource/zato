@@ -19,9 +19,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Bunch
+from bunch import Bunch
+
 # Zato
+from zato.common import KVDB
 from zato.server.service.internal import AdminService
 
 class ProcessRawTimers(AdminService):
     def handle(self):
-        print(self.__class__.__name__)
+        config = Bunch()
+        for item in self.request.payload.splitlines():
+            key, value = item.split('=')
+            config[key] = int(value)
+
+        for item in self.server.kvdb.conn.keys(KVDB.SERVICE_TIMER_RAW + '*'):
+            service_name = item.replace(KVDB.SERVICE_TIMER_RAW, '')
+            print(333, service_name)
+            
+            #mean_percentile = 

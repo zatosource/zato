@@ -20,7 +20,7 @@ Data ditionaries
 Statistics
 ----------
 'zato:stats:service:usage:zato.channel.amqp.Edit':'73501'
-'zato:stats:service:timer:basic:zato.channel.amqp.Edit':{'min':'21', 'max':'715', 'avg':'269', 'last':'341'}
+'zato:stats:service:timer:basic:zato.channel.amqp.Edit':{'min':'21', 'max':'715', 'mean':'269', 'last':'341', 'mean-percentile':'100'}
 'zato:stats:service:timer:raw:zato.channel.amqp.Edit':['382', '447', '281', '89', '539']
 'zato:stats:service:timer:slow:zato.channel.amqp.Edit':[json({'cid':'000010429385681103291914', 'ts':'2012-07-04T21:10:18.897370', 'req':'...', 'resp':'...'}), ]
 'zato:stats:service:timer:slow-threshold:zato.channel.amqp.Edit': '1200'
