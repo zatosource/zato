@@ -1,4 +1,10 @@
 #!/bin/sh
+
+mkdir ../code/eggs
+python ./add_egglinks.py
+
+exit 1
+
 rm -rf ../code/bin
 rm -rf ../code/develop-eggs
 rm -rf ../code/downloads
@@ -16,9 +22,9 @@ sudo apt-get install liblapack-dev libgfortran3 liblapack3gf gfortran
 
 sudo pip install --upgrade distribute
 sudo pip install --upgrade virtualenv
-sudo pip install --upgrade scipy
 
-virtualenv --system-site-packages .
+virtualenv --no-site-packages --extra-search-dir=/usr/local/lib/python2.7/dist-packages/scipy .
+
 ./bin/python bootstrap.py
 ./bin/buildout
 echo OK
