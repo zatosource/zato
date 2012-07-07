@@ -512,7 +512,7 @@ class Service(object):
         self.processing_time = int(round(self.processing_time_raw.microseconds / 1000.0))
         
         self.server.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIMER_BASIC, self.name), 'last', self.processing_time)
-        self.server.kvdb.conn.lpush('{}{}'.format(KVDB.SERVICE_TIMER_RAW, self.name), self.processing_time)
+        self.server.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIMER_RAW, self.name), self.processing_time)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
