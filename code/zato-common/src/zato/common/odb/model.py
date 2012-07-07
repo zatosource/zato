@@ -379,7 +379,9 @@ class Service(Base):
     def __init__(self, id=None, name=None, is_active=None, impl_name=None, 
                  is_internal=None, cluster=None, usage_count=None, wsdl=None,
                  wsdl_name=None, sample_request=None, sample_response=None,
-                 sample_req_resp_freq=0, timer_min=None, timer_max=None, timer_mean=None, timer_last=None):
+                 sample_req_resp_freq=0, timer_last=None, timer_min_all_time=None, 
+                 timer_max_all_time=None, timer_mean_all_time=None, timer_min_1h=None, 
+                 timer_max_1h=None, timer_mean_1h=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -402,10 +404,13 @@ class Service(Base):
         self.sample_request_html = None # Not used by the database
         self.sample_response_html = None # Not used by the database
         self.may_be_deleted = False # Not used by the database
-        self.timer_min = timer_min # Not used by the database
-        self.timer_max = timer_max # Not used by the database
-        self.timer_mean = timer_mean # Not used by the database
         self.timer_last = timer_last # Not used by the database
+        self.timer_min_all_time = timer_min_all_time # Not used by the database
+        self.timer_max_all_time = timer_max_all_time # Not used by the database
+        self.timer_mean_all_time = timer_mean_all_time # Not used by the database
+        self.timer_min_1h = timer_min_1h # Not used by the database
+        self.timer_max_1h = timer_max_1h # Not used by the database
+        self.timer_mean_1h = timer_mean_1h # Not used by the database
 
 class DeployedService(Base):
     """ A service living on a given server.

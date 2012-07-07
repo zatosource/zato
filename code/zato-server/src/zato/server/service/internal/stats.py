@@ -47,9 +47,9 @@ class ProcessRawTimers(AdminService):
             
             service_name = item.replace(KVDB.SERVICE_TIMER_RAW, '')
             
-            current_mean = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean') or 0)
-            current_min = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'min') or 0)
-            current_max = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'max') or 0)
+            current_mean = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean_all_time') or 0)
+            current_min = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'min_all_time') or 0)
+            current_max = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'max_all_time') or 0)
             
             item_len = self.server.kvdb.conn.llen(item)
             batch_size = min(item_len, config.max_batch_size)
@@ -61,15 +61,15 @@ class ProcessRawTimers(AdminService):
             
             timers = [int(elem) for elem in self.server.kvdb.conn.lrange(item, 0, batch_size)]
             
-            mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean-percentile') or 0)
+            mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean_percentile') or 0)
             max_score = int(sp_stats.scoreatpercentile(timers, mean_percentile))
 
             # The new mean is a mean of the last batch of timers and of the current mean
             batch_mean = sp_stats.tmean(timers, (None, max_score)) or 0
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean', sp_stats.tmean((batch_mean, current_mean)))
+            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean_all_time', sp_stats.tmean((batch_mean, current_mean)))
             
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'min', min(current_min, min(timers)))
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'max', max(current_max, max(timers)))
+            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'min_all_time', min(current_min, min(timers)))
+            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'max_all_time', max(current_max, max(timers)))
             
             # Services use RPUSH for storing raw timers so we are safe to use LTRIM
             # in order to do away with the already processed ones
