@@ -22,6 +22,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Bunch
 from bunch import Bunch
 
+# SciPy
+from scipy import stats as sp_stats
+
 # Zato
 from zato.common import KVDB
 from zato.server.service.internal import AdminService
@@ -35,6 +38,17 @@ class ProcessRawTimers(AdminService):
 
         for item in self.server.kvdb.conn.keys(KVDB.SERVICE_TIMER_RAW + '*'):
             service_name = item.replace(KVDB.SERVICE_TIMER_RAW, '')
-            print(333, service_name)
+            timers = self.server.kvdb.conn.lrange(item, 0, -1)
             
-            #mean_percentile = 
+            mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean-percentile') or 0)
+            max_score = sp_stats.scoreatpercentile(timers, mean_percentile)
+            if max_score:
+                elems = [int(elem) for elem in timers]
+                try:
+                    print(777, elems, sp_stats.tmean(elems, (None, max_score)))
+                    print(555, service_name, mean_percentile, max_score)
+                    print(666, elems)
+                    print()
+                    print()
+                except AttributeError, e:
+                    pass
