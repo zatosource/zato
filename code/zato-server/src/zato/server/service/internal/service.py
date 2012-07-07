@@ -72,7 +72,9 @@ class GetByName(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage_count', 'timer_min', 'timer_max', 'timer_mean', 'timer_last')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage_count', 
+            'timer_last', 'timer_min_all_time', 'timer_max_all_time', 'timer_mean_all_time', 
+            'timer_min_1h', 'timer_max_1h', 'timer_mean_1h')
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
@@ -93,8 +95,13 @@ class GetByName(AdminService):
             self.response.payload.usage_count = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
             timer_key = '{}{}'.format(KVDB.SERVICE_TIMER_BASIC, service.name)
-            for name in('min', 'max', 'mean', 'last'):
-                setattr(self.response.payload, 'timer_' + name, self.server.kvdb.conn.hget(timer_key, name) or 0)
+            for name in('min_all_time', 'max_all_time', 'mean_all_time'):
+                setattr(self.response.payload, 'timer_{}'.format(name), self.server.kvdb.conn.hget(timer_key, name) or 0)
+                    
+            self.response.payload.timer_last = self.server.kvdb.conn.hget(timer_key, 'last')
+            self.response.payload.timer_min_1h = self.server.kvdb.conn.hget(timer_key, 'timer_min_1h') or 0
+            self.response.payload.timer_max_1h = self.server.kvdb.conn.hget(timer_key, 'timer_max_1h') or 0
+            self.response.payload.timer_mean_1h = self.server.kvdb.conn.hget(timer_key, 'timer_mean_1h') or 0
 
 class Edit(AdminService):
     """ Updates a service.
@@ -192,7 +199,7 @@ class GetChannelList(AdminService):
                 q = q.filter(class_.soap_version == None)
             
             self.response.payload[:] = q.all()
-        
+            
 class Invoke(AdminService):
     """ Invokes the service directly, as though it was exposed through some channel
     which doesn't necessarily have to be true.
@@ -217,7 +224,10 @@ class Invoke(AdminService):
             self.request.input.transport, self.request.simple_io_config, 
             self.request.input.data_format, self.request.request_data)
 
+        service_instance._pre_handle()
         service_instance.handle()
+        service_instance._post_handle()
+        
         response = service_instance.response.payload
         if not isinstance(response, basestring):
             response = response.getvalue()

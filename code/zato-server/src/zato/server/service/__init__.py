@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from httplib import OK
 from itertools import chain
 from traceback import format_exc
@@ -513,6 +513,18 @@ class Service(object):
         
         self.server.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIMER_BASIC, self.name), 'last', self.processing_time)
         self.server.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIMER_RAW, self.name), self.processing_time)
+        
+        #year_exp = self.handle_return_time + timedelta(weeks=260) # 5 years = (52 weeks / 2) * 10 = 260 weeks
+        #month_exp = self.handle_return_time + timedelta(weeks=26) # Half a year = 52 weeks / 2
+        
+        # Store the processing time for each time component separately
+        components = ['year', 'month', 'day', 'hour', 'minute']
+        for x in range(1, len(components)+1):
+            attrs = components[0:x]
+            pattern = ':'.join(['{}'] * x)
+            key_suffix = pattern.format(*(getattr(self.handle_return_time, attr) for attr in attrs))
+            key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_RAW, self.name, key_suffix)
+            self.server.kvdb.conn.rpush(key, self.processing_time)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
