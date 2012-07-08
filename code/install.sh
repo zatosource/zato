@@ -1,4 +1,8 @@
-#!/bin/sh
+#!/bin/bash
+
+function symlink_py {
+    ln -s `python -c 'import '${1}', os.path, sys; sys.stdout.write(os.path.dirname('${1}'.__file__))'` ../code/zato_extra_paths
+}
 
 rm -rf ../code/bin
 rm -rf ../code/develop-eggs
@@ -18,10 +22,6 @@ sudo apt-get install liblapack-dev libgfortran3 liblapack3gf gfortran
 sudo apt-get install python-numpy python-scipy
 
 mkdir ../code/zato_extra_paths
-
-function symlink_py {
-    ln -s `python -c 'import '${1}', os.path, sys; sys.stdout.write(os.path.dirname('${1}'.__file__))'` ../code/zato_extra_paths
-}
 
 symlink_py 'scipy'
 symlink_py 'numpy'
