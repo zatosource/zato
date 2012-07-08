@@ -510,21 +510,15 @@ class Service(object):
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
         self.processing_time = int(round(self.processing_time_raw.microseconds / 1000.0))
-        
+
         self.server.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIMER_BASIC, self.name), 'last', self.processing_time)
         self.server.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIMER_RAW, self.name), self.processing_time)
-        
-        #year_exp = self.handle_return_time + timedelta(weeks=260) # 5 years = (52 weeks / 2) * 10 = 260 weeks
-        #month_exp = self.handle_return_time + timedelta(weeks=26) # Half a year = 52 weeks / 2
-        
-        # Store the processing time for each time component separately
-        components = ['year', 'month', 'day', 'hour', 'minute']
-        for x in range(1, len(components)+1):
-            attrs = components[0:x]
-            pattern = ':'.join(['{}'] * x)
-            key_suffix = pattern.format(*(getattr(self.handle_return_time, attr) for attr in attrs))
-            key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_RAW, self.name, key_suffix)
-            self.server.kvdb.conn.rpush(key, self.processing_time)
+
+        key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_RAW_BY_MINUTE, self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
+        self.server.kvdb.conn.rpush(key, self.processing_time)
+
+        # .. we'll have 120 seconds to process timers for a given minute and then it will expire
+        self.server.kvdb.conn.expire(key, 120)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
