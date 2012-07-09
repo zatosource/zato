@@ -27,7 +27,7 @@ $(document).ready(function() {
 
             $('#rate_1h_' + instance.id).text(json.rate);
             $('#mean_1h_' + instance.id).text(json.mean);
-            $('#trend_1h_' + instance.id).sparkline(json.trend, {'width':'80px'});
+            $('#trend_1h_' + instance.id).sparkline(json.trend, {'width':'80px', 'spotColor':false, 'disableHiddenCheck':true});
             
         };
         $.fn.zato.post(String.format('./last-stats/{0}/cluster/{1}/', instance.id, $('#cluster_id').val()), _callback, {}, 'json', true);

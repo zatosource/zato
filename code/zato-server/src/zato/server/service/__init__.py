@@ -24,6 +24,7 @@ import logging
 from datetime import datetime, timedelta
 from httplib import OK
 from itertools import chain
+from time import mktime
 from traceback import format_exc
 
 # SQLAlchemy
@@ -516,9 +517,9 @@ class Service(object):
 
         key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_RAW_BY_MINUTE, self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
         self.server.kvdb.conn.rpush(key, self.processing_time)
-
+        
         # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) to process timers for a given minute and then it will expire
-        self.server.kvdb.conn.expire(key, 300)
+        self.server.kvdb.conn.expire(key, 300) # TODO: Document that we need Redis 2.1.3+ otherwise they key has just been overwritten
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
