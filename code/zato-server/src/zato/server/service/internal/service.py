@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 from httplib import BAD_REQUEST, NOT_FOUND
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
@@ -74,7 +74,7 @@ class GetByName(AdminService):
         input_required = ('cluster_id', 'name')
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage_count', 
             'timer_last', 'timer_min_all_time', 'timer_max_all_time', 'timer_mean_all_time', 
-            'timer_min_1h', 'timer_max_1h', 'timer_mean_1h')
+            'timer_min_1h', 'timer_max_1h', 'timer_mean_1h', 'timer_rate_1h')
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
@@ -102,6 +102,7 @@ class GetByName(AdminService):
             self.response.payload.timer_min_1h = self.server.kvdb.conn.hget(timer_key, 'timer_min_1h') or 0
             self.response.payload.timer_max_1h = self.server.kvdb.conn.hget(timer_key, 'timer_max_1h') or 0
             self.response.payload.timer_mean_1h = self.server.kvdb.conn.hget(timer_key, 'timer_mean_1h') or 0
+            self.response.payload.timer_rate_1h = self.server.kvdb.conn.hget(timer_key, 'timer_rate_1h') or 0
 
 class Edit(AdminService):
     """ Updates a service.
@@ -444,3 +445,43 @@ class UploadPackage(AdminService):
             tf.flush()
 
             success = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
+
+class GetLastStats(AdminService):
+    """ Returns basic statistics regarding a service, going back up to the period,
+    expressed in minutes. The data returned is:
+    - usage count
+    - mean response time
+    - a BASE64-encoded sparkline depicting the mean response time's trend during the given period
+    """
+    class SimpleIO:
+        input_required = ('service_id', 'minutes')
+        output_required = ('rate', 'mean', 'trend')
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter_by(id=self.request.input.service_id).\
+                one()
+            
+            minutes = int(self.request.input.minutes)
+            now = datetime.utcnow()
+            suffixes = ((now - timedelta(minutes=minute)).strftime('%Y:%m:%d:%H:%M') for minute in range(minutes, 0, -1))
+            
+            rate = 0
+            mean = 0
+            trend = []
+            
+            for suffix in suffixes:
+                key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_AGGREGATED_BY_MINUTE, service.name, suffix)
+                items = self.server.kvdb.conn.hgetall(key)
+                
+                if items:
+                    rate += float(items['rate'])
+                    mean += float(items['mean'])
+                    trend.append(items['mean'])
+                else:
+                    trend.append('0')
+            
+            self.response.payload.rate = '{:.2f}'.format(rate / float(minutes) / 60) # The rate is req/s hence we need to divide it by 60 
+            self.response.payload.mean = '{:.0f}'.format(mean / float(minutes))
+            self.response.payload.trend = ','.join(trend)

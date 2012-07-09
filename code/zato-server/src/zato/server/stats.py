@@ -60,5 +60,6 @@ def add_stats_jobs(cluster_id, odb, stats_jobs):
                 session.add(ib_job)
                 session.commit()
             except IntegrityError, e:
+                session.rollback()
                 msg = 'Caught an IntegrityError, carrying on anyway, e:[{}]]'.format(format_exc(e))
                 logger.debug(msg)
