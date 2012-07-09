@@ -155,11 +155,11 @@ class KVDB:
     TRANSLATION_ID = TRANSLATION + ':id'
     SEPARATOR = ':::'
     SERVICE_USAGE = 'zato:stats:service:usage:'
-    SERVICE_TIMER_BASIC = 'zato:stats:service:timer:basic:'
-    SERVICE_TIMER_RAW = 'zato:stats:service:timer:raw:'
-    SERVICE_TIMER_RAW_BY_MINUTE = 'zato:stats:service:timer:raw-by-minute:'
-    SERVICE_TIMER_AGGREGATED_BY_MINUTE = 'zato:stats:service:timer:aggr-by-minute:'
-    SERVICE_TIMER_SLOW = 'zato:stats:service:timer:slow:'
+    SERVICE_TIME_BASIC = 'zato:stats:service:time:basic:'
+    SERVICE_TIME_RAW = 'zato:stats:service:time:raw:'
+    SERVICE_TIME_RAW_BY_MINUTE = 'zato:stats:service:time:raw-by-minute:'
+    SERVICE_TIME_AGGREGATED_BY_MINUTE = 'zato:stats:service:time:aggr-by-minute:'
+    SERVICE_TIME_SLOW = 'zato:stats:service:time:slow:'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

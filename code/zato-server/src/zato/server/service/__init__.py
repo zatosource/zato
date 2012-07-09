@@ -506,19 +506,19 @@ class Service(object):
         self.invocation_time = datetime.utcnow()
         
     def _post_handle(self):
-        """ An internal method for updating the service's timer statistics.
+        """ An internal method for updating the service's statistics.
         """
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
         self.processing_time = int(round(self.processing_time_raw.microseconds / 1000.0))
 
-        self.server.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIMER_BASIC, self.name), 'last', self.processing_time)
-        self.server.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIMER_RAW, self.name), self.processing_time)
+        self.server.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
+        self.server.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
 
-        key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_RAW_BY_MINUTE, self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
+        key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE, self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
         self.server.kvdb.conn.rpush(key, self.processing_time)
         
-        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) to process timers for a given minute and then it will expire
+        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) to aggregate processing times for a given minute and then it will expire
         self.server.kvdb.conn.expire(key, 300) # TODO: Document that we need Redis 2.1.3+ otherwise they key has just been overwritten
             
     def translate(self, *args, **kwargs):

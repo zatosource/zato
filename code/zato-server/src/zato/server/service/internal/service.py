@@ -46,7 +46,7 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 'usage_count')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 'usage')
         output_repeated = True
         
     def get_data(self, session):
@@ -57,7 +57,7 @@ class GetList(AdminService):
         
         for item in sl:
             item.may_be_deleted = internal_del if item.is_internal else True
-            item.usage_count = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
+            item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
             
             out.append(item)
         
@@ -72,9 +72,8 @@ class GetByName(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id', 'name')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage_count', 
-            'timer_last', 'timer_min_all_time', 'timer_max_all_time', 'timer_mean_all_time', 
-            'timer_min_1h', 'timer_max_1h', 'timer_mean_1h', 'timer_rate_1h')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage', 
+            'time_last', 'time_min_all_time', 'time_max_all_time', 'time_mean_all_time')
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
@@ -92,17 +91,13 @@ class GetByName(AdminService):
             self.response.payload.is_active = service.is_active
             self.response.payload.impl_name = service.impl_name
             self.response.payload.is_internal = service.is_internal
-            self.response.payload.usage_count = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
+            self.response.payload.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
-            timer_key = '{}{}'.format(KVDB.SERVICE_TIMER_BASIC, service.name)
+            time_key = '{}{}'.format(KVDB.SERVICE_TIME_BASIC, service.name)            
+            self.response.payload.time_last = self.server.kvdb.conn.hget(time_key, 'last')
+            
             for name in('min_all_time', 'max_all_time', 'mean_all_time'):
-                setattr(self.response.payload, 'timer_{}'.format(name), self.server.kvdb.conn.hget(timer_key, name) or 0)
-                    
-            self.response.payload.timer_last = self.server.kvdb.conn.hget(timer_key, 'last')
-            self.response.payload.timer_min_1h = self.server.kvdb.conn.hget(timer_key, 'timer_min_1h') or 0
-            self.response.payload.timer_max_1h = self.server.kvdb.conn.hget(timer_key, 'timer_max_1h') or 0
-            self.response.payload.timer_mean_1h = self.server.kvdb.conn.hget(timer_key, 'timer_mean_1h') or 0
-            self.response.payload.timer_rate_1h = self.server.kvdb.conn.hget(timer_key, 'timer_rate_1h') or 0
+                setattr(self.response.payload, 'time_{}'.format(name), self.server.kvdb.conn.hget(time_key, name) or 0)
 
 class Edit(AdminService):
     """ Updates a service.
@@ -110,7 +105,7 @@ class Edit(AdminService):
     class SimpleIO:
         input_required = ('id', 'is_active')
         output_required = ('id', 'name', 'impl_name', 'is_internal',)
-        output_optional = (Boolean('usage_count'),)
+        output_optional = ('usage',)
 
     def handle(self):
         input = self.request.input
@@ -186,7 +181,7 @@ class GetChannelList(AdminService):
             'jms-wmq': ChannelWMQ,
             'zmq': ChannelZMQ,
         }
-        
+
         class_ = channel_type_class[self.request.input.channel_type]
         q_attrs = (class_.id, class_.name)
         
@@ -450,12 +445,13 @@ class GetLastStats(AdminService):
     """ Returns basic statistics regarding a service, going back up to the period,
     expressed in minutes. The data returned is:
     - usage count
-    - mean response time
-    - a BASE64-encoded sparkline depicting the mean response time's trend during the given period
+    - min, max and mean response time
+    - CSV data for the period requested representing mean response time trend
+    - CSV data for the period requested representing request rate (req/s) trend
     """
     class SimpleIO:
         input_required = ('service_id', 'minutes')
-        output_required = ('min', 'max', 'mean', 'rate', 'trend_mean', 'trend_rate')
+        output_required = ('usage', 'min', 'max', 'mean', 'rate', 'trend_mean', 'trend_rate')
         
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -467,6 +463,7 @@ class GetLastStats(AdminService):
             now = datetime.utcnow()
             suffixes = ((now - timedelta(minutes=minute)).strftime('%Y:%m:%d:%H:%M') for minute in range(minutes, 1, -1))
             
+            usage = 0
             min_ = None
             max_ = None
             mean = 0
@@ -475,7 +472,7 @@ class GetLastStats(AdminService):
             trend_rate = []
             
             for suffix in suffixes:
-                key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_AGGREGATED_BY_MINUTE, service.name, suffix)
+                key = '{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service.name, suffix)
                 items = self.server.kvdb.conn.hgetall(key)
                 
                 if items:
@@ -489,6 +486,7 @@ class GetLastStats(AdminService):
                     else:
                         max_ = max(max_, float(items['max']))
 
+                    usage += int(items['total'])
                     mean += float(items['mean'])
                     rate += float(items['rate'])
                     trend_mean.append(items['mean'])
@@ -509,6 +507,7 @@ class GetLastStats(AdminService):
             else:
                 rate = '{:.2f}'.format(rate)
             
+            self.response.payload.usage = usage
             self.response.payload.min = min_
             self.response.payload.max = max_
             self.response.payload.mean = mean

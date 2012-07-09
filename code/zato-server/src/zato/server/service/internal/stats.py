@@ -33,7 +33,7 @@ from zato.common import KVDB
 from zato.server.service.internal import AdminService
 
 class _AggregatingService(AdminService):
-    """ A base class for all services that process raw timers into aggregates values.
+    """ A base class for all services that process raw times into aggregates values.
     """
     def _aggregate(self, key, service_name, max_batch_size=None):
         """ Aggregates values from a list living under a given key. Returns its
@@ -52,14 +52,14 @@ class _AggregatingService(AdminService):
         else:
             batch_size = key_len
             
-        timers = [int(elem) for elem in self.server.kvdb.conn.lrange(key, 0, batch_size)]
+        times = [int(elem) for elem in self.server.kvdb.conn.lrange(key, 0, batch_size)]
         
-        mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean_percentile') or 0)
-        max_score = int(sp_stats.scoreatpercentile(timers, mean_percentile))
+        mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_percentile') or 0)
+        max_score = int(sp_stats.scoreatpercentile(times, mean_percentile))
         
-        return min(timers), max(timers), (sp_stats.tmean(timers, (None, max_score)) or 0), len(timers)
+        return min(times), max(times), (sp_stats.tmean(times, (None, max_score)) or 0), len(times)
 
-class ProcessRawTimers(_AggregatingService):
+class ProcessRawTimes(_AggregatingService):
     def handle(self):
         
         # 
@@ -73,26 +73,26 @@ class ProcessRawTimers(_AggregatingService):
             key, value = item.split('=')
             config[key] = int(value)
 
-        for key in self.server.kvdb.conn.keys(KVDB.SERVICE_TIMER_RAW + '*'):
+        for key in self.server.kvdb.conn.keys(KVDB.SERVICE_TIME_RAW + '*'):
             
-            service_name = key.replace(KVDB.SERVICE_TIMER_RAW, '')
+            service_name = key.replace(KVDB.SERVICE_TIME_RAW, '')
             
-            current_mean = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean_all_time') or 0)
-            current_min = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'min_all_time') or 0)
-            current_max = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIMER_BASIC + service_name, 'max_all_time') or 0)
+            current_mean = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time') or 0)
+            current_min = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'min_all_time') or 0)
+            current_max = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'max_all_time') or 0)
             
             batch_min, batch_max, batch_mean, batch_total = self._aggregate(key, service_name, config.max_batch_size)
             
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'mean_all_time', sp_stats.tmean((batch_mean, current_mean)))
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'min_all_time', min(current_min, batch_min))
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIMER_BASIC + service_name, 'max_all_time', max(current_max, batch_max))
+            self.server.kvdb.conn.hset(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time', sp_stats.tmean((batch_mean, current_mean)))
+            self.server.kvdb.conn.hset(KVDB.SERVICE_TIME_BASIC + service_name, 'min_all_time', min(current_min, batch_min))
+            self.server.kvdb.conn.hset(KVDB.SERVICE_TIME_BASIC + service_name, 'max_all_time', max(current_max, batch_max))
             
-            # Services use RPUSH for storing raw timers so we are safe to use LTRIM
+            # Services use RPUSH for storing raw times so we are safe to use LTRIM
             # in order to do away with the already processed ones
             self.server.kvdb.conn.ltrim(key, batch_total, -1)
 
 class AggregateByMinute(_AggregatingService):
-    """ Aggregates per-miunte timers.
+    """ Aggregates per-miunte times.
     """
     def handle(self):
         
@@ -104,10 +104,10 @@ class AggregateByMinute(_AggregatingService):
         now = datetime.utcnow()
         key_suffix = (now - timedelta(minutes=2)).strftime('%Y:%m:%d:%H:%M')
         
-        for key in self.server.kvdb.conn.keys('{}*:{}'.format(KVDB.SERVICE_TIMER_RAW_BY_MINUTE, key_suffix)):
+        for key in self.server.kvdb.conn.keys('{}*:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE, key_suffix)):
             
-            service_name = key.replace(KVDB.SERVICE_TIMER_RAW_BY_MINUTE, '').replace(':' + key_suffix, '')
-            aggr_key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_AGGREGATED_BY_MINUTE, service_name, key_suffix)
+            service_name = key.replace(KVDB.SERVICE_TIME_RAW_BY_MINUTE, '').replace(':' + key_suffix, '')
+            aggr_key = '{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service_name, key_suffix)
             
             batch_min, batch_max, batch_mean, batch_total = self._aggregate(key, service_name)
             
