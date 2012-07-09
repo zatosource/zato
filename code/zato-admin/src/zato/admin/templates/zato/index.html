@@ -107,19 +107,10 @@
                 <li><a href="#">Statistics</a>
                     <ul>
                         <li>
-                            <span class="like-a">Top N &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}">Last hour</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'today' %}">Today</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}">Last 24 hour</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}">This week</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}">This month</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}">This year</a></li>
-                            </ul>
+                            <a href="#">Last hour</a>
                         </li>
                         <li>
-                            <a href="#">Last hour</a>
+                            <a href="#">By service</a>
                         </li>
                         <li>
                             <span class="like-a">By day &rarr;</span>
@@ -152,6 +143,33 @@
                                 <li class='wide'><a href="#">Previous</a></li>
                                 <li class='wide'><a href="#">Other</a></li>
                             </ul>
+                        </li>
+                        <li>
+                            <span class="like-a">Top N &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}">Last hour</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'today' %}">Today</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}">Yesterday</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}">Last 24 hours</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}">This week</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}">This month</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}">This year</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <span class="like-a">Trends &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}">Last hour</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'today' %}">Today</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}">Yesterday</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}">Last 24 hours</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}">This week</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}">This month</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}">This year</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <a href="#">Settings</a>
                         </li>
                     </ul>
                 </li>

@@ -1,0 +1,104 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/stats/top-n.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+<h2 class="zato">Statistics : Top N : {{ label }}</h2>
+
+<div class='page_prompt'>
+    <a href="{% url service-details service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
+    <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
+    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
+</div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td>
+                <form action="." method="GET">
+                    Show {{ n_form.n }}  items <input type="submit" value="OK" />
+                    <input type="hidden" name="start" value="{{ start }}" />
+                    <input type="hidden" name="stop" value="{{ stop }}" />
+                </form>
+                
+            </td>
+            <td style="text-align:right">
+                Compare to: 
+                    {{ compare_form.compare_to }} 
+            </td>
+        </tr>
+        <tr>
+            <td id="left-side" style="width:50%">
+
+                <table style="width:100%">
+                    <tr>
+                        <td class="inline_header">Slowest services 
+                            <div style="width:20%;text-align:right;float:right"><a href="#">(CSV)</a></div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <table style="width:100%">
+                                <tr>
+                                    <td style="width:60%"></td>
+                                    <td style="text-align:right">Mean (ms)</td>
+                                    <td style="text-align:right">Trend</td>
+                                </tr>
+                                <tr>
+                                    <td><a href="#">zato.kvdb.data_dict.translation.GetList</a></td>
+                                    <td style="text-align:right">381</td>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="inline_header">Most commonly used
+                            <div style="width:20%;text-align:right;float:right"><a href="#">(CSV)</a></div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td>
+                            <table style="width:100%">
+                                <tr>
+                                    <td style="width:50%"></td>
+                                    <td style="text-align:right">Usage</td>
+                                    <td style="text-align:right">%</td>
+                                    <td style="text-align:right">Req/s</td>
+                                    <td style="text-align:right">Trend</td>
+                                </tr>
+                                <tr>
+                                    <td><a href="#">zato.kvdb.data_dict.translation.GetList</a></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+            </td>
+
+            <td id="right-side"></td>
+        </tr>
+    </table>
+</div>
+
+
+{% endblock %}
