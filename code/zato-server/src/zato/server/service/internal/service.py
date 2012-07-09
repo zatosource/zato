@@ -455,7 +455,7 @@ class GetLastStats(AdminService):
     """
     class SimpleIO:
         input_required = ('service_id', 'minutes')
-        output_required = ('min', 'max', 'mean', 'rate', 'trend')
+        output_required = ('min', 'max', 'mean', 'rate', 'trend_mean', 'trend_rate')
         
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -471,7 +471,8 @@ class GetLastStats(AdminService):
             max_ = None
             mean = 0
             rate = 0
-            trend = []
+            trend_mean = []
+            trend_rate = []
             
             for suffix in suffixes:
                 key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_AGGREGATED_BY_MINUTE, service.name, suffix)
@@ -490,9 +491,11 @@ class GetLastStats(AdminService):
 
                     mean += float(items['mean'])
                     rate += float(items['rate'])
-                    trend.append(items['mean'])
+                    trend_mean.append(items['mean'])
+                    trend_rate.append(items['rate'])
                 else:
-                    trend.append('0')
+                    trend_mean.append('0')
+                    trend_rate.append('0')
                     
             mean = mean / float(minutes)
             if mean and mean < 1:
@@ -510,4 +513,5 @@ class GetLastStats(AdminService):
             self.response.payload.max = max_
             self.response.payload.mean = mean
             self.response.payload.rate = rate
-            self.response.payload.trend = ','.join(trend)
+            self.response.payload.trend_mean = ','.join(trend_mean)
+            self.response.payload.trend_rate = ','.join(trend_rate)
