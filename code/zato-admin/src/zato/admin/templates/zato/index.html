@@ -109,12 +109,13 @@
                         <li>
                             <span class="like-a">Top N &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="#">Last hour</a></li>
-                                <li class='wide'><a href="#">Today</a></li>
-                                <li class='wide'><a href="#">Last 24 hour</a></li>
-                                <li class='wide'><a href="#">This week</a></li>
-                                <li class='wide'><a href="#">This month</a></li>
-                                <li class='wide'><a href="#">This year</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}">Last hour</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'today' %}">Today</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}">Yesterday</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}">Last 24 hour</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}">This week</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}">This month</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}">This year</a></li>
                             </ul>
                         </li>
                         <li>

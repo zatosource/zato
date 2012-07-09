@@ -25,7 +25,7 @@ from django.contrib.auth.views import login
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import cluster, http_soap, kvdb, load_balancer, main, scheduler, service
+from zato.admin.web.views import cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
@@ -214,6 +214,9 @@ urlpatterns = patterns('',
     url(r'^zato/kvdb/data-dict/impexp/$', impexp.index, name='kvdb-data-dict-impexp'),
     url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/import/$', impexp.import_, name='kvdb-data-dict-impexp-import'),
     url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/export/$', impexp.export, name='kvdb-data-dict-impexp-export'),
+    
+    # Statistics
+    url(r'^zato/stats/top-n/(?P<choice>.*)/$', stats.top_n, name='stats-top-n'),
 
 )
 
