@@ -412,6 +412,9 @@ def last_stats(req, service_id, cluster_id):
                     value = [int(float(elem)) for elem in value.split(',')]
                 return_data[key] = value
                 
+        if str(service_id) == '1':
+            print(4444, return_data)
+                
     except Exception, e:
         msg = 'Caught an exception while invoking zato:service.get-last-stats, e:[{}]'.format(format_exc(e))
         logger.error(msg)

@@ -455,7 +455,7 @@ class GetLastStats(AdminService):
     """
     class SimpleIO:
         input_required = ('service_id', 'minutes')
-        output_required = ('rate', 'mean', 'trend')
+        output_required = ('min', 'max', 'mean', 'rate', 'trend')
         
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -465,10 +465,12 @@ class GetLastStats(AdminService):
             
             minutes = int(self.request.input.minutes)
             now = datetime.utcnow()
-            suffixes = ((now - timedelta(minutes=minute)).strftime('%Y:%m:%d:%H:%M') for minute in range(minutes, 0, -1))
+            suffixes = ((now - timedelta(minutes=minute)).strftime('%Y:%m:%d:%H:%M') for minute in range(minutes, 1, -1))
             
-            rate = 0
+            min_ = None
+            max_ = None
             mean = 0
+            rate = 0
             trend = []
             
             for suffix in suffixes:
@@ -476,12 +478,36 @@ class GetLastStats(AdminService):
                 items = self.server.kvdb.conn.hgetall(key)
                 
                 if items:
-                    rate += float(items['rate'])
+                    if not min_:
+                        min_ = float(items['min'])
+                    else:
+                        min_ = min(min_, float(items['min']))
+                        
+                    if not max_:
+                        max_ = float(items['max'])
+                    else:
+                        max_ = max(max_, float(items['max']))
+
                     mean += float(items['mean'])
+                    rate += float(items['rate'])
                     trend.append(items['mean'])
                 else:
                     trend.append('0')
+                    
+            mean = mean / float(minutes)
+            if mean and mean < 1:
+                mean = '1'
+            else:
+                mean = '{:.0f}'.format(mean)
+                
+            rate = rate / float(minutes)
+            if rate and rate < 0.01:
+                rate = '<0.01'
+            else:
+                rate = '{:.2f}'.format(rate)
             
-            self.response.payload.rate = '{:.2f}'.format(rate / float(minutes) / 60) # The rate is req/s hence we need to divide it by 60 
-            self.response.payload.mean = '{:.0f}'.format(mean / float(minutes))
+            self.response.payload.min = min_
+            self.response.payload.max = max_
+            self.response.payload.mean = mean
+            self.response.payload.rate = rate
             self.response.payload.trend = ','.join(trend)
