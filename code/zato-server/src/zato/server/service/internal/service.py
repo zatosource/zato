@@ -485,12 +485,17 @@ class GetLastStats(AdminService):
                         max_ = float(items['max'])
                     else:
                         max_ = max(max_, float(items['max']))
+                        
+                    item_mean = float(items['mean'])
+                    item_rate = float(items['rate'])
 
                     usage += int(items['total'])
-                    mean += float(items['mean'])
-                    rate += float(items['rate'])
-                    trend_mean.append(items['mean'])
-                    trend_rate.append(items['rate'])
+                    mean += item_mean
+                    rate += item_rate
+                    
+                    trend_mean.append('{:.0f}'.format(item_mean))
+                    trend_rate.append('{:.0f}'.format(item_rate))
+                    
                 else:
                     trend_mean.append('0')
                     trend_rate.append('0')
