@@ -78,7 +78,7 @@ $.namespace('zato.security.wss');
 $.namespace('zato.service');
 
 
-$.fn.zato.post = function(url, callback, data, data_type) {
+$.fn.zato.post = function(url, callback, data, data_type, suppress_user_message) {
     if(!data) {
         data = '';
     }
@@ -87,7 +87,9 @@ $.fn.zato.post = function(url, callback, data, data_type) {
         data_type = 'json';
     }
     
-    $.fn.zato.user_message(false, '', true);
+    if(!suppress_user_message) {
+        $.fn.zato.user_message(false, '', true);
+    }
     
     $.ajax({
         type: 'POST',

@@ -19,6 +19,20 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.service.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name']);
+    
+    $.each($.fn.zato.data_table.data, function(idx, instance) {
+    
+        var _callback = function(data, status) {
+            var json = $.parseJSON(data.responseText);
+
+            $('#rate_1h_' + instance.id).text(json.rate);
+            $('#mean_1h_' + instance.id).text(json.mean);
+            $('#trend_1h_' + instance.id).sparkline(json.trend, {'width':'80px'});
+            
+        };
+        $.fn.zato.post(String.format('./last-stats/{0}/cluster/{1}/', instance.id, $('#cluster_id').val()), _callback, {}, 'json', true);
+    });
+    
 })
 
 $.fn.zato.service.create = function() {

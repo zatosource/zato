@@ -517,8 +517,8 @@ class Service(object):
         key = '{}{}:{}'.format(KVDB.SERVICE_TIMER_RAW_BY_MINUTE, self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
         self.server.kvdb.conn.rpush(key, self.processing_time)
 
-        # .. we'll have 120 seconds to process timers for a given minute and then it will expire
-        self.server.kvdb.conn.expire(key, 120)
+        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) to process timers for a given minute and then it will expire
+        self.server.kvdb.conn.expire(key, 300)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')

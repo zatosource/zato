@@ -173,7 +173,8 @@ def details(req, service_name):
             
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal', 
                 'usage_count', 'timer_last', 'timer_min_all_time', 'timer_max_all_time', 
-                'timer_mean_all_time', 'timer_min_1h', 'timer_max_1h', 'timer_mean_1h'):
+                'timer_mean_all_time', 'timer_min_1h', 'timer_max_1h', 'timer_mean_1h', 
+                'timer_rate_1h'):
 
                 value = getattr(msg_item, name).text
                 if name in('is_active', 'is_internal'):
@@ -390,3 +391,29 @@ def package_upload(req, cluster_id):
         msg = 'Could not upload the service package, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
+    
+@meth_allowed('POST')
+def last_stats(req, service_id, cluster_id):
+    
+    return_data = {
+        'rate': '(error)',
+        'mean': '(error)',
+        'trend': '(error)',
+        }
+    
+    try:
+        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:service.get-last-stats', {'service_id': service_id, 'minutes':60})
+        
+        if zato_path('response.item').get_from(zato_message) is not None:
+            item = zato_message.response.item
+            for key in return_data:
+                value = getattr(item, key).text or ''
+                if value and key == 'trend':
+                    value = [int(float(elem)) for elem in value.split(',')]
+                return_data[key] = value
+                
+    except Exception, e:
+        msg = 'Caught an exception while invoking zato:service.get-last-stats, e:[{}]'.format(format_exc(e))
+        logger.error(msg)
+    
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')

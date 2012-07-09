@@ -381,7 +381,7 @@ class Service(Base):
                  wsdl_name=None, sample_request=None, sample_response=None,
                  sample_req_resp_freq=0, timer_last=None, timer_min_all_time=None, 
                  timer_max_all_time=None, timer_mean_all_time=None, timer_min_1h=None, 
-                 timer_max_1h=None, timer_mean_1h=None):
+                 timer_max_1h=None, timer_mean_1h=None, timer_rate_1h=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -411,6 +411,7 @@ class Service(Base):
         self.timer_min_1h = timer_min_1h # Not used by the database
         self.timer_max_1h = timer_max_1h # Not used by the database
         self.timer_mean_1h = timer_mean_1h # Not used by the database
+        self.timer_rate_1h = timer_rate_1h # Not used by the database
 
 class DeployedService(Base):
     """ A service living on a given server.

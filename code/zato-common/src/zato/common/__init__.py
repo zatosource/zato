@@ -158,6 +158,7 @@ class KVDB:
     SERVICE_TIMER_BASIC = 'zato:stats:service:timer:basic:'
     SERVICE_TIMER_RAW = 'zato:stats:service:timer:raw:'
     SERVICE_TIMER_RAW_BY_MINUTE = 'zato:stats:service:timer:raw-by-minute:'
+    SERVICE_TIMER_AGGREGATED_BY_MINUTE = 'zato:stats:service:timer:aggr-by-minute:'
     SERVICE_TIMER_SLOW = 'zato:stats:service:timer:slow:'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
