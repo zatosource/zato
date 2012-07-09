@@ -119,3 +119,12 @@ class AggregateByMinute(_AggregatingService):
             
             # Per-minute statistic keys will expire by themselves, we don't need
             # to delete them manually.
+
+
+    class GetTopN(AdminService):
+        """ Returns top N slowest and most commonly used services for a given period.
+        """
+        class SimpleIO:
+            input_required = ('start', 'stop')
+            output_required = ('position', 'slowest_name', 'slowest_mean', 'slowest_trend', 
+                                'most_used_name', 'most_used_as_percent', 'most_used_rate', 'most_used_trend') 
