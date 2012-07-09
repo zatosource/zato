@@ -398,7 +398,8 @@ def last_stats(req, service_id, cluster_id):
     return_data = {
         'rate': '(error)',
         'mean': '(error)',
-        'trend': '(error)',
+        'trend_mean': '(error)',
+        'trend_rate': '(error)',
         }
     
     try:
@@ -408,7 +409,7 @@ def last_stats(req, service_id, cluster_id):
             item = zato_message.response.item
             for key in return_data:
                 value = getattr(item, key).text or ''
-                if value and key == 'trend':
+                if value and key.startswith('trend'):
                     value = [int(float(elem)) for elem in value.split(',')]
                 return_data[key] = value
                 
