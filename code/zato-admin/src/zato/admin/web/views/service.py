@@ -123,7 +123,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage_count')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage')
         output_repeated = True
 
     def handle(self):
@@ -145,7 +145,7 @@ class Edit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('is_active',)
-        output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage_count')
+        output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage')
 
     def success_message(self, item):
         return 'Successfully {0} the service [{1}]'.format(self.verb, item.name.text)
@@ -164,29 +164,33 @@ def details(req, service_name):
             'name': service_name,
             'cluster_id': req.zato.cluster_id
         }
-        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
-
+        
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
         if zato_path('response.item').get_from(zato_message) is not None:
-
             service = Service()
             msg_item = zato_message.response.item
             
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal', 
-                'usage_count', 'timer_last', 'timer_min_all_time', 'timer_max_all_time', 
-                'timer_mean_all_time', 'timer_min_1h', 'timer_max_1h', 'timer_mean_1h', 
-                'timer_rate_1h'):
+                'usage', 'time_last', 'time_min_all_time', 'time_max_all_time', 
+                'time_mean_all_time'):
 
                 value = getattr(msg_item, name).text
                 if name in('is_active', 'is_internal'):
                     value = is_boolean(value)
-                
+
                 setattr(service, name, value)
+                
+            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:service.get-last-stats', {'service_id':service.id, 'minutes':60})
+            if zato_path('response.item').get_from(zato_message) is not None:
+                msg_item = zato_message.response.item
+                for name in('usage', 'min', 'max', 'mean', 'rate', 'trend_mean', 'trend_rate'):
+                    setattr(service, 'time_{}_1h'.format(name), getattr(msg_item, name).text)
 
             for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(req.zato.cluster, service.id, channel_type)
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
-            zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-deployment-info-list', {'id': service.id})
+            zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:service.get-deployment-info-list', {'id': service.id})
 
             if zato_path('response.item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.response.item_list.item:

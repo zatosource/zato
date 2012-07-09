@@ -210,9 +210,9 @@ class ZatoContext(PythonConfig):
     @Object
     def stats_jobs(self):
         return [
-            {'name': 'zato.stats.ProcessRawTimers', 
+            {'name': 'zato.stats.ProcessRawTimes', 
              'seconds':90, 
-             'service':'zato.server.service.internal.stats.ProcessRawTimers', 
+             'service':'zato.server.service.internal.stats.ProcessRawTimes', 
              'extra':'global_slow_threshold=120\nmax_batch_size=100000'},
             {'name': 'zato.stats.AggregateByMinute', 
              'seconds':60, 

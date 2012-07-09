@@ -20,7 +20,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name']);
     
-    var sparklines_options = {'width':'60px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'disableHiddenCheck':true,
+    var sparklines_options = {'width':'90px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'disableHiddenCheck':true,
                                'fillColor':false}
     
     $.each($.fn.zato.data_table.data, function(idx, instance) {
@@ -72,7 +72,7 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', data.impl_name);
     row += String.format('<td>{0}</td>', is_internal ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', data.usage_count);
+    row += String.format('<td>{0}</td>', data.usage);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.edit('{0}')\">Edit</a>", data.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.service.delete_({0});'>Delete</a>", data.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
