@@ -381,6 +381,9 @@ class Quickstart(ZatoCommand):
             'zato:kvdb.data-dict.translation.translate':'zato.server.service.internal.kvdb.data_dict.translation.Translate',
             'zato:kvdb.data-dict.impexp.import':'zato.server.service.internal.kvdb.data_dict.impexp.Import',
             'zato:kvdb.remote-command.execute':'zato.server.service.internal.kvdb.ExecuteCommand',
+            
+            # Statistics
+            'zato:stats.get-top-n':'zato.server.service.internal.stats.GetTopN',
         }
         
         #
