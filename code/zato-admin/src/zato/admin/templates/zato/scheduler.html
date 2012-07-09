@@ -126,7 +126,7 @@
                 {% for job in jobs %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ job.id }}'>
                         <td class='numbering'>&nbsp;</td>
-                        <td><input type="checkbox" /></td>
+                        <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ job.name }}</td>
                         <td>{{ job.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ job.job_type_friendly }}</td>

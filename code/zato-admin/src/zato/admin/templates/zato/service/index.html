@@ -129,7 +129,7 @@
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
-                        <td><input type="checkbox" /></td>
+                        <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url service-details item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.impl_name }}</td>
