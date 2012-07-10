@@ -21,7 +21,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
+
+# dateutil
+from dateutil.relativedelta import relativedelta
 
 # Django
 from django.http import HttpResponse
@@ -29,6 +32,7 @@ from django.shortcuts import render_to_response
 from django.template import loader, RequestContext
 
 # Zato
+from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.stats import CompareForm, NForm
 from zato.common.util import TRACE1
 
@@ -56,21 +60,29 @@ def top_n(req, choice):
     if not choice in labels:
         raise ValueError('choice:[{}] is not one of:[{}]'.format(choice, labels.keys()))
         
+    start, stop = '', ''
+    n = req.GET.get('n', 10)
     now = datetime.utcnow()
-    
-    def _params_last_hour():
-        return (now - timedelta(minutes=60)).isoformat(), now.isoformat(), 'minute'
         
-    start, stop, granularity = locals()['_params_' + choice]()
-    
-    print(333, start, stop, granularity)
+    if req.zato.get('cluster'):
+        
+        def _params_last_hour():
+            return (now+relativedelta(hours=-1)).isoformat(), now.isoformat(), 'minute'
+            
+        start, stop, granularity = locals()['_params_' + choice]()
+        
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-top-n',
+            {'start':start, 'stop':stop, 'granularity':granularity, 'n':n, 'stat_type':'highest_mean'})
     
     return_data = {
         'start': start,
         'stop': stop,
         'label': labels[choice], 
-        'n_form': NForm(initial={'n':req.GET.get('n', 10)}),
+        'n_form': NForm(initial={'n':n}),
         'compare_form': CompareForm(compare_to=compare_to[choice]),
+        'zato_clusters': req.zato.clusters,
+        'cluster_id': req.zato.cluster_id,
+        'choose_cluster_form':req.zato.choose_cluster_form,
     }
     
     if logger.isEnabledFor(TRACE1):

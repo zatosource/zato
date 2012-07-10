@@ -505,7 +505,7 @@ class RequestHandler(object):
                 task.setResponseStatus(status, reason)
                 return response
         else:
-            response = "[{}] The URL:[{}] doesn't exist, SOAP action:[{}]".format(cid, task.request_data.uri, soap_action)
+            response = "[{}] The URL:[{}] or SOAP action:[{}] doesn't exist".format(cid, task.request_data.uri, soap_action)
             task.setResponseStatus(NOT_FOUND, _reason_not_found)
             
             logger.error(response)
