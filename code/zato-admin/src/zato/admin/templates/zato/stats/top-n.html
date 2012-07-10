@@ -4,6 +4,9 @@
 {% endblock %}
 
 {% block extra_js %}
+    
+    <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
+    
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/stats/top-n.js"></script>
 {% endblock %}
@@ -44,7 +47,7 @@
                     Show {{ n_form.n }}  items <input type="submit" value="OK" />
                     <input type="hidden" name="start" value="{{ start }}" />
                     <input type="hidden" name="stop" value="{{ stop }}" />
-                    <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
                 </form>
                 
             </td>
@@ -74,18 +77,29 @@
                         <td>
                             <table style="width:100%">
                                 <tr>
-                                    <td style="width:60%"></td>
+                                    <td style="width:4%"></td>
+                                    <td></td>
                                     <td style="text-align:right">Mean</td>
                                     <td style="text-align:right">Avg mean</td>
                                     <td style="text-align:right">Trend</td>
                                 </tr>
+                                
+                                
+                            {% for item in slowest %}
+                                
                                 <tr>
-                                    <td><a href="#">zato.kvdb.data_dict.translation.GetList</a></td>
-                                    <td style="text-align:right">381</td>
-                                    <td style="text-align:right">976</td>
-                                    <td></td>
+                                    <td>{{ item.position }}</td>    
+                                    <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                                    <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
+                                    <td>{{ item.average }}</td>    
+                                    <td><span class="trend">{{ item.trend }}</span></td>
                                 </tr>
+                                
+                            {% endfor %}
+                                
+                                
                             </table>
+                            <br/>
                         </td>
                     </tr>
                     
@@ -99,19 +113,28 @@
                         <td>
                             <table style="width:100%">
                                 <tr>
-                                    <td style="width:50%"></td>
+                                    <td style="width:4%"></td>
+                                    <td></td>
                                     <td style="text-align:right">Usage</td>
                                     <td style="text-align:right">%</td>
                                     <td style="text-align:right">Req/s</td>
                                     <td style="text-align:right">Trend</td>
                                 </tr>
+                                
+                            {% for item in most_used %}
+                                
                                 <tr>
-                                    <td><a href="#">zato.kvdb.data_dict.translation.GetList</a></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
+                                    <td>{{ item.position }}</td>    
+                                    <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                                    <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
+                                    <td>{{ item.percent }}</td>    
+                                    <td>{{ item.rate }}</td>
+                                    <td><span class="trend">{{ item.trend }}</span></td>
                                 </tr>
+                                
+                            {% endfor %}
+                                
+                                
                             </table>
                         </td>
                     </tr>
@@ -132,14 +155,23 @@
                             <table style="width:100%">
                                 <tr>
                                     <td style="width:60%"></td>
+                                    <td style="width:60%"></td>
                                     <td style="text-align:right">Mean (ms)</td>
                                     <td style="text-align:right">Trend</td>
                                 </tr>
+
+                            {% for item in slowest %}
+                                
                                 <tr>
+                                    <td>{{ item.position }}</td>    
                                     <td><a href="#">zato.kvdb.data_dict.translation.GetList</a></td>
-                                    <td style="text-align:right">381</td>
+                                    <td style="text-align:right">2381</td>
                                     <td></td>
                                 </tr>
+                                
+                            {% endfor %}
+
+
                             </table>
                         </td>
                     </tr>

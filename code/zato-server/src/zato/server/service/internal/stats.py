@@ -37,7 +37,7 @@ from dateutil.rrule import MINUTELY, rrule
 from scipy import stats as sp_stats
 
 # Zato
-from zato.common import KVDB
+from zato.common import KVDB, ZatoException
 from zato.server.service.internal import AdminService
 
 class _AggregatingService(AdminService):
@@ -145,7 +145,7 @@ class GetTopN(AdminService):
         
         sort_order = (1, 0) # idx[1] = value, idx[0] = name
         
-        stat_types = {'highest_mean':'mean', 'usage':'usage')
+        stat_types = {'highest_mean':'mean', 'highest_usage':'usage'}
         if self.request.input.stat_type not in stat_types:
             msg = 'stat_type must be one of:[{}]'.format(stat_types.keys())
             self.logger.error(msg)
@@ -159,6 +159,7 @@ class GetTopN(AdminService):
         
         overall = {stat_attr: 0}
         services = {}
+        trends = {}
         suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
         
         for suffix in suffixes:
@@ -166,31 +167,20 @@ class GetTopN(AdminService):
                 service_name = key.replace(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, '').replace(suffix, '')
                 
                 values = self.server.kvdb.conn.hgetall(key)
-                service_data = services.setdefault(service_name, {stat_attr:0})
+                services.setdefault(service_name, 0)
+                trends.setdefault(service_name, [])
                 
-                service_data[stat_attr] += float(values[stat_attr])
+                value = int(float(values[stat_attr]))
                 
-        services = [service, services[service][stat_attr]]
-        services = nlargest(n, services, key=itemgetter(1))
-        services = list(reversed(sorted(services, key=itemgetter(*sort_order))))
+                if stat_attr == 'mean':
+                    services[service_name] = sp_stats.tmean((value, services[service_name]))
+                else:
+                    services[service_name] += value
+                
+                trends[service_name].append(str(value))
+                
+        services = nlargest(n, services.items(), key=itemgetter(1))
+        services = sorted(services, key=itemgetter(*sort_order), reverse=True)
         
-        print(333, services)
-
-        '''        
-        for prefix, data, order in prefix_data_order:
-            items = list(reversed(sorted(data, key=itemgetter(*order))))
-            for idx, (name, mean, usage) in enumerate(items):
-                idx += 1
-                #print(prefix, idx, name, mean, usage)
-                response_item = {'position':position, 'slowest_name', 'slowest_mean', 'slowest_trend', 
-                            'most_used_name', 'most_used_as_percent', 'most_used_rate', 'most_used_trend'
-        '''
-        
-        #print('Slowest', ) # Sort by mean then by name
-        #print()
-        #print('Most used', list(reversed(sorted(most_used, key=itemgetter(2,0))))) # Sort by usage then by name            
-
-
-        
-        
-
+        for idx, (service_name, value) in enumerate(services):
+            self.response.payload.append({'position':idx+1, 'service_name':service_name, 'value':value, 'trend':','.join(trends[service_name])})
