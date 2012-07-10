@@ -114,7 +114,7 @@ class AggregateByMinute(_AggregatingService):
             self.server.kvdb.conn.hset(aggr_key, 'min', batch_min)
             self.server.kvdb.conn.hset(aggr_key, 'max', batch_max)
             self.server.kvdb.conn.hset(aggr_key, 'mean', batch_mean)
-            self.server.kvdb.conn.hset(aggr_key, 'total', batch_total)
+            self.server.kvdb.conn.hset(aggr_key, 'usage', batch_total)
             self.server.kvdb.conn.hset(aggr_key, 'rate', batch_total / 60.0) # I.e. req/s
             
             # Per-minute statistic keys will expire by themselves, we don't need
@@ -128,3 +128,58 @@ class AggregateByMinute(_AggregatingService):
             input_required = ('start', 'stop')
             output_required = ('position', 'slowest_name', 'slowest_mean', 'slowest_trend', 
                                 'most_used_name', 'most_used_as_percent', 'most_used_rate', 'most_used_trend') 
+            
+            
+        def handle(self):
+            """
+            from __future__ import absolute_import, division, print_function, unicode_literals
+            
+            # stdlib
+            from datetime import datetime, timedelta
+            from dateutil.parser import parse
+            from dateutil.relativedelta import relativedelta
+            from dateutil.rrule import MINUTELY, rrule
+            from heapq import nlargest
+            from operator import itemgetter
+            
+            # redis
+            from redis import StrictRedis
+            
+            # Zato
+            from zato.common import KVDB
+            
+            conn = StrictRedis()
+            
+            n = 10
+            start = '2012-07-10T13:22:54.442517'
+            stop = '2012-07-10T14:22:54.442517'
+            
+            start = parse(start)
+            stop = parse(stop)
+            
+            overall = {'mean': 0, 'usage': 0}
+            services = {}
+            suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
+            
+            for suffix in suffixes:
+                for key in conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
+                    service_name = key.replace(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, '').replace(suffix, '')
+                    
+                    values = conn.hgetall(key)
+                    service_data = services.setdefault(service_name, {'mean':0, 'usage':0})
+                    
+                    service_mean = float(values['mean'])
+                    service_usage = float(values['usage'])
+                    
+                    service_data['mean'] += service_mean
+                    service_data['usage'] += service_usage
+                    
+            services = [(service, services[service]['mean'], services[service]['usage']) for service in services]
+            
+            slowest = nlargest(n, services, key=itemgetter(1))
+            most_used = nlargest(n, services, key=itemgetter(2))
+            
+            print('Slowest', list(reversed(sorted(slowest, key=itemgetter(1,0))))) # Sort by mean then by name
+            print()
+            print('Most used', list(reversed(sorted(most_used, key=itemgetter(2,0))))) # Sort by usage then by name            
+            """
