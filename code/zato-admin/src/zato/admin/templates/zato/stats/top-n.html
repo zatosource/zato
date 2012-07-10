@@ -10,9 +10,31 @@
 
 {% block content %}
 
-<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+{% if not zato_clusters %}
+    <p>
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url cluster %}" class="common">Click here</a> to register a new cluster first.
+    <br/><br/>
+    </p>
+{% else %}
 
 <h2 class="zato">Statistics : Top N : {{ label }}</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+
+    <div class="prompt">
+    {% if not cluster_id %}
+        Choose a cluster to browse the statistics for
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_cluster_form.cluster }}
+        <input type="submit" value="Show statistics" />
+    </form>
+    </div>
+
+{% if cluster_id %}
 
 <div id="markup">
     <table id="data-table">
@@ -22,6 +44,7 @@
                     Show {{ n_form.n }}  items <input type="submit" value="OK" />
                     <input type="hidden" name="start" value="{{ start }}" />
                     <input type="hidden" name="stop" value="{{ stop }}" />
+                    <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
                 </form>
                 
             </td>
@@ -153,6 +176,9 @@
         </tr>
     </table>
 </div>
+
+{% endif %} {% comment %}cluster_id{% endcomment %}
+{% endif %} {% comment %}zato_clusters{% endcomment %}
 
 
 {% endblock %}

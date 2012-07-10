@@ -21,9 +21,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
+from datetime import datetime, timedelta
+from heapq import nlargest
+from operator import itemgetter
 
 # Bunch
 from bunch import Bunch
+
+# dateutil
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import MINUTELY, rrule
 
 # SciPy
 from scipy import stats as sp_stats
@@ -121,65 +129,68 @@ class AggregateByMinute(_AggregatingService):
             # to delete them manually.
 
 
-    class GetTopN(AdminService):
-        """ Returns top N slowest and most commonly used services for a given period.
-        """
-        class SimpleIO:
-            input_required = ('start', 'stop')
-            output_required = ('position', 'slowest_name', 'slowest_mean', 'slowest_trend', 
-                                'most_used_name', 'most_used_as_percent', 'most_used_rate', 'most_used_trend') 
+class GetTopN(AdminService):
+    """ Returns top N slowest and most commonly used services for a given period.
+    """
+    class SimpleIO:
+        input_required = ('start', 'stop', 'n', 'stat_type')
+        output_required = ('position', 'service_name', 'value', 'trend') 
+        
+        
+    def handle(self):
+    
+        start = parse(self.request.input.start)
+        stop = parse(self.request.input.stop)
+        n = int(self.request.input.n)
+        
+        sort_order = (1, 0) # idx[1] = value, idx[0] = name
+        
+        stat_types = {'highest_mean':'mean', 'usage':'usage')
+        if self.request.input.stat_type not in stat_types:
+            msg = 'stat_type must be one of:[{}]'.format(stat_types.keys())
+            self.logger.error(msg)
+            raise ZatoException(self.cid, msg)
             
-            
-        def handle(self):
-            """
-            from __future__ import absolute_import, division, print_function, unicode_literals
-            
-            # stdlib
-            from datetime import datetime, timedelta
-            from dateutil.parser import parse
-            from dateutil.relativedelta import relativedelta
-            from dateutil.rrule import MINUTELY, rrule
-            from heapq import nlargest
-            from operator import itemgetter
-            
-            # redis
-            from redis import StrictRedis
-            
-            # Zato
-            from zato.common import KVDB
-            
-            conn = StrictRedis()
-            
-            n = 10
-            start = '2012-07-10T13:22:54.442517'
-            stop = '2012-07-10T14:22:54.442517'
-            
-            start = parse(start)
-            stop = parse(stop)
-            
-            overall = {'mean': 0, 'usage': 0}
-            services = {}
-            suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
-            
-            for suffix in suffixes:
-                for key in conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
-                    service_name = key.replace(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, '').replace(suffix, '')
-                    
-                    values = conn.hgetall(key)
-                    service_data = services.setdefault(service_name, {'mean':0, 'usage':0})
-                    
-                    service_mean = float(values['mean'])
-                    service_usage = float(values['usage'])
-                    
-                    service_data['mean'] += service_mean
-                    service_data['usage'] += service_usage
-                    
-            services = [(service, services[service]['mean'], services[service]['usage']) for service in services]
-            
-            slowest = nlargest(n, services, key=itemgetter(1))
-            most_used = nlargest(n, services, key=itemgetter(2))
-            
-            print('Slowest', list(reversed(sorted(slowest, key=itemgetter(1,0))))) # Sort by mean then by name
-            print()
-            print('Most used', list(reversed(sorted(most_used, key=itemgetter(2,0))))) # Sort by usage then by name            
-            """
+        # For now we always return the /largest/ N but it may well be true in the
+        # future that we will return the opposite. In any case, mapping the stat
+        # type to a stat attribute somewhat insulates us from changes in the Redis keyspace
+        # even though the mapping isn't too impressive for now.
+        stat_attr = stat_types[self.request.input.stat_type]
+        
+        overall = {stat_attr: 0}
+        services = {}
+        suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
+        
+        for suffix in suffixes:
+            for key in self.server.kvdb.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
+                service_name = key.replace(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, '').replace(suffix, '')
+                
+                values = self.server.kvdb.conn.hgetall(key)
+                service_data = services.setdefault(service_name, {stat_attr:0})
+                
+                service_data[stat_attr] += float(values[stat_attr])
+                
+        services = [service, services[service][stat_attr]]
+        services = nlargest(n, services, key=itemgetter(1))
+        services = list(reversed(sorted(services, key=itemgetter(*sort_order))))
+        
+        print(333, services)
+
+        '''        
+        for prefix, data, order in prefix_data_order:
+            items = list(reversed(sorted(data, key=itemgetter(*order))))
+            for idx, (name, mean, usage) in enumerate(items):
+                idx += 1
+                #print(prefix, idx, name, mean, usage)
+                response_item = {'position':position, 'slowest_name', 'slowest_mean', 'slowest_trend', 
+                            'most_used_name', 'most_used_as_percent', 'most_used_rate', 'most_used_trend'
+        '''
+        
+        #print('Slowest', ) # Sort by mean then by name
+        #print()
+        #print('Most used', list(reversed(sorted(most_used, key=itemgetter(2,0))))) # Sort by usage then by name            
+
+
+        
+        
+
