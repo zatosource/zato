@@ -489,7 +489,7 @@ class GetLastStats(AdminService):
                     item_mean = float(items['mean'])
                     item_rate = float(items['rate'])
 
-                    usage += int(items['total'])
+                    usage += int(items['usage'])
                     mean += item_mean
                     rate += item_rate
                     
