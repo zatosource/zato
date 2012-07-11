@@ -133,16 +133,17 @@ class GetTopN(AdminService):
     """ Returns top N slowest and most commonly used services for a given period.
     """
     class SimpleIO:
-        input_required = ('start', 'stop', 'n', 'stat_type')
-        output_required = ('position', 'service_name', 'value', 'trend') 
-        
+        input_required = ('start', 'stop', 'n', 'granularity', 'trend_elems', 'stat_type')
+        output_optional = ('position', 'service_name', 'value', 'trend') 
         
     def handle(self):
     
         start = parse(self.request.input.start)
         stop = parse(self.request.input.stop)
-        n = int(self.request.input.n)
         
+        n = int(self.request.input.n)
+        trend_elems = int(self.request.input.trend_elems)
+
         sort_order = (1, 0) # idx[1] = value, idx[0] = name
         
         stat_types = {'highest_mean':'mean', 'highest_usage':'usage'}
@@ -150,13 +151,13 @@ class GetTopN(AdminService):
             msg = 'stat_type must be one of:[{}]'.format(stat_types.keys())
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
-            
+
         # For now we always return the /largest/ N but it may well be true in the
         # future that we will return the opposite. In any case, mapping the stat
         # type to a stat attribute somewhat insulates us from changes in the Redis keyspace
         # even though the mapping isn't too impressive for now.
         stat_attr = stat_types[self.request.input.stat_type]
-        
+
         overall = {stat_attr: 0}
         services = {}
         trends = {}
@@ -183,4 +184,8 @@ class GetTopN(AdminService):
         services = sorted(services, key=itemgetter(*sort_order), reverse=True)
         
         for idx, (service_name, value) in enumerate(services):
-            self.response.payload.append({'position':idx+1, 'service_name':service_name, 'value':value, 'trend':','.join(trends[service_name])})
+            trend = trends[service_name]
+            trend_template = ['0'] * trend_elems
+            trend_template[trend_elems-len(trend):] = trend
+            self.response.payload.append({'position':idx+1, 'service_name':service_name, 'value':value, 'trend':','.join(trend_template)})
+

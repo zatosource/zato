@@ -68,9 +68,10 @@ def top_n(req, choice):
         
     if req.zato.get('cluster'):
         
-        def _get_stats(start, stop, granularity, stat_type, append_to):
+        def _get_stats(start, stop, granularity, time_elems, stat_type, append_to):
             zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-top-n',
-                {'start':start, 'stop':stop, 'granularity':granularity, 'n':n, 'stat_type':stat_type})
+                {'start':start, 'stop':stop, 'granularity':granularity, 'n':n, 
+                'trend_elems':trend_elems, 'stat_type':stat_type})
             
             if zato_path('response.item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.response.item_list.item:
@@ -78,15 +79,15 @@ def top_n(req, choice):
                                      'value':int(float(msg_item.value.text)), 'trend':msg_item.trend.text})
         
         def _params_last_hour():
-            start = now+relativedelta(hours=-1)
-            return start.isoformat(), now.isoformat(), (now-start).seconds, 'minute'
+            trend_elems = 60
+            start = now+relativedelta(minutes=-trend_elems)
+            return start.isoformat(), now.isoformat(), (now-start).seconds, 'minutes', trend_elems
             
-        start, stop, seconds, granularity = locals()['_params_' + choice]()
-
+        start, stop, seconds, granularity, trend_elems = locals()['_params_' + choice]()
 
         # Collect basic stats
-        _get_stats(start, stop, granularity, 'highest_mean', slowest)
-        _get_stats(start, stop, granularity, 'highest_usage', most_used)
+        _get_stats(start, stop, granularity, trend_elems, 'highest_mean', slowest)
+        _get_stats(start, stop, granularity, trend_elems, 'highest_usage', most_used)
         
         for item in most_used:
             rate = item['value']/seconds
