@@ -134,7 +134,7 @@ class GetTopN(AdminService):
     """
     class SimpleIO:
         input_required = ('start', 'stop', 'n', 'granularity', 'trend_elems', 'stat_type')
-        output_optional = ('position', 'service_name', 'value', 'trend') 
+        output_optional = ('position', 'service_name', 'value', 'trend', 'avg', 'total') 
         
     def handle(self):
     
@@ -183,9 +183,24 @@ class GetTopN(AdminService):
         services = nlargest(n, services.items(), key=itemgetter(1))
         services = sorted(services, key=itemgetter(*sort_order), reverse=True)
         
+        values = [elem[1] for elem in services]
+        if stat_attr == 'mean':
+            avg = sp_stats.tmean(values)
+        else:
+            total = sum(values)
+        
         for idx, (service_name, value) in enumerate(services):
             trend = trends[service_name]
             trend_template = ['0'] * trend_elems
             trend_template[trend_elems-len(trend):] = trend
-            self.response.payload.append({'position':idx+1, 'service_name':service_name, 'value':value, 'trend':','.join(trend_template)})
+            item = {'position':idx+1, 'service_name':service_name, 'value':value, 'trend':','.join(trend_template)}
+            
+            if stat_attr == 'mean':
+                item['avg'] = avg
+                item['total'] = ''
+            else:
+                item['avg'] = ''
+                item['total'] = total
+                
+            self.response.payload.append(item)
 

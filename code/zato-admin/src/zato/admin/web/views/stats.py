@@ -75,8 +75,14 @@ def top_n(req, choice):
             
             if zato_path('response.item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.response.item_list.item:
-                    append_to.append({'position':msg_item.position.text, 'service_name':msg_item.service_name.text, 
-                                     'value':int(float(msg_item.value.text)), 'trend':msg_item.trend.text})
+                    item = {'position':msg_item.position.text, 'service_name':msg_item.service_name.text, 
+                                 'value':int(float(msg_item.value.text)), 'trend':msg_item.trend.text}
+                                 
+                    for name in('avg', 'total'):
+                        value = getattr(msg_item, name).text or '0'
+                        item[name] = int(float(value))
+                                 
+                    append_to.append(item)
         
         def _params_last_hour():
             trend_elems = 60
@@ -92,6 +98,7 @@ def top_n(req, choice):
         for item in most_used:
             rate = item['value']/seconds
             item['rate'] = '{:.2f}'.format(rate) if rate > 0.01 else '<0.01'
+            item['percent'] = float(item['value'] / item['total']) * 100
         
     return_data = {
         'start': start,
