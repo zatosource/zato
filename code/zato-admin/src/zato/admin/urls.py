@@ -217,6 +217,7 @@ urlpatterns = patterns('',
     
     # Statistics
     url(r'^zato/stats/top-n/(?P<choice>.*)/$', stats.top_n, name='stats-top-n'),
+    url(r'^zato/stats/settings/$', stats.settings, name='stats-settings'),
 
 )
 

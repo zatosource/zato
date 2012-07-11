@@ -95,6 +95,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'debug_toolbar',
+    'django_settings',
     'zato.admin.web',
 )
 
