@@ -31,14 +31,19 @@ from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from django.template import loader, RequestContext
 
+# django-settings
+from django_settings.models import Setting
+
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.stats import CompareForm, NForm
+from zato.admin.web.views import meth_allowed
 from zato.common import zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
+@meth_allowed('GET')
 def top_n(req, choice):
     labels = {'last_hour':'Last hour', 'today':'Today', 'yesterday':'Yesterday', 'last_24h':'Last 24h',
             'this_week':'This week', 'this_month':'This month', 'this_year':'This year'}
@@ -65,6 +70,8 @@ def top_n(req, choice):
     n = req.GET.get('n', 10)
     slowest, most_used = [], []
     now = datetime.utcnow()
+    
+    slow_service_threshold = Setting.objects.get_value('slow_service_threshold', default=99999)
         
     if req.zato.get('cluster'):
         
@@ -119,3 +126,16 @@ def top_n(req, choice):
     return render_to_response('zato/stats/top-n.html', return_data, context_instance=RequestContext(req))
 
 
+@meth_allowed('GET')
+def settings(req):
+    
+    return_data = {
+        'zato_clusters': req.zato.clusters,
+        'cluster_id': req.zato.cluster_id,
+        'choose_cluster_form':req.zato.choose_cluster_form,
+    }
+
+    if logger.isEnabledFor(TRACE1):
+        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
+
+    return render_to_response('zato/stats/settings.html', return_data, context_instance=RequestContext(req))
