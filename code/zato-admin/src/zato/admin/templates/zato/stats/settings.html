@@ -1,0 +1,87 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/stats/settings.js"></script>
+{% endblock %}
+
+{% block content %}
+
+{% if not zato_clusters %}
+    <p>
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url cluster %}" class="common">Click here</a> to register a new cluster first.
+    <br/><br/>
+    </p>
+{% else %}
+
+<h2 class="zato">Statistics : Settings</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+
+    <div class="prompt">
+    {% if not cluster_id %}
+        Choose a cluster to configure the statistics settings of
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_cluster_form.cluster }}
+        <input type="submit" value="Show settings" />
+    </form>
+    </div>
+
+{% if cluster_id %}
+
+<div id="markup">
+    <form action="." method="post">
+    <table id="data-table">
+        <tr>
+            <td class="inline_header" colspan="4">Scheduler</td>
+        </tr>
+        <tr>
+            <td>How often to process raw statistics</td>
+            <td></td>
+            <td>How many raw statistics process in one batch</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>How often to aggregate per-minute statistics</td>
+            <td></td>
+            <td colspan="2"></td>
+        </tr>
+        <tr>
+            <td class="inline_header" colspan="4">Attention grabbers</td>
+        </tr>
+        <tr>
+            <td>Slow service threshold</td>
+            <td></td>
+            <td>Top service usage threshold</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td style="text-align:right" colspan="4">
+                <button id="save_settings" name="save_settings" type="submit">Save settings</button>
+            </td>
+        </tr>
+        <tr>
+            <td class="inline_header" colspan="4">Delete statistics</td>
+        </tr>
+        <tr>
+            <td style="text-align:right" colspan="4">
+                <button id="delete_statistics" name="delete_statistics" type="submit">Delete statistics</button>
+            </td>
+        </tr>
+    </table>
+    </form>
+</div>
+
+
+{% endif %} {% comment %}cluster_id{% endcomment %}
+{% endif %} {% comment %}zato_clusters{% endcomment %}
+
+
+{% endblock %}
