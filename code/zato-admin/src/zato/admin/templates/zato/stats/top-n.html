@@ -42,7 +42,7 @@
 <div id="markup">
     <table id="data-table">
         <tr>
-            <td>
+            <td style="text-align:right">
                 <form action="." method="GET">
                     Show {{ n_form.n }}  items <input type="submit" value="OK" />
                     <input type="hidden" name="start" value="{{ start }}" />
@@ -87,11 +87,11 @@
                                 
                             {% for item in slowest %}
                                 
-                                <tr>
+                                <tr {% if item.value > item.avg %}style="background-color:#fff;color:#00f"{% endif %}>
                                     <td>{{ item.position }}</td>    
-                                    <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                                    <td><a {% if item.value > item.avg %}style="color:#00f"{% endif %} href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                                     <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
-                                    <td>{{ item.average }}</td>    
+                                    <td style="text-align:right;width:60px">{{ item.avg|floatformat:"0" }}</td>    
                                     <td><span class="trend">{{ item.trend }}</span></td>
                                 </tr>
                                 
@@ -123,12 +123,12 @@
                                 
                             {% for item in most_used %}
                                 
-                                <tr>
+                                <tr {% if item.percent > 10 %}style="background-color:#fff;color:#00f"{% endif %}>
                                     <td>{{ item.position }}</td>    
                                     <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                                     <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
-                                    <td>{{ item.percent }}</td>    
-                                    <td>{{ item.rate }}</td>
+                                    <td style="text-align:right">{{ item.percent|floatformat:"2" }}</td>    
+                                    <td style="text-align:right">{{ item.rate }}</td>
                                     <td><span class="trend">{{ item.trend }}</span></td>
                                 </tr>
                                 
