@@ -36,7 +36,7 @@ from django_settings.models import Setting
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms.stats import CompareForm, NForm
+from zato.admin.web.forms.stats import CompareForm, NForm, SettingsForm
 from zato.admin.web.views import meth_allowed
 from zato.common import zato_path
 from zato.common.util import TRACE1
@@ -133,6 +133,7 @@ def settings(req):
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
+        'form': SettingsForm()
     }
 
     if logger.isEnabledFor(TRACE1):

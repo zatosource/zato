@@ -43,37 +43,27 @@
             <td class="inline_header" colspan="4">Scheduler</td>
         </tr>
         <tr>
-            <td>How often to process raw statistics</td>
-            <td></td>
-            <td>How many raw statistics process in one batch</td>
-            <td></td>
+            <td style="width:15%">How often to process raw statistics</td>
+            <td style="width:30%" style="text-align:left">{{ form.scheduler_raw_stats_time }} <span class="form_hint">seconds (default: 90)</span></td>
+            <td style="width:15%">At most, how many raw statistics to process in one batch</td>
+            <td style="width:30%" style="text-align:left">{{ form.scheduler_raw_stats_time }} <span class="form_hint">(default: 99999)</span></td>
         </tr>
         <tr>
             <td>How often to aggregate per-minute statistics</td>
-            <td></td>
+            <td style="width:30%" style="text-align:left">{{ form.scheduler_raw_stats_time }} <span class="form_hint">seconds (default: 60)</span></td>
             <td colspan="2"></td>
         </tr>
         <tr>
             <td class="inline_header" colspan="4">Attention grabbers</td>
         </tr>
         <tr>
-            <td>Slow service threshold</td>
-            <td></td>
-            <td>Top service usage threshold</td>
-            <td></td>
+            <td style="width:15%">Slow service threshold</td>
+            <td style="width:30%" style="text-align:left">{{ form.scheduler_raw_stats_time }} <span class="form_hint">ms (default: 2000)</span></td>
+            <td style="width:15%">Top service usage threshold</td>
+            <td style="width:30%" style="text-align:left">{{ form.scheduler_raw_stats_time }} <span class="form_hint">% (default: 10)</span></td>
         </tr>
         <tr>
-            <td style="text-align:right" colspan="4">
-                <button id="save_settings" name="save_settings" type="submit">Save settings</button>
-            </td>
-        </tr>
-        <tr>
-            <td class="inline_header" colspan="4">Delete statistics</td>
-        </tr>
-        <tr>
-            <td style="text-align:right" colspan="4">
-                <button id="delete_statistics" name="delete_statistics" type="submit">Delete statistics</button>
-            </td>
+            <td colspan="4" style="text-align:right;border-top:1px solid #ddd"><button id="save_settings" name="save_settings" type="submit">Save settings</button></td>
         </tr>
     </table>
     </form>
