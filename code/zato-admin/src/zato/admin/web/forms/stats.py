@@ -41,3 +41,8 @@ class CompareForm(forms.Form):
             self.fields['compare_to'].choices.append([name, label])
             
         self.fields['compare_to'].choices.append(['custom', 'Choose a time span ..'])
+
+class SettingsForm(forms.Form):
+    """ Various statistics settings.
+    """
+    scheduler_raw_stats_time = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
