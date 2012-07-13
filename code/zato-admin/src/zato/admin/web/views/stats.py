@@ -36,7 +36,7 @@ from django_settings.models import Setting
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.forms.stats import CompareForm, NForm, SettingsForm
+from zato.admin.web.forms.stats import CompareForm, MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import meth_allowed
 from zato.common import zato_path
 from zato.common.util import TRACE1
@@ -140,3 +140,20 @@ def settings(req):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
     return render_to_response('zato/stats/settings.html', return_data, context_instance=RequestContext(req))
+
+
+@meth_allowed('GET')
+def maintenance(req):
+
+    return_data = {
+        'zato_clusters': req.zato.clusters,
+        'cluster_id': req.zato.cluster_id,
+        'choose_cluster_form':req.zato.choose_cluster_form,
+        'form': MaintenanceForm()
+    }
+
+    if logger.isEnabledFor(TRACE1):
+        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
+
+    return render_to_response('zato/stats/maintenance.html', return_data, context_instance=RequestContext(req))
+
