@@ -30,14 +30,19 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# dateutil
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import MINUTELY, rrule
+
+# Paste
+from paste.util.multidict import MultiDict
+
 # zope.server
 from zope.server.http.httpserverchannel import HTTPServerChannel
 from zope.server.http.httptask import HTTPTask
 from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
-
-# Paste
-from paste.util.multidict import MultiDict
 
 # Zato
 from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
@@ -468,6 +473,15 @@ class WorkerStore(BaseWorker):
 # ##############################################################################
 
     def on_broker_pull_msg_HOT_DEPLOY_CREATE(self, msg, *args):
+        msg.cid = new_cid()
+        msg.service = 'zato.server.service.internal.hot_deploy.Create'
+        msg.payload = {'package_id': msg.package_id}
+        msg.data_format = SIMPLE_IO.FORMAT.JSON
+        return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+    
+# ##############################################################################
+
+    def on_broker_pull_msg_STATS_DELETE_BY_MINUTE(self, msg, *args):
         msg.cid = new_cid()
         msg.service = 'zato.server.service.internal.hot_deploy.Create'
         msg.payload = {'package_id': msg.package_id}
