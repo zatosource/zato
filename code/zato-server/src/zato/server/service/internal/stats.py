@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from datetime import datetime, timedelta
 from datetime import datetime, timedelta
 from heapq import nlargest
+from itertools import izip, tee
 from operator import itemgetter
 
 # Bunch
@@ -214,8 +215,61 @@ class Delete(AdminService):
         input_required = ('start', 'stop')
 
     def handle(self):
-        msg = {'action':'', 'start':self.request.input.start, 'stop':self.request.input.stop}
-        for action in(STATS.DELETE_BY_MINUTE, ):
-            msg['action'] = action
-            self.broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_PULL)
-                
+        #msg = {'action':'', 'start':self.request.input.start, 'stop':self.request.input.stop}
+        #for action in(STATS.DELETE_BY_MINUTE, ):
+        #    msg['action'] = action
+        #    self.broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_PULL)
+        pass
+    
+        '''
+        start = parse(self.request.input.start)
+        stop = parse(self.request.input.stop)
+        
+        # Looks weird but this is so we don't have to create a list instead of a generator
+        # (and Python 3 won't leak the last element anymore)
+        last_elem = None
+        elems = (elem for elem in rrule(WEEKLY, dtstart=start, until=stop))
+        for elem in elems:
+            suffix = elem.strftime(':%Y:%m:%d:%H:%M')
+            last_elem = elem
+        '''
+        
+        '''
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
+
+
+start = '2012-07-10T15:22:54.442517'
+stop = '2012-07-11T15:22:54.442517'
+
+start = parse(start)
+stop = parse(stop)
+
+# Looks weird but this is so we don't have to create a list instead of a generator
+# (and Python 3 won't leak the last element anymore)
+last_elem = None
+#elems = (elem for elem in rrule(WEEKLY, dtstart=start, until=stop))
+
+#print(1010, [elem for elem in rrule(DAILY, dtstart=start, until=stop)])
+
+print((stop-start).days)
+
+'''
+elems = [1, 2]
+for elem1, elem2 in pairwise(elems):
+    #suffix = elem.strftime(':%Y:%m:%d:%H:%M')
+    #print(33, suffix)
+    #last_elem = elem2
+    print(elem1, elem2)
+'''
+    
+#print(1919, last_elem.isoformat())
+
+suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=last_elem, until=stop))
+
+#for suffix in suffixes:
+#    print(99, suffix)
+'''

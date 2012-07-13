@@ -482,11 +482,16 @@ class WorkerStore(BaseWorker):
 # ##############################################################################
 
     def on_broker_pull_msg_STATS_DELETE_BY_MINUTE(self, msg, *args):
-        msg.cid = new_cid()
-        msg.service = 'zato.server.service.internal.hot_deploy.Create'
-        msg.payload = {'package_id': msg.package_id}
-        msg.data_format = SIMPLE_IO.FORMAT.JSON
-        return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+        start = parse(msg.start)
+        stop = parse(msg.stop)
+        
+        suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
+         
+        for suffix in suffixes:
+            print(333, suffix)
+
+            #for key in self.server.kvdb.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
+            #    print(444, key)
 
 # ##############################################################################
             

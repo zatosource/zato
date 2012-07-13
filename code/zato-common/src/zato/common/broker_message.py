@@ -154,7 +154,7 @@ HOT_DEPLOY = Bunch()
 HOT_DEPLOY.CREATE = '11000'
 
 STATS = Bunch()
-STATS.DELETE_BY_MINUTE = '11100'
+STATS.DELETE = '11100'
 
 code_to_name = {}
 
