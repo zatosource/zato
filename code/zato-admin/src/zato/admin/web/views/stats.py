@@ -45,6 +45,12 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
+defaults = {
+    'scheduler_raw_stats_batch':99999,
+    'atttention_slow_threshold':2000,
+    'atttention_top_threshold':10,
+}
+
 @meth_allowed('GET')
 def top_n(req, choice):
     labels = {'last_hour':'Last hour', 'today':'Today', 'yesterday':'Yesterday', 'last_24h':'Last 24h',
@@ -73,8 +79,6 @@ def top_n(req, choice):
     slowest, most_used = [], []
     now = datetime.utcnow()
     
-    slow_service_threshold = Setting.objects.get_value('slow_service_threshold', default=99999)
-        
     if req.zato.get('cluster'):
         
         def _get_stats(start, stop, granularity, time_elems, stat_type, append_to):
@@ -131,11 +135,36 @@ def top_n(req, choice):
 @meth_allowed('GET')
 def settings(req):
     
+    _settings = {}
+    
+    # A mapping a job type, its name and the execution interval unit
+    job_mapping = {
+        'raw_times': ('zato.stats.ProcessRawTimes', 'seconds'),
+        'per_minute_aggr': ('zato.stats.AggregateByMinute', 'seconds'),
+        }
+    
+    for job_type, (name, unit) in job_mapping.items():
+        print(job_type, (name, unit))
+    
+    for name in defaults:
+        _settings[name] = Setting.objects.get_value(name, default=defaults[name])
+        
+
+    
+
+    # _interval
+    # _interval
+    '''
+    'scheduler_raw_stats_interval':90,
+    'scheduler_per_minute_aggr_interval':60,
+    '''
+    
     return_data = {
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
-        'form': SettingsForm()
+        'form': SettingsForm(initial=_settings),
+        'defaults':defaults,
     }
 
     if logger.isEnabledFor(TRACE1):

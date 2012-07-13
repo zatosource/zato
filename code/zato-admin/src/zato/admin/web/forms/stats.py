@@ -45,11 +45,14 @@ class CompareForm(forms.Form):
 class SettingsForm(forms.Form):
     """ Various statistics settings.
     """
-    scheduler_raw_stats_time = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    scheduler_raw_times_interval = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    scheduler_raw_times_batch = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    scheduler_per_minute_aggr_interval = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    atttention_slow_threshold = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    atttention_top_threshold = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     
 class MaintenanceForm(forms.Form):
     """ Statistics maintenance.
     """
     delete_from = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))
     delete_to = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))
-

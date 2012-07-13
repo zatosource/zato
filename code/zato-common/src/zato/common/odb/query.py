@@ -61,10 +61,7 @@ def internal_channel_list(session, cluster_id):
 
 # ##############################################################################
 
-@needs_columns
-def job_list(session, cluster_id, needs_columns=False):
-    """ All the scheduler's jobs defined in the ODB.
-    """
+def _job(session, cluster_id):
     return session.query(Job.id, Job.name, Job.is_active,
         Job.job_type, Job.start_date,  Job.extra,
         Service.name.label('service_name'), Service.impl_name.label('service_impl_name'),
@@ -78,6 +75,19 @@ def job_list(session, cluster_id, needs_columns=False):
             filter(Cluster.id==cluster_id).\
             filter(Job.service_id==Service.id).\
             order_by('job.name')
+
+@needs_columns
+def job_list(session, cluster_id, needs_columns=False):
+    """ All the scheduler's jobs defined in the ODB.
+    """
+    return _def_amqp(session, cluster_id)
+    
+def job_by_name(session, cluster_id, name):
+    """ A scheduler's job fetched by its name.
+    """
+    return _job(session, cluster_id).\
+           filter(Job.name==name).\
+           one()
 
 # ##############################################################################
 

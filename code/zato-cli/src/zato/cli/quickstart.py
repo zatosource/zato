@@ -242,6 +242,7 @@ class Quickstart(ZatoCommand):
             'zato:scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
             'zato:scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
             'zato:scheduler.job.execute':'zato.server.service.internal.scheduler.Execute',
+            'zato:scheduler.job.get-by-name':'zato.server.service.internal.scheduler.GetByName',
             'zato:scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
 
             # Services
