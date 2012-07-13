@@ -38,6 +38,7 @@ from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, ZatoException
+from zato.common.broker_message import MESSAGE_TYPE, STATS
 from zato.common.odb.query import job_by_name
 from zato.server.service.internal import AdminService
 
@@ -213,13 +214,8 @@ class Delete(AdminService):
         input_required = ('start', 'stop')
 
     def handle(self):
-        start = parse(self.request.input.start)
-        stop = parse(self.request.input.stop)
-
-        suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
-        
-        #for suffix in suffixes:
-        #    print(333, suffix)
-        #    for key in self.server.kvdb.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
-        #        print(444, key)
+        msg = {'action':'', 'start':self.request.input.start, 'stop':self.request.input.stop}
+        for action in(STATS.DELETE_BY_MINUTE, ):
+            msg['action'] = action
+            self.broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_PULL)
                 

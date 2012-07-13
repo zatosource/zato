@@ -197,7 +197,7 @@ def maintenance_delete(req):
     
     path = reverse('stats-maintenance')
 
-    msg = 'Deleted statistics from [{}] to [{}]'.format(start, stop)
+    msg = 'Deleting statistics from [{}] to [{}], requested submitted. Chech the server logs for details.'.format(start, stop)
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
     return redirect('{}?cluster={}'.format(path, req.zato.cluster_id))
