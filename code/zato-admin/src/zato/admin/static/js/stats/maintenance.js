@@ -1,8 +1,8 @@
 
 $(document).ready(function() { 
 
-    $.each(['from', 'to'], function(ignored, suffix) {
-        var id = 'id_delete_' + suffix;
+    $.each(['start', 'stop'], function(ignored, suffix) {
+        var id = 'id_' + suffix;
         var jq_id = '#' + id;
         
         $(jq_id).attr('data-bvalidator', 'required');
