@@ -46,3 +46,10 @@ class SettingsForm(forms.Form):
     """ Various statistics settings.
     """
     scheduler_raw_stats_time = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    
+class MaintenanceForm(forms.Form):
+    """ Statistics maintenance.
+    """
+    delete_from = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))
+    delete_to = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))
+

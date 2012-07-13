@@ -1,0 +1,69 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="/static/css/anytimec.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/date_time_picker.css">
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/jquery/anytimec.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+    
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/stats/maintenance.js"></script>
+{% endblock %}
+
+{% block content %}
+
+{% if not zato_clusters %}
+    <p>
+    There aren't any Zato clusters registered with this ZatoAdmin instance.
+    <a href="{% url cluster %}" class="common">Click here</a> to register a new cluster first.
+    <br/><br/>
+    </p>
+{% else %}
+
+<h2 class="zato">Statistics : Maintenance</h2>
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+
+    <div class="prompt">
+    {% if not cluster_id %}
+        Choose a cluster
+    {% endif %}
+
+    <form action="." method="get">
+        {{ choose_cluster_form.cluster }}
+        <input type="submit" value="Show the maintenance form" />
+    </form>
+    </div>
+
+{% if cluster_id %}
+
+<div id="markup">
+    <form action="." method="post" id="maintenance_form">
+    <table id="data-table">
+        <tr>
+            <td class="inline_header" colspan="4">Delete statistics in the selected interval</td>
+        </tr>
+        <tr>
+            <td style="width:10%">Delete from<br/><span class="form_hint">(inclusive)</span></td>
+            <td style="width:20%" style="text-align:left">{{ form.delete_from }} </td>
+            <td style="width:10%">Delete to<br/><span class="form_hint">(inclusive)</span></td>
+            <td style="width:60%" style="text-align:left">{{ form.delete_to }}</td>
+        </tr>
+        <tr>
+            <td colspan="4" style="text-align:right;border-top:1px solid #ddd"><button id="delete_stats" name="delete_stats" type="submit">Save settings</button></td>
+        </tr>
+    </table>
+    </form>
+</div>
+
+
+{% endif %} {% comment %}cluster_id{% endcomment %}
+{% endif %} {% comment %}zato_clusters{% endcomment %}
+
+
+{% endblock %}
