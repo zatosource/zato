@@ -27,8 +27,10 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 # Django
+from django.contrib import messages
+from django.core.urlresolvers import reverse
 from django.http import HttpResponse
-from django.shortcuts import render_to_response
+from django.shortcuts import redirect, render_to_response
 from django.template import loader, RequestContext
 
 # django-settings
@@ -156,4 +158,17 @@ def maintenance(req):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
     return render_to_response('zato/stats/maintenance.html', return_data, context_instance=RequestContext(req))
+
+@meth_allowed('POST')
+def maintenance_delete(req):
+    cluster_id = req.POST['cluster_id']
+    delete_from = req.POST['delete_from']
+    delete_to = req.POST['delete_to']
+    
+    path = reverse('stats-maintenance')
+
+    msg = 'Deleted statistics from [{}] to [{}]'.format(delete_from, delete_to)
+    messages.add_message(req, messages.INFO, msg, extra_tags="success")
+        
+    return redirect('{}?cluster={}'.format(path, cluster_id))
 

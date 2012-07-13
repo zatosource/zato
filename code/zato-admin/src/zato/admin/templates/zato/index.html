@@ -56,12 +56,12 @@
             <div id="main-menu">
                 <ul class="sf-menu" >
                 <li><a href="{% url cluster %}">Clusters</a></li>
-                <li><a href="{% url service %}?cluster={{ cluster_id }}">Services</a></li>
+                <li><a href="{% url service %}?cluster={{ cluster_id|default:'' }}">Services</a></li>
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
-                        <li><a href="{% url security-basic-auth %}?cluster={{ cluster_id }}">HTTP Basic Auth</a></li>
-                        <li><a href="{% url security-tech-account %}?cluster={{ cluster_id }}">Technical accounts</a></li>
-                        <li><a href="{% url security-wss %}?cluster={{ cluster_id }}">WS-Security</a></li>
+                        <li><a href="{% url security-basic-auth %}?cluster={{ cluster_id|default:'' }}">HTTP Basic Auth</a></li>
+                        <li><a href="{% url security-tech-account %}?cluster={{ cluster_id|default:'' }}">Technical accounts</a></li>
+                        <li><a href="{% url security-wss %}?cluster={{ cluster_id|default:'' }}">WS-Security</a></li>
                     </ul>
                 </li>
                 <li><span class="like-a">Connections &darr;</span>
@@ -69,38 +69,38 @@
                         <li>
                             <span class="like-a">Definitions &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url def-amqp %}?cluster={{ cluster_id }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url def-jms-wmq %}?cluster={{ cluster_id }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url def-amqp %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li class='wide'><a href="{% url def-jms-wmq %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Channels &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url channel-amqp %}?cluster={{ cluster_id }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url channel-jms-wmq %}?cluster={{ cluster_id }}">JMS WebSphere MQ</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id }}&amp;connection=channel&amp;transport=plain_http">Plain HTTP</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url channel-zmq %}?cluster={{ cluster_id }}">ZeroMQ</a></li>
+                                <li class='wide'><a href="{% url channel-amqp %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li class='wide'><a href="{% url channel-jms-wmq %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">Plain HTTP</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
+                                <li class='wide'><a href="{% url channel-zmq %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Outgoing &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url out-amqp %}?cluster={{ cluster_id }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url out-ftp %}?cluster={{ cluster_id }}">FTP</a></li>
-                                <li class='wide'><a href="{% url out-jms-wmq %}?cluster={{ cluster_id }}">JMS WebSphere MQ</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id }}&amp;connection=outgoing&amp;transport=plain_http">Plain HTTP</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url out-sql %}?cluster={{ cluster_id }}">SQL</a></li>
-                                <li class='wide'><a href="{% url out-zmq %}?cluster={{ cluster_id }}">ZeroMQ</a></li>
+                                <li class='wide'><a href="{% url out-amqp %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li class='wide'><a href="{% url out-ftp %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
+                                <li class='wide'><a href="{% url out-jms-wmq %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">Plain HTTP</a></li>
+                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
+                                <li class='wide'><a href="{% url out-sql %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
+                                <li class='wide'><a href="{% url out-zmq %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
                     </ul>
                 </li>
                 <li><span class="like-a">Key/value DB &darr;</span>
                     <ul>
-                        <li><a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id }}">Data dictionaries</a></li>
-                        <li><a href="{% url kvdb-remote-command %}?cluster={{ cluster_id }}">Remote commands</a></li>
+                        <li><a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
+                        <li><a href="{% url kvdb-remote-command %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
                     </ul>
                 </li>
                 <li><a href="{% url scheduler %}?cluster={{ cluster_id }}">Scheduler</a></li>
@@ -147,32 +147,32 @@
                         <li>
                             <span class="like-a">Top N &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}">Last hour</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'today' %}">Today</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}">Last 24 hours</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}">This week</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}">This month</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}">This year</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}?cluster={{ cluster_id|default:'' }}">Last 24 hours</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Trends &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}">Last hour</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'today' %}">Today</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}">Last 24 hours</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}">This week</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}">This month</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}">This year</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}?cluster={{ cluster_id }}">Last hour</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}?cluster={{ cluster_id|default:'' }}">Last 24 hours</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
+                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
                             </ul>
                         </li>
                         <li>
-                            <a href="{% url stats-settings %}?cluster={{ cluster_id }}">Settings</a>
+                            <a href="{% url stats-settings %}?cluster={{ cluster_id|default:'' }}">Settings</a>
                         </li>
                         <li>
-                            <a href="{% url stats-maintenance %}?cluster={{ cluster_id }}">Maintenance</a>
+                            <a href="{% url stats-maintenance %}?cluster={{ cluster_id|default:'' }}">Maintenance</a>
                         </li>
                     </ul>
                 </li>
