@@ -38,6 +38,7 @@ from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, ZatoException
+from zato.common.odb.query import job_by_name
 from zato.server.service.internal import AdminService
 
 class _AggregatingService(AdminService):
@@ -203,4 +204,3 @@ class GetTopN(AdminService):
                 item['total'] = total
                 
             self.response.payload.append(item)
-

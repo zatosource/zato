@@ -28,7 +28,7 @@ from zato.common import scheduler_date_time_format, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
-from zato.common.odb.query import job_list
+from zato.common.odb.query import job_by_name, job_list
 from zato.server.service.internal import AdminService
 
 PREDEFINED_CRON_DEFINITIONS = {
@@ -208,9 +208,7 @@ class _CreateEdit(AdminService):
             _create_edit(self.__class__.__name__.lower(), self.cid, self.request.input, self.request.payload, 
                     self.logger, session, self.broker_client, self.response)
 
-class GetList(AdminService):
-    """ Returns a list of all jobs defined in the SingletonServer's scheduler.
-    """
+class _Get(AdminService):
     class SimpleIO:
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'service_id', 'service_name')
@@ -218,13 +216,29 @@ class GetList(AdminService):
         output_repeated = True
         default_value = ''
         date_time_format = scheduler_date_time_format
-        
+
+class GetList(_Get):
+    """ Returns a list of all jobs defined in the SingletonServer's scheduler.
+    """
     def get_data(self, session):
         return job_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+            
+class GetByName(_Get):
+    """ Returns a job by its name.
+    """
+    class SimpleIO(_Get.SimpleIO):
+        input_required = ('cluster_id', 'name')
+        
+    def get_data(self, session):
+        return job_by_name(session, self.request.input.cluster_id, self.request.input.name)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = self.get_data(session)
 
 class Create(_CreateEdit):
     """ Creates a new scheduler's job.
