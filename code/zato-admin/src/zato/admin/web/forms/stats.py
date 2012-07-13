@@ -54,5 +54,5 @@ class SettingsForm(forms.Form):
 class MaintenanceForm(forms.Form):
     """ Statistics maintenance.
     """
-    delete_from = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))
-    delete_to = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))
+    start = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))
+    stop = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:150px; height:19px'}))

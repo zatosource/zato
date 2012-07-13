@@ -385,6 +385,7 @@ class Quickstart(ZatoCommand):
             
             # Statistics
             'zato:stats.get-top-n':'zato.server.service.internal.stats.GetTopN',
+            'zato:stats.delete':'zato.server.service.internal.stats.Delete',
         }
         
         #

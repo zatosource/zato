@@ -204,3 +204,22 @@ class GetTopN(AdminService):
                 item['total'] = total
                 
             self.response.payload.append(item)
+
+
+class Delete(AdminService):
+    """ Deletes aggregated statistics from a given interval.
+    """
+    class SimpleIO:
+        input_required = ('start', 'stop')
+
+    def handle(self):
+        start = parse(self.request.input.start)
+        stop = parse(self.request.input.stop)
+
+        suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
+        
+        #for suffix in suffixes:
+        #    print(333, suffix)
+        #    for key in self.server.kvdb.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
+        #        print(444, key)
+                

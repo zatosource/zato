@@ -190,14 +190,15 @@ def maintenance(req):
 
 @meth_allowed('POST')
 def maintenance_delete(req):
-    cluster_id = req.POST['cluster_id']
-    delete_from = req.POST['delete_from']
-    delete_to = req.POST['delete_to']
+    start = req.POST['start']
+    stop = req.POST['stop']
+    
+    invoke_admin_service(req.zato.cluster, 'zato:stats.delete', {'start':start, 'stop':stop})
     
     path = reverse('stats-maintenance')
 
-    msg = 'Deleted statistics from [{}] to [{}]'.format(delete_from, delete_to)
-    messages.add_message(req, messages.INFO, msg, extra_tags="success")
+    msg = 'Deleted statistics from [{}] to [{}]'.format(start, stop)
+    messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
-    return redirect('{}?cluster={}'.format(path, cluster_id))
+    return redirect('{}?cluster={}'.format(path, req.zato.cluster_id))
 
