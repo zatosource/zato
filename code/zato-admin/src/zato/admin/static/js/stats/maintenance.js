@@ -20,3 +20,4 @@ $(document).ready(function() {
     $('#maintenance_form').bValidator();
 
 });
+

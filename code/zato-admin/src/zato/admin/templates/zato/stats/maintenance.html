@@ -26,7 +26,11 @@
 
 <h2 class="zato">Statistics : Maintenance</h2>
 
-<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+{% if messages %}
+    {% for message in messages %}
+    <div id="user-message-div"><pre id="user-message" class="user-message user-message-{{ message.tags }}">{{ message }}</pre></div>
+    {% endfor %}
+{% endif %}
 
 
     <div class="prompt">
@@ -43,7 +47,8 @@
 {% if cluster_id %}
 
 <div id="markup">
-    <form action="." method="post" id="maintenance_form">
+    <form action="./delete/" method="post" id="maintenance_form">
+    <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
     <table id="data-table">
         <tr>
             <td class="inline_header" colspan="4">Delete statistics in the selected interval</td>
