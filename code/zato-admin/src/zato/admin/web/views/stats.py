@@ -147,6 +147,9 @@ def top_n(req, choice):
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
     }
+
+    for name in('atttention_slow_threshold', 'atttention_top_threshold'):
+        return_data[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
     
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
