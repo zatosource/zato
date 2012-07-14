@@ -461,7 +461,7 @@ class WorkerStore(BaseWorker):
         # other parallel servers may wish to do exactly the same so we just ignore
         # the error if any files are missing. Also note that internal services won't
         # be ever deleted from the FS.
-        if msg.is_internal:
+        if not msg.is_internal:
             all_ext = ('py', 'pyc', 'pyo')
             no_ext = '.'.join(fs_location.split('.')[:-1])
             for ext in all_ext:
