@@ -29,6 +29,11 @@ from operator import itemgetter
 # Bunch
 from bunch import Bunch
 
+# dateutil
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import DAILY, MINUTELY, rrule
+
 # SciPy
 from scipy import stats as sp_stats
 

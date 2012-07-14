@@ -35,7 +35,7 @@ from django.shortcuts import redirect, render_to_response
 from django.template import loader, RequestContext
 
 # django-settings
-from django_settings.models import Setting
+from django_settings.models import PositiveInteger, Setting
 
 # Zato
 from zato.admin.web import invoke_admin_service
@@ -45,6 +45,12 @@ from zato.common import DEFAULT_STATS_SETTINGS, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
+
+# A mapping a job type, its name and the execution interval unit
+job_mapping = {
+    'raw_times': ('zato.stats.ProcessRawTimes', 'seconds'),
+    'per_minute_aggr': ('zato.stats.AggregateByMinute', 'seconds'),
+    }
 
 @meth_allowed('GET')
 def top_n(req, choice):
@@ -135,24 +141,22 @@ def settings(req):
         _settings = {}
         defaults = deepcopy(DEFAULT_STATS_SETTINGS)
         
-        # A mapping a job type, its name and the execution interval unit
-        job_mapping = {
-            'raw_times': ('zato.stats.ProcessRawTimes', 'seconds'),
-            'per_minute_aggr': ('zato.stats.AggregateByMinute', 'seconds'),
-            }
-        
         for job_type, (name, unit) in job_mapping.items():
             setting_base_name = 'scheduler_{}_interval'.format(job_type)
             setting_unit_name = 'scheduler_{}_interval_unit'.format(job_type)
             defaults[setting_unit_name] = unit
             
             zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': name})
-        
+            if zato_path('response.item').get_from(zato_message) is not None:
+                value = getattr(zato_message.response.item, unit).text
+                _settings[setting_base_name] = value
+                
         for name in DEFAULT_STATS_SETTINGS:
-            _settings[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
+            if not name.endswith('interval'):
+                _settings[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
     else:
         form, defaults, _settings = None, None, {}
-        
+
     return_data = {
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
@@ -166,16 +170,42 @@ def settings(req):
 
     return render_to_response('zato/stats/settings.html', return_data, context_instance=RequestContext(req))
 
+@meth_allowed('POST')
+def settings_save(req):
+    #invoke_admin_service(req.zato.cluster, 'zato:stats.delete', {'start':start, 'stop':stop})
+    
+    for name in DEFAULT_STATS_SETTINGS:
+        if not name.endswith('interval'):
+            value = req.POST[name]
+            Setting.objects.set_value(name, PositiveInteger, value)
+
+    for job_type, (name, unit) in job_mapping.items():
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': name})
+        if zato_path('response.item').get_from(zato_message) is not None:
+            item = zato_message.response.item
+            
+            # Gotta love dictionary comprehensions!
+            params = {attr: getattr(item, attr).text for attr in('id', 'name', 'is_active', 'job_type', 'start_date', 'extra')}
+            
+            params['service'] = item.service_name.text
+            params['cluster_id'] = req.zato.cluster.id
+            params[unit] = req.POST['scheduler_{}_interval'.format(job_type)]
+            
+            invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.edit', params)
+    
+    msg = 'Settings saved'
+    messages.add_message(req, messages.INFO, msg, extra_tags='success')
+        
+    return redirect('{}?cluster={}'.format(reverse('stats-settings'), req.zato.cluster_id))
+
 @meth_allowed('GET')
 def maintenance(req):
-
     return_data = {
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
         'form': MaintenanceForm()
     }
-
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
@@ -188,9 +218,7 @@ def maintenance_delete(req):
     
     invoke_admin_service(req.zato.cluster, 'zato:stats.delete', {'start':start, 'stop':stop})
     
-    path = reverse('stats-maintenance')
-
     msg = 'Submitted a request to delete statistics from [{}] to [{}]. Check the server logs for details.'.format(start, stop)
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
-    return redirect('{}?cluster={}'.format(path, req.zato.cluster_id))
+    return redirect('{}?cluster={}'.format(reverse('stats-maintenance'), req.zato.cluster_id))
