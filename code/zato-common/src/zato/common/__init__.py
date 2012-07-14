@@ -131,6 +131,14 @@ SOAP_VERSIONS = ('1.1', '1.2')
 
 SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}
 
+DEFAULT_STATS_SETTINGS = {
+    'scheduler_per_minute_aggr_interval':60,
+    'scheduler_raw_times_interval':90,
+    'scheduler_raw_times_batch':99999,
+    'atttention_slow_threshold':2000,
+    'atttention_top_threshold':10,
+}
+
 class SIMPLE_IO:
     class FORMAT:
         XML = 'xml'

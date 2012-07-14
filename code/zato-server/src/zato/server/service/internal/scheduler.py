@@ -231,10 +231,10 @@ class GetByName(_Get):
     """ Returns a job by its name.
     """
     class SimpleIO(_Get.SimpleIO):
-        input_required = ('cluster_id', 'name')
+        input_required = ('name',)
         
     def get_data(self, session):
-        return job_by_name(session, self.request.input.cluster_id, self.request.input.name)
+        return job_by_name(session, self.server.cluster_id, self.request.input.name)
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from springpython.config import Object, PythonConfig
 
 # Zato
-from zato.common import ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common import DEFAULT_STATS_SETTINGS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
@@ -213,7 +213,7 @@ class ZatoContext(PythonConfig):
             {'name': 'zato.stats.ProcessRawTimes', 
              'seconds':90, 
              'service':'zato.server.service.internal.stats.ProcessRawTimes', 
-             'extra':'global_slow_threshold=120\nmax_batch_size=100000'},
+             'extra':'max_batch_size={}'.format(DEFAULT_STATS_SETTINGS['scheduler_raw_times_batch'])},
             {'name': 'zato.stats.AggregateByMinute', 
              'seconds':60, 
              'service':'zato.server.service.internal.stats.AggregateByMinute'},

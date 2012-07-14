@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from copy import deepcopy
 from datetime import datetime
 
 # dateutil
@@ -40,16 +41,10 @@ from django_settings.models import Setting
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.stats import CompareForm, MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import meth_allowed
-from zato.common import zato_path
+from zato.common import DEFAULT_STATS_SETTINGS, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
-
-defaults = {
-    'scheduler_raw_stats_batch':99999,
-    'atttention_slow_threshold':2000,
-    'atttention_top_threshold':10,
-}
 
 @meth_allowed('GET')
 def top_n(req, choice):
@@ -135,30 +130,29 @@ def top_n(req, choice):
 @meth_allowed('GET')
 def settings(req):
     
-    _settings = {}
-    
-    # A mapping a job type, its name and the execution interval unit
-    job_mapping = {
-        'raw_times': ('zato.stats.ProcessRawTimes', 'seconds'),
-        'per_minute_aggr': ('zato.stats.AggregateByMinute', 'seconds'),
-        }
-    
-    for job_type, (name, unit) in job_mapping.items():
-        print(job_type, (name, unit))
-    
-    for name in defaults:
-        _settings[name] = Setting.objects.get_value(name, default=defaults[name])
+    if req.zato.get('cluster'):
         
-
-    
-
-    # _interval
-    # _interval
-    '''
-    'scheduler_raw_stats_interval':90,
-    'scheduler_per_minute_aggr_interval':60,
-    '''
-    
+        _settings = {}
+        defaults = deepcopy(DEFAULT_STATS_SETTINGS)
+        
+        # A mapping a job type, its name and the execution interval unit
+        job_mapping = {
+            'raw_times': ('zato.stats.ProcessRawTimes', 'seconds'),
+            'per_minute_aggr': ('zato.stats.AggregateByMinute', 'seconds'),
+            }
+        
+        for job_type, (name, unit) in job_mapping.items():
+            setting_base_name = 'scheduler_{}_interval'.format(job_type)
+            setting_unit_name = 'scheduler_{}_interval_unit'.format(job_type)
+            defaults[setting_unit_name] = unit
+            
+            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': name})
+        
+        for name in DEFAULT_STATS_SETTINGS:
+            _settings[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
+    else:
+        form, defaults, _settings = None, None, {}
+        
     return_data = {
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
@@ -171,7 +165,6 @@ def settings(req):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
     return render_to_response('zato/stats/settings.html', return_data, context_instance=RequestContext(req))
-
 
 @meth_allowed('GET')
 def maintenance(req):
@@ -201,4 +194,3 @@ def maintenance_delete(req):
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
     return redirect('{}?cluster={}'.format(path, req.zato.cluster_id))
-
