@@ -97,7 +97,7 @@
                             {% for item in slowest %}
                                 
                                 <tr>
-                                    <td>{% if item.value > item.avg %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
+                                    <td>{% if item.value > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
                                     <td>{{ item.position }}</td>    
                                     <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                                     <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
@@ -135,7 +135,7 @@
                             {% for item in most_used %}
                                 
                                 <tr>
-                                    <td>{% if item.percent > 10 %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
+                                    <td>{% if item.percent > atttention_top_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
                                     <td>{{ item.position }}</td>    
                                     <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                                     <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
