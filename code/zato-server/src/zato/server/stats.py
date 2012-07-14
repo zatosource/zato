@@ -25,11 +25,15 @@ from contextlib import closing
 from datetime import datetime
 from traceback import format_exc
 
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import DAILY, MINUTELY, rrule
+
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import scheduler_date_time_format
+from zato.common import KVDB, scheduler_date_time_format
 from zato.common.odb.model import Job, IntervalBasedJob, Service
 from zato.common.odb.query import _service as _service
 
@@ -63,3 +67,20 @@ def add_stats_jobs(cluster_id, odb, stats_jobs):
                 session.rollback()
                 msg = 'Caught an IntegrityError, carrying on anyway, e:[{}]]'.format(format_exc(e))
                 logger.debug(msg)
+                
+class MaintenanceTool(object):
+    """ A tool for performing maintenance-related tasks, such as deleting the statistics.
+    """
+    def __init__(self, conn):
+        self.conn = conn
+        
+    def delete(self, start, stop, interval):
+        with self.conn.pipeline() as p:
+            suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
+            for suffix in suffixes:
+                for key in self.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
+                    p.delete(key)
+                    print(33, key)
+                    
+            p.execute()
+

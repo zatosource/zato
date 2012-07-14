@@ -155,6 +155,7 @@ HOT_DEPLOY.CREATE = '11000'
 
 STATS = Bunch()
 STATS.DELETE = '11100'
+STATS.DELETE_DAY = '11101'
 
 code_to_name = {}
 
