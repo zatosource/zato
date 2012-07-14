@@ -80,7 +80,7 @@ def _job(session, cluster_id):
 def job_list(session, cluster_id, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
-    return _def_amqp(session, cluster_id)
+    return _job(session, cluster_id)
     
 def job_by_name(session, cluster_id, name):
     """ A scheduler's job fetched by its name.
