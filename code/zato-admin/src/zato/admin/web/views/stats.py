@@ -46,10 +46,31 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
+# 
+# per_minute_aggr
+
+class JobAttrForm(object):
+    def __init__(self, form_name, job_attr):
+        self.form_name = form_name
+        self.job_attr = job_attr
+        
+    def __repr__(self):
+        return '<{} at {} form_name:[{}], job_attr:[{}]>'.format(self.__class__.__name__, hex(id(self)),
+            self.form_name, repr(self.job_attr))
+
+class JobAttrFormMapping(object):
+    def __init__(self, job_name, attrs):
+        self.job_name = job_name
+        self.attrs = attrs
+        
+    def __repr__(self):
+        return '<{} at {} job_name:[{}], attrs:[{}]>'.format(self.__class__.__name__, hex(id(self)),
+            self.job_name, repr(self.attrs))
+
 # A mapping a job type, its name and the execution interval unit
-job_mapping = {
-    'raw_times': ('zato.stats.ProcessRawTimes', 'seconds'),
-    'per_minute_aggr': ('zato.stats.AggregateByMinute', 'seconds'),
+job_mappings = {
+    JobAttrFormMapping('zato.stats.ProcessRawTimes', [JobAttrForm('raw_times', 'seconds'),  JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
+    JobAttrFormMapping('zato.stats.AggregateByMinute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
 
 @meth_allowed('GET')
@@ -141,18 +162,27 @@ def settings(req):
         _settings = {}
         defaults = deepcopy(DEFAULT_STATS_SETTINGS)
         
-        for job_type, (name, unit) in job_mapping.items():
-            setting_base_name = 'scheduler_{}_interval'.format(job_type)
-            setting_unit_name = 'scheduler_{}_interval_unit'.format(job_type)
-            defaults[setting_unit_name] = unit
-            
-            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': name})
+        for mapping in job_mappings:
+
+            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
             if zato_path('response.item').get_from(zato_message) is not None:
-                value = getattr(zato_message.response.item, unit).text
-                _settings[setting_base_name] = value
-                
+                item = zato_message.response.item
+            
+                for attr in mapping.attrs:
+                    try:
+                        attr.job_attr['extra']
+                    except TypeError:
+                        setting_base_name = 'scheduler_{}_interval'.format(attr.form_name)
+                        setting_unit_name = 'scheduler_{}_interval_unit'.format(attr.form_name)
+                        
+                        defaults[setting_unit_name] = attr.job_attr
+                        _settings[setting_base_name] = getattr(zato_message.response.item, attr.job_attr).text
+                    else:
+                        # A sample item.extra.text is 'max_batch_size=123456'
+                        _settings['scheduler_{}'.format(attr.form_name)] = item.extra.text.split('=')[1]
+
         for name in DEFAULT_STATS_SETTINGS:
-            if not name.endswith('interval'):
+            if not name.startswith('scheduler'):
                 _settings[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
     else:
         form, defaults, _settings = None, None, {}
@@ -172,27 +202,39 @@ def settings(req):
 
 @meth_allowed('POST')
 def settings_save(req):
-    #invoke_admin_service(req.zato.cluster, 'zato:stats.delete', {'start':start, 'stop':stop})
     
     for name in DEFAULT_STATS_SETTINGS:
-        if not name.endswith('interval'):
+        if not name.startswith('scheduler'):
             value = req.POST[name]
             Setting.objects.set_value(name, PositiveInteger, value)
 
-    for job_type, (name, unit) in job_mapping.items():
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': name})
+    for mapping in job_mappings:
+
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
         if zato_path('response.item').get_from(zato_message) is not None:
             item = zato_message.response.item
             
             # Gotta love dictionary comprehensions!
             params = {attr: getattr(item, attr).text for attr in('id', 'name', 'is_active', 'job_type', 'start_date', 'extra')}
-            
+        
+            for attr in mapping.attrs:
+                
+                try:
+                    attr.job_attr['extra']
+                except TypeError:
+                    key = attr.job_attr
+                    value = req.POST['scheduler_{}_interval'.format(attr.form_name)]
+                else:
+                    key = 'extra'
+                    value = '{}={}'.format(attr.job_attr['extra'], req.POST['scheduler_{}'.format(attr.form_name)])
+                    
+                params[key] = value
+                
             params['service'] = item.service_name.text
             params['cluster_id'] = req.zato.cluster.id
-            params[unit] = req.POST['scheduler_{}_interval'.format(job_type)]
-            
+                
             invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.edit', params)
-    
+
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
