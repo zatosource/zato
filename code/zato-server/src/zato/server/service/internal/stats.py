@@ -128,7 +128,7 @@ class AggregateByMinute(_AggregatingService):
 
 
 class GetTopN(AdminService):
-    """ Returns top N slowest and most commonly used services for a given period.
+    """ Returns top N slowest or most commonly used services for a given period.
     """
     class SimpleIO:
         input_required = ('start', 'stop', 'n', 'granularity', 'trend_elems', 'stat_type')
