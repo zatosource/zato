@@ -27,7 +27,7 @@ from datetime import datetime
 from glob import glob
 from hashlib import sha1, sha256
 from importlib import import_module
-from itertools import ifilter, izip_longest
+from itertools import ifilter, izip, izip_longest, tee
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
@@ -480,3 +480,11 @@ def translation_name(system1, key1, value1, system2, key2):
 
 def dict_item_name(system, key, value):
     return KVDB.SEPARATOR.join((system, key, value))
+    
+# From http://docs.python.org/release/2.7/library/itertools.html#recipes
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
+

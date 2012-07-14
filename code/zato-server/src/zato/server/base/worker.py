@@ -25,6 +25,7 @@ from copy import deepcopy
 from errno import ENOENT
 from thread import start_new_thread
 from threading import local, RLock
+from time import sleep
 from traceback import format_exc
 
 # Bunch
@@ -33,7 +34,7 @@ from bunch import Bunch
 # dateutil
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
-from dateutil.rrule import MINUTELY, rrule
+from dateutil.rrule import DAILY, MINUTELY, rrule
 
 # Paste
 from paste.util.multidict import MultiDict
@@ -46,12 +47,13 @@ from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Zato
 from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import code_to_name
-from zato.common.util import new_cid, security_def_type, TRACE1
+from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
+from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore, SessionWrapper
+from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +94,9 @@ class WorkerStore(BaseWorker):
         self.request_handler = RequestHandler(simple_io_config=self.worker_config.simple_io)
         self.request_handler.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
         self.request_handler.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
+        
+        # Statistics maintenance
+        self.stats_maint = MaintenanceTool(self.worker_config.server.kvdb.conn)
         
         # ConnectionHTTPSOAPSecurity needs only actual URLs hence it's self.worker_config.url_sec[0]
         # below
@@ -481,17 +486,47 @@ class WorkerStore(BaseWorker):
     
 # ##############################################################################
 
-    def on_broker_pull_msg_STATS_DELETE_BY_MINUTE(self, msg, *args):
+    def on_broker_pull_msg_STATS_DELETE(self, msg, *args):
         start = parse(msg.start)
         stop = parse(msg.stop)
         
-        suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
-         
-        for suffix in suffixes:
-            print(333, suffix)
+        # Looks weird but this is so we don't have to create a list instead of a generator
+        # (and Python 3 won't leak the last element anymore)
+        last_elem = None
+        
+        # Are the dates are at least a day apart? If so, we'll split the interval
+        # into smaller one day-long batches.
+        if(stop-start).days:
+            for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
+                self.broker_client.send_json({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()}, 
+                   MESSAGE_TYPE.TO_PARALLEL_PULL)
+                   
+                # So as not to drown the broker with a sudden surge of messages
+                sleep(0.02)
+            
+                last_elem = elem2
+                
+            # It's possible we still have something left over. Let's say
+            # 
+            # start = '2012-07-24T02:02:53'
+            # stop = '2012-07-25T02:04:53'
+            #
+            # The call to rrule(DAILY, ...) will nicely slice the time between
+            # start and stop into one day intervals yet the last element of the slice
+            # will have the time portion equal to that of start's - so in this
+            # particular case it would be that last_elem was 2012-07-25T02:02:53
+            # which would be still be 2 minutes short of stop. Hence the need for
+            # a relativedelta, to tease out the remaining time information.
+            delta = relativedelta(stop, last_elem)
+            if delta.minutes:
+                self.stats_maint.delete(last_elem, stop, MINUTELY)
 
-            #for key in self.server.kvdb.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
-            #    print(444, key)
+        # Not a full day apart so we can delete everything ourselves   
+        else:
+            self.stats_maint.delete(start, stop, MINUTELY)
+
+    def on_broker_pull_msg_STATS_DELETE_DAY(self, msg, *args):
+        self.stats_maint.delete(parse(msg.start), parse(msg.stop), MINUTELY)
 
 # ##############################################################################
             
