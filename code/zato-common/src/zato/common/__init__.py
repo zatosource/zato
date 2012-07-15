@@ -20,8 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from collections import OrderedDict
+from cStringIO import StringIO
 from httplib import responses
 from string import Template
+from sys import maxint
 from traceback import format_exc
 
 # lxml
@@ -271,3 +274,77 @@ class SourceInfo(object):
         self.hash = None
         self.hash_method = None
         self.server_name = None
+
+class StatsElem(object):
+    """ A single element of a statistics query result. All values make sense
+    only within the time interval of the original query, e.g. a 'min_resp_time'
+    may be 18 ms in this element because it represents statistics regarding, say,
+    the last hour yet in a different period the 'min_resp_time' may be a completely
+    different value. Likewise, 'all' in the description of parameters below means
+    'all that matched given query criteria' rather than 'all that ever existed'.
+    
+    service_name - name of the service this element describes
+    usage - how many times the service has been invoked
+    mean - an arithmetical average of all the mean response times  (in ms)
+    rate - usage rate in requests/s (up to 1 decimal point)
+    time - time spent by this service on processing the messages (in ms)
+    usage_trend - a CSV list of values representing the service usage 
+    usage_trend_int - a list of integers representing the service usage 
+    mean_trend - a CSV list of values representing mean response times (in ms)
+    mean_trend_int - a list of integers representing mean response times (in ms)
+    min_resp_time - minimum service response time (in ms)
+    max_resp_time - maximum service response time (in ms)
+    all_services_usage - how many times all the services have been invoked
+    all_services_time - how much time all the services spent on processing the messages (in ms)
+    mean_all_services - an arithmetical average of all the mean response times  of all services (in ms)
+    usage_perc_all_services - this service's usage as a percentage of all_services_usage (up to 2 decimal points)
+    time_perc_all_services - this service's share as a percentage of all_services_time (up to 2 decimal points)
+    expected_time_elems - an OrderedDict of all the time slots mapped to a mean time and rate 
+    """
+    def __init__(self, service_name=None):
+        self.service_name = service_name
+        self.usage = 0
+        self.mean = 0
+        self.rate = 0.0
+        self.time = 0
+        self.usage_trend_int = []
+        self.mean_trend_int = []
+        self.min_resp_time = maxint # Assuming that there sure will be at least one response time lower than that
+        self.max_resp_time = 0
+        self.all_services_usage = 0
+        self.all_services_time = 0
+        self.mean_all_services = 0
+        self.usage_perc_all_services = 0
+        self.time_perc_all_services = 0
+        self.expected_time_elems = OrderedDict()
+        
+    def get_attrs(self, ignore=[]):
+        for attr in dir(self):
+            if attr.startswith('__') or callable(getattr(self, attr)) or attr in ignore:
+                continue
+            yield attr
+    
+    def to_dict(self, ignore=['expected_time_elems', 'mean_trend_int', 'usage_trend_int', ]):
+        return {attr: getattr(self, attr) for attr in self.get_attrs(ignore)}
+    
+    @staticmethod
+    def from_xml(xml_item):
+        stats_elem = StatsElem()
+        for child in xml_item.getchildren():
+            setattr(stats_elem, child.xpath('local-name()'), child.pyval)
+            
+        return stats_elem
+    
+    def __repr__(self):
+        buff = StringIO()
+        buff.write('<{} at {} '.format(self.__class__.__name__, hex(id(self))))
+        
+        attrs = ('{}=[{}]'.format(attr, getattr(self, attr)) for attr in self.get_attrs())
+        buff.write(', '.join(attrs))
+        
+        buff.write('>')
+        
+        value = buff.getvalue()
+        buff.close()
+        
+        return value
