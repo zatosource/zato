@@ -88,8 +88,11 @@
                                     <td></td>
                                     <td style="width:4%"></td>
                                     <td></td>
-                                    <td style="text-align:right">Mean</td>
-                                    <td style="text-align:right">Avg mean</td>
+                                    <td style="text-align:right">M</td>
+                                    <td style="text-align:right">AM</td>
+                                    <td style="text-align:right">U%</td>
+                                    <td style="text-align:right">T%</td>
+                                    <td style="text-align:right">T</td>
                                     <td style="text-align:right">Trend</td>
                                 </tr>
                                 
@@ -101,7 +104,10 @@
                                     <td>{{ item.position }}</td>    
                                     <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                                     <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
-                                    <td style="text-align:right;width:60px">{{ item.avg|floatformat:"0" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
                                     <td><span class="trend">{{ item.trend }}</span></td>
                                 </tr>
                                 
@@ -126,9 +132,11 @@
                                     <td></td>
                                     <td style="width:4%"></td>
                                     <td></td>
-                                    <td style="text-align:right">Usage</td>
-                                    <td style="text-align:right">%</td>
+                                    <td style="text-align:right">U</td>
                                     <td style="text-align:right">Req/s</td>
+                                    <td style="text-align:right">U%</td>
+                                    <td style="text-align:right">T%</td>
+                                    <td style="text-align:right">T</td>
                                     <td style="text-align:right">Trend</td>
                                 </tr>
                                 
@@ -138,9 +146,11 @@
                                     <td>{% if item.percent > atttention_top_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
                                     <td>{{ item.position }}</td>    
                                     <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                                    <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
-                                    <td style="text-align:right">{{ item.percent|floatformat:"2" }}</td>    
-                                    <td style="text-align:right">{{ item.rate }}</td>
+                                    <td style="text-align:right;width:30px">{{ item.value|floatformat:"0" }}</td>
+                                    <td style="text-align:right;width:30px">{{ item.rate }}</td>
+                                    <td style="text-align:right;width:30px">{{ item.percent|floatformat:"2" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.percent|floatformat:"2" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.percent|floatformat:"2" }}</td>    
                                     <td><span class="trend">{{ item.trend }}</span></td>
                                 </tr>
                                 

@@ -41,7 +41,7 @@ from django_settings.models import PositiveInteger, Setting
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.stats import CompareForm, MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import meth_allowed
-from zato.common import DEFAULT_STATS_SETTINGS, zato_path
+from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
@@ -103,37 +103,36 @@ def top_n(req, choice):
     
     if req.zato.get('cluster'):
         
-        def _get_stats(start, stop, granularity, time_elems, stat_type, append_to):
+        def _get_stats(start, stop, n_type, append_to):
             zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-top-n',
-                {'start':start, 'stop':stop, 'granularity':granularity, 'n':n, 
-                'trend_elems':trend_elems, 'stat_type':stat_type})
+                {'start':start, 'stop':stop, 'n':n, 'n_type':n_type})
             
             if zato_path('response.item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.response.item_list.item:
-                    item = {'position':msg_item.position.text, 'service_name':msg_item.service_name.text, 
-                                 'value':int(float(msg_item.value.text)), 'trend':msg_item.trend.text}
+                    #item = {'service_name':msg_item.service_name.text}
                                  
-                    for name in('avg', 'total'):
-                        value = getattr(msg_item, name).text or '0'
-                        item[name] = int(float(value))
-                                 
+                    #for name in('avg', 'total'):
+                    #    value = getattr(msg_item, name).text or '0'
+                    #    item[name] = int(float(value))
+                     
+                    item = StatsElem.from_xml(msg_item)
                     append_to.append(item)
         
         def _params_last_hour():
             trend_elems = 60
             start = now+relativedelta(minutes=-trend_elems)
-            return start.isoformat(), now.isoformat(), (now-start).seconds, 'minutes', trend_elems
+            return start.isoformat(), now.isoformat()
             
-        start, stop, seconds, granularity, trend_elems = locals()['_params_' + choice]()
+        start, stop = locals()['_params_' + choice]()
 
         # Collect basic stats
-        _get_stats(start, stop, granularity, trend_elems, 'highest_mean', slowest)
-        _get_stats(start, stop, granularity, trend_elems, 'highest_usage', most_used)
+        _get_stats(start, stop, 'mean', slowest)
+        _get_stats(start, stop, 'usage', most_used)
         
-        for item in most_used:
-            rate = item['value']/seconds
-            item['rate'] = '{:.2f}'.format(rate) if rate > 0.01 else '<0.01'
-            item['percent'] = float(item['value'] / item['total']) * 100
+        #for item in most_used:
+        #    rate = item['value']/seconds
+        #    item['rate'] = '{:.2f}'.format(rate) if rate > 0.01 else '<0.01'
+        #    item['percent'] = float(item['value'] / item['total']) * 100
         
     return_data = {
         'start': start,
