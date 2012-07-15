@@ -180,7 +180,7 @@ def details(req, service_name):
 
                 setattr(service, name, value)
                 
-            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:service.get-last-stats', {'service_id':service.id, 'minutes':60})
+            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-by-service', {'service_id':service.id, 'minutes':60})
             if zato_path('response.item').get_from(zato_message) is not None:
                 msg_item = zato_message.response.item
                 for name in('usage', 'min', 'max', 'mean', 'rate', 'trend_mean', 'trend_rate'):
