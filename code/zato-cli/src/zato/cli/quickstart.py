@@ -252,7 +252,6 @@ class Quickstart(ZatoCommand):
             'zato:service.edit':'zato.server.service.internal.service.Edit',
             'zato:service.get-by-name':'zato.server.service.internal.service.GetByName',
             'zato:service.get-deployment-info-list':'zato.server.service.internal.service.GetDeploymentInfoList',
-            'zato:service.get-last-stats':'zato.server.service.internal.service.GetLastStats',
             'zato:service.get-list':'zato.server.service.internal.service.GetList',
             'zato:service.get-request-response':'zato.server.service.internal.service.GetRequestResponse',
             'zato:service.get-source-info':'zato.server.service.internal.service.GetSourceInfo',
@@ -385,6 +384,7 @@ class Quickstart(ZatoCommand):
             
             # Statistics
             'zato:stats.get-top-n':'zato.server.service.internal.stats.GetTopN',
+            'zato:stats.get-by-service':'zato.server.service.internal.stats.GetByService',
             'zato:stats.delete':'zato.server.service.internal.stats.Delete',
         }
         

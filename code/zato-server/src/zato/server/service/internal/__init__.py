@@ -50,6 +50,8 @@ class Ping(AdminService):
         output_required = ('ping',)
         
     def handle(self):
+        from time import sleep
+        sleep(0.02)
         self.response.payload.ping = 'pong'
     
 class Ping2(Ping):

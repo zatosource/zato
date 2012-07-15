@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
 from datetime import datetime, timedelta
 from datetime import datetime, timedelta
 from heapq import nlargest
@@ -40,6 +41,7 @@ from scipy import stats as sp_stats
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, STATS
+from zato.common.odb.model import Service
 from zato.common.odb.query import job_by_name
 from zato.server.service.internal import AdminService
 
@@ -207,6 +209,260 @@ class GetTopN(AdminService):
                 
             self.response.payload.append(item)
 
+class GetByService(AdminService):
+    """ Returns basic statistics regarding a service, going back up to the period,
+    expressed in minutes. The data returned is:
+    - usage count
+    - min, max and mean response time
+    - CSV data for the period requested representing mean response time trend
+    - CSV data for the period requested representing request rate (req/s) trend
+    """
+    class SimpleIO:
+        input_required = ('service_id', 'minutes')
+        output_required = ('usage', 'min', 'max', 'mean', 'rate', 'trend_mean', 'trend_rate')
+        
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter_by(id=self.request.input.service_id).\
+                one()
+            
+            minutes = int(self.request.input.minutes)
+            now = datetime.utcnow()
+            suffixes = ((now - timedelta(minutes=minute)).strftime('%Y:%m:%d:%H:%M') for minute in range(minutes, 1, -1))
+            
+            usage = 0
+            min_ = None
+            max_ = None
+            mean = 0
+            rate = 0
+            trend_mean = []
+            trend_rate = []
+            
+            for suffix in suffixes:
+                key = '{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service.name, suffix)
+                items = self.server.kvdb.conn.hgetall(key)
+                
+                if items:
+                    if not min_:
+                        min_ = float(items['min'])
+                    else:
+                        min_ = min(min_, float(items['min']))
+                        
+                    if not max_:
+                        max_ = float(items['max'])
+                    else:
+                        max_ = max(max_, float(items['max']))
+                        
+                    item_mean = float(items['mean'])
+                    item_rate = float(items['rate'])
+
+                    usage += int(items['usage'])
+                    mean += item_mean
+                    rate += item_rate
+                    
+                    trend_mean.append('{:.0f}'.format(item_mean))
+                    trend_rate.append('{:.0f}'.format(item_rate))
+                    
+                else:
+                    trend_mean.append('0')
+                    trend_rate.append('0')
+                    
+            mean = mean / float(minutes)
+            if mean and mean < 1:
+                mean = '1'
+            else:
+                mean = '{:.0f}'.format(mean)
+                
+            rate = rate / float(minutes)
+            if rate and rate < 0.01:
+                rate = '<0.01'
+            else:
+                rate = '{:.2f}'.format(rate)
+            
+            self.response.payload.usage = usage
+            self.response.payload.min = min_
+            self.response.payload.max = max_
+            self.response.payload.mean = mean
+            self.response.payload.rate = rate
+            self.response.payload.trend_mean = ','.join(trend_mean)
+            self.response.payload.trend_rate = ','.join(trend_rate)
+
+'''
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from collections import OrderedDict
+from copy import deepcopy
+from cStringIO import StringIO
+from datetime import datetime, timedelta
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import MINUTELY, DAILY, rrule, WEEKLY
+from heapq import nlargest
+from operator import itemgetter
+from itertools import izip, tee
+from sys import maxint
+
+# Bunch
+from bunch import Bunch
+
+# SciPy
+from scipy import stats as sp_stats
+
+# redis
+from redis import StrictRedis
+
+# Zato
+from zato.common import KVDB
+
+conn = StrictRedis()
+
+class StatsElem(object):
+    """ A single element of a statistics query result. All values make sense
+    only within the time interval of the original query, e.g. a 'min_resp_time'
+    may be 18 ms in this element because it represents statistics regarding, say,
+    the last hour yet in a different period the 'min_resp_time' may be a completely
+    different value. Likewise, 'all' in the description of parameters below means
+    'all that matched given query criteria' rather than 'all that ever existed'.
+    
+    service_name - name of the service this element describes
+    usage - how many times the service has been invoked
+    avg_mean - an arithmetical average of all the mean response times  (in ms)
+    rate - usage rate in requests/s (up to 1 decimal point)
+    usage_trend - a CSV list of values representing the service usage 
+    mean_trend - a CSV list of values representing mean response times (in ms)
+    min_resp_time - minimum service response time (in ms)
+    max_resp_time - maximum service response time (in ms)
+    all_services_usage - how many times all the services have been invoked
+    mean_all_services - an arithmetical average of all the mean response times  of all services (in ms)
+    usage_perc_all_services - this service's usage as a percentage of all_services_usage (up to 2 decimal points)
+    expected_time_elems - an OrderedDict of all the time slots mapped to a mean time and rate 
+    """
+    def __init__(self, service_name=None):
+        self.service_name = service_name
+        self.usage = 0
+        self.avg_mean = 0
+        self.rate = 0.0
+        self.usage_trend = []
+        self.mean_trend = []
+        self.min_resp_time = maxint # Hoping there will be at least response timer lower than that, if any! :-)
+        self.max_resp_time = 0
+        self.all_services_usage = 0
+        self.mean_all_services = 0
+        self.usage_perc_all_services = 0
+        self.expected_time_elems = OrderedDict()
+        
+    def __repr__(self):
+        buff = StringIO()
+        buff.write('<{} at {} '.format(self.__class__.__name__, hex(id(self))))
+        
+        attrs = (attr for attr in dir(self) if not attr.startswith('__'))
+        attrs = ('{}=[{}]'.format(attr, getattr(self, attr)) for attr in attrs)
+        buff.write(', '.join(attrs))
+        
+        buff.write('>')
+        
+        value = buff.getvalue()
+        buff.close()
+        
+        return value
+    
+def get_stats(start, stop, service='*', n=None):
+    """ Returns statistics for a given interval, as defined by 'start' and 'stop'.
+    service default to '*' for all services in that period and may be set to return
+    a one-element list of information regarding that particular service. Setting 'n' 
+    to a positive integer will make it return only top n services.
+    """
+    
+    stats_elems = {}
+    all_services_usage = 0
+
+    # All mean values
+    mean_all_services_list = []
+    
+    # A mean value of all the mean value
+    mean_all_services = 0
+
+    start = parse(start)
+    stop = parse(stop)
+    
+    delta_seconds = (stop - start).seconds
+    
+    time_elems = [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
+    
+    # We make several passes. First two passes are over Redis keys, one gathers the services, if any at all,
+    # and another one actually collects statistics for each service found. Next pass computes trends
+    # for mean response time and service usage. Another one computes each of the service's
+    # average rate and updates other attributes basing on values collected in the previous step.
+    
+    # 1st pass
+    for suffix in time_elems:
+        keys = conn.keys('{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service, suffix))
+        for key in keys:
+            service_name = key.replace(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, '').replace(':{}'.format(suffix), '')
+        
+            stats_elem = StatsElem(service_name)
+            stats_elems[service_name] = stats_elem
+            
+            # When building trends, we can't expect there will be data for all the time
+            # elems built above so to guard against it, this is a dictionary whose keys are the
+            # said elems and values are mean/usage for each elem. The values will remain
+            # 0/0.0 if there is no data for the time elem, which may mean that in this
+            # particular time slice the service wasn't invoked at all.
+            stats_elem.expected_time_elems = OrderedDict((elem, Bunch({'mean':0, 'usage':0.0})) for elem in time_elems)
+            
+    # 2nd pass
+    for service, stats_elem in stats_elems.items():
+        for suffix in time_elems:
+            key = '{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service, suffix)
+            
+            # We can convert all the values to floats here to ease with computing
+            # all the stuff and convert them still to integers later on, when necessary.
+            key_values = Bunch(((name, float(value)) for (name, value) in conn.hgetall(key).items()))
+        
+            if key_values:
+                
+                all_services_usage += key_values.usage
+                mean_all_services_list.append(key_values.mean)
+                
+                stats_elem.usage += key_values.usage
+                
+                stats_elem.min_resp_time = min(stats_elem.min_resp_time, key_values.min)
+                stats_elem.max_resp_time = max(stats_elem.max_resp_time, key_values.max)
+                
+                for attr in('mean', 'usage'):
+                    stats_elem.expected_time_elems[suffix][attr] = key_values[attr]
+                    
+    mean_all_services = '{:.0f}'.format(sp_stats.tmean(mean_all_services_list)) if mean_all_services_list else 0
+                    
+    # 3rd pass
+    for stats_elem in stats_elems.values():
+        values = stats_elem.expected_time_elems.values()
+        stats_elem.mean_trend = ','.join(['{:.0f}'.format(elem.mean) for elem in values])
+        
+        usage_trend = [int(elem.usage) for elem in values]
+        stats_elem.rate = '{:.1f}'.format(sum(usage_trend) / delta_seconds)
+        stats_elem.usage_trend = ','.join(str(elem) for elem in usage_trend)
+            
+        stats_elem.mean_all_services = mean_all_services
+        stats_elem.all_services_usage = all_services_usage
+        
+        # Don't divide by 0
+        if all_services_usage:
+            stats_elem.usage_perc_all_services = '{:.2f}'.format(100.0 * stats_elem.usage / all_services_usage)
+        
+    return stats_elems
+        
+start = '2012-07-14T20:00:54.442517'
+stop = '2012-07-14T21:00:54.442517'           
+            
+stats_elems = get_stats(start, stop, '*')
+
+for stats_elem in stats_elems.values():
+    print()
+    print(stats_elem)
+    '''
 
 class Delete(AdminService):
     """ Deletes aggregated statistics from a given interval.
@@ -215,6 +471,5 @@ class Delete(AdminService):
         input_required = ('start', 'stop')
 
     def handle(self):
-       self.broker_client.send_json({'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop}, 
-           MESSAGE_TYPE.TO_PARALLEL_PULL)
-
+        self.broker_client.send_json({'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop}, 
+                                     MESSAGE_TYPE.TO_PARALLEL_PULL)
