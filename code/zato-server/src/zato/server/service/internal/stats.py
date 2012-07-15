@@ -241,8 +241,8 @@ class StatsReturningService(AdminService):
             stats_elem.rate = '{:.1f}'.format(sum(stats_elem.usage_trend_int) / delta_seconds)
     
             stats_elem.mean_all_services = mean_all_services
-            stats_elem.all_services_time = all_services_stats.time
-            stats_elem.all_services_usage = all_services_stats.usage
+            stats_elem.all_services_time = int(all_services_stats.time)
+            stats_elem.all_services_usage = int(all_services_stats.usage)
             
             for name in('time', 'usage'):
                 if all_services_stats[name]:
