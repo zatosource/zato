@@ -3,10 +3,8 @@
 {% block extra_css %}
 
 <style type="text/css">
-.circle {
-  border-radius: 50%;
-  width: 5px;
-  height: 5px; 
+.stats-table th {
+    background-color:red
 }
 </style>
 {% endblock %}
@@ -14,6 +12,7 @@
 {% block extra_js %}
     
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/stats/top-n.js"></script>
@@ -74,97 +73,7 @@
         </tr>
         <tr>
             <td id="left-side" style="width:50%">
-                <table style="width:100%">
-                    <tr>
-                        <td class="inline_header">Slowest services (ms)
-                            <div style="width:20%;text-align:right;float:right"><a href="#">(CSV)</a></div>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>
-                            <table style="width:100%">
-                                <tr>
-                                    <td></td>
-                                    <td style="width:4%"></td>
-                                    <td></td>
-                                    <td style="text-align:right">M</td>
-                                    <td style="text-align:right">AM</td>
-                                    <td style="text-align:right">U%</td>
-                                    <td style="text-align:right">T%</td>
-                                    <td style="text-align:right">TU</td>
-                                    <td style="text-align:right">Trend</td>
-                                </tr>
-                                
-                                
-                            {% for item in slowest %}
-                                
-                                <tr>
-                                    <td>{% if item.mean > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
-                                    <td>{{ forloop.counter }}</td>    
-                                    <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                                    <td style="text-align:right">{{ item.mean|floatformat:"0" }}</td>
-                                    <td style="text-align:right;width:30px">{{ item.mean_all_services|floatformat:"0" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.usage_perc_all_services|floatformat:"1" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.time_perc_all_services|floatformat:"1"}}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
-                                    <td><span class="trend">{{ item.mean_trend }}</span></td>
-                                </tr>
-                                
-                            {% endfor %}
-                                
-                                
-                            </table>
-                            <br/>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td class="inline_header">Most commonly used
-                            <div style="width:20%;text-align:right;float:right"><a href="#">(CSV)</a></div>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>
-                            <table style="width:100%">
-                                <tr>
-                                    <td></td>
-                                    <td style="width:4%"></td>
-                                    <td></td>
-                                    <td style="text-align:right">U</td>
-                                    <td style="text-align:right">Rq/s</td>
-                                    <td style="text-align:right">U%</td>
-                                    <td style="text-align:right">T%</td>
-                                    <td style="text-align:right">T</td>
-                                    <td style="text-align:right">Trend</td>
-                                </tr>
-                                
-                            {% for item in most_used %}
-                                
-                                <tr>
-                                    <td>{% if item.usage_perc_all_services > atttention_top_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
-                                    <td>{{ forloop.counter }}</td>    
-                                    <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                                    <td style="text-align:right;width:30px">{{ item.usage }}</td>
-                                    <td style="text-align:right;width:30px">{{ item.rate }}</td>
-                                    <td style="text-align:right;width:30px">{{ item.usage_perc_all_services|floatformat:"1" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.time_perc_all_services|floatformat:"1"}}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
-                                    <td><span class="trend">{{ item.usage_trend }}</span></td>
-                                </tr>
-                                
-                            {% empty %}
-                            zzaa
-                                
-                            {% endfor %}
-                                
-                                
-                            </table>
-                        </td>
-                    </tr>
-                    
-                </table>
+                {% include "zato/stats/top-n-table.html" %}
             </td>
 
             <td id="right-side" style="width:50%;display:none">
