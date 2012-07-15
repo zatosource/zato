@@ -109,14 +109,7 @@ def top_n(req, choice):
             
             if zato_path('response.item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.response.item_list.item:
-                    #item = {'service_name':msg_item.service_name.text}
-                                 
-                    #for name in('avg', 'total'):
-                    #    value = getattr(msg_item, name).text or '0'
-                    #    item[name] = int(float(value))
-                     
-                    item = StatsElem.from_xml(msg_item)
-                    append_to.append(item)
+                    append_to.append(StatsElem.from_xml(msg_item))
         
         def _params_last_hour():
             trend_elems = 60

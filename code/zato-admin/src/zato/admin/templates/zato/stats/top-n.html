@@ -92,7 +92,7 @@
                                     <td style="text-align:right">AM</td>
                                     <td style="text-align:right">U%</td>
                                     <td style="text-align:right">T%</td>
-                                    <td style="text-align:right">T</td>
+                                    <td style="text-align:right">TU</td>
                                     <td style="text-align:right">Trend</td>
                                 </tr>
                                 
@@ -100,15 +100,15 @@
                             {% for item in slowest %}
                                 
                                 <tr>
-                                    <td>{% if item.value > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
-                                    <td>{{ item.position }}</td>    
+                                    <td>{% if item.mean > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
+                                    <td>{{ forloop.counter }}</td>    
                                     <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                                    <td style="text-align:right">{{ item.value|floatformat:"0" }}</td>
-                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.avg|floatformat:"0" }}</td>    
-                                    <td><span class="trend">{{ item.trend }}</span></td>
+                                    <td style="text-align:right">{{ item.mean|floatformat:"0" }}</td>
+                                    <td style="text-align:right;width:30px">{{ item.mean_all_services|floatformat:"0" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.usage_perc_all_services|floatformat:"1" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.time_perc_all_services|floatformat:"1"}}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
+                                    <td><span class="trend">{{ item.mean_trend }}</span></td>
                                 </tr>
                                 
                             {% endfor %}
@@ -133,7 +133,7 @@
                                     <td style="width:4%"></td>
                                     <td></td>
                                     <td style="text-align:right">U</td>
-                                    <td style="text-align:right">Req/s</td>
+                                    <td style="text-align:right">Rq/s</td>
                                     <td style="text-align:right">U%</td>
                                     <td style="text-align:right">T%</td>
                                     <td style="text-align:right">T</td>
@@ -143,15 +143,15 @@
                             {% for item in most_used %}
                                 
                                 <tr>
-                                    <td>{% if item.percent > atttention_top_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
-                                    <td>{{ item.position }}</td>    
+                                    <td>{% if item.usage_perc_all_services > atttention_top_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
+                                    <td>{{ forloop.counter }}</td>    
                                     <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                                    <td style="text-align:right;width:30px">{{ item.value|floatformat:"0" }}</td>
+                                    <td style="text-align:right;width:30px">{{ item.usage }}</td>
                                     <td style="text-align:right;width:30px">{{ item.rate }}</td>
-                                    <td style="text-align:right;width:30px">{{ item.percent|floatformat:"2" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.percent|floatformat:"2" }}</td>    
-                                    <td style="text-align:right;width:30px">{{ item.percent|floatformat:"2" }}</td>    
-                                    <td><span class="trend">{{ item.trend }}</span></td>
+                                    <td style="text-align:right;width:30px">{{ item.usage_perc_all_services|floatformat:"1" }}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.time_perc_all_services|floatformat:"1"}}</td>    
+                                    <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
+                                    <td><span class="trend">{{ item.usage_trend }}</span></td>
                                 </tr>
                                 
                             {% empty %}
