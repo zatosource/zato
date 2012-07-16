@@ -27,146 +27,159 @@
 </div>
 
 <div id="markup">
-        <table id="data-table">
-            <tr>
-                <td class='inline_header'>Overview</td>
-            </tr>
-            <tr>
-                <td>
-                    <div class="item-details-body">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header'>Overview</td>
+        </tr>
+        <tr>
+            <td>
+                <div class="item-details-body">
+                    <table style="width:100%">
+                        <tr>
+                        
+                            <td style="width:35%">
+                                <table>
+                                    <tr>
+                                        <td class='inline_header' colspan="2">Statistics</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Last response time</td>
+                                        <td>{{ service.time_last|floatformat:0 }} ms</td>
+                                    </tr>
+                                    <tr>
+                                        <td>All time usage</td>
+                                        <td>{{ service.usage }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>All time min/max/mean of 100% (ms)</td>
+                                        <td>{{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1h usage</td>
+                                        <td>{{ service.time_usage_1h|default:0 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1h min/max/mean of 100% (ms)</td>
+                                        <td>{{ service.time_min_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_max_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_mean_1h|floatformat:0|default:0 }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1h req/s</td>
+                                        <td>{{ service.time_rate_1h|default:"0.0" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>1h mean trend</td>
+                                        <td>
+                                            {% if service.time_mean_trend_1h %}
+                                            <span class="sparklines" id="trend_mean_1h"><!-- {{ service.time_mean_trend_1h }} --></span>
+                                            {% else %}
+                                            N/A
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>1h req trend</td>
+                                        <td>
+                                            {% if service.time_usage_trend_1h %}
+                                            <span class="sparklines" id="trend_rate_1h"><!-- {{ service.time_usage_trend_1h }} --></span>
+                                            {% else %}
+                                            N/A
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2"><a href="{% url stats-by-service %}?service_name={{ service.name}}&amp;cluster={{ cluster_id }}">(More statistics)</a></td>
+                                    </tr>
+                                </table>
+                            </td>
+
+                            <td style="width:65%">
+                                <table style="width:100%">
+                                    <tr>
+                                        <td class='inline_header'>Channels</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Plain HTTP: {% if not service.plain_http_channels %}(None) {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            SOAP: {% if not service.soap_channels %}(None) {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            AMQP: {% if not service.amqp_channels %}(None) {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            JMS WebSphere MQ: {% if not service.wmq_channels %}(None) {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            Zero MQ: {% if not service.zmq_channels %}(None) {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div> <!-- class="item-details-body" -->
+            </td>
+        </tr>
+        <tr>
+            <td class='inline_header'>Deployment info</td>
+        </tr>
+        <tr>
+            <td>
+                {% if service.deployment_info %}
+                    <table>
+                    {% for item in service.deployment_info %}
+                        <tr>
+                            <td>{{ item.server_name }}</td>
+                            <td>{{ item.details }}</td>
+                        </tr>
+                    {% endfor %}
+                    </table>
+                {% else %}
+                    (Service isn't deployed on any servers)
+                {% endif %}
+            </td>
+        </tr>
+
+        <tr>
+            <td class='inline_header'>Invoke the service directly</td>
+        </tr>
+        <tr>
+            <td>
+                <form id="invoke_service_form" action="{% url service-invoke service.id cluster_id %}" method="post">
+                    <textarea style="width:100%; height:350px" id="payload" name="payload"></textarea>
+                    <br/><br/>
                     
-    <table>
-    
-        <tr>
-            <td>Last response time</td>
-            <td>{{ service.time_last|floatformat:0 }} ms</td>
-            <td><a class="common" href="#">(statistics)</a></td>
+                    <table>
+                        <tr>
+                            <td>
+                                Data format:
+                            </td>
+                            <td>
+                                <select name="data_format" id="data_format">
+                                    <option value="" selected="selected">----------</option>
+                                    <option value="json">JSON</option>
+                                    <option value="xml">XML</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Transport:
+                            </td>
+                            <td>
+                                <select name="transport" id="transport">
+                                    <option value="" selected="selected">----------</option>
+                                    <option value="plain_http">Plain HTTP</option>
+                                    <option value="soap">SOAP</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <input type="hidden" id="service_id" name="service_id" value="{{ service.id }}" />
+                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    
+                    <div style="text-align:right">
+                        <input type="submit" value="Submit" />
+                    </div>
+                    
+                </form>
+            </td>
         </tr>
-        
-        <tr>
-            <td>All time usage</td>
-            <td>{{ service.usage }}</td>
-            <td><a class="common" href="#">(statistics)</a></td>
-        </tr>
-        
-        <tr>
-            <td>All time min/max/mean of 100% (ms)</td>
-            <td>{{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}</td>
-            <td><a class="common" href="#">(statistics)</a></td>
-        </tr>
-        
-        <tr>
-            <td>1h usage</td>
-            <td>{{ service.time_usage_1h|default:0 }}</td>
-            <td><a class="common" href="#">(statistics)</a></td>
-        </tr>
-        
-        <tr>
-            <td>1h min/max/mean of 100% (ms)</td>
-            <td>{{ service.time_min_1h|floatformat:0|default:0 }}/{{ service.time_max_1h|floatformat:0|default:0 }}/{{ service.time_mean_1h|floatformat:0 }}</td>
-            <td><a class="common" href="#">(statistics)</a></td>
-        </tr>
-        
-        <tr>
-            <td>1h req/s</td>
-            <td>{{ service.time_rate_1h|floatformat:2 }}</td>
-            <td><a class="common" href="#">(statistics)</a></td>
-        </tr>
-        
-        <tr>
-            <td>1h req trend</td>
-            <td><span class="sparklines" id="trend_rate_1h"><!-- {{ service.time_trend_rate_1h }} --></span></td>
-            <td><a class="common" href="#">(statistics)</a></td>
-        </tr>
-        
-        <tr>
-            <td>1h mean trend</td>
-            <td><span class="sparklines" id="trend_mean_1h"><!-- {{ service.time_trend_mean_1h }} --></span></td>
-            <td><a class="common" href="#">(statistics)</a></td>
-        </tr>
-        
     </table>
-                    </div>                    
-                </td>
-            </tr>
-            <tr>
-                <td class='inline_header'>Deployment info</td>
-            </tr>
-            <tr>
-                <td>
-                    {% if service.deployment_info %}
-                        <table>
-                        {% for item in service.deployment_info %}
-                            <tr>
-                                <td>{{ item.server_name }}</td>
-                                <td>{{ item.details }}</td>
-                            </tr>
-                        {% endfor %}
-                        </table>
-                    {% else %}
-                        (Service isn't deployed on any servers)
-                    {% endif %}
-                </td>
-            </tr>
-            <tr>
-                <td class='inline_header'>Channels</td>
-            </tr>
-            <tr>
-                <td>
-                    Plain HTTP: {% if not service.plain_http_channels %}(None) {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                    SOAP: {% if not service.soap_channels %}(None) {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                    AMQP: {% if not service.amqp_channels %}(None) {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                    JMS WebSphere MQ: {% if not service.wmq_channels %}(None) {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                    Zero MQ: {% if not service.zmq_channels %}(None) {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                </td>
-            </tr>
-            <tr>
-                <td class='inline_header'>Invoke the service directly</td>
-            </tr>
-            <tr>
-                <td>
-                    <form id="invoke_service_form" action="{% url service-invoke service.id cluster_id %}" method="post">
-                        <textarea style="width:100%; height:350px" id="payload" name="payload"></textarea>
-                        <br/><br/>
-                        
-                        <table>
-                            <tr>
-                                <td>
-                                    Data format:
-                                </td>
-                                <td>
-                                    <select name="data_format" id="data_format">
-                                        <option value="" selected="selected">----------</option>
-                                        <option value="json">JSON</option>
-                                        <option value="xml">XML</option>
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    Transport:
-                                </td>
-                                <td>
-                                    <select name="transport" id="transport">
-                                        <option value="" selected="selected">----------</option>
-                                        <option value="plain_http">Plain HTTP</option>
-                                        <option value="soap">SOAP</option>
-                                    </select>
-                                </td>
-                            </tr>
-                        </table>
-                        
-                        <input type="hidden" id="service_id" name="service_id" value="{{ service.id }}" />
-                        <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                        
-                        <div style="text-align:right">
-                            <input type="submit" value="Submit" />
-                        </div>
-                        
-                    </form>
-                </td>
-            </tr>
-        </table>
 </div>
 
 

@@ -151,7 +151,7 @@ class StatsReturningService(AdminService):
         """
         input_required = ('start', 'stop')
         input_optional = ('service_name', 'n', 'n_type')
-        output_required = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
+        output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
             'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
             'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services')
 
@@ -275,19 +275,26 @@ class GetTopN(StatsReturningService):
     """ Returns top N slowest or most commonly used services for a given period.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
-        StatsReturningService.SimpleIO.input_required + ('n', 'n_type')
+        input_required = StatsReturningService.SimpleIO.input_required + ('n', 'n_type')
 
     def handle(self):
         self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(self.request.input.start, 
             self.request.input.stop, n=int(self.request.input.n), n_type=self.request.input.n_type))
 
 class GetByService(StatsReturningService):
-    """ Returns basic statistics regarding a service, going back up to the period,
-    expressed in minutes. The data returned is:
-    - usage count
-    - min, max and mean response time
-    - CSV data for the period requested representing mean response time trend
-    - CSV data for the period requested representing request rate (req/s) trend
+    """ Returns statistics regarding a particular service.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
-        input_required = ('service_id', )
+        input_required = StatsReturningService.SimpleIO.input_required + ('service_id',)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            service = session.query(Service).\
+                filter(Service.id==self.request.input.service_id).\
+                one()
+                
+        stats_elem = list(self.get_stats(self.request.input.start, self.request.input.stop, service.name))
+        if stats_elem:
+            stats_elem = stats_elem[0]
+            self.response.payload = Bunch(stats_elem.to_dict())
+            
