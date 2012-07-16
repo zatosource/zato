@@ -18,9 +18,16 @@ $(document).ready(function() {
     
     var data = {};
     var keys = ['cluster_id', 'left_start', 'left_stop', 'n'];
+    var value = null;
     
     $.each(keys, function(idx, key) {
-        var value = $('#'+key).val();
+        if(key == 'n') {
+            value = $('#id_'+key).val();
+        }
+        else {
+            value = $('#'+key).val();
+        }
+        
         data[key.replace('left_', '')] = value;
     });
     

@@ -123,7 +123,7 @@ def top_n(req, choice):
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
     }
-
+    
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
