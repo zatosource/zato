@@ -27,6 +27,9 @@ from datetime import datetime
 # anyjson
 from anyjson import dumps
 
+# Bunch
+from bunch import Bunch
+
 # dateutil
 from dateutil.relativedelta import relativedelta
 
@@ -132,19 +135,21 @@ def top_n(req, choice):
 @meth_allowed('GET', 'POST')
 def top_n_data(req):
     
-    start = req.GET.get('start') or req.POST.get('start')
-    stop = req.GET.get('start') or req.POST.get('stop')
-    n = req.GET.get('n') or req.POST.get('n') or 0
-    
+    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'format'))
+    for name in req_input:
+        req_input[name] = req.GET.get(name) or req.POST.get(name)
+
     try:
-        n = int(n)
+        req_input.n = int(req_input.n)
     except ValueError:
-        n = 0
+        req_input.n = 0
+        
+    req_input.format = req_input.format or 'html'
     
     def _get_stats(n_type):
         out = []
         zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-top-n',
-            {'start':start, 'stop':stop, 'n':n, 'n_type':n_type})
+            {'start':req_input.start, 'stop':req_input.stop, 'n':req_input.n, 'n_type':n_type})
         
         if zato_path('response.item_list.item').get_from(zato_message) is not None:
             for msg_item in zato_message.response.item_list.item:
@@ -155,13 +160,13 @@ def top_n_data(req):
     return_data = {}
     settings = {}
     
-    if n:
+    if req_input.n:
         for name in('atttention_slow_threshold', 'atttention_top_threshold'):
             settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
         
     for name in('mean', 'usage'):
         d = {}
-        if n:
+        if req_input.n:
             d.update({name:_get_stats(name)})
             d.update(settings)
 
