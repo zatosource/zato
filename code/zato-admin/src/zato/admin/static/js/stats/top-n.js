@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-    var sparklines_options = {'width':'80px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'fillColor':false}
+    var sparklines_options = {'width':'48px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'fillColor':false}
 
     var _callback = function(data, status) {
         var json = $.parseJSON(data.responseText);
