@@ -24,6 +24,7 @@
     <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
     <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
     <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
+    <a href="{% url service-slow-response service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>
 
 <div id="markup">
