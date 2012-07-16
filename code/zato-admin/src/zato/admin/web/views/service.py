@@ -433,3 +433,8 @@ def last_stats(req, service_id, cluster_id):
         logger.error(msg)
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
+
+
+@meth_allowed('GET')
+def slow_response(req, service_name):
+    pass
