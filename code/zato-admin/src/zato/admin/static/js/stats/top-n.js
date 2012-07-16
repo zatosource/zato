@@ -21,13 +21,7 @@ $(document).ready(function() {
     var value = null;
     
     $.each(keys, function(idx, key) {
-        if(key == 'n') {
-            value = $('#id_'+key).val();
-        }
-        else {
-            value = $('#'+key).val();
-        }
-        
+        value = $('#'+key).val();
         data[key.replace('left_', '')] = value;
     });
     

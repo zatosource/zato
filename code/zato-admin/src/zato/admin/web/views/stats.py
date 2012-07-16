@@ -134,7 +134,12 @@ def top_n_data(req):
     
     start = req.GET.get('start') or req.POST.get('start')
     stop = req.GET.get('start') or req.POST.get('stop')
-    n = req.GET.get('n') or req.POST.get('n')
+    n = req.GET.get('n') or req.POST.get('n') or 0
+    
+    try:
+        n = int(n)
+    except ValueError:
+        n = 0
     
     def _get_stats(n_type):
         out = []
@@ -148,14 +153,18 @@ def top_n_data(req):
         return out
     
     return_data = {}
-    
     settings = {}
-    for name in('atttention_slow_threshold', 'atttention_top_threshold'):
-        settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
     
+    if n:
+        for name in('atttention_slow_threshold', 'atttention_top_threshold'):
+            settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
+        
     for name in('mean', 'usage'):
-        d = {name:_get_stats(name)}
-        d.update(settings)
+        d = {}
+        if n:
+            d.update({name:_get_stats(name)})
+            d.update(settings)
+
         return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
