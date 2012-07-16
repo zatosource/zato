@@ -24,6 +24,9 @@ import logging
 from copy import deepcopy
 from datetime import datetime
 
+# anyjson
+from anyjson import dumps
+
 # dateutil
 from dateutil.relativedelta import relativedelta
 
@@ -98,18 +101,9 @@ def top_n(req, choice):
         
     start, stop = '', ''
     n = req.GET.get('n', 10)
-    slowest, most_used = [], []
     now = datetime.utcnow()
     
     if req.zato.get('cluster'):
-        
-        def _get_stats(start, stop, n_type, append_to):
-            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-top-n',
-                {'start':start, 'stop':stop, 'n':n, 'n_type':n_type})
-            
-            if zato_path('response.item_list.item').get_from(zato_message) is not None:
-                for msg_item in zato_message.response.item_list.item:
-                    append_to.append(StatsElem.from_xml(msg_item))
         
         def _params_last_hour():
             trend_elems = 60
@@ -118,36 +112,53 @@ def top_n(req, choice):
             
         start, stop = locals()['_params_' + choice]()
 
-        # Collect basic stats
-        _get_stats(start, stop, 'mean', slowest)
-        _get_stats(start, stop, 'usage', most_used)
-        
-        #for item in most_used:
-        #    rate = item['value']/seconds
-        #    item['rate'] = '{:.2f}'.format(rate) if rate > 0.01 else '<0.01'
-        #    item['percent'] = float(item['value'] / item['total']) * 100
-        
     return_data = {
         'start': start,
         'stop': stop,
+        'n': n,
         'label': labels[choice], 
         'n_form': NForm(initial={'n':n}),
         'compare_form': CompareForm(compare_to=compare_to[choice]),
-        'slowest':slowest,
-        'most_used':most_used,
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
     }
 
-    for name in('atttention_slow_threshold', 'atttention_top_threshold'):
-        return_data[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
-    
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
     return render_to_response('zato/stats/top-n.html', return_data, context_instance=RequestContext(req))
 
+@meth_allowed('GET', 'POST')
+def top_n_data(req):
+    
+    start = req.GET.get('start') or req.POST.get('start')
+    stop = req.GET.get('start') or req.POST.get('stop')
+    n = req.GET.get('n') or req.POST.get('n')
+    
+    def _get_stats(n_type):
+        out = []
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-top-n',
+            {'start':start, 'stop':stop, 'n':n, 'n_type':n_type})
+        
+        if zato_path('response.item_list.item').get_from(zato_message) is not None:
+            for msg_item in zato_message.response.item_list.item:
+                out.append(StatsElem.from_xml(msg_item))
+                
+        return out
+    
+    return_data = {}
+    
+    settings = {}
+    for name in('atttention_slow_threshold', 'atttention_top_threshold'):
+        settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
+    
+    for name in('mean', 'usage'):
+        d = {name:_get_stats(name)}
+        d.update(settings)
+        return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
+    
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @meth_allowed('GET')
 def settings(req):

@@ -1,0 +1,38 @@
+    <tr>
+        <td>
+            <table style="width:100%" class="stats-table" id="left-usage">
+                <thead>
+                <tr>
+                    <th></th>
+                    <th></th>
+                    <th><a href="#">Name</a></th>
+                    <th style="text-align:right"><a href="#">U</a></th>
+                    <th style="text-align:right"><a href="#">Rq/s</a></th>
+                    <th style="text-align:right"><a href="#">U%</a></th>
+                    <th style="text-align:right"><a href="#">T%</a></th>
+                    <th style="text-align:right"><a href="#">TU</a></th>
+                    <th style="text-align:right">Trend</th>
+                </tr>
+                </thead>
+                
+                <tbody>
+            {% for item in usage %}
+                <tr>
+                    <td>{% if item.usage_perc_all_services > atttention_top_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
+                    <td>{{ forloop.counter }}</td>    
+                    <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                    <td style="text-align:right;width:30px">{{ item.usage }}</td>
+                    <td style="text-align:right;width:30px">{{ item.rate }}</td>
+                    <td style="text-align:right;width:30px">{{ item.usage_perc_all_services|floatformat:"1" }}</td>    
+                    <td style="text-align:right;width:30px">{{ item.time_perc_all_services|floatformat:"1"}}</td>    
+                    <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
+                    <td><span class="trend">{{ item.usage_trend }}</span></td>
+                </tr>
+            {% empty %}
+                (No data)
+            {% endfor %}
+                </tbody>
+                
+            </table>
+        </td>
+    </tr>

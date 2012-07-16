@@ -13,6 +13,7 @@
     
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/stats/top-n.js"></script>
@@ -52,9 +53,10 @@
             <td style="text-align:right">
                 <form action="." method="GET">
                     Show {{ n_form.n }}  items <input type="submit" value="OK" />
-                    <input type="hidden" name="start" value="{{ start }}" />
-                    <input type="hidden" name="stop" value="{{ stop }}" />
+                    <input type="hidden" name="start" id="left_start" value="{{ start }}" />
+                    <input type="hidden" name="stop" id="left_stop" value="{{ stop }}" />
                     <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" name="n" id="n" value="{{ n }}" />
                 </form>
                 
             </td>
@@ -73,71 +75,11 @@
         </tr>
         <tr>
             <td id="left-side" style="width:50%">
-                {% include "zato/stats/top-n-table.html" %}
+                {% include "zato/stats/top-n-table.html" with side="left"%}
             </td>
 
             <td id="right-side" style="width:50%;display:none">
-                <table style="width:100%">
-                    <tr>
-                        <td class="inline_header">Slowest services 
-                            <div style="width:20%;text-align:right;float:right"><a href="#">(CSV)</a></div>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>
-                            <table style="width:100%">
-                                <tr>
-                                    <td style="width:60%"></td>
-                                    <td style="width:60%"></td>
-                                    <td style="text-align:right">Mean (ms)</td>
-                                    <td style="text-align:right">Trend</td>
-                                </tr>
-
-                            {% for item in slowest %}
-                                
-                                <tr>
-                                    <td>{{ item.position }}</td>    
-                                    <td><a href="#">zato.kvdb.data_dict.translation.GetList</a></td>
-                                    <td style="text-align:right">2381</td>
-                                    <td></td>
-                                </tr>
-                                
-                            {% endfor %}
-
-
-                            </table>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td class="inline_header">Most commonly used
-                            <div style="width:20%;text-align:right;float:right"><a href="#">(CSV)</a></div>
-                        </td>
-                    </tr>
-                    
-                    <tr>
-                        <td>
-                            <table style="width:100%">
-                                <tr>
-                                    <td style="width:50%"></td>
-                                    <td style="text-align:right">Usage</td>
-                                    <td style="text-align:right">%</td>
-                                    <td style="text-align:right">Req/s</td>
-                                    <td style="text-align:right">Trend</td>
-                                </tr>
-                                <tr>
-                                    <td><a href="#">zato.kvdb.data_dict.translation.GetList</a></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    
-                </table>
+                {% include "zato/stats/top-n-table.html" with side="right"%}
             </td>
         </tr>
     </table>

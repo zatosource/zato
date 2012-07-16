@@ -216,6 +216,7 @@ urlpatterns = patterns('',
     url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/export/$', impexp.export, name='kvdb-data-dict-impexp-export'),
     
     # Statistics
+    url(r'^zato/stats/top-n/data/$', stats.top_n_data, name='stats-top-n-data'),
     url(r'^zato/stats/top-n/(?P<choice>.*)/$', stats.top_n, name='stats-top-n'),
     url(r'^zato/stats/settings/$', stats.settings, name='stats-settings'),
     url(r'^zato/stats/settings/save/$', stats.settings_save, name='stats-settings-save'),
