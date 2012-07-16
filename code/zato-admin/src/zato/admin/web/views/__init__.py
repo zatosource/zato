@@ -59,7 +59,7 @@ def meth_allowed(*meths):
     for a given view. An exception will be raised if a request has been made
     with a method outside of those allowed, otherwise the view executes
     unchanged.
-    TODO: Make it return a custom Exception so that whoever called us can catch
+    TODO: Make it return a custom Exception so that whoever called us can
     catch it and return a correct HTTP status (405 Method not allowed).
     """
     def inner_meth_allowed(view):
