@@ -181,7 +181,7 @@ def _top_n_data_html(req_input, cluster):
             settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
         
     for name in('mean', 'usage'):
-        d = {}
+        d = {'cluster_id':cluster.id}
         if req_input.n:
             stats = _get_stats(cluster, req_input.start, req_input.stop, req_input.n, name)
             
@@ -323,3 +323,7 @@ def maintenance_delete(req):
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
     return redirect('{}?cluster={}'.format(reverse('stats-maintenance'), req.zato.cluster_id))
+
+@meth_allowed('GET')
+def by_service(req):
+    pass

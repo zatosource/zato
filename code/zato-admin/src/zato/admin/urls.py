@@ -222,6 +222,7 @@ urlpatterns = patterns('',
     url(r'^zato/stats/settings/save/$', stats.settings_save, name='stats-settings-save'),
     url(r'^zato/stats/maintenance/$', stats.maintenance, name='stats-maintenance'),
     url(r'^zato/stats/maintenance/delete/$', stats.maintenance_delete, name='stats-maintenance-delete'),
+    url(r'^zato/stats/by-service/$', stats.by_service, name='stats-by-service'),
 
 )
 

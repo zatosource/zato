@@ -22,7 +22,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from collections import namedtuple
+from datetime import datetime
 from traceback import format_exc
+
+# anyjson
+from anyjson import dumps, loads
+
+# dateutil
+from dateutil.relativedelta import relativedelta
 
 # Django
 from django.core.urlresolvers import reverse
@@ -42,14 +49,11 @@ from pygments.formatters import HtmlFormatter
 # validate
 from validate import is_boolean
 
-# anyjson
-from anyjson import dumps, loads
-
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
-from zato.common import SourceInfo, zato_path
+from zato.common import SourceInfo, ZATO_NONE, zato_path
 from zato.common.odb.model import Service
 from zato.common.util import TRACE1
 
@@ -179,12 +183,19 @@ def details(req, service_name):
                     value = is_boolean(value)
 
                 setattr(service, name, value)
+
+            now = datetime.utcnow()
+            start = now+relativedelta(minutes=-60)
                 
-            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-by-service', {'service_id':service.id, 'minutes':60})
+            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
             if zato_path('response.item').get_from(zato_message) is not None:
                 msg_item = zato_message.response.item
-                for name in('usage', 'min', 'max', 'mean', 'rate', 'trend_mean', 'trend_rate'):
-                    setattr(service, 'time_{}_1h'.format(name), getattr(msg_item, name).text)
+                for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
+                    value = getattr(msg_item, name).text
+                    if not value or value == ZATO_NONE:
+                        value = ''
+
+                    setattr(service, 'time_{}_1h'.format(name), value)
 
             for channel_type in('plain_http', 'soap', 'amqp', 'jms-wmq', 'zmq'):
                 channels = _get_channels(req.zato.cluster, service.id, channel_type)
