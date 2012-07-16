@@ -18,13 +18,13 @@
                 <tbody>
             {% for item in mean %}
                 <tr>
-                    <td>{% if item.mean > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
-                    <td>{{ forloop.counter }}</td>    
-                    <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                    <td style="text-align:right">{{ item.mean|floatformat:"0" }}</td>
+                    <td style="width:10px">{% if item.mean > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
+                    <td style="width:10px">{{ forloop.counter }}</td>    
+                    <td style="width:200px"><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                    <td style="text-align:right;width:30px">{% if item.mean != 0 and item.mean < 1 %}&lt;1{% else %}{{ item.mean }}{% endif %}</td>
                     <td style="text-align:right;width:30px">{{ item.mean_all_services|floatformat:"0" }}</td>    
-                    <td style="text-align:right;width:30px">{{ item.usage_perc_all_services|floatformat:"1" }}</td>    
-                    <td style="text-align:right;width:30px">{{ item.time_perc_all_services|floatformat:"1"}}</td>    
+                    <td style="text-align:right;width:30px">{% if item.usage_perc_all_services < 0.1 %}&lt;0.1{% else %}{{ item.usage_perc_all_services|floatformat:"1" }}{% endif %}</td>
+                    <td style="text-align:right;width:30px">{% if item.time_perc_all_services < 0.1 %}&lt;0.1{% else %}{{ item.time_perc_all_services|floatformat:"1" }}{% endif %}</td>
                     <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
                     <td><span class="trend">{{ item.mean_trend }}</span></td>
                 </tr>

@@ -85,3 +85,17 @@ div.page_prompt a.current {
 #id_file {
 	width:100%
 }
+
+.hidden {
+	visibility: hidden;
+	display: none;
+}
+
+.visible {
+	visibility: visible;
+	
+	/* The question is whether this is a proper approach, I wish there was
+	   a 'browser-default' value instead of 'initial' available.
+	*/
+	display: initial; 
+}

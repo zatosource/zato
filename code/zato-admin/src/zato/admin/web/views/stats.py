@@ -22,6 +22,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
+from cStringIO import StringIO
+from csv import DictWriter
 from datetime import datetime
 
 # anyjson
@@ -79,6 +81,20 @@ job_mappings = {
     JobAttrFormMapping('zato.stats.AggregateByMinute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
 
+def _get_stats(cluster, start, stop, n, n_type):
+    """ Returns at most n statistics elements of a given n_type for the period
+    between start and stop.
+    """
+    out = []
+    zato_message, _  = invoke_admin_service(cluster, 'zato:stats.get-top-n',
+        {'start':start, 'stop':stop, 'n':n, 'n_type':n_type})
+    
+    if zato_path('response.item_list.item').get_from(zato_message) is not None:
+        for msg_item in zato_message.response.item_list.item:
+            out.append(StatsElem.from_xml(msg_item))
+            
+    return out
+
 @meth_allowed('GET')
 def top_n(req, choice):
     labels = {'last_hour':'Last hour', 'today':'Today', 'yesterday':'Yesterday', 'last_24h':'Last 24h',
@@ -132,10 +148,59 @@ def top_n(req, choice):
 
     return render_to_response('zato/stats/top-n.html', return_data, context_instance=RequestContext(req))
 
+def _top_n_data_csv(req_input, cluster):
+
+    n_type_keys = {
+        'mean': ['service_name', 'mean', 'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services', 'all_services_usage', 'mean_trend'],
+        'usage': ['service_name', 'usage', 'rate', 'usage_perc_all_services', 'time_perc_all_services', 'all_services_usage', 'usage_trend'],
+        }
+    
+    buff = StringIO()
+    writer = DictWriter(buff, n_type_keys[req_input.n_type], extrasaction='ignore')
+    writer.writeheader()
+    
+    for stat in _get_stats(cluster, req_input.start, req_input.stop, req_input.n, req_input.n_type):
+        writer.writerow(stat.to_dict())
+        
+    out = buff.getvalue()
+    buff.close()
+        
+    response = HttpResponse(out, mimetype='text/csv')
+    response['Content-Disposition'] = 'attachment; filename={}'.format('zato-stat.csv')
+    
+    return response
+
+def _top_n_data_html(req_input, cluster):
+    
+    return_data = {'has_stats':False}
+    settings = {}
+    query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
+    
+    if req_input.n:
+        for name in('atttention_slow_threshold', 'atttention_top_threshold'):
+            settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
+        
+    for name in('mean', 'usage'):
+        d = {}
+        if req_input.n:
+            stats = _get_stats(cluster, req_input.start, req_input.stop, req_input.n, name)
+            
+            # I.e. whether it's not an empty list (assuming both stats will always be available or none will be)
+            return_data['has_stats'] = len(stats)
+            
+            return_data['{}_csv_href'.format(name)] = '{}?{}&amp;format=csv&amp;n_type={}&amp;cluster={}'.format(
+                reverse('stats-top-n-data'), query_data, name, cluster.id)
+            
+            d.update({name:stats})
+            d.update(settings)
+
+        return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
+    
+    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+
 @meth_allowed('GET', 'POST')
 def top_n_data(req):
-    
-    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'format'))
+    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format'))
     for name in req_input:
         req_input[name] = req.GET.get(name) or req.POST.get(name)
 
@@ -146,34 +211,8 @@ def top_n_data(req):
         
     req_input.format = req_input.format or 'html'
     
-    def _get_stats(n_type):
-        out = []
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-top-n',
-            {'start':req_input.start, 'stop':req_input.stop, 'n':req_input.n, 'n_type':n_type})
-        
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            for msg_item in zato_message.response.item_list.item:
-                out.append(StatsElem.from_xml(msg_item))
-                
-        return out
+    return globals()['_top_n_data_{}'.format(req_input.format)](req_input, req.zato.cluster)
     
-    return_data = {}
-    settings = {}
-    
-    if req_input.n:
-        for name in('atttention_slow_threshold', 'atttention_top_threshold'):
-            settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
-        
-    for name in('mean', 'usage'):
-        d = {}
-        if req_input.n:
-            d.update({name:_get_stats(name)})
-            d.update(settings)
-
-        return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
-    
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
-
 @meth_allowed('GET')
 def settings(req):
     
