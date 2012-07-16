@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-    var sparklines_options = {'width':'48px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'fillColor':false}
+    var sparklines_options = {'width':'46px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'fillColor':false}
 
     var _callback = function(data, status) {
         var json = $.parseJSON(data.responseText);
@@ -11,9 +11,17 @@ $(document).ready(function() {
             $(String.format('#left-{0}-tr', n_type)).after(json[n_type]);
             $(String.format('#left-{0}', n_type)).tablesorter();
         });
-        
-        $('.trend').sparkline('html', sparklines_options);    
 
+        if(json.has_stats) {
+            $('.left-csv').removeClass('hidden').addClass('visible');
+            $('.trend').sparkline('html', sparklines_options);
+            $('#left-usage-csv').attr('href', json.usage_csv_href);
+            $('#left-mean-csv').attr('href', json.mean_csv_href);
+        }
+        else {
+            $('.left-csv').removeClass('visible').addClass('hidden');
+        }
+        
     };
     
     var data = {};
