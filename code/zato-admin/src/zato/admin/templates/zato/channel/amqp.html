@@ -54,16 +54,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    <div class="prompt">
-    {% if not cluster_id %}
-        Choose a cluster to manage AMQP channels
-    {% endif %}
-
-    <form action="." method="get">
-        {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show channels" />
-    </form>
-    </div>
+{% include "zato/choose-cluster.html" with page_prompt="Show channels"%}
 
 
     {% if cluster_id %}
