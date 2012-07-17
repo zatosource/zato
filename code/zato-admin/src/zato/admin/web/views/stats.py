@@ -33,6 +33,7 @@ from anyjson import dumps
 from bunch import Bunch
 
 # dateutil
+from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 
 # Django
@@ -104,7 +105,7 @@ def top_n(req, choice):
         'last_hour':[
             ('prev_hour', 'The previous hour'),
             ('prev_day', 'Same hour the previous day'),
-            ('prev_day', 'Same hour and day the previous week'),
+            ('prev_week', 'Same hour and day the previous week'),
         ], 
 
         'today':[('', '')], 
@@ -126,7 +127,7 @@ def top_n(req, choice):
         
         def _params_last_hour():
             trend_elems = 60
-            start = now+relativedelta(minutes=-trend_elems)
+            start = now + relativedelta(minutes=-trend_elems)
             return start.isoformat(), now.isoformat()
             
         start, stop = locals()['_params_' + choice]()
@@ -181,7 +182,7 @@ def _top_n_data_html(req_input, cluster):
             settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
         
     for name in('mean', 'usage'):
-        d = {'cluster_id':cluster.id}
+        d = {'cluster_id':cluster.id, 'side':req_input.side}
         if req_input.n:
             stats = _get_stats(cluster, req_input.start, req_input.stop, req_input.n, name)
             
@@ -193,14 +194,19 @@ def _top_n_data_html(req_input, cluster):
             
             d.update({name:stats})
             d.update(settings)
-
+            
         return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @meth_allowed('GET', 'POST')
 def top_n_data(req):
-    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format'))
+    """ n and n_type will always be given. format may be None and will
+    default to 'html'. Also, either start/stop or left_start/left_stop/id_compare_to
+    will be present - if the latter, start and stop will be computed as left_start/left_stop
+    shifted by the value pointed to by id_compare_to.
+    """
+    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 'left_start', 'left_stop', 'id_compare_to'))
     for name in req_input:
         req_input[name] = req.GET.get(name) or req.POST.get(name)
 
@@ -211,6 +217,19 @@ def top_n_data(req):
         
     req_input.format = req_input.format or 'html'
     
+    shift_params = {
+        'prev_hour': {'minutes': -60},
+        'prev_day': {'days': -1},
+        'prev_week': {'days': -7},
+    }
+    
+    if req_input.id_compare_to:
+        req_input.side = 'right'
+        for name in('start', 'stop'):
+            req_input[name] = (parse(req_input['left_{}'.format(name)]) + relativedelta(**shift_params[req_input.id_compare_to])).isoformat()
+    else:
+        req_input.side = 'left'
+        
     return globals()['_top_n_data_{}'.format(req_input.format)](req_input, req.zato.cluster)
     
 @meth_allowed('GET')

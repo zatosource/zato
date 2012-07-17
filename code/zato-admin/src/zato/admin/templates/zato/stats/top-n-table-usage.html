@@ -1,6 +1,6 @@
     <tr>
         <td>
-            <table style="width:100%" class="stats-table" id="left-usage">
+            <table style="width:100%" class="stats-table" id="{{ side }}-usage">
                 <thead>
                 <tr>
                     <th></th>
@@ -26,7 +26,7 @@
                     <td style="text-align:right;width:30px">{% if item.usage_perc_all_services < 0.1 %}&lt;0.1{% else %}{{ item.usage_perc_all_services|floatformat:"1" }}{% endif %}</td>
                     <td style="text-align:right;width:30px">{% if item.time_perc_all_services < 0.1 %}&lt;0.1{% else %}{{ item.time_perc_all_services|floatformat:"1" }}{% endif %}</td>
                     <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
-                    <td><span class="trend">{{ item.usage_trend }}</span></td>
+                    <td style="text-align:right;width:30px"><span class="{{ side }}-trend">{{ item.usage_trend }}</span></td>
                 </tr>
             {% empty %}
                 <tr><td colspan="9">(No data)</td></tr>
