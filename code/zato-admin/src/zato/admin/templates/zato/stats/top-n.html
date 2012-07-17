@@ -48,7 +48,7 @@
     <table id="data-table">
         <tr>
             <td>
-                <div style="float:left;">
+                <div style="float:left">
                     <form action="." method="GET">
                         Show {{ n_form.n }}  items <input type="submit" value="OK" />
                         <input type="hidden" name="start" id="left_start" value="{{ start }}" />
@@ -56,7 +56,7 @@
                         <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
                     </form>
                 </div>
-                <div style="text-align:right">
+                <div id="compare_to" style="text-align:right" class="hidden">
                     Compare to: {{ compare_form.compare_to }} 
                 </div>
                 
@@ -78,7 +78,7 @@
                 {% include "zato/stats/top-n-table.html" with side="left"%}
             </td>
 
-            <td id="right-side" style="width:50%;display:none">
+            <td id="right-side" style="width:50%;" class="hidden">
                 {% include "zato/stats/top-n-table.html" with side="right"%}
             </td>
         </tr>

@@ -76,9 +76,11 @@ $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.wss');
 $.namespace('zato.service');
+$.namespace('zato.stats');
+$.namespace('zato.stats.top_n');
 
 
-$.fn.zato.post = function(url, callback, data, data_type, suppress_user_message) {
+$.fn.zato.post = function(url, callback, data, data_type, suppress_user_message, context) {
     if(!data) {
         data = '';
     }
@@ -91,13 +93,18 @@ $.fn.zato.post = function(url, callback, data, data_type, suppress_user_message)
         $.fn.zato.user_message(false, '', true);
     }
     
+    if(!context) {
+        context = {};
+    }
+    
     $.ajax({
         type: 'POST',
         url: url,
         data: data,
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         complete: callback,
-        dataType: data_type
+        dataType: data_type,
+        context: context
     });
 }
 
@@ -678,7 +685,6 @@ $.fn.zato.like_bool = function(item) {
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
 }
-
 
 $.fn.zato.dir = function(item) {
     out = [];
