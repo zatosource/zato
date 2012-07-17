@@ -17,6 +17,23 @@ $(document).ready(function() {
             $('.trend').sparkline('html', sparklines_options);
             $('#left-usage-csv').attr('href', json.usage_csv_href);
             $('#left-mean-csv').attr('href', json.mean_csv_href);
+            
+            var _switch_highlight = function(this_, remove_class, add_class) { 
+                var id = $(this_).attr('id');
+                id = _.last(_.str.words(id, '-'));
+                if(id) {
+                  $('tr[id*="' +id+'"] > td').removeClass(remove_class).addClass(add_class);
+                };
+            };
+            
+            $('.stats-table tr').mouseover(function() {
+                _switch_highlight(this, 'default', 'hover');
+            });
+                    
+            $('.stats-table tr').mouseout(function(){
+                _switch_highlight(this, 'hover', 'default');
+           });
+            
         }
         else {
             $('.left-csv').removeClass('visible').addClass('hidden');
