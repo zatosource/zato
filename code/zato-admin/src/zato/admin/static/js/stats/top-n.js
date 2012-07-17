@@ -53,7 +53,9 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
         
     }
     else {
-        $.fn.zato.stats.top_n.show_hide(show_hide, false);
+        if(side == 'left') {
+            $.fn.zato.stats.top_n.show_hide(show_hide, false);
+        }
     }
 };
 
