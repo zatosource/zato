@@ -152,8 +152,10 @@ def top_n(req, choice):
 def _top_n_data_csv(req_input, cluster):
 
     n_type_keys = {
-        'mean': ['service_name', 'mean', 'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services', 'all_services_usage', 'mean_trend'],
-        'usage': ['service_name', 'usage', 'rate', 'usage_perc_all_services', 'time_perc_all_services', 'all_services_usage', 'usage_trend'],
+        'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services', 
+                  'usage_perc_all_services', 'time_perc_all_services', 'all_services_usage', 'mean_trend'],
+        'usage': ['start', 'stop', 'service_name', 'usage', 'rate', 'usage_perc_all_services', 
+                  'time_perc_all_services', 'all_services_usage', 'usage_trend'],
         }
     
     buff = StringIO()
@@ -161,7 +163,10 @@ def _top_n_data_csv(req_input, cluster):
     writer.writeheader()
     
     for stat in _get_stats(cluster, req_input.start, req_input.stop, req_input.n, req_input.n_type):
-        writer.writerow(stat.to_dict())
+        d = stat.to_dict()
+        d['start'] = req_input.start
+        d['stop'] = req_input.stop
+        writer.writerow(d)
         
     out = buff.getvalue()
     buff.close()
@@ -208,7 +213,7 @@ def top_n_data(req):
     """
     req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 'left_start', 'left_stop', 'id_compare_to'))
     for name in req_input:
-        req_input[name] = req.GET.get(name) or req.POST.get(name)
+        req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
 
     try:
         req_input.n = int(req_input.n)
