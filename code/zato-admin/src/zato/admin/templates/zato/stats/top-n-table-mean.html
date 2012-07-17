@@ -17,7 +17,7 @@
                 
                 <tbody>
             {% for item in mean %}
-                <tr>
+                <tr id="tr-mean-{{ item.service_name|slugify }}">
                     <td style="width:10px">{% if item.mean > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
                     <td style="width:10px">{{ forloop.counter }}</td>    
                     <td style="width:200px"><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>

@@ -3,13 +3,19 @@
 {% block extra_css %}
 
 <style type="text/css">
-.stats-table th {
-    background-color:red
-}
+    .default {
+        background-color: #f3f3f3;
+    }  
+    
+    .hover {
+        background-color: #f0ff6e;
+    }  
 </style>
 {% endblock %}
 
 {% block extra_js %}
+
+    <script type="text/javascript" src="/static/js/underscore.string.min.js"></script>
     
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
