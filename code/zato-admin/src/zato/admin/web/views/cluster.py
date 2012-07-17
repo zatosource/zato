@@ -143,7 +143,7 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
 
         'host': host if host else '(unknown)',
         'up_status': up_status if up_status else '(unknown)',
-        'up_mod_date': up_mod_date if up_mod_date else '(unknown)',
+        'up_mod_date': up_mod_date.isoformat() if up_mod_date else '(unknown)',
         'cluster_id': cluster_id if cluster_id else '',
 
         'lb_state': lb_server_data.state,
