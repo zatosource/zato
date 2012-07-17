@@ -10,12 +10,20 @@ $.fn.zato.stats.top_n.show_hide = function(selectors, show) {
     })
 };
 
+$.fn.zato.stats.top_n.switch_highlight = function(this_, remove_class, add_class) { 
+    var id = $(this_).attr('id');
+    id = _.last(_.str.words(id, '-'));
+    if(id) {
+      $('tr[id*="' +id+'"] > td').removeClass(remove_class).addClass(add_class);
+    };
+};
+
 $.fn.zato.stats.top_n.data_callback = function(data, status) {
 
     var side = this['side'];
 
     var json = $.parseJSON(data.responseText);
-    $(String.format('.{0}-loading-tr', side)).remove();
+    $(String.format('.{0}-loading-tr', side)).hide();
     
     var n_types = ['mean', 'usage'];
     $.each(n_types, function(idx, n_type) {
@@ -35,20 +43,12 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
         $(String.format('#{0}-usage-csv', side)).attr('href', json.usage_csv_href);
         $(String.format('#{0}-mean-csv', side)).attr('href', json.mean_csv_href);
         
-        var _switch_highlight = function(this_, remove_class, add_class) { 
-            var id = $(this_).attr('id');
-            id = _.last(_.str.words(id, '-'));
-            if(id) {
-              $('tr[id*="' +id+'"] > td').removeClass(remove_class).addClass(add_class);
-            };
-        };
-        
         $('.stats-table tr').mouseover(function() {
-            _switch_highlight(this, 'default', 'hover');
+            $.fn.zato.stats.top_n.switch_highlight(this, 'default', 'hover');
         });
                 
         $('.stats-table tr').mouseout(function(){
-            _switch_highlight(this, 'hover', 'default');
+            $.fn.zato.stats.top_n.switch_highlight(this, 'hover', 'default');
        });
         
     }
@@ -61,7 +61,11 @@ $.fn.zato.stats.top_n.compare_to = function() {
     var compare_to_label = $(this).find(':selected').val();
     
     if(compare_to_label) {
+    
         $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
+        $('.right-loading-tr').show();
+        $('tr[id^="right-tr-mean"], tr[id^="right-tr-usage"]').empty().remove();
+        
         var data = {};
         var keys = ['left_start', 'left_stop', 'n', 'cluster_id', 'id_compare_to'];
         
