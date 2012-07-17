@@ -48,14 +48,17 @@
     <table id="data-table">
         <tr>
             <td>
-                <form action="." method="GET" style="float:left">
-                    Show {{ n_form.n }}  items <input type="submit" value="OK" />
-                    <input type="hidden" name="start" id="left_start" value="{{ start }}" />
-                    <input type="hidden" name="stop" id="left_stop" value="{{ stop }}" />
-                    <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
-                </form>
-                &nbsp;
-                Compare to: {{ compare_form.compare_to }} 
+                <div style="float:left;">
+                    <form action="." method="GET">
+                        Show {{ n_form.n }}  items <input type="submit" value="OK" />
+                        <input type="hidden" name="start" id="left_start" value="{{ start }}" />
+                        <input type="hidden" name="stop" id="left_stop" value="{{ stop }}" />
+                        <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
+                    </form>
+                </div>
+                <div style="text-align:right">
+                    Compare to: {{ compare_form.compare_to }} 
+                </div>
                 
             </td>
             <td style="text-align:right">
