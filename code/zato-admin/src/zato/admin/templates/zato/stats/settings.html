@@ -27,16 +27,7 @@
 {% endif %}
 
 
-    <div class="prompt">
-    {% if not cluster_id %}
-        Choose a cluster to configure the statistics settings of
-    {% endif %}
-
-    <form action="." method="get">
-        {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show settings" />
-    </form>
-    </div>
+{% include "zato/choose-cluster.html" with page_prompt="Show settings"%}
 
 {% if cluster_id %}
 

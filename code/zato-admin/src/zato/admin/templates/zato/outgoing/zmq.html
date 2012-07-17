@@ -55,11 +55,7 @@
         Choose a cluster to manage outgoing ZeroMQ connections
     {% endif %}
 
-    <form action="." method="get">
-        {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show outgoing connections" />
-    </form>
-    </div>
+{% include "zato/choose-cluster.html" with page_prompt="Show outgoing connections"%}
 
 
     {% if cluster_id %}

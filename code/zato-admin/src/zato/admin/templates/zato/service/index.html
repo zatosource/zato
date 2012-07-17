@@ -83,16 +83,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    <div class="prompt">
-    {% if not cluster_id %}
-        Choose a cluster to manage services
-    {% endif %}
-
-    <form action="." method="get">
-        {{ choose_cluster_form.cluster }}
-        <input type="submit" value="Show services" />
-    </form>
-    </div>
+{% include "zato/choose-cluster.html" with page_prompt="Show services"%}
 
 
     {% if cluster_id %}
