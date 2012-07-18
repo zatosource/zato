@@ -31,7 +31,7 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
         $(String.format('#{0}-{1}', side, n_type)).tablesorter();
     });
     
-    var show_hide = [String.format('.{0}-csv', side), '#compare_to'];
+    var show_hide = [String.format('.{0}-csv', side), '#compare_to', String.format('.{0}-date', side)];
 
     if(json.has_stats) {
 
@@ -65,6 +65,8 @@ $.fn.zato.stats.top_n.compare_to = function() {
     if(compare_to_label) {
     
         $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
+        $.fn.zato.stats.top_n.show_hide(['.right-date'], false);
+        
         $('.right-loading-tr').show();
         $('tr[id^="right-tr-mean"], tr[id^="right-tr-usage"]').empty().remove();
         
