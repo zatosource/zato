@@ -29,7 +29,7 @@ class NForm(forms.Form):
     n = forms.IntegerField(widget=forms.TextInput(attrs={'style':'width:30px', 'id':'n'}))
 
 class CompareForm(forms.Form):
-    compare_to = forms.ChoiceField()
+    compare_to = forms.ChoiceField(widget=forms.Select(attrs={'id':'shift'}))
     
     def __init__(self, compare_to=[], *args, **kwargs):
         super(CompareForm, self).__init__(*args, **kwargs)

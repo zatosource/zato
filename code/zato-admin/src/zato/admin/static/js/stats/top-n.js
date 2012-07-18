@@ -65,8 +65,9 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
 };
 
 $.fn.zato.stats.top_n._shift = function(side, shift) {
-    if(shift) {
+    var data = {};
     
+    if(shift) {
         $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
         
         $.each(['csv', 'date'], function(idx, elem) {
@@ -76,15 +77,15 @@ $.fn.zato.stats.top_n._shift = function(side, shift) {
         $(String.format('.{0}-loading-tr', side)).show();
         $(String.format('tr[id^="{0}-tr-mean"], tr[id^="{0}-tr-usage"]', side)).empty().remove();
         
-        var data = {};
-        var keys = [String.format('{0}-start', side), String.format('{0}-stop', side), 'n', 'cluster_id', 'id_compare_to'];
+        var keys = [String.format('{0}-start', side), String.format('{0}-stop', side), 'n', 'cluster_id'];
         
         $.each(keys, function(idx, key) {
             data[key] = $('#'+key).val();
         });
         
         data['side'] = side;
-    };
+        data['shift'] = shift;
+    }
     
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': side});
 }
@@ -110,9 +111,7 @@ $(document).ready(function() {
     });
     
     data['side'] = 'left';
-    
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
-    
-    $('#id_compare_to').change($.fn.zato.stats.top_n.compare_to);
+    $('#shift').change($.fn.zato.stats.top_n.compare_to);
         
 })
