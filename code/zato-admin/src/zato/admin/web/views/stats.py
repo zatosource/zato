@@ -207,12 +207,12 @@ def _top_n_data_html(req_input, cluster):
 @meth_allowed('GET', 'POST')
 def top_n_data(req):
     """ n and n_type will always be given. format may be None and will
-    default to 'html'. Also, either start/stop or left_start/left_stop/id_compare_to
+    default to 'html'. Also, either start/stop or left_start/left_stop/shift
     will be present - if the latter, start and stop will be computed as left_start/left_stop
-    shifted by the value pointed to by id_compare_to.
+    shifted by the value pointed to by shift.
     """
     req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 
-        'left-start', 'left-stop', 'right-start', 'right-stop', 'id_compare_to', 'side'))
+        'left-start', 'left-stop', 'right-start', 'right-stop', 'shift', 'side'))
     
     for name in req_input:
         req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
@@ -234,11 +234,11 @@ def top_n_data(req):
         'next_week': {'days': 7},
     }
     
-    if req_input.id_compare_to:
+    if req_input.shift:
         for name in('start', 'stop'):
             param_name = '{}-{}'.format(req_input.side, name)
             base_value = parse(req_input[param_name])
-            delta = relativedelta(**shift_params[req_input.id_compare_to])
+            delta = relativedelta(**shift_params[req_input.shift])
             req_input[name] = (base_value + delta).isoformat()
 
     return globals()['_top_n_data_{}'.format(req_input.format)](req_input, req.zato.cluster)
