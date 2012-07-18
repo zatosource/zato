@@ -178,7 +178,7 @@ def _top_n_data_csv(req_input, cluster):
 
 def _top_n_data_html(req_input, cluster):
     
-    return_data = {'has_stats':False}
+    return_data = {'has_stats':False, 'start':req_input.start, 'stop':req_input.stop}
     settings = {}
     query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
     
@@ -211,7 +211,9 @@ def top_n_data(req):
     will be present - if the latter, start and stop will be computed as left_start/left_stop
     shifted by the value pointed to by id_compare_to.
     """
-    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 'left_start', 'left_stop', 'id_compare_to'))
+    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 
+        'left-start', 'left-stop', 'right-start', 'right-stop', 'id_compare_to', 'side'))
+    
     for name in req_input:
         req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
 
@@ -226,15 +228,19 @@ def top_n_data(req):
         'prev_hour': {'minutes': -60},
         'prev_day': {'days': -1},
         'prev_week': {'days': -7},
+        
+        'next_hour': {'minutes': 60},
+        'next_day': {'days': 1},
+        'next_week': {'days': 7},
     }
     
     if req_input.id_compare_to:
-        req_input.side = 'right'
         for name in('start', 'stop'):
-            req_input[name] = (parse(req_input['left_{}'.format(name)]) + relativedelta(**shift_params[req_input.id_compare_to])).isoformat()
-    else:
-        req_input.side = 'left'
-        
+            param_name = '{}-{}'.format(req_input.side, name)
+            base_value = parse(req_input[param_name])
+            delta = relativedelta(**shift_params[req_input.id_compare_to])
+            req_input[name] = (base_value + delta).isoformat()
+
     return globals()['_top_n_data_{}'.format(req_input.format)](req_input, req.zato.cluster)
     
 @meth_allowed('GET')

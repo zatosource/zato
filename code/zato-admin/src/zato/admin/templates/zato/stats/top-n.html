@@ -51,8 +51,10 @@
                 <div style="float:left">
                     <form action="." method="GET">
                         Show {{ n_form.n }}  items <input type="submit" value="OK" />
-                        <input type="hidden" name="start" id="left_start" value="{{ start }}" />
-                        <input type="hidden" name="stop" id="left_stop" value="{{ stop }}" />
+                        <input type="hidden" name="start" id="left-start" value="{{ start }}" />
+                        <input type="hidden" name="stop" id="left-stop" value="{{ stop }}" />
+                        <input type="hidden" name="start" id="right-start" value="{{ start }}" />
+                        <input type="hidden" name="stop" id="right-stop" value="{{ stop }}" />
                         <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
                     </form>
                 </div>
@@ -61,9 +63,9 @@
                 </div>
                 
             <div class="left-date hidden" style="text-align:left;margin-top:10px">
-                <a href="#" style="text-decoration:none">&larr;</a> 
-                    <span class="form_hint">2012-04-12 03:23 - 2012-04-16 23:23</span> 
-                <a href="#" style="text-decoration:none">&rarr;</a>
+                <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'prev_hour')" style="text-decoration:none">&larr;</a>
+                    <span class="form_hint"><span id="left-start-label">2012-04-12 03:23</span> - <span id="left-stop-label">2012-04-16 23:23</span></span> 
+                <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'next_hour')" style="text-decoration:none">&rarr;</a>
             </div>
                 
                 
@@ -71,9 +73,9 @@
             <td style="text-align:right">
                 <div>&nbsp;</div>
                 <div class="right-date hidden" style="text-align:right;margin-top:14px">
-                    <a href="#" style="text-decoration:none">&larr;</a> 
-                        <span class="form_hint">2012-04-12 03:23 - 2012-04-16 23:23</span> 
-                    <a href="#" style="text-decoration:none">&rarr;</a>
+                    <a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'prev_hour')" style="text-decoration:none">&larr;</a>
+                        <span class="form_hint"><span id="right-start-label">2012-04-12 03:23</span> - <span id="right-stop-label">2012-04-16 23:23</span></span> 
+                    <a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'next_hour')" style="text-decoration:none">&rarr;</a>
                 </div>
             </td>
         </tr>
