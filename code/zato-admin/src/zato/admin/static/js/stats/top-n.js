@@ -68,12 +68,14 @@ $.fn.zato.stats.top_n._shift = function(side, shift) {
     var data = {};
     
     if(shift) {
-        $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
+        if(side == 'right') {
+            $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
+        }
         
         $.each(['csv', 'date'], function(idx, elem) {
             $.fn.zato.stats.top_n.show_hide([String.format('{0}-{1}', side, elem)], false);
         });
-        
+
         $(String.format('.{0}-loading-tr', side)).show();
         $(String.format('tr[id^="{0}-tr-mean"], tr[id^="{0}-tr-usage"]', side)).empty().remove();
         
@@ -96,6 +98,12 @@ $.fn.zato.stats.top_n.compare_to = function() {
 };
 
 $.fn.zato.stats.top_n.change_date = function(side, shift) {
+    if(side == 'right') {
+        $('#shift').val('');
+    }
+    else {
+        $('#page_label').text('Custom')
+    }
     $.fn.zato.stats.top_n._shift(side, shift);
 };
 
