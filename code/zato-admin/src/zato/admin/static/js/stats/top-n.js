@@ -32,13 +32,18 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
     });
     
     var show_hide = [String.format('.{0}-csv', side), '#compare_to', String.format('.{0}-date', side)];
+    
+    $.each(['start', 'stop'], function(idx, time) {
+        $(String.format('#{0}-{1}', side, time)).val(json[time]);
+        $(String.format('#{0}-{1}-label', side, time)).text(json[time]);
+    });
 
     if(json.has_stats) {
 
         var sparklines_options = {'width':'36px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'fillColor':false}    
 
         $.fn.zato.stats.top_n.show_hide(show_hide, true);
-        
+
         $(String.format('.{0}-trend', side)).sparkline('html', sparklines_options);
         $(String.format('#{0}-usage-csv', side)).attr('href', json.usage_csv_href);
         $(String.format('#{0}-mean-csv', side)).attr('href', json.mean_csv_href);
@@ -59,38 +64,52 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
     }
 };
 
-$.fn.zato.stats.top_n.compare_to = function() {
-    var compare_to_label = $(this).find(':selected').val();
-    
-    if(compare_to_label) {
+$.fn.zato.stats.top_n._shift = function(side, shift) {
+    if(shift) {
     
         $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
-        $.fn.zato.stats.top_n.show_hide(['.right-csv', '.right-date'], false);
         
-        $('.right-loading-tr').show();
-        $('tr[id^="right-tr-mean"], tr[id^="right-tr-usage"]').empty().remove();
+        $.each(['csv', 'date'], function(idx, elem) {
+            $.fn.zato.stats.top_n.show_hide([String.format('{0}-{1}', side, elem)], false);
+        });
+        
+        $(String.format('.{0}-loading-tr', side)).show();
+        $(String.format('tr[id^="{0}-tr-mean"], tr[id^="{0}-tr-usage"]', side)).empty().remove();
         
         var data = {};
-        var keys = ['left_start', 'left_stop', 'n', 'cluster_id', 'id_compare_to'];
+        var keys = [String.format('{0}-start', side), String.format('{0}-stop', side), 'n', 'cluster_id', 'id_compare_to'];
         
         $.each(keys, function(idx, key) {
             data[key] = $('#'+key).val();
         });
+        
+        data['side'] = side;
     };
     
-    $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'right'});
+    $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': side});
+}
+
+$.fn.zato.stats.top_n.compare_to = function() {
+    var shift = $(this).find(':selected').val();
+    $.fn.zato.stats.top_n._shift('right', shift);
+};
+
+$.fn.zato.stats.top_n.change_date = function(side, shift) {
+    $.fn.zato.stats.top_n._shift(side, shift);
 };
 
 $(document).ready(function() {
 
     var data = {};
-    var keys = ['cluster_id', 'left_start', 'left_stop', 'n'];
+    var keys = ['cluster_id', 'left-start', 'left-stop', 'n'];
     var value = null;
     
     $.each(keys, function(idx, key) {
         value = $('#'+key).val();
-        data[key.replace('left_', '')] = value;
+        data[key.replace('left-', '')] = value;
     });
+    
+    data['side'] = 'left';
     
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
     
