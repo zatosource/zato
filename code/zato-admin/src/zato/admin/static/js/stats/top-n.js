@@ -97,16 +97,25 @@ $.fn.zato.stats.top_n._shift = function(side, shift, date_prefix) {
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': side});
 }
 
+$.fn.zato.stats.top_n.start_stop_picker = function() {
+    alert('cc');
+}
+
 $.fn.zato.stats.top_n.compare_to = function() {
     var shift = $(this).find(':selected').val();
-    $.fn.zato.stats.top_n._shift('right', shift, 'left');
+    if(shift) {
+        if(shift == 'custom') {
+            $.fn.zato.stats.top_n.start_stop_picker()
+        }
+        else {
+            $.fn.zato.stats.top_n._shift('right', shift, 'left');
+        }
+    }
 };
 
 $.fn.zato.stats.top_n.change_date = function(side, shift) {
-    if(side == 'right') {
-        $('#shift').val('');
-    }
-    else {
+    $('#shift').val('');
+    if(side == 'left') {
         $('#page_label').text('Custom set by hour')
     }
     $.fn.zato.stats.top_n._shift(side, shift);
@@ -126,5 +135,4 @@ $(document).ready(function() {
     data['side'] = 'left';
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
     $('#shift').change($.fn.zato.stats.top_n.compare_to);
-        
 })
