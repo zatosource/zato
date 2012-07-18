@@ -37,6 +37,12 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
         $(String.format('#{0}-{1}', side, time)).val(json[time]);
         $(String.format('#{0}-{1}-label', side, time)).text(json[time]);
     });
+    
+    $.fn.zato.stats.top_n.show_hide([String.format('.{0}-date', side)], true);
+    
+    /* The right side has never been shown yet so we need to update its start/stop
+       parameters even though the shift was on the left one.
+    */
 
     if(json.has_stats) {
 
@@ -57,19 +63,18 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
        });
         
     }
-    else {
-        if(side == 'left') {
-            $.fn.zato.stats.top_n.show_hide(show_hide, false);
-        }
-    }
 };
 
-$.fn.zato.stats.top_n._shift = function(side, shift) {
+$.fn.zato.stats.top_n._shift = function(side, shift, date_prefix) {
     var data = {};
     
     if(shift) {
         if(side == 'right') {
             $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
+        }
+        
+        if(!date_prefix) {
+            date_prefix = side;
         }
         
         $.each(['csv', 'date'], function(idx, elem) {
@@ -79,10 +84,10 @@ $.fn.zato.stats.top_n._shift = function(side, shift) {
         $(String.format('.{0}-loading-tr', side)).show();
         $(String.format('tr[id^="{0}-tr-mean"], tr[id^="{0}-tr-usage"]', side)).empty().remove();
         
-        var keys = [String.format('{0}-start', side), String.format('{0}-stop', side), 'n', 'cluster_id'];
+        var keys = [String.format('{0}-start', date_prefix), String.format('{0}-stop', date_prefix), 'n', 'cluster_id'];
         
         $.each(keys, function(idx, key) {
-            data[key] = $('#'+key).val();
+            data[key.replace('left-', '').replace('right-', '')] = $('#'+key).val();
         });
         
         data['side'] = side;
@@ -94,7 +99,7 @@ $.fn.zato.stats.top_n._shift = function(side, shift) {
 
 $.fn.zato.stats.top_n.compare_to = function() {
     var shift = $(this).find(':selected').val();
-    $.fn.zato.stats.top_n._shift('right', shift);
+    $.fn.zato.stats.top_n._shift('right', shift, 'left');
 };
 
 $.fn.zato.stats.top_n.change_date = function(side, shift) {
@@ -102,7 +107,7 @@ $.fn.zato.stats.top_n.change_date = function(side, shift) {
         $('#shift').val('');
     }
     else {
-        $('#page_label').text('Custom')
+        $('#page_label').text('Custom set by hour')
     }
     $.fn.zato.stats.top_n._shift(side, shift);
 };
