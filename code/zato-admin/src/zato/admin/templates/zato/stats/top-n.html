@@ -2,11 +2,10 @@
 
 {% block extra_css %}
 
-<style type="text/css">
+<link rel="stylesheet" type="text/css" href="/static/css/anytimec.css">
+<link rel="stylesheet" type="text/css" href="/static/css/date_time_picker.css">
 
-    <link rel="stylesheet" type="text/css" href="/static/css/anytimec.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/date_time_picker.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+<style type="text/css">
 
     .default {
         background-color: #f3f3f3;
@@ -108,7 +107,7 @@
 
 <div id="custom_date" class='data-popup'>
     <div>
-        <form action="/invalid/" method="post" id="form-custom_date">
+        <form action="." method="post" id="form-custom_date">
             <table class="form-data">
 
                 <tr>
@@ -117,7 +116,7 @@
                         <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
                     </td>
                     <td>
-                        <input id="custom_start" class="required" name="custom_start" type="text" />
+                        <input id="custom-start" class="required" name="custom-start" type="text" />
                     </td>
                 </tr>
                 
@@ -127,7 +126,7 @@
                         <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
                     </td>
                     <td>
-                        <input id="custom_stop" class="required" name="custom_stop" type="text" />
+                        <input id="custom-stop" class="required" name="custom-stop" type="text" />
                     </td>
                 </tr>
                 
