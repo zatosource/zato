@@ -65,7 +65,7 @@ $.fn.zato.stats.top_n.compare_to = function() {
     if(compare_to_label) {
     
         $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
-        $.fn.zato.stats.top_n.show_hide(['.right-date'], false);
+        $.fn.zato.stats.top_n.show_hide(['.right-csv', '.right-date'], false);
         
         $('.right-loading-tr').show();
         $('tr[id^="right-tr-mean"], tr[id^="right-tr-usage"]').empty().remove();
