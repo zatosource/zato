@@ -68,31 +68,29 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
 $.fn.zato.stats.top_n.shift = function(side, shift, date_prefix) {
     var data = {};
     
-    if(shift) {
-        if(side == 'right') {
-            $.fn.zato.stats.top_n.show_hide(['#right-side'], true);
-        }
-        
-        if(!date_prefix) {
-            date_prefix = side;
-        }
-        
-        $.each(['csv', 'date'], function(idx, elem) {
-            $.fn.zato.stats.top_n.show_hide([String.format('{0}-{1}', side, elem)], false);
-        });
+	if(side == 'right') {
+		$.fn.zato.stats.top_n.show_hide(['#right-side'], true);
+	}
+	
+	if(!date_prefix) {
+		date_prefix = side;
+	}
+	
+	$.each(['csv', 'date'], function(idx, elem) {
+		$.fn.zato.stats.top_n.show_hide([String.format('{0}-{1}', side, elem)], false);
+	});
 
-        $(String.format('.{0}-loading-tr', side)).show();
-        $(String.format('tr[id^="{0}-tr-mean"], tr[id^="{0}-tr-usage"]', side)).empty().remove();
-        
-        var keys = [String.format('{0}-start', date_prefix), String.format('{0}-stop', date_prefix), 'n', 'cluster_id'];
-        
-        $.each(keys, function(idx, key) {
-            data[key.replace('left-', '').replace('right-', '')] = $('#'+key).val();
-        });
-        
-        data['side'] = side;
-        data['shift'] = shift;
-    }
+	$(String.format('.{0}-loading-tr', side)).show();
+	$(String.format('tr[id^="{0}-tr-mean"], tr[id^="{0}-tr-usage"]', side)).empty().remove();
+	
+	var keys = [String.format('{0}-start', date_prefix), String.format('{0}-stop', date_prefix), 'n', 'cluster_id'];
+	
+	$.each(keys, function(idx, key) {
+		data[key.replace('left-', '').replace('right-', '').replace('custom-', '')] = $('#'+key).val();
+	});
+	
+	data['side'] = side;
+	data['shift'] = shift;
     
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': side});
 }
@@ -126,24 +124,44 @@ $.fn.zato.stats.top_n.initial_data = function() {
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
 };
 
+$.fn.zato.stats.top_n.on_custom_date = function() {
+	var custom_date_form_id = '#form-custom_date'
+	var custom_date_form = $(custom_date_form_id);
+	
+	if(custom_date_form.data('bValidator').isValid()) {
+		$.fn.zato.stats.top_n.shift('right', '', 'custom');
+		$.fn.zato.data_table.cleanup(custom_date_form_id);
+		return true;
+	}
+};
+
 $.fn.zato.stats.top_n.setup_forms = function() {
 
 	$.each(['start', 'stop'], function(ignored, suffix) {
-		var field_id = String.format('#custom_{0}', suffix)
+		var field_id = String.format('#custom-{0}', suffix)
 		$(field_id).attr('data-bvalidator', 'required');
 		$(field_id).attr('data-bvalidator-msg', 'This is a required field');
 
 		AnyTime.picker(field_id.replace('#', ''), {format: '%Y-%m-%d %T', firstDOW: 1});
 	});
 	
-	var form_id = '#form-custom_date';
-	$(form_id).bValidator();
+	var custom_date_form_id = '#form-custom_date'
+	var custom_date_form = $(custom_date_form_id);
+	
+	custom_date_form.submit(function(e) {
+		e.preventDefault();
+		if($.fn.zato.stats.top_n.on_custom_date()) {
+			$('#custom_date').dialog('close');
+		}
+	});
+	
+	custom_date_form.bValidator();
 	
 	$('#custom_date').dialog({
 		autoOpen: false,
 		width: '40em',
 		close: function(e, ui) {
-			$.fn.zato.data_table.reset_form(form_id);
+			$.fn.zato.data_table.reset_form(custom_date_form_id);
 		}
 	});
 }
