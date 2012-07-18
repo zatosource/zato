@@ -236,8 +236,7 @@ def top_n_data(req):
     
     if req_input.shift:
         for name in('start', 'stop'):
-            param_name = '{}-{}'.format(req_input.side, name)
-            base_value = parse(req_input[param_name])
+            base_value = parse(req_input[name])
             delta = relativedelta(**shift_params[req_input.shift])
             req_input[name] = (base_value + delta).isoformat()
 
