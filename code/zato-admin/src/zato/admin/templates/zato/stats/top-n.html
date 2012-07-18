@@ -3,6 +3,11 @@
 {% block extra_css %}
 
 <style type="text/css">
+
+    <link rel="stylesheet" type="text/css" href="/static/css/anytimec.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/date_time_picker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+
     .default {
         background-color: #f3f3f3;
     }  
@@ -15,6 +20,7 @@
 
 {% block extra_js %}
 
+    <script type="text/javascript" src="/static/jquery/anytimec.js"></script>
     <script type="text/javascript" src="/static/js/underscore.string.min.js"></script>
     
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
@@ -58,11 +64,15 @@
                         <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
                     </form>
                 </div>
-                <div id="compare_to" style="text-align:right" class="hidden">
-                    Compare to: {{ compare_form.compare_to }} 
+                <div id="compare_to" style="text-align:right;margin-top:4px" class="hidden">
+                    Compare to:
+                    <a href="javascript:$.fn.zato.stats.top_n.shift('right', 'prev_hour', 'left');">prev hour</a>,
+                    <a href="javascript:$.fn.zato.stats.top_n.shift('right', 'prev_day', 'left');">prev day</a>,
+                    <a href="javascript:$.fn.zato.stats.top_n.shift('right', 'prev_week', 'left');">prev week</a>,
+                    <a href="javascript:$.fn.zato.stats.top_n.show_start_stop_picker()">other</a>
                 </div>
                 
-            <div class="left-date hidden" style="text-align:left;margin-top:10px">
+            <div class="left-date hidden" style="text-align:left;margin-top:14px">
                 <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'prev_hour')" style="text-decoration:none">&larr;</a>
                     <span class="form_hint"><span id="left-start-label">left-start-label placeholder</span> - <span id="left-stop-label">left-stop-label placeholder</span></span> 
                 <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'next_hour')" style="text-decoration:none">&rarr;</a>
@@ -94,6 +104,44 @@
             </td>
         </tr>
     </table>
+</div>
+
+<div id="custom_date" class='data-popup'>
+    <div>
+        <form action="/invalid/" method="post" id="form-custom_date">
+            <table class="form-data">
+
+                <tr>
+                    <td style="vertical-align:middle">
+                        Start<br/>
+                        <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
+                    </td>
+                    <td>
+                        <input id="custom_start" class="required" name="custom_start" type="text" />
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td style="vertical-align:middle">
+                        Stop<br/>
+                        <span class="form_hint">(YYYY-MM-DD hh:mm:ss)</span>
+                    </td>
+                    <td>
+                        <input id="custom_stop" class="required" name="custom_stop" type="text" />
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td colspan="2" style="text-align:right">
+                        <input type="submit" value="OK" />
+                        <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                    </td>
+                </tr>
+
+            </table>
+
+        </form>
+    </div>
 </div>
 
 {% endif %} {% comment %}cluster_id{% endcomment %}

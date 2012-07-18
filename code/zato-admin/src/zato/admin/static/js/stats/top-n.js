@@ -65,7 +65,7 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
     }
 };
 
-$.fn.zato.stats.top_n._shift = function(side, shift, date_prefix) {
+$.fn.zato.stats.top_n.shift = function(side, shift, date_prefix) {
     var data = {};
     
     if(shift) {
@@ -97,32 +97,22 @@ $.fn.zato.stats.top_n._shift = function(side, shift, date_prefix) {
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': side});
 }
 
-$.fn.zato.stats.top_n.start_stop_picker = function() {
-    alert('cc');
+$.fn.zato.stats.top_n.show_start_stop_picker = function() {
+	var div = $('#custom_date');
+	div.prev().text('Choose start/end dates for the right-side statistics'); // prev() is a .ui-dialog-titlebar
+	div.dialog('open');
 }
-
-$.fn.zato.stats.top_n.compare_to = function() {
-    var shift = $(this).find(':selected').val();
-    if(shift) {
-        if(shift == 'custom') {
-            $.fn.zato.stats.top_n.start_stop_picker()
-        }
-        else {
-            $.fn.zato.stats.top_n._shift('right', shift, 'left');
-        }
-    }
-};
 
 $.fn.zato.stats.top_n.change_date = function(side, shift) {
     $('#shift').val('');
     if(side == 'left') {
-        $('#page_label').text('Custom set by hour')
+        $('#page_label').text('Custom set, step one hour')
     }
-    $.fn.zato.stats.top_n._shift(side, shift);
+
+    $.fn.zato.stats.top_n.shift(side, shift);
 };
 
-$(document).ready(function() {
-
+$.fn.zato.stats.top_n.initial_data = function() {
     var data = {};
     var keys = ['cluster_id', 'left-start', 'left-stop', 'n'];
     var value = null;
@@ -134,5 +124,31 @@ $(document).ready(function() {
     
     data['side'] = 'left';
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
-    $('#shift').change($.fn.zato.stats.top_n.compare_to);
+};
+
+$.fn.zato.stats.top_n.setup_forms = function() {
+
+	$.each(['start', 'stop'], function(ignored, suffix) {
+		var field_id = String.format('#custom_{0}', suffix)
+		$(field_id).attr('data-bvalidator', 'required');
+		$(field_id).attr('data-bvalidator-msg', 'This is a required field');
+
+		AnyTime.picker(field_id.replace('#', ''), {format: '%Y-%m-%d %T', firstDOW: 1});
+	});
+	
+	var form_id = '#form-custom_date';
+	$(form_id).bValidator();
+	
+	$('#custom_date').dialog({
+		autoOpen: false,
+		width: '40em',
+		close: function(e, ui) {
+			$.fn.zato.data_table.reset_form(form_id);
+		}
+	});
+}
+
+$(document).ready(function() {
+	$.fn.zato.stats.top_n.setup_forms();
+	$.fn.zato.stats.top_n.initial_data();
 })
