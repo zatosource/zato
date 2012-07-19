@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2010 Dariusz Suchojad <dsuch at gefira.pl>
+Copyright (C) 2012 Dariusz Suchojad <dsuch at gefira.pl>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,14 +19,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from django.db import models
-from django.contrib.auth.models import User
+# Django
+from django.http import HttpResponseRedirect
+from django.shortcuts import render_to_response
+from django.template import RequestContext
 
-class UserProfile(models.Model):
-    user = models.ForeignKey(User, unique=True)
-    timezone = models.CharField(maxlength=100, null=True, default='UTC')
-    
-class ClusterColorMarker(models.Model):
-    user_profile = models.ForeignKey(UserProfile)
-    cluster_id = models.IntegerField()
-    color = models.CharField(maxlength=6)
+# Zato
+from zato.admin.web.views import meth_allowed
+
+@meth_allowed('GET')
+def my_account(req):
+    pass
