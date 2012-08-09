@@ -172,7 +172,7 @@ def _top_n_data_csv(req_input, cluster):
     buff.close()
         
     response = HttpResponse(out, mimetype='text/csv')
-    response['Content-Disposition'] = 'attachment; filename={}'.format('zato-stat.csv')
+    response['Content-Disposition'] = 'attachment; filename={}'.format('zato-stats.csv')
     
     return response
 
