@@ -1,0 +1,55 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="/static/css/colorpicker/css/colorpicker.css">
+{% endblock %}
+
+{% block extra_js %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/account/settings.js"></script>
+    <script type="text/javascript" src="/static/js/colorpicker/js/colorpicker.js"></script>
+{% endblock %}
+
+{% block content %}
+
+<h2 class="zato">Account : Settings</h2>
+
+{% if messages %}
+    {% for message in messages %}
+    <div id="user-message-div"><pre id="user-message" class="user-message user-message-{{ message.tags }}">{{ message }}</pre></div>
+    {% endfor %}
+{% endif %}
+
+
+<div id="markup">
+    <form action="./save/" method="post" id="settings_form">
+    <table id="data-table">
+        <tr>
+            <td class="inline_header" colspan="4">Time</td>
+        </tr>
+        <tr>
+            <td style="width:15%">Time zone</td>
+            <td style="width:30%;text-align:left">{{ form.scheduler_raw_times_interval }} <span class="form_hint">(default: UTC)</span></td>
+            <td style="width:15%">Date and time format</td>
+            <td style="width:30%;text-align:left">{{ form.scheduler_raw_times_batch }} <span class="form_hint">(default: DD-MM-YYYY HH:mm:ss)</span></td>
+        </tr>
+        <tr>
+            <td class="inline_header" colspan="4">Cluster color markers</td>
+        </tr>
+        
+        {% for cluster in clusters %}
+            <tr>
+                <td style="width:15%">{{ cluster.name }}</td>
+                <td style="width:30;text-align:left%" colspan="3"><input type="text" id="color" /></td>
+            </tr>
+        {% endfor %}
+
+        <tr>
+            <td colspan="4" style="text-align:right;border-top:1px solid #ddd"><button id="save_settings" name="save_settings" type="submit">Save settings</button></td>
+        </tr>
+    </table>
+    </form>
+</div>
+
+
+{% endblock %}

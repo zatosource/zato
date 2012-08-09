@@ -25,7 +25,7 @@ from django.contrib.auth.views import login
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
+from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
@@ -49,7 +49,7 @@ urlpatterns = patterns('',
     url(r'^logout/$', main.logout, name='logout'),
     
     # User accounts
-    url(r'^account/settings/$', main.my_account, name='account-settings'),
+    url(r'^account/settings/$', account.settings, name='account-settings'),
 
     # Clusters
     url(r'^zato/cluster/$', cluster.index, name='cluster'),
