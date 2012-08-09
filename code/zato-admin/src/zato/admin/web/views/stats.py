@@ -55,9 +55,6 @@ from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
-# 
-# per_minute_aggr
-
 class JobAttrForm(object):
     def __init__(self, form_name, job_attr):
         self.form_name = form_name

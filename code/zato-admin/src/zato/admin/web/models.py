@@ -24,9 +24,9 @@ from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
-    timezone = models.CharField(maxlength=100, null=True, default='UTC')
+    timezone = models.CharField(max_length=100, null=True, default='UTC')
     
 class ClusterColorMarker(models.Model):
     user_profile = models.ForeignKey(UserProfile)
     cluster_id = models.IntegerField()
-    color = models.CharField(maxlength=6)
+    color = models.CharField(max_length=6)

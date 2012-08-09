@@ -19,14 +19,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import logging
+
 # Django
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 
 # Zato
 from zato.admin.web.views import meth_allowed
+from zato.common.util import TRACE1
+
+logger = logging.getLogger(__name__)
 
 @meth_allowed('GET')
-def my_account(req):
-    pass
+def settings(req):
+    return_data = {'clusters':req.zato.clusters}
+
+    if logger.isEnabledFor(TRACE1):
+        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
+    
+    return render_to_response('zato/account/settings.html', return_data, context_instance=RequestContext(req))
