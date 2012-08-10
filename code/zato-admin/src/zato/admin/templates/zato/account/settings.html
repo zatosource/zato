@@ -39,8 +39,14 @@
         
         {% for cluster in clusters %}
             <tr>
-                <td style="width:15%">{{ cluster.name }}</td>
-                <td style="width:30;text-align:left%" colspan="3"><input type="text" id="color" /></td>
+                <td style="width:15%;line-height:25px">{{ cluster.name }}</td>
+                
+                <td style="width:30%;text-align:left;line-height:25px" colspan="3">
+                    <input type="checkbox" id="checkbox_{{ cluster.id }}" style="vertical-align:middle;margin-bottom:5px" />&nbsp;
+                    <span id="color_picker_span_{{ cluster.id }}" class="hidden">
+                        <input type="text" style="color:#999" id="color_{{ cluster.id }}" value="Click to pick a color" />
+                    </span>
+                </td>
             </tr>
         {% endfor %}
 

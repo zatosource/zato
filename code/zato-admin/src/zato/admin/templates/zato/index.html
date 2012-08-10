@@ -195,8 +195,15 @@
                 </ul>
                 <br style="clear:left"/>
             </div>
+            <div id="cluster_color_div" 
+                {% if cluster_color %}
+                    style="background-color:{{ cluster_color }}"
+                {% else %}
+                    class="hidden"
+                {% endif %}
+                >&nbsp;</div>
         </div>
-
+        
         {% endif %}
 
         <div id="bd">
