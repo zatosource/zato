@@ -47,6 +47,8 @@ if ({}.__proto__){
 })(jQuery);
 
 $.namespace('zato');
+$.namespace('zato.account');
+$.namespace('zato.account.basic_settings');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');

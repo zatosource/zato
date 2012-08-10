@@ -26,6 +26,7 @@ import logging
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import meth_allowed
@@ -40,4 +41,4 @@ def settings(req):
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
     
-    return render_to_response('zato/account/settings.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/account/settings.html', return_data)

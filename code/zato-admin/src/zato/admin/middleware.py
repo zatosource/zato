@@ -89,7 +89,7 @@ class ZatoMiddleware(object):
             else:
                 return HttpResponseRedirect('{}?next={}'.format(self.require_login_path, req.path))
             
-        # Makes each Django view have an access to an 'odb' attribute of the
+        # Makes each Django view have an access to a 'zato.odb' attribute of the
         # request object. The attribute is an SQLAlchemy session to the database
         # defined in app's settings.py
         req.zato = Bunch()
@@ -104,3 +104,9 @@ class ZatoMiddleware(object):
             
         req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
         req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)
+
+    def process_template_response(self, req, resp):
+        resp.context_data['cluster_colorx'] = 'red'
+        resp.render()
+        
+        return resp
