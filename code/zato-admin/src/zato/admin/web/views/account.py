@@ -31,17 +31,21 @@ from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.views import meth_allowed
 from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_PROMPT = 'Click to pick a color'
+
 @meth_allowed('GET')
 def settings_basic(req):
-    return_data = {'clusters':req.zato.clusters}
+    return_data = {'clusters':req.zato.clusters, 'default_prompt':DEFAULT_PROMPT}
     
-    print(req.zato.user_profile.cluster_color_markers.all())
-
+    cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in req.zato.user_profile.cluster_color_markers.all()}
+    return_data['cluster_colors'] = cluster_colors
+    
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
@@ -50,9 +54,22 @@ def settings_basic(req):
 @meth_allowed('POST')
 def settings_basic_save(req):
 
-    #print(req.POST)
-    #print(req.user)
-    
+    for key, value in req.POST.items():
+        if key.startswith('color_') and value != DEFAULT_PROMPT:
+            cluster_id = key.replace('color_', '')
+            
+            if 'checkbox_{}'.format(cluster_id) in req.POST:
+                try:
+                    ccm = ClusterColorMarker.objects.get(cluster_id=cluster_id, user_profile=req.zato.user_profile)
+                except ClusterColorMarker.DoesNotExist:
+                    ccm = ClusterColorMarker()
+                    ccm.cluster_id = cluster_id
+                    ccm.user_profile = req.zato.user_profile
+                ccm.color = value
+                ccm.save()
+            else:
+                ClusterColorMarker.objects.filter(cluster_id=cluster_id, user_profile=req.zato.user_profile).delete()
+            
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
     return redirect(reverse('account-settings-basic'))

@@ -23,6 +23,9 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
+    class Meta:
+        db_table = 'user_profile'
+        
     user = models.ForeignKey(User, unique=True)
     timezone = models.CharField(max_length=100, null=True, default='UTC')
     
@@ -33,6 +36,15 @@ class UserProfile(models.Model):
     __unicode__ = __repr__
 
 class ClusterColorMarker(models.Model):
+    class Meta:
+        db_table = 'cluster_color_marker'
+    
     user_profile = models.ForeignKey(UserProfile, related_name='cluster_color_markers')
     cluster_id = models.IntegerField()
     color = models.CharField(max_length=6) # RGB
+
+    def __repr__(self):
+        return '<{} at {} user_profile:[{}] cluster_id:[{}] color:[{}]>'.format(
+            self.__class__.__name__, hex(id(self)), self.user_profile, self.cluster_id, self.color)
+    
+    __unicode__ = __repr__
