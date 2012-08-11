@@ -23,8 +23,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Django
+from django.contrib import messages
+from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render_to_response
+from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
 from django.template.response import TemplateResponse
 
@@ -35,10 +37,22 @@ from zato.common.util import TRACE1
 logger = logging.getLogger(__name__)
 
 @meth_allowed('GET')
-def settings(req):
+def settings_basic(req):
     return_data = {'clusters':req.zato.clusters}
+    
+    print(req.zato.user_profile.cluster_color_markers.all())
 
     if logger.isEnabledFor(TRACE1):
         logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
-    
+
     return TemplateResponse(req, 'zato/account/settings.html', return_data)
+
+@meth_allowed('POST')
+def settings_basic_save(req):
+
+    #print(req.POST)
+    #print(req.user)
+    
+    msg = 'Settings saved'
+    messages.add_message(req, messages.INFO, msg, extra_tags='success')
+    return redirect(reverse('account-settings-basic'))

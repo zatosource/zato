@@ -31,6 +31,7 @@ from bunch import Bunch
 # Zato
 from zato.admin.settings import SASession
 from zato.admin.web.forms import ChooseClusterForm
+from zato.admin.web.models import UserProfile
 from zato.common.odb.model import Cluster
 
 
@@ -104,6 +105,15 @@ class ZatoMiddleware(object):
             
         req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
         req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)
+
+        if not req.user.is_anonymous():
+            try:
+                user_profile = UserProfile.objects.get(user=req.user)
+            except UserProfile.DoesNotExist, e:
+                user_profile = UserProfile(user=req.user)
+                user_profile.save()
+                
+            req.zato.user_profile = user_profile
 
     def process_template_response(self, req, resp):
         resp.context_data['cluster_colorx'] = 'red'
