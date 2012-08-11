@@ -20,6 +20,7 @@ $(document).ready(function() {
 				_.each(['color', 'backgroundColor'], function(attr_name) {
 					_.each([input, '#cluster_color_div'], function(elem) {
 						$(elem).css(attr_name, '#' + hex);
+						$(elem).val(hex); // Works on the 'input' element only
 					});
 				});
 			}

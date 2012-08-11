@@ -26,7 +26,13 @@ class UserProfile(models.Model):
     user = models.ForeignKey(User, unique=True)
     timezone = models.CharField(max_length=100, null=True, default='UTC')
     
+    def __repr__(self):
+        return '<{} at {} user:[{}] timezone:[{}]>'.format(self.__class__.__name__,
+            hex(id(self)), self.user, self.timezone)
+    
+    __unicode__ = __repr__
+
 class ClusterColorMarker(models.Model):
-    user_profile = models.ForeignKey(UserProfile)
+    user_profile = models.ForeignKey(UserProfile, related_name='cluster_color_markers')
     cluster_id = models.IntegerField()
-    color = models.CharField(max_length=6)
+    color = models.CharField(max_length=6) # RGB

@@ -49,7 +49,8 @@ urlpatterns = patterns('',
     url(r'^logout/$', main.logout, name='logout'),
     
     # User accounts
-    url(r'^account/settings/$', account.settings, name='account-settings'),
+    url(r'^account/settings/basic/$', account.settings_basic, name='account-settings-basic'),
+    url(r'^account/settings/basic/save/$', account.settings_basic_save, name='account-settings-basic-save'),
 
     # Clusters
     url(r'^zato/cluster/$', cluster.index, name='cluster'),

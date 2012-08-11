@@ -12,7 +12,7 @@
 
 {% block content %}
 
-<h2 class="zato">Account : Settings</h2>
+<h2 class="zato">Account : Basic settings</h2>
 
 {% if messages %}
     {% for message in messages %}
@@ -44,7 +44,7 @@
                 <td style="width:30%;text-align:left;line-height:25px" colspan="3">
                     <input type="checkbox" id="checkbox_{{ cluster.id }}" style="vertical-align:middle;margin-bottom:5px" />&nbsp;
                     <span id="color_picker_span_{{ cluster.id }}" class="hidden">
-                        <input type="text" style="color:#999" id="color_{{ cluster.id }}" value="Click to pick a color" />
+                        <input type="text" style="color:#999" id="color_{{ cluster.id }}" name="color_{{ cluster.id }}" value="Click to pick a color" />
                     </span>
                 </td>
             </tr>

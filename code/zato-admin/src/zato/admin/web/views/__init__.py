@@ -66,7 +66,7 @@ def meth_allowed(*meths):
         def inner_view(*args, **kwargs):
             req = args[1] if len(args) > 1 else args[0]
             if req.method not in meths:
-                msg = "Method [{method}] is not allowed here [{view}], methods allowed:[{meths}]"
+                msg = 'Method [{method}] is not allowed here [{view}], methods allowed:[{meths}]'
                 msg = msg.format(method=req.method, view=view.func_name, meths=meths)
                 logger.error(msg)
                 raise Exception(msg)

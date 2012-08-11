@@ -45,7 +45,7 @@
             <div id="console-header"><span id="logo">Zato</span>
             {% if user.is_authenticated %}
                 <span id="logout">
-                    <a class="top" href="{% url account-settings %}">My settings</a>
+                    <a class="top" href="{% url account-settings-basic %}">My settings</a>
                     <a class="top"  href="{% url logout %}">Log out ({{ user.username }})</a>
                 </span>
             {% endif %}
