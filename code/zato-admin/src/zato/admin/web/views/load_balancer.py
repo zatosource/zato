@@ -33,7 +33,6 @@ except ImportError:
 # Django
 from django.contrib import messages
 from django.http import HttpResponse
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Zato
@@ -42,7 +41,6 @@ from zato.admin.web.forms.load_balancer import ManageLoadBalancerForm, RemoteCom
 from zato.admin.web.views import get_lb_client, meth_allowed
 from zato.common.haproxy import haproxy_stats, Config
 from zato.common.odb.model import Cluster
-from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

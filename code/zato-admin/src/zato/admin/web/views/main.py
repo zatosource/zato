@@ -22,7 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django.contrib.auth import logout as _logout
 from django.http import HttpResponseRedirect
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Zato

@@ -25,7 +25,6 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # anyjson
@@ -36,7 +35,6 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import meth_allowed
-from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

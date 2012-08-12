@@ -34,7 +34,6 @@ from dateutil.relativedelta import relativedelta
 # Django
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # lxml
@@ -55,7 +54,6 @@ from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common import SourceInfo, ZATO_NONE, zato_path
 from zato.common.odb.model import Service
-from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

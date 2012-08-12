@@ -26,8 +26,6 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # anyjson
@@ -35,8 +33,7 @@ from json import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.common import ZATO_NONE, zato_path
-from zato.common.util import TRACE1
+from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
 

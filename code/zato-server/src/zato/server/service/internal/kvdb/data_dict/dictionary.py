@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import re
-from operator import attrgetter
 
 # Zato
 from zato.common import KVDB, ZatoException

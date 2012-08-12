@@ -26,7 +26,7 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.template import loader, RequestContext
+from django.template import loader
 from django.template.response import TemplateResponse
 
 # anyjson
@@ -43,7 +43,6 @@ from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, D
      DATABASE_USER, sqlalchemy_django_engine
 from zato.common import SERVER_UP_STATUS
 from zato.common.odb.model import Cluster, Server
-from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

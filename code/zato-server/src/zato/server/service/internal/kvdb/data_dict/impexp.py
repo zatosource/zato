@@ -22,8 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # anyjson
 from anyjson import loads
 
-import codecs
-
 # Zato
 from zato.common import KVDB
 from zato.common.util import dict_item_name, translation_name
