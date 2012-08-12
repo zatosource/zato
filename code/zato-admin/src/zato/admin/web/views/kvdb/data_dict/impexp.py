@@ -27,8 +27,8 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import invoke_admin_service
@@ -48,7 +48,7 @@ def index(req):
         'choose_cluster_form':req.zato.choose_cluster_form,
     }
     
-    return render_to_response('zato/kvdb/data_dict/impexp.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/kvdb/data_dict/impexp.html', return_data)
 
 @meth_allowed('POST')
 def import_(req, cluster_id):

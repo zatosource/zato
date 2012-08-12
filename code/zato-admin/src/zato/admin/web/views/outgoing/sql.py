@@ -23,8 +23,8 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Validate
 from validate import is_boolean
@@ -122,12 +122,7 @@ def index(req):
         'change_password_form': change_password_form
         }
 
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
-
-    return render_to_response('zato/outgoing/sql.html', return_data,
-                              context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/outgoing/sql.html', return_data)
 
 @meth_allowed('POST')
 def create(req):
@@ -179,9 +174,7 @@ def ping(req, cluster_id, id):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        return render_to_response('zato/outgoing/sql-ping-ok.html', 
-                                  {'response_time':'%.3f' % float(response_time)},
-                                  context_instance=RequestContext(req))
+        return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html', {'response_time':'%.3f' % float(response_time)})
 
 @meth_allowed('POST')
 def change_password(req):

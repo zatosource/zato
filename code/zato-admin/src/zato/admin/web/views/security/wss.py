@@ -26,8 +26,8 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Validate
 from validate import is_boolean
@@ -105,7 +105,7 @@ def index(req):
         'change_password_form': change_password_form
         }
 
-    return render_to_response('zato/security/wss.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/security/wss.html', return_data)
 
 @meth_allowed('POST')
 def edit(req):

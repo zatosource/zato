@@ -26,7 +26,6 @@ import logging
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
 from django.template.response import TemplateResponse
 
@@ -45,9 +44,6 @@ def settings_basic(req):
     
     cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in req.zato.user_profile.cluster_color_markers.all()}
     return_data['cluster_colors'] = cluster_colors
-    
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
 
     return TemplateResponse(req, 'zato/account/settings.html', return_data)
 

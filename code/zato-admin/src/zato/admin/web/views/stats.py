@@ -40,8 +40,8 @@ from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
-from django.shortcuts import redirect, render_to_response
 from django.template import loader, RequestContext
+from django.template.response import TemplateResponse
 
 # django-settings
 from django_settings.models import PositiveInteger, Setting
@@ -141,10 +141,7 @@ def top_n(req, choice):
         'choose_cluster_form':req.zato.choose_cluster_form,
     }
     
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
-
-    return render_to_response('zato/stats/top-n.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/stats/top-n.html', return_data)
 
 def _top_n_data_csv(req_input, cluster):
 
@@ -280,10 +277,7 @@ def settings(req):
         'defaults':defaults,
     }
 
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
-
-    return render_to_response('zato/stats/settings.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/stats/settings.html', return_data)
 
 @meth_allowed('POST')
 def settings_save(req):
@@ -333,10 +327,8 @@ def maintenance(req):
         'choose_cluster_form':req.zato.choose_cluster_form,
         'form': MaintenanceForm()
     }
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(str(return_data)))
-
-    return render_to_response('zato/stats/maintenance.html', return_data, context_instance=RequestContext(req))
+    
+    return TemplateResponse(req, 'zato/stats/maintenance.html', return_data)
 
 @meth_allowed('POST')
 def maintenance_delete(req):

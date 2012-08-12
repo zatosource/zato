@@ -22,8 +22,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django.contrib.auth import logout as _logout
 from django.http import HttpResponseRedirect
-from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.views import meth_allowed
@@ -34,8 +34,8 @@ def index_redirect(req):
 
 @meth_allowed('GET')
 def index(req):
-    return render_to_response('zato/index.html',
-                              context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/index.html')
+
 @meth_allowed('GET')
 def logout(req):
     _logout(req)
