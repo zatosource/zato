@@ -32,8 +32,8 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Validate
 from validate import is_boolean
@@ -388,7 +388,7 @@ def index(req):
                 logger.error(msg)
                 return HttpResponseServerError(msg)
     
-        return render_to_response('zato/scheduler.html',
+        return TemplateResponse(req, 'zato/scheduler.html',
             {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
             'choose_cluster_form':req.zato.choose_cluster_form,
@@ -400,7 +400,7 @@ def index(req):
             'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
             'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
-            }, context_instance=RequestContext(req))
+            })
     except Exception, e:
         msg = '<pre>Could not invoke the method, e:[{0}]</pre>'.format(format_exc(e))
         logger.error(msg)

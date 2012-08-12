@@ -28,6 +28,7 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # anyjson
 from json import dumps
@@ -213,10 +214,8 @@ class Index(_BaseView):
             if view_specific:
                 return_data.update(view_specific)
                 
-            if logger.isEnabledFor(TRACE1):
-                logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
-    
-            return render_to_response(self.template, return_data, context_instance=RequestContext(req))
+            return TemplateResponse(req, self.template, return_data)
+        
         except Exception, e:
             return HttpResponseServerError(format_exc(e))
 

@@ -26,7 +26,7 @@ from traceback import format_exc
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template import RequestContext
-from django.shortcuts import render_to_response
+from django.template.response import TemplateResponse
 
 # anyjson
 from anyjson import dumps
@@ -49,11 +49,8 @@ def remote_command(req):
                    'zato_clusters':req.zato.clusters,
                    'cluster_id':req.zato.cluster_id,
                    }
-
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(return_data))
-
-    return render_to_response('zato/kvdb/remote-command.html', return_data, context_instance=RequestContext(req))
+    
+    return TemplateResponse(req, 'zato/kvdb/remote-command.html', return_data)
 
 @meth_allowed('POST')
 def remote_command_execute(req):

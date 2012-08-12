@@ -27,8 +27,8 @@ from anyjson import dumps
 
 # Django
 from django.http import HttpResponse
-from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import invoke_admin_service
@@ -145,4 +145,4 @@ def translate(req):
         'translation_result': _translate() if req.method == 'POST' else None,
         'show_translation': req.method == 'POST'
     }
-    return render_to_response('zato/kvdb/data_dict/translation/translate.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/kvdb/data_dict/translation/translate.html', return_data)

@@ -31,7 +31,7 @@ from bunch import Bunch
 # Zato
 from zato.admin.settings import SASession
 from zato.admin.web.forms import ChooseClusterForm
-from zato.admin.web.models import UserProfile
+from zato.admin.web.models import ClusterColorMarker, UserProfile
 from zato.common.odb.model import Cluster
 
 
@@ -112,11 +112,18 @@ class ZatoMiddleware(object):
             except UserProfile.DoesNotExist, e:
                 user_profile = UserProfile(user=req.user)
                 user_profile.save()
-                
             req.zato.user_profile = user_profile
+        else:
+            req.zato.user_profile = None
 
     def process_template_response(self, req, resp):
-        resp.context_data['cluster_colorx'] = 'red'
+        try:
+            ccm = ClusterColorMarker.objects.get(cluster_id=req.zato.cluster_id, user_profile=req.zato.user_profile)
+        except ClusterColorMarker.DoesNotExist:
+            pass
+        else:
+            resp.context_data['cluster_color'] = ccm.color
+
         resp.render()
         
         return resp

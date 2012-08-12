@@ -35,7 +35,7 @@ from dateutil.relativedelta import relativedelta
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.template import RequestContext
-from django.shortcuts import render_to_response
+from django.template.response import TemplateResponse
 
 # lxml
 from lxml import etree
@@ -218,11 +218,7 @@ def details(req, service_name):
         'edit_form':edit_form,
         }
 
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
-
-    return render_to_response('zato/service/details.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/service/details.html', return_data)
 
 @meth_allowed('POST')
 def invoke(req, service_id, cluster_id):
@@ -277,7 +273,7 @@ def source_info(req, service_name):
         'service':service,
         }
 
-    return render_to_response('zato/service/source-info.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/service/source-info.html', return_data)
 
 @meth_allowed('GET')
 def wsdl(req, service_name):
@@ -302,7 +298,7 @@ def wsdl(req, service_name):
         'wsdl_public_url':wsdl_public_url,
         }
 
-    return render_to_response('zato/service/wsdl.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/service/wsdl.html', return_data)
 
 @meth_allowed('POST')
 def wsdl_upload(req, service_name, cluster_id):
@@ -364,7 +360,7 @@ def request_response(req, service_name):
         'service': service,
         }
 
-    return render_to_response('zato/service/request-response.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/service/request-response.html', return_data)
 
 @meth_allowed('POST')
 def request_response_configure(req, service_name, cluster_id):

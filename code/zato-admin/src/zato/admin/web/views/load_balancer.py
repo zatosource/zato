@@ -33,8 +33,8 @@ except ImportError:
 # Django
 from django.contrib import messages
 from django.http import HttpResponse
-from django.shortcuts import redirect, render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.load_balancer import ManageLoadBalancerForm, RemoteCommandForm, \
@@ -144,11 +144,7 @@ def remote_command(req, cluster_id):
 
     return_data = {"form":form, "cluster":cluster, "haproxy_alive":haproxy_alive}
 
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, "Returning render_to_response [%s]" % return_data)
-
-    return render_to_response("zato/load_balancer/remote_command.html", return_data,
-                              context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/load_balancer/remote_command.html', return_data)
 
 @meth_allowed("GET")
 def manage(req, cluster_id):
@@ -202,11 +198,7 @@ def manage(req, cluster_id):
                    'form':form, 'backends':backends, 'haproxy_alive':haproxy_alive,
                    'servers_state':servers_state}
 
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)
-
-    return render_to_response('zato/load_balancer/manage.html', return_data,
-                              context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/load_balancer/manage.html', return_data)
 
 @meth_allowed("POST")
 def validate_save(req, cluster_id):
@@ -275,11 +267,7 @@ def manage_source_code(req, cluster_id):
 
     return_data = {"form": form, "haproxy_alive":haproxy_alive, "cluster":cluster}
 
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, "Returning render_to_response [%s]" % return_data)
-
-    return render_to_response("zato/load_balancer/manage_source_code.html", return_data,
-                              context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/load_balancer/manage_source_code.html', return_data)
 
 @meth_allowed("POST")
 def validate_save_source_code(req, cluster_id):

@@ -25,8 +25,8 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
-from django.shortcuts import render_to_response
 from django.template import RequestContext
+from django.template.response import TemplateResponse
 
 # Validate
 from validate import is_boolean
@@ -200,12 +200,7 @@ def index(req):
         'colspan': colspan
         }
 
-    # TODO: Should really be done by a decorator.
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{0}]'.format(return_data))
-
-    return render_to_response('zato/http_soap.html', return_data,
-                              context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/http_soap.html', return_data)
 
 @meth_allowed('POST')
 def create(req):

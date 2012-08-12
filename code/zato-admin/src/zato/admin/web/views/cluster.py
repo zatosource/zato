@@ -26,8 +26,8 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import render_to_response
 from django.template import loader, RequestContext
+from django.template.response import TemplateResponse
 
 # anyjson
 from anyjson import dumps
@@ -187,12 +187,7 @@ def index(req):
     return_data = {'create_form':create_form, 'delete_form':delete_form,
                    'edit_form':EditClusterForm(prefix='edit'), 'items':items}
 
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)
-
-    return render_to_response('zato/cluster/index.html', return_data,
-                              context_instance=RequestContext(req))
-
+    return TemplateResponse(req, 'zato/cluster/index.html', return_data)
 
 @meth_allowed('POST')
 def create(req):
@@ -228,13 +223,7 @@ def get_servers_state(req, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-    return_data = {'cluster':cluster}
-
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [%s]' % return_data)
-
-    return render_to_response('zato/cluster/servers_state.html', return_data,
-                              context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/cluster/servers_state.html', {'cluster':cluster})
 
 @meth_allowed('POST')
 def delete(req, cluster_id):
@@ -291,10 +280,7 @@ def servers(req):
         'edit_form':EditServerForm(prefix='edit')
     }
     
-    if logger.isEnabledFor(TRACE1):
-        logger.log(TRACE1, 'Returning render_to_response [{}]'.format(return_data))
-
-    return render_to_response('zato/cluster/servers.html', return_data, context_instance=RequestContext(req))
+    return TemplateResponse(req, 'zato/cluster/servers.html', return_data)
 
 @meth_allowed('POST')
 def servers_edit(req):
