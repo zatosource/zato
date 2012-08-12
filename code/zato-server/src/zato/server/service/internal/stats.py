@@ -24,7 +24,6 @@ from collections import OrderedDict
 from contextlib import closing
 from datetime import datetime, timedelta
 from heapq import nlargest
-from itertools import izip, tee
 from operator import itemgetter
 
 # Bunch
@@ -32,8 +31,7 @@ from bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta
-from dateutil.rrule import DAILY, MINUTELY, rrule, WEEKLY
+from dateutil.rrule import MINUTELY, rrule
 
 # SciPy
 from scipy import stats as sp_stats
@@ -42,7 +40,6 @@ from scipy import stats as sp_stats
 from zato.common import KVDB, StatsElem, ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, STATS
 from zato.common.odb.model import Service
-from zato.common.odb.query import job_by_name
 from zato.server.service.internal import AdminService
 
 class Delete(AdminService):

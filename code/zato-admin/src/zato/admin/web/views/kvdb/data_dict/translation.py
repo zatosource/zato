@@ -27,7 +27,6 @@ from anyjson import dumps
 
 # Django
 from django.http import HttpResponse
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Zato

@@ -23,7 +23,6 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Validate
@@ -41,7 +40,6 @@ from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common.odb.model import SQLConnectionPool
 from zato.common import zato_path
-from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

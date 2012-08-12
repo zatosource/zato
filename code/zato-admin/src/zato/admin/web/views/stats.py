@@ -40,7 +40,7 @@ from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
-from django.template import loader, RequestContext
+from django.template import loader
 from django.template.response import TemplateResponse
 
 # django-settings
@@ -51,7 +51,6 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.stats import CompareForm, MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import meth_allowed
 from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
-from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

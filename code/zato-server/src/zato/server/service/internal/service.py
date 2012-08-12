@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import datetime
 from httplib import BAD_REQUEST, NOT_FOUND
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile

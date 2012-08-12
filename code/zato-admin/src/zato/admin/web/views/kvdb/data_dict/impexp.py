@@ -27,13 +27,11 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import meth_allowed
-from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import zato_path
 from zato.common.util import current_host, translation_name

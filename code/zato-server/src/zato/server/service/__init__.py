@@ -21,10 +21,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from httplib import OK
 from itertools import chain
-from time import mktime
 from traceback import format_exc
 
 # SQLAlchemy

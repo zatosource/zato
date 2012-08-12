@@ -25,14 +25,11 @@ import logging
 # Django
 from django.contrib import messages
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseRedirect
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.views import meth_allowed
-from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 

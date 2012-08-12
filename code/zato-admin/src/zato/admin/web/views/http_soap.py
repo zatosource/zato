@@ -25,7 +25,6 @@ from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
-from django.template import RequestContext
 from django.template.response import TemplateResponse
 
 # Validate

@@ -46,7 +46,7 @@ from springpython.context import InitializingObject
 
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo
-from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, service_name_from_impl, TRACE1, visit_py_source_from_distribution
+from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, TRACE1, visit_py_source_from_distribution
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
