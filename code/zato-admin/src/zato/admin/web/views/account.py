@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
+import logging, time
 
 # Django
 from django.contrib import messages
@@ -29,6 +29,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web.forms.account import BasicSettingsForm
 from zato.admin.web.models import ClusterColorMarker
 from zato.admin.web.views import meth_allowed
 
@@ -38,7 +39,8 @@ DEFAULT_PROMPT = 'Click to pick a color'
 
 @meth_allowed('GET')
 def settings_basic(req):
-    return_data = {'clusters':req.zato.clusters, 'default_prompt':DEFAULT_PROMPT}
+    initial = {'timezone':req.zato.user_profile.timezone, 'dt_format': req.zato.user_profile.dt_format}
+    return_data = {'clusters':req.zato.clusters, 'default_prompt':DEFAULT_PROMPT, 'form':BasicSettingsForm(initial)}
     
     cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in req.zato.user_profile.cluster_color_markers.all()}
     return_data['cluster_colors'] = cluster_colors
@@ -47,6 +49,10 @@ def settings_basic(req):
 
 @meth_allowed('POST')
 def settings_basic_save(req):
+    
+    for attr in('timezone', 'dt_format'):
+        setattr(req.zato.user_profile, attr, req.POST[attr])
+    req.zato.user_profile.save()
 
     for key, value in req.POST.items():
         if key.startswith('color_') and value != DEFAULT_PROMPT:
