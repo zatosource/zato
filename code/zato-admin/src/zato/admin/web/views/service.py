@@ -49,7 +49,7 @@ from pygments.formatters import HtmlFormatter
 from validate import is_boolean
 
 # Zato
-from zato.admin.web import invoke_admin_service
+from zato.admin.web import invoke_admin_service, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common import SourceInfo, ZATO_NONE, zato_path
@@ -407,20 +407,26 @@ def last_stats(req, service_id, cluster_id):
     return_data = {
         'rate': '(error)',
         'mean': '(error)',
-        'trend_mean': '(error)',
-        'trend_rate': '(error)',
+        'mean_trend': '(error)',
         }
     
     try:
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:service.get-last-stats', {'service_id': service_id, 'minutes':60})
+        start, stop = last_hour_start_stop(datetime.utcnow())
+        zato_message, _ = invoke_admin_service(req.zato.cluster, 
+            'zato:stats.get-by-service', {'service_id': service_id, 'start':start, 'stop':stop})
         
         if zato_path('response.item').get_from(zato_message) is not None:
             item = zato_message.response.item
             for key in return_data:
                 value = getattr(item, key).text or ''
-                if value and key.startswith('trend'):
+                
+                if value and key.endswith('trend') and value != ZATO_NONE:
                     value = [int(float(elem)) for elem in value.split(',')]
-                return_data[key] = value
+
+                if value == '0.0':
+                    value = '<0.1'
+
+                return_data[key] = value if value != ZATO_NONE else '0'
 
     except Exception, e:
         msg = 'Caught an exception while invoking zato:service.get-last-stats, e:[{}]'.format(format_exc(e))
