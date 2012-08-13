@@ -79,7 +79,5 @@ class MaintenanceTool(object):
             for suffix in suffixes:
                 for key in self.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
                     p.delete(key)
-                    print(33, key)
                     
             p.execute()
-
