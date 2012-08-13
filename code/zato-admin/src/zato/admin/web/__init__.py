@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # dateutil
+from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 
 # lxml
@@ -33,6 +34,7 @@ from lxml.objectify import Element
 from zato.admin.settings import TECH_ACCOUNT_NAME, TECH_ACCOUNT_PASSWORD
 from zato.common import zato_namespace
 from zato.common.soap import invoke_admin_service as _invoke_admin_service
+from zato.common.util import from_local_to_utc, from_utc_to_local
 
 logger = logging.getLogger(__name__)
 
@@ -64,3 +66,12 @@ def last_hour_start_stop(now):
     now-1 hour and now.
     """
     return (now + relativedelta(minutes=-60)).isoformat(), now.isoformat()
+
+def from_utc_to_user(dt, req):
+    """ Converts a datetime object from UTC to a user-selected timezone and datetime format. 
+    """
+    return from_utc_to_local(dt, req.zato.user_profile.timezone).strftime(req.zato.user_profile.dt_format)
+    
+def from_user_to_utc(dt, req):
+    """ Converts a datetime object from a user-selected timezone to UTC.
+    """

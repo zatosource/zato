@@ -45,6 +45,18 @@ except ImportError:
     from distutils2.config import Config
     from distutils2.dist import Distribution
 
+# anyjson
+from anyjson import dumps, loads
+
+# Bunch
+from bunch import Bunch, bunchify
+
+# ConfigObj
+from configobj import ConfigObj
+
+# dateutil
+from dateutil.parser import parse
+
 # lxml
 from lxml import objectify
 
@@ -54,17 +66,8 @@ from M2Crypto import BIO, RSA
 # pip
 from pip.download import is_archive_file
 
-# ConfigObj
-from configobj import ConfigObj
-
-# Bunch
-from bunch import Bunch, bunchify
-
-# ConfigObj
-from configobj import ConfigObj
-
-# anyjson
-from anyjson import dumps, loads
+# pytz
+import pytz
 
 # Spring Python
 from springpython.context import ApplicationContext
@@ -488,3 +491,18 @@ def pairwise(iterable):
     next(b, None)
     return izip(a, b)
 
+def from_local_to_utc(dt, tz_name):
+    """ What is the UTC time given the local time and the timezone's name?
+    """
+    dt = parse(dt)
+    dt = pytz.timezone(tz_name).localize(dt)
+    utc_dt = pytz.utc.normalize(dt.astimezone(pytz.utc))
+    return utc_dt #.isoformat()
+
+def from_utc_to_local(dt, tz_name):
+    """ What is the local time in the user-provided time zone name?
+    """
+    local_tz = pytz.timezone(tz_name)
+    dt = parse(dt)
+    dt = local_tz.normalize(dt.astimezone(local_tz))
+    return dt

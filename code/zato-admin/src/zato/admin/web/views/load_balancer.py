@@ -37,6 +37,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.load_balancer import ManageLoadBalancerForm, RemoteCommandForm, \
      ManageLoadBalancerSourceCodeForm
 from zato.admin.web.views import get_lb_client, meth_allowed
@@ -152,11 +153,11 @@ def manage(req, cluster_id):
     cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
-    lb_start_time = datetime.fromtimestamp(client.get_uptime_info())
+    lb_start_time = from_utc_to_user(client.get_uptime_info(), req)	
     lb_config = client.get_config()
     lb_work_config = client.get_work_config()
     lb_work_config['verify_fields'] = ', '.join(['%s=%s' % (k,v) for (k, v) in sorted(lb_work_config['verify_fields'].items())])
-
+    
     form_data = {
         'global_log_host': lb_config['global_']['log']['host'],
         'global_log_port': lb_config['global_']['log']['port'],
