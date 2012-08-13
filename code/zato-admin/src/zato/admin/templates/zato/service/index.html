@@ -107,7 +107,7 @@
                         <th><a href="#">Internal</a></th>
                         <th>1h req/s</th>
                         <th>1h mean</th>
-                        <th>1h req/mean trend</th>
+                        <th>1h mean trend</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -128,8 +128,6 @@
                         <td id="rate_1h_{{ item.id }}"></td>
                         <td id="mean_1h_{{ item.id }}"></td>
                         <td>
-                            <span id="trend_rate_1h_{{ item.id }}"></span>
-                            <br/>
                             <span id="trend_mean_1h_{{ item.id }}"></span>
                         </td>
                         <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>

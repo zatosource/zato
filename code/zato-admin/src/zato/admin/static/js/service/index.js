@@ -20,7 +20,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name']);
     
-    var sparklines_options = {'width':'90px', 'height':'15px', 'lineColor':'#555', 'spotColor':false, 'disableHiddenCheck':true,
+    var sparklines_options = {'width':'90px', 'height':'12px', 'lineColor':'#555', 'spotColor':false, 'disableHiddenCheck':true,
                                'fillColor':false}
     
     $.each($.fn.zato.data_table.data, function(idx, instance) {
@@ -30,8 +30,12 @@ $(document).ready(function() {
 
             $('#rate_1h_' + instance.id).text(json.rate);
             $('#mean_1h_' + instance.id).text(json.mean);
-            $('#trend_rate_1h_' + instance.id).sparkline(json.trend_rate, sparklines_options);
-            $('#trend_mean_1h_' + instance.id).sparkline(json.trend_mean, sparklines_options);
+            if(json.mean_trend != '0') {
+                $('#trend_mean_1h_' + instance.id).sparkline(json.mean_trend, sparklines_options);
+            }
+            else {
+                $('#trend_mean_1h_' + instance.id).text('n/a');
+            }
             
         };
         $.fn.zato.post(String.format('./last-stats/{0}/cluster/{1}/', instance.id, $('#cluster_id').val()), _callback, {}, 'json', true);

@@ -22,6 +22,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# dateutil
+from dateutil.relativedelta import relativedelta
+
 # lxml
 from lxml import etree
 from lxml.objectify import Element
@@ -55,3 +58,9 @@ def invoke_admin_service(cluster, soap_action, input_dict):
         logger.debug('Request:[{}], response:[{}]'.format(request, soap_response))
         
     return zato_message, soap_response
+
+def last_hour_start_stop(now):
+    """ Returns a ISO-8601 formatted pair of start/stop timestamps representing
+    now-1 hour and now.
+    """
+    return (now + relativedelta(minutes=-60)).isoformat(), now.isoformat()
