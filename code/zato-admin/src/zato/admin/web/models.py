@@ -28,10 +28,11 @@ class UserProfile(models.Model):
         
     user = models.ForeignKey(User, unique=True)
     timezone = models.CharField(max_length=100, null=True, default='UTC')
+    dt_format = models.CharField(max_length=100, null=True, default='%d-%m-%Y %H:%M:%S')
     
     def __repr__(self):
-        return '<{} at {} user:[{}] timezone:[{}]>'.format(self.__class__.__name__,
-            hex(id(self)), self.user, self.timezone)
+        return '<{} at {} user:[{}] timezone:[{}] dt_format:[{}]>'.format(self.__class__.__name__,
+            hex(id(self)), self.user, self.timezone, self.dt_format)
     
     __unicode__ = __repr__
 
