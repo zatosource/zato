@@ -24,19 +24,22 @@ import logging
 from string import whitespace
 from traceback import format_exc
 
-# Django
-from django.http import HttpResponse, HttpResponseServerError
-from django.template import loader
-from django.template.response import TemplateResponse
-
 # anyjson
 from anyjson import dumps
 
 # Bunch
 from bunch import Bunch
 
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+from django.template import loader
+from django.template.response import TemplateResponse
+
+# pytz
+from pytz import UTC
+
 # Zato
-from zato.admin.web import invoke_admin_service
+from zato.admin.web import invoke_admin_service, from_utc_to_user
 from zato.admin.web.forms.cluster import CreateClusterForm, DeleteClusterForm, EditClusterForm, EditServerForm
 from zato.admin.web.views import Delete as _Delete, get_lb_client, meth_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
@@ -262,6 +265,10 @@ def servers(req):
                     item.in_lb = True
                     item.lb_address = lb_address
                     item.lb_state = lb_state
+                    
+                    if item.up_mod_date:
+                        item.up_mod_date_user = from_utc_to_user(item.up_mod_date.replace(tzinfo=UTC).isoformat(), req)
+                       
                     if item.up_status == SERVER_UP_STATUS.RUNNING:
                         item.may_be_deleted = False
                     else:

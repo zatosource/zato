@@ -156,6 +156,7 @@ class Server(Base):
         self.lb_state = None # Not used by the database
         self.lb_address = None # Not used by the database
         self.may_be_deleted = None # Not used by the database
+        self.up_mod_date_user = None # Not used by the database
 
 ################################################################################
 

@@ -63,7 +63,7 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Server host/FQDN</a></th>
                         <th><a href="#">Server state</a></th>
-                        <th><a href="#">Server state update (UTC)</a></th>
+                        <th><a href="#">Server state update</a></th>
                         <th><a href="#">LB state</a></th>
                         <th><a href="#">LB address</a></th>
                         <th>&nbsp;</th>
@@ -79,7 +79,7 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.host|default:'(unknown)' }}</td>
                         <td>{{ item.up_status|default:'(unknown)' }}</td>
-                        <td>{{ item.up_mod_date|default:'(unknown)' }}</td>
+                        <td>{{ item.up_mod_date_user|default:'(unknown)' }}</td>
                         <td>{{ item.lb_state|default:'(unknown)' }}</td>
                         <td>{{ item.lb_address|default:'(unknown)' }}</td>
                         <td>
