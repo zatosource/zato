@@ -22,10 +22,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import httplib, json, logging, logging.config, os, ssl, urllib
 from collections import Counter
+from datetime import datetime
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
 from time import sleep, time
 from traceback import format_exc
+
+# pytz
+from pytz import UTC
 
 # Spring Python
 from springpython.remoting.xmlrpc import SSLServer
@@ -72,7 +76,7 @@ class LoadBalancerAgent(SSLServer):
 
         self.config_path = os.path.join(self.config_dir, config_file)
         self.config = self._read_config()
-        self.start_time = time()
+        self.start_time = datetime.utcnow().replace(tzinfo=UTC).isoformat()
         self.haproxy_stats = HAProxyStats(self.config.global_["stats_socket"])
 
         super(LoadBalancerAgent, self).__init__(host=self.json_config['host'],
