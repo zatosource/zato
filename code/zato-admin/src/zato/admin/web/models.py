@@ -19,8 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Django
 from django.db import models
 from django.contrib.auth.models import User
+
+# Zato
+from zato.admin.web import DATE_FORMATS, TIME_FORMATS
 
 class UserProfile(models.Model):
     class Meta:
@@ -28,14 +32,21 @@ class UserProfile(models.Model):
         
     user = models.ForeignKey(User, unique=True)
     timezone = models.CharField(max_length=100, null=True, default='UTC')
-    dt_format = models.CharField(max_length=100, null=True, default='%d-%m-%Y %H:%M:%S')
+    date_format = models.CharField(max_length=100, null=True, default='dd-mm-yyyy')
+    time_format = models.CharField(max_length=10, null=True, default='24')
+    
+    def __init__(self, *args, **kwargs):
+        super(UserProfile, self).__init__(*args, **kwargs)
+        self.date_format_py = DATE_FORMATS[self.date_format]
+        self.time_format_py = TIME_FORMATS[self.time_format]
+        self.date_time_format_py = '{} {}'.format(self.date_format_py, self.time_format_py)
     
     def __repr__(self):
         return '<{} at {} user:[{}] timezone:[{}] dt_format:[{}]>'.format(self.__class__.__name__,
             hex(id(self)), self.user, self.timezone, self.dt_format)
     
     __unicode__ = __repr__
-
+    
 class ClusterColorMarker(models.Model):
     class Meta:
         db_table = 'cluster_color_marker'
