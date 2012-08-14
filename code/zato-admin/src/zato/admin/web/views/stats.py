@@ -146,7 +146,7 @@ def top_n(req, choice):
     
     return TemplateResponse(req, 'zato/stats/top-n.html', return_data)
 
-def _top_n_data_csv(req, req_input, cluster):
+def _top_n_data_csv(user_profile, req_input, cluster):
 
     n_type_keys = {
         'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services', 
@@ -173,7 +173,7 @@ def _top_n_data_csv(req, req_input, cluster):
     
     return response
 
-def _top_n_data_html(req, req_input, cluster):
+def _top_n_data_html(user_profile, req_input, cluster):
     
     return_data = {'has_stats':False, 'start':req_input.start, 'stop':req_input.stop}
     settings = {}
@@ -200,7 +200,7 @@ def _top_n_data_html(req, req_input, cluster):
         return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
         
     for name in('start', 'stop'):
-        return_data['{}_label'.format(name)] = from_utc_to_user(return_data[name], req)
+        return_data['{}_label'.format(name)] = from_utc_to_user(return_data[name], user_profile)
         
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -240,7 +240,7 @@ def top_n_data(req):
             delta = relativedelta(**shift_params[req_input.shift])
             req_input[name] = (base_value + delta).isoformat()
 
-    return globals()['_top_n_data_{}'.format(req_input.format)](req, req_input, req.zato.cluster)
+    return globals()['_top_n_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster)
     
 @meth_allowed('GET')
 def settings(req):
