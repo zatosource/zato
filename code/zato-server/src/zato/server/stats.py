@@ -54,7 +54,7 @@ def add_stats_jobs(cluster_id, odb, stats_jobs):
             try:
                 service_id = _get_service_by_impl_name(session, cluster_id, item['service'])[0]
                 
-                now = datetime.now().strftime(scheduler_date_time_format)
+                now = datetime.utcnow().strftime(scheduler_date_time_format)
                 job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
                           cluster_id=cluster_id, service_id=service_id)
                 ib_job = IntervalBasedJob(None, job, seconds=item['seconds'])

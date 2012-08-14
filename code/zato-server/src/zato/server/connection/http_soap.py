@@ -763,7 +763,7 @@ class HTTPSOAPWrapper(object):
         # session will write some info to it ..
         verbose = StringIO()
         
-        start = datetime.now()
+        start = datetime.utcnow()
         
         # .. invoke the other end ..
         r = self.session.head(self.config['address'], auth=self.requests_auth, prefetch=True,
@@ -771,7 +771,7 @@ class HTTPSOAPWrapper(object):
         
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(r.status_code))
-        verbose.write('\nResponse time: {}'.format(datetime.now() - start))
+        verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
         value = verbose.getvalue()
         verbose.close()
         

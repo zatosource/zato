@@ -106,7 +106,7 @@ class BaseConnection(object):
         and how long it took if the connection hadn't been established straightaway.
         """
         if self.connection_attempts > 1:
-            delta = datetime.now() - self.first_connection_attempt_time
+            delta = datetime.utcnow() - self.first_connection_attempt_time
             msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
                 self._conn_info(), self.connection_attempts, delta)
             self.logger.warn(msg)
@@ -116,7 +116,7 @@ class BaseConnection(object):
     def start(self):
         """ Start the connection, reconnect on any recoverable errors.
         """ 
-        self.first_connection_attempt_time = datetime.now() 
+        self.first_connection_attempt_time = datetime.utcnow() 
         while self.keep_connecting:
             try:
                 
@@ -125,7 +125,7 @@ class BaseConnection(object):
                 
                 # Set only if there was an already established connection 
                 # and we're now trying to reconnect to the resource.
-                self.first_connection_attempt_time = datetime.now()
+                self.first_connection_attempt_time = datetime.utcnow()
             except self.reconnect_exceptions, e:
                 if self._keep_connecting(e):
                     if isinstance(e, EnvironmentError):
@@ -133,7 +133,7 @@ class BaseConnection(object):
                     else:
                         err_info = format_exc(e)
                     msg = 'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
-                    delta = datetime.now() - self.first_connection_attempt_time
+                    delta = datetime.utcnow() - self.first_connection_attempt_time
                     self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
                     self.connection_attempts += 1
                     time.sleep(self.reconnect_sleep_time)
