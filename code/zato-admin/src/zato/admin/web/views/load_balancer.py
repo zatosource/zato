@@ -153,7 +153,7 @@ def manage(req, cluster_id):
     cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
-    lb_start_time = from_utc_to_user(client.get_uptime_info(), req)	
+    lb_start_time = from_utc_to_user(client.get_uptime_info(), req.zato.user_profile)
     lb_config = client.get_config()
     lb_work_config = client.get_work_config()
     lb_work_config['verify_fields'] = ', '.join(['%s=%s' % (k,v) for (k, v) in sorted(lb_work_config['verify_fields'].items())])

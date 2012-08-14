@@ -267,7 +267,7 @@ def servers(req):
                     item.lb_state = lb_state
                     
                     if item.up_mod_date:
-                        item.up_mod_date_user = from_utc_to_user(item.up_mod_date.replace(tzinfo=UTC).isoformat(), req)
+                        item.up_mod_date_user = from_utc_to_user(item.up_mod_date.replace(tzinfo=UTC).isoformat(), req.zato.user_profile)
                        
                     if item.up_status == SERVER_UP_STATUS.RUNNING:
                         item.may_be_deleted = False

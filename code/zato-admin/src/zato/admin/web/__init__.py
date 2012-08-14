@@ -87,12 +87,12 @@ def last_hour_start_stop(now):
     """
     return (now + relativedelta(minutes=-60)).isoformat(), now.isoformat()
 
-def from_utc_to_user(dt, req):
+def from_utc_to_user(dt, user_profile, format='date_time'):
     """ Converts a datetime object from UTC to a user-selected timezone and datetime format. 
     """
-    return django_date_filter(_from_utc_to_local(dt, req.zato.user_profile.timezone), req.zato.user_profile.date_time_format_py)
+    return django_date_filter(_from_utc_to_local(dt, user_profile.timezone), getattr(user_profile, '{}_format_py'.format(format)))
                               
     
-def from_user_to_utc(dt, req):
+def from_user_to_utc(dt, user_profile):
     """ Converts a datetime object from a user-selected timezone to UTC.
     """

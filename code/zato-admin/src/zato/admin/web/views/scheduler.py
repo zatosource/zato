@@ -41,7 +41,7 @@ from validate import is_boolean
 from anyjson import dumps
 
 # Zato
-from zato.admin.web import invoke_admin_service
+from zato.admin.web import invoke_admin_service, from_utc_to_user
 from zato.admin.web.views import meth_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
@@ -69,7 +69,7 @@ def _get_start_date(start_date, start_date_format):
 
 def _one_time_job_def(start_date):
     start_date = _get_start_date(start_date, scheduler_date_time_format)
-    return 'Execute once on {0} at {1}'.format(start_date.strftime('%Y-%m-%d'),
+    return 'Execute once on {0} at {1}'.format(from_utc_to_user(start_date, 'date'),
                 start_date.strftime('%H:%M:%S'))
 
 def _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, seconds):
