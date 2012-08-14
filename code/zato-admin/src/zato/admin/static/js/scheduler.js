@@ -41,7 +41,6 @@ $(document).ready(function() {
 				firstDOW: 1, // Weeks start on Monday
 				}
 			);
-			
 		});
 	});
 	

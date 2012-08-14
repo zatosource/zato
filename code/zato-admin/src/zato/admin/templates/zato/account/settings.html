@@ -34,9 +34,10 @@
             <br/>
             <span class="form_hint">(default: UTC)</span></td>
             <td style="width:15%">Date and time format</td>
-            <td style="width:40%;text-align:left">{{ form.dt_format }}
+            <td style="width:40%;text-align:left">{{ form.date_format }} {{ form.time_format }}
             <br/>
-            <span class="form_hint">(default: %d-%m-%Y %H:%M:%S)</span></td>
+            <span class="form_hint">(default: dd-mm-yyyy, 24-hour)
+            </span></td>
         </tr>
         <tr>
             <td class="inline_header" colspan="4">Cluster color markers</td>

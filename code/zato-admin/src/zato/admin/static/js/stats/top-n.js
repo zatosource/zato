@@ -35,7 +35,7 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
     
     $.each(['start', 'stop'], function(idx, time) {
         $(String.format('#{0}-{1}', side, time)).val(json[time]);
-        $(String.format('#{0}-{1}-label', side, time)).text(json[time]);
+        $(String.format('#{0}-{1}-label', side, time)).text(json[time+'_label']);
     });
     
     $.fn.zato.stats.top_n.show_hide([String.format('.{0}-date', side)], true);

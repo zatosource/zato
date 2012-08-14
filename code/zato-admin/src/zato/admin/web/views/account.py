@@ -39,7 +39,10 @@ DEFAULT_PROMPT = 'Click to pick a color'
 
 @meth_allowed('GET')
 def settings_basic(req):
-    initial = {'timezone':req.zato.user_profile.timezone, 'dt_format': req.zato.user_profile.dt_format}
+    initial = {}
+    for attr in('timezone', 'date_format', 'time_format'):
+        initial[attr] = getattr(req.zato.user_profile, attr)
+        
     return_data = {'clusters':req.zato.clusters, 'default_prompt':DEFAULT_PROMPT, 'form':BasicSettingsForm(initial)}
     
     cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in req.zato.user_profile.cluster_color_markers.all()}
@@ -50,7 +53,7 @@ def settings_basic(req):
 @meth_allowed('POST')
 def settings_basic_save(req):
     
-    for attr in('timezone', 'dt_format'):
+    for attr in('timezone', 'date_format', 'time_format'):
         setattr(req.zato.user_profile, attr, req.POST[attr])
     req.zato.user_profile.save()
 

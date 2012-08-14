@@ -26,6 +26,9 @@ import logging
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 
+# Django
+from django.template.defaultfilters import date as django_date_filter
+
 # lxml
 from lxml import etree
 from lxml.objectify import Element
@@ -37,6 +40,23 @@ from zato.common.soap import invoke_admin_service as _invoke_admin_service
 from zato.common.util import from_local_to_utc as _from_local_to_utc, from_utc_to_local as _from_utc_to_local
 
 logger = logging.getLogger(__name__)
+
+DATE_FORMATS = {
+    'dd/mm/yyyy': 'd/m/Y',
+    'dd-mm-yyyy': 'd-m-Y',
+    'dd.mm.yyyy': 'd.m.Y',
+    'dd.mm.yy': 'd.m.y',
+    'mm-dd-yy': 'm-d-y',
+    'mm-dd-yyyy': 'm-d-Y',
+    'yyyy/mm/dd': 'Y/m/d',
+    'yyyy-mm-dd': 'Y-m-d',
+    'yyyy.mm.dd': 'Y.m.d',
+}
+
+TIME_FORMATS = {
+    '12': 'g:i.s A',
+    '24': 'H:i:s',
+}
 
 def invoke_admin_service(cluster, soap_action, input_dict):
     """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
@@ -70,7 +90,8 @@ def last_hour_start_stop(now):
 def from_utc_to_user(dt, req):
     """ Converts a datetime object from UTC to a user-selected timezone and datetime format. 
     """
-    return _from_utc_to_local(dt, req.zato.user_profile.timezone).strftime(req.zato.user_profile.dt_format)
+    return django_date_filter(_from_utc_to_local(dt, req.zato.user_profile.timezone), req.zato.user_profile.date_time_format_py)
+                              
     
 def from_user_to_utc(dt, req):
     """ Converts a datetime object from a user-selected timezone to UTC.
