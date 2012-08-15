@@ -54,6 +54,15 @@ def get_sample_dt(user_profile):
     """
     return from_utc_to_user((datetime.utcnow() + timedelta(hours=1)).replace(tzinfo=UTC), user_profile)
 
+def get_js_dt_format(user_profile):
+    """ Converts the user-given datetime format to the one that JavaScript's date time picker is to use.
+    """
+    return {
+        'js_date_format':user_profile.date_format.replace('yyyy', 'yy') if 'yyyy' in user_profile.date_format else user_profile.date_format.replace('yy', 'y'),
+        'js_time_format':'h:mm.ss TT' if user_profile.time_format == '12' else 'hh:mm:ss',
+        'js_ampm':user_profile.time_format == '12',
+    }
+
 def get_lb_client(cluster):
     """ A convenience wrapper over the function for creating a load-balancer client
     which may use ZatoAdmin's SSL material (the client from zato.common can't use

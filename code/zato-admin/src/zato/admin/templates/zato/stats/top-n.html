@@ -138,10 +138,15 @@
                 </tr>
 
             </table>
-
         </form>
     </div>
 </div>
+
+    <form>
+        <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
+        <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
+        <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+    </form>    
 
 {% endif %} {% comment %}cluster_id{% endcomment %}
 {% endif %} {% comment %}zato_clusters{% endcomment %}

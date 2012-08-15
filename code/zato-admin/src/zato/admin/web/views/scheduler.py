@@ -48,7 +48,7 @@ from validate import is_boolean
 
 # Zato
 from zato.admin.web import from_utc_to_user, invoke_admin_service
-from zato.admin.web.views import get_sample_dt, meth_allowed, Delete as _Delete
+from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
@@ -397,8 +397,7 @@ def index(req):
                 logger.error(msg)
                 return HttpResponseServerError(msg)
 
-        return TemplateResponse(req, 'zato/scheduler.html',
-            {'zato_clusters':req.zato.clusters,
+        return_data = {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
             'choose_cluster_form':req.zato.choose_cluster_form,
             'jobs':jobs, 
@@ -410,7 +409,11 @@ def index(req):
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
             'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
             'sample_dt': get_sample_dt(req.zato.user_profile),
-            })
+            }
+        
+        return_data.update(get_js_dt_format(req.zato.user_profile))
+
+        return TemplateResponse(req, 'zato/scheduler.html', return_data)
     except Exception, e:
         msg = '<pre>Could not invoke the method, e:[{0}]</pre>'.format(format_exc(e))
         logger.error(msg)

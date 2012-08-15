@@ -35,8 +35,13 @@ $(document).ready(function() {
 				}
 			});
 			
-			$('#'+picker_id).datetimepicker();
-
+			$('#'+picker_id).datetimepicker(
+				{
+					'dateFormat':$('#js_date_format').val(),
+					'timeFormat':$('#js_time_format').val(),
+					'ampm':$.fn.zato.to_bool($('#js_ampm').val()),
+				}
+			);
 		});
 	});
 	
