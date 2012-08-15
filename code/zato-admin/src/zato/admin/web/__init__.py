@@ -41,21 +41,26 @@ from zato.common.util import from_local_to_utc as _from_local_to_utc, from_utc_t
 
 logger = logging.getLogger(__name__)
 
+class _Format(object):
+    def __init__(self, frontend, python):
+        self.frontend = frontend
+        self.python = python
+
 DATE_FORMATS = {
-    'dd/mm/yyyy': 'd/m/Y',
-    'dd-mm-yyyy': 'd-m-Y',
-    'dd.mm.yyyy': 'd.m.Y',
-    'dd.mm.yy': 'd.m.y',
-    'mm-dd-yy': 'm-d-y',
-    'mm-dd-yyyy': 'm-d-Y',
-    'yyyy/mm/dd': 'Y/m/d',
-    'yyyy-mm-dd': 'Y-m-d',
-    'yyyy.mm.dd': 'Y.m.d',
+    'dd/mm/yyyy': _Format('d/m/Y', ''),
+    'dd-mm-yyyy': _Format('d-m-Y', ''),
+    'dd.mm.yyyy': _Format('d.m.Y', ''),
+    'dd.mm.yy': _Format('d.m.y', ''),
+    'mm-dd-yy': _Format('m-d-y', ''),
+    'mm-dd-yyyy': _Format('m-d-Y', ''),
+    'yyyy/mm/dd': _Format('Y/m/d', ''),
+    'yyyy-mm-dd': _Format('Y-m-d', ''),
+    'yyyy.mm.dd': _Format('Y.m.d', ''),
 }
 
 TIME_FORMATS = {
-    '12': 'g:i.s A',
-    '24': 'H:i:s',
+    '12': _Format('g:i.s A', '')
+    '24': _Format('H:i:s', ''),
 }
 
 def invoke_admin_service(cluster, soap_action, input_dict):
@@ -96,3 +101,5 @@ def from_utc_to_user(dt, user_profile, format='date_time'):
 def from_user_to_utc(dt, user_profile):
     """ Converts a datetime object from a user-selected timezone to UTC.
     """
+    print(333, user_profile.date_time_format_py)
+    return dt
