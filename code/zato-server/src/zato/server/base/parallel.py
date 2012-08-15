@@ -448,7 +448,6 @@ class ParallelServer(BrokerMessageReceiver):
             self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
 
-            self.zmq_context.term()
             task_dispatcher.shutdown()
             
 # ##############################################################################
