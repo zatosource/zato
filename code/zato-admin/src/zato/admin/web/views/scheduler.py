@@ -26,7 +26,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from cStringIO import StringIO
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import strptime
 from traceback import format_exc
 
@@ -397,6 +397,11 @@ def index(req):
                 logger.error(msg)
                 return HttpResponseServerError(msg)
     
+        # A sample date and time an hour in the future serving as a hint 
+        # as to what format to use when entering date and time manually.
+        sample_dt = (datetime.utcnow() + timedelta(hours=1)).replace(tzinfo=UTC)
+        sample_dt = from_utc_to_user(sample_dt, req.zato.user_profile)
+    
         return TemplateResponse(req, 'zato/scheduler.html',
             {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
@@ -409,6 +414,7 @@ def index(req):
             'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
             'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
+            'sample_dt': sample_dt
             })
     except Exception, e:
         msg = '<pre>Could not invoke the method, e:[{0}]</pre>'.format(format_exc(e))
