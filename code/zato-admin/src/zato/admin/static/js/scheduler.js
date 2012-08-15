@@ -35,12 +35,15 @@ $(document).ready(function() {
 				}
 			});
 			
+			$('#'+picker_id).datetimepicker();
+			
 			// Picker
-			AnyTime.picker(picker_id,
+			/*AnyTime.picker(picker_id,
 				{format: '%Y-%m-%d %T', 
 				firstDOW: 1, // Weeks start on Monday
 				}
 			);
+			*/
 		});
 	});
 	
