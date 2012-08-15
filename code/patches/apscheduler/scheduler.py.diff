@@ -1,5 +1,32 @@
---- apscheduler/scheduler.py.orig	2012-05-07 17:53:44.731846237 +0200
-+++ apscheduler/scheduler.py	2012-05-07 16:11:26.000000000 +0200
+--- apscheduler/scheduler.py.orig	2012-08-15 22:48:43.000000000 +0200
++++ apscheduler/scheduler.py	2012-08-15 22:51:44.236470007 +0200
+@@ -227,7 +227,7 @@
+                     logger.exception('Error notifying listener')
+ 
+     def _real_add_job(self, job, jobstore, wakeup):
+-        job.compute_next_run_time(datetime.now())
++        job.compute_next_run_time(datetime.utcnow())
+         if not job.next_run_time:
+             raise ValueError('Not adding job since it would never be run')
+ 
+@@ -245,7 +245,7 @@
+         event = JobStoreEvent(EVENT_JOBSTORE_JOB_ADDED, jobstore, job)
+         self._notify_listeners(event)
+ 
+-        logger.info('Added job "%s" to job store "%s"', job, jobstore)
++        logger.debug('Added job "%s" to job store "%s"', job, jobstore)
+ 
+         # Notify the scheduler about the new job
+         if wakeup:
+@@ -460,7 +460,7 @@
+         for run_time in run_times:
+             # See if the job missed its run time window, and handle possible
+             # misfires accordingly
+-            difference = datetime.now() - run_time
++            difference = datetime.utcnow() - run_time
+             grace_time = timedelta(seconds=job.misfire_grace_time)
+             if difference > grace_time:
+                 # Notify listeners about a missed run
 @@ -479,7 +479,7 @@
                                     'reached (%d)', job, job.max_instances)
                      break
@@ -9,12 +36,12 @@
                              run_time)
  
                  try:
-@@ -498,7 +498,7 @@
-                                      retval=retval)
-                     self._notify_listeners(event)
+@@ -550,7 +550,7 @@
+         self._wakeup.clear()
+         while not self._stopped:
+             logger.debug('Looking for jobs to run')
+-            now = datetime.now()
++            now = datetime.utcnow()
+             next_wakeup_time = self._process_jobs(now)
  
--                    logger.info('Job "%s" executed successfully', job)
-+                    logger.debug('Job "%s" executed successfully', job)
- 
-                 job.remove_instance()
- 
+             # Sleep until the next job is scheduled to be run,
