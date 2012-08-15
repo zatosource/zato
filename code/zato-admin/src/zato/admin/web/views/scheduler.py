@@ -47,7 +47,7 @@ from pytz import UTC
 from validate import is_boolean
 
 # Zato
-from zato.admin.web import from_utc_to_user, invoke_admin_service
+from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
@@ -140,6 +140,10 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=""):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions, regardless of the job's type.
     """
+    start_date = params.get(form_prefix + 'start_date', '')
+    if start_date:
+        start_date = from_user_to_utc(start_date, user_profile)
+
     return {
         'name': params[form_prefix + 'name'],
         'cluster_id': cluster.id,
@@ -147,7 +151,7 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=""):
         'is_active': bool(params.get(form_prefix + 'is_active')),
         'service': params.get(form_prefix + 'service', ''),
         'extra': params.get(form_prefix + 'extra', ''),
-        'start_date': params.get(form_prefix + 'start_date', ''),
+        'start_date': start_date,
     }
     
 def _get_create_edit_one_time_message(user_profile, cluster, params, form_prefix=''):
