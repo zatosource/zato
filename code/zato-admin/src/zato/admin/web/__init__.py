@@ -47,20 +47,20 @@ class _Format(object):
         self.python = python
 
 DATE_FORMATS = {
-    'dd/mm/yyyy': _Format('d/m/Y', ''),
-    'dd-mm-yyyy': _Format('d-m-Y', ''),
-    'dd.mm.yyyy': _Format('d.m.Y', ''),
-    'dd.mm.yy': _Format('d.m.y', ''),
-    'mm-dd-yy': _Format('m-d-y', ''),
-    'mm-dd-yyyy': _Format('m-d-Y', ''),
-    'yyyy/mm/dd': _Format('Y/m/d', ''),
-    'yyyy-mm-dd': _Format('Y-m-d', ''),
-    'yyyy.mm.dd': _Format('Y.m.d', ''),
+    'dd/mm/yyyy': 'd/m/Y',
+    'dd-mm-yyyy': 'd-m-Y',
+    'dd.mm.yyyy': 'd.m.Y',
+    'dd.mm.yy': 'd.m.y',
+    'mm-dd-yy': 'm-d-y',
+    'mm-dd-yyyy': 'm-d-Y',
+    'yyyy/mm/dd': 'Y/m/d',
+    'yyyy-mm-dd': 'Y-m-d',
+    'yyyy.mm.dd': 'Y.m.d',
 }
 
 TIME_FORMATS = {
-    '12': _Format('g:i.s A', '')
-    '24': _Format('H:i:s', ''),
+    '12': 'g:i.s A',
+    '24': 'H:i:s',
 }
 
 def invoke_admin_service(cluster, soap_action, input_dict):
@@ -77,7 +77,7 @@ def invoke_admin_service(cluster, soap_action, input_dict):
                'x-zato-user': TECH_ACCOUNT_NAME,
                'x-zato-password': TECH_ACCOUNT_PASSWORD
                }
-    
+
     request = etree.tostring(zato_message)
     zato_message, soap_response = _invoke_admin_service(cluster, soap_action, request, headers)
     
@@ -101,5 +101,12 @@ def from_utc_to_user(dt, user_profile, format='date_time'):
 def from_user_to_utc(dt, user_profile):
     """ Converts a datetime object from a user-selected timezone to UTC.
     """
-    print(333, user_profile.date_time_format_py)
-    return dt
+    # The underlying parser gets confused by stuff like '15.08.12 9:56.59 PM',
+    # that is, where the seconds separator (.) is different from what separates hours from minutes,
+    # so we need replace the dot with semicolon in order to make the parser happy.
+    if user_profile.time_format == '12':
+        # Reverse the string, replace the first occurence of . with a : and reverse it back
+        dt = dt[::-1].replace('.', ':', 1)[::-1]
+    
+    return _from_local_to_utc(dt, user_profile.timezone, user_profile.date_format_py.startswith('d'))
+

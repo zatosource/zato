@@ -491,15 +491,15 @@ def pairwise(iterable):
     next(b, None)
     return izip(a, b)
 
-def from_local_to_utc(dt, tz_name):
+def from_local_to_utc(dt, tz_name, dayfirst=True):
     """ What is the UTC time given the local time and the timezone's name?
     """
     if not isinstance(dt, datetime):
-        dt = parse(dt)
+        dt = parse(dt, dayfirst=dayfirst)
         
     dt = pytz.timezone(tz_name).localize(dt)
     utc_dt = pytz.utc.normalize(dt.astimezone(pytz.utc))
-    return utc_dt #.isoformat()
+    return utc_dt
 
 def from_utc_to_local(dt, tz_name):
     """ What is the local time in the user-provided time zone name?

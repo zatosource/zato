@@ -42,6 +42,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import loader
+from django.template.defaultfilters import date as django_date_filter
 from django.template.response import TemplateResponse
 
 # django-settings
@@ -51,7 +52,7 @@ from django_settings.models import PositiveInteger, Setting
 from pytz import UTC
 
 # Zato
-from zato.admin.web import invoke_admin_service, from_utc_to_user
+from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
 from zato.admin.web.forms.stats import CompareForm, MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed
 from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
@@ -128,9 +129,11 @@ def top_n(req, choice):
         def _params_last_hour():
             trend_elems = 60
             start = now + relativedelta(minutes=-trend_elems)
-            return start.replace(tzinfo=UTC).isoformat(), now.replace(tzinfo=UTC).isoformat()
+            return start.replace(tzinfo=UTC), now.replace(tzinfo=UTC)
             
         start, stop = locals()['_params_' + choice]()
+        start = from_utc_to_user(start, req.zato.user_profile)
+        stop = from_utc_to_user(stop, req.zato.user_profile)
 
     return_data = {
         'start': start,
@@ -189,7 +192,10 @@ def _top_n_data_html(user_profile, req_input, cluster):
     for name in('mean', 'usage'):
         d = {'cluster_id':cluster.id, 'side':req_input.side}
         if req_input.n:
-            stats = _get_stats(cluster, req_input.start, req_input.stop, req_input.n, name)
+            stats = _get_stats(cluster, 
+                from_user_to_utc(req_input.start, user_profile),
+                from_user_to_utc(req_input.stop, user_profile),
+                req_input.n, name)
             
             # I.e. whether it's not an empty list (assuming both stats will always be available or none will be)
             return_data['has_stats'] = len(stats)
@@ -203,7 +209,7 @@ def _top_n_data_html(user_profile, req_input, cluster):
         return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
         
     for name in('start', 'stop'):
-        return_data['{}_label'.format(name)] = from_utc_to_user(return_data[name], user_profile)
+        return_data['{}_label'.format(name)] = return_data[name]
         
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -241,7 +247,7 @@ def top_n_data(req):
         for name in('start', 'stop'):
             base_value = parse(req_input[name])
             delta = relativedelta(**shift_params[req_input.shift])
-            req_input[name] = (base_value + delta).isoformat()
+            req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
 
     return globals()['_top_n_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster)
     
@@ -343,12 +349,15 @@ def maintenance(req):
 
 @meth_allowed('POST')
 def maintenance_delete(req):
-    start = req.POST['start']
-    stop = req.POST['stop']
+    start = from_user_to_utc(req.POST['start'], req.zato.user_profile)
+    stop = from_user_to_utc(req.POST['stop'], req.zato.user_profile)
     
     invoke_admin_service(req.zato.cluster, 'zato:stats.delete', {'start':start, 'stop':stop})
     
-    msg = 'Submitted a request to delete statistics from [{}] to [{}]. Check the server logs for details.'.format(start, stop)
+    msg = 'Submitted a request to delete statistics from [{}] to [{}]. Check the server logs for details.'.format(
+        from_utc_to_user(start, req.zato.user_profile), 
+        from_utc_to_user(stop, req.zato.user_profile))
+        
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
     return redirect('{}?cluster={}'.format(reverse('stats-maintenance'), req.zato.cluster_id))
