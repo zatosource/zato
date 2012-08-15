@@ -53,7 +53,7 @@ from pytz import UTC
 # Zato
 from zato.admin.web import invoke_admin_service, from_utc_to_user
 from zato.admin.web.forms.stats import CompareForm, MaintenanceForm, NForm, SettingsForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import get_sample_dt, meth_allowed
 from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
 
 logger = logging.getLogger(__name__)
@@ -142,6 +142,7 @@ def top_n(req, choice):
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
+        'sample_dt': get_sample_dt(req.zato.user_profile),
     }
     
     return TemplateResponse(req, 'zato/stats/top-n.html', return_data)
