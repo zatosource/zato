@@ -1,13 +1,14 @@
 {% extends "zato/index.html" %}
 
 {% block extra_css %}
-    <link rel="stylesheet" type="text/css" href="/static/css/anytimec.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/date_time_picker.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
 {% endblock %}
 
 {% block extra_js %}
-    <script type="text/javascript" src="/static/jquery/anytimec.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    
+    <script type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/stats/maintenance.js"></script>

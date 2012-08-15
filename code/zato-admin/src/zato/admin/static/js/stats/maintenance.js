@@ -10,11 +10,8 @@ $(document).ready(function() {
         
     
 	    // Picker
-	    AnyTime.picker(id,
-		    {format: '%Y-%m-%d %T', 
-		    firstDOW: 1, // Weeks start on Monday
-		    });
-        
+	    $(jq_id).datetimepicker();
+
     })
     
     $('#maintenance_form').bValidator();
