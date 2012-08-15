@@ -30,15 +30,21 @@ from datetime import datetime
 from time import strptime
 from traceback import format_exc
 
+# anyjson
+from anyjson import dumps
+
+# dateutil
+from dateutil.parser import parse
+
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
+# pytz
+from pytz import UTC
+
 # Validate
 from validate import is_boolean
-
-# anyjson
-from anyjson import dumps
 
 # Zato
 from zato.admin.web import invoke_admin_service, from_utc_to_user
@@ -59,26 +65,29 @@ edit_one_time_prefix = 'edit-one_time'
 edit_interval_based_prefix = 'edit-interval_based'
 edit_cron_style_prefix = 'edit-cron_style'
 
-def _get_start_date(start_date, start_date_format):
+def _get_start_date(start_date):
     if not start_date:
         return ''
+        
+    if not isinstance(start_date, datetime):
+        start_date = parse(start_date)
 
-    strp = strptime(str(start_date), start_date_format)
-    return datetime(year=strp.tm_year, month=strp.tm_mon, day=strp.tm_mday,
-                       hour=strp.tm_hour, minute=strp.tm_min, second=strp.tm_sec)
+    return start_date.replace(tzinfo=UTC)
 
-def _one_time_job_def(start_date):
-    start_date = _get_start_date(start_date, scheduler_date_time_format)
-    return 'Execute once on {0} at {1}'.format(from_utc_to_user(start_date, 'date'),
-                start_date.strftime('%H:%M:%S'))
+def _one_time_job_def(user_profile, start_date):
+    start_date = _get_start_date(start_date)
+    return 'Execute once on {0} at {1}'.format(
+        from_utc_to_user(start_date, user_profile, 'date'),
+        from_utc_to_user(start_date, user_profile, 'time'))
 
-def _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, seconds):
+def _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hours, minutes, seconds):
 
     buf = StringIO()
 
     if start_date:
-        buf.write('Start on {0} at {1}.'.format(start_date.strftime('%Y-%m-%d'),
-                start_date.strftime('%H:%M:%S')))
+        buf.write('Start on {0} at {1}.'.format(
+            from_utc_to_user(start_date, user_profile, 'date'),
+            from_utc_to_user(start_date, user_profile, 'time')))
 
     if not repeats:
         buf.write(' Repeat indefinitely.')
@@ -116,17 +125,18 @@ def _get_success_message(action, job_type, job_name):
     return msg.format(verb, job_type, job_name)
         
 
-def _cron_style_job_def(start_date, cron_definition):
-    start_date = _get_start_date(start_date, scheduler_date_time_format)
+def _cron_style_job_def(user_profile, start_date, cron_definition):
+    start_date = _get_start_date(start_date)
 
     buf = StringIO()
-    buf.write('Start on {0} at {1}.'.format(start_date.strftime('%Y-%m-%d'),
-               start_date.strftime('%H:%M:%S')))
+    buf.write('Start on {0} at {1}.'.format(
+        from_utc_to_user(start_date, user_profile, 'date'),
+        from_utc_to_user(start_date, user_profile, 'time')))
     buf.write('<br/>{0}'.format(cron_definition))
     
     return buf.getvalue()
 
-def _get_create_edit_message(cluster, params, form_prefix=""):
+def _get_create_edit_message(user_profile, cluster, params, form_prefix=""):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions, regardless of the job's type.
     """
@@ -140,20 +150,20 @@ def _get_create_edit_message(cluster, params, form_prefix=""):
         'start_date': params.get(form_prefix + 'start_date', ''),
     }
     
-def _get_create_edit_one_time_message(cluster, params, form_prefix=''):
+def _get_create_edit_one_time_message(user_profile, cluster, params, form_prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create'
     actions. Used when creating one_time jobs.
     """
-    input_dict = _get_create_edit_message(cluster, params, form_prefix)
+    input_dict = _get_create_edit_message(user_profile, cluster, params, form_prefix)
     input_dict['job_type'] = 'one_time'
 
     return input_dict
 
-def _get_create_edit_interval_based_message(cluster, params, form_prefix=''):
+def _get_create_edit_interval_based_message(user_profile, cluster, params, form_prefix=''):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions. Used when creating interval_based jobs.
     """
-    input_dict =_get_create_edit_message(cluster, params, form_prefix)
+    input_dict =_get_create_edit_message(user_profile, cluster, params, form_prefix)
     input_dict['job_type'] = 'interval_based'
     input_dict['weeks'] = params.get(form_prefix + 'weeks', '')
     input_dict['days'] = params.get(form_prefix + 'days', '')
@@ -164,41 +174,41 @@ def _get_create_edit_interval_based_message(cluster, params, form_prefix=''):
 
     return input_dict
 
-def _get_create_edit_cron_style_message(cluster, params, form_prefix=''):
+def _get_create_edit_cron_style_message(user_profile, cluster, params, form_prefix=''):
     """ A dictionary of core data which can be used by both 'edit' and 'create'
     actions. Used when creating cron_style jobs.
     """
-    input_dict =_get_create_edit_message(cluster, params, form_prefix)
+    input_dict =_get_create_edit_message(user_profile, cluster, params, form_prefix)
     input_dict['job_type'] = 'cron_style'
     input_dict['cron_definition'] = params[form_prefix + 'cron_definition']
 
     return input_dict
 
-def _create_one_time(cluster, params):
+def _create_one_time(user_profile, cluster, params):
     """ Creates a one_time scheduler job.
     """
     logger.debug('About to create a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
     zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', 
-        _get_create_edit_one_time_message(cluster, params, create_one_time_prefix+'-'))
+        _get_create_edit_one_time_message(user_profile, cluster, params, create_one_time_prefix+'-'))
     
     new_id = zato_message.response.item.id.text
     logger.debug('Successfully created a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    return {'id': new_id, 'definition_text':_one_time_job_def(params['create-one_time-start_date'])}
+    return {'id': new_id, 'definition_text':_one_time_job_def(user_profile, params['create-one_time-start_date'])}
 
-def _create_interval_based(cluster, params):
+def _create_interval_based(user_profile, cluster, params):
     """ Creates an interval_based scheduler job.
     """
     logger.debug('About to create an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', 
-        _get_create_edit_interval_based_message(cluster, params, create_interval_based_prefix+'-'))
+        _get_create_edit_interval_based_message(user_profile, cluster, params, create_interval_based_prefix+'-'))
     new_id = zato_message.response.item.id.text
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     start_date = params.get('create-interval_based-start_date')
     if start_date:
-        start_date = _get_start_date(start_date, scheduler_date_time_format)
+        start_date = _get_start_date(start_date)
     repeats = params.get('create-interval_based-repeats')
     weeks = params.get('create-interval_based-weeks')
     days = params.get('create-interval_based-days')
@@ -206,49 +216,49 @@ def _create_interval_based(cluster, params):
     minutes = params.get('create-interval_based-minutes')
     seconds = params.get('create-interval_based-seconds')
 
-    definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, seconds)
+    definition = _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hours, minutes, seconds)
 
     return {'id': new_id, 'definition_text':definition}
 
-def _create_cron_style(cluster, params):
+def _create_cron_style(user_profile, cluster, params):
     """ Creates a cron_style scheduler job.
     """
     logger.debug('About to create a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', 
-        _get_create_edit_cron_style_message(cluster, params, create_cron_style_prefix+'-'))
+        _get_create_edit_cron_style_message(user_profile, cluster, params, create_cron_style_prefix+'-'))
     new_id = zato_message.response.item.id.text
     cron_definition = zato_message.response.item.cron_definition.text
     logger.debug('Successfully created a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     return {'id': new_id, 
-            'definition_text':_cron_style_job_def(
+            'definition_text':_cron_style_job_def(user_profile,
                 params['create-cron_style-start_date'], cron_definition),
             'cron_definition': cron_definition}
 
-def _edit_one_time(cluster, params):
+def _edit_one_time(user_profile, cluster, params):
     """ Updates a one_time scheduler job.
     """
     logger.debug('About to change a one_time job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', 
-        _get_create_edit_one_time_message(cluster, params, edit_one_time_prefix+'-'))
+        _get_create_edit_one_time_message(user_profile, cluster, params, edit_one_time_prefix+'-'))
     logger.debug('Successfully updated a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    return {'definition_text':_one_time_job_def(params['edit-one_time-start_date']), 'id':params['edit-one_time-id']}
+    return {'definition_text':_one_time_job_def(user_profile, params['edit-one_time-start_date']), 'id':params['edit-one_time-id']}
 
-def _edit_interval_based(cluster, params):
+def _edit_interval_based(user_profile, cluster, params):
     """ Creates an interval_based scheduler job.
     """
     logger.debug('About to change an interval_based job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', 
-        _get_create_edit_interval_based_message(cluster, params, edit_interval_based_prefix+'-'))
+        _get_create_edit_interval_based_message(user_profile, cluster, params, edit_interval_based_prefix+'-'))
     logger.debug('Successfully updated an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     start_date = params.get('edit-interval_based-start_date')
     if start_date:
-        start_date = _get_start_date(start_date, scheduler_date_time_format)
+        start_date = _get_start_date(start_date)
     repeats = params.get('edit-interval_based-repeats')
     weeks = params.get('edit-interval_based-weeks')
     days = params.get('edit-interval_based-days')
@@ -256,23 +266,23 @@ def _edit_interval_based(cluster, params):
     minutes = params.get('edit-interval_based-minutes')
     seconds = params.get('edit-interval_based-seconds')
 
-    definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, 
+    definition = _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hours, 
                                          minutes, seconds)
 
     return {'definition_text':definition, 'id':params['edit-interval_based-id']}
 
-def _edit_cron_style(cluster, params):
+def _edit_cron_style(user_profile, cluster, params):
     """ Creates an cron_style scheduler job.
     """
     logger.debug('About to change a cron_style job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', _get_create_edit_cron_style_message(cluster, params, edit_cron_style_prefix+'-'))
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', 
+        _get_create_edit_cron_style_message(user_profile, cluster, params, edit_cron_style_prefix+'-'))
     cron_definition = zato_message.response.item.cron_definition.text
     logger.debug('Successfully updated a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    start_date = _get_start_date(params.get('edit-cron_style-start_date'), 
-                                 scheduler_date_time_format)
-    definition = _cron_style_job_def(start_date, cron_definition)
+    start_date = _get_start_date(params.get('edit-cron_style-start_date'))
+    definition = _cron_style_job_def(user_profile, start_date, cron_definition)
 
     return {'definition_text':definition, 'cron_definition': cron_definition, 'id':params['edit-cron_style-id']}
 
@@ -305,11 +315,11 @@ def index(req):
                               job_type_friendly=job_type_friendly)
                     
                     if job_type == 'one_time':
-                        definition_text=_one_time_job_def(start_date)
+                        definition_text=_one_time_job_def(req.zato.user_profile, start_date)
                         
                     elif job_type == 'interval_based':
-                        definition_text = _interval_based_job_def(
-                            _get_start_date(job_elem.start_date, scheduler_date_time_format),
+                        definition_text = _interval_based_job_def(req.zato.user_profile,
+                            _get_start_date(job_elem.start_date.text),
                                 job_elem.repeats, job_elem.weeks, job_elem.days,
                                 job_elem.hours, job_elem.minutes, job_elem.seconds)
                         
@@ -326,7 +336,7 @@ def index(req):
                         
                     elif job_type == 'cron_style':
                         cron_definition = (job_elem.cron_definition.text if job_elem.cron_definition.text else '')
-                        definition_text=_cron_style_job_def(start_date,  cron_definition)
+                        definition_text=_cron_style_job_def(req.zato.user_profile, start_date,  cron_definition)
                         
                         cs_job = CronStyleJob(None, None, cron_definition)
                         job.cron_style = cs_job
@@ -373,7 +383,7 @@ def index(req):
     
             # .. invoke the action handler.
             try:
-                response = handler(req.zato.cluster, req.POST)
+                response = handler(req.zato.user_profile, req.zato.cluster, req.POST)
                 response = response if response else ''
                 if response:
                     response['message'] = _get_success_message(action, job_type, job_name)
@@ -427,7 +437,7 @@ def execute(req, job_id, cluster_id):
 
 @meth_allowed('POST')
 def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds):
-    start_date = _get_start_date(start_date, scheduler_date_time_format)
+    start_date = _get_start_date(start_date)
 
     definition = _interval_based_job_def(start_date, repeats, weeks, days, hours, minutes, seconds)
     logger.log(TRACE1, 'definition:[{}]'.format(definition))
