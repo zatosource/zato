@@ -142,7 +142,14 @@ $.fn.zato.stats.top_n.setup_forms = function() {
 		$(field_id).attr('data-bvalidator', 'required');
 		$(field_id).attr('data-bvalidator-msg', 'This is a required field');
 
-		$(field_id).datetimepicker();
+		$(field_id).datetimepicker(
+			{
+				'dateFormat':$('#js_date_format').val(),
+				'timeFormat':$('#js_time_format').val(),
+				'ampm':$.fn.zato.to_bool($('#js_ampm').val()),
+			}
+		);
+		
 	});
 	
 	var custom_date_form_id = '#form-custom_date'
