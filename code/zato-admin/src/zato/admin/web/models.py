@@ -42,8 +42,9 @@ class UserProfile(models.Model):
         self.date_time_format_py = '{} {}'.format(self.date_format_py, self.time_format_py)
     
     def __repr__(self):
-        return '<{} at {} user:[{}] timezone:[{}] dt_format:[{}]>'.format(self.__class__.__name__,
-            hex(id(self)), self.user, self.timezone, self.dt_format)
+        return '<{} at {} user:[{}] timezone:[{}] date_format_py:[{}] time_format_py:[{}] date_time_format_py:[{}]>'.format(
+            self.__class__.__name__, hex(id(self)), self.user, self.timezone, self.date_format_py,
+            self.time_format_py, self.date_time_format_py)
     
     __unicode__ = __repr__
     
