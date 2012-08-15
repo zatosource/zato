@@ -47,8 +47,8 @@ from pytz import UTC
 from validate import is_boolean
 
 # Zato
-from zato.admin.web import invoke_admin_service, from_utc_to_user
-from zato.admin.web.views import meth_allowed, Delete as _Delete
+from zato.admin.web import from_utc_to_user, invoke_admin_service
+from zato.admin.web.views import get_sample_dt, meth_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
@@ -396,12 +396,7 @@ def index(req):
     
                 logger.error(msg)
                 return HttpResponseServerError(msg)
-    
-        # A sample date and time an hour in the future serving as a hint 
-        # as to what format to use when entering date and time manually.
-        sample_dt = (datetime.utcnow() + timedelta(hours=1)).replace(tzinfo=UTC)
-        sample_dt = from_utc_to_user(sample_dt, req.zato.user_profile)
-    
+
         return TemplateResponse(req, 'zato/scheduler.html',
             {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
@@ -414,7 +409,7 @@ def index(req):
             'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
             'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
-            'sample_dt': sample_dt
+            'sample_dt': get_sample_dt(req.zato.user_profile),
             })
     except Exception, e:
         msg = '<pre>Could not invoke the method, e:[{0}]</pre>'.format(format_exc(e))

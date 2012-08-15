@@ -21,18 +21,22 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime, timedelta
 from itertools import chain
 from traceback import format_exc
+
+# anyjson
+from json import dumps
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# anyjson
-from json import dumps
+# pytz
+from pytz import UTC
 
 # Zato
-from zato.admin.web import invoke_admin_service
+from zato.admin.web import from_utc_to_user, invoke_admin_service
 from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
@@ -43,6 +47,12 @@ from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, \
 from zato.common.util import get_lb_client as _get_lb_client
 
 logger = logging.getLogger(__name__)
+
+def get_sample_dt(user_profile):
+    """ A sample date and time an hour in the future serving as a hint as to what 
+    format to use when entering date and time manually in the user-provided format.
+    """
+    return from_utc_to_user((datetime.utcnow() + timedelta(hours=1)).replace(tzinfo=UTC), user_profile)
 
 def get_lb_client(cluster):
     """ A convenience wrapper over the function for creating a load-balancer client
