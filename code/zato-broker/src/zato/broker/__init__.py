@@ -73,7 +73,6 @@ class BaseBroker(object):
                 
             if item.client_push_broker_pull:
                 sock = self.context.socket(zmq.PULL)
-                sock.setsockopt(zmq.LINGER, 0)
                 sock.bind(item.client_push_broker_pull)
                 self.sockets[item.name].pull = sock
 

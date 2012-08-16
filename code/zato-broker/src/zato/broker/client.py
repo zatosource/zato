@@ -35,6 +35,12 @@ import zmq
 
 logger = logging.getLogger(__name__)
 
+_errno_caught = {
+    zmq.ETERM: 'zmq.ETERM',
+    errno.ENOTSOCK: 'errno.ENOTSOCK',
+    errno.EOPNOTSUPP: 'errno.EOPNOTSUPP',
+}
+
 class ZMQPullSub(object):
     """ A ZeroMQ client which pulls and subscribe to messages. Runs in a background 
     thread and invokes the handler on each incoming message.
@@ -136,11 +142,8 @@ class ZMQPullSub(object):
             except Exception, e:
                 # It's OK and needs not to disturb the user so log it only
                 # in the DEBUG level.
-                if isinstance(e, zmq.ZMQError) and(e.errno == zmq.ETERM or e.errno == errno.ENOTSOCK):
-                    if e.errno == zmq.ETERM:
-                        caught = 'zmq.ETERM'
-                    elif e.errno == errno.ENOTSOCK:
-                        caught = 'errno.ENOTSOCK'
+                if isinstance(e, zmq.ZMQError) and e.errno in _errno_caught:
+                    caught = _errno_caught[e.errno]
                     msg = '[{0}] Caught [{1}] [{2}], quitting'.format(self.name, caught, format_exc(e))
                     log_meth = logger.debug
                 else:
@@ -160,25 +163,26 @@ class ZMQPush(object):
         self.zmq_context = zmq_context
         self.address = address
         self.socket_type = zmq.PUSH 
-        
-        logger.debug('Starting PUSH [{0}/{1}]'.format(self.name, self.address))
 
         self.socket = self.zmq_context.socket(self.socket_type)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.connect(self.address)
         
+        logger.info('Started PUSH [{}/{}/{}]'.format(self.name, self.address, self.socket_type))
+        
     def send(self, msg):
         try:
-            self.socket.send_unicode(msg)
+            print(888, self.socket.send_unicode(msg))
+            print(190, 'Sent', msg)
         except zmq.ZMQError, e:
-            msg = '[{0}] Caught ZMQError [{1}], continuing anyway.'.format(
-                self.name, e.strerror)
+            msg = '[{0}] Caught ZMQError [{1}], errno [{2}], continuing anyway.'.format(
+                self.name, e.strerror, e.errno)
             logger.warn(msg)
         
     def close(self):
-        msg = 'Stopping [[{0}/{1}/{2}]'.format(self.name, self.address, self.socket_type)
-        logger.info(msg)
         self.socket.close()
+        msg = 'Stopped PUSH [[{}/{}/{}]'.format(self.name, self.address, self.socket_type)
+        logger.info(msg)
         
 class BrokerClient(object):
     """ A ZeroMQ broker client which knows how to subscribe to messages and push
@@ -239,7 +243,9 @@ class BrokerClient(object):
             self._pull_sub.start()
     
     def send(self, msg):
-        return self._push.send(msg)
+        zz = self._push.send(msg)
+        print(88, zz)
+        return zz
     
     def close(self):
         if self._push:
