@@ -83,7 +83,7 @@ class Create(AdminService):
             else:
                 input.action = SECURITY.BASIC_AUTH_CREATE
                 input.sec_type = 'basic_auth'
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
             
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
@@ -129,7 +129,7 @@ class Edit(AdminService):
                 input.action = SECURITY.BASIC_AUTH_EDIT
                 input.old_name = old_name
                 input.sec_type = 'basic_auth'
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
     
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
@@ -167,4 +167,4 @@ class Delete(AdminService):
             else:
                 self.request.input.action = SECURITY.BASIC_AUTH_DELETE
                 self.request.input.name = auth.name
-                self.broker_client.send_json(self.request.input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(self.request.input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)

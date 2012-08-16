@@ -34,7 +34,6 @@ from dateutil.parser import parse
 from pytz import UTC
 
 # Zato 
-from zato.broker.zato_client import BrokerClient
 from zato.common import scheduler_date_time_format
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import new_cid
@@ -82,26 +81,15 @@ class Scheduler(object):
         the actual execution request to the broker so it can be picked up by
         one of the parallel server's broker clients.
         """
-        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'payload':extra,
-               'cid':new_cid()}
-               
-        #self.singleton.broker_client.send_json(msg, msg_type=broker_msg_type)
-        
-        broker_client = BrokerClient()
-        broker_client.name = 'singleton-scheduler'
-        broker_client.token = self.broker_token
-        broker_client.zmq_context = self.zmq_context
-        broker_client.client_push_broker_pull = self.client_push_broker_pull
-        broker_client.init()
-        broker_client.send_json(msg, msg_type=broker_msg_type)
-        broker_client.close()
+        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'payload':extra, 'cid':new_cid()}
+        self.singleton.broker_client.send(msg)
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(
                 name, service, extra)
             logger.debug(msg)
 
-    def create_edit(self, action, job_data, broker_msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL):
+    def create_edit(self, action, job_data, broker_msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY):
         """ Invokes a handler appropriate for the given action and job_data.job_type.
         """
         if logger.isEnabledFor(logging.DEBUG):

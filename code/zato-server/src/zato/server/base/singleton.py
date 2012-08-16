@@ -29,7 +29,7 @@ from time import sleep
 from bunch import Bunch
 
 # Zato
-from zato.broker.zato_client import BrokerClient
+from zato.broker.client import BrokerClient
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER, SINGLETON
 from zato.server.base import BrokerMessageReceiver
 
@@ -42,17 +42,11 @@ class SingletonServer(BrokerMessageReceiver):
     """
     
     def __init__(self, parallel_server=None, server_id=None, scheduler=None, 
-                 broker_token=None, zmq_context=None, broker_host=None, broker_push_singleton_pull_port=None, 
-                 singleton_push_broker_pull_port=None, initial_sleep_time=None,
-                 is_cluster_wide=False):
+                 broker_client=None, initial_sleep_time=None, is_cluster_wide=False):
         self.parallel_server = parallel_server
         self.server_id = server_id
         self.scheduler = scheduler
-        self.broker_token = broker_token
-        self.broker_host = broker_host
-        self.broker_push_singleton_pull_port = broker_push_singleton_pull_port
-        self.singleton_push_broker_pull_port = singleton_push_broker_pull_port
-        self.zmq_context = zmq_context
+        self.broker_client = broker_client
         self.initial_sleep_time = initial_sleep_time
         self.is_cluster_wide = is_cluster_wide
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -63,32 +57,13 @@ class SingletonServer(BrokerMessageReceiver):
         self.logger.debug('Sleeping for {0} s'.format(self.initial_sleep_time))
         sleep(self.initial_sleep_time)
 
-        for name in('broker_token', 'zmq_context', 'broker_host', 'broker_push_singleton_pull_port', 
-                    'singleton_push_broker_pull_port'):
+        for name in('broker_client',):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
                 
-        self.broker_push_client_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.broker_push_singleton_pull_port)
-        self.client_push_broker_pull = 'tcp://{0}:{1}'.format(self.broker_host, self.singleton_push_broker_pull_port)
-        
-        # Initialize scheduler.
+        # Initialize scheduler
         self.scheduler.singleton = self
-        self.scheduler.broker_token = self.broker_token
-        self.scheduler.zmq_context = self.zmq_context
-        self.scheduler.client_push_broker_pull = self.client_push_broker_pull
-        
-        print(999, self.client_push_broker_pull)
-        
-        self.broker_client = BrokerClient()
-        self.broker_client.name = 'singleton'
-        self.broker_client.token = self.broker_token
-        self.broker_client.zmq_context = self.zmq_context
-        #self.broker_client.broker_push_client_pull = self.broker_push_client_pull
-        self.broker_client.client_push_broker_pull = self.client_push_broker_pull
-        self.broker_client.on_pull_handler = self.on_broker_msg
-        #self.broker_client.init()
-        #self.broker_client.start()
-        
+
         # Start the hot-reload pickup monitor
         #self.logger.info('Pickup notifier starting')
         #self.pickup.watch()
@@ -128,7 +103,7 @@ class SingletonServer(BrokerMessageReceiver):
                 job_data.service = 'zato.server.service.internal.server.EnsureClusterWideSingleton'
 
         if job_data:
-            self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_PARALLEL_SUB)
+            self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_PARALLEL_ALL)
 
         return self.is_cluster_wide
         

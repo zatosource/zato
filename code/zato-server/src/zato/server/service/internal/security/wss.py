@@ -91,7 +91,7 @@ class Create(AdminService):
                 input.action = SECURITY.WSS_CREATE
                 input.password = password
                 input.sec_type = 'wss'
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
             
             self.response.payload.id = wss.id
 
@@ -142,7 +142,7 @@ class Edit(AdminService):
                 input.action = SECURITY.WSS_EDIT
                 input.old_name = old_name
                 input.sec_type = 'wss'
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
     
             self.response.payload.id = wss.id
     
@@ -180,4 +180,4 @@ class Delete(AdminService):
             else:
                 self.request.input.action = SECURITY.WSS_DELETE
                 self.request.input.name = wss.name
-                self.broker_client.send_json(self.request.input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(self.request.input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)

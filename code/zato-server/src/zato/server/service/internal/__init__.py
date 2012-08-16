@@ -63,7 +63,7 @@ class ChangePasswordBase(AdminService):
     class SimpleIO:
         input_required = ('id', 'password1', 'password2')
 
-    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB,
+    def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,
                 *args, **kwargs):
 
         with closing(self.odb.session()) as session:

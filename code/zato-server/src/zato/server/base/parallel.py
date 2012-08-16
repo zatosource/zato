@@ -30,9 +30,6 @@ from traceback import format_exc
 # zope.server
 from zope.server.http.httpserver import HTTPServer
 
-# ZeroMQ
-import zmq
-
 # Paste
 from paste.util.multidict import MultiDict
 
@@ -40,9 +37,9 @@ from paste.util.multidict import MultiDict
 from bunch import Bunch, SimpleBunch
 
 # Zato
-from zato.broker.zato_client import BrokerClient
+from zato.broker.client import BrokerClient
 from zato.common import PORTS, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SINGLETON, ZMQ_CONNECTOR
+from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SINGLETON, TOPICS, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
@@ -94,9 +91,8 @@ class ZatoHTTPListener(HTTPServer):
         task.response_headers['Content-Length'] = str(len(payload))
         task.write(payload)
 
-
 class ParallelServer(BrokerMessageReceiver):
-    def __init__(self, host=None, port=None, zmq_context=None, crypto_manager=None,
+    def __init__(self, host=None, port=None, crypto_manager=None,
                  odb=None, odb_data=None, singleton_server=None, worker_config=None, 
                  repo_location=None, sql_pool_store=None, int_parameters=None, 
                  int_parameter_suffixes=None, bool_parameter_prefixes=None,
@@ -107,7 +103,6 @@ class ParallelServer(BrokerMessageReceiver):
                  id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None):
         self.host = host
         self.port = port
-        self.zmq_context = zmq_context or zmq.Context()
         self.crypto_manager = crypto_manager
         self.odb = odb
         self.odb_data = odb_data
@@ -150,7 +145,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
         
-        '''
         # .. Remove all the deployed services from the DB ..
         self.odb.drop_deployed_services(server.id)
         
@@ -164,7 +158,15 @@ class ParallelServer(BrokerMessageReceiver):
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
         self.kvdb.init()
-        '''
+
+        callbacks = {
+            MESSAGE_TYPE.TO_SINGLETON: self.on_broker_msg_singleton,
+            }
+        
+        self.broker_client = BrokerClient(self.kvdb, '127.0.0.1', 'parallel', callbacks)
+        self.broker_client.start()
+        
+        self.broker_client.subscribe(TOPICS[MESSAGE_TYPE.TO_SINGLETON])
         
         if self.singleton_server:
             
@@ -178,12 +180,7 @@ class ParallelServer(BrokerMessageReceiver):
                 self.hot_deploy_config.backup_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.backup_work_dir))
                 self.hot_deploy_config.last_backup_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
                 
-            kwargs = {'zmq_context':self.zmq_context,
-                'broker_host': server.cluster.broker_host,
-                'broker_push_singleton_pull_port': server.cluster.broker_start_port + PORTS.BROKER_PUSH_SINGLETON_PULL,
-                'singleton_push_broker_pull_port': server.cluster.broker_start_port + PORTS.SINGLETON_PUSH_BROKER_PULL,
-                'broker_token':self.broker_token,
-                }
+            kwargs = {'broker_client':self.broker_client}
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
             
             # Let the scheduler fully initialize
@@ -191,7 +188,7 @@ class ParallelServer(BrokerMessageReceiver):
             self.singleton_server.server_id = server.id
     
     def _after_init_accepted(self, server):
-    
+        
         if self.singleton_server:
             for(_, name, is_active, job_type, start_date, extra, service_name, service_impl_name,
                 _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
@@ -271,15 +268,6 @@ class ParallelServer(BrokerMessageReceiver):
         # Security configuration of HTTP URLs
         self.config.url_sec = self.odb.get_url_security(server)
         
-        # The broker client for each of the worker threads.
-        self.config.broker_config = Bunch()
-        self.config.broker_config.name = 'worker-thread'
-        self.config.broker_config.broker_token = self.broker_token
-        self.config.broker_config.zmq_context = self.zmq_context
-        self.config.broker_config.broker_push_client_pull = self.broker_push_worker_pull
-        self.config.broker_config.client_push_broker_pull = self.worker_push_broker_pull
-        self.config.broker_config.broker_pub_client_sub = self.broker_pub_worker_sub
-        
         # All the HTTP/SOAP channels.
         http_soap = MultiDict()
         for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
@@ -306,18 +294,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
         self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
 
-        # The parallel server's broker client. The client's used to notify
-        # all the server's AMQP subprocesses that they need to shut down.
-
-        self.broker_client = BrokerClient()
-        self.broker_client.name = 'parallel'
-        self.broker_client.token = server.cluster.broker_token
-        self.broker_client.zmq_context = self.zmq_context
-        self.broker_client.client_push_broker_pull = self.parallel_push_broker_pull
-        
-        self.broker_client.init()
-        self.broker_client.start()
-        
     def init_connectors(self):
         """ Starts all the connector subprocesses.
         """
@@ -393,8 +369,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.cluster_id = server.cluster_id
 
         # A server which hasn't been approved in the cluster still needs to fetch
-        # all the config data but it won't start any MQ/AMQP/ZMQ/etc. listeners
-        # except for a ZMQ config subscriber that will listen for an incoming approval.
+        # all the config data but it won't start any MQ/AMQP/ZMQ/etc. listeners.
         
         self._after_init_common(server)
         
@@ -412,8 +387,8 @@ class ParallelServer(BrokerMessageReceiver):
 
     def run_forever(self):
         
-        task_dispatcher = _TaskDispatcher(self, self.config, self.on_broker_msg, self.zmq_context)
-        task_dispatcher.setThreadCount(0) # TODO: Make it configurable
+        task_dispatcher = _TaskDispatcher(self, self.config)
+        task_dispatcher.setThreadCount(1) # TODO: Make it configurable
 
         logger.debug('host:[{0}], port:[{1}]'.format(self.host, self.port))
 
@@ -425,38 +400,8 @@ class ParallelServer(BrokerMessageReceiver):
 
         except KeyboardInterrupt:
             logger.info('Shutting down')
-
-            # Close all the connector subprocesses this server has started
-            pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB),
-                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB),
-                    (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB),
-                    (SINGLETON.CLOSE, MESSAGE_TYPE.TO_SINGLETON),
-                    )
             
-            for action, msg_type in pairs:
-                msg = {}
-                msg['action'] = action
-                msg['odb_token'] = self.odb.odb_token
-                self.broker_client.send_json(msg, msg_type=msg_type)
-                time.sleep(0.2)
-            
-            print(8888, current_thread().name)
-            self.broker_client.close()
-            
-            '''
-            context = zmq.Context()
-            socket = context.socket(zmq.PUSH)
-            socket.connect('tcp://127.0.0.1:5111')
-            
-            for x in range(5):
-                msg = str(x) * 20
-                socket.send(msg)
-                time.sleep(0.1)
-                print('Sent {0}'.format(msg))
-                
-            socket.close()
-            context.term()
-            '''
+            self.broker_client.stop()
             
             if self.singleton_server:
                 self.singleton_server.pickup.stop()
@@ -468,8 +413,15 @@ class ParallelServer(BrokerMessageReceiver):
             self.odb.close()
 
             task_dispatcher.shutdown()
-            self.zmq_context.term()
             
+# ##############################################################################
+
+    def on_broker_msg_singleton(self, msg):
+        print('on_broker_msg_singleton', msg)
+    
+    def on_broker_msg_parallel(self, msg):
+        print('on_broker_msg_parallel', msg)
+    
 # ##############################################################################
 
     def notify_new_package(self, package_id):
@@ -477,4 +429,4 @@ class ParallelServer(BrokerMessageReceiver):
         can deploy a new package).
         """
         msg = {'action': HOT_DEPLOY.CREATE, 'package_id': package_id}
-        self.broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_SUB)
+        self.broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_ALL)

@@ -144,7 +144,7 @@ class ConsumingConnector(BaseZMQConnector):
             params['payload'] = msg
             params['data_format'] = self.channel.data_format
             
-            self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+            self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY)
                 
     def on_broker_pull_msg_CHANNEL_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()
