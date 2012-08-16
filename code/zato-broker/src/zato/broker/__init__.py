@@ -25,7 +25,7 @@ so it can be re-used outside of the Zato project.
 """
 
 # stdlib
-import logging
+import logging, os
 from traceback import format_exc
 
 # Bunch
@@ -67,9 +67,10 @@ class BaseBroker(object):
             
             if item.broker_push_client_pull:
                 sock = self.context.socket(zmq.PUSH)
+                #sock.setsockopt(zmq.LINGER, 0)
                 sock.bind(item.broker_push_client_pull)
                 self.sockets[item.name].push = sock
-                logger.debug('Binding [{0}] on behalf of [{1}] (broker_push_client_pull)'.format(sock, item.name))
+                logger.debug('Binding [{}] on behalf of [{}] (broker_push_client_pull {})'.format(sock, item.name, item.broker_push_client_pull))
                 
             if item.client_push_broker_pull:
                 sock = self.context.socket(zmq.PULL)
@@ -78,40 +79,41 @@ class BaseBroker(object):
 
                 self.pull_sockets.append(sock)
                 self.poller.register(sock, zmq.POLLIN)                
-                logger.debug('Binding [{0}] on behalf of [{1}] (client_push_broker_pull)'.format(sock, item.name))
+                logger.debug('Binding [{}] on behalf of [{}] (client_push_broker_pull {})'.format(sock, item.name, item.client_push_broker_pull))
             
             if item.broker_pub_client_sub:
                 sock = self.context.socket(zmq.PUB)
                 sock.bind(item.broker_pub_client_sub)
                 self.sockets[item.name].pub = sock
-                logger.debug('Binding [{0}] on behalf of [{1}] (broker_pub_client_sub)'.format(sock, item.name))
+                logger.debug('Binding [{}] on behalf of [{}] (broker_pub_client_sub {})'.format(sock, item.name, item.broker_pub_client_sub))
                 
                 
     def serve_forever(self):
         self.pre_run()
-        while self.keep_running:
-            try:
-                socks = dict(self.poller.poll())
-                for sock in self.pull_sockets:
-                    if socks.get(sock) == zmq.POLLIN:
-                        msg = sock.recv()
-                        self.on_message(msg)
-            except Exception, e:
-                msg = 'Exception caught [{0}]'.format(format_exc(e))
-                logger.error(msg)
+        try:
+            while self.keep_running:
+                try:
+                    socks = dict(self.poller.poll())
+                    for sock in self.pull_sockets:
+                        if socks.get(sock) == zmq.POLLIN:
+                            msg = sock.recv()
+                            self.on_message(msg)
+                except Exception, e:
+                    msg = 'Exception caught [{0}]'.format(format_exc(e))
+                    logger.error(msg)
+                    
+        except KeyboardInterrupt:
+            # Sockets ..
+            for item in self.sockets.values():
+                for name in('pull', 'push', 'pub'):
+                    if name in item:
+                        item[name].close()
                 
-        # Sockets ..
-        for item in self.sockets.values():
-            item.pull.close()
-            item.push.close()
-            if 'pub' in item:
-                item.pub.close()
+            # .. and the context.
+            self.context.term()
             
-        # .. and the context.
-        self.context.term()
-        
-        msg = 'Closed ZMQ sockets and terminated the context'
-        logger.info(msg)
+            msg = 'Closed ZMQ sockets and terminated the context'
+            logger.info(msg)
         
     def on_message(self, msg):
         raise NotImplementedError()

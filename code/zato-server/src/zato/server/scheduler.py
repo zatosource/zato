@@ -39,6 +39,9 @@ from zato.common import scheduler_date_time_format
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import new_cid
 
+# zmq
+from zmq.core import context
+
 logger = logging.getLogger(__name__)
 
 def _start_date(job_data):
@@ -82,9 +85,8 @@ class Scheduler(object):
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'payload':extra,
                'cid':new_cid()}
                
-        self.singleton.broker_client.send_json(msg, msg_type=broker_msg_type)
+        #self.singleton.broker_client.send_json(msg, msg_type=broker_msg_type)
         
-        '''
         broker_client = BrokerClient()
         broker_client.name = 'singleton-scheduler'
         broker_client.token = self.broker_token
@@ -93,7 +95,6 @@ class Scheduler(object):
         broker_client.init()
         broker_client.send_json(msg, msg_type=broker_msg_type)
         broker_client.close()
-        '''
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(

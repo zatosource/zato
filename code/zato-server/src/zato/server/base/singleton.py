@@ -83,12 +83,11 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client.name = 'singleton'
         self.broker_client.token = self.broker_token
         self.broker_client.zmq_context = self.zmq_context
-        self.broker_client.broker_push_client_pull = self.broker_push_client_pull
+        #self.broker_client.broker_push_client_pull = self.broker_push_client_pull
         self.broker_client.client_push_broker_pull = self.client_push_broker_pull
         self.broker_client.on_pull_handler = self.on_broker_msg
         #self.broker_client.init()
         #self.broker_client.start()
-        print(1111111111111, current_thread().name)
         
         # Start the hot-reload pickup monitor
         #self.logger.info('Pickup notifier starting')

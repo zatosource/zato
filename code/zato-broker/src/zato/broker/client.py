@@ -27,7 +27,7 @@ on Zato code base so they can be re-used outside of the Zato project.
 # stdlib
 import errno
 import logging
-from threading import Thread
+from threading import current_thread, Thread
 from traceback import format_exc
 
 # ZeroMQ
@@ -83,6 +83,8 @@ class ZMQPullSub(object):
             ss.close()
     
     def listen(self):
+        
+        print(1111111111111, current_thread().name)
         
         _socks = []
         poller = zmq.Poller()
@@ -167,6 +169,8 @@ class ZMQPush(object):
         self.socket = self.zmq_context.socket(self.socket_type)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.connect(self.address)
+        
+        print(8888, current_thread().name)
         
         logger.info('Started PUSH [{}/{}/{}]'.format(self.name, self.address, self.socket_type))
         

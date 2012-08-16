@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, logging, os, time
 from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, responses
-from threading import Thread
+from threading import current_thread, Thread
 from time import sleep
 from traceback import format_exc
 
@@ -150,6 +150,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
                 server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
         
+        '''
         # .. Remove all the deployed services from the DB ..
         self.odb.drop_deployed_services(server.id)
         
@@ -163,6 +164,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
         self.kvdb.init()
+        '''
         
         if self.singleton_server:
             
@@ -273,7 +275,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.broker_config = Bunch()
         self.config.broker_config.name = 'worker-thread'
         self.config.broker_config.broker_token = self.broker_token
-        #self.config.broker_config.zmq_context = self.zmq_context
+        self.config.broker_config.zmq_context = self.zmq_context
         self.config.broker_config.broker_push_client_pull = self.broker_push_worker_pull
         self.config.broker_config.client_push_broker_pull = self.worker_push_broker_pull
         self.config.broker_config.broker_pub_client_sub = self.broker_pub_worker_sub
@@ -438,21 +440,35 @@ class ParallelServer(BrokerMessageReceiver):
                 self.broker_client.send_json(msg, msg_type=msg_type)
                 time.sleep(0.2)
             
+            print(8888, current_thread().name)
             self.broker_client.close()
             
-            '''if self.singleton_server:
-                if getattr(self.singleton_server, 'broker_client', None):
-                    self.singleton_server.broker_client.close()
+            '''
+            context = zmq.Context()
+            socket = context.socket(zmq.PUSH)
+            socket.connect('tcp://127.0.0.1:5111')
+            
+            for x in range(5):
+                msg = str(x) * 20
+                socket.send(msg)
+                time.sleep(0.1)
+                print('Sent {0}'.format(msg))
+                
+            socket.close()
+            context.term()
+            '''
+            
+            if self.singleton_server:
                 self.singleton_server.pickup.stop()
                 
                 if self.singleton_server.is_cluster_wide:
-                    self.odb.clear_cluster_wide()'''
+                    self.odb.clear_cluster_wide()
                 
             self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
 
-            self.zmq_context.term()
             task_dispatcher.shutdown()
+            self.zmq_context.term()
             
 # ##############################################################################
 
