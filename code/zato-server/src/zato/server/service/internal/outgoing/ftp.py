@@ -36,7 +36,7 @@ class _FTPService(AdminService):
         """ Notify worker threads of new or updated parameters.
         """
         params['action'] = action
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
 
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.

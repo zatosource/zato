@@ -19,247 +19,153 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-""" 
-Objects useful when implementing ZeroMQ clients. Written without any dependecies
-on Zato code base so they can be re-used outside of the Zato project.
-"""
-
 # stdlib
-import errno
-import logging
-from threading import current_thread, Thread
-from traceback import format_exc
+import logging, time
+from threading import Thread
+from uuid import uuid4
 
-# ZeroMQ
-import zmq
+# anyjson
+from anyjson import dumps, loads
+
+# Mosquitto
+from mosquitto import Mosquitto
+
+# Redis
+import redis
+
+# Zato
+from zato.common import ZATO_NONE
+from zato.common.util import new_cid
+from zato.common.broker_message import MESSAGE_TYPE, TOPICS
 
 logger = logging.getLogger(__name__)
 
-_errno_caught = {
-    zmq.ETERM: 'zmq.ETERM',
-    errno.ENOTSOCK: 'errno.ENOTSOCK',
-    errno.EOPNOTSUPP: 'errno.EOPNOTSUPP',
-}
-
-class ZMQPullSub(object):
-    """ A ZeroMQ client which pulls and subscribe to messages. Runs in a background 
-    thread and invokes the handler on each incoming message.
+def _mosq_msg_to_dict(msg):
+    """ Converts a Mosquitto message to a Python dictionary.
     """
-    
-    def __init__(self, name, zmq_context, broker_push_client_pull, broker_pub_client_sub, 
-                 on_pull_handler=None,  pull_handler_args=None,
-                 on_sub_handler=None,  sub_handler_args=None, sub_key=b'', keep_running=True):
-        self.name = name
-        self.zmq_context = zmq_context
-        self.broker_push_client_pull = broker_push_client_pull
-        self.broker_pub_client_sub = broker_pub_client_sub
-        self.keep_running = keep_running
-        self.on_pull_handler = on_pull_handler
-        self.pull_handler_args = pull_handler_args
-        self.on_sub_handler = on_sub_handler
-        self.sub_handler_args = sub_handler_args
-        self.sub_key = sub_key
-        self.pull_socket = None
-        self.sub_socket = None
-        
-    # Custom subclasses may wish to override the two hooks below.
-    def on_before_msg_handler(self, msg, args):
-        pass
+    out = {}
+    for name in('timestamp', 'direction', 'state', 'dup', 'mid', 'topic', 'payload', 'qos', 'retain'):
+        out[name] = getattr(msg, name, ZATO_NONE)
+    return out
 
-    def on_after_msg_handler(self, msg, e=None, args=None):
-        pass
-    
-    def start(self):
-        Thread(target=self.listen).start()
-        
-    def close(self, pull_socket=None, sub_socket=None):
-        self.keep_running = False
-        ps = pull_socket if pull_socket else self.pull_socket
-        ss = sub_socket if sub_socket else self.sub_socket
-        
-        if ps:
-            ps.close()
-        if ss:
-            ss.close()
-    
-    def listen(self):
-        
-        print(1111111111111, current_thread().name)
-        
-        _socks = []
-        poller = zmq.Poller()
-        
-        if self.broker_push_client_pull:
-            self.pull_socket = self.zmq_context.socket(zmq.PULL)
-            self.pull_socket.setsockopt(zmq.LINGER, 0)
-            self.pull_socket.connect(self.broker_push_client_pull)
-            poller.register(self.pull_socket, zmq.POLLIN)
-            _socks.append(('pull', self.pull_socket))
-            
-            logger.debug('Starting PULL [{0}/{1}]'.format(
-                self.name, self.broker_push_client_pull))
-            
-        if self.broker_pub_client_sub:
-            self.sub_socket = self.zmq_context.socket(zmq.SUB)
-            self.sub_socket.setsockopt(zmq.LINGER, 0)
-            self.sub_socket.connect(self.broker_pub_client_sub)
-            self.sub_socket.setsockopt(zmq.SUBSCRIBE, self.sub_key)
-            poller.register(self.sub_socket, zmq.POLLIN)
-            _socks.append(('sub', self.sub_socket))
-            
-            logger.debug('Starting SUB [{0}/{1}]'.format(
-                self.name, self.broker_pub_client_sub))
-            
-        _handlers_args = {}
-        if self.pull_socket:
-            _handlers_args[self.pull_socket] = (self.on_pull_handler, self.pull_handler_args)
-        if self.sub_socket:
-            _handlers_args[self.sub_socket] = (self.on_sub_handler, self.sub_handler_args)
-            
-        while self.keep_running:
-            try:
-                poll_socks = dict(poller.poll())
-                for sock_name, sock in _socks:
-                    if poll_socks.get(sock) == zmq.POLLIN:
-                        msg = sock.recv()
-                        try:
-                            
-                            e = None
-                            args = None
-                            
-                            # A pre-hook, if any..
-                            self.on_before_msg_handler(msg, self.pull_handler_args)
-                            
-                            # .. the actual handler ..
-                            handler, args = _handlers_args[sock]
-                            args = (args, sock_name)
-                            handler(msg, args)
-                        except Exception, e:
-                            msg = '[{0}] Could not invoke the message handler, msg [{1}] sock_name [{2}] e [{3}]'
-                            logger.error(msg.format(self.name, msg, sock_name, format_exc(e)))
-                        finally:
-                            # .. an after-hook, if any..
-                            self.on_after_msg_handler(msg, args, e)
-                        
-            except Exception, e:
-                # It's OK and needs not to disturb the user so log it only
-                # in the DEBUG level.
-                if isinstance(e, zmq.ZMQError) and e.errno in _errno_caught:
-                    caught = _errno_caught[e.errno]
-                    msg = '[{0}] Caught [{1}] [{2}], quitting'.format(self.name, caught, format_exc(e))
-                    log_meth = logger.debug
-                else:
-                    e_errno = getattr(e, 'errno', None)
-                    msg = '[{0}] Caught an exception [{1}], errno [{2}], quitting.'.format(
-                        self.name, e_errno, format_exc(e))
-                    log_meth = logger.error
-                    
-                log_meth(msg)
-                self.close()
-                    
-class ZMQPush(object):
-    """ Sends messages to ZeroMQ using a PUSH socket.
+class _ClientThread(Thread):
+    """ A background thread that will be used either for publishing or receiving
+    of MQTT messages.
     """
-    def __init__(self, name, zmq_context, address):
-        self.name = name
-        self.zmq_context = zmq_context
+    def __init__(self, address, pubsub, name, on_message):
+        Thread.__init__(self)
         self.address = address
-        self.socket_type = zmq.PUSH 
-
-        self.socket = self.zmq_context.socket(self.socket_type)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.connect(self.address)
+        self.pubsub = pubsub
+        self.name = self.client_id = 'zato-{}-{}-{}'.format(self.pubsub, name, uuid4().hex)
+        self.on_message = on_message
+        self.keep_running = ZATO_NONE
         
-        print(8888, current_thread().name)
+    def publish(self, topic, msg):
+        return self._client.publish(topic, msg)
+    
+    def subscribe(self, topic):
+        return self._client.subscribe(topic)
         
-        logger.info('Started PUSH [{}/{}/{}]'.format(self.name, self.address, self.socket_type))
+    def run(self):
+        self._client = Mosquitto(self.client_id)
+        self._client.connect(self.address)
+        self._client.on_message = self.on_message
         
-    def send(self, msg):
-        try:
-            print(888, self.socket.send_unicode(msg))
-            print(190, 'Sent', msg)
-        except zmq.ZMQError, e:
-            msg = '[{0}] Caught ZMQError [{1}], errno [{2}], continuing anyway.'.format(
-                self.name, e.strerror, e.errno)
-            logger.warn(msg)
-        
-    def close(self):
-        self.socket.close()
-        msg = 'Stopped PUSH [[{}/{}/{}]'.format(self.name, self.address, self.socket_type)
+        msg = 'Client [{}] connected to broker [{}]'.format(self.client_id, self.address)
         logger.info(msg)
         
+        self.keep_running = True
+        
+        try:
+            while self.keep_running:
+                self._client.loop()
+        except KeyboardInterrupt:
+            self._client.disconnect()
+            
+    def stop(self):
+        self.keep_running = False
+    
 class BrokerClient(object):
-    """ A ZeroMQ broker client which knows how to subscribe to messages and push
-    the messages onto the broker.
+    """ Zato MQTT broker client. Starts two background threads, one for publishing
+    and one for receiving of the messages.
+    
+    There may be 3 types of messages sent out:
+    
+    1) to the singleton server
+    2) to all the parallel servers
+    3) to one of the parallel servers
+    
+    1) and 2) are straightforward, a message is being published on a topic, off which
+    it is read by broker client(s). 
+    
+    3) needs more work - the actual message is added
+    to Redis and what is really being published is a Redis key it's been stored under.
+    The first client to read it will be the one to handle it. Yup, it means the messages
+    are sent across to all of the clients and the winning one is the one that picked
+    up the Redis message; it's not that bad as it may seem, there will be at most as
+    many clients as there are servers in the cluster and truth to be told, Zero MQ < 3.x
+    also would do client-side PUB/SUB filtering and it did scale nicely.
     """
-    def __init__(self, init=False, **kwargs):
-        self._push = None
-        self._pull_sub = None
-        self.zmq_context = kwargs.get('zmq_context')
-        self.name = kwargs.get('name')
-        self.broker_push_client_pull = kwargs.get('broker_push_client_pull')
-        self.client_push_broker_pull = kwargs.get('client_push_broker_pull')
-        self.broker_pub_client_sub = kwargs.get('broker_pub_client_sub')
-        self.on_pull_handler = kwargs.get('on_pull_handler')
-        self.pull_handler_args = kwargs.get('pull_handler_args')
-        self.on_sub_handler = kwargs.get('on_sub_handler')
-        self.sub_handler_args = kwargs.get('sub_handler_args')
-        self.sub_key = kwargs.get('sub_key', b'')
-
-        if init:
-            self.init()
-            
-    def __repr__(self):
-        return '<{0} at {1} name:[{2}] broker_push_client_pull:[{3}] '\
-               'client_push_broker_pull:[{4}] broker_pub_client_sub:[{5}] '\
-               'on_pull_handler:[{6}] pull_handler_args:[{7}] on_sub_handler:[{8}] '\
-               'sub_handler_args:[{9}] sub_key:[{10}]'.format(self.__class__.__name__,
-                    hex(id(self)), self.name, self.broker_push_client_pull,
-                    self.client_push_broker_pull, self.broker_pub_client_sub,
-                    self.on_pull_handler, self.pull_handler_args,
-                    self.on_sub_handler, self.sub_handler_args, self.sub_key)
-            
-    def init(self):
-        if self.broker_pub_client_sub or self.broker_push_client_pull:
-            self._pull_sub = ZMQPullSub(self.name, self.zmq_context, self.broker_push_client_pull, 
-                self.broker_pub_client_sub, self.on_pull_handler, self.pull_handler_args,
-                self.on_sub_handler, self.sub_handler_args, self.sub_key)
+    def __init__(self, kvdb=None, address=None, name=None, callbacks={}):
+        self.kvdb = kvdb
+        self.address = address
+        self.name = name
+        self.callbacks = callbacks
+        self._pub_client = _ClientThread(self.address, 'pub', self.name, self.on_message)
+        self._sub_client = _ClientThread(self.address, 'sub', self.name, self.on_message)
+        self._to_parallel_any_topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
         
-        if self.client_push_broker_pull:
-            self._push = ZMQPush(self.name, self.zmq_context, self.client_push_broker_pull)
-        else:
-            logger.debug('Client [{0}] has no [client_push_broker_pull] address defined'.format(self.name))
-        
-    def set_pull_handler(self, handler):
-        self._pull_sub.on_pull_handler = handler
-        
-    def set_pull_handler_args(self, args):
-        self._pull_sub.pull_handler_args = args
-        
-    def set_sub_handler(self, handler):
-        self._pull_sub.on_sub_handler = handler
-        
-    def set_sub_handler_args(self, args):
-        self._pull_sub.sub_handler_args = args
-    
     def start(self):
-        if self._pull_sub:
-            self._pull_sub.start()
-    
+        for client in(self._pub_client, self._sub_client):
+            client.start()
+            while client.keep_running == ZATO_NONE:
+                time.sleep(0.01)
+        
+    def stop(self):
+        self._pub_client.stop()
+        self._sub_client.stop()
+
+    def on_message(self, client, obj, msg):
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug('client [{}], obj [{}], msg [{}]'.format(client, obj, _mosq_msg_to_dict(msg)))
+        
+        # Replace payload with stuff read off the KVDB in case this is where the actual message happens to reside.
+        if msg.topic == self._to_parallel_any_topic:
+            tmp_key = '{}.tmp'.format(msg.payload)
+            
+            try:
+                self.kvdb.conn.rename(msg.payload, tmp_key)
+            except redis.ResponseError, e:
+                if e.message != 'ERR no such key': # Doh, I hope Redis guys don't change it out of a sudden :/
+                    raise
+            else:
+                payload = self.kvdb.conn.get(tmp_key)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug('Got actual payload from key [{}]'.format(msg.payload))
+                    
+                self.kvdb.conn.delete(tmp_key) # Note that it would've expired anyway
+                payload = loads(payload)
+        else:
+            payload = loads(msg.payload)
+            
+        return self.callbacks[payload['msg_type']](payload)
+        
+    def publish(self, msg_type, msg):
+        msg['msg_type'] = msg_type
+        topic = TOPICS[msg_type]
+        self._pub_client.publish(topic, dumps(msg))
+        
     def send(self, msg):
-        zz = self._push.send(msg)
-        print(88, zz)
-        return zz
-    
-    def close(self):
-        if self._push:
-            self._push.close()
-        if self._pull_sub:
-            self._pull_sub.close()
-            
-        logger.debug('Closed [{0}]'.format(self.get_connection_info()))
-            
-    def get_connection_info(self):
-        return 'name:[{0}] client_pull:[{1}] client_push:[{2}] client_sub:[{3}] sub_key:[{4}]'.format(
-            self.name, self.broker_push_client_pull, self.client_push_broker_pull, self.broker_pub_client_sub,
-            self.sub_key)
+        msg['msg_type'] = MESSAGE_TYPE.TO_PARALLEL_ANY
+        msg = dumps(msg)
+        
+        topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
+        key = broker_msg = b'zato:broker:to-parallel:any:{}'.format(new_cid())
+        
+        self.kvdb.conn.set(key, str(msg))
+        self.kvdb.conn.expire(key, 5)
+        
+        self._pub_client.publish(topic, broker_msg)
+        
+    def subscribe(self, topic):
+        self._sub_client.subscribe(topic)        

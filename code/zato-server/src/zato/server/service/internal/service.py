@@ -119,7 +119,7 @@ class Edit(AdminService):
                 
                 input.action = SERVICE.EDIT
                 input.impl_name = service.impl_name
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
                 
                 self.response.payload = service
                 
@@ -156,7 +156,7 @@ class Delete(AdminService):
 
                 msg = {'action': SERVICE.DELETE, 'id': self.request.input.id, 'impl_name':service.impl_name, 
                        'is_internal':service.is_internal}
-                self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+                self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
                 
             except Exception, e:
                 session.rollback()

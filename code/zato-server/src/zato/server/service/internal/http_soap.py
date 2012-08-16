@@ -41,7 +41,7 @@ class _HTTPSOAPService(object):
         """ Notify worker threads of new or updated parameters.
         """
         params['action'] = action
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_SUB)
+        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
 
     def _handle_security_info(self, session, security_id, connection, transport):
         """ First checks whether the security type is correct for the given 

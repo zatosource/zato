@@ -46,8 +46,9 @@ from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Zato
+from zato.broker.client import BrokerClient
 from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
+from zato.common.broker_message import code_to_name, MESSAGE_TYPE, TOPICS, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
@@ -106,6 +107,18 @@ class WorkerStore(BaseWorker):
         # Create all the expected connections
         self.init_sql()
         self.init_http_soap()
+        
+        callbacks = {
+            MESSAGE_TYPE.TO_PARALLEL_ANY: self.on_broker_msg,
+            MESSAGE_TYPE.TO_PARALLEL_ALL: self.on_broker_msg,
+            }
+        
+        self.broker_client = BrokerClient(self.worker_config.server.kvdb, '127.0.0.1', 'worker-thread', callbacks)
+        self.broker_client.start()
+        
+        for msg_type, topic in TOPICS.items():
+            if msg_type != MESSAGE_TYPE.TO_SINGLETON:
+                self.broker_client.subscribe(topic)
         
     def filter(self, msg):
         return True
@@ -236,24 +249,24 @@ class WorkerStore(BaseWorker):
         """
         self.request_handler.security.basic_auth_get(name)
 
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
         self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
         
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
                 self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
 
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
                 self._visit_wrapper_delete)
                     
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
@@ -266,22 +279,22 @@ class WorkerStore(BaseWorker):
         """
         self.request_handler.security.tech_acc_get(msg, *args)
 
-    def on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
         self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
         
-    def on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
         self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
         
-    def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
         self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
         
-    def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
         self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
@@ -293,12 +306,12 @@ class WorkerStore(BaseWorker):
         """
         self.request_handler.security.wss_get(msg, *args)
 
-    def on_broker_pull_msg_SECURITY_WSS_CREATE(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
         self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_CREATE(msg, *args)
         
-    def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.wss,
@@ -306,13 +319,13 @@ class WorkerStore(BaseWorker):
                     'nonce_freshness_time', 'reject_expiry_limit', 'password_type', 
                     'reject_empty_nonce_creat', 'reject_stale_tokens'))
         
-    def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.wss,
                 self._visit_wrapper_delete)
         
-    def on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.wss,
@@ -342,21 +355,21 @@ class WorkerStore(BaseWorker):
             
 # ##############################################################################
 
-    def on_broker_pull_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
+    def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED', args)
 
-    def on_broker_pull_msg_CHANNEL_AMQP_MESSAGE_RECEIVED(self, msg, args=None):
+    def on_broker_msg_CHANNEL_AMQP_MESSAGE_RECEIVED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'amqp', 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
     
-    def on_broker_pull_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
+    def on_broker_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'jms-wmq', 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
     
-    def on_broker_pull_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
+    def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self._on_message_invoke_service(msg, 'zmq', 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
     
 # ##############################################################################
 
-    def on_broker_pull_msg_OUTGOING_SQL_CREATE_EDIT(self, msg, *args):
+    def on_broker_msg_OUTGOING_SQL_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an SQL connection, including changing its
         password.
         """
@@ -366,20 +379,20 @@ class WorkerStore(BaseWorker):
             
         self.sql_pool_store[msg['name']] = msg
         
-    def on_broker_pull_msg_OUTGOING_SQL_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_OUTGOING_SQL_CHANGE_PASSWORD(self, msg, *args):
         """ Deletes an outgoing SQL connection pool and recreates it using the
         new password.
         """
         self.sql_pool_store.change_password(msg['name'], msg['password'])
         
-    def on_broker_pull_msg_OUTGOING_SQL_DELETE(self, msg, *args):
+    def on_broker_msg_OUTGOING_SQL_DELETE(self, msg, *args):
         """ Deletes an outgoing SQL connection pool.
         """
         del self.sql_pool_store[msg['name']]
 
 # ##############################################################################
 
-    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+    def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
         # Security
@@ -389,7 +402,7 @@ class WorkerStore(BaseWorker):
         handler = getattr(self.request_handler, msg.transport + '_handler')
         handler.on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
         
-    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
+    def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
         # Security
@@ -413,7 +426,7 @@ class WorkerStore(BaseWorker):
         except(KeyError, AttributeError), e:
             log_meth('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
         
-    def on_broker_pull_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+    def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an outgoing HTTP/SOAP connection.
         """
         # It might be a rename
@@ -431,7 +444,7 @@ class WorkerStore(BaseWorker):
         config_dict[msg['name']].conn = wrapper
         config_dict[msg['name']].ping = wrapper.ping # (just like in self.init_http)
         
-    def on_broker_pull_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg, *args):
+    def on_broker_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the
         task to self._delete_outgoing_http_soap.
         """
@@ -439,7 +452,7 @@ class WorkerStore(BaseWorker):
             
 # ##############################################################################
 
-    def on_broker_pull_msg_SERVICE_SET_REQUEST_RESPONSE(self, msg, *args):
+    def on_broker_msg_SERVICE_SET_REQUEST_RESPONSE(self, msg, *args):
         new_msg = Bunch()
         new_msg.cid = msg.cid
         new_msg.service = 'zato.server.service.internal.service.SetRequestResponse'
@@ -447,7 +460,7 @@ class WorkerStore(BaseWorker):
         new_msg.payload = msg
         return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SET_REQUEST_RESPONSE', args)
     
-    def on_broker_pull_msg_SERVICE_DELETE(self, msg, *args):
+    def on_broker_msg_SERVICE_DELETE(self, msg, *args):
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
         """
@@ -472,12 +485,12 @@ class WorkerStore(BaseWorker):
                     if e.errno != ENOENT:
                         raise
                 
-    def on_broker_pull_msg_SERVICE_EDIT(self, msg, *args):
+    def on_broker_msg_SERVICE_EDIT(self, msg, *args):
         self.worker_config.server.service_store.services[msg.impl_name]['is_active'] = msg.is_active
         
 # ##############################################################################
 
-    def on_broker_pull_msg_HOT_DEPLOY_CREATE(self, msg, *args):
+    def on_broker_msg_HOT_DEPLOY_CREATE(self, msg, *args):
         msg.cid = new_cid()
         msg.service = 'zato.server.service.internal.hot_deploy.Create'
         msg.payload = {'package_id': msg.package_id}
@@ -486,7 +499,7 @@ class WorkerStore(BaseWorker):
     
 # ##############################################################################
 
-    def on_broker_pull_msg_STATS_DELETE(self, msg, *args):
+    def on_broker_msg_STATS_DELETE(self, msg, *args):
         start = parse(msg.start)
         stop = parse(msg.stop)
         
@@ -499,7 +512,7 @@ class WorkerStore(BaseWorker):
         if(stop-start).days:
             for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
                 self.broker_client.send_json({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()}, 
-                   MESSAGE_TYPE.TO_PARALLEL_PULL)
+                   MESSAGE_TYPE.TO_PARALLEL_ANY)
                    
                 # So as not to drown the broker with a sudden surge of messages
                 sleep(0.02)
@@ -525,7 +538,7 @@ class WorkerStore(BaseWorker):
         else:
             self.stats_maint.delete(start, stop, MINUTELY)
 
-    def on_broker_pull_msg_STATS_DELETE_DAY(self, msg, *args):
+    def on_broker_msg_STATS_DELETE_DAY(self, msg, *args):
         self.stats_maint.delete(parse(msg.start), parse(msg.stop), MINUTELY)
 
 # ##############################################################################
@@ -534,12 +547,10 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the worker threads.
     """
-    def __init__(self, server, server_config, pull_handler, zmq_context):
+    def __init__(self, server, server_config):
         super(_TaskDispatcher, self).__init__()
         self.server = server
         self.server_config = server_config
-        self.pull_handler = pull_handler
-        self.zmq_context = zmq_context
         
     def setThreadCount(self, count):
         """ Mostly copy & paste from the base classes except for the part
@@ -560,10 +571,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
 
                 # Each thread gets its own copy of the initial configuration ..
                 worker_config = self.server_config.copy()
-                
-                # .. though the ZMQ context is OK to be shared among multiple threads.
-                worker_config.zmq_context = self.zmq_context
-                
+
                 # .. be careful with this, it's a reference to the main ParallelServer
                 # this thread is running on.
                 worker_config.server = self.server
@@ -590,7 +598,6 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         _local = local()
         _local.store = WorkerStore(worker_config)
         _local.store._init()
-        _local.broker_client = _local.store.broker_client
         
         threads = self.threads
         try:

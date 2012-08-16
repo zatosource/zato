@@ -186,7 +186,7 @@ class ConsumingConnector(BaseAMQPConnector):
                 params['cid'] = new_cid()
                 params['payload'] = body
                 
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY)
 
     def on_broker_pull_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation

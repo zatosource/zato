@@ -50,7 +50,7 @@ class Delete(AdminService):
 
     def handle(self):
         self.broker_client.send_json({'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop}, 
-                                     MESSAGE_TYPE.TO_PARALLEL_PULL)
+                                     MESSAGE_TYPE.TO_PARALLEL_ANY)
 
 class _AggregatingService(AdminService):
     """ A base class for all services that process raw times into aggregates values.

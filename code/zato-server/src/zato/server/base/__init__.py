@@ -29,7 +29,7 @@ from anyjson import loads
 from bunch import Bunch
 
 # Zato
-from zato.broker.zato_client import BrokerClient
+#from zato.broker.zato_client import BrokerClient
 from zato.common.broker_message import code_to_name, MESSAGE
 
 class BrokerMessageReceiver(object):
@@ -38,7 +38,7 @@ class BrokerMessageReceiver(object):
     to handle the messages in a Zato-specific way.
     """
     
-    def on_broker_msg(self, msg, *args):
+    def on_broker_msg(self, msg):
         """ Receives a configuration message, parses its JSON contents and invokes
         an appropriate handler, the one indicated by the msg's 'action' key so
         if the action is '1000' then self.on_config_SCHEDULER_CREATE
@@ -49,19 +49,11 @@ class BrokerMessageReceiver(object):
         
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug('Got message [{0}]'.format(msg))
-            
-        msg_type = msg[:MESSAGE.MESSAGE_TYPE_LENGTH]
-        msg = loads(msg[MESSAGE.PAYLOAD_START:])
-        msg = Bunch(msg)
-        
+
         if self.filter(msg):
             action = code_to_name[msg['action']]
-            handler = 'on_broker_pull_msg_{0}'.format(action)
-            handler = getattr(self, handler)
-            if args:
-                handler(msg, args)
-            else:
-                handler(msg)
+            handler = 'on_broker_msg_{0}'.format(action)
+            getattr(self, handler)(Bunch(msg))
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug('Filtered out message [{0}]'.format(msg))
@@ -69,7 +61,7 @@ class BrokerMessageReceiver(object):
     def filter(self, msg):
         """ Subclasses may override the method in order to filter the messages
         prior to invoking the actual message handler. Default implementation 
-        always returns False.
+        always returns False which rejects all the incoming messages.
         """
         return False
             
@@ -78,11 +70,12 @@ class BaseWorker(BrokerMessageReceiver):
     def _init(self):
         """ Initializes the instance, sets up the broker client.
         """
-        self._setup_broker_client()
+        #self._setup_broker_client()
 
     def _setup_broker_client(self):
         """ Connects to the broker and sets up all the sockets.
         """
+        '''
         self.broker_client = BrokerClient()
         self.broker_client.name = self.worker_config.broker_config.name
         self.broker_client.token = self.worker_config.broker_config.broker_token
@@ -94,3 +87,4 @@ class BaseWorker(BrokerMessageReceiver):
         self.broker_client.on_sub_handler = self.on_broker_msg
         self.broker_client.init()
         self.broker_client.start()
+        '''

@@ -26,7 +26,7 @@ import logging
 import zmq
 
 # Zato
-from zato.broker.zato_client import BrokerClient as ZMQClient
+from zato.broker.client import BrokerClient
 from zato.common import ZatoException
 from zato.common.broker_message import DEFINITION, ZMQ_CONNECTOR
 from zato.server.connection import BaseConnection, BaseConnector
