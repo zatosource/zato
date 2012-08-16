@@ -513,7 +513,7 @@ class WorkerStore(BaseWorker):
             #
             # The call to rrule(DAILY, ...) will nicely slice the time between
             # start and stop into one day intervals yet the last element of the slice
-            # will have the time portion equal to that of start's - so in this
+            # will have the time portion equal to that of start - so in this
             # particular case it would be that last_elem was 2012-07-25T02:02:53
             # which would be still be 2 minutes short of stop. Hence the need for
             # a relativedelta, to tease out the remaining time information.
