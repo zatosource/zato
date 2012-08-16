@@ -34,6 +34,7 @@ from dateutil.parser import parse
 from pytz import UTC
 
 # Zato 
+from zato.broker.zato_client import BrokerClient
 from zato.common import scheduler_date_time_format
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import new_cid
@@ -49,8 +50,11 @@ class Scheduler(object):
     """ The Zato's job scheduler. All of the operations assume the data's being
     first validated and sanitized by relevant Zato public API services.
     """
-    def __init__(self, singleton=None, init=True):
+    def __init__(self, singleton=None, init=False):
         self.singleton = singleton
+        self.broker_token = None
+        self.zmq_context = None
+        self.client_push_broker_pull = None
         
         if init:
             self._init()
@@ -62,6 +66,7 @@ class Scheduler(object):
     def wait_for_init(self):
         """ Sleeps till the background APScheduler's thread is up and running.
         """
+        self._init()
         while not self._sched.running:
             time.sleep(0.01)
         
@@ -76,7 +81,19 @@ class Scheduler(object):
         """
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'payload':extra,
                'cid':new_cid()}
+               
         self.singleton.broker_client.send_json(msg, msg_type=broker_msg_type)
+        
+        '''
+        broker_client = BrokerClient()
+        broker_client.name = 'singleton-scheduler'
+        broker_client.token = self.broker_token
+        broker_client.zmq_context = self.zmq_context
+        broker_client.client_push_broker_pull = self.client_push_broker_pull
+        broker_client.init()
+        broker_client.send_json(msg, msg_type=broker_msg_type)
+        broker_client.close()
+        '''
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(

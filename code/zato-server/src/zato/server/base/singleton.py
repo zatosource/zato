@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime, timedelta
+from threading import current_thread
 from time import sleep
 
 # Bunch
@@ -29,10 +30,10 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.zato_client import BrokerClient
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER, SINGLETON
 from zato.server.base import BrokerMessageReceiver
 
-_scheduler_values = SCHEDULER.values()
+_accepted_messages = SCHEDULER.values() + SINGLETON.values()
 
 class SingletonServer(BrokerMessageReceiver):
     """ A server of which one instance only may be running in a Zato container.
@@ -72,6 +73,11 @@ class SingletonServer(BrokerMessageReceiver):
         
         # Initialize scheduler.
         self.scheduler.singleton = self
+        self.scheduler.broker_token = self.broker_token
+        self.scheduler.zmq_context = self.zmq_context
+        self.scheduler.client_push_broker_pull = self.client_push_broker_pull
+        
+        print(999, self.client_push_broker_pull)
         
         self.broker_client = BrokerClient()
         self.broker_client.name = 'singleton'
@@ -80,12 +86,13 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client.broker_push_client_pull = self.broker_push_client_pull
         self.broker_client.client_push_broker_pull = self.client_push_broker_pull
         self.broker_client.on_pull_handler = self.on_broker_msg
-        self.broker_client.init()
-        self.broker_client.start()
+        #self.broker_client.init()
+        #self.broker_client.start()
+        print(1111111111111, current_thread().name)
         
         # Start the hot-reload pickup monitor
-        self.logger.info('Pickup notifier starting')
-        self.pickup.watch()
+        #self.logger.info('Pickup notifier starting')
+        #self.pickup.watch()
         
     def become_cluster_wide(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
             server_id, cluster_id, starting_up):
@@ -129,9 +136,9 @@ class SingletonServer(BrokerMessageReceiver):
 ################################################################################
 
     def filter(self, msg):
-        """ Filters out messages meant to be received by a singleton server.
+        """ Filters out messages not meant to be received by a singleton server.
         """
-        if msg.action in _scheduler_values:
+        if msg.action in _accepted_messages:
             return True
         return False
 
@@ -146,3 +153,8 @@ class SingletonServer(BrokerMessageReceiver):
         
     def on_broker_pull_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
         self.scheduler.execute(msg)
+        
+    def on_broker_pull_msg_SINGLETON_CLOSE(self, msg, *ignored_args):
+        print(2222222222222, current_thread().name)
+        self.broker_client.close()
+        

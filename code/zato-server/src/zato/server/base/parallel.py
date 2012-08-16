@@ -42,7 +42,7 @@ from bunch import Bunch, SimpleBunch
 # Zato
 from zato.broker.zato_client import BrokerClient
 from zato.common import PORTS, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, ZMQ_CONNECTOR
+from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SINGLETON, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
@@ -189,6 +189,7 @@ class ParallelServer(BrokerMessageReceiver):
             self.singleton_server.server_id = server.id
     
     def _after_init_accepted(self, server):
+    
         if self.singleton_server:
             for(_, name, is_active, job_type, start_date, extra, service_name, service_impl_name,
                 _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
@@ -201,9 +202,10 @@ class ParallelServer(BrokerMessageReceiver):
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
+                    
 
             # Let's see if we can become a connector server, the one to start all
-            # the connectors and start the connectors only once throughout the whole cluster.
+            # the connectors, and start the connectors only once throughout the whole cluster.
             self.connector_server_keep_alive_job_time = int(self.fs_server_config.singleton.connector_server_keep_alive_job_time)
             self.connector_server_grace_time = int(self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
             
@@ -271,7 +273,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.broker_config = Bunch()
         self.config.broker_config.name = 'worker-thread'
         self.config.broker_config.broker_token = self.broker_token
-        self.config.broker_config.zmq_context = self.zmq_context
+        #self.config.broker_config.zmq_context = self.zmq_context
         self.config.broker_config.broker_push_client_pull = self.broker_push_worker_pull
         self.config.broker_config.client_push_broker_pull = self.worker_push_broker_pull
         self.config.broker_config.broker_pub_client_sub = self.broker_pub_worker_sub
@@ -409,7 +411,7 @@ class ParallelServer(BrokerMessageReceiver):
     def run_forever(self):
         
         task_dispatcher = _TaskDispatcher(self, self.config, self.on_broker_msg, self.zmq_context)
-        task_dispatcher.setThreadCount(1) # TODO: Make it configurable
+        task_dispatcher.setThreadCount(0) # TODO: Make it configurable
 
         logger.debug('host:[{0}], port:[{1}]'.format(self.host, self.port))
 
@@ -426,6 +428,7 @@ class ParallelServer(BrokerMessageReceiver):
             pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB),
                     (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB),
                     (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB),
+                    (SINGLETON.CLOSE, MESSAGE_TYPE.TO_SINGLETON),
                     )
             
             for action, msg_type in pairs:
@@ -437,17 +440,18 @@ class ParallelServer(BrokerMessageReceiver):
             
             self.broker_client.close()
             
-            if self.singleton_server:
+            '''if self.singleton_server:
                 if getattr(self.singleton_server, 'broker_client', None):
                     self.singleton_server.broker_client.close()
                 self.singleton_server.pickup.stop()
                 
                 if self.singleton_server.is_cluster_wide:
-                    self.odb.clear_cluster_wide()
+                    self.odb.clear_cluster_wide()'''
                 
             self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
 
+            self.zmq_context.term()
             task_dispatcher.shutdown()
             
 # ##############################################################################

@@ -157,6 +157,9 @@ STATS = Bunch()
 STATS.DELETE = '11100'
 STATS.DELETE_DAY = '11101'
 
+SINGLETON = Bunch()
+SINGLETON.CLOSE = b'11200'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

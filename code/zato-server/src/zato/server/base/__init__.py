@@ -83,7 +83,7 @@ class BaseWorker(BrokerMessageReceiver):
     def _setup_broker_client(self):
         """ Connects to the broker and sets up all the sockets.
         """
-        self.broker_client = BrokerClient()
+        '''self.broker_client = BrokerClient()
         self.broker_client.name = self.worker_config.broker_config.name
         self.broker_client.token = self.worker_config.broker_config.broker_token
         self.broker_client.zmq_context = self.worker_config.broker_config.zmq_context
@@ -94,3 +94,4 @@ class BaseWorker(BrokerMessageReceiver):
         self.broker_client.on_sub_handler = self.on_broker_msg
         self.broker_client.init()
         self.broker_client.start()
+        '''
