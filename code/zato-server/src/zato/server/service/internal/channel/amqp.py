@@ -33,7 +33,7 @@ from zato.server.service.internal import AdminService
 class _AMQPService(AdminService):
     def delete_channel(self, channel):
         msg = {'action': CHANNEL.AMQP_DELETE, 'name': channel.name, 'id':channel.id}
-        self.broker_client.publish(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+        self.broker_client.publish(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
 
 class GetList(AdminService):
     """ Returns a list of AMQP channels.

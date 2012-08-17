@@ -83,7 +83,7 @@ class PublisherFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB)
+        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -100,10 +100,6 @@ class OutgoingConnector(BaseAMQPConnector):
         self.broker_client_name = 'amqp-publishing-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
-        
-        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_AMQP_PULL
-        self.client_push_broker_pull_port = PORTS.PUBLISHING_CONNECTOR_AMQP_PUSH_BROKER_PULL
-        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_AMQP_SUB
         
         if init:
             self._init()
@@ -226,25 +222,25 @@ class OutgoingConnector(BaseAMQPConnector):
             if self.out_amqp.is_active:
                 return self.out_amqp
 
-    def on_broker_pull_msg_OUTGOING_AMQP_CREATE(self, msg, *args):
+    def on_broker_msg_OUTGOING_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation
         is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
         self._out_amqp_create_edit(msg, *args)
         
-    def on_broker_pull_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
+    def on_broker_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
         """ Updates an outgoing AMQP connection. Note that the implementation
         is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
         self._out_amqp_create_edit(msg, *args)
         
-    def on_broker_pull_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
+    def on_broker_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
         """ Deletes an outgoing AMQP connection, closes all the other connections
         and stops the process.
         """
         self._close()
                 
-    def on_broker_pull_msg_OUTGOING_AMQP_PUBLISH(self, msg, *args):
+    def on_broker_msg_OUTGOING_AMQP_PUBLISH(self, msg, *args):
         """ Publishes an AMQP message on the broker.
         """
         properties = {}
