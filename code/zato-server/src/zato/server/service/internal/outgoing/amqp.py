@@ -34,7 +34,7 @@ from zato.server.service.internal import AdminService
 class _AMQPService(AdminService):
     def delete_outgoing(self, outgoing):
         msg = {'action': OUTGOING.AMQP_DELETE, 'name': outgoing.name, 'id':outgoing.id}
-        self.broker_client.send_json(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+        self.broker_client.publish(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
 
 class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.

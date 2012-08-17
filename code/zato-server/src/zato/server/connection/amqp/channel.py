@@ -71,7 +71,7 @@ class ConsumingConnection(BaseAMQPConnection):
             getpid(), getrandbits(64)).ljust(72, '0')
         
         self.channel.basic_consume(self._on_basic_consume, queue=_queue, consumer_tag=consumer_tag)
-        self.logger.error('Started a consumer for [{0}], queue [{1}], tag [{2}]'.format(
+        self.logger.info('Started a consumer for [{0}], queue [{1}], tag [{2}]'.format(
             self._conn_info(), _queue, consumer_tag))
         
 class ConsumingConnector(BaseAMQPConnector):
@@ -86,12 +86,12 @@ class ConsumingConnector(BaseAMQPConnector):
         
         self.broker_client_id = 'amqp-consumer'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB: self.on_broker_msg,
-            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: self.on_broker_msg
+            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ANY: self.on_broker_msg,
+            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
+            MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
         }
-        self.broker_messages = (MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB, 
-            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+        self.broker_messages = (MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ANY, 
+            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
         
         if init:
             self._init()
