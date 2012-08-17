@@ -148,6 +148,7 @@ class ParallelServer(BrokerMessageReceiver):
         # .. Remove all the deployed services from the DB ..
         self.odb.drop_deployed_services(server.id)
         
+        
         # .. and re-deploy the back from a clear state.
         self.service_store.import_services_from_anywhere(self.internal_service_modules + self.service_modules, self.base_dir)
         
@@ -300,38 +301,50 @@ class ParallelServer(BrokerMessageReceiver):
         logger.info('Initializing connectors')
 
         # AMQP - channels    
-        for item in self.odb.get_channel_amqp_list(self.cluster_id):
-            amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
+        channel_amqp_list = self.odb.get_channel_amqp_list(self.cluster_id)
+        if channel_amqp_list:
+            for item in channel_amqp_list:
+                amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
         else:
             logger.info('No AMQP channels to start')
         
         # AMQP - outgoing
-        for item in self.odb.get_out_amqp_list(self.cluster_id):
-            amqp_out_start_connector(self.repo_location, item.id, item.def_id)
+        out_amqp_list = self.odb.get_out_amqp_list(self.cluster_id)
+        if out_amqp_list:
+            for item in out_amqp_list:
+                amqp_out_start_connector(self.repo_location, item.id, item.def_id)
         else:
             logger.info('No AMQP outgoing connections to start')
             
         # JMS WMQ - channels
-        for item in self.odb.get_channel_jms_wmq_list(self.cluster_id):
-            jms_wmq_channel_start_connector(self.repo_location, item.id, item.def_id)
+        channel_jms_wmq_list = self.odb.get_channel_jms_wmq_list(self.cluster_id)
+        if channel_jms_wmq_list:
+            for item in channel_jms_wmq_list:
+                jms_wmq_channel_start_connector(self.repo_location, item.id, item.def_id)
         else:
             logger.info('No JMS WebSphere MQ channels to start')
     
         # JMS WMQ - outgoing
-        for item in self.odb.get_out_jms_wmq_list(self.cluster_id):
-            jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
+        out_jms_wmq_list = self.odb.get_out_jms_wmq_list(self.cluster_id)
+        if out_jms_wmq_list:
+            for item in out_jms_wmq_list:
+                jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
         else:
             logger.info('No JMS WebSphere MQ outgoing connections to start')
             
         # ZMQ - channels
-        for item in self.odb.get_channel_zmq_list(self.cluster_id):
-            zmq_channel_start_connector(self.repo_location, item.id)
+        channel_zmq_list = self.odb.get_channel_zmq_list(self.cluster_id)
+        if channel_zmq_list:
+            for item in channel_zmq_list:
+                zmq_channel_start_connector(self.repo_location, item.id)
         else:
             logger.info('No Zero MQ channels to start')
             
         # ZMQ - outgoimg
-        for item in self.odb.get_out_zmq_list(self.cluster_id):
-            zmq_outgoing_start_connector(self.repo_location, item.id)
+        out_zmq_list = self.odb.get_out_zmq_list(self.cluster_id)
+        if out_zmq_list:
+            for item in out_zmq_list:
+                zmq_outgoing_start_connector(self.repo_location, item.id)
         else:
             logger.info('No Zero MQ outgoing connections to start')
             
@@ -388,7 +401,7 @@ class ParallelServer(BrokerMessageReceiver):
     def run_forever(self):
         
         task_dispatcher = _TaskDispatcher(self, self.config)
-        task_dispatcher.setThreadCount(1) # TODO: Make it configurable
+        task_dispatcher.setThreadCount(2) # TODO: Make it configurable
 
         logger.debug('host:[{0}], port:[{1}]'.format(self.host, self.port))
 

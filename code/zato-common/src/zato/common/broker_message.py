@@ -53,6 +53,9 @@ TOPICS = {
     MESSAGE_TYPE.TO_SINGLETON: b'/zato/to-singleton',
     MESSAGE_TYPE.TO_PARALLEL_ANY: b'/zato/to-parallel/any',
     MESSAGE_TYPE.TO_PARALLEL_ALL: b'/zato/to-parallel/all',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: b'/zato/connector/amqp',
+    MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB: b'/zato/connector/jms-wmq',
+    MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB: b'/zato/connector/zmq',
 }
 
 SCHEDULER = Bunch()

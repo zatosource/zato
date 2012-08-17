@@ -108,17 +108,14 @@ class WorkerStore(BaseWorker):
         self.init_sql()
         self.init_http_soap()
         
-        callbacks = {
+        self.kvdb = self.worker_config.server.kvdb
+        
+        self.broker_client_id = 'worker-thread'
+        self.broker_messages = (MESSAGE_TYPE.TO_PARALLEL_ANY, MESSAGE_TYPE.TO_PARALLEL_ALL)
+        self.broker_callbacks = {
             MESSAGE_TYPE.TO_PARALLEL_ANY: self.on_broker_msg,
             MESSAGE_TYPE.TO_PARALLEL_ALL: self.on_broker_msg,
             }
-        
-        self.broker_client = BrokerClient(self.worker_config.server.kvdb, '127.0.0.1', 'worker-thread', callbacks)
-        self.broker_client.start()
-        
-        for msg_type, topic in TOPICS.items():
-            if msg_type != MESSAGE_TYPE.TO_SINGLETON:
-                self.broker_client.subscribe(topic)
         
     def filter(self, msg):
         return True

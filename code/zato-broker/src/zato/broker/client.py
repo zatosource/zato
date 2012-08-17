@@ -27,6 +27,9 @@ from uuid import uuid4
 # anyjson
 from anyjson import dumps, loads
 
+# Bunch
+from bunch import Bunch
+
 # Mosquitto
 from mosquitto import Mosquitto
 
@@ -35,7 +38,7 @@ import redis
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.util import new_cid
+from zato.common.util import new_cid, TRACE1
 from zato.common.broker_message import MESSAGE_TYPE, TOPICS
 
 logger = logging.getLogger(__name__)
@@ -138,19 +141,26 @@ class BrokerClient(object):
             except redis.ResponseError, e:
                 if e.message != 'ERR no such key': # Doh, I hope Redis guys don't change it out of a sudden :/
                     raise
+                else:
+                    payload = None
             else:
                 payload = self.kvdb.conn.get(tmp_key)
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug('Got actual payload from key [{}]'.format(msg.payload))
-                    
                 self.kvdb.conn.delete(tmp_key) # Note that it would've expired anyway
-                payload = loads(payload)
+                if not payload:
+                    logger.warning('No KVDB payload for key [{}] (already expired?)'.format(tmp_key))
+                else:
+                    payload = loads(payload)
         else:
             payload = loads(msg.payload)
             
-        return self.callbacks[payload['msg_type']](payload)
+        if payload:
+            payload = Bunch(payload)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Got broker message payload [{}]'.format(payload))
+                
+            return self.callbacks[payload['msg_type']](payload)
         
-    def publish(self, msg_type, msg):
+    def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL):
         msg['msg_type'] = msg_type
         topic = TOPICS[msg_type]
         self._pub_client.publish(topic, dumps(msg))

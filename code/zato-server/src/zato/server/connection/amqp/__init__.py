@@ -27,11 +27,12 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
+import errno, socket
 from threading import RLock
 
 # Pika
 from pika import BasicProperties
-from pika.adapters import TornadoConnection
+from pika.adapters import SelectConnection
 from pika.connection import ConnectionParameters
 from pika.credentials import PlainCredentials
 from pika.spec import BasicProperties
@@ -58,18 +59,23 @@ class BaseAMQPConnection(BaseConnection):
         self.reconnect_exceptions = (TypeError, EnvironmentError)
         
     def _start(self):
-        self.conn = TornadoConnection(self.conn_params, self._on_connected)
+        self.conn = SelectConnection(self.conn_params, self._on_connected)
         self.conn.ioloop.start()
         
     def _close(self):
         """ Actually close the connection.
         """
         if self.conn:
-            self.conn.close()
+            try:
+                self.conn.close()
+            except socket.error, e:
+                if e.errno != errno.EBADF:
+                    # EBADF meant we actually had a connection but it was unusable (like the credentials were incorrect)
+                    raise
             
     def _conn_info(self):
         return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
-            self.conn_params.port, self.conn_params.virtual_host, self.item_name)
+            self.conn_params.port, self.conn_params.virtual_host, self.item_name.encode('utf-8')).decode('utf-8')
             
     def _on_channel_open(self, channel):
         self.channel = channel
@@ -90,7 +96,7 @@ class BaseAMQPConnection(BaseConnection):
         """
         super(BaseAMQPConnection, self)._on_connected()
         conn.channel(self._on_channel_open)
-        
+        self.has_valid_connection = True
         
 class BaseAMQPConnector(BaseConnector):
     """ A base connector for any AMQP-related ones.
@@ -121,52 +127,50 @@ class BaseAMQPConnector(BaseConnector):
         elif msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
             if self.def_amqp.id == msg.id:
                 return True
-            
         
-    def on_broker_pull_msg_AMQP_CONNECTOR_CLOSE(self, msg, *args):
+    def on_broker_msg_AMQP_CONNECTOR_CLOSE(self, msg, *args):
         """ Stops the publisher, ODB connection and exits the process.
         """
         self._close()
         
-    def on_broker_pull_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
+    def on_broker_msg_DEFINITION_AMQP_CREATE(self, msg, *args):
         """ Creates a new AMQP definition.
         """
         with self.def_amqp_lock:
             msg.host = str(msg.host)
             self.def_amqp[msg.id] = msg
         
-    def on_broker_pull_msg_DEFINITION_AMQP_EDIT(self, msg, *args):
+    def on_broker_msg_DEFINITION_AMQP_EDIT(self, msg, *args):
         """ Updates an existing AMQP definition.
         """
         with self.def_amqp_lock:
-            
             password = self.def_amqp.password
             self.def_amqp = msg
             self.def_amqp.password = password
             self.def_amqp.host = str(self.def_amqp.host)
+            self._recreate()
             
-            with self.out_amqp_lock:
-                with self.channel_amqp_lock:
-                    recreate_meth = '_recreate_amqp_publisher' if hasattr(self, '_recreate_amqp_publisher') else '_recreate_consumer'
-                    getattr(self, recreate_meth)()
-                    if self.logger.isEnabledFor(TRACE1):
-                        log_msg = 'self.def_amqp [{0}]'.format(self.def_amqp)
-                        self.logger.log(TRACE1, log_msg)
-        
-    def on_broker_pull_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
+    def on_broker_msg_DEFINITION_AMQP_DELETE(self, msg, *args):
         """ Deletes an AMQP definition and stops the process.
         """
         self._close()
         
-    def on_broker_pull_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of an AMQP definition and of any existing publishers
         using this definition.
         """
         with self.def_amqp_lock:
             self.def_amqp['password'] = msg.password
-            with self.out_amqp_lock:
-                with self.channel_amqp_lock:
-                    self._recreate_amqp_publisher()
+            self._recreate()
+                    
+    def _recreate(self):
+        with self.out_amqp_lock:
+            with self.channel_amqp_lock:
+                recreate_meth = '_recreate_amqp_publisher' if hasattr(self, '_recreate_amqp_publisher') else '_recreate_consumer'
+                getattr(self, recreate_meth)()
+                if self.logger.isEnabledFor(TRACE1):
+                    log_msg = 'self.def_amqp [{0}]'.format(self.def_amqp)
+                    self.logger.log(TRACE1, log_msg)
                 
     def _amqp_conn_params(self):
         

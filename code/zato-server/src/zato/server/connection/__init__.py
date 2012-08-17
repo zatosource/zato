@@ -43,6 +43,7 @@ from bunch import Bunch
 from zato.common import ZATO_ODB_POOL_NAME
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 from zato.server.base import BaseWorker
+from zato.server.kvdb import KVDB
 
 class BaseConnection(object):
     """ A base class for connections to any external resourced accessed through
@@ -57,6 +58,7 @@ class BaseConnection(object):
         self.first_connection_attempt_time = None
         self.keep_connecting = True
         self.reconnect_sleep_time = 5 # Seconds
+        self.has_valid_connection = False
 
     def _start(self):
         """ Actually start a specific resource.
@@ -111,12 +113,30 @@ class BaseConnection(object):
                 self._conn_info(), self.connection_attempts, delta)
             self.logger.warn(msg)
             
-        self.connection_attempts = 1
+        if self.has_valid_connection:
+            self.connection_attempts = 1
     
     def start(self):
         """ Start the connection, reconnect on any recoverable errors.
         """ 
         self.first_connection_attempt_time = datetime.utcnow() 
+        
+        def _no_valid_connection(e=None):
+            if e:
+                if isinstance(e, EnvironmentError):
+                    err_info = '{0} {1}'.format(e.errno, e.strerror)
+                else:
+                    err_info = format_exc(e)
+                prefix = 'Caught [{}] error'.format(err_info)
+            else:
+                prefix = "Could not establish the connection (invalid credentials?)"
+                
+            msg = prefix + ', will try to (re-)connect to {} in {} seconds, {} attempt(s) so far, time spent {}'
+            delta = datetime.utcnow() - self.first_connection_attempt_time
+            self.logger.warn(msg.format(self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
+            self.connection_attempts += 1
+            time.sleep(self.reconnect_sleep_time)
+
         while self.keep_connecting:
             try:
                 
@@ -125,22 +145,18 @@ class BaseConnection(object):
                 
                 # Set only if there was an already established connection 
                 # and we're now trying to reconnect to the resource.
-                self.first_connection_attempt_time = datetime.utcnow()
+                if self.has_valid_connection:
+                    self.first_connection_attempt_time = datetime.utcnow()
             except self.reconnect_exceptions, e:
                 if self._keep_connecting(e):
-                    if isinstance(e, EnvironmentError):
-                        err_info = '{0} {1}'.format(e.errno, e.strerror)
-                    else:
-                        err_info = format_exc(e)
-                    msg = 'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
-                    delta = datetime.utcnow() - self.first_connection_attempt_time
-                    self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
-                    self.connection_attempts += 1
-                    time.sleep(self.reconnect_sleep_time)
+                    _no_valid_connection(e)
                 else:
                     msg = 'No connection for {0}, e:[{1}]'.format(self._conn_info(), format_exc(e))
                     self.logger.error(msg)
                     raise
+            else:
+                if not self.has_valid_connection:
+                    _no_valid_connection()
 
 class BaseConnector(BaseWorker):
     """ A base class for both channels and outgoing connectors.
@@ -170,23 +186,29 @@ class BaseConnector(BaseWorker):
         """ Initializes all the basic run-time data structures and connects
         to the Zato broker.
         """
-        config = get_config(self.repo_location, 'server.conf')
-        app_context = get_app_context(config)
-        crypto_manager = get_crypto_manager(self.repo_location, app_context, config)
+        fs_server_config = get_config(self.repo_location, 'server.conf')
+        app_context = get_app_context(fs_server_config)
+        crypto_manager = get_crypto_manager(self.repo_location, app_context, fs_server_config)
         
-        config_odb = config['odb']
+        config_odb = fs_server_config.odb
         self.odb = app_context.get_object('odb_manager')
         self.odb.crypto_manager = crypto_manager
-        self.odb.odb_token = config_odb['token']
+        self.odb.odb_token = config_odb.token
+        
+        # Key-value DB
+        self.kvdb = KVDB()
+        self.kvdb.config = fs_server_config.kvdb
+        self.kvdb.decrypt_func = self.odb.crypto_manager.decrypt
+        self.kvdb.init()
         
         odb_data = Bunch()
-        odb_data.db_name = config_odb['db_name']
-        odb_data.engine = config_odb['engine']
-        odb_data.extra = config_odb['extra']
-        odb_data.host = config_odb['host']
-        odb_data.password = self.odb.crypto_manager.decrypt(config_odb['password'])
-        odb_data.pool_size = config_odb['pool_size']
-        odb_data.username = config_odb['username']
+        odb_data.db_name = config_odb.db_name
+        odb_data.engine = config_odb.engine
+        odb_data.extra = config_odb.extra
+        odb_data.host = config_odb.host
+        odb_data.password = self.odb.crypto_manager.decrypt(config_odb.password)
+        odb_data.pool_size = config_odb.pool_size
+        odb_data.username = config_odb.username
         odb_data.is_odb = True
         
         self.sql_pool_store = app_context.get_object('sql_pool_store')
@@ -194,25 +216,6 @@ class BaseConnector(BaseWorker):
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
         
         self._setup_odb()
-        
-        self.worker_config = Bunch()
-        self.worker_config.broker_config = Bunch()
-        self.worker_config.broker_config.name = self.broker_client_name
-        self.worker_config.broker_config.broker_token = self.server.cluster.broker_token
-        self.worker_config.broker_config.zmq_context = zmq.Context()
-
-        broker_push_client_pull = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + self.broker_push_client_pull_port)
-        
-        client_push_broker_pull = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + self.client_push_broker_pull_port)
-        
-        broker_pub_client_sub = 'tcp://{0}:{1}'.format(self.server.cluster.broker_host, 
-            self.server.cluster.broker_start_port + self.broker_pub_client_sub_port)
-        
-        self.worker_config.broker_config.broker_push_client_pull = broker_push_client_pull
-        self.worker_config.broker_config.client_push_broker_pull = client_push_broker_pull
-        self.worker_config.broker_config.broker_pub_client_sub = broker_pub_client_sub
 
         # Connects to the broker
         super(BaseConnector, self)._init()

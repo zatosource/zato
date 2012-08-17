@@ -143,7 +143,7 @@ class Edit(AdminService):
                 
                 input.action = DEFINITION.AMQP_EDIT
                 input.old_name = old_name
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
                 self.response.payload.id = def_amqp.id
                 self.response.payload.name = def_amqp.name
@@ -172,7 +172,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': DEFINITION.AMQP_DELETE, 'id': self.request.input.id}
-                self.broker_client.send_json(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
+                self.broker_client.publish(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
                 
             except Exception, e:
                 session.rollback()

@@ -50,8 +50,6 @@ class Ping(AdminService):
         output_required = ('ping',)
         
     def handle(self):
-        from time import sleep
-        sleep(0.02)
         self.response.payload.ping = 'pong'
     
 class Ping2(Ping):
@@ -93,7 +91,7 @@ class ChangePasswordBase(AdminService):
                     self.request.input.name = name
                     self.request.input.password = auth.password
                     self.request.input.salt = kwargs.get('salt')
-                    self.broker_client.send_json(self.request.input, msg_type=msg_type)
+                    self.broker_client.publish(self.request.input, msg_type=msg_type)
 
             except Exception, e:
                 msg = 'Could not update the password, e:[{}]'.format(format_exc(e))
@@ -101,4 +99,3 @@ class ChangePasswordBase(AdminService):
                 session.rollback()
 
                 raise
-            

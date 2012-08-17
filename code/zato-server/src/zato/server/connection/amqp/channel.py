@@ -55,7 +55,7 @@ class ConsumingConnection(BaseAMQPConnection):
         self.consume()
         
     def _on_basic_consume(self, channel, method_frame, header_frame, body):
-        """ We've got a message to be handled.
+        """ We've got a message to handle.
         """
         self.callback(method_frame, header_frame, body)
         channel.basic_ack(delivery_tag=method_frame.delivery_tag)
@@ -71,9 +71,8 @@ class ConsumingConnection(BaseAMQPConnection):
             getpid(), getrandbits(64)).ljust(72, '0')
         
         self.channel.basic_consume(self._on_basic_consume, queue=_queue, consumer_tag=consumer_tag)
-        self.logger.debug('Started a consumer for [{0}], queue [{1}], tag [{2}]'.format(
-            self._conn_info(), queue, consumer_tag))
-        
+        self.logger.error('Started a consumer for [{0}], queue [{1}], tag [{2}]'.format(
+            self._conn_info(), _queue, consumer_tag))
         
 class ConsumingConnector(BaseAMQPConnector):
     """ An AMQP consuming connector started as a subprocess. Each connection to an AMQP
@@ -85,9 +84,14 @@ class ConsumingConnector(BaseAMQPConnector):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         
-        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_AMQP_PULL
-        self.client_push_broker_pull_port = PORTS.CONSUMING_CONNECTOR_AMQP_PUSH_BROKER_PULL
-        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_CONSUMING_CONNECTOR_AMQP_SUB
+        self.broker_client_id = 'amqp-consumer'
+        self.broker_callbacks = {
+            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB: self.on_broker_msg,
+            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL: self.on_broker_msg,
+            MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB: self.on_broker_msg
+        }
+        self.broker_messages = (MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_SUB, 
+            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_PULL, MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB)
         
         if init:
             self._init()
@@ -133,7 +137,7 @@ class ConsumingConnector(BaseAMQPConnector):
         """ Stops the given AMQP consumer. The method must be called from a method 
         that holds onto all AMQP-related RLocks.
         """
-        if self.channel_amqp.get('consumer') and self.channel_amqp.consumer.conn and self.channel_amqp.consumer.conn.is_open:
+        if self.channel_amqp.get('consumer'):
             self.channel_amqp.consumer.close()
                             
     def _recreate_consumer(self):
@@ -186,27 +190,27 @@ class ConsumingConnector(BaseAMQPConnector):
                 params['cid'] = new_cid()
                 params['payload'] = body
                 
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY)
+                self.broker_client.send(params)
 
-    def on_broker_pull_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
+    def on_broker_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation
         is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
         self._channel_amqp_create_edit(msg, *args)
         
-    def on_broker_pull_msg_CHANNEL_AMQP_EDIT(self, msg, *args):
+    def on_broker_msg_CHANNEL_AMQP_EDIT(self, msg, *args):
         """ Updates an AMQP consumer. Note that the implementation
         is the same for both CHANNEL_AMQP_CREATE and CHANNEL_AMQP_EDIT.
         """
         self._channel_amqp_create_edit(msg, *args)
         
-    def on_broker_pull_msg_CHANNEL_AMQP_DELETE(self, msg, *args):
+    def on_broker_msg_CHANNEL_AMQP_DELETE(self, msg, *args):
         """ Deletes an AMQP connection, closes all the other connections
         and stops the process.
         """
         self._close()
         
-    def on_broker_pull_msg_CHANNEL_AMQP_CLOSE(self, msg, *args):
+    def on_broker_msg_CHANNEL_AMQP_CLOSE(self, msg, *args):
         """ Stops the consumer, ODB connection and exits the process.
         """
         self._close()
