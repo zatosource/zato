@@ -102,7 +102,7 @@ class Create(AdminService):
                 input.action = SECURITY.TECH_ACC_CREATE
                 input.password = input.password
                 input.sec_type = 'tech_acc'
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
+                self.broker_client.publish(input)
             
                 self.response.payload.id = tech_account.id
                 self.response.payload.name = tech_account.name
@@ -148,7 +148,7 @@ class Edit(AdminService):
                 input.action = SECURITY.TECH_ACC_EDIT
                 input.old_name = old_name
                 input.sec_type = 'tech_acc'
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
+                self.broker_client.publish(input)
             
                 self.response.payload.id = tech_account.id
                 self.response.payload.name = tech_account.name
@@ -195,4 +195,4 @@ class Delete(AdminService):
             else:
                 input.action = SECURITY.TECH_ACC_DELETE
                 input.name = tech_account.name
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
+                self.broker_client.publish(input)

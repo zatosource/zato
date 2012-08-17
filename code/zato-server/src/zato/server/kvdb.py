@@ -31,10 +31,10 @@ from zato.common import KVDB as _KVDB
 class KVDB(object):
     """ A wrapper around the Zato's key-value database.
     """
-    def __init__(self, conn=None, config=None, server=None):
+    def __init__(self, conn=None, config=None, decrypt_func=None):
         self.conn = conn
         self.config = config
-        self.server = server
+        self.decrypt_func = decrypt_func
         
     def init(self):
         config = {}
@@ -49,7 +49,7 @@ class KVDB(object):
             config['db'] = int(self.config.db)
             
         if self.config.get('password'):
-            config['password'] = self.server.decrypt(self.config.password)
+            config['password'] = self.decrypt_func(self.config.password)
             
         if self.config.get('socket_timeout'):
             config['socket_timeout'] = float(self.config.socket_timeout)

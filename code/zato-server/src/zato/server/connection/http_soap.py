@@ -474,7 +474,7 @@ class RequestHandler(object):
                 
                 # Optionally store the sample request/response pair
                 if should_store(service_info.service_id):
-                    store(thread_ctx.broker_client, cid, service_info.service_id, req_timestamp, datetime.utcnow(), payload, response.payload)
+                    store(thread_ctx.store.broker_client, cid, service_info.service_id, req_timestamp, datetime.utcnow(), payload, response.payload)
           
                 return response.payload
 
@@ -565,7 +565,7 @@ class _BaseMessageHandler(object):
         payload, service_info, service_data = self.init(cid, task, raw_request, headers, transport, data_format)
 
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
-        service_instance.update(service_instance, self.server, thread_ctx.broker_client, 
+        service_instance.update(service_instance, self.server, thread_ctx.store.broker_client, 
             thread_ctx.store, cid, payload, raw_request, transport, 
             simple_io_config, data_format, request_data)
 

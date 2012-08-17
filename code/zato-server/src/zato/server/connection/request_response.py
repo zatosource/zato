@@ -39,4 +39,4 @@ def store(broker_client, cid, service_id, req_timestamp, resp_timestamp, request
     params['request'] = request
     params['response'] = response
     
-    broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY)
+    broker_client.send(params)

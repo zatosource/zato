@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from uuid import uuid4
 
 # anyjson
 from anyjson import loads
@@ -29,14 +30,19 @@ from anyjson import loads
 from bunch import Bunch
 
 # Zato
-#from zato.broker.zato_client import BrokerClient
-from zato.common.broker_message import code_to_name, MESSAGE
+from zato.broker.client import BrokerClient
+from zato.common import ZATO_NONE
+from zato.common.broker_message import code_to_name, MESSAGE, TOPICS
 
 class BrokerMessageReceiver(object):
     """ A class that knows how to handle messages received from the broker.
     It doesn't really belong to the zato-broker's namespace because it is free
     to handle the messages in a Zato-specific way.
     """
+    def __init__(self):
+        self.broker_client_id = '{}-{}'.format(ZATO_NONE, uuid4().hex)
+        self.broker_callbacks = {}
+        self.broker_messages = []
     
     def on_broker_msg(self, msg):
         """ Receives a configuration message, parses its JSON contents and invokes
@@ -53,7 +59,7 @@ class BrokerMessageReceiver(object):
         if self.filter(msg):
             action = code_to_name[msg['action']]
             handler = 'on_broker_msg_{0}'.format(action)
-            getattr(self, handler)(Bunch(msg))
+            getattr(self, handler)(msg)
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
                 self.logger.debug('Filtered out message [{0}]'.format(msg))
@@ -66,25 +72,18 @@ class BrokerMessageReceiver(object):
         return False
             
 class BaseWorker(BrokerMessageReceiver):
-        
+    
     def _init(self):
         """ Initializes the instance, sets up the broker client.
         """
-        #self._setup_broker_client()
+        self._setup_broker_client()
 
     def _setup_broker_client(self):
         """ Connects to the broker and sets up all the sockets.
         """
-        '''
-        self.broker_client = BrokerClient()
-        self.broker_client.name = self.worker_config.broker_config.name
-        self.broker_client.token = self.worker_config.broker_config.broker_token
-        self.broker_client.zmq_context = self.worker_config.broker_config.zmq_context
-        self.broker_client.broker_push_client_pull = self.worker_config.broker_config.broker_push_client_pull
-        self.broker_client.client_push_broker_pull = self.worker_config.broker_config.client_push_broker_pull
-        self.broker_client.broker_pub_client_sub = self.worker_config.broker_config.broker_pub_client_sub
-        self.broker_client.on_pull_handler = self.on_broker_msg
-        self.broker_client.on_sub_handler = self.on_broker_msg
-        self.broker_client.init()
+        self.broker_client = BrokerClient(self.kvdb, '127.0.0.1', self.broker_client_id, self.broker_callbacks)
         self.broker_client.start()
-        '''
+        
+        for msg_type, topic in TOPICS.items():
+            if msg_type in self.broker_messages:
+                self.broker_client.subscribe(topic)
