@@ -193,7 +193,8 @@ class Index(_BaseView):
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
-                setattr(item, name, value.encode('utf-8'))
+                if value:
+                    setattr(item, name, value.encode('utf-8'))
             self.items.append(item)
     
     def _handle_item(self, item):

@@ -80,7 +80,7 @@ class OutgoingConnector(BaseZMQConnector):
     """
     def __init__(self, repo_location=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, None)
-        self.broker_client_name = 'zmq-outgoing-connector'
+        self.broker_client_id = 'zmq-outgoing-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
         

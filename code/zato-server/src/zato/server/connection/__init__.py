@@ -165,7 +165,6 @@ class BaseConnector(BaseWorker):
         self.repo_location = repo_location
         self.def_id = def_id
         self.odb = None
-        self.broker_client_name = None
         self.sql_pool_store = None
         
     def _close(self):

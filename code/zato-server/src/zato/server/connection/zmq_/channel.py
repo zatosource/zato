@@ -57,7 +57,7 @@ class ConsumingConnector(BaseZMQConnector):
     """
     def __init__(self, repo_location=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, None)
-        self.broker_client_name = 'zmq-consuming-connector'
+        self.broker_client_id = 'zmq-consuming-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         
