@@ -190,5 +190,5 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
             
         return self._handle(ConnDefAMQP, _auth, 
-            DEFINITION.AMQP_CHANGE_PASSWORD, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_SUB, 
+            DEFINITION.AMQP_CHANGE_PASSWORD, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL, 
             payload=self.request.payload)
