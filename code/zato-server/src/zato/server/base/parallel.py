@@ -414,6 +414,19 @@ class ParallelServer(BrokerMessageReceiver):
         except KeyboardInterrupt:
             logger.info('Shutting down')
             
+            # Close all the connector subprocesses this server has started
+            pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
+                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
+                    (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
+                    )
+            
+            for action, msg_type in pairs:
+                msg = {}
+                msg['action'] = action
+                msg['odb_token'] = self.odb.odb_token
+                self.broker_client.publish(msg, msg_type=msg_type)
+                time.sleep(0.2)
+            
             self.broker_client.stop()
             
             if self.singleton_server:
