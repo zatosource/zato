@@ -63,7 +63,7 @@ class BrokerMessageReceiver(object):
             getattr(self, handler)(msg)
         else:
             if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug('Filtered out message [{0}]'.format(msg))
+                self.logger.debug('Rejecting broker message [{0}]'.format(msg))
             
     def filter(self, msg):
         """ Subclasses may override the method in order to filter the messages

@@ -99,7 +99,6 @@ class ConsumingConnector(BaseJMSWMQConnector):
     """
     def __init__(self, repo_location=None, def_id=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, def_id)
-        self.broker_client_id = 'jms-wmq-consuming-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         
@@ -109,9 +108,12 @@ class ConsumingConnector(BaseJMSWMQConnector):
         self.def_ = Bunch()
         self.channel = Bunch()
         
-        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_JMS_WMQ_PULL
-        self.client_push_broker_pull_port = PORTS.CONSUMING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL
-        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_CONSUMING_CONNECTOR_JMS_WMQ_SUB
+        self.broker_client_id = 'jms-wmq-consuming-connector'
+        self.broker_callbacks = {
+            MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY: self.on_broker_msg,
+            MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: self.on_broker_msg
+        }
+        self.broker_messages = (MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
         
         if init:
             self._init()
@@ -209,18 +211,18 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 for attr in MESSAGE_ATTRS:
                     params[attr] = getattr(msg, attr, None)
                 
-                self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_PULL)
+                self.broker_client.send(params)
                 
-    def on_broker_pull_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
+    def on_broker_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
             with self.channel_lock:
                 self.def_ = msg
                 self._recreate_listener()
                 
-    def on_broker_pull_msg_CHANNEL_JMS_WMQ_DELETE(self, msg, args=None):
+    def on_broker_msg_CHANNEL_JMS_WMQ_DELETE(self, msg, args=None):
         self._close_delete()
         
-    def on_broker_pull_msg_CHANNEL_JMS_WMQ_EDIT(self, msg, args=None):
+    def on_broker_msg_CHANNEL_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
             with self.channel_lock:
                 listener = self.channel.listener

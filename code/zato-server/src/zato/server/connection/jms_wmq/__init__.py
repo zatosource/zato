@@ -83,8 +83,8 @@ class BaseJMSWMQConnector(BaseConnector):
         elif msg.action in(DEFINITION.JMS_WMQ_EDIT, DEFINITION.JMS_WMQ_DELETE):
             return self.def_.id == msg.id
 
-    def on_broker_pull_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
+    def on_broker_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):
         self._close_delete()
 
-    def on_broker_pull_msg_DEFINITION_JMS_WMQ_DELETE(self, msg, args=None):
+    def on_broker_msg_DEFINITION_JMS_WMQ_DELETE(self, msg, args=None):
         self._close_delete()

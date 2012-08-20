@@ -61,7 +61,7 @@ class WMQFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_SUB)
+        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -107,16 +107,18 @@ class OutgoingConnector(BaseJMSWMQConnector):
     """
     def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, def_id)
-        self.broker_client_id = 'jms-wmq-outgoing-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
         
         self.out_lock = RLock()
         self.def_lock = RLock()
         
-        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_JMS_WMQ_PULL
-        self.client_push_broker_pull_port = PORTS.PUBLISHING_CONNECTOR_JMS_WMQ_PUSH_BROKER_PULL
-        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_JMS_WMQ_SUB
+        self.broker_client_id = 'jms-wmq-outgoing-connector'
+        self.broker_callbacks = {
+            MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY: self.on_broker_msg,
+            MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: self.on_broker_msg
+        }
+        self.broker_messages = (MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
         
         if init:
             self._init()
@@ -202,13 +204,13 @@ class OutgoingConnector(BaseJMSWMQConnector):
                 self._stop_connection()
                 self._close()
 
-    def on_broker_pull_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
+    def on_broker_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
             with self.out_lock:
                 self.def_ = msg
                 self._recreate_sender()
                 
-    def on_broker_pull_msg_OUTGOING_JMS_WMQ_SEND(self, msg, args=None):
+    def on_broker_msg_OUTGOING_JMS_WMQ_SEND(self, msg, args=None):
         """ Puts a message on a queue.
         """
         if not self.out.get('is_active'):
@@ -229,10 +231,10 @@ class OutgoingConnector(BaseJMSWMQConnector):
                 log_msg = 'No sender for [{0}]'.format(self.out)
                 self.logger.log(TRACE1, log_msg)
                 
-    def on_broker_pull_msg_OUTGOING_JMS_WMQ_DELETE(self, msg, args=None):
+    def on_broker_msg_OUTGOING_JMS_WMQ_DELETE(self, msg, args=None):
         self._close_delete()
         
-    def on_broker_pull_msg_OUTGOING_JMS_WMQ_EDIT(self, msg, args=None):
+    def on_broker_msg_OUTGOING_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
             with self.out_lock:
                 sender = self.out.get('sender')
