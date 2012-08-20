@@ -132,7 +132,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
             MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY: self.on_broker_msg,
             MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: self.on_broker_msg
         }
-        self.broker_messages = (MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
+        self.broker_messages = self.broker_callbacks.keys()
         
         if init:
             self._init()
