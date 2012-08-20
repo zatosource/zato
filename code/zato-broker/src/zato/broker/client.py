@@ -22,7 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, time
 from threading import Thread
-from uuid import uuid4
 
 # anyjson
 from anyjson import dumps, loads
@@ -59,7 +58,7 @@ class _ClientThread(Thread):
         Thread.__init__(self)
         self.address = address
         self.pubsub = pubsub
-        self.name = self.client_id = 'zato-{}-{}-{}'.format(self.pubsub, name, uuid4().hex)
+        self.name = self.client_id = 'zato-{}-{}-{}'.format(self.pubsub, name, new_cid())
         self.on_message = on_message
         self.keep_running = ZATO_NONE
         

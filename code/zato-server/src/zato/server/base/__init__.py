@@ -33,6 +33,7 @@ from bunch import Bunch
 from zato.broker.client import BrokerClient
 from zato.common import ZATO_NONE
 from zato.common.broker_message import code_to_name, MESSAGE, TOPICS
+from zato.common.util import new_cid
 
 class BrokerMessageReceiver(object):
     """ A class that knows how to handle messages received from the broker.
@@ -40,7 +41,7 @@ class BrokerMessageReceiver(object):
     to handle the messages in a Zato-specific way.
     """
     def __init__(self):
-        self.broker_client_id = '{}-{}'.format(ZATO_NONE, uuid4().hex)
+        self.broker_client_id = '{}-{}'.format(ZATO_NONE, new_cid())
         self.broker_callbacks = {}
         self.broker_messages = []
     

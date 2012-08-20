@@ -80,13 +80,12 @@ class ConsumingConnector(BaseAMQPConnector):
     """
     def __init__(self, repo_location=None, def_id=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, def_id)
-        self.broker_client_name = 'amqp-consuming-connector'
+        self.broker_client_id = 'amqp-consuming-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         
-        self.broker_client_id = 'amqp-consumer'
+        self.broker_client_id = 'amqp-consuming-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ANY: self.on_broker_msg,
             MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
             MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
         }
