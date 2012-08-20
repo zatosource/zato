@@ -55,6 +55,7 @@ TOPICS = {
     MESSAGE_TYPE.TO_PARALLEL_ALL: b'/zato/to-parallel/all',
     MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: b'/zato/connector/amqp/all',
     MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: b'/zato/connector/jms-wmq/all',
+    MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY: b'/zato/connector/jms-wmq/publishing/any',
     MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: b'/zato/connector/zmq/all',
 }
 

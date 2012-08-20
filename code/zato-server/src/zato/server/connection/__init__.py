@@ -129,7 +129,7 @@ class BaseConnection(object):
                     err_info = format_exc(e)
                 prefix = 'Caught [{}] error'.format(err_info)
             else:
-                prefix = "Could not establish the connection (invalid credentials?)"
+                prefix = 'Could not establish the connection (Invalid credentials? Is the connection being shut down?)'
                 
             msg = prefix + ', will try to (re-)connect to {} in {} seconds, {} attempt(s) so far, time spent {}'
             delta = datetime.utcnow() - self.first_connection_attempt_time
