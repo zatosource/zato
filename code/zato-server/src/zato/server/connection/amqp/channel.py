@@ -89,7 +89,7 @@ class ConsumingConnector(BaseAMQPConnector):
             MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
             MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
         }
-        self.broker_messages = (MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
+        self.broker_messages = self.broker_callbacks.keys()
         
         if init:
             self._init()
