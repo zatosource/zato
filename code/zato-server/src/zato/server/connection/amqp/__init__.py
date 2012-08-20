@@ -74,12 +74,11 @@ class BaseAMQPConnection(BaseConnection):
                     raise
             
     def _conn_info(self):
-        return '{0}:{1}{2} ({3})'.format(self.conn_params.host, 
-            self.conn_params.port, self.conn_params.virtual_host, self.item_name.encode('utf-8')).decode('utf-8')
+        return u'{0}:{1}{2} ({3})'.format(self.conn_params.host, self.conn_params.port, self.conn_params.virtual_host, self.item_name)
             
     def _on_channel_open(self, channel):
         self.channel = channel
-        msg = 'Got a channel for {0}'.format(self._conn_info())
+        msg = u'Got a channel for {0}'.format(self._conn_info())
         self.logger.debug(msg)
         
     def _keep_connecting(self, e):
