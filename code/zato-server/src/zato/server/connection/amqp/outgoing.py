@@ -45,6 +45,8 @@ class PublishingConnection(BaseAMQPConnection):
         super(PublishingConnection, self).__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
         
+        self.logger.info(u'Started an AMQP publisher for [{}]'.format(self._conn_info()))
+        
     def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
         if self.channel:
             if self.conn.is_open:
