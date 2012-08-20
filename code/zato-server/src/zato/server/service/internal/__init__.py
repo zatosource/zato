@@ -50,7 +50,7 @@ class Ping(AdminService):
         output_required = ('ping',)
         
     def handle(self):
-        self.outgoing.jms_wmq.send('zzz', 'MQ1', 'TEST.2')
+        self.outgoing.amqp.send('zzz', 'aa', 'zato.direct', '')
         self.response.payload.ping = 'pong'
     
 class Ping2(Ping):
