@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os
 from threading import RLock, Thread
+from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
@@ -75,6 +76,13 @@ class OutgoingConnection(BaseJMSWMQConnection):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.jms_template = JmsTemplate(self.factory)
         
+        # So people don't have to install PyMQI if they don't need it
+        from CMQC import MQRC_UNKNOWN_OBJECT_NAME
+        from pymqi import MQMIError
+        
+        self.MQMIError = MQMIError
+        self.dont_reconnect_errors = (MQRC_UNKNOWN_OBJECT_NAME, )
+        
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         jms_msg = TextMessage()
         jms_msg.text = msg.get('body')
@@ -93,13 +101,19 @@ class OutgoingConnection(BaseJMSWMQConnection):
         try:
             self.jms_template.send(jms_msg, queue)
         except Exception, e:
-            if self._keep_connecting(e):
-                self.close()
-                self.keep_connecting = True
-                self.factory._disconnecting = False
-                self.start()
+            
+            if isinstance(e, self.MQMIError) and e.reason in self.dont_reconnect_errors:
+                self.logger.warn('Caught [{}/{}] while sending the message [{}]'.format(e.reason, e.errorAsString(), jms_msg))
             else:
-                raise
+                self.logger.warn('Caught [{}] while sending the message [{}]'.format(format_exc(e), jms_msg))
+                
+                if self._keep_connecting(e):
+                    self.close()
+                    self.keep_connecting = True
+                    self.factory._disconnecting = False
+                    self.start()
+                else:
+                    raise
 
 class OutgoingConnector(BaseJMSWMQConnector):
     """ An outgoing connector started as a subprocess. Each connection to a queue manager
