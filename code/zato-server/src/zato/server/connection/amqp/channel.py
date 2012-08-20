@@ -71,7 +71,7 @@ class ConsumingConnection(BaseAMQPConnection):
             getpid(), getrandbits(64)).ljust(72, '0')
         
         self.channel.basic_consume(self._on_basic_consume, queue=_queue, consumer_tag=consumer_tag)
-        self.logger.info('Started a consumer for [{0}], queue [{1}], tag [{2}]'.format(
+        self.logger.info(u'Started a consumer for [{0}], queue [{1}], tag [{2}]'.format(
             self._conn_info(), _queue, consumer_tag))
         
 class ConsumingConnector(BaseAMQPConnector):
