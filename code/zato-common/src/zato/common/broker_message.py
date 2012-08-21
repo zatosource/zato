@@ -51,13 +51,21 @@ MESSAGE_TYPE.USER_DEFINED_START = b'5000'
 
 TOPICS = {
     MESSAGE_TYPE.TO_SINGLETON: b'/zato/to-singleton',
+    
     MESSAGE_TYPE.TO_PARALLEL_ANY: b'/zato/to-parallel/any',
     MESSAGE_TYPE.TO_PARALLEL_ALL: b'/zato/to-parallel/all',
-    MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: b'/zato/connector/amqp/all',
+    
     MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ANY: b'/zato/connector/amqp/publishing/any',
-    MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: b'/zato/connector/jms-wmq/all',
+    MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: b'/zato/connector/amqp/consuming/all',
+    MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: b'/zato/connector/amqp/all',
+    
     MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY: b'/zato/connector/jms-wmq/publishing/any',
-    MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: b'/zato/connector/zmq/all',
+    MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL: b'/zato/connector/jms-wmq/consuming/all',
+    MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: b'/zato/connector/jms-wmq/all',
+    
+    MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL: b'/zato/connector/zmq/all',
+    MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ANY: b'/zato/connector/zmq/publishing/any',
+    MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: b'/zato/connector/zmq/consuming/all',
 }
 
 SCHEDULER = Bunch()

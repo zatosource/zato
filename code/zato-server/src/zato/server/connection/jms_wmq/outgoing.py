@@ -175,7 +175,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
             return True
 
         elif msg.action in(OUTGOING.JMS_WMQ_SEND, OUTGOING.JMS_WMQ_DELETE, OUTGOING.JMS_WMQ_EDIT):
-            return self.out.name == msg['name']
+            return self.out.name == msg['old_name']
         
     def _stop_connection(self):
         """ Stops the given outgoing connection's sender. The method must 
@@ -183,7 +183,6 @@ class OutgoingConnector(BaseJMSWMQConnector):
         """
         if self.out.get('sender'):
             sender = self.out.sender
-            self.out.clear()
             sender.close()
         
     def _recreate_sender(self):

@@ -93,9 +93,9 @@ class BaseAMQPConnection(BaseConnection):
         Will report a diagnostic message regarding how many attempts there were
         and how long it took if the connection hasn't been established straightaway.
         """
+        self.has_valid_connection = True
         super(BaseAMQPConnection, self)._on_connected()
         conn.channel(self._on_channel_open)
-        self.has_valid_connection = True
         
 class BaseAMQPConnector(BaseConnector):
     """ A base connector for any AMQP-related ones.
@@ -165,7 +165,7 @@ class BaseAMQPConnector(BaseConnector):
     def _recreate(self):
         with self.out_amqp_lock:
             with self.channel_amqp_lock:
-                recreate_meth = '_recreate_amqp_publisher' if hasattr(self, '_recreate_amqp_publisher') else '_recreate_consumer'
+                recreate_meth = '_recreate_sender' if hasattr(self, '_recreate_sender') else '_recreate_consumer'
                 getattr(self, recreate_meth)()
                 if self.logger.isEnabledFor(TRACE1):
                     log_msg = 'self.def_amqp [{0}]'.format(self.def_amqp)
