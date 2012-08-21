@@ -63,7 +63,7 @@ class BaseConnection(object):
     def _start(self):
         """ Actually start a specific resource.
         """ 
-        raise NotImplementedError('Must be implemented by a subclass')
+        self.has_valid_connection = True
     
     def _close(self):
         """ Perform a resource-specific close operation.
@@ -115,48 +115,32 @@ class BaseConnection(object):
             
         if self.has_valid_connection:
             self.connection_attempts = 1
-    
+            
+        self.first_connection_attempt_time = datetime.utcnow()
+            
     def start(self):
         """ Start the connection, reconnect on any recoverable errors.
-        """ 
-        self.first_connection_attempt_time = datetime.utcnow() 
-        
-        def _no_valid_connection(e=None):
-            if e:
-                if isinstance(e, EnvironmentError):
-                    err_info = '{0} {1}'.format(e.errno, e.strerror)
-                else:
-                    err_info = format_exc(e)
-                prefix = 'Caught [{}] error'.format(err_info)
-            else:
-                prefix = 'Could not establish the connection (Invalid credentials? Is the connection being shut down?)'
-                
-            msg = prefix + ', will try to (re-)connect to {} in {} seconds, {} attempt(s) so far, time spent {}'
-            delta = datetime.utcnow() - self.first_connection_attempt_time
-            self.logger.warn(msg.format(self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
-            self.connection_attempts += 1
-            time.sleep(self.reconnect_sleep_time)
-
+        """
+        self.first_connection_attempt_time = datetime.utcnow()
         while self.keep_connecting:
             try:
-                
                 # Actually try establishing the connection
                 self._start()
-                
-                # Set only if there was an already established connection 
-                # and we're now trying to reconnect to the resource.
-                if self.has_valid_connection:
-                    self.first_connection_attempt_time = datetime.utcnow()
             except self.reconnect_exceptions, e:
                 if self._keep_connecting(e):
-                    _no_valid_connection(e)
+                    if isinstance(e, EnvironmentError):
+                        err_info = '{0} {1}'.format(e.errno, e.strerror)
+                    else:
+                        err_info = format_exc(e)
+                    msg = u'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
+                    delta = datetime.utcnow() - self.first_connection_attempt_time
+                    self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
+                    self.connection_attempts += 1
+                    time.sleep(self.reconnect_sleep_time)
                 else:
-                    msg = 'No connection for {0}, e:[{1}]'.format(self._conn_info(), format_exc(e))
+                    msg = u'No connection for {0}, e:[{1}]'.format(self._conn_info(), format_exc(e))
                     self.logger.error(msg)
                     raise
-            else:
-                if not self.has_valid_connection:
-                    _no_valid_connection()
 
 class BaseConnector(BaseWorker):
     """ A base class for both channels and outgoing connectors.

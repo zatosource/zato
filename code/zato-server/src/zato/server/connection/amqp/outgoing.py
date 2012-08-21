@@ -44,8 +44,11 @@ class PublishingConnection(BaseAMQPConnection):
     def __init__(self, *args, **kwargs):
         super(PublishingConnection, self).__init__(*args, **kwargs)
         self.logger = logging.getLogger(self.__class__.__name__)
-        
+
+    def _on_connected(self, *args, **kwargs):
         self.logger.info(u'Started an AMQP publisher for [{}]'.format(self._conn_info()))
+        self.has_valid_connection = True
+        super(PublishingConnection, self)._on_connected(*args, **kwargs)
         
     def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
         if self.channel:

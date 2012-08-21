@@ -40,6 +40,7 @@ class BaseJMSWMQConnection(BaseConnection):
 
     def _start(self):
         self.factory._connect()
+        super(BaseJMSWMQConnection, self)._start()
         self._on_connected()
         self.keep_connecting = False
         
@@ -61,7 +62,7 @@ class BaseJMSWMQConnector(BaseConnector):
             self.def_.queue_manager,
             str(self.def_.channel),
             str(self.def_.host),
-            self.def_.port,
+            str(self.def_.port),
             self.def_.cache_open_send_queues,
             self.def_.cache_open_receive_queues,
             self.def_.use_shared_connections,

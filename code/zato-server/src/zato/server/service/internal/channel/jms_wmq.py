@@ -150,7 +150,7 @@ class Edit(AdminService):
                 input.action = CHANNEL.JMS_WMQ_EDIT
                 input.old_name = old_name
                 input.service = service.impl_name
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL)
                 
                 self.response.payload.id = item.id
                 
@@ -178,7 +178,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': CHANNEL.JMS_WMQ_DELETE, 'name': def_.name, 'id':def_.id}
-                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_SUB)
+                self.broker_client.publish(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL)
                 
             except Exception, e:
                 session.rollback()
