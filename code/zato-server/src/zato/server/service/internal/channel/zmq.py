@@ -146,7 +146,7 @@ class Edit(AdminService):
                 input.action = CHANNEL.ZMQ_EDIT
                 input.sub_key = input.get('sub_key', b'')
                 input.service = service.impl_name
-                self.broker_client.send_json(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL)
                 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -175,7 +175,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': CHANNEL.ZMQ_DELETE, 'name': item.name, 'id':item.id}
-                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_SUB)
+                self.broker_client.publish(msg, MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL)
                 
             except Exception, e:
                 session.rollback()

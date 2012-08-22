@@ -57,16 +57,19 @@ class ConsumingConnector(BaseZMQConnector):
     """
     def __init__(self, repo_location=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, None)
-        self.broker_client_id = 'zmq-consuming-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
+        self.name = None
         
         self.channel_lock = RLock()
         self.channel = Bunch()
         
-        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_CONSUMING_CONNECTOR_ZMQ_PULL
-        self.client_push_broker_pull_port = PORTS.CONSUMING_CONNECTOR_ZMQ_PUSH_BROKER_PULL
-        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_CONSUMING_CONNECTOR_ZMQ_SUB
+        self.broker_client_id = 'zmq-consuming-connector'
+        self.broker_callbacks = {
+            MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
+            MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: self.on_broker_msg
+        }
+        self.broker_messages = self.broker_callbacks.keys()
         
         if init:
             self._init()
@@ -91,12 +94,13 @@ class ConsumingConnector(BaseZMQConnector):
         self.channel.address = str(item.address)
         self.channel.socket_type = self.socket_type = item.socket_type
         self.channel.service = item.service_impl_name
-        self.channel.sub_key = item.sub_key
+        self.channel.sub_key = item.sub_key or ''
         self.channel.data_format = item.data_format
         self.channel.listener = None
         
     def _recreate_listener(self):
         self._stop_connection()
+        self.name = self.channel.name
         
         if self.channel.is_active:
             factory = self._get_factory(self._on_message, self.channel.address, self.channel.sub_key)
@@ -144,15 +148,17 @@ class ConsumingConnector(BaseZMQConnector):
             params['payload'] = msg
             params['data_format'] = self.channel.data_format
             
-            self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY)
+            self.broker_client.send(params)
                 
-    def on_broker_pull_msg_CHANNEL_ZMQ_DELETE(self, msg, args=None):
+    def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()
         
-    def on_broker_pull_msg_CHANNEL_ZMQ_EDIT(self, msg, args=None):
+    def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg, args=None):
         with self.channel_lock:
             listener = self.channel.listener
             self.channel = msg
+            self.socket_type = self.channel.socket_type
+            self.channel.sub_key = msg.sub_key or ''
             self.channel.listener = listener
             self._recreate_listener()
 
