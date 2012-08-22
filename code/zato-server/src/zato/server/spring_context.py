@@ -211,10 +211,10 @@ class ZatoContext(PythonConfig):
     def stats_jobs(self):
         return [
             {'name': 'zato.stats.ProcessRawTimes', 
-             'seconds':2, 
+             'seconds':90, 
              'service':'zato.server.service.internal.stats.ProcessRawTimes', 
              'extra':'max_batch_size={}'.format(DEFAULT_STATS_SETTINGS['scheduler_raw_times_batch'])},
             {'name': 'zato.stats.AggregateByMinute', 
-             'seconds':2, 
+             'seconds':60, 
              'service':'zato.server.service.internal.stats.AggregateByMinute'},
         ]
