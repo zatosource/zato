@@ -97,7 +97,7 @@ class ODBManager(SessionWrapper):
             session.add(server)
             session.commit()
 
-    def get_url_security(self, server):
+    def get_url_security(self, cluster_id):
         """ Returns the security configuration of HTTP URLs.
         """
 
@@ -110,7 +110,7 @@ class ODBManager(SessionWrapper):
 
         result = MultiDict()
 
-        query = http_soap_security_list(self._session, server.cluster_id)
+        query = http_soap_security_list(self._session, cluster_id)
         columns = SimpleBunch()
         
         # So ConfigDict has its data in the format it expects
