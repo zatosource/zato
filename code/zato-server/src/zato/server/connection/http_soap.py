@@ -247,13 +247,13 @@ class Security(object):
         with self.url_sec_lock:
             return self.basic_auth_config.get(name)
 
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
         with self.url_sec_lock:
             self._update_basic_auth(msg.name, msg)
         
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
@@ -261,14 +261,14 @@ class Security(object):
             self._update_basic_auth(msg.name, msg)
             self._update_url_sec(msg, security_def_type.basic_auth)
             
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, security_def_type.basic_auth, True)
         
-    def on_broker_pull_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
@@ -290,13 +290,13 @@ class Security(object):
         with self.url_sec_lock:
             return self.tech_acc_config.get(name)
 
-    def on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
         with self.url_sec_lock:
             self._update_tech_acc(msg.name, msg)
         
-    def on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
         with self.url_sec_lock:
@@ -304,14 +304,14 @@ class Security(object):
             self._update_tech_acc(msg.name, msg)
             self._update_url_sec(msg, security_def_type.tech_account)
         
-    def on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
         with self.url_sec_lock:
             del self.tech_acc_config[msg.name]
             self._update_url_sec(msg, security_def_type.tech_account, True)
         
-    def on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
         with self.url_sec_lock:
@@ -335,13 +335,13 @@ class Security(object):
         with self.url_sec_lock:
             return self.wss_config.get(name)
 
-    def on_broker_pull_msg_SECURITY_WSS_CREATE(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
         with self.url_sec_lock:
             self._update_wss(msg.name, msg)
         
-    def on_broker_pull_msg_SECURITY_WSS_EDIT(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
         with self.url_sec_lock:
@@ -349,14 +349,14 @@ class Security(object):
             self._update_wss(msg.name, msg)
             self._update_url_sec(msg, security_def_type.wss)
         
-    def on_broker_pull_msg_SECURITY_WSS_DELETE(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
         with self.url_sec_lock:
             del self.wss_config[msg.name]
             self._update_url_sec(msg, security_def_type.wss, True)
         
-    def on_broker_pull_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
+    def on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
         """
         with self.url_sec_lock:
@@ -367,7 +367,7 @@ class Security(object):
             
 # ##############################################################################
 
-    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+    def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
@@ -394,14 +394,13 @@ class Security(object):
             soap_action_bunch.transport = msg.transport
             soap_action_bunch.data_format = msg.data_format
             
-    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
+    def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
             if msg.transport == url_type.plain_http:
                 del self.url_sec[msg.url_path]
             else:
-                
                 url_path = self.url_sec.getall(msg.url_path)
                 for _soap_action in url_path:
                     if msg.soap_action in _soap_action:
@@ -618,7 +617,7 @@ class _BaseMessageHandler(object):
         logger.debug('[{}] Returning content_type:[{}], response.payload:[{}]'.format(cid, content_type, response.payload))
         return service_info, response
     
-    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
+    def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Updates the configuration so that there's a link between a URL
         and a SOAP method to a service.
         """
@@ -650,7 +649,7 @@ class _BaseMessageHandler(object):
                     'service_id', 'service_name', 'soap_version', 'url_path'):
             soap_action_bunch[name] = msg[name]
             
-    def on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
+    def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
         if msg.transport == url_type.plain_http:

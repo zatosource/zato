@@ -37,7 +37,7 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common import SECURITY_TYPES, url_type, ZATO_NONE
+from zato.common import SECURITY_TYPES, url_type, ZATO_NONE, zato_path
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 

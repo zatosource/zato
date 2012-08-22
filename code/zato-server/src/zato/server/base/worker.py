@@ -98,11 +98,10 @@ class WorkerStore(BaseWorker):
         
         # Statistics maintenance
         self.stats_maint = MaintenanceTool(self.worker_config.server.kvdb.conn)
-        
-        # ConnectionHTTPSOAPSecurity needs only actual URLs hence it's self.worker_config.url_sec[0]
-        # below
-        self.request_handler.security = ConnectionHTTPSOAPSecurity(self.worker_config.url_sec[0], 
-                self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
+
+        self.request_handler.security = ConnectionHTTPSOAPSecurity(
+            self.worker_config.server.odb.get_url_security(self.worker_config.server.cluster_id)[0],
+            self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
         # Create all the expected connections
         self.init_sql()
@@ -193,7 +192,7 @@ class WorkerStore(BaseWorker):
         """ 
         with self.update_lock:
             # Channels
-            handler = getattr(self.request_handler.security, 'on_broker_pull_msg_' + action_name)
+            handler = getattr(self.request_handler.security, 'on_broker_msg_' + action_name)
             handler(msg)
         
             for transport in('soap', 'plain_http'):
@@ -249,7 +248,7 @@ class WorkerStore(BaseWorker):
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
+        self.request_handler.security.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
@@ -279,22 +278,22 @@ class WorkerStore(BaseWorker):
     def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
+        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
+        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
+        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
+        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
             
 # ##############################################################################
 
@@ -306,7 +305,7 @@ class WorkerStore(BaseWorker):
     def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
-        self.request_handler.security.on_broker_pull_msg_SECURITY_WSS_CREATE(msg, *args)
+        self.request_handler.security.on_broker_msg_SECURITY_WSS_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
@@ -393,21 +392,21 @@ class WorkerStore(BaseWorker):
         """ Creates or updates an HTTP/SOAP channel.
         """
         # Security
-        self.request_handler.security.on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
+        self.request_handler.security.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
         
         # A mapping between a URL and a service
         handler = getattr(self.request_handler, msg.transport + '_handler')
-        handler.on_broker_pull_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
+        handler.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
         
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
         # Security
-        self.request_handler.security.on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+        self.request_handler.security.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
         
         # A mapping between a URL and a service
         handler = getattr(self.request_handler, msg.transport + '_handler')
-        handler.on_broker_pull_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+        handler.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
 
 # ##############################################################################
 

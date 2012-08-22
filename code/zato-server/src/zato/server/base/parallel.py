@@ -267,7 +267,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.wss = ConfigDict.from_query('wss', query)
         
         # Security configuration of HTTP URLs
-        self.config.url_sec = self.odb.get_url_security(server)
+        #self.config.url_sec = self.odb.get_url_security(server.cluster.id)
         
         # All the HTTP/SOAP channels.
         http_soap = MultiDict()
