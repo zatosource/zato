@@ -317,7 +317,6 @@ class Ping(AdminService):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
-            print(333, config_dict, item.name)
             self.response.payload.info = config_dict.get(item.name).ping(self.cid)
 
 class GetURLSecurity(AdminService):
