@@ -90,7 +90,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
                         <td>{{ item.socket_type }}</td>
-                        <td>{{ item.sub_key }}</td>
+                        <td>{{ item.sub_key|default:''}}</td>
                         <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.zmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.zmq.delete_('{{ item.id }}')">Delete</a></td>

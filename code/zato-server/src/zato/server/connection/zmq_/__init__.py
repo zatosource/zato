@@ -21,14 +21,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from threading import current_thread
 
 # ZeroMQ
 import zmq
 
 # Zato
-from zato.broker.client import BrokerClient
 from zato.common import ZatoException
 from zato.common.broker_message import DEFINITION, ZMQ_CONNECTOR
+from zato.common.zmq_ import ZMQClient
 from zato.server.connection import BaseConnection, BaseConnector
 
 logger = logging.getLogger(__name__)
@@ -56,12 +57,12 @@ class BaseZMQConnector(BaseConnector):
     def __init__(self, *args, **kwargs):
         super(BaseZMQConnector, self).__init__(*args, **kwargs)
         self.socket_type = None
+        self.name = None
     
     def _get_factory(self, msg_handler, address, sub_key):
 
         zmq_client = ZMQClient()
-        zmq_client.name = self.worker_config.broker_config.name
-        zmq_client.token = self.worker_config.broker_config.broker_token
+        zmq_client.name = 'zmq-connector-{}'.format(self.name)
         zmq_client.zmq_context = zmq.Context()
         
         if self.socket_type == 'PUSH':
@@ -72,6 +73,7 @@ class BaseZMQConnector(BaseConnector):
         elif self.socket_type == 'SUB':
             zmq_client.on_sub_handler = msg_handler
             zmq_client.broker_pub_client_sub = address
+            zmq_client.sub_key = zmq.utils.strtypes.asbytes(sub_key)
         else:
             raise ZatoException('Unrecognized socket_type [{0}]'.format(self.socket_type))
         
@@ -89,8 +91,8 @@ class BaseZMQConnector(BaseConnector):
         elif msg.action in(DEFINITION.ZMQ_EDIT, DEFINITION.ZMQ_DELETE):
             return self.def_.id == msg.id
 
-    def on_broker_pull_msg_ZMQ_CONNECTOR_CLOSE(self, msg, args=None):
+    def on_broker_msg_ZMQ_CONNECTOR_CLOSE(self, msg, args=None):
         self._close_delete()
 
-    def on_broker_pull_msg_DEFINITION_ZMQ_DELETE(self, msg, args=None):
+    def on_broker_msg_DEFINITION_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()
