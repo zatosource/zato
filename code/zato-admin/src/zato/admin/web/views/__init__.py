@@ -275,8 +275,12 @@ class CreateEdit(_BaseView):
                 value = getattr(zato_message.response.item, name, None)
                 if value:
                     value = value.text
-                    
-                return_data[name] = str(value)
+                    if isinstance(value, basestring):
+                        value = value.encode('utf-8')
+                    else:
+                        value = str(value)
+                        
+                return_data[name] = value
                 
             return HttpResponse(dumps(return_data), mimetype='application/javascript')
         except Exception, e:
