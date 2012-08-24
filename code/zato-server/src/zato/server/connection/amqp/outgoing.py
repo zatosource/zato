@@ -88,7 +88,7 @@ class PublisherFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ANY)
+        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -107,7 +107,7 @@ class OutgoingConnector(BaseAMQPConnector):
         
         self.broker_client_id = 'amqp-publishing-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ANY: self.on_broker_msg,
+            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL: self.on_broker_msg,
             MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()

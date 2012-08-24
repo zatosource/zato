@@ -52,7 +52,7 @@ class ZMQFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_SUB)
+        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -70,7 +70,7 @@ class OutgoingConnection(BaseZMQConnection):
     def send(self, msg):
         """ Sends a message to a ZMQ socket.
         """
-        self.factory.send_raw(msg)
+        self.factory.send(msg)
         if self.logger.isEnabledFor(TRACE1):
             self.logger.log(TRACE1, 'Sent {0} name {1} factory {2}'.format(msg, self.name, self.factory))
 
@@ -80,15 +80,17 @@ class OutgoingConnector(BaseZMQConnector):
     """
     def __init__(self, repo_location=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, None)
-        self.broker_client_id = 'zmq-outgoing-connector'
         self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
         
         self.out_lock = RLock()
         
-        self.broker_push_client_pull_port = PORTS.BROKER_PUSH_PUBLISHING_CONNECTOR_ZMQ_PULL
-        self.client_push_broker_pull_port = PORTS.PUBLISHING_CONNECTOR_ZMQ_PUSH_BROKER_PULL
-        self.broker_pub_client_sub_port = PORTS.BROKER_PUB_PUBLISHING_CONNECTOR_ZMQ_SUB
+        self.broker_client_id = 'zmq-outgoing-connector'
+        self.broker_callbacks = {
+            MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL: self.on_broker_msg,
+            MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: self.on_broker_msg
+        }
+        self.broker_messages = self.broker_callbacks.keys()
         
         if init:
             self._init()
@@ -121,11 +123,11 @@ class OutgoingConnector(BaseZMQConnector):
         """
         if self.out.get('sender'):
             sender = self.out.sender
-            self.out.clear()
             sender.close()
         
     def _recreate_sender(self):
         self._stop_connection()
+        self.name = self.out.name
         
         if self.out.get('is_active'):
             factory = self._get_factory(None, self.out.address, None)
@@ -154,7 +156,7 @@ class OutgoingConnector(BaseZMQConnector):
             self._stop_connection()
             self._close()
 
-    def on_broker_pull_msg_OUTGOING_ZMQ_SEND(self, msg, args=None):
+    def on_broker_msg_OUTGOING_ZMQ_SEND(self, msg, args=None):
         """ Puts a message on a socket.
         """
         if not self.out.get('is_active'):
@@ -169,10 +171,10 @@ class OutgoingConnector(BaseZMQConnector):
                 log_msg = 'No sender for [{0}]'.format(self.out)
                 self.logger.log(TRACE1, log_msg)
                 
-    def on_broker_pull_msg_OUTGOING_ZMQ_DELETE(self, msg, args=None):
+    def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()
         
-    def on_broker_pull_msg_OUTGOING_ZMQ_EDIT(self, msg, args=None):
+    def on_broker_msg_OUTGOING_ZMQ_EDIT(self, msg, args=None):
         with self.out_lock:
             sender = self.out.get('sender')
             self.out = msg
