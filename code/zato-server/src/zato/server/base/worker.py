@@ -507,8 +507,7 @@ class WorkerStore(BaseWorker):
         # into smaller one day-long batches.
         if(stop-start).days:
             for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
-                self.broker_client.send_json({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()}, 
-                   MESSAGE_TYPE.TO_PARALLEL_ANY)
+                self.broker_client.send({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
                    
                 # So as not to drown the broker with a sudden surge of messages
                 sleep(0.02)

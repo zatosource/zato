@@ -172,7 +172,7 @@ class BrokerClient(object):
         key = broker_msg = b'zato:broker:to-parallel:any:{}'.format(new_cid())
         
         self.kvdb.conn.set(key, str(msg))
-        self.kvdb.conn.expire(key, 5)
+        self.kvdb.conn.expire(key, 5) # In seconds
         
         self._pub_client.publish(topic, broker_msg)
         

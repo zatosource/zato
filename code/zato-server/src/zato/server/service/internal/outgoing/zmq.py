@@ -146,7 +146,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': OUTGOING.ZMQ_DELETE, 'name': item.name, 'id':item.id}
-                self.broker_client.send_json(msg, MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
+                self.broker_client.publish(msg, MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
                 
             except Exception, e:
                 session.rollback()

@@ -35,7 +35,7 @@ class _SQLService(object):
         """ Notify worker threads of new or updated parameters.
         """
         params['action'] = action
-        self.broker_client.send_json(params, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL)
+        self.broker_client.publish(params)
 
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
