@@ -137,17 +137,8 @@ class ParallelServer(BrokerMessageReceiver):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
-        self.broker_token = server.cluster.broker_token
-        self.broker_push_worker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.BROKER_PUSH_WORKER_THREAD_PULL)
-        self.worker_push_broker_pull = self.parallel_push_broker_pull = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.WORKER_THREAD_PUSH_BROKER_PULL)
-        self.broker_pub_worker_sub = 'tcp://{0}:{1}'.format(server.cluster.broker_host, 
-                server.cluster.broker_start_port + PORTS.BROKER_PUB_WORKER_THREAD_SUB)
-        
         # .. Remove all the deployed services from the DB ..
         self.odb.drop_deployed_services(server.id)
-        
         
         # .. and re-deploy the back from a clear state.
         self.service_store.import_services_from_anywhere(self.internal_service_modules + self.service_modules, self.base_dir)

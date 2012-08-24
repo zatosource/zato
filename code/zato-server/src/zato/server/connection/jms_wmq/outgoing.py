@@ -62,7 +62,7 @@ class WMQFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY)
+        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -129,7 +129,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
         
         self.broker_client_id = 'jms-wmq-outgoing-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ANY: self.on_broker_msg,
+            MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL: self.on_broker_msg,
             MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
