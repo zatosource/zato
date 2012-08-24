@@ -49,8 +49,7 @@ class Delete(AdminService):
         input_required = ('start', 'stop')
 
     def handle(self):
-        self.broker_client.send_json({'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop}, 
-                                     MESSAGE_TYPE.TO_PARALLEL_ANY)
+        self.broker_client.send({'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop})
 
 class _AggregatingService(AdminService):
     """ A base class for all services that process raw times into aggregates values.

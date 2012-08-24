@@ -446,4 +446,4 @@ class ParallelServer(BrokerMessageReceiver):
         can deploy a new package).
         """
         msg = {'action': HOT_DEPLOY.CREATE, 'package_id': package_id}
-        self.broker_client.send_json(msg, MESSAGE_TYPE.TO_PARALLEL_ALL)
+        self.broker_client.publish(msg)
