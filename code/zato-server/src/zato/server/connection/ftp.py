@@ -89,6 +89,11 @@ class FTPStore(object):
             if old_name:
                 del self.conn_params[old_name]
                 
-    def update_password(self, name, password):
+    def change_password(self, name, password):
         with self._lock:
             self.conn_params[name].password = password
+
+    def delete(self, name):
+        with self._lock:
+            del self.conn_params[name]
+            logger.error('FTP connection [{}] deleted'.format(name.encode('utf-8')))
