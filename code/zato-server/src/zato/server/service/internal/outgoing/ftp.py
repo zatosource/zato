@@ -132,6 +132,8 @@ class Edit(_FTPService):
                 item.user = input.user
                 item.acct = input.acct
                 item.timeout = input.timeout
+                
+                input.old_name = old_name
 
                 session.add(item)
                 session.commit()

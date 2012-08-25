@@ -497,7 +497,7 @@ class WorkerStore(BaseWorker):
 # ##############################################################################
 
     def on_broker_msg_OUTGOING_FTP_CREATE_EDIT(self, msg, *args):
-        raise NotImplementedError()
+        self.worker_config.out_ftp.create_edit(msg, msg.get('old_name'))
 
     def on_broker_msg_OUTGOING_FTP_DELETE(self, msg, *args):
         self.worker_config.out_ftp.delete(msg.name)
