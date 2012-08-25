@@ -72,7 +72,7 @@ class FTPStore(object):
             else:
                 raise ZatoException('FTP connection [{0}] is not active'.format(params.name))
         
-    def update(self, params, old_name):
+    def create_edit(self, params, old_name):
         with self._lock:
             if params:
                 _name = old_name if old_name else params.name
@@ -81,19 +81,25 @@ class FTPStore(object):
                     if ftp:
                         ftp.close()
                 except Exception, e:
-                    msg = 'Could not close the FTP connection [{0}], e [{1}]'.format(
-                        params.name, format_exc(e))
+                    msg = 'Could not close the FTP connection [{0}], e [{1}]'.format(params.name, format_exc(e))
+                    logger.warn(msg)
                 finally:
                     self._add(params)
                         
             if old_name:
                 del self.conn_params[old_name]
+                msg = 'FTP connection updated, name:[{}], old_name:[{}]'.format(params.name, old_name)
+            else:
+                msg = 'FTP connection created, name:[{}]'.format(params.name)
+                
+            logger.debug(msg)
                 
     def change_password(self, name, password):
         with self._lock:
             self.conn_params[name].password = password
+            logger.debug('Password updated - FTP connection [{}]'.format(name))
 
     def delete(self, name):
         with self._lock:
             del self.conn_params[name]
-            logger.error('FTP connection [{}] deleted'.format(name.encode('utf-8')))
+            logger.debug('FTP connection [{}] deleted'.format(name))
