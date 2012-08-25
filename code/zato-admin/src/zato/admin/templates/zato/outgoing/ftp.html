@@ -95,9 +95,9 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.host }}</td>
-                        <td>{{ item.user }}</td>
-                        <td>{{ item.acct }}</td>
-                        <td>{{ item.timeout }}</td>
+                        <td>{{ item.user|default:'' }}</td>
+                        <td>{{ item.acct|default:'' }}</td>
+                        <td>{{ item.timeout|default:'' }}</td>
                         <td>{{ item.port }}</td>
                         <td>{{ item.dircache|yesno:'Yes,No' }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
