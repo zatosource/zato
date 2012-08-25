@@ -50,7 +50,6 @@ class Ping(AdminService):
         output_required = ('ping',)
         
     def handle(self):
-        self.outgoing.zmq.send('azaz', 'aaa')
         self.response.payload.ping = 'pong'
     
 class Ping2(Ping):
