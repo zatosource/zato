@@ -32,19 +32,43 @@ from zato.common import ZatoException
 
 logger = logging.getLogger(__name__)
 
-class FTPFacade(object):
-    """ An object through which services access FTP resources.
+class FTPFacade(FTPFS):
+    """ A thin wrapper around fs's FTPFS so it looks like the other Zato connection objects.
     """
-    def __init__(self, conn_params={}):
-        self.conn_params = conn_params
+    def conn(self):
+        return self
+
+class FTPStore(object):
+    """ An object through which services access FTP connections.
+    """
+    def __init__(self):
+        self.conn_params = {}
         self._lock = RLock()
+        
+    def _add(self, params):
+        """ Adds one set of params to the list of connection parameters. Must not
+        be called without holding onto self._lock
+        """
+        self.conn_params[params.name] = params
+        
+    def add_params(self, params_list):
+        with self._lock:
+            for params in params_list:
+                self._add(params)
+                
+    def get_conn_names(self):
+        """ Returns a list of UTF-8 connection names this store contains,
+        sorted in ascending order.
+        """
+        with self._lock:
+            return [elem.encode('utf-8') for elem in sorted(self.conn_params)]
     
     def get(self, name):
         with self._lock:
             params = self.conn_params[name]
             if params.is_active:
                 timeout = params.timeout if params.timeout else _GLOBAL_DEFAULT_TIMEOUT
-                return FTPFS(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
+                return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
             else:
                 raise ZatoException('FTP connection [{0}] is not active'.format(params.name))
         
@@ -60,7 +84,7 @@ class FTPFacade(object):
                     msg = 'Could not close the FTP connection [{0}], e [{1}]'.format(
                         params.name, format_exc(e))
                 finally:
-                    self.conn_params[params.name] = params
+                    self._add(params)
                         
             if old_name:
                 del self.conn_params[old_name]
@@ -68,4 +92,3 @@ class FTPFacade(object):
     def update_password(self, name, password):
         with self._lock:
             self.conn_params[name].password = password
-            

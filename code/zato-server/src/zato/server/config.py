@@ -76,15 +76,31 @@ class ConfigDict(object):
     def __nonzero__(self):
         with self.lock:
             return bool(self._bunch)
+        
+    def items(self):
+        with self.lock:
+            return self._bunch.items()
             
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
         """
-        config_dict = ConfigDict(self.name)
-        config_dict._bunch = Bunch()
-        config_dict._bunch.update(self._bunch)
+        with self.lock:
+            config_dict = ConfigDict(self.name)
+            config_dict._bunch = Bunch()
+            config_dict._bunch.update(deepcopy(self._bunch))
+            
+            return config_dict
         
-        return config_dict
+    def get_config_list(self):
+        """ Returns a list of deepcopied config Bunch objects.
+        """
+        with self.lock:
+            out = []
+            for value in self._bunch.values():
+                config = value['config']
+                out.append(deepcopy(config))
+
+        return out
     
     def copy_keys(self):
         """ Returns a deepcopy of the underlying Bunch's keys
