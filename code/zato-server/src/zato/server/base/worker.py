@@ -176,10 +176,12 @@ class WorkerStore(BaseWorker):
             self.sql_pool_store[pool_name] = config
     
     def init_ftp(self):
-        """ Initializes FTP connetions.
+        """ Initializes FTP connetions. The method replaces whatever value self.out_ftp
+        previously had (initially this would be a ConfigDict of connection definitions).
         """
-        self.ftp_store = FTPStore()
-        self.ftp_store.add_params(self.worker_config.out_ftp.get_config_list())
+        config_list = self.worker_config.out_ftp.get_config_list()
+        self.worker_config.out_ftp = FTPStore()
+        self.worker_config.out_ftp.add_params(config_list)
             
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
