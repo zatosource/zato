@@ -165,7 +165,7 @@ class Delete(_FTPService):
                 session.delete(item)
                 session.commit()
                 
-                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE)
+                self.notify_worker_threads({'name':old_name}, OUTGOING.FTP_DELETE)
 
             except Exception, e:
                 session.rollback()

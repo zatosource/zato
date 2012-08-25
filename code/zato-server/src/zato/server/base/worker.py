@@ -493,6 +493,17 @@ class WorkerStore(BaseWorker):
                 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
         self.worker_config.server.service_store.services[msg.impl_name]['is_active'] = msg.is_active
+
+# ##############################################################################
+
+    def on_broker_msg_OUTGOING_FTP_CREATE_EDIT(self, msg, *args):
+        raise NotImplementedError()
+
+    def on_broker_msg_OUTGOING_FTP_DELETE(self, msg, *args):
+        self.worker_config.out_ftp.delete(msg.name)
+    
+    def on_broker_msg_OUTGOING_FTP_CHANGE_PASSWORD(self, msg, *args):
+        self.worker_config.out_ftp.change_password(msg.name, msg.password)
         
 # ##############################################################################
 
