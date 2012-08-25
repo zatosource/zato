@@ -51,6 +51,7 @@ from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, MESSAGE_TYPE, TOPICS, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BaseWorker
+from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
 from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore, SessionWrapper
@@ -105,6 +106,7 @@ class WorkerStore(BaseWorker):
         
         # Create all the expected connections
         self.init_sql()
+        self.init_ftp()
         self.init_http_soap()
         
         self.kvdb = self.worker_config.server.kvdb
@@ -119,22 +121,6 @@ class WorkerStore(BaseWorker):
     def filter(self, msg):
         return True
     
-    def init_sql(self):
-        """ Initializes SQL connections, first to ODB and then any user-defined ones.
-        """
-        # We need a store first
-        self.sql_pool_store = PoolStore()
-        
-        # Connect to ODB
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
-        self.odb = SessionWrapper()
-        self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME])
-        
-        # Any user-defined SQL connections left?
-        for pool_name in self.worker_config.out_sql:
-            config = self.worker_config.out_sql[pool_name]['config']
-            self.sql_pool_store[pool_name] = config
-            
     def _http_soap_wrapper_from_config(self, config, has_sec_config=True):
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration
         dictionary. 
@@ -172,6 +158,28 @@ class WorkerStore(BaseWorker):
             'soap_action':config.soap_action, 'soap_version':config.soap_version}
         wrapper_config.update(sec_config)
         return HTTPSOAPWrapper(wrapper_config)
+    
+    def init_sql(self):
+        """ Initializes SQL connections, first to ODB and then any user-defined ones.
+        """
+        # We need a store first
+        self.sql_pool_store = PoolStore()
+        
+        # Connect to ODB
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
+        self.odb = SessionWrapper()
+        self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME])
+        
+        # Any user-defined SQL connections left?
+        for pool_name in self.worker_config.out_sql:
+            config = self.worker_config.out_sql[pool_name]['config']
+            self.sql_pool_store[pool_name] = config
+    
+    def init_ftp(self):
+        """ Initializes FTP connetions.
+        """
+        self.ftp_store = FTPStore()
+        self.ftp_store.add_params(self.worker_config.out_ftp.get_config_list())
             
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
