@@ -17,12 +17,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
 from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
 # Zato
+from zato.common import ZatoException
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
@@ -36,6 +39,10 @@ class _SQLService(object):
         """
         params['action'] = action
         self.broker_client.publish(params)
+        
+    def validate_extra(self, cid, extra):
+        if extra and not b'=' in extra:
+            raise ZatoException(cid, 'extra should be a list of key=value parameters, possibly one-element long, instead of [{}]'.format(extra.decode('utf-8')))
 
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
@@ -63,7 +70,9 @@ class Create(AdminService, _SQLService):
     def handle(self):
         input = self.request.input
         input.password = uuid4().hex
-        input.extra = input.extra.encode('utf-8') if input.extra else ''
+        input.extra = input.extra.encode('utf-8') if input.extra else b''
+        
+        self.validate_extra(self.cid, input.extra.decode('utf-8'))
         
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
@@ -113,6 +122,8 @@ class Edit(AdminService, _SQLService):
     def handle(self):
         input = self.request.input
         input.extra = input.extra.encode('utf-8') if input.extra else ''
+        
+        self.validate_extra(self.cid, input.extra)
         
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
@@ -213,7 +224,7 @@ class Ping(AdminService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Could not ping the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
 
                 raise
