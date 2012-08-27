@@ -17,6 +17,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
 import logging
 from copy import deepcopy
@@ -61,27 +63,27 @@ zato_message = Template("""
 </zato_message>""")
 
 # Returned if there has been any exception caught.
-soap_error = Template("""<?xml version='1.0' encoding='UTF-8'?>
+soap_error = """<?xml version='1.0' encoding='UTF-8'?>
 <SOAP-ENV:Envelope
   xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
   xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance"
   xmlns:xsd="http://www.w3.org/1999/XMLSchema">
    <SOAP-ENV:Body>
      <SOAP-ENV:Fault>
-     <faultcode>SOAP-ENV:$faultcode</faultcode>
-     <faultstring><![CDATA[[$cid] $faultstring]]></faultstring>
+     <faultcode>SOAP-ENV:{faultcode}</faultcode>
+     <faultstring><![CDATA[cid [{cid}], faultstring [{faultstring}]]]></faultstring>
       </SOAP-ENV:Fault>
   </SOAP-ENV:Body>
-</SOAP-ENV:Envelope>""")
+</SOAP-ENV:Envelope>"""
 
 _reason_not_found = responses[NOT_FOUND]
 _reason_internal_server_error = responses[INTERNAL_SERVER_ERROR]
 
 def client_soap_error(cid, faultstring):
-    return soap_error.safe_substitute(faultcode='Client', cid=cid, faultstring=faultstring)
+    return soap_error.format(**{'faultcode':'Client', 'cid':cid, 'faultstring':faultstring})
 
 def server_soap_error(cid, faultstring):
-    return soap_error.safe_substitute(faultcode='Server', cid=cid, faultstring=faultstring)
+    return soap_error.format(**{'faultcode':'Server', 'cid':cid, 'faultstring':faultstring})
 
 class ClientHTTPError(HTTPException):
     def __init__(self, cid, msg, status):
