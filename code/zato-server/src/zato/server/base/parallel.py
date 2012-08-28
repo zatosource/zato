@@ -39,7 +39,7 @@ from bunch import Bunch, SimpleBunch
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common import PORTS, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SINGLETON, TOPICS, ZMQ_CONNECTOR
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SINGLETON, TOPICS, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
@@ -434,10 +434,7 @@ class ParallelServer(BrokerMessageReceiver):
 # ##############################################################################
 
     def on_broker_msg_singleton(self, msg):
-        print('on_broker_msg_singleton', msg)
-    
-    def on_broker_msg_parallel(self, msg):
-        print('on_broker_msg_parallel', msg)
+        getattr(self.singleton_server, 'on_broker_msg_{}'.format(code_to_name[msg.action]))(msg)
     
 # ##############################################################################
 

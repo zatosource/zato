@@ -109,4 +109,3 @@ def from_user_to_utc(dt, user_profile):
         dt = dt[::-1].replace('.', ':', 1)[::-1]
     
     return _from_local_to_utc(dt, user_profile.timezone, user_profile.date_format_py.startswith('d'))
-
