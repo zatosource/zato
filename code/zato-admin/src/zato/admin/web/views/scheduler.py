@@ -315,7 +315,8 @@ def index(req):
                     extra = job_elem.extra.text if job_elem.extra.text else ''
                     job_type_friendly = job_type_friendly_names[job_type]
                     
-                    job = Job(id, name, is_active, job_type, start_date,
+                    job = Job(id, name, is_active, job_type, 
+                              from_utc_to_user(start_date+'+00:00', req.zato.user_profile),
                               extra, service_name=service_name, 
                               job_type_friendly=job_type_friendly)
                     
