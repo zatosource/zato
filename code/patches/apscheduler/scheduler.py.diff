@@ -1,5 +1,5 @@
---- apscheduler/scheduler.py.orig	2012-08-15 22:48:43.000000000 +0200
-+++ apscheduler/scheduler.py	2012-08-15 22:51:44.236470007 +0200
+--- apscheduler/scheduler.py.orig	2012-04-02 10:26:54.000000000 +0200
++++ apscheduler/scheduler.py	2012-08-28 21:40:08.000460591 +0200
 @@ -227,7 +227,7 @@
                      logger.exception('Error notifying listener')
  
@@ -9,15 +9,6 @@
          if not job.next_run_time:
              raise ValueError('Not adding job since it would never be run')
  
-@@ -245,7 +245,7 @@
-         event = JobStoreEvent(EVENT_JOBSTORE_JOB_ADDED, jobstore, job)
-         self._notify_listeners(event)
- 
--        logger.info('Added job "%s" to job store "%s"', job, jobstore)
-+        logger.debug('Added job "%s" to job store "%s"', job, jobstore)
- 
-         # Notify the scheduler about the new job
-         if wakeup:
 @@ -460,7 +460,7 @@
          for run_time in run_times:
              # See if the job missed its run time window, and handle possible
