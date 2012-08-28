@@ -116,19 +116,18 @@ class SingletonServer(BrokerMessageReceiver):
             return True
         return False
 
-    def on_broker_pull_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
+    def on_broker_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
         self.scheduler.create_edit('create', msg)
         
-    def on_broker_pull_msg_SCHEDULER_EDIT(self, msg, *ignored_args):
+    def on_broker_msg_SCHEDULER_EDIT(self, msg, *ignored_args):
         self.scheduler.create_edit('edit', msg)
         
-    def on_broker_pull_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
+    def on_broker_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
         self.scheduler.delete(msg)
         
-    def on_broker_pull_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
+    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
         self.scheduler.execute(msg)
         
-    def on_broker_pull_msg_SINGLETON_CLOSE(self, msg, *ignored_args):
-        print(2222222222222, current_thread().name)
+    def on_broker_msg_SINGLETON_CLOSE(self, msg, *ignored_args):
         self.broker_client.close()
         

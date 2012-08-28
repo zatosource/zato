@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
-        return parse(job_data.start_date).replace(tzinfo=UTC)
+        return parse(job_data.start_date)
     return job_data.start_date
 
 class Scheduler(object):
