@@ -227,6 +227,8 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 // /////////////////////////////////////////////////////////////////////////////
 
 $.fn.zato.data_table.data = {}
+$.fn.zato.data_table.on_submit_complete_callback = null;
+$.fn.zato.data_table.on_submit_complete_callback_args = null;
 
 $.fn.zato.data_table.row_updated = function(id) {
     var tr = $('#tr_'+ id)
@@ -643,6 +645,14 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 
     $.fn.zato.data_table._on_submit_complete(data, status);
     $.fn.zato.data_table.cleanup('#'+ action +'-form');
+
+    if($.fn.zato.data_table.on_submit_complete_callback) {
+        $.fn.zato.data_table.on_submit_complete_callback($.fn.zato.data_table.on_submit_complete_callback_args);
+        
+        $.fn.zato.data_table.on_submit_complete_callback = null;
+        $.fn.zato.data_table.on_submit_complete_callback_args = null;
+    }
+    
 }
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
