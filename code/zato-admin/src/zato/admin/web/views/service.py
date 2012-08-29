@@ -114,7 +114,7 @@ def _get_channels(cluster, id, channel_type):
     return response
 
 class Index(_Index):
-    """ A view for listing the services and their basic management.
+    """ A view for listing the services along with their basic statistics.
     """
     meth_allowed = 'GET'
     url_name = 'service'
