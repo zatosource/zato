@@ -153,7 +153,7 @@ class Edit(CreateEdit):
         return 'Successfully {0} the service [{1}]'.format(self.verb, item.name.text)
 
 @meth_allowed('GET')
-def details(req, service_name):
+def overview(req, service_name):
     cluster_id = req.GET.get('cluster')
     service = None
 
@@ -216,28 +216,7 @@ def details(req, service_name):
         'edit_form':edit_form,
         }
 
-    return TemplateResponse(req, 'zato/service/details.html', return_data)
-
-@meth_allowed('POST')
-def invoke(req, service_id, cluster_id):
-    """ Executes a service directly, even if it isn't exposed through any channel.
-    """
-    try:
-        input_dict = {
-            'id': service_id,
-            'payload': req.POST.get('payload', ''),
-            'data_format': req.POST.get('data_format', ''),
-            'transport': req.POST.get('transport', ''),
-        }
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.invoke', input_dict)
-
-    except Exception, e:
-        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e:[{}]'.format(service_id, cluster_id, format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    else:
-        response = zato_message.response.item.response.text if zato_message.response.item.response else '(No output)'
-        return HttpResponse(response)
+    return TemplateResponse(req, 'zato/service/overview.html', return_data)
 
 @meth_allowed('GET')
 def source_info(req, service_name):
@@ -438,3 +417,62 @@ def last_stats(req, service_id, cluster_id):
 @meth_allowed('GET')
 def slow_response(req, service_name):
     pass
+
+@meth_allowed('GET')
+def invoker(req, service_name):
+    service = Service(name=service_name)
+    input_dict = {
+        'name': service_name,
+        'cluster_id': req.zato.cluster_id
+    }
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-request-response', input_dict)
+
+    if zato_path('response.item').get_from(zato_message) is not None:
+        item = zato_message.response.item
+
+        request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
+        request_data_format = known_data_format(request)
+        if request_data_format:
+            service.sample_request_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
+
+        response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
+        response_data_format = known_data_format(response)
+        if response_data_format:
+            service.sample_response_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
+
+        service.sample_request = request
+        service.sample_response = response
+
+        service.id = item.service_id.text
+        service.sample_cid = item.sample_cid.text
+        service.sample_req_timestamp = item.sample_req_timestamp.text
+        service.sample_resp_timestamp = item.sample_resp_timestamp.text
+        service.sample_req_resp_freq = item.sample_req_resp_freq.text
+
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'service': service,
+        }
+
+    return TemplateResponse(req, 'zato/service/invoker.html', return_data)
+
+@meth_allowed('POST')
+def invoke(req, service_id, cluster_id):
+    """ Executes a service directly, even if it isn't exposed through any channel.
+    """
+    try:
+        input_dict = {
+            'id': service_id,
+            'payload': req.POST.get('payload', ''),
+            'data_format': req.POST.get('data_format', ''),
+            'transport': req.POST.get('transport', ''),
+        }
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.invoke', input_dict)
+
+    except Exception, e:
+        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e:[{}]'.format(service_id, cluster_id, format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+    else:
+        response = zato_message.response.item.response.text if zato_message.response.item.response else '(No output)'
+        return HttpResponse(response)
