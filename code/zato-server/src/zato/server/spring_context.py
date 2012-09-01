@@ -26,7 +26,7 @@ from springpython.config import Object, PythonConfig
 from zato.common import DEFAULT_STATS_SETTINGS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
-from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
+from zato.server.connection.http_soap.security import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore
 from zato.server.crypto import CryptoManager
 from zato.server.kvdb import KVDB
