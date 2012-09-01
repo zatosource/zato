@@ -134,25 +134,33 @@ def _get_server_data(client, server_name):
         'lb_address': lb_address,
         })
 
-def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_date, cluster_id):
+def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_date, cluster_id, user_profile, fetch_lb_data=True):
     """ Returns a common JSON message for both the actual 'edit' and 'add/remove to/from LB' actions.
     """
-    lb_server_data = _get_server_data(client, name)
-    
     return_data = {
         'id': id,
         'name': name,
 
         'host': host if host else '(unknown)',
         'up_status': up_status if up_status else '(unknown)',
-        'up_mod_date': up_mod_date.isoformat() if up_mod_date else '(unknown)',
+        'up_mod_date': from_utc_to_user(up_mod_date+'+00:00', user_profile) if up_mod_date else '(unknown)',
         'cluster_id': cluster_id if cluster_id else '',
-
-        'lb_state': lb_server_data.state,
-        'lb_address': lb_server_data.lb_address,
-        'in_lb': lb_server_data.in_lb,
-        'message': success_msg.format(name),
+        
+        'lb_state': '(unknown)',
+        'lb_address': '(unknown)',
+        'in_lb': '(unknown)',
+        'message': success_msg.format(name)
     }
+
+    if fetch_lb_data:
+        lb_server_data = _get_server_data(client, name)
+        
+        return_data.update({
+            'lb_state': lb_server_data.state,
+            'lb_address': lb_server_data.lb_address,
+            'in_lb': lb_server_data.in_lb,
+        })
+    
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 
@@ -273,11 +281,11 @@ def servers(req):
                         item.may_be_deleted = False
                     else:
                         item.may_be_deleted = True
-        
+
         for server_name in bck_http_plain:
             lb_address = '{}:{}'.format(bck_http_plain[server_name]['address'], bck_http_plain[server_name]['port'])
             _update_item(server_name, lb_address, server_data_dict[server_name]['state'])
-    
+
     return_data = {
         'items':items,
         'choose_cluster_form':req.zato.choose_cluster_form,
@@ -304,7 +312,8 @@ def servers_edit(req):
         return _common_edit_message(client, 'Server [{}] updated', 
             msg_item.id.text, msg_item.name.text, msg_item.host.text,
             msg_item.up_status.text, msg_item.up_mod_date.text,
-            msg_item.cluster_id.text if hasattr(msg_item, 'cluster_id') else '')
+            msg_item.cluster_id.text if hasattr(msg_item, 'cluster_id') else '',
+            req.zato.user_profile)
     
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
@@ -314,14 +323,22 @@ def servers_add_remove_lb(req, action, server_id):
     """ Adds or removes a server from the load balancer's configuration.
     """
     server = req.zato.odb.query(Server).filter_by(id=server_id).one()
+    up_mod_date = server.up_mod_date.isoformat() if server.up_mod_date else ''
     
     client = get_lb_client(req.zato.cluster)
     client.add_remove_server(action, server.name)
     
+    if action == 'add':
+        success_msg = 'added from'
+        fetch_lb_data = True
+    else:
+        success_msg = 'removed from'
+        fetch_lb_data = False
+    
     return _common_edit_message(client, 
-        'Server [{{}}] {} the load balancer'.format('removed from' if action == 'remove' else 'added to'),
-        server.id, server.name, server.host, server.up_status, server.up_mod_date,
-        server.cluster_id)
+        'Server [{{}}] {} the load balancer'.format(success_msg),
+        server.id, server.name, server.host, server.up_status, up_mod_date,
+        server.cluster_id, req.zato.user_profile, fetch_lb_data)
 
 class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
@@ -331,7 +348,12 @@ class ServerDelete(_Delete):
     def __call__(self, req, *args, **kwargs):
         zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.get-by-id', {'id':req.zato.id})
 
-        client = get_lb_client(req.zato.cluster)
-        client.add_remove_server('remove', zato_message.response.item.name.text)
+        server = req.zato.odb.query(Server).filter_by(id=req.zato.id).one()
 
+        # This isn't atomic but it doesn't need to be. There won't be much congestion
+        # over deleting servers.
+        client = get_lb_client(req.zato.cluster) # Checks whether the server is known by LB
+        if client.get_server_data_dict(server.name):
+            client.add_remove_server('remove', zato_message.response.item.name.text)
+            
         return super(ServerDelete, self).__call__(req, *args, **kwargs)
