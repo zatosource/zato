@@ -1,43 +1,10 @@
 {% extends "zato/index.html" %}
 
-{% block extra_css %}
-    <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
-{% endblock %}
-
 {% block extra_js %}
 
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/service/request-response.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
-    
-    <script>
-    
-        var on_upload_complete = function(id, file_name, response){
-            if(response.success) {
-                var html = '<a href="{% url service-wsdl-download service.name cluster_id %}" class="common">Click to download</a>';
-                html += '<br/>';
-                html += '<div style="margin-top:7px">Direct address: {{ wsdl_public_url }}</div>';
-                $('#td_wsdl').html(html);
-                $.fn.zato.user_message(true, 'WSDL uploaded');
-            }
-            else {
-                $.fn.zato.user_message(false, response.response);
-            }
-        };    
-    
-        function create_uploader(){
-            var uploader = new qq.FileUploader({
-                element: $('#uploader')[0],
-                action: 'cluster/{{ cluster_id }}/upload/',
-                onComplete: on_upload_complete,
-                debug: true
-            });
-        }
-        window.onload = create_uploader;
-        
-    </script>
 
 {% endblock %}
 
@@ -71,6 +38,8 @@
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}"/>
                     <input type="hidden" id="configure_url" name="configure_url" value=""/>
                     <input type="submit" value="OK" />
+                    <br/>
+                    <span class="form_hint">(Use 0 to disable)
                 </form>
             </td>
         </tr>
