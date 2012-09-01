@@ -39,7 +39,7 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
     var dircache = item.dircache == true;
     
     row += "<td class='numbering'>&nbsp;</td>";
-    row += "<td><input type='checkbox' /></td>";
+    row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.host);

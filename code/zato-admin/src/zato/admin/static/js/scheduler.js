@@ -161,7 +161,7 @@ $.fn.zato.scheduler.data_table.new_row = function(job, data, include_tr) {
 	var cluster_id = $(document).getUrlParam('cluster');
 	
 	row += "<td class='numbering'>&nbsp;</td>";
-	row += "<td><input type='checkbox' /></td>";
+	row += "<td class='impexp'><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', job.name);
 	row += String.format('<td>{0}</td>', job.is_active ? 'Yes' : 'No');
 	row += String.format('<td>{0}</td>', friendly_names[job.job_type]);

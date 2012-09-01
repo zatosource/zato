@@ -59,7 +59,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
     
     row += "<td class='numbering'>&nbsp;</td>";
-    row += "<td><input type='checkbox' /></td>";
+    row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += host_tr;
