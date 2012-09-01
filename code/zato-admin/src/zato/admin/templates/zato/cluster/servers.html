@@ -30,6 +30,7 @@
             'id',
             'old_name',
             'in_lb',
+            'may_be_deleted',
         ]
     }
     
@@ -98,11 +99,12 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.name }}</td>
                         <td class='ignore'>{{ item.in_lb }}</td>
+                        <td class='ignore'>{{ item.may_be_deleted }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='13'>No results</td>
                     </tr>
                 {% endif %}
 

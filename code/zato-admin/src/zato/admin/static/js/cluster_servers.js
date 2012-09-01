@@ -64,6 +64,8 @@ $.fn.zato.cluster.servers.data_table.new_row = function(item, data, include_tr) 
     
     row += String.format('<td>{0}</td>', in_lb_link);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cluster.servers.edit('{0}')\">Edit</a>", data.id));
+    
+    
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cluster.servers.delete_('{0}')\">Delete</a>", data.id));
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
