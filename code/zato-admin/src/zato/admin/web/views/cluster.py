@@ -302,18 +302,25 @@ def servers_edit(req):
     """
     try:
         client = get_lb_client(req.zato.cluster)
-        client.rename_server(req.POST['edit-old_name'], req.POST['edit-name'])
+        
+        server_id = req.POST['id']
+        server = req.zato.odb.query(Server).filter_by(id=server_id).one()
+        
+        if client.get_server_data_dict(server.name):
+            fetch_lb_data = True
+            client.rename_server(req.POST['edit-old_name'], req.POST['edit-name'])
+        else:
+            fetch_lb_data = False
 
         zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.edit', 
-            {'id':req.POST['id'], 'name':req.POST['edit-name']})
+            {'id':server_id, 'name':req.POST['edit-name']})
         
         msg_item = zato_message.response.item
         
         return _common_edit_message(client, 'Server [{}] updated', 
             msg_item.id.text, msg_item.name.text, msg_item.host.text,
             msg_item.up_status.text, msg_item.up_mod_date.text,
-            msg_item.cluster_id.text if hasattr(msg_item, 'cluster_id') else '',
-            req.zato.user_profile)
+            req.zato.cluster_id, req.zato.user_profile, fetch_lb_data)
     
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
@@ -329,7 +336,7 @@ def servers_add_remove_lb(req, action, server_id):
     client.add_remove_server(action, server.name)
     
     if action == 'add':
-        success_msg = 'added from'
+        success_msg = 'added to'
         fetch_lb_data = True
     else:
         success_msg = 'removed from'
@@ -350,8 +357,6 @@ class ServerDelete(_Delete):
 
         server = req.zato.odb.query(Server).filter_by(id=req.zato.id).one()
 
-        # This isn't atomic but it doesn't need to be. There won't be much congestion
-        # over deleting servers.
         client = get_lb_client(req.zato.cluster) # Checks whether the server is known by LB
         if client.get_server_data_dict(server.name):
             client.add_remove_server('remove', zato_message.response.item.name.text)

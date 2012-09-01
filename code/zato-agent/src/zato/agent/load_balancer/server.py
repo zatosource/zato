@@ -368,7 +368,7 @@ class LoadBalancerAgent(SSLServer):
                         backends.append(backend_template.format(**data_dict))
                 line += ('\n' * 2) + '\n'.join(backends)
             new_config.append(line.rstrip())
-        
+            
         self._validate_save_config_string('\n'.join(new_config), True)
         
         return True
