@@ -38,7 +38,7 @@ $.fn.zato.security.tech_account.data_table.new_row = function(item, data, includ
 	var is_active = item.is_active == true
 	
 	row += "<td class='numbering'>&nbsp;</td>";
-	row += "<td><input type='checkbox' /></td>";
+	row += "<td class='impexp'><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', item.name);
 	row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
