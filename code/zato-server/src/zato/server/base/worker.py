@@ -52,8 +52,9 @@ from zato.common.broker_message import code_to_name, MESSAGE_TYPE, TOPICS, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.ftp import FTPStore
-from zato.server.connection.http_soap import HTTPSOAPWrapper, PlainHTTPHandler, RequestHandler, SOAPHandler
-from zato.server.connection.http_soap import Security as ConnectionHTTPSOAPSecurity
+from zato.server.connection.http_soap.channel import PlainHTTPHandler, RequestDispatcher, SOAPHandler
+from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+from zato.server.connection.http_soap.security import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.stats import MaintenanceTool
 
@@ -93,7 +94,7 @@ class WorkerStore(BaseWorker):
                         config = soap_config.setdefault(url_path, Bunch())
                         config[soap_action] = deepcopy(item)
         
-        self.request_handler = RequestHandler(simple_io_config=self.worker_config.simple_io)
+        self.request_handler = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
         self.request_handler.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
         self.request_handler.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
         
