@@ -151,7 +151,11 @@ def string_from_config(config, config_template):
                     backend_values.update(config["backend"][backend_type][server_name])
 
                     new_line += backend_template.format(**backend_values)
-
+                else:
+                    for name in('begin', 'end'):
+                        prefix = '{}{}'.format(zato_item_token, name)
+                        if line.startswith(prefix):
+                            new_line += line
                 new_line += "\n"
                 new_config.append(new_line)
             else:
