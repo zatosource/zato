@@ -33,7 +33,7 @@ from anyjson import dumps
 from bunch import Bunch
 
 # Zato
-from zato.common import SIMPLE_IO, url_type, ZATO_NONE
+from zato.common import SIMPLE_IO, URL_TYPE, ZATO_NONE
 from zato.common.util import payload_from_request, security_def_type, TRACE1
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
      NotFound, Unauthorized
@@ -91,7 +91,7 @@ class RequestDispatcher(object):
     def wrap_error_message(self, cid, url_type, msg):
         """ Wraps an error message in a transport-specific envelope.
         """
-        if url_type == ZATO_URL_TYPE_SOAP:
+        if url_type == URL_TYPE.SOAP:
             return server_soap_error(cid, msg)
         
         # Let's return the message as-is if we don't have any specific envelope
@@ -272,7 +272,7 @@ class _BaseMessageHandler(object):
             if not isinstance(response.payload, basestring):
                 response.payload = response.payload.getvalue() if response.payload else ''
 
-        if transport == 'soap':
+        if transport == URL_TYPE.SOAP:
             response.payload = soap_doc.safe_substitute(body=response.payload)
     
     def set_content_type(self, response, data_format, transport, service_info):
@@ -284,7 +284,7 @@ class _BaseMessageHandler(object):
         else:
             # .. or they did not so let's find out if we're using SimpleIO ..
             if data_format == SIMPLE_IO.FORMAT.XML:
-                if transport == url_type.soap:
+                if transport == URL_TYPE.SOAP:
                     if service_info['soap_version'] == '1.1':
                         content_type = self.server.soap11_content_type
                     else:
@@ -310,7 +310,7 @@ class _BaseMessageHandler(object):
         
         # A plain HTTP channel has always one SOAP action, the dummy empty one ''
         # so we can just quickly recreate it from scratch
-        if msg.transport == url_type.plain_http:
+        if msg.transport == URL_TYPE.PLAIN_HTTP:
             soap_action = ''
             if old_url_path in self.http_soap:
                 del self.http_soap[old_url_path]
@@ -336,7 +336,7 @@ class _BaseMessageHandler(object):
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
-        if msg.transport == url_type.plain_http:
+        if msg.transport == URL_TYPE.PLAIN_HTTP:
             del self.http_soap[msg.url_path]
         else:
             del self.http_soap[msg.url_path][msg.soap_action]
