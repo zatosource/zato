@@ -71,9 +71,8 @@ class ZatoHTTPListener(HTTPServer):
         cid = new_cid()
         
         try:
-            # SOAP or plain HTTP.
-            payload = thread_local_ctx.store.request_handler.handle(cid, 
-                            datetime.utcnow(), task, thread_local_ctx)
+            # It's either SOAP or a plain HTTP request
+            payload = thread_local_ctx.store.request_dispatcher.dispatch(cid, datetime.utcnow(), task, thread_local_ctx)
         # Any exception at this point must be our fault.
         except Exception, e:
             tb = format_exc(e)
