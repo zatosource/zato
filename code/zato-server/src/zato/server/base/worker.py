@@ -94,14 +94,14 @@ class WorkerStore(BaseWorker):
                         config = soap_config.setdefault(url_path, Bunch())
                         config[soap_action] = deepcopy(item)
         
-        self.request_handler = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
-        self.request_handler.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
-        self.request_handler.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
+        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
+        self.request_dispatcher.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
+        self.request_dispatcher.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
         
         # Statistics maintenance
         self.stats_maint = MaintenanceTool(self.worker_config.server.kvdb.conn)
 
-        self.request_handler.security = ConnectionHTTPSOAPSecurity(
+        self.request_dispatcher.security = ConnectionHTTPSOAPSecurity(
             self.worker_config.server.odb.get_url_security(self.worker_config.server.cluster_id)[0],
             self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
@@ -120,6 +120,7 @@ class WorkerStore(BaseWorker):
             }
         
     def filter(self, msg):
+        # TODO: Fix it, worker doesn't need to accept all the messages
         return True
     
     def _http_soap_wrapper_from_config(self, config, has_sec_config=True):
@@ -139,7 +140,7 @@ class WorkerStore(BaseWorker):
         else:
             if security_name:
                 sec_type = config.sec_type
-                meth = getattr(self.request_handler.security, sec_type + '_get')
+                meth = getattr(self.request_dispatcher.security, sec_type + '_get')
                 _sec_config = meth(security_name).config
                 
         if logger.isEnabledFor(TRACE1):
@@ -203,7 +204,7 @@ class WorkerStore(BaseWorker):
         """ 
         with self.update_lock:
             # Channels
-            handler = getattr(self.request_handler.security, 'on_broker_msg_' + action_name)
+            handler = getattr(self.request_dispatcher.security, 'on_broker_msg_' + action_name)
             handler(msg)
         
             for transport in('soap', 'plain_http'):
@@ -254,12 +255,12 @@ class WorkerStore(BaseWorker):
         """ Returns the configuration of the HTTP Basic Auth security definition
         of the given name.
         """
-        self.request_handler.security.basic_auth_get(name)
+        self.request_dispatcher.security.basic_auth_get(name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        self.request_handler.security.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
@@ -284,39 +285,39 @@ class WorkerStore(BaseWorker):
     def tech_acc_get(self, name):
         """ Returns the configuration of the technical account of the given name.
         """
-        self.request_handler.security.tech_acc_get(msg, *args)
+        self.request_dispatcher.security.tech_acc_get(msg, *args)
 
     def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
-        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
-        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
-        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-        self.request_handler.security.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
             
 # ##############################################################################
 
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
         """
-        self.request_handler.security.wss_get(msg, *args)
+        self.request_dispatcher.security.wss_get(msg, *args)
 
     def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
-        self.request_handler.security.on_broker_msg_SECURITY_WSS_CREATE(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_SECURITY_WSS_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
@@ -403,20 +404,20 @@ class WorkerStore(BaseWorker):
         """ Creates or updates an HTTP/SOAP channel.
         """
         # Security
-        self.request_handler.security.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
         
         # A mapping between a URL and a service
-        handler = getattr(self.request_handler, msg.transport + '_handler')
+        handler = getattr(self.request_dispatcher, msg.transport + '_handler')
         handler.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
         
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
         # Security
-        self.request_handler.security.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+        self.request_dispatcher.security.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
         
         # A mapping between a URL and a service
-        handler = getattr(self.request_handler, msg.transport + '_handler')
+        handler = getattr(self.request_dispatcher, msg.transport + '_handler')
         handler.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
 
 # ##############################################################################

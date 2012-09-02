@@ -98,8 +98,8 @@ class RequestDispatcher(object):
         # to use.
         return msg        
     
-    def handle(self, cid, req_timestamp, task, thread_ctx):
-        """ Base method for handling incoming HTTP/SOAP messages. If the security
+    def dispatch(self, cid, req_timestamp, task, thread_ctx):
+        """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth, 
         the security validation is being performed. Otherwise, that step 
         is postponed until a concrete transport-specific handler is invoked.
