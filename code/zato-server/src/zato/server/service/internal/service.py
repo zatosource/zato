@@ -220,9 +220,9 @@ class Invoke(AdminService):
             self.request.input.transport, self.request.simple_io_config, 
             self.request.input.data_format, self.request.request_data)
 
-        service_instance._pre_handle()
+        service_instance.pre_handle()
         service_instance.handle()
-        service_instance._post_handle()
+        service_instance.post_handle()
         
         response = service_instance.response.payload
         if not isinstance(response, basestring):

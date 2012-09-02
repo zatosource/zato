@@ -497,14 +497,14 @@ class Service(object):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
-    def _pre_handle(self):
+    def pre_handle(self):
         """ An internal method for incrementing the service's usage count and
         storing the service invocation time.
         """
         self.server.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
         self.invocation_time = datetime.utcnow()
         
-    def _post_handle(self):
+    def post_handle(self):
         """ An internal method for updating the service's statistics.
         """
         self.handle_return_time = datetime.utcnow()
