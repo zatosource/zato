@@ -18,3 +18,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+from unittest import TestCase
+
+# Zato
+from zato.server.connection.http_soap import channel
+
+class PlainHTTPHandlerTestCase(TestCase):
+    pass

@@ -231,9 +231,8 @@ class _BaseMessageHandler(object):
         payload, service_info, service_data = self.init(cid, task, raw_request, headers, transport, data_format)
 
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
-        service_instance.update(service_instance, self.server, thread_ctx.store.broker_client, 
-            thread_ctx.store, cid, payload, raw_request, transport, 
-            simple_io_config, data_format, request_data)
+        service_instance.update(service_instance, self.server, thread_ctx.store.broker_client, thread_ctx.store, 
+                cid, payload, raw_request, transport, simple_io_config, data_format, request_data)
 
         service_instance.pre_handle()
         service_instance.handle()
@@ -247,9 +246,17 @@ class _BaseMessageHandler(object):
         logger.debug('[{}] Returning response.content_type:[{}], response.payload:[{}]'.format(cid, response.content_type, response.payload))
         return service_info, response
 
-    # ##########################################################################    
+    # ##########################################################################
+    
+    def _get_xml_admin_payload(self, service_instance, response, data):
+        return zato_message.safe_substitute(cid=service_instance.cid, result=response.result, 
+            details=response.result_details, data=data)
     
     def set_payload(self, response, data_format, transport, service_instance):
+        """ Sets the actual payload to represent the service's response out of
+        whatever the service produced. This includes converting dictionaries into
+        JSON, adding Zato metadata and wrapping the mesasge in SOAP if need be.
+        """
         if isinstance(service_instance, AdminService):
             if data_format == SIMPLE_IO.FORMAT.JSON:
                 payload = response.payload.getvalue(False)
@@ -258,11 +265,9 @@ class _BaseMessageHandler(object):
             else:
                 if response.payload:
                     if not isinstance(response.payload, basestring):
-                        response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
-                            result=response.result, details=response.result_details, data=response.payload.getvalue())
+                        response.payload = self._get_xml_admin_payload(service_instance, response, response.payload.getvalue())
                 else:
-                    response.payload = zato_message.safe_substitute(cid=service_instance.cid, 
-                        result=response.result, details=response.result_details, data='<response/>')
+                    response.payload = self._get_xml_admin_payload(service_instance, response, '<response/>')
         else:
             if not isinstance(response.payload, basestring):
                 response.payload = response.payload.getvalue() if response.payload else ''
@@ -271,6 +276,8 @@ class _BaseMessageHandler(object):
             response.payload = soap_doc.safe_substitute(body=response.payload)
     
     def set_content_type(self, response, data_format, transport, service_info):
+        """ Sets a response's content type if one hasn't been supplied by the user.
+        """
         # A user provided their own content type ..
         if response.content_type_changed:
             content_type = response.content_type
