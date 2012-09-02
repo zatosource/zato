@@ -350,9 +350,9 @@ class WorkerStore(BaseWorker):
             self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
             msg.data_format if hasattr(msg, 'data_format') else None)
         
-        service_instance._pre_handle()
+        service_instance.pre_handle()
         service_instance.handle()
-        service_instance._post_handle()
+        service_instance.post_handle()
         if not isinstance(service_instance.response.payload, basestring):
             service_instance.response.payload = service_instance.response.payload.getvalue()
         

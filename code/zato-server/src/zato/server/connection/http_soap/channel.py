@@ -235,11 +235,21 @@ class _BaseMessageHandler(object):
             thread_ctx.store, cid, payload, raw_request, transport, 
             simple_io_config, data_format, request_data)
 
-        service_instance._pre_handle()
+        service_instance.pre_handle()
         service_instance.handle()
-        service_instance._post_handle()
+        service_instance.post_handle()
+        
         response = service_instance.response
+        
+        self.set_payload(response, data_format, transport, service_instance)
+        self.set_content_type(response, data_format, transport, service_info)
 
+        logger.debug('[{}] Returning response.content_type:[{}], response.payload:[{}]'.format(cid, response.content_type, response.payload))
+        return service_info, response
+
+    # ##########################################################################    
+    
+    def set_payload(self, response, data_format, transport, service_instance):
         if isinstance(service_instance, AdminService):
             if data_format == SIMPLE_IO.FORMAT.JSON:
                 payload = response.payload.getvalue(False)
@@ -259,7 +269,8 @@ class _BaseMessageHandler(object):
 
         if transport == 'soap':
             response.payload = soap_doc.safe_substitute(body=response.payload)
-
+    
+    def set_content_type(self, response, data_format, transport, service_info):
         # A user provided their own content type ..
         if response.content_type_changed:
             content_type = response.content_type
@@ -280,9 +291,8 @@ class _BaseMessageHandler(object):
                 content_type = response.content_type
                 
         response.content_type = content_type
-
-        logger.debug('[{}] Returning content_type:[{}], response.payload:[{}]'.format(cid, content_type, response.payload))
-        return service_info, response
+    
+    # ##########################################################################
     
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Updates the configuration so that there's a link between a URL
