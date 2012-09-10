@@ -64,11 +64,8 @@ class DummyService(AdminService):
 class MessageHandlingBase(TestCase):
     """ Base class for tests for functionality common to SOAP and plain HTTP messages.
     """
-    def get_data(self):    
+    def get_data(self, data_format, transport):
         bmh = channel._BaseMessageHandler()
-        
-        data_format = SIMPLE_IO.FORMAT.JSON
-        transport = URL_TYPE.SOAP
         
         expected = {
             'key': uuid4().hex + NON_ASCII_STRING,
@@ -77,8 +74,13 @@ class MessageHandlingBase(TestCase):
             'details': uuid4().hex,
             'cid': new_cid(),
         }
+        
+        if data_format == SIMPLE_IO.FORMAT.JSON:
+            payload_value = {expected['key']: expected['value']}
+        else:
+            payload_value = '<{key}>{value}</{key}>'.format(**expected)
 
-        payload = DummyPayload({expected['key']: expected['value']})
+        payload = DummyPayload(payload_value)
         response = DummyResponse(payload, expected['result'], expected['details'])
         service = DummyService(response, expected['cid'])
 
@@ -87,8 +89,9 @@ class MessageHandlingBase(TestCase):
         return expected, service
 
 class TestSetPayloadAdminServiceJSONTestCase(MessageHandlingBase):
-    def test(self):
-        expected, service = self.get_data()
+    
+    def xtest_set_payload_admin_service_payload_provided_json_plain_http(self):
+        expected, service = self.get_data(SIMPLE_IO.FORMAT.JSON, URL_TYPE.PLAIN_HTTP)
         payload = loads(service.response.payload)
         
         # Will fail with KeyError so it's a good indicator whether it worked at all or not
@@ -99,37 +102,8 @@ class TestSetPayloadAdminServiceJSONTestCase(MessageHandlingBase):
         
         for name in('cid', 'result', 'details'):
             self.assertEquals(zato_env[name], expected[name])
-    
-    def xtest_set_payload_admin_service_xml_payload_provided(self):
-        bmh = channel._BaseMessageHandler()
-        
-        data_format = SIMPLE_IO.FORMAT.XML
-        transport = URL_TYPE.SOAP
-        
-        expected = {
-            'key': 'a' + uuid4().hex + NON_ASCII_STRING,
-            'value': 'a' + uuid4().hex + NON_ASCII_STRING,
-            'result': uuid4().hex,
-            'details': uuid4().hex,
-            'cid': new_cid(),
-        }
-        
-        payload = DummyPayload('<{key}>{value}</{key}>'.format(**expected))
-        response = DummyResponse(payload, expected['result'], expected['details'])
-        service = DummyService(response, expected['cid'])
-        
-        bmh.set_payload(response, data_format, transport, service)
-        payload = etree.fromstring(service.response.payload.encode('utf-8'))
-        
-        xpath = etree.XPath('//gfr:{}/text()'.format(expected['key']), namespaces=NS_MAP)
-        value = xpath(payload)[0]
-        self.assertEquals(value, expected['value'])
-        
-        for name in('cid', 'result', 'details'):
-            xpath = etree.XPath('//gfr:zato_env/gfr:{}/text()'.format(name), namespaces=NS_MAP)
-            value = xpath(payload)[0]
-            self.assertEquals(value, expected[name])
 
-    def xtest_set_payload_admin_service_xml_no_payload_provided(self):
-        #raise NotImplementedError('TODO')
-        pass
+    def test_set_payload_admin_service_payload_provided_xml_plain_http(self):
+        expected, service = self.get_data(SIMPLE_IO.FORMAT.XML, URL_TYPE.PLAIN_HTTP)
+        
+        self.attrs_xpath[attr_name] = etree.XPath(ATTR_QUERY_TEMPLATE.format(value.strip()), namespaces=ns_map)
