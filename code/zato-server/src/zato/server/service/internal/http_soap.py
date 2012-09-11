@@ -27,7 +27,7 @@ from traceback import format_exc
 from json import dumps
 
 # Zato
-from zato.common import url_type, ZATO_NONE
+from zato.common import URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
@@ -58,9 +58,9 @@ class _HTTPSOAPService(object):
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.                
             if connection == 'outgoing':
-                if transport == url_type.plain_http and security.sec_type != security_def_type.basic_auth:
+                if transport == URL_TYPE.PLAIN_HTTP and security.sec_type != security_def_type.basic_auth:
                     raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
-                elif transport == url_type.soap and security.sec_type \
+                elif transport == URL_TYPE.SOAP and security.sec_type \
                      not in(security_def_type.basic_auth, security_def_type.wss):
                     raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
             

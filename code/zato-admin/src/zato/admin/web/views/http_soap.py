@@ -37,7 +37,7 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import meth_allowed
-from zato.common import SECURITY_TYPES, url_type, ZATO_NONE, zato_path
+from zato.common import SECURITY_TYPES, URL_TYPE, ZATO_NONE, zato_path
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 
@@ -131,9 +131,9 @@ def index(req):
                 # Outgoing plain HTTP connections may use HTTP Basic Auth only,
                 # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
                 if connection == 'outgoing':
-                    if transport == url_type.plain_http and def_item.sec_type != _security_def_type.basic_auth:
+                    if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type != _security_def_type.basic_auth:
                         continue
-                    elif transport == url_type.soap and def_item.sec_type \
+                    elif transport == URL_TYPE.SOAP and def_item.sec_type \
                          not in(_security_def_type.basic_auth, _security_def_type.wss):
                         continue
                 
