@@ -34,7 +34,7 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import url_type, ZATO_NONE
+from zato.common import URL_TYPE, ZATO_NONE
 from zato.common.util import security_def_type
 from zato.server.connection.http_soap import Unauthorized
 
@@ -334,7 +334,7 @@ class Security(object):
         """ Deletes an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
-            if msg.transport == url_type.plain_http:
+            if msg.transport == URL_TYPE.PLAIN_HTTP:
                 del self.url_sec[msg.url_path]
             else:
                 url_path = self.url_sec.getall(msg.url_path)
