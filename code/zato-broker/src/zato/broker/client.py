@@ -37,7 +37,7 @@ import redis
 
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.util import new_cid, TRACE1
+from zato.common.util import new_cid
 from zato.common.broker_message import MESSAGE_TYPE, TOPICS
 
 logger = logging.getLogger(__name__)

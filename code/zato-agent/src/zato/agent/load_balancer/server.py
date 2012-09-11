@@ -25,7 +25,7 @@ from collections import Counter
 from datetime import datetime
 from subprocess import Popen, PIPE
 from tempfile import NamedTemporaryFile
-from time import sleep, time
+from time import sleep
 from traceback import format_exc
 
 # pytz

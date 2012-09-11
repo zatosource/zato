@@ -30,7 +30,7 @@ from pika import BasicProperties
 from bunch import Bunch
 
 # Zato
-from zato.common import ConnectionException, PORTS
+from zato.common import ConnectionException
 from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
 from zato.common.util import TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector

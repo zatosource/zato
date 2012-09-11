@@ -28,7 +28,7 @@ from json import dumps
 
 # Zato
 from zato.common import URL_TYPE, ZATO_NONE
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
 from zato.common.util import security_def_type

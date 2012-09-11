@@ -33,9 +33,6 @@ from traceback import format_exc
 # psutil
 import psutil
 
-# ZeroMQ
-import zmq
-
 # Bunch
 from bunch import Bunch
 

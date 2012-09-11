@@ -33,7 +33,6 @@ from springpython.jms import WebSphereMQJMSException, NoMessageAvailableExceptio
 from springpython.jms.core import reserved_attributes
 
 # Zato
-from zato.common import PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector

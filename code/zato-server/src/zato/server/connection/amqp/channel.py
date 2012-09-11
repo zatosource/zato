@@ -30,7 +30,6 @@ from threading import Thread
 from bunch import Bunch
 
 # Zato
-from zato.common import PORTS
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector

@@ -23,7 +23,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # dateutil
-from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 
 # Django

@@ -24,7 +24,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
 from zato.server.service.internal import AdminService, ChangePasswordBase

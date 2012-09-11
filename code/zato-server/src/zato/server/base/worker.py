@@ -46,9 +46,8 @@ from zope.server.serverchannelbase import task_lock
 from zope.server.taskthreads import ThreadedTaskDispatcher
 
 # Zato
-from zato.broker.client import BrokerClient
 from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import code_to_name, MESSAGE_TYPE, TOPICS, STATS
+from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.connection.ftp import FTPStore

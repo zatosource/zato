@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, SERVICE
+from zato.common.broker_message import SERVICE
 
 def should_store(service_id):
     """ Decides whether a service's request/response pair should be kept in the DB.

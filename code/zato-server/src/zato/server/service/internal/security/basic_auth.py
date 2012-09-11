@@ -25,7 +25,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, SECURITY
+from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
 from zato.server.service.internal import AdminService, ChangePasswordBase
