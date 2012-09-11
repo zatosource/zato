@@ -31,7 +31,6 @@ from bunch import Bunch
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
-from zato.common import PORTS
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.util import TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector

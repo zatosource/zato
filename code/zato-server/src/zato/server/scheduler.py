@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, time
-from datetime import datetime
 from traceback import format_exc
 
 # APScheduler
@@ -30,16 +29,9 @@ from apscheduler.scheduler import Scheduler as APScheduler
 # dateutil
 from dateutil.parser import parse
 
-# pytz
-from pytz import UTC
-
 # Zato 
-from zato.common import scheduler_date_time_format
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import new_cid
-
-# zmq
-from zmq.core import context
 
 logger = logging.getLogger(__name__)
 

@@ -33,7 +33,7 @@ from validate import is_boolean
 
 # Zato
 from zato.common import KVDB, ZatoException
-from zato.common.broker_message import MESSAGE_TYPE, SERVICE
+from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
      DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service, service_list

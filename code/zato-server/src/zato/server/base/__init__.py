@@ -21,18 +21,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from uuid import uuid4
-
-# anyjson
-from anyjson import loads
-
-# Bunch
-from bunch import Bunch
 
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common import ZATO_NONE
-from zato.common.broker_message import code_to_name, MESSAGE, TOPICS
+from zato.common.broker_message import code_to_name, TOPICS
 from zato.common.util import new_cid
 
 class BrokerMessageReceiver(object):

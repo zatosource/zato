@@ -38,7 +38,7 @@ from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
-from zato.common.broker_message import MESSAGE_TYPE, STATS
+from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
 from zato.server.service.internal import AdminService
 

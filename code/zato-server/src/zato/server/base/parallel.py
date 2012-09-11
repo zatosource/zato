@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, logging, os, time
 from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, responses
-from threading import current_thread, Thread
+from threading import Thread
 from time import sleep
 from traceback import format_exc
 
@@ -38,8 +38,8 @@ from bunch import Bunch, SimpleBunch
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common import PORTS, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SINGLETON, TOPICS, ZMQ_CONNECTOR
+from zato.common import SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher

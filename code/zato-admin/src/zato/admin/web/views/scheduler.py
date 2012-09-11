@@ -26,8 +26,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from cStringIO import StringIO
-from datetime import datetime, timedelta
-from time import strptime
+from datetime import datetime
 from traceback import format_exc
 
 # anyjson
@@ -52,7 +51,7 @@ from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed, 
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
-from zato.common import scheduler_date_time_format, zato_path, ZatoException
+from zato.common import zato_path, ZatoException
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint, TRACE1
 

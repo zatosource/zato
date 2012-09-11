@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import json, logging
-from datetime import datetime
 from traceback import format_exc
 
 # OrderedDict is new in 2.7

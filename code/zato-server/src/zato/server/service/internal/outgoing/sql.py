@@ -26,7 +26,7 @@ from uuid import uuid4
 
 # Zato
 from zato.common import ZatoException
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.server.service.internal import AdminService, ChangePasswordBase

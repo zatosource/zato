@@ -22,14 +22,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime, timedelta
-from threading import current_thread
 from time import sleep
 
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.broker.client import BrokerClient
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER, SINGLETON
 from zato.server.base import BrokerMessageReceiver
 

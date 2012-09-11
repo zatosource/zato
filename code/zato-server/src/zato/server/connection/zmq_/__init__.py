@@ -21,7 +21,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from threading import current_thread
 
 # ZeroMQ
 import zmq
