@@ -64,11 +64,11 @@ class DummyService(AdminService):
 class MessageHandlingBase(TestCase):
     """ Base class for tests for functionality common to SOAP and plain HTTP messages.
     """
-    def get_data(self, data_format, transport):
+    def get_data(self, data_format, transport, add_string=NON_ASCII_STRING):
         bmh = channel._BaseMessageHandler()
         
         expected = {
-            'key': uuid4().hex + NON_ASCII_STRING,
+            'key': 'a' + uuid4().hex + add_string,
             'value': uuid4().hex + NON_ASCII_STRING,
             'result': uuid4().hex,
             'details': uuid4().hex,
@@ -78,7 +78,8 @@ class MessageHandlingBase(TestCase):
         if data_format == SIMPLE_IO.FORMAT.JSON:
             payload_value = {expected['key']: expected['value']}
         else:
-            payload_value = '<{key}>{value}</{key}>'.format(**expected)
+            # str.format can't handle Unicode http://bugs.python.org/issue7300
+            payload_value = '<%(key)s>%(value)s</%(key)s>' % (expected)
 
         payload = DummyPayload(payload_value)
         response = DummyResponse(payload, expected['result'], expected['details'])
@@ -88,9 +89,27 @@ class MessageHandlingBase(TestCase):
         
         return expected, service
 
-class TestSetPayloadAdminServiceJSONTestCase(MessageHandlingBase):
+class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
     
-    def xtest_set_payload_admin_service_payload_provided_json_plain_http(self):
+    def _test_xml(self, url_type):
+        expected, service = self.get_data(SIMPLE_IO.FORMAT.XML, url_type, '')
+        payload = etree.fromstring(service.response.payload)
+        
+        parent_path = '/soap:Envelope/soap:Body' if url_type == URL_TYPE.SOAP else ''
+        
+        path = parent_path + '/gfr:zato_message/gfr:{}/text()'.format(expected['key'])
+        xpath = etree.XPath(path, namespaces=NS_MAP)
+        value = xpath(payload)[0]
+        self.assertEquals(value, expected['value'])
+        
+        for name in('cid', 'result', 'details'):
+            path = parent_path + '/gfr:zato_message/gfr:zato_env/gfr:{}/text()'.format(name)
+            xpath = etree.XPath(path, namespaces=NS_MAP)
+            
+            value = xpath(payload)[0]
+            self.assertEquals(value, expected[name])
+
+    def test_set_payload_admin_service_payload_provided_json_plain_http(self):
         expected, service = self.get_data(SIMPLE_IO.FORMAT.JSON, URL_TYPE.PLAIN_HTTP)
         payload = loads(service.response.payload)
         
@@ -104,6 +123,7 @@ class TestSetPayloadAdminServiceJSONTestCase(MessageHandlingBase):
             self.assertEquals(zato_env[name], expected[name])
 
     def test_set_payload_admin_service_payload_provided_xml_plain_http(self):
-        expected, service = self.get_data(SIMPLE_IO.FORMAT.XML, URL_TYPE.PLAIN_HTTP)
-        
-        self.attrs_xpath[attr_name] = etree.XPath(ATTR_QUERY_TEMPLATE.format(value.strip()), namespaces=ns_map)
+        self._test_xml(URL_TYPE.PLAIN_HTTP)
+
+    def test_set_payload_admin_service_payload_provided_xml_soap(self):
+        self._test_xml(URL_TYPE.SOAP)
