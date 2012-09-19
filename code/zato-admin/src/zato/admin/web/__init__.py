@@ -95,7 +95,6 @@ def from_utc_to_user(dt, user_profile, format='date_time'):
     """ Converts a datetime object from UTC to a user-selected timezone and datetime format. 
     """
     return django_date_filter(_from_utc_to_local(dt, user_profile.timezone), getattr(user_profile, '{}_format_py'.format(format)))
-                              
     
 def from_user_to_utc(dt, user_profile):
     """ Converts a datetime object from a user-selected timezone to UTC.
