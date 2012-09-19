@@ -84,10 +84,8 @@ class SingletonServer(BrokerMessageReceiver):
             self.is_cluster_wide = True
             
             # Schedule a job for letting the other servers know we're still alive
-            # (not that we're not using .utcnow() for start_date because the
-            # scheduler - for better or worse - doesn't use UTC.
             job_data = Bunch(base_job_data.copy())
-            job_data.start_date = datetime.now()
+            job_data.start_date = datetime.utcnow()
             job_data.name = 'zato.ClusterWideSingletonKeepAlive'
             job_data.service = 'zato.server.service.internal.server.ClusterWideSingletonKeepAlive'
             
@@ -96,7 +94,7 @@ class SingletonServer(BrokerMessageReceiver):
             # for checking whether the connector server is alive or not
             if starting_up:
                 job_data = Bunch(base_job_data.copy())
-                job_data.start_date = datetime.now() + timedelta(seconds=10) # Let's give the other server some time to warm up
+                job_data.start_date = datetime.utcnow() + timedelta(seconds=10) # Let's give the other server some time to warm up
                 job_data.name = 'zato.EnsureClusterWideSingleton'
                 job_data.service = 'zato.server.service.internal.server.EnsureClusterWideSingleton'
 
