@@ -222,12 +222,14 @@ class Invoke(AdminService):
 
         service_instance.pre_handle()
         service_instance.handle()
-        service_instance.post_handle()
         
         response = service_instance.response.payload
         if not isinstance(response, basestring):
             response = response.getvalue()
-
+            service_instance.response.payload = response
+            
+        service_instance.post_handle()
+            
         self.response.payload.response = response
 
 class GetDeploymentInfoList(AdminService):
@@ -372,26 +374,32 @@ class GetRequestResponse(AdminService):
     """
     class SimpleIO:
         input_required = ('name', 'cluster_id')
-        output_required = ('service_id', 'sample_cid', 'sample_req_timestamp', 'sample_resp_timestamp', 
-            'sample_request', 'sample_response', Integer('sample_req_resp_freq'))
+        output_required = ('service_id', 'sample_cid', 'sample_req_ts', 'sample_resp_ts', 
+            'sample_req', 'sample_resp', Integer('sample_req_resp_freq'))
         
-    def get_data(self, session):
-        return session.query(Service.id, Service.sample_cid, Service.sample_req_timestamp,
-            Service.sample_resp_timestamp, Service.sample_request, Service.sample_response,
-            Service.sample_req_resp_freq).\
-            filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
-            one()
+    def get_data(self):
+        result = {}
+        
+        with closing(self.odb.session()) as session:
+            result['id'] = session.query(Service.id).\
+                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
+                one()[0]
+        
+        result.update(**self.kvdb.conn.hgetall('{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.request.input.name)))
+        
+        print(result)
+        
+        return result
         
     def handle(self):
-        with closing(self.odb.session()) as session:
-            result = self.get_data(session)
-            self.response.payload.service_id = result.id
-            self.response.payload.sample_cid = result.sample_cid
-            self.response.payload.sample_req_timestamp = result.sample_req_timestamp
-            self.response.payload.sample_resp_timestamp = result.sample_resp_timestamp
-            self.response.payload.sample_request = (result.sample_request if result.sample_request else '').encode('base64')
-            self.response.payload.sample_response = (result.sample_response if result.sample_response else '').encode('base64')
-            self.response.payload.sample_req_resp_freq = result.sample_req_resp_freq
+        result = self.get_data()
+        self.response.payload.service_id = result.get('id')
+        self.response.payload.sample_cid = result.get('cid')
+        self.response.payload.sample_req_ts = result.get('req_ts')
+        self.response.payload.sample_resp_ts = result.get('resp_ts')
+        self.response.payload.sample_req = result.get('req', '').encode('base64')
+        self.response.payload.sample_resp = result.get('resp', '').encode('base64')
+        self.response.payload.sample_req_resp_freq = result.get('freq', 0)
 
 class ConfigureRequestResponse(AdminService):
     """ Updates the request/response-related configuration.

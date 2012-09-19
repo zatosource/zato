@@ -467,6 +467,7 @@ class Service(object):
         self.handle_return_time = None # When did its 'handle' method finished processing the request
         self.processing_time_raw = None # A timedelta object with the processing time up to microseconds
         self.processing_time = None # Processing time in milliseconds
+        self.usage = 0 # How many times the service has been invoked
         
     @classmethod
     def get_name(class_):
@@ -485,6 +486,8 @@ class Service(object):
         """ Actually initializes the service.
         """
         self.odb = self.worker_store.odb
+        self.kvdb = self.worker_store.kvdb
+        
         out_amqp = PublisherFacade(self.broker_client)
         out_jms_wmq = WMQFacade(self.broker_client)
         out_zmq = ZMQFacade(self.broker_client)
@@ -498,27 +501,51 @@ class Service(object):
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
     def pre_handle(self):
-        """ An internal method for incrementing the service's usage count and
-        storing the service invocation time.
+        """ An internal method run just before the service sets to process the payload.
+        Used for incrementing the service's usage count and storing the service invocation time.
         """
-        self.server.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
+        self.usage = self.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
         self.invocation_time = datetime.utcnow()
         
     def post_handle(self):
-        """ An internal method for updating the service's statistics.
+        """ An internal method executed after the service has completed and has
+        a response ready to return. Updates its statistics and, optionally, stores
+        a sample request/response pair.
         """
+        
+        #
+        # Statistics
+        #
+        
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
         self.processing_time = int(round(self.processing_time_raw.microseconds / 1000.0))
 
-        self.server.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
-        self.server.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
+        self.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
+        self.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
 
         key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE, self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
-        self.server.kvdb.conn.rpush(key, self.processing_time)
+        self.kvdb.conn.rpush(key, self.processing_time)
         
         # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) to aggregate processing times for a given minute and then it will expire
-        self.server.kvdb.conn.expire(key, 300) # TODO: Document that we need Redis 2.1.3+ otherwise they key has just been overwritten
+        self.kvdb.conn.expire(key, 300) # TODO: Document that we need Redis 2.1.3+ otherwise the key has just been overwritten
+        
+        # 
+        # Sample requests/responses
+        #
+        
+        key = '{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.name)
+        freq = self.kvdb.conn.hget(key, 'freq') or 0
+        
+        if freq and self.usage % freq == 0:
+            data = {
+                'cid': self.cid,
+                'req_ts': self.invocation_time.isoformat(),
+                'resp_ts': self.handle_return_time.isoformat(),
+                'req': self.request.raw_request or '',
+                'resp': self.response.payload or '',
+            }
+            self.kvdb.conn.hmset(key, data)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')

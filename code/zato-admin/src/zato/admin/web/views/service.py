@@ -70,7 +70,7 @@ def known_data_format(data):
     try:
         etree.fromstring(data)
         data_format = 'xml'
-    except etree.XMLSyntaxError:
+    except etree.XMLSyntaxError, e:
         try:
             loads(data)
             data_format = 'json'
@@ -313,23 +313,23 @@ def request_response(req, service_name):
     if zato_path('response.item').get_from(zato_message) is not None:
         item = zato_message.response.item
 
-        request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
+        request = (item.sample_req.text if item.sample_req.text else '').decode('base64')
         request_data_format = known_data_format(request)
         if request_data_format:
-            service.sample_request_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
+            service.sample_req_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
 
-        response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
+        response = (item.sample_resp.text if item.sample_resp.text else '').decode('base64')
         response_data_format = known_data_format(response)
         if response_data_format:
-            service.sample_response_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
+            service.sample_resp_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
 
-        service.sample_request = request
-        service.sample_response = response
+        service.sample_req = request
+        service.sample_resp = response
 
         service.id = item.service_id.text
         service.sample_cid = item.sample_cid.text
-        service.sample_req_timestamp = item.sample_req_timestamp.text
-        service.sample_resp_timestamp = item.sample_resp_timestamp.text
+        service.sample_req_ts = item.sample_req_ts.text
+        service.sample_resp_ts = item.sample_resp_ts.text
         service.sample_req_resp_freq = item.sample_req_resp_freq.text
 
     return_data = {
@@ -421,33 +421,15 @@ def slow_response(req, service_name):
 @meth_allowed('GET')
 def invoker(req, service_name):
     service = Service(name=service_name)
+
     input_dict = {
         'name': service_name,
         'cluster_id': req.zato.cluster_id
     }
-    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-request-response', input_dict)
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
 
     if zato_path('response.item').get_from(zato_message) is not None:
-        item = zato_message.response.item
-
-        request = (item.sample_request.text if item.sample_request.text else '').decode('base64')
-        request_data_format = known_data_format(request)
-        if request_data_format:
-            service.sample_request_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
-
-        response = (item.sample_response.text if item.sample_response.text else '').decode('base64')
-        response_data_format = known_data_format(response)
-        if response_data_format:
-            service.sample_response_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
-
-        service.sample_request = request
-        service.sample_response = response
-
-        service.id = item.service_id.text
-        service.sample_cid = item.sample_cid.text
-        service.sample_req_timestamp = item.sample_req_timestamp.text
-        service.sample_resp_timestamp = item.sample_resp_timestamp.text
-        service.sample_req_resp_freq = item.sample_req_resp_freq.text
+        service.id = zato_message.response.item.id.text
 
     return_data = {
         'cluster_id': req.zato.cluster_id,

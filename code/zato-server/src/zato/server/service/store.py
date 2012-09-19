@@ -218,9 +218,11 @@ class ServiceStore(InitializingObject):
                 si = self._get_source_code_info(mod)
                 
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                service_id = self.odb.add_service(item.get_name(), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
-                self.services[class_name]['is_active'] = self.odb.is_service_active(service_id)
-
+                service_id, is_active = self.odb.add_service(
+                    item.get_name(), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
+                
+                self.services[class_name]['is_active'] = is_active
+                
 if __name__ == '__main__':
     store = ServiceStore()
     store.import_services_from_directory('/home/dsuch/tmp/zato-sample-project1')

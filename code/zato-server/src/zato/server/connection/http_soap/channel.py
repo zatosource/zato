@@ -237,12 +237,13 @@ class _BaseMessageHandler(object):
 
         service_instance.pre_handle()
         service_instance.handle()
-        service_instance.post_handle()
         
         response = service_instance.response
         
         self.set_payload(response, data_format, transport, service_instance)
         self.set_content_type(response, data_format, transport, service_info)
+        
+        service_instance.post_handle()
 
         logger.debug('[{}] Returning response.content_type:[{}], response.payload:[{}]'.format(cid, response.content_type, response.payload))
         return service_info, response
