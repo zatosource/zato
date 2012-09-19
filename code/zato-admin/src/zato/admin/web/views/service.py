@@ -49,7 +49,7 @@ from pygments.formatters import HtmlFormatter
 from validate import is_boolean
 
 # Zato
-from zato.admin.web import invoke_admin_service, last_hour_start_stop
+from zato.admin.web import from_utc_to_user, invoke_admin_service, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
 from zato.common import SourceInfo, ZATO_NONE, zato_path
@@ -326,10 +326,18 @@ def request_response(req, service_name):
         service.sample_req = request
         service.sample_resp = response
 
+        ts = {}
+        for name in('req', 'resp'):
+            full_name = 'sample_{}_ts'.format(name)
+            value = getattr(item, full_name).text or ''
+            if value:
+                value = from_utc_to_user(value+'+00:00', req.zato.user_profile)
+            ts[full_name] = value
+                
         service.id = item.service_id.text
         service.sample_cid = item.sample_cid.text
-        service.sample_req_ts = item.sample_req_ts.text
-        service.sample_resp_ts = item.sample_resp_ts.text
+        service.sample_req_ts = ts['sample_req_ts']
+        service.sample_resp_ts = ts['sample_resp_ts']
         service.sample_req_resp_freq = item.sample_req_resp_freq.text
 
     return_data = {
