@@ -1,5 +1,9 @@
 {% extends "zato/index.html" %}
 
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
+{% endblock %}
+
 {% block extra_js %}
 
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -39,7 +43,7 @@
                     <input type="hidden" id="configure_url" name="configure_url" value=""/>
                     <input type="submit" value="OK" />
                     <br/>
-                    <span class="form_hint">(Use 0 to disable)
+                    <span class="form_hint">(Use 0 to disable)</span>
                 </form>
             </td>
         </tr>
@@ -47,30 +51,30 @@
             <td class='inline_header'>CID</td>
         </tr>
         <tr>
-            <td>{% if service.sample_cid %}{{ service.sample_cid }}{% else %}(None){% endif %}</td>
+            <td>{{ service.sample_cid|default:'(None)' }}</td>
         </tr>
         <tr>
             <td class='inline_header'>Request timestamp (UTC)</td>
         </tr>
         <tr>
-            <td>{% if service.sample_req_timestamp %}{{ service.sample_req_timestamp }}{% else %}(None){% endif %}</td>
+            <td>{{ service.sample_req_ts|default:'(None)' }}</td>
         </tr>
         <tr>
             <td class='inline_header'>Response timestamp (UTC)</td>
         </tr>
         <tr>
-            <td>{% if service.sample_resp_timestamp %}{{ service.sample_resp_timestamp }}{% else %}(None){% endif %}</td>
+            <td>{{ service.sample_resp_ts|default:'(None)' }}</td>
         </tr>
         <tr>
             <td class='inline_header'>Request</td>
         </tr>
         <tr>
             <td>
-                {% if service.sample_request_html %}
-                    {{ service.sample_request_html|safe }}
+                {% if service.sample_req_html %}
+                    {{ service.sample_req_html|safe|default:'(None)' }}
                 {% else %}
-                    {% if service.sample_request %}
-                        {{ service.sample_request }}
+                    {% if service.sample_req %}
+                        {{ service.sample_req|default:'(None)' }}
                     {% else %}
                         (None)
                     {% endif %}
@@ -82,11 +86,11 @@
         </tr>
         <tr>
             <td>
-                {% if service.sample_response_html %}
-                    {{ service.sample_response_html|safe }}
+                {% if service.sample_resp_html %}
+                    {{ service.sample_resp_html|safe|default:'(None)' }}
                 {% else %}
-                    {% if service.sample_response %}
-                        {{ service.sample_response }}
+                    {% if service.sample_resp %}
+                        {{ service.sample_resp|default:'(None)' }}
                     {% else %}
                         (None)
                     {% endif %}

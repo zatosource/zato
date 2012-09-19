@@ -27,3 +27,7 @@ Statistics
 
 #'zato:stats:service:timer:slow:zato.channel.amqp.Edit':[json({'cid':'000010429385681103291914', 'ts':'2012-07-04T21:10:18.897370', 'req':'...', 'resp':'...'}), ]
 #'zato:stats:service:timer:slow-threshold:zato.channel.amqp.Edit': '1200'
+
+Sample requests/response pairs
+------------------------------
+'zato:req-resp:sample:zato.channel.amqp.Edit': {'freq':10, 'cid':'000014009833055140048197', 'req_ts':'2012-07-04T21:10:18.897370', 'resp_ts':'2012-07-04T21:10:19.897370', 'req':'zzz', 'resp':'zzz'}

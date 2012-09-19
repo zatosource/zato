@@ -367,20 +367,11 @@ class Service(Base):
     wsdl = Column(LargeBinary(5000000), nullable=True)
     wsdl_name = Column(String(200), nullable=True)
     
-    sample_cid = Column(String(24), nullable=True)
-    sample_req_timestamp = Column(DateTime, nullable=True)
-    sample_resp_timestamp = Column(DateTime, nullable=True)
-    sample_request = Column(LargeBinary(5000000), nullable=True)
-    sample_response = Column(LargeBinary(5000000), nullable=True)
-    sample_req_resp_freq = Column(Integer, nullable=False)
-
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('services', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, impl_name=None, 
-                 is_internal=None, cluster=None, wsdl=None,
-                 wsdl_name=None, sample_request=None, sample_response=None,
-                 sample_req_resp_freq=0):
+                 is_internal=None, cluster=None, wsdl=None, wsdl_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -389,9 +380,6 @@ class Service(Base):
         self.cluster = cluster
         self.wsdl = wsdl
         self.wsdl_name = wsdl_name
-        self.sample_request = sample_request
-        self.sample_response = sample_response
-        self.sample_req_resp_freq = sample_req_resp_freq
         self.plain_http_channels = [] # Not used by the database
         self.soap_channels = [] # Not used by the database
         self.amqp_channels = [] # Not used by the database
@@ -399,9 +387,16 @@ class Service(Base):
         self.zmq_channels = [] # Not used by the database
         self.deployment_info = [] # Not used by the database
         self.source_info = None # Not used by the database
-        self.sample_request_html = None # Not used by the database
-        self.sample_response_html = None # Not used by the database
         self.may_be_deleted = False # Not used by the database
+
+        self.sample_cid = None # Not used by the database
+        self.sample_req_timestamp = None # Not used by the database
+        self.sample_resp_timestamp = None # Not used by the database
+        self.sample_req = None # Not used by the database
+        self.sample_resp = None # Not used by the database
+        self.sample_req_resp_freq = None # Not used by the database
+        self.sample_req_html = None # Not used by the database
+        self.sample_resp_html = None # Not used by the database
         
         self.usage = None # Not used by the database
         self.time_last = None # Not used by the database

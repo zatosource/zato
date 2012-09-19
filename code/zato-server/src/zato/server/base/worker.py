@@ -351,9 +351,10 @@ class WorkerStore(BaseWorker):
         
         service_instance.pre_handle()
         service_instance.handle()
-        service_instance.post_handle()
         if not isinstance(service_instance.response.payload, basestring):
             service_instance.response.payload = service_instance.response.payload.getvalue()
+            
+        service_instance.post_handle()
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(

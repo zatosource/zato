@@ -180,7 +180,7 @@ class ODBManager(SessionWrapper):
 
             self.add_deployed_service(deployment_time, details, service, source_info)
             
-            return service.id
+            return service.id, service.is_active
 
         except Exception, e:
             msg = 'Could not add the Service, name:[{}], e:[{}]'.format(name, format_exc(e))
