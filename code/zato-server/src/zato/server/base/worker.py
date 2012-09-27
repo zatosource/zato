@@ -460,14 +460,6 @@ class WorkerStore(BaseWorker):
             
 # ##############################################################################
 
-    def on_broker_msg_SERVICE_SET_REQUEST_RESPONSE(self, msg, *args):
-        new_msg = Bunch()
-        new_msg.cid = msg.cid
-        new_msg.service = 'zato.server.service.internal.service.SetRequestResponse'
-        new_msg.data_format = SIMPLE_IO.FORMAT.JSON
-        new_msg.payload = msg
-        return self._on_message_invoke_service(new_msg, 'req-resp', 'SERVICE_SET_REQUEST_RESPONSE', args)
-    
     def on_broker_msg_SERVICE_DELETE(self, msg, *args):
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
@@ -494,7 +486,8 @@ class WorkerStore(BaseWorker):
                         raise
                 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
-        self.worker_config.server.service_store.services[msg.impl_name]['is_active'] = msg.is_active
+        for name in('is_active', 'slow_threshold'):
+            self.worker_config.server.service_store.services[msg.impl_name][name] = msg[name]
 
 # ##############################################################################
 

@@ -36,7 +36,6 @@ from zato.common import SIMPLE_IO, URL_TYPE, ZATO_NONE
 from zato.common.util import payload_from_request, security_def_type, TRACE1
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
      NotFound, Unauthorized
-from zato.server.connection.request_response import should_store, store
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
@@ -138,11 +137,7 @@ class RequestDispatcher(object):
                 task.response_headers['Content-Type'] = response.content_type
                 task.response_headers.update(response.headers)
                 task.setResponseStatus(response.status_code, responses[response.status_code])
-                
-                # Optionally store the sample request/response pair
-                if should_store(service_info.service_id):
-                    store(thread_ctx.store.broker_client, cid, service_info.service_id, req_timestamp, datetime.utcnow(), payload, response.payload)
-          
+
                 return response.payload
 
             except Exception, e:

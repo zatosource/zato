@@ -89,6 +89,7 @@ urlpatterns = patterns('',
     url(r'^zato/service/wsdl/(?P<service_name>.*)/$', service.wsdl, name='service-wsdl'),
     url(r'^zato/service/request-response/(?P<service_name>.*)/cluster/(?P<cluster_id>.*)/configure/$', service.request_response_configure, name='service-request-response-configure'),
     url(r'^zato/service/request-response/(?P<service_name>.*)/$', service.request_response, name='service-request-response'),
+    url(r'^zato/service/slow-response/details/(?P<service_name>.*)/$', service.slow_response_details, name='service-slow-response-details'),
     url(r'^zato/service/slow-response/(?P<service_name>.*)/$', service.slow_response, name='service-slow-response'),
 
     # Security..

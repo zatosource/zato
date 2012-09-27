@@ -27,6 +27,7 @@ from zato.admin.web.forms import UploadForm
 
 class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    slow_threshold = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'style':'text-align:left'}))

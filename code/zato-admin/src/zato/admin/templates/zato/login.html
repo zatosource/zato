@@ -37,12 +37,7 @@
                     {{ form.username }}
                     {% if form.username.errors %}
                         {{ form.username.errors.as_text }}
-                    {% else %}
-                        {% if form.errors %}
-                        Your username and password didn't match. Please try again.
-                        {% endif %}
                     {% endif %}
-
                 </td>
             </tr>
             <tr>
@@ -53,6 +48,11 @@
                     {{ form.password }}
                     {% if form.password.errors %}
                         {{ form.password.errors.as_text }}
+                    {% else %}
+                        {% if form.errors %}
+                        <br/><br/>
+                        Your username and password didn't match. Please try again.
+                        {% endif %}
                     {% endif %}
                 </td>
             </tr>
