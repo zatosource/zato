@@ -46,6 +46,7 @@ from bunch import Bunch
 from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.odb.model import Base
 from zato.common.util import service_name_from_impl, TRACE1
+from zato.server.connection import request_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
@@ -533,11 +534,8 @@ class Service(object):
         # 
         # Sample requests/responses
         #
-        
-        key = '{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.name)
-        freq = self.kvdb.conn.hget(key, 'freq') or 0
-        
-        if freq and self.usage % freq == 0:
+        key, freq = request_response.should_store(self.kvdb, self.usage, self.name)
+        if freq:
             data = {
                 'cid': self.cid,
                 'req_ts': self.invocation_time.isoformat(),
@@ -545,7 +543,7 @@ class Service(object):
                 'req': self.request.raw_request or '',
                 'resp': self.response.payload or '',
             }
-            self.kvdb.conn.hmset(key, data)
+            request_response.store(self.kvdb, key, self.usage, freq, **data)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')

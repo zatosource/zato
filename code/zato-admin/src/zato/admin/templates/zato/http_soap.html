@@ -141,7 +141,7 @@
                             <td>{{ item.soap_version }}</td>
                         {% endifequal %}
                         {% ifequal connection 'channel' %}
-                            <td><a href="{% url service-details item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                            <td><a href="{% url service-overview item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         {% endifequal %}
                         <td>{{ item.security_name|safe }}</td>
                         {% ifequal connection 'channel' %}

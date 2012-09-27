@@ -17,26 +17,31 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+# stdlib
+import logging
+
 # Zato
-from zato.common.broker_message import SERVICE
+from zato.common import KVDB
+from zato.common.util import TRACE1 # TODO: TRACE1 should be moved over to zato.common
 
-def should_store(service_id):
+logger = logging.getLogger(__name__)
+
+def should_store(kvdb, service_usage, service_name):
     """ Decides whether a service's request/response pair should be kept in the DB.
-    TODO: Make sure only actual service requests and responses are getting added
-    and not, say, WSDLs.
     """
-    return True
+    key = '{}{}'.format(KVDB.REQ_RESP_SAMPLE, service_name)
+    freq = int(kvdb.conn.hget(key, 'freq') or 0)
+    
+    if freq and service_usage % freq == 0:
+        return key, freq
+    
+    return None, None
 
-def store(broker_client, cid, service_id, req_timestamp, resp_timestamp, request, response):
+def store(kvdb, key, usage, freq, **data):
     """ Stores a service's request/response pair.
     """
-    params = {}
-    params['action'] = SERVICE.SET_REQUEST_RESPONSE
-    params['cid'] = cid
-    params['service_id'] = service_id
-    params['req_timestamp'] = req_timestamp.isoformat()
-    params['resp_timestamp'] = resp_timestamp.isoformat()
-    params['request'] = request
-    params['response'] = response
-    
-    broker_client.send(params)
+    if logger.isEnabledFor(TRACE1):
+        msg = 'key:[{}], usage:[{}], freq:[{}], data:[{}]'.format(key, usage, freq, data)
+        logger.log(TRACE1, msg)
+        
+    kvdb.conn.hmset(key, data)

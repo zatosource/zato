@@ -226,7 +226,7 @@ class Index(_BaseView):
             return_data['item'] = self.item
             return_data['zato_clusters'] = req.zato.clusters
             return_data['choose_cluster_form'] = req.zato.choose_cluster_form
-    
+            
             view_specific = self.handle()
             if view_specific:
                 return_data.update(view_specific)

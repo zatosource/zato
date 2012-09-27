@@ -60,6 +60,20 @@ logger = logging.getLogger(__name__)
 Channel = namedtuple('Channel', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
 
+class SlowResponse(object):
+    def __init__(self, id, service_name, threshold, req_time, resp_time, proc_time,
+            req, resp, req_html, resp_html):
+        self.id = id
+        self.service_name = service_name
+        self.threshold = threshold
+        self.req_time = req_time
+        self.resp_time = resp_time
+        self.proc_time = proc_time
+        self.req  = req
+        self.resp = resp
+        self.req_html = req_html 
+        self.resp_html = resp_html
+
 data_format_lexer = {
     'json': JSONLexer,
     'xml': MakoXmlLexer
@@ -112,6 +126,22 @@ def _get_channels(cluster, id, channel_type):
             response.append(channel)
 
     return response
+    
+def _get_service(req, name):
+    """ Returns a service details by its name.
+    """
+    service = Service(name=name)
+    
+    input_dict = {
+        'name': name,
+        'cluster_id': req.zato.cluster_id
+    }
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
+    
+    if zato_path('response.item').get_from(zato_message) is not None:
+        service.id = zato_message.response.item.id.text
+        
+    return service
 
 class Index(_Index):
     """ A view for listing the services along with their basic statistics.
@@ -125,7 +155,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 
+            'may_be_deleted', 'usage', 'slow_threshold')
         output_repeated = True
 
     def handle(self):
@@ -146,7 +177,7 @@ class Edit(CreateEdit):
     soap_action = 'zato:service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('is_active',)
+        input_required = ('is_active', 'slow_threshold')
         output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage')
 
     def success_message(self, item):
@@ -424,24 +455,55 @@ def last_stats(req, service_id, cluster_id):
 
 @meth_allowed('GET')
 def slow_response(req, service_name):
-    pass
+
+    def _get_items():
+        sr = SlowResponse('zzz', service_name, '999', '12-12-2012', '13-12-2012', 
+            '3719', 'req', 'resp', 'req_html', 'resp_html')
+        return [sr]
+        
+    items = _get_items()
+    
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'service': _get_service(req, service_name),
+        'items': items,
+        }
+        
+    return TemplateResponse(req, 'zato/service/slow-response.html', return_data)
+    
+@meth_allowed('GET')
+def slow_response_details(req, service_name):
+
+    def _get_item():
+        item = SlowResponse('zzz', service_name, '999', '12-12-2012', '13-12-2012', '3719', 
+            "{'1':'1'}", '{"2":"2"}', None, None)
+            
+        for name in('req', 'resp'):
+            value = getattr(item, name)
+            data_format = known_data_format(value)
+            if data_format:
+                attr_name = name + '_html'
+                setattr(item, attr_name, highlight(value, 
+                     data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
+                 
+        return item
+        
+    item = _get_item()
+    
+    return_data = {
+        'cluster_id': req.zato.cluster_id,
+        'service': _get_service(req, service_name),
+        'item': item,
+        }
+        
+    return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
 
 @meth_allowed('GET')
 def invoker(req, service_name):
-    service = Service(name=service_name)
-
-    input_dict = {
-        'name': service_name,
-        'cluster_id': req.zato.cluster_id
-    }
-    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
-
-    if zato_path('response.item').get_from(zato_message) is not None:
-        service.id = zato_message.response.item.id.text
 
     return_data = {
         'cluster_id': req.zato.cluster_id,
-        'service': service,
+        'service': _get_service(req, service_name),
         }
 
     return TemplateResponse(req, 'zato/service/invoker.html', return_data)
@@ -466,3 +528,4 @@ def invoke(req, service_id, cluster_id):
     else:
         response = zato_message.response.item.response.text if zato_message.response.item.response else '(No output)'
         return HttpResponse(response)
+

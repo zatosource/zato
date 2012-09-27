@@ -46,7 +46,8 @@ class GetList(AdminService):
     """
     class SimpleIO:
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 'usage')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 'usage',
+                           Integer('slow_threshold'))
         output_repeated = True
         
     def get_data(self, session):
@@ -103,7 +104,7 @@ class Edit(AdminService):
     """ Updates a service.
     """
     class SimpleIO:
-        input_required = ('id', 'is_active')
+        input_required = ('id', 'is_active', Integer('slow_threshold'))
         output_required = ('id', 'name', 'impl_name', 'is_internal',)
         output_optional = ('usage',)
 
@@ -113,6 +114,7 @@ class Edit(AdminService):
             try:
                 service = session.query(Service).filter_by(id=input.id).one()
                 service.is_active = input.is_active
+                service.slow_threshold = input.slow_threshold
                 
                 session.add(service)
                 session.commit()
@@ -387,8 +389,6 @@ class GetRequestResponse(AdminService):
         
         result.update(**self.kvdb.conn.hgetall('{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.request.input.name)))
         
-        print(result)
-        
         return result
         
     def handle(self):
@@ -405,36 +405,11 @@ class ConfigureRequestResponse(AdminService):
     """ Updates the request/response-related configuration.
     """
     class SimpleIO:
-        input_required = ('cluster_id', 'name', 'sample_req_resp_freq')
+        input_required = ('cluster_id', 'name', Integer('sample_req_resp_freq'))
         
     def handle(self):
-        with closing(self.odb.session()) as session:
-            service = session.query(Service).\
-                filter_by(name=self.request.input.name, cluster_id=self.request.input.cluster_id).\
-                one()
-            
-            service.sample_req_resp_freq = int(self.request.input.sample_req_resp_freq)
-            
-            session.add(service)
-            session.commit()
-            
-class SetRequestResponse(AdminService):
-    """ Stores a new request/response pair.
-    """
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            service = session.query(Service).\
-                filter_by(id=self.request.payload.service_id).\
-                one()
-            
-            service.sample_cid = self.request.payload.cid
-            service.sample_req_timestamp = datetime.strptime(self.request.payload.req_timestamp, '%Y-%m-%dT%H:%M:%S.%f')
-            service.sample_resp_timestamp = datetime.strptime(self.request.payload.resp_timestamp, '%Y-%m-%dT%H:%M:%S.%f')
-            service.sample_request = self.request.payload.request.encode('utf-8')
-            service.sample_response = self.request.payload.response.encode('utf-8')
-
-            session.add(service)
-            session.commit()
+        key = '{}{}'.format(KVDB.REQ_RESP_SAMPLE, self.request.input.name)
+        self.kvdb.conn.hset(key, 'freq', self.request.input.sample_req_resp_freq)
             
 class UploadPackage(AdminService):
     """ Returns a boolean flag indicating whether the server has a WSDL attached.

@@ -1,0 +1,73 @@
+{% extends "zato/index.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
+{% endblock %}
+
+{% block extra_js %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/service/index.js"></script>
+
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'req_time',
+            'resp_time',
+            'proc_time',
+            '_details',
+        ]
+    }
+
+    </script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Slow responses: Details</h2>
+
+<div class='page_prompt'>
+    <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
+    <a href="{% url service-invoker service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
+    <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
+    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
+    <a href="{% url service-slow-response service.name %}?cluster={{ cluster_id }}" class="common current">Slow responses</a>
+</div>
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td class='inline_header' style="width:15%">Threshold</td>
+            <td>{{ item.threshold }}</td>
+            <td class='inline_header' style="width:15%">Processing time</td>
+            <td>{{ item.proc_time }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header' style="width:15%">Request time</td>
+            <td>{{ item.req_time }}</td>
+            <td class='inline_header' style="width:15%">Response time</td>
+            <td>{{ item.resp_time }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header' colspan="4">Request</td>
+        </tr>
+        <tr>
+            <td>{{ item.req_html|default:'(None)'|safe }}</td>
+        </tr>
+        <tr>
+            <td class='inline_header' colspan="4">Response</td>
+        </tr>
+        <tr>
+            <td>{{ item.resp_html|default:'(None)'|safe }}</td>
+        </tr>
+    </table>
+</div>
+
+{% endblock %}

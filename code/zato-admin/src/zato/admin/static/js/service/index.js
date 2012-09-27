@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Service;
     $.fn.zato.data_table.new_row_func = $.fn.zato.service.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name']);
+    $.fn.zato.data_table.setup_forms(['slow_threshold']);
     
     $.each($.fn.zato.data_table.data, function(idx, instance) {
         $.fn.zato.service.add_stats(instance, $.fn.zato.service.get_sparklines_options());
