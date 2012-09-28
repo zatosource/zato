@@ -513,6 +513,31 @@ class Service(object):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
+    def invoke_by_impl_name(self, impl_name, payload, data_format=None, transport=None):
+        service_instance = self.server.service_store.new_instance(impl_name)
+        
+        service_instance.update(service_instance, self.server, self.broker_client, 
+            self.worker_store, self.cid, payload, payload, 
+            transport, {}, data_format, payload)
+
+        service_instance.pre_handle()
+        service_instance.handle()
+        
+        response = service_instance.response.payload
+        if not isinstance(response, basestring):
+            response = response.getvalue()
+            service_instance.response.payload = response
+            
+        service_instance.post_handle()
+        
+        return response
+        
+    def invoke(self, name, *args, **kwargs):
+        return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
+        
+    def invoke_by_id(self, service_id, *args, **kwargs):
+        return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
+            
     def pre_handle(self):
         """ An internal method run just before the service sets to process the payload.
         Used for incrementing the service's usage count and storing the service invocation time.
