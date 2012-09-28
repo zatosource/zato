@@ -24,6 +24,7 @@ import logging
 from datetime import datetime
 from httplib import OK
 from itertools import chain
+from sys import maxint
 from traceback import format_exc
 
 # SQLAlchemy
@@ -46,7 +47,7 @@ from bunch import Bunch
 from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.odb.model import Base
 from zato.common.util import service_name_from_impl, TRACE1
-from zato.server.connection import request_response
+from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
@@ -107,7 +108,7 @@ class Integer(ForceType):
     """
     
 class Unicode(ForceType):
-    """ Gets transformed into an unicode object.
+    """ Gets transformed into a unicode object.
     """
 
 class ServiceInput(Bunch):
@@ -344,8 +345,12 @@ class SimpleIOPayload(ValueConverter):
         if not names:
             raise Exception('Could not get the keys out of attrs:[{}]'.format(attrs))
 
-        for name in names:
-            setattr(self, name, getattr(attrs, name))
+        if isinstance(attrs, dict):
+            for name in names:
+                setattr(self, name, attrs[name])
+        else:
+            for name in names:
+                setattr(self, name, getattr(attrs, name))
 
     def append(self, item):
         self.zato_output.append(item)
@@ -469,25 +474,32 @@ class Service(object):
         self.processing_time_raw = None # A timedelta object with the processing time up to microseconds
         self.processing_time = None # Processing time in milliseconds
         self.usage = 0 # How many times the service has been invoked
+        self.slow_threshold = maxint # After how many ms to consider the response came too late
+        self.name = self.__class__.get_name()
+        self.impl_name = self.__class__.get_impl_name()
         
     @classmethod
     def get_name(class_):
         """ Returns a service's name, settings its .name attribute along. This will
         be called once while the service is being deployed.
         """
-        if not hasattr(class_, 'name'):
-            class_.name = service_name_from_impl(class_.get_impl_name())
-        return class_.name
-    
+        if not hasattr(class_, '__name'):
+            class_.__name = service_name_from_impl(class_.get_impl_name())
+        return class_.__name
+
     @classmethod
     def get_impl_name(class_):
-        return '{}.{}'.format(class_.__module__, class_.__name__)
+        if not hasattr(class_, '__impl_name'):
+            class_.__impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
+        return class_.__impl_name
         
     def _init(self):
         """ Actually initializes the service.
         """
         self.odb = self.worker_store.odb
         self.kvdb = self.worker_store.kvdb
+        
+        self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
         
         out_amqp = PublisherFacade(self.broker_client)
         out_jms_wmq = WMQFacade(self.broker_client)
@@ -525,11 +537,15 @@ class Service(object):
         self.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
         self.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
 
-        key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE, self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
+        key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE, 
+            self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
         self.kvdb.conn.rpush(key, self.processing_time)
         
-        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) to aggregate processing times for a given minute and then it will expire
-        self.kvdb.conn.expire(key, 300) # TODO: Document that we need Redis 2.1.3+ otherwise the key has just been overwritten
+        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) 
+        # to aggregate processing times for a given minute and then it will expire
+        
+        # TODO: Document that we need Redis 2.1.3+ otherwise the key has just been overwritten
+        self.kvdb.conn.expire(key, 300)
         
         # 
         # Sample requests/responses
@@ -544,6 +560,21 @@ class Service(object):
                 'resp': self.response.payload or '',
             }
             request_response.store(self.kvdb, key, self.usage, freq, **data)
+            
+        #
+        # Slow responses
+        #
+        if self.processing_time > self.slow_threshold:
+            data = {
+                'cid': self.cid,
+                'proc_time': self.processing_time,
+                'slow_threshold': self.slow_threshold,
+                'req_ts': self.invocation_time.isoformat(),
+                'resp_ts': self.handle_return_time.isoformat(),
+                'req': self.request.raw_request or '',
+                'resp': self.response.payload or '',
+            }
+            slow_response.store(self.kvdb, self.name, **data)
             
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')

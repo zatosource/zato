@@ -28,6 +28,9 @@ from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from urlparse import parse_qs
 
+# anyjson
+from anyjson import loads
+
 # validate
 from validate import is_boolean
 
@@ -74,11 +77,12 @@ class GetByName(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', 'name')
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage', 
-            'time_last', 'time_min_all_time', 'time_max_all_time', 'time_mean_all_time')
+            'time_last', 'time_min_all_time', 'time_max_all_time', 'time_mean_all_time',
+            Integer('slow_threshold'))
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
-            Service.impl_name, Service.is_internal).\
+            Service.impl_name, Service.is_internal, Service.slow_threshold).\
             filter(Cluster.id==Service.cluster_id).\
             filter(Cluster.id==self.request.input.cluster_id).\
             filter(Service.name==self.request.input.name).\
@@ -92,6 +96,7 @@ class GetByName(AdminService):
             self.response.payload.is_active = service.is_active
             self.response.payload.impl_name = service.impl_name
             self.response.payload.is_internal = service.is_internal
+            self.response.payload.slow_threshold = service.slow_threshold
             self.response.payload.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
             time_key = '{}{}'.format(KVDB.SERVICE_TIME_BASIC, service.name)            
@@ -423,3 +428,50 @@ class UploadPackage(AdminService):
             tf.flush()
 
             success = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
+            
+class _SlowResponseService(AdminService):
+    def get_data(self):
+        data = []
+        cid_needed = self.request.input.cid if 'cid' in self.SimpleIO.input_required else None
+        key = '{}{}'.format(KVDB.RESP_SLOW, self.request.input.name)
+        
+        for item in self.kvdb.conn.lrange(key, 0, -1):
+            item = loads(item)
+            
+            if cid_needed and cid_needed != item['cid']:
+                continue
+            
+            elem = {}
+            for name in('cid', 'req_ts', 'resp_ts', 'proc_time'):
+                elem[name] = item[name]
+                
+            if cid_needed and cid_needed == item['cid']:
+                for name in('req', 'resp'):
+                    elem[name] = item.get(name, '').encode('base64')
+                    
+            data.append(elem)
+
+        return data
+            
+class GetSlowResponseList(_SlowResponseService):
+    """ Returns a list of basic information regarding slow responses of a given service.
+    """
+    class SimpleIO:
+        input_required = ('name',)
+        output_required = ('cid', 'req_ts', 'resp_ts', 'proc_time')
+        
+    def handle(self):
+        self.response.payload[:] = self.get_data()    
+        
+class GetSlowResponse(_SlowResponseService):
+    """ Returns information regading a particular slow response of a service.
+    """
+    class SimpleIO:
+        input_required = ('cid', 'name')
+        output_optional = ('cid', 'req_ts', 'resp_ts', 'proc_time', 'req', 'resp')
+    
+    def handle(self):
+        data = self.get_data()
+        if data:
+            self.response.payload = data[0]
+

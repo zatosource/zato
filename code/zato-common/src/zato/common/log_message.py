@@ -26,7 +26,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # CID stands for the 'correlation ID'
 
 # Needs to be kept in sync with zato.common.util.new_cid
-CID_LENGTH = 24
+CID_LENGTH = 30
 
 NULL_LMC = '0000.0000'
-NULL_CID = '0' * CID_LENGTH
+NULL_CID = 'K' + '0' * (CID_LENGTH-1)

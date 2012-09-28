@@ -31,6 +31,9 @@ from zato.server.service.internal.kvdb.data_dict import DataDictService
 class GetList(DataDictService):
     """ Returns a list of dictionary items.
     """
+    def __init__(self, *args, **kwargs):
+        super(GetList, self).__init__(*args, **kwargs)
+        
     class SimpleIO:
         output_required = ('id', 'system', 'key', 'value')
         
@@ -185,3 +188,4 @@ class GetLastID(AdminService):
         
     def handle(self):
         self.response.payload.value = self.server.kvdb.conn.get(KVDB.DICTIONARY_ITEM_ID) or ''
+
