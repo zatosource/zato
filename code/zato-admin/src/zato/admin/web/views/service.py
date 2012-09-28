@@ -352,6 +352,8 @@ def wsdl_download(req, service_name, cluster_id):
 @meth_allowed('GET')
 def request_response(req, service_name):
     service = Service(name=service_name)
+    pretty_print = asbool(req.GET.get('pretty_print'))
+    
     input_dict = {
         'name': service_name,
         'cluster_id': req.zato.cluster_id
@@ -364,12 +366,16 @@ def request_response(req, service_name):
         request = (item.sample_req.text if item.sample_req.text else '').decode('base64')
         request_data_format = known_data_format(request)
         if request_data_format:
+            if pretty_print:
+                request = get_pretty_print(request, request_data_format)
             service.sample_req_html = highlight(request, data_format_lexer[request_data_format](), 
                 HtmlFormatter(linenos='table'))
 
         response = (item.sample_resp.text if item.sample_resp.text else '').decode('base64')
         response_data_format = known_data_format(response)
         if response_data_format:
+            if pretty_print:
+                response = get_pretty_print(response, response_data_format)
             service.sample_resp_html = highlight(response, data_format_lexer[response_data_format](), 
                 HtmlFormatter(linenos='table'))
 
@@ -393,6 +399,7 @@ def request_response(req, service_name):
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'service': service,
+        'pretty_print': not pretty_print,
         }
 
     return TemplateResponse(req, 'zato/service/request-response.html', return_data)
@@ -505,6 +512,7 @@ def slow_response(req, service_name):
 @meth_allowed('GET')
 def slow_response_details(req, cid, service_name):
 
+    item = None
     service = _get_service(req, service_name)
     pretty_print = asbool(req.GET.get('pretty_print'))
     
@@ -517,26 +525,28 @@ def slow_response_details(req, cid, service_name):
     
     if zato_path('response.item').get_from(zato_message) is not None:
         _item = zato_message.response.item
-        item = SlowResponse()
-        item.cid = _item.cid.text
-        item.req_ts = from_utc_to_user(_item.req_ts.text+'+00:00', req.zato.user_profile)
-        item.resp_ts = from_utc_to_user(_item.resp_ts.text+'+00:00', req.zato.user_profile)
-        item.proc_time = _item.proc_time.text
-        item.service_name = service_name
-        item.threshold = service.slow_threshold
-        
-        for name in('req', 'resp'):
-            value = getattr(_item, name)
-            if value:
-                value = value.text.decode('base64')
-                data_format = known_data_format(value)
-                if data_format:
-                    if pretty_print:
-                        value = get_pretty_print(value, data_format)
-                    attr_name = name + '_html'
-                    setattr(item, attr_name, highlight(value, 
-                         data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
-                 
+        cid = _item.cid.text
+        if cid != ZATO_NONE:
+            item = SlowResponse()
+            item.cid = _item.cid.text
+            item.req_ts = from_utc_to_user(_item.req_ts.text+'+00:00', req.zato.user_profile)
+            item.resp_ts = from_utc_to_user(_item.resp_ts.text+'+00:00', req.zato.user_profile)
+            item.proc_time = _item.proc_time.text
+            item.service_name = service_name
+            item.threshold = service.slow_threshold
+            
+            for name in('req', 'resp'):
+                value = getattr(_item, name)
+                if value:
+                    value = value.text.decode('base64')
+                    data_format = known_data_format(value)
+                    if data_format:
+                        if pretty_print:
+                            value = get_pretty_print(value, data_format)
+                        attr_name = name + '_html'
+                        setattr(item, attr_name, highlight(value, 
+                             data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'service': service,

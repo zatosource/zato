@@ -30,7 +30,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Slow responses: Details : {{ item.cid }}</h2>
+<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Slow responses: Details : {{ item.cid|default:"(None)" }}</h2>
 
 <div class='page_prompt'>
     <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
@@ -43,28 +43,30 @@
         class="common current">Slow responses</a>
 </div>
 
-<div class='page_prompt'>
-    <a href="{% url service-slow-response-details item.cid service.name %}?cluster={{ cluster_id }}&amp;pretty_print={{ pretty_print }}" 
-        class="common">Toggle pretty print</a>
-</div>
+{% if item.cid %}
+    <div class='page_prompt'>
+        <a href="{% url service-slow-response-details item.cid service.name %}?cluster={{ cluster_id }}&amp;pretty_print={{ pretty_print }}" 
+            class="common">Toggle pretty print</a>
+    </div>
+{% endif %}
 
 <div id="markup">
     <table id="data-table">
         <tr>
             <td class='inline_header' style="width:90px">CID</td>
-            <td colspan="3">{{ item.cid }}</td>
+            <td colspan="3">{{ item.cid|default:"(None)" }}</td>
         </tr>
         <tr>
             <td class='inline_header' style="width:90px">Threshold</td>
-            <td style="width:90px">{{ item.threshold }} ms</td>
+            <td style="width:90px">{{ item.threshold|default:"(None)" }} {% if item.threshold %}ms{% endif %}</td>
             <td class='inline_header' style="width:110px">Processing time</td>
-            <td>{{ item.proc_time }} ms</td>
+            <td>{{ item.proc_time|default:"(None)" }} {% if item.proc_time %}ms{% endif %}</td>
         </tr>
         <tr>
             <td class='inline_header' style="width:90px">Request time</td>
-            <td style="width:140px">{{ item.req_ts }}</td>
+            <td style="width:140px">{{ item.req_ts|default:"(None)" }}</td>
             <td class='inline_header' style="width:90px">Response time</td>
-            <td>{{ item.resp_ts }}</td>
+            <td>{{ item.resp_ts|default:"(None)" }}</td>
         </tr>
         <tr>
             <td class='inline_header' colspan="4">Request</td>
