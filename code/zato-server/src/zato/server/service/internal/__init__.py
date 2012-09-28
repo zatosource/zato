@@ -50,10 +50,28 @@ class Ping(AdminService):
         output_required = ('ping',)
         
     def handle(self):
+        req = """<?xml version='1.0' encoding='UTF-8'?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <ns0:zato_message xmlns:py="http://codespeak.net/lxml/objectify/pytype" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns0="http://gefira.pl/zato" py:pytype="TREE">
+      <ns0:request py:pytype="TREE">
+        <ns0:cluster_id py:pytype="str">1</ns0:cluster_id>
+      </ns0:request>
+    </ns0:zato_message>
+  </soap:Body>
+</soap:Envelope>
+        """
+        print(88, self.invoke('zato.Ping2', req, data_format='XML'))
         self.response.payload.ping = 'pong'
     
 class Ping2(Ping):
-    pass
+    class SimpleIO:
+        input_required = ('cluster_id',)
+        output_required = ('zzz',)
+        
+    def handle(self):
+        print(self, self.request.input.keys(), self.request.payload)
+        self.response.payload.zzz = 'zzz'
 
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.

@@ -66,6 +66,8 @@ class ServiceStore(InitializingObject):
         self.services = services
         self.service_store_config = service_store_config
         self.odb = odb
+        self.id_to_impl_name = {}
+        self.name_to_impl_name = {}
 
     def _invoke_hook(self, object_, hook_name):
         """ A utility method for invoking various service's hooks.
@@ -79,9 +81,17 @@ class ServiceStore(InitializingObject):
             logger.error(msg)
 
     def new_instance(self, class_name):
-        """ Returns a new instance of a service of the given name.
+        """ Returns a new instance of a service of the given impl name.
         """
         return self.services[class_name]['service_class']()
+        
+    def new_instance_by_id(self, service_id):
+        impl_name = self.id_to_impl_name[service_id]
+        return self.new_instance(impl_name)
+        
+    def new_instance_by_name(self, name):
+        impl_name = self.name_to_impl_name[name]
+        return self.new_instance(impl_name)
 
     def service_data(self, class_name):
         """ Returns all the service-related data.
@@ -212,19 +222,24 @@ class ServiceStore(InitializingObject):
                 timestamp = datetime.utcnow().isoformat()
                 depl_info = deployment_info('ServiceStore', item, timestamp, fs_location)
     
-                class_name = item.get_impl_name()
-                self.services[class_name] = {}
-                self.services[class_name]['deployment_info'] = depl_info
-                self.services[class_name]['service_class'] = item
+                name = item.get_name()
+                impl_name = item.get_impl_name()
+                
+                self.services[impl_name] = {}
+                self.services[impl_name]['deployment_info'] = depl_info
+                self.services[impl_name]['service_class'] = item
                 
                 si = self._get_source_code_info(mod)
                 
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
                 service_id, is_active, slow_threshold = self.odb.add_service(
-                    item.get_name(), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
+                    name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
                 
-                self.services[class_name]['is_active'] = is_active
-                self.services[class_name]['slow_threshold'] = slow_threshold
+                self.services[impl_name]['is_active'] = is_active
+                self.services[impl_name]['slow_threshold'] = slow_threshold
+                
+                self.id_to_impl_name[service_id] = impl_name
+                self.name_to_impl_name[name] = impl_name
                 
 if __name__ == '__main__':
     store = ServiceStore()

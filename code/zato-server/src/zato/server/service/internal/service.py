@@ -213,30 +213,11 @@ class Invoke(AdminService):
         output_required = ('response',)
 
     def handle(self):
-        with closing(self.odb.session()) as session:
-            service = session.query(Service).\
-                filter(Service.id==self.request.input.id).\
-                one()
+        payload = payload_from_request(self.request.input.payload, 
+            self.request.input.data_format, self.request.input.transport)
             
-        payload = payload_from_request(self.request.input.payload, self.request.input.data_format,
-                        self.request.input.transport)
-        
-        service_instance = self.server.service_store.new_instance(service.impl_name)
-        service_instance.update(service_instance, self.server, self.broker_client, 
-            self.worker_store, self.cid, payload, self.request.input.payload, 
-            self.request.input.transport, self.request.simple_io_config, 
-            self.request.input.data_format, self.request.request_data)
-
-        service_instance.pre_handle()
-        service_instance.handle()
-        
-        response = service_instance.response.payload
-        if not isinstance(response, basestring):
-            response = response.getvalue()
-            service_instance.response.payload = response
-            
-        service_instance.post_handle()
-            
+        response = self.invoke_by_id(self.request.input.id, payload, 
+            self.request.input.data_format, self.request.input.transport)
         self.response.payload.response = response
 
 class GetDeploymentInfoList(AdminService):
