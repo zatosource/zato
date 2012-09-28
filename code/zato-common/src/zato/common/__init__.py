@@ -176,6 +176,7 @@ class KVDB:
     SERVICE_TIME_SLOW = 'zato:stats:service:time:slow:'
     
     REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
+    RESP_SLOW = 'zato:resp:slow:'
 
 # How much various ZeroMQ ports are shifted with regards to the base port
 # configured for the cluster. The name of a port contains information who talks

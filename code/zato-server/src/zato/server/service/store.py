@@ -86,6 +86,8 @@ class ServiceStore(InitializingObject):
     def service_data(self, class_name):
         """ Returns all the service-related data.
         """
+        #for name in sorted(self.services):
+        #    print(name)
         return self.services[class_name]
     
     def decompress(self, archive, work_dir):
@@ -214,14 +216,15 @@ class ServiceStore(InitializingObject):
                 self.services[class_name] = {}
                 self.services[class_name]['deployment_info'] = depl_info
                 self.services[class_name]['service_class'] = item
-                 
+                
                 si = self._get_source_code_info(mod)
                 
                 last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                service_id, is_active = self.odb.add_service(
+                service_id, is_active, slow_threshold = self.odb.add_service(
                     item.get_name(), class_name, is_internal, timestamp, dumps(str(depl_info)), si)
                 
                 self.services[class_name]['is_active'] = is_active
+                self.services[class_name]['slow_threshold'] = slow_threshold
                 
 if __name__ == '__main__':
     store = ServiceStore()

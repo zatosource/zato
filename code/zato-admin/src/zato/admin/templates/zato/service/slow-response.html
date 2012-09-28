@@ -14,8 +14,9 @@
         return [
             '_numbering',
             '_selection',
-            'req_time',
-            'resp_time',
+            'cid',
+            'req_ts',
+            'resp_ts',
             'proc_time',
             '_details',
         ]
@@ -38,7 +39,7 @@
 </div>
 
 <div class='page_prompt'>
-Threshold: 300 ms
+Threshold: {{ service.slow_threshold }} ms
 </div>
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
@@ -51,9 +52,10 @@ Threshold: 300 ms
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th><a href="#">CID</a></th>
                         <th><a href="#">Request time</a></th>
                         <th><a href="#">Response time</a></th>
-                        <th><a href="#">Processing time</a></th>
+                        <th><a href="#">Processing time (ms)</a></th>
                         <th><a href="#"></a></th>
                 </thead>
 
@@ -63,10 +65,11 @@ Threshold: 300 ms
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.req_time }}</td>
-                        <td>{{ item.resp_time }}</td>
+                        <td>{{ item.cid }}</td>
+                        <td>{{ item.req_ts }}</td>
+                        <td>{{ item.resp_ts }}</td>
                         <td>{{ item.proc_time }}</td>
-                        <td><a href="{% url service-slow-response-details item.service_name %}?cluster={{ cluster_id }}" class="common">Details</a></td>
+                        <td><a href="{% url service-slow-response-details item.cid item.service_name %}?cluster={{ cluster_id }}" class="common">Details</a></td>
                     </tr>
                 {% endfor %}
                 {% else %}

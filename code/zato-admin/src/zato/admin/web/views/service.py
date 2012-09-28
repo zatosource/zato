@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+import json as stdlib_json
 from collections import namedtuple
 from datetime import datetime
 from traceback import format_exc
@@ -38,6 +39,9 @@ from django.template.response import TemplateResponse
 
 # lxml
 from lxml import etree
+
+# Paste
+from paste.util.converters import asbool
 
 # Pygments
 from pygments import highlight
@@ -61,13 +65,13 @@ Channel = namedtuple('Channel', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
 
 class SlowResponse(object):
-    def __init__(self, id, service_name, threshold, req_time, resp_time, proc_time,
-            req, resp, req_html, resp_html):
-        self.id = id
+    def __init__(self, cid=None, service_name=None, threshold=None, req_ts=None, 
+            resp_ts=None, proc_time=None, req=None, resp=None, req_html=None, resp_html=None):
+        self.cid = cid
         self.service_name = service_name
         self.threshold = threshold
-        self.req_time = req_time
-        self.resp_time = resp_time
+        self.req_ts = req_ts
+        self.resp_ts = resp_ts
         self.proc_time = proc_time
         self.req  = req
         self.resp = resp
@@ -96,7 +100,8 @@ def known_data_format(data):
 def get_public_wsdl_url(cluster, service_name):
     """ Returns an address under which a service's WSDL is publically available.
     """
-    return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host, cluster.lb_port, service_name, cluster.id)
+    return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host, 
+        cluster.lb_port, service_name, cluster.id)
 
 def _get_channels(cluster, id, channel_type):
     """ Returns a list of channels of a given type for the given service.
@@ -139,9 +144,19 @@ def _get_service(req, name):
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
     
     if zato_path('response.item').get_from(zato_message) is not None:
-        service.id = zato_message.response.item.id.text
+        for name in('id', 'slow_threshold'):
+            setattr(service, name, getattr(zato_message.response.item, name).text)
         
     return service
+    
+def get_pretty_print(value, data_format):
+    if data_format == 'xml':
+        parser = etree.XMLParser(remove_blank_text=True)
+        tree = etree.fromstring(value, parser)
+        return etree.tostring(tree, pretty_print=True, xml_declaration=True, encoding='UTF-8')
+    else:
+        value = loads(value)
+        return stdlib_json.dumps(value, sort_keys=True, indent=2)
 
 class Index(_Index):
     """ A view for listing the services along with their basic statistics.
@@ -216,7 +231,8 @@ def overview(req, service_name):
             now = datetime.utcnow()
             start = now+relativedelta(minutes=-60)
                 
-            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
+            zato_message, _  = invoke_admin_service(req.zato.cluster, 
+                'zato:stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
             if zato_path('response.item').get_from(zato_message) is not None:
                 msg_item = zato_message.response.item
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
@@ -230,7 +246,8 @@ def overview(req, service_name):
                 channels = _get_channels(req.zato.cluster, service.id, channel_type)
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
-            zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:service.get-deployment-info-list', {'id': service.id})
+            zato_message, _ = invoke_admin_service(req.zato.cluster, 
+                'zato:service.get-deployment-info-list', {'id': service.id})
 
             if zato_path('response.item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.response.item_list.item:
@@ -347,12 +364,14 @@ def request_response(req, service_name):
         request = (item.sample_req.text if item.sample_req.text else '').decode('base64')
         request_data_format = known_data_format(request)
         if request_data_format:
-            service.sample_req_html = highlight(request, data_format_lexer[request_data_format](), HtmlFormatter(linenos='table'))
+            service.sample_req_html = highlight(request, data_format_lexer[request_data_format](), 
+                HtmlFormatter(linenos='table'))
 
         response = (item.sample_resp.text if item.sample_resp.text else '').decode('base64')
         response_data_format = known_data_format(response)
         if response_data_format:
-            service.sample_resp_html = highlight(response, data_format_lexer[response_data_format](), HtmlFormatter(linenos='table'))
+            service.sample_resp_html = highlight(response, data_format_lexer[response_data_format](), 
+                HtmlFormatter(linenos='table'))
 
         service.sample_req = request
         service.sample_resp = response
@@ -456,13 +475,25 @@ def last_stats(req, service_id, cluster_id):
 @meth_allowed('GET')
 def slow_response(req, service_name):
 
-    def _get_items():
-        sr = SlowResponse('zzz', service_name, '999', '12-12-2012', '13-12-2012', 
-            '3719', 'req', 'resp', 'req_html', 'resp_html')
-        return [sr]
-        
-    items = _get_items()
+    items = []
     
+    input_dict = {
+        'name': service_name,
+    }
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
+        'zato:service.slow-response.get-list', input_dict)
+    
+    if zato_path('response.item_list.item').get_from(zato_message) is not None:
+        for _item in zato_message.response.item_list.item:
+            item = SlowResponse()
+            item.cid = _item.cid.text
+            item.req_ts = from_utc_to_user(_item.req_ts.text+'+00:00', req.zato.user_profile)
+            item.resp_ts = from_utc_to_user(_item.resp_ts.text+'+00:00', req.zato.user_profile)
+            item.proc_time = _item.proc_time.text
+            item.service_name = service_name
+            
+            items.append(item)
+        
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'service': _get_service(req, service_name),
@@ -472,28 +503,45 @@ def slow_response(req, service_name):
     return TemplateResponse(req, 'zato/service/slow-response.html', return_data)
     
 @meth_allowed('GET')
-def slow_response_details(req, service_name):
+def slow_response_details(req, cid, service_name):
 
-    def _get_item():
-        item = SlowResponse('zzz', service_name, '999', '12-12-2012', '13-12-2012', '3719', 
-            "{'1':'1'}", '{"2":"2"}', None, None)
-            
-        for name in('req', 'resp'):
-            value = getattr(item, name)
-            data_format = known_data_format(value)
-            if data_format:
-                attr_name = name + '_html'
-                setattr(item, attr_name, highlight(value, 
-                     data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
-                 
-        return item
-        
-    item = _get_item()
+    service = _get_service(req, service_name)
+    pretty_print = asbool(req.GET.get('pretty_print'))
     
+    input_dict = {
+        'cid': cid,
+        'name': service_name,
+    }
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
+        'zato:service.slow-response.get', input_dict)
+    
+    if zato_path('response.item').get_from(zato_message) is not None:
+        _item = zato_message.response.item
+        item = SlowResponse()
+        item.cid = _item.cid.text
+        item.req_ts = from_utc_to_user(_item.req_ts.text+'+00:00', req.zato.user_profile)
+        item.resp_ts = from_utc_to_user(_item.resp_ts.text+'+00:00', req.zato.user_profile)
+        item.proc_time = _item.proc_time.text
+        item.service_name = service_name
+        item.threshold = service.slow_threshold
+        
+        for name in('req', 'resp'):
+            value = getattr(_item, name)
+            if value:
+                value = value.text.decode('base64')
+                data_format = known_data_format(value)
+                if data_format:
+                    if pretty_print:
+                        value = get_pretty_print(value, data_format)
+                    attr_name = name + '_html'
+                    setattr(item, attr_name, highlight(value, 
+                         data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
+                 
     return_data = {
         'cluster_id': req.zato.cluster_id,
-        'service': _get_service(req, service_name),
+        'service': service,
         'item': item,
+        'pretty_print': not pretty_print,
         }
         
     return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
@@ -522,7 +570,8 @@ def invoke(req, service_id, cluster_id):
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.invoke', input_dict)
 
     except Exception, e:
-        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e:[{}]'.format(service_id, cluster_id, format_exc(e))
+        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e:[{}]'.format(
+            service_id, cluster_id, format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

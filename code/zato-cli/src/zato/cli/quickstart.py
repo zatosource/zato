@@ -260,6 +260,8 @@ class Quickstart(ZatoCommand):
             'zato:service.has-wsdl':'zato.server.service.internal.service.HasWSDL',
             'zato:service.invoke':'zato.server.service.internal.service.Invoke',
             'zato:service.set-wsdl':'zato.server.service.internal.service.SetWSDL',
+            'zato:service.slow-response.get':'zato.server.service.internal.service.GetSlowResponse',
+            'zato:service.slow-response.get-list':'zato.server.service.internal.service.GetSlowResponseList',
             'zato:service.upload-package':'zato.server.service.internal.service.UploadPackage',
 
             # SOAP channels
