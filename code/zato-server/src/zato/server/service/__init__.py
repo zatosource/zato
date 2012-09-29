@@ -27,8 +27,11 @@ from itertools import chain
 from sys import maxint
 from traceback import format_exc
 
-# SQLAlchemy
-from sqlalchemy.util import NamedTuple
+# anyjson
+from anyjson import dumps
+
+# Bunch
+from bunch import Bunch, bunchify
 
 # lxml
 from lxml import etree
@@ -37,11 +40,8 @@ from lxml.objectify import Element
 # Paste
 from paste.util.converters import asbool
 
-# anyjson
-from anyjson import dumps
-
-# Bunch
-from bunch import Bunch
+# SQLAlchemy
+from sqlalchemy.util import NamedTuple
 
 # Zato
 from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
@@ -169,6 +169,8 @@ class Request(ValueConverter):
             self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
             self.int_parameters = self.simple_io_config.get('int_parameters', [])
             self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
+        else:
+            self.payload = self.raw_request
         
         if required_list:
             params = self.get_params(required_list, path_prefix, default_value, use_text)
@@ -513,7 +515,8 @@ class Service(object):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
-    def invoke_by_impl_name(self, impl_name, payload, data_format=None, transport=None):
+    def invoke_by_impl_name(self, impl_name, payload, data_format=None, transport=None,
+            serialize=False, as_bunch=False):
         service_instance = self.server.service_store.new_instance(impl_name)
         
         service_instance.update(service_instance, self.server, self.broker_client, 
@@ -525,7 +528,9 @@ class Service(object):
         
         response = service_instance.response.payload
         if not isinstance(response, basestring):
-            response = response.getvalue()
+            response = response.getvalue(serialize=serialize)
+            if as_bunch:
+                response = bunchify(response)
             service_instance.response.payload = response
             
         service_instance.post_handle()

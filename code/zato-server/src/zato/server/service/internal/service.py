@@ -217,7 +217,8 @@ class Invoke(AdminService):
             self.request.input.data_format, self.request.input.transport)
             
         response = self.invoke_by_id(self.request.input.id, payload, 
-            self.request.input.data_format, self.request.input.transport)
+            self.request.input.data_format, self.request.input.transport,
+            serialize=True)
         self.response.payload.response = response
 
 class GetDeploymentInfoList(AdminService):
