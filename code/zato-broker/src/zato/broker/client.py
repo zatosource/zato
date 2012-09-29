@@ -97,16 +97,18 @@ class BrokerClient(object):
     2) to all the parallel servers
     3) to one of the parallel servers
     
-    1) and 2) are straightforward, a message is being published on a topic, off which
-    it is read by broker client(s). 
+    1) and 2) are straightforward, a message is being published on a topic, 
+       off which it is read by broker client(s). 
     
-    3) needs more work - the actual message is added
-    to Redis and what is really being published is a Redis key it's been stored under.
-    The first client to read it will be the one to handle it. Yup, it means the messages
-    are sent across to all of the clients and the winning one is the one that picked
-    up the Redis message; it's not that bad as it may seem, there will be at most as
-    many clients as there are servers in the cluster and truth to be told, Zero MQ < 3.x
-    also would do client-side PUB/SUB filtering and it did scale nicely.
+    3) needs more work - the actual message is added to Redis and what is really
+       being published is a Redis key it's been stored under. The first client
+       to read it will be the one to handle it. 
+       
+       Yup, it means the messages are sent across to all of the clients
+       and the winning one is the one that picked up the Redis message; it's not
+       that bad as it may seem, there will be at most as many clients as there 
+       are servers in the cluster and truth to be told, Zero MQ < 3.x also would
+       do client-side PUB/SUB filtering and it did scale nicely.
     """
     def __init__(self, kvdb=None, address=None, name=None, callbacks={}):
         self.kvdb = kvdb
@@ -172,7 +174,7 @@ class BrokerClient(object):
         key = broker_msg = b'zato:broker:to-parallel:any:{}'.format(new_cid())
         
         self.kvdb.conn.set(key, str(msg))
-        self.kvdb.conn.expire(key, 5) # In seconds
+        self.kvdb.conn.expire(key, 15) # In seconds, TODO: Document it and make configurable
         
         self._pub_client.publish(topic, broker_msg)
         

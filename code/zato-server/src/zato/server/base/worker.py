@@ -553,6 +553,11 @@ class WorkerStore(BaseWorker):
         self.stats_maint.delete(parse(msg.start), parse(msg.stop), MINUTELY)
 
 # ##############################################################################
+
+    def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
+        return self._on_message_invoke_service(msg, 'publish', 'SERVICE_PUBLISH', args)
+        
+# ##############################################################################
             
 class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
