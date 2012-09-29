@@ -140,7 +140,8 @@ class ParallelServer(BrokerMessageReceiver):
         self.odb.drop_deployed_services(server.id)
         
         # .. and re-deploy the back from a clear state.
-        self.service_store.import_services_from_anywhere(self.internal_service_modules + self.service_modules, self.base_dir)
+        self.service_store.import_services_from_anywhere(
+            self.internal_service_modules + self.service_modules, self.base_dir)
         
         # Add the statistics-related scheduler jobs to the ODB
         add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
@@ -164,12 +165,17 @@ class ParallelServer(BrokerMessageReceiver):
             # Normalize hot-deploy configuration
             if not self.hot_deploy_config:
                 self.hot_deploy_config = Bunch()
-                self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(self.repo_location, self.fs_server_config.hot_deploy.work_dir))
+                self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
+                    self.repo_location, self.fs_server_config.hot_deploy.work_dir))
                 self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
                 self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
-                self.hot_deploy_config.current_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.current_work_dir))
-                self.hot_deploy_config.backup_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.backup_work_dir))
-                self.hot_deploy_config.last_backup_work_dir = os.path.normpath(os.path.join(self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
+                self.hot_deploy_config.current_work_dir = os.path.normpath(os.path.join(
+                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.current_work_dir))
+                self.hot_deploy_config.backup_work_dir = os.path.normpath(os.path.join(
+                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.backup_work_dir))
+                self.hot_deploy_config.last_backup_work_dir = os.path.normpath(
+                    os.path.join(
+                        self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
                 
             kwargs = {'broker_client':self.broker_client}
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
@@ -196,8 +202,10 @@ class ParallelServer(BrokerMessageReceiver):
 
             # Let's see if we can become a connector server, the one to start all
             # the connectors, and start the connectors only once throughout the whole cluster.
-            self.connector_server_keep_alive_job_time = int(self.fs_server_config.singleton.connector_server_keep_alive_job_time)
-            self.connector_server_grace_time = int(self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
+            self.connector_server_keep_alive_job_time = int(
+                self.fs_server_config.singleton.connector_server_keep_alive_job_time)
+            self.connector_server_grace_time = int(
+                self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
             
             if self.singleton_server.become_cluster_wide(
                 self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
@@ -371,9 +379,6 @@ class ParallelServer(BrokerMessageReceiver):
         self.name = server.name
         self.cluster_id = server.cluster_id
 
-        # A server which hasn't been approved in the cluster still needs to fetch
-        # all the config data but it won't start any MQ/AMQP/ZMQ/etc. listeners.
-        
         self._after_init_common(server)
         
         # For now, all the servers are always ACCEPTED but future versions
