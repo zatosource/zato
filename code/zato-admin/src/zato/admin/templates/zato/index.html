@@ -107,44 +107,6 @@
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
                         <li>
-                            <a href="#">Last hour</a>
-                        </li>
-                        <li>
-                            <a href="#">By service</a>
-                        </li>
-                        <li>
-                            <span class="like-a">By day &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="#">Today</a></li>
-                                <li class='wide'><a href="#">Yesterday</a></li>
-                                <li class='wide'><a href="#">Other</a></li>
-                            </ul>
-                        </li>
-                        <li>
-                            <span class="like-a">By week &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="#">Current</a></li>
-                                <li class='wide'><a href="#">Previous</a></li>
-                                <li class='wide'><a href="#">Other</a></li>
-                            </ul>
-                        </li>
-                        <li>
-                            <span class="like-a">By month &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="#">Current</a></li>
-                                <li class='wide'><a href="#">Previous</a></li>
-                                <li class='wide'><a href="#">Other</a></li>
-                            </ul>
-                        </li>
-                        <li>
-                            <span class="like-a">By year &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="#">Current</a></li>
-                                <li class='wide'><a href="#">Previous</a></li>
-                                <li class='wide'><a href="#">Other</a></li>
-                            </ul>
-                        </li>
-                        <li>
                             <span class="like-a">Top N &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url stats-top-n 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
@@ -157,17 +119,7 @@
                             </ul>
                         </li>
                         <li>
-                            <span class="like-a">Trends &rarr;</span>
-                            <ul>
-                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}?cluster={{ cluster_id }}">Last hour</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}?cluster={{ cluster_id|default:'' }}">Last 24 hours</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
-                            </ul>
-                        </li>
+
                         <li>
                             <a href="{% url stats-settings %}?cluster={{ cluster_id|default:'' }}">Settings</a>
                         </li>
