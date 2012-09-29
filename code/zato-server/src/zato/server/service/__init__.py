@@ -45,8 +45,9 @@ from sqlalchemy.util import NamedTuple
 
 # Zato
 from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common.broker_message import MESSAGE_TYPE, SERVICE
 from zato.common.odb.model import Base
-from zato.common.util import service_name_from_impl, TRACE1
+from zato.common.util import new_cid, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -542,6 +543,22 @@ class Service(object):
         
     def invoke_by_id(self, service_id, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
+        
+    def publish(self, name, payload, to_json=True):
+        if to_json:
+            payload = dumps(payload)
+            
+        cid = new_cid()
+            
+        msg = dict()
+        msg['action'] = SERVICE.PUBLISH
+        msg['service'] = self.server.service_store.name_to_impl_name[name]
+        msg['payload'] = payload
+        msg['cid'] = cid
+        
+        self.broker_client.send(msg)
+        
+        return cid
             
     def pre_handle(self):
         """ An internal method run just before the service sets to process the payload.
