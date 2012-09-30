@@ -31,6 +31,7 @@ from bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MINUTELY, rrule
 
 # SciPy
@@ -49,12 +50,13 @@ class Delete(AdminService):
         input_required = ('start', 'stop')
 
     def handle(self):
-        self.broker_client.send({'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop})
+        self.broker_client.send(
+            {'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop})
 
 class _AggregatingService(AdminService):
     """ A base class for all services that process raw times into aggregates values.
     """
-    def _aggregate(self, key, service_name, max_batch_size=None):
+    def aggregate_raw_times(self, key, service_name, max_batch_size=None):
         """ Aggregates values from a list living under a given key. Returns its
         min, max, mean and an overall usage count. 'max_batch_size' controls how
         many items will be fetched from the list so it's possible to fetch less
@@ -73,10 +75,73 @@ class _AggregatingService(AdminService):
             
         times = [int(elem) for elem in self.server.kvdb.conn.lrange(key, 0, batch_size)]
         
-        mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_percentile') or 0)
+        mean_percentile = int(self.server.kvdb.conn.hget(
+            KVDB.SERVICE_TIME_BASIC + service_name, 'mean_percentile') or 0)
         max_score = int(sp_stats.scoreatpercentile(times, mean_percentile))
         
         return min(times), max(times), (sp_stats.tmean(times, (None, max_score)) or 0), len(times)
+        
+    def aggregate_partly_aggregated(self, delta, source_strftime_format, source, target):
+        """ Further aggregates service statistics, e.g. turns per-minute statistics
+        into per-hour statistcs.
+        """
+        now = datetime.utcnow()
+        delta_diff = (now - delta)
+        
+        if hasattr(delta, 'total_seconds'):
+            total_seconds = delta.total_seconds() 
+        else:
+            # I.e. number of days in the month * seconds a day has
+            total_seconds = mdays[delta_diff.month] * 86400
+        
+        stats_keys = ('usage', 'max', 'rate', 'mean', 'min')
+        key_suffix = (now - delta).strftime(source_strftime_format)
+
+        service_stats = {}
+        
+        for key in self.server.kvdb.conn.keys('{}*:{}*'.format(source, key_suffix)):
+
+            service_name = key.replace(source, '').replace(':' + key_suffix, '')[:-3]
+            values = self.server.kvdb.conn.hgetall(key)
+            
+            stats = service_stats.setdefault(service_name, {})
+            
+            for name in stats_keys:
+            
+                value = values[name]
+                if name in('rate', 'mean'):
+                    value = float(value)
+                else:
+                    value = int(value)
+                    
+                if not name in stats:
+                    if name == 'mean':
+                        stats[name] = []
+                    elif name == 'min':
+                        stats[name] = maxint
+                    else:
+                        stats[name] = 0
+                    
+                if name == 'usage':
+                    stats[name] += value
+                elif name == 'max':
+                    stats[name] = max(stats[name], value)
+                elif name == 'mean':
+                    stats[name].append(value)
+                elif name == 'min':
+                    stats[name] = min(stats[name], value)
+                    
+        for service_name, values in service_stats.items():
+            values['rate'] = values['usage'] / total_seconds
+            values['mean'] = sp_stats.tmean(values['mean'])
+            
+            aggr_key = '{}{}:{}'.format(target, service_name, key_suffix)
+            
+            for name in stats_keys:
+                self.server.kvdb.conn.hset(aggr_key, name, values[name])
+        
+    def hset_aggr_key(self, aggr_key, hash_key, hash_value):
+        self.server.kvdb.conn.hset(aggr_key, hash_key, hash_value)
 
 class ProcessRawTimes(_AggregatingService):
     def handle(self):
@@ -85,7 +150,7 @@ class ProcessRawTimes(_AggregatingService):
         # Sample config values
         # 
         # global_slow_threshold=120
-        # max_batch_size=100000
+        # max_batch_size=99999
         #
         config = Bunch()
         for item in self.request.payload.splitlines():
@@ -96,22 +161,27 @@ class ProcessRawTimes(_AggregatingService):
             
             service_name = key.replace(KVDB.SERVICE_TIME_RAW, '')
             
-            current_mean = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time') or 0)
+            current_mean = float(
+                self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time') or 0)
             current_min = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'min_all_time') or 0)
             current_max = float(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'max_all_time') or 0)
             
-            batch_min, batch_max, batch_mean, batch_total = self._aggregate(key, service_name, config.max_batch_size)
+            batch_min, batch_max, batch_mean, batch_total = self.aggregate_raw_times(
+                key, service_name, config.max_batch_size)
             
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time', sp_stats.tmean((batch_mean, current_mean)))
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIME_BASIC + service_name, 'min_all_time', min(current_min, batch_min))
-            self.server.kvdb.conn.hset(KVDB.SERVICE_TIME_BASIC + service_name, 'max_all_time', max(current_max, batch_max))
+            self.server.kvdb.conn.hset(
+               KVDB.SERVICE_TIME_BASIC + service_name, 'mean_all_time', sp_stats.tmean((batch_mean, current_mean)))
+            self.server.kvdb.conn.hset(
+               KVDB.SERVICE_TIME_BASIC + service_name, 'min_all_time', min(current_min, batch_min))
+            self.server.kvdb.conn.hset(
+                KVDB.SERVICE_TIME_BASIC + service_name, 'max_all_time', max(current_max, batch_max))
             
             # Services use RPUSH for storing raw times so we are safe to use LTRIM
             # in order to do away with the already processed ones
             self.server.kvdb.conn.ltrim(key, batch_total, -1)
 
 class AggregateByMinute(_AggregatingService):
-    """ Aggregates per-miunte times.
+    """ Aggregates per-minute times.
     """
     def handle(self):
         
@@ -128,16 +198,49 @@ class AggregateByMinute(_AggregatingService):
             service_name = key.replace(KVDB.SERVICE_TIME_RAW_BY_MINUTE, '').replace(':' + key_suffix, '')
             aggr_key = '{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service_name, key_suffix)
             
-            batch_min, batch_max, batch_mean, batch_total = self._aggregate(key, service_name)
+            batch_min, batch_max, batch_mean, batch_total = self.aggregate_raw_times(key, service_name)
             
-            self.server.kvdb.conn.hset(aggr_key, 'min', batch_min)
-            self.server.kvdb.conn.hset(aggr_key, 'max', batch_max)
-            self.server.kvdb.conn.hset(aggr_key, 'mean', batch_mean)
-            self.server.kvdb.conn.hset(aggr_key, 'usage', batch_total)
-            self.server.kvdb.conn.hset(aggr_key, 'rate', batch_total / 60.0) # I.e. req/s
+            self.hset_aggr_key(aggr_key, 'min', batch_min)
+            self.hset_aggr_key(aggr_key, 'max', batch_max)
+            self.hset_aggr_key(aggr_key, 'mean', batch_mean)
+            self.hset_aggr_key(aggr_key, 'usage', batch_total)
+            self.hset_aggr_key(aggr_key, 'rate', batch_total / 60.0) # I.e. req/s
             
-            # Per-minute statistic keys will expire by themselves, we don't need
+            # Per-minute statistics keys will expire by themselves, we don't need
             # to delete them manually.
+            
+class AggregateByHour(_AggregatingService):
+    """ Creates per-hour stats.
+    """
+    def handle(self):
+        delta = timedelta(hours=1)
+        source_strftime_format = '%Y:%m:%d:%H'
+        source = KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE
+        target = KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR
+        
+        self.aggregate_partly_aggregated(delta, source_strftime_format, source, target)
+        
+class AggregateByDay(_AggregatingService):
+    """ Creates per-day stats.
+    """
+    def handle(self):
+        delta = timedelta(days=1)
+        source_strftime_format = '%Y:%m:%d'
+        source = KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR
+        target = KVDB.SERVICE_TIME_AGGREGATED_BY_DAY
+        
+        self.aggregate_partly_aggregated(delta, source_strftime_format, source, target)
+        
+class AggregateByMonth(_AggregatingService):
+    """ Creates per-month stats.
+    """
+    def handle(self):
+        delta = relativedelta(datetime.utcnow(), months=1)
+        source_strftime_format = '%Y:%m'
+        source = KVDB.SERVICE_TIME_AGGREGATED_BY_DAY
+        target = KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH
+        
+        self.aggregate_partly_aggregated(delta, source_strftime_format, source, target)
             
 class StatsReturningService(AdminService):
     """ A base class for services returning time-oriented statistics.
@@ -173,7 +276,7 @@ class StatsReturningService(AdminService):
         
         time_elems = [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
         
-        # We make several passes. First two passes are over Redis keys, one gathers the services, if any at all,
+        # We make several passes. First two passes are made over Redis keys, one gathers the services, if any at all,
         # and another one actually collects statistics for each service found. Next pass computes trends
         # for mean response time and service usage. Another one computes each of the service's
         # average rate and updates other attributes basing on values collected in the previous step.
@@ -194,7 +297,8 @@ class StatsReturningService(AdminService):
                 # said elems and values are mean/usage for each elem. The values will remain
                 # 0/0.0 if there is no data for the time elem, which may mean that in this
                 # particular time slice the service wasn't invoked at all.
-                stats_elem.expected_time_elems = OrderedDict((elem, Bunch({'mean':0, 'usage':0.0})) for elem in time_elems)
+                stats_elem.expected_time_elems = OrderedDict(
+                    (elem, Bunch({'mean':0, 'usage':0.0})) for elem in time_elems)
                 
         # 2nd pass
         for service, stats_elem in stats_elems.items():
@@ -203,7 +307,8 @@ class StatsReturningService(AdminService):
                 
                 # We can convert all the values to floats here to ease with computing
                 # all the stuff and convert them still to integers later on, when necessary.
-                key_values = Bunch(((name, float(value)) for (name, value) in self.server.kvdb.conn.hgetall(key).items()))
+                key_values = Bunch(
+                    ((name, float(value)) for (name, value) in self.server.kvdb.conn.hgetall(key).items()))
                 
                 if key_values:
     

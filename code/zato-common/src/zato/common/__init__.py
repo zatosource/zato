@@ -173,6 +173,9 @@ class KVDB:
     SERVICE_TIME_RAW = 'zato:stats:service:time:raw:'
     SERVICE_TIME_RAW_BY_MINUTE = 'zato:stats:service:time:raw-by-minute:'
     SERVICE_TIME_AGGREGATED_BY_MINUTE = 'zato:stats:service:time:aggr-by-minute:'
+    SERVICE_TIME_AGGREGATED_BY_HOUR = 'zato:stats:service:time:aggr-by-hour:'
+    SERVICE_TIME_AGGREGATED_BY_DAY = 'zato:stats:service:time:aggr-by-day:'
+    SERVICE_TIME_AGGREGATED_BY_MONTH = 'zato:stats:service:time:aggr-by-month:'
     SERVICE_TIME_SLOW = 'zato:stats:service:time:slow:'
     
     REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
