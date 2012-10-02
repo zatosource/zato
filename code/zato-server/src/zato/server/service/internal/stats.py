@@ -20,11 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from calendar import mdays
 from collections import OrderedDict
 from contextlib import closing
 from datetime import datetime, timedelta
 from heapq import nlargest
 from operator import itemgetter
+from sys import maxint
 
 # Bunch
 from bunch import Bunch
@@ -42,6 +44,7 @@ from zato.common import KVDB, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
 from zato.server.service.internal import AdminService
+
 
 class Delete(AdminService):
     """ Deletes aggregated statistics from a given interval.
@@ -95,7 +98,7 @@ class _AggregatingService(AdminService):
             total_seconds = mdays[delta_diff.month] * 86400
         
         stats_keys = ('usage', 'max', 'rate', 'mean', 'min')
-        key_suffix = (now - delta).strftime(source_strftime_format)
+        key_suffix = delta_diff.strftime(source_strftime_format)
 
         service_stats = {}
         
@@ -138,7 +141,7 @@ class _AggregatingService(AdminService):
             aggr_key = '{}{}:{}'.format(target, service_name, key_suffix)
             
             for name in stats_keys:
-                self.server.kvdb.conn.hset(aggr_key, name, values[name])
+                self.hset_aggr_key(aggr_key, name, values[name])
         
     def hset_aggr_key(self, aggr_key, hash_key, hash_value):
         self.server.kvdb.conn.hset(aggr_key, hash_key, hash_value)
@@ -190,6 +193,7 @@ class AggregateByMinute(_AggregatingService):
         # that happened in 13:17. Hence it's also important that any changes in the minutes
         # to be picked up here below be kept in sync with the EXPIRE command Service._post_handle uses.
         
+        
         now = datetime.utcnow()
         key_suffix = (now - timedelta(minutes=2)).strftime('%Y:%m:%d:%H:%M')
         
@@ -206,7 +210,7 @@ class AggregateByMinute(_AggregatingService):
             self.hset_aggr_key(aggr_key, 'usage', batch_total)
             self.hset_aggr_key(aggr_key, 'rate', batch_total / 60.0) # I.e. req/s
             
-            # Per-minute statistics keys will expire by themselves, we don't need
+            # Raw per-minute statistics keys will expire by themselves, we don't need
             # to delete them manually.
             
 class AggregateByHour(_AggregatingService):
@@ -372,8 +376,9 @@ class StatsReturningService(AdminService):
             for stats_elem in stats_elems.values():
                 yield stats_elem
 
-class GetTopN(StatsReturningService):
-    """ Returns top N slowest or most commonly used services for a given period.
+class GetTrends(StatsReturningService):
+    """ Returns top N slowest or most commonly used services for a given period
+    along with their trends.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
         input_required = StatsReturningService.SimpleIO.input_required + ('n', 'n_type')

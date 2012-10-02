@@ -384,7 +384,7 @@ class Quickstart(ZatoCommand):
             'zato:kvdb.remote-command.execute':'zato.server.service.internal.kvdb.ExecuteCommand',
             
             # Statistics
-            'zato:stats.get-top-n':'zato.server.service.internal.stats.GetTopN',
+            'zato:stats.get-trends':'zato.server.service.internal.stats.GetTrends',
             'zato:stats.get-by-service':'zato.server.service.internal.stats.GetByService',
             'zato:stats.delete':'zato.server.service.internal.stats.Delete',
         }
