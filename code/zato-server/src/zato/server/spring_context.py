@@ -217,4 +217,14 @@ class ZatoContext(PythonConfig):
             {'name': 'zato.stats.AggregateByMinute', 
              'seconds':60, 
              'service':'zato.server.service.internal.stats.AggregateByMinute'},
+            {'name': 'zato.stats.AggregateByHour', 
+             'minutes':60, 
+             'service':'zato.server.service.internal.stats.AggregateByHour'},
+            {'name': 'zato.stats.AggregateByDay', 
+             'minutes':60, 
+             'service':'zato.server.service.internal.stats.AggregateByDay'},
+            {'name': 'zato.stats.AggregateByMonth', 
+             'minutes':60,
+             'service':'zato.server.service.internal.stats.AggregateByMonth'},
         ]
+

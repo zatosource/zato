@@ -27,7 +27,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/stats/top-n.js"></script>
+    <script type="text/javascript" src="/static/js/stats/trends.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -95,11 +95,11 @@
         </tr>
         <tr>
             <td id="left-side" style="width:50%">
-                {% include "zato/stats/top-n-table.html" with side="left"%}
+                {% include "zato/stats/trends-table.html" with side="left"%}
             </td>
 
             <td id="right-side" style="width:50%;" class="hidden">
-                {% include "zato/stats/top-n-table.html" with side="right"%}
+                {% include "zato/stats/trends-table.html" with side="right"%}
             </td>
         </tr>
     </table>

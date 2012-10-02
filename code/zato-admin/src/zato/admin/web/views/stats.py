@@ -79,7 +79,8 @@ class JobAttrFormMapping(object):
 
 # A mapping a job type, its name and the execution interval unit
 job_mappings = {
-    JobAttrFormMapping('zato.stats.ProcessRawTimes', [JobAttrForm('raw_times', 'seconds'),  JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
+    JobAttrFormMapping('zato.stats.ProcessRawTimes', 
+        [JobAttrForm('raw_times', 'seconds'),  JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
     JobAttrFormMapping('zato.stats.AggregateByMinute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
 
@@ -88,7 +89,7 @@ def _get_stats(cluster, start, stop, n, n_type):
     between start and stop.
     """
     out = []
-    zato_message, _  = invoke_admin_service(cluster, 'zato:stats.get-top-n',
+    zato_message, _  = invoke_admin_service(cluster, 'zato:stats.get-trends',
         {'start':start, 'stop':stop, 'n':n, 'n_type':n_type})
     
     if zato_path('response.item_list.item').get_from(zato_message) is not None:
@@ -98,7 +99,7 @@ def _get_stats(cluster, start, stop, n, n_type):
     return out
 
 @meth_allowed('GET')
-def top_n(req, choice):
+def trends(req, choice):
     labels = {'last_hour':'Last hour', 'today':'Today', 'yesterday':'Yesterday', 'last_24h':'Last 24h',
             'this_week':'This week', 'this_month':'This month', 'this_year':'This year'}
     
@@ -150,9 +151,9 @@ def top_n(req, choice):
     
     return_data.update(get_js_dt_format(req.zato.user_profile))
     
-    return TemplateResponse(req, 'zato/stats/top-n.html', return_data)
+    return TemplateResponse(req, 'zato/stats/trends.html', return_data)
 
-def _top_n_data_csv(user_profile, req_input, cluster):
+def _trends_data_csv(user_profile, req_input, cluster):
 
     n_type_keys = {
         'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services', 
@@ -179,7 +180,7 @@ def _top_n_data_csv(user_profile, req_input, cluster):
     
     return response
 
-def _top_n_data_html(user_profile, req_input, cluster):
+def _trends_data_html(user_profile, req_input, cluster):
     
     return_data = {'has_stats':False, 'start':req_input.start, 'stop':req_input.stop}
     settings = {}
@@ -201,12 +202,12 @@ def _top_n_data_html(user_profile, req_input, cluster):
             return_data['has_stats'] = len(stats)
             
             return_data['{}_csv_href'.format(name)] = '{}?{}&amp;format=csv&amp;n_type={}&amp;cluster={}'.format(
-                reverse('stats-top-n-data'), query_data, name, cluster.id)
+                reverse('stats-trends-data'), query_data, name, cluster.id)
             
             d.update({name:stats})
             d.update(settings)
             
-        return_data[name] = loader.render_to_string('zato/stats/top-n-table-{}.html'.format(name), d)
+        return_data[name] = loader.render_to_string('zato/stats/trends-table-{}.html'.format(name), d)
         
     for name in('start', 'stop'):
         return_data['{}_label'.format(name)] = return_data[name]
@@ -214,7 +215,7 @@ def _top_n_data_html(user_profile, req_input, cluster):
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @meth_allowed('GET', 'POST')
-def top_n_data(req):
+def trends_data(req):
     """ n and n_type will always be given. format may be None and will
     default to 'html'. Also, either start/stop or left_start/left_stop/shift
     will be present - if the latter, start and stop will be computed as left_start/left_stop
@@ -249,7 +250,11 @@ def top_n_data(req):
             delta = relativedelta(**shift_params[req_input.shift])
             req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
 
-    return globals()['_top_n_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster)
+    return globals()['_trends_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster)
+    
+@meth_allowed('GET')
+def summary(req, choice):
+    pass
     
 @meth_allowed('GET')
 def settings(req):
@@ -261,7 +266,8 @@ def settings(req):
         
         for mapping in job_mappings:
 
-            zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
+            zato_message, _  = invoke_admin_service(req.zato.
+                cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
             if zato_path('response.item').get_from(zato_message) is not None:
                 item = zato_message.response.item
             
@@ -309,7 +315,8 @@ def settings_save(req):
             item = zato_message.response.item
             
             # Gotta love dictionary comprehensions!
-            params = {attr: getattr(item, attr).text for attr in('id', 'name', 'is_active', 'job_type', 'start_date', 'extra')}
+            params = {attr: getattr(item, attr).text for attr in(
+                'id', 'name', 'is_active', 'job_type', 'start_date', 'extra')}
         
             for attr in mapping.attrs:
                 

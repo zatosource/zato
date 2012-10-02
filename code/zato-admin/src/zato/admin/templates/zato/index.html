@@ -106,18 +106,26 @@
                 <li><a href="{% url scheduler %}?cluster={{ cluster_id }}">Scheduler</a></li>
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
+                    
                         <li>
-                            <span class="like-a">Top N &rarr;</span>
+                            <span class="like-a">Trends &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url stats-top-n 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'last_24h' %}?cluster={{ cluster_id|default:'' }}">Last 24 hours</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
-                                <li class='wide'><a href="{% url stats-top-n 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
+                                <li class='wide'><a href="{% url stats-trends 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
                             </ul>
                         </li>
+                    
+                        <li>
+                            <span class="like-a">Summary &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url stats-trends 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
+                                <li class='wide'><a href="{% url stats-trends 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
+                                <li class='wide'><a href="{% url stats-trends 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
+                                <li class='wide'><a href="{% url stats-trends 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
+                                <li class='wide'><a href="{% url stats-trends 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
+                            </ul>
+                        </li>
+                        
+                        
                         <li>
 
                         <li>
