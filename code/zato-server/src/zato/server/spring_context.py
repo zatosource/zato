@@ -210,21 +210,20 @@ class ZatoContext(PythonConfig):
     @Object
     def stats_jobs(self):
         return [
-            {'name': 'zato.stats.ProcessRawTimes', 
-             'seconds':90, 
+            {'name': 'zato.stats.ProcessRawTimes', 'seconds':90, 
              'service':'zato.server.service.internal.stats.ProcessRawTimes', 
              'extra':'max_batch_size={}'.format(DEFAULT_STATS_SETTINGS['scheduler_raw_times_batch'])},
-            {'name': 'zato.stats.AggregateByMinute', 
-             'seconds':60, 
+            
+            {'name': 'zato.stats.AggregateByMinute', 'seconds':60, 
              'service':'zato.server.service.internal.stats.AggregateByMinute'},
-            {'name': 'zato.stats.AggregateByHour', 
-             'minutes':60, 
+            
+            {'name': 'zato.stats.AggregateByHour', 'seconds':10, 
              'service':'zato.server.service.internal.stats.AggregateByHour'},
-            {'name': 'zato.stats.AggregateByDay', 
-             'minutes':60, 
+            
+            {'name': 'zato.stats.AggregateByDay', 'minutes':60, 
              'service':'zato.server.service.internal.stats.AggregateByDay'},
-            {'name': 'zato.stats.AggregateByMonth', 
-             'minutes':60,
+            
+            {'name': 'zato.stats.AggregateByMonth', 'minutes':60,
              'service':'zato.server.service.internal.stats.AggregateByMonth'},
         ]
 
