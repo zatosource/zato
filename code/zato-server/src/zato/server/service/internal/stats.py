@@ -34,7 +34,7 @@ from bunch import Bunch
 # dateutil
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
-from dateutil.rrule import MINUTELY, rrule
+from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule
 
 # SciPy
 from scipy import stats as sp_stats
@@ -45,6 +45,7 @@ from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
 from zato.server.service.internal import AdminService
 
+STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
 
 class Delete(AdminService):
     """ Deletes aggregated statistics from a given interval.
@@ -83,33 +84,17 @@ class _AggregatingService(AdminService):
         max_score = int(sp_stats.scoreatpercentile(times, mean_percentile))
         
         return min(times), max(times), (sp_stats.tmean(times, (None, max_score)) or 0), len(times)
-        
-    def aggregate_partly_aggregated(self, delta, source_strftime_format, source, target):
-        """ Further aggregates service statistics, e.g. turns per-minute statistics
-        into per-hour statistcs.
-        """
-        now = datetime.utcnow()
-        delta_diff = (now - delta)
-        
-        if hasattr(delta, 'total_seconds'):
-            total_seconds = delta.total_seconds() 
-        else:
-            # I.e. number of days in the month * seconds a day has
-            total_seconds = mdays[delta_diff.month] * 86400
-        
-        stats_keys = ('usage', 'max', 'rate', 'mean', 'min')
-        key_suffix = delta_diff.strftime(source_strftime_format)
-
+    
+    def collect_service_stats(self, keys_pattern, key_prefix, key_suffix, total_seconds):
         service_stats = {}
-        
-        for key in self.server.kvdb.conn.keys('{}*:{}*'.format(source, key_suffix)):
+        for key in self.server.kvdb.conn.keys(keys_pattern):
 
-            service_name = key.replace(source, '').replace(':' + key_suffix, '')[:-3]
+            service_name = key.replace(key_prefix, '').replace(':' + key_suffix, '')[:-3]
             values = self.server.kvdb.conn.hgetall(key)
             
             stats = service_stats.setdefault(service_name, {})
             
-            for name in stats_keys:
+            for name in STATS_KEYS:
             
                 value = values[name]
                 if name in('rate', 'mean'):
@@ -138,9 +123,29 @@ class _AggregatingService(AdminService):
             values['rate'] = values['usage'] / total_seconds
             values['mean'] = sp_stats.tmean(values['mean'])
             
+        return service_stats
+        
+    def aggregate_partly_aggregated(self, delta, source_strftime_format, source, target, now=None):
+        """ Further aggregates service statistics, e.g. turns per-minute statistics
+        into per-hour statistcs.
+        """
+        if not now:
+            now = datetime.utcnow()
+        delta_diff = (now - delta)
+        
+        if hasattr(delta, 'total_seconds'):
+            total_seconds = delta.total_seconds() 
+        else:
+            # I.e. number of days in the month * seconds a day has
+            total_seconds = mdays[delta_diff.month] * 86400
+        
+        key_suffix = delta_diff.strftime(source_strftime_format)
+        service_stats = self.collect_service_stats(
+            '{}*:{}*'.format(source, key_suffix), source, key_suffix, total_seconds)
+        
+        for service_name, values in service_stats.items():
             aggr_key = '{}{}:{}'.format(target, service_name, key_suffix)
-            
-            for name in stats_keys:
+            for name in STATS_KEYS:
                 self.hset_aggr_key(aggr_key, name, values[name])
         
     def hset_aggr_key(self, aggr_key, hash_key, hash_value):
@@ -193,7 +198,6 @@ class AggregateByMinute(_AggregatingService):
         # that happened in 13:17. Hence it's also important that any changes in the minutes
         # to be picked up here below be kept in sync with the EXPIRE command Service._post_handle uses.
         
-        
         now = datetime.utcnow()
         key_suffix = (now - timedelta(minutes=2)).strftime('%Y:%m:%d:%H:%M')
         
@@ -245,6 +249,18 @@ class AggregateByMonth(_AggregatingService):
         target = KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH
         
         self.aggregate_partly_aggregated(delta, source_strftime_format, source, target)
+        
+class CreateSummaryByDay(_AggregatingService):
+    pass
+
+class CreateSummaryByWeek(_AggregatingService):
+    pass
+
+class CreateSummaryByMonth(_AggregatingService):
+    pass
+
+class CreateSummaryByYear(_AggregatingService):
+    pass
             
 class StatsReturningService(AdminService):
     """ A base class for services returning time-oriented statistics.
