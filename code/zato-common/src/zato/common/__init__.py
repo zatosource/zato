@@ -178,6 +178,11 @@ class KVDB:
     SERVICE_TIME_AGGREGATED_BY_MONTH = 'zato:stats:service:time:aggr-by-month:'
     SERVICE_TIME_SLOW = 'zato:stats:service:time:slow:'
     
+    SERVICE_SUMMARY_PREFIX_PATTERN = 'zato:stats:service:summary:{}:'
+    SERVICE_SUMMARY_BY_DAY = 'zato:stats:service:summary:by-day:'
+    SERVICE_SUMMARY_BY_MONTH = 'zato:stats:service:summary:by-month:'
+    SERVICE_SUMMARY_BY_YEAR = 'zato:stats:service:summary:by-year:'
+    
     REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
     RESP_SLOW = 'zato:resp:slow:'
 
