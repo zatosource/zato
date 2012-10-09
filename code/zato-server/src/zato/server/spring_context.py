@@ -232,10 +232,10 @@ class ZatoContext(PythonConfig):
             {'name': 'zato.stats.CreateSummaryByWeek', 'minutes':60, 
              'service':'zato.server.service.internal.stats.CreateSummaryByWeek'},
             
-            {'name': 'zato.stats.CreateSummaryByMonth', 'minutes':60, 
+            {'name': 'zato.stats.CreateSummaryByMonth', 'seconds':10, 
              'service':'zato.server.service.internal.stats.CreateSummaryByMonth'},
             
-            {'name': 'zato.stats.CreateSummaryByYear', 'minutes':60, 
+            {'name': 'zato.stats.CreateSummaryByYear', 'seconds':10, 
              'service':'zato.server.service.internal.stats.CreateSummaryByYear'},
 
         ]
