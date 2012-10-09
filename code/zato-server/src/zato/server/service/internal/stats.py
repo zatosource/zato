@@ -53,9 +53,17 @@ DEFAULT_STATS['mean'] = []
 DEFAULT_STATS['min'] = maxint
 
 class DT_PATTERNS(object):
+    CURRENT_YEAR_START = '%Y-01-01'
+    CURRENT_MONTH_START = '%Y-%m-01'
     CURRENT_DAY_START = '%Y-%m-%d 00:00:00'
-    PREVIOUS_HOUR_START = '%Y-%m-%d %H:00:00'
+    
     CURRENT_HOUR_END = '%Y-%m-%d %H:59:59'
+    
+    PREVIOUS_HOUR_START = '%Y-%m-%d %H:00:00'
+    
+    PREVIOUS_MONTH_END = '%Y-%m'
+    PREVIOUS_DAY_END = '%Y-%m-%d 23:59:59'
+    
     SUMMARY_SUFFIX_PATTERNS = {
         'daily': '%Y:%m:%d',
         'monthly': '%Y:%m',
@@ -189,23 +197,45 @@ class _AggregatingService(AdminService):
 class _SummarizingService(_AggregatingService):
     """ Base class for services creating summaries.
     """
-    def get_hourly_suffixes(self, now):
-        start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
-        until = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
-        
-        return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=until))
-    
     def get_minutely_suffixes(self, now):
         start = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
         until = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
         
         return (elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=until))
     
-    def get_by_hour_patterns(self, now):
-        return ['{}*:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR, elem) for elem in self.get_hourly_suffixes(now)]
+    def get_hourly_suffixes(self, now):
+        start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
+        until = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
+        
+        return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=until))
+    
+    def get_daily_suffixes(self, now):
+        start = parse(now.strftime(DT_PATTERNS.CURRENT_MONTH_START))
+        until = parse((now - timedelta(days=1)).strftime(DT_PATTERNS.PREVIOUS_DAY_END))
+        
+        return (elem.strftime('%Y:%m:%d') for elem in rrule(DAILY, dtstart=start, until=until))
+    
+    def get_monthly_suffixes(self, now):
+        start = parse(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
+        delta = relativedelta(now, months=1)
+        until = parse((now - delta).strftime(DT_PATTERNS.PREVIOUS_MONTH_END))
+        
+        return (elem.strftime('%Y:%m') for elem in rrule(MONTHLY, dtstart=start, until=until))
+    
+    def _get_patterns(self, now, kvdb_key, method):
+        return ('{}*:{}'.format(kvdb_key, elem) for elem in method(now))
     
     def get_by_minute_patterns(self, now):
-        return ['{}*:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, elem) for elem in self.get_minutely_suffixes(now)]
+        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, self.get_minutely_suffixes)
+    
+    def get_by_hour_patterns(self, now):
+        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR, self.get_hourly_suffixes)
+    
+    def get_by_day_patterns(self, now):
+        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_DAY, self.get_daily_suffixes)
+    
+    def get_by_month_patterns(self, now):
+        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH, self.get_monthly_suffixes)
     
     def create_summary(self, start_pattern, target, *pattern_names):
         now = datetime.utcnow()
@@ -363,10 +393,12 @@ class CreateSummaryByWeek(_SummarizingService):
     pass
 
 class CreateSummaryByMonth(_SummarizingService):
-    pass
+    def handle(self):
+        self.create_summary(DT_PATTERNS.CURRENT_DAY_START, 'monthly', 'day', 'hour', 'minute')
 
 class CreateSummaryByYear(_SummarizingService):
-    pass
+    def handle(self):
+        self.create_summary(DT_PATTERNS.CURRENT_DAY_START, 'yearly', 'month', 'day', 'hour', 'minute')
 
 # ##############################################################################
             
