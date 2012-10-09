@@ -225,5 +225,18 @@ class ZatoContext(PythonConfig):
             
             {'name': 'zato.stats.AggregateByMonth', 'minutes':60,
              'service':'zato.server.service.internal.stats.AggregateByMonth'},
+            
+            {'name': 'zato.stats.CreateSummaryByDay', 'seconds':10, 
+             'service':'zato.server.service.internal.stats.CreateSummaryByDay'},
+            
+            {'name': 'zato.stats.CreateSummaryByWeek', 'minutes':60, 
+             'service':'zato.server.service.internal.stats.CreateSummaryByWeek'},
+            
+            {'name': 'zato.stats.CreateSummaryByMonth', 'minutes':60, 
+             'service':'zato.server.service.internal.stats.CreateSummaryByMonth'},
+            
+            {'name': 'zato.stats.CreateSummaryByYear', 'minutes':60, 
+             'service':'zato.server.service.internal.stats.CreateSummaryByYear'},
+
         ]
 

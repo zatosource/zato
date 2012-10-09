@@ -23,8 +23,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from calendar import mdays
 from collections import OrderedDict
 from contextlib import closing
+from copy import deepcopy
 from datetime import datetime, timedelta
 from heapq import nlargest
+from itertools import chain
 from operator import itemgetter
 from sys import maxint
 
@@ -46,6 +48,21 @@ from zato.common.odb.model import Service
 from zato.server.service.internal import AdminService
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
+DEFAULT_STATS = {k:0 for k in STATS_KEYS}
+DEFAULT_STATS['mean'] = []
+DEFAULT_STATS['min'] = maxint
+
+class DT_PATTERNS(object):
+    CURRENT_DAY_START = '%Y-%m-%d 00:00:00'
+    PREVIOUS_HOUR_START = '%Y-%m-%d %H:00:00'
+    CURRENT_HOUR_END = '%Y-%m-%d %H:59:59'
+    SUMMARY_SUFFIX_PATTERNS = {
+        'daily': '%Y:%m:%d',
+        'monthly': '%Y:%m',
+        'yearly': '%Y',
+    }
+    
+# ##############################################################################
 
 class Delete(AdminService):
     """ Deletes aggregated statistics from a given interval.
@@ -56,6 +73,8 @@ class Delete(AdminService):
     def handle(self):
         self.broker_client.send(
             {'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop})
+        
+# ##############################################################################
 
 class _AggregatingService(AdminService):
     """ A base class for all services that process raw times into aggregates values.
@@ -85,12 +104,18 @@ class _AggregatingService(AdminService):
         
         return min(times), max(times), (sp_stats.tmean(times, (None, max_score)) or 0), len(times)
     
-    def collect_service_stats(self, keys_pattern, key_prefix, key_suffix, total_seconds):
+    def collect_service_stats(self, keys_pattern, key_prefix, key_suffix, total_seconds, 
+                              suffix_needs_colon=True, chop_off_service_name=True, needs_rate=True):
         service_stats = {}
-        for key in self.server.kvdb.conn.keys(keys_pattern):
-
-            service_name = key.replace(key_prefix, '').replace(':' + key_suffix, '')[:-3]
-            values = self.server.kvdb.conn.hgetall(key)
+        if suffix_needs_colon:
+            key_suffix = ':' + key_suffix
+            
+        for key in self.kvdb.conn.keys(keys_pattern):
+            service_name = key.replace(key_prefix, '').replace(key_suffix, '')
+            if chop_off_service_name:
+                service_name = service_name[:-3]
+                
+            values = self.kvdb.conn.hgetall(key)
             
             stats = service_stats.setdefault(service_name, {})
             
@@ -120,8 +145,10 @@ class _AggregatingService(AdminService):
                     stats[name] = min(stats[name], value)
                     
         for service_name, values in service_stats.items():
-            values['rate'] = values['usage'] / total_seconds
             values['mean'] = sp_stats.tmean(values['mean'])
+            
+            if needs_rate:
+                values['rate'] = values['usage'] / total_seconds
             
         return service_stats
         
@@ -145,172 +172,81 @@ class _AggregatingService(AdminService):
         
         self.hset_aggr_keys(service_stats, target, key_suffix)
         
-    def hset_aggr_keys(self, service_stats, target, key_suffix):
+    def hset_aggr_keys(self, service_stats, key_prefix, key_suffix):
         for service_name, values in service_stats.items():
-            aggr_key = '{}{}:{}'.format(target, service_name, key_suffix)
+            aggr_key = '{}{}:{}'.format(key_prefix, service_name, key_suffix)
             for name in STATS_KEYS:
                 self.hset_aggr_key(aggr_key, name, values[name])
         
     def hset_aggr_key(self, aggr_key, hash_key, hash_value):
         self.server.kvdb.conn.hset(aggr_key, hash_key, hash_value)
         
-"""
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-# stdlib
-from copy import deepcopy
-from datetime import datetime, timedelta
-from itertools import chain
-from pprint import pprint
-from sys import maxint
-
-# dateutil
-from dateutil.parser import parse
-from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule
-
-# redis
-from redis import StrictRedis
-
-# SciPy
-from scipy import stats as sp_stats
-
-# Zato
-from zato.common import KVDB
-
-STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
-DEFAULT_STATS = {k:0 for k in STATS_KEYS}
-DEFAULT_STATS['mean'] = []
-DEFAULT_STATS['min'] = maxint
-
-class DT_PATTERNS(object):
-    CURRENT_DAY_START = '%Y-%m-%d 00:00:00'
-    PREVIOUS_HOUR_START = '%Y-%m-%d %H:00:00'
-    CURRENT_HOUR_END = '%Y-%m-%d %H:59:59'
-    SUMMARY_SUFFIX_PATTERNS = {
-        'daily': '%Y:%m:%d',
-        'monthly': '%Y:%m',
-        'yearly': '%Y',
-    }
-
-conn = StrictRedis()
-
-def get_hourly_suffixes(now):
-    start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
-    until = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
-    
-    return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=until))
-
-def get_minutely_suffixes(now):
-    start = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
-    until = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
-    
-    return (elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=until))
-
-def collect_service_stats(keys_pattern, key_prefix, key_suffix, total_seconds, 
-                          suffix_needs_colon=True, chop_off_service_name=True, needs_rate=True):
-    service_stats = {}
-    if suffix_needs_colon:
-        key_suffix = ':' + key_suffix
+# ##############################################################################
         
-    for key in conn.keys(keys_pattern):
-        service_name = key.replace(key_prefix, '').replace(key_suffix, '')
-        if chop_off_service_name:
-            service_name = service_name[:-3]
+class _SummarizingService(_AggregatingService):
+    """ Base class for services creating summaries.
+    """
+    def get_hourly_suffixes(self, now):
+        start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
+        until = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
+        
+        return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=until))
+    
+    def get_minutely_suffixes(self, now):
+        start = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
+        until = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
+        
+        return (elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=until))
+    
+    def get_by_hour_patterns(self, now):
+        return ['{}*:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR, elem) for elem in self.get_hourly_suffixes(now)]
+    
+    def get_by_minute_patterns(self, now):
+        return ['{}*:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, elem) for elem in self.get_minutely_suffixes(now)]
+    
+    def create_summary(self, start_pattern, target, *pattern_names):
+        now = datetime.utcnow()
+        #now = parse('2012-10-08 22:10:33.074743')
+        
+        key_prefix = KVDB.SERVICE_SUMMARY_PREFIX_PATTERN.format(target)
+        key_suffix = now.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
+    
+        start = parse(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
+        total_seconds = (now - start).total_seconds()
+        
+        patterns = []
+        for name in pattern_names:
+            patterns.append(getattr(self, 'get_by_{}_patterns'.format(name))(now))
+        
+        services = {}
+        
+        for elem in chain(*patterns):
+            prefix, suffix = elem.split('*')
+            suffix = suffix[1:]
+            stats = self.collect_service_stats(elem, prefix, suffix, None, False, False, False)
             
-        values = conn.hgetall(key)
-        
-        stats = service_stats.setdefault(service_name, {})
-        
-        for name in STATS_KEYS:
-        
-            value = values[name]
-            if name in('rate', 'mean'):
-                value = float(value)
-            else:
-                value = int(value)
+            for service_name, values in stats.items():
+                stats = services.setdefault(service_name, deepcopy(DEFAULT_STATS))
                 
-            if not name in stats:
-                if name == 'mean':
-                    stats[name] = []
-                elif name == 'min':
-                    stats[name] = maxint
-                else:
-                    stats[name] = 0
-                
-            if name == 'usage':
-                stats[name] += value
-            elif name == 'max':
-                stats[name] = max(stats[name], value)
-            elif name == 'mean':
-                stats[name].append(value)
-            elif name == 'min':
-                stats[name] = min(stats[name], value)
-                
-    for service_name, values in service_stats.items():
-        values['mean'] = sp_stats.tmean(values['mean'])
-        
-        if needs_rate:
-            values['rate'] = values['usage'] / total_seconds
-        
-    return service_stats
-
-def create_summary(start_pattern, target, *pattern_names):
-    now = datetime.utcnow()
-    #now = parse('2012-10-08 22:10:33.074743')
-    
-    key_prefix = KVDB.SERVICE_SUMMARY_PREFIX_PATTERN.format(target)
-    key_suffix = now.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
-
-    start = parse(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
-    total_seconds = (now - start).total_seconds()
-    
-    patterns = []
-    for name in pattern_names:
-        patterns.append(globals()['get_by_{}_patterns'.format(name)](now))
-    
-    services = {}
-    
-    for elem in chain(*patterns):
-        prefix, suffix = elem.split('*')
-        suffix = suffix[1:]
-        stats = collect_service_stats(elem, prefix, suffix, None, False, False, False)
-        
-        for service_name, values in stats.items():
-            stats = services.setdefault(service_name, deepcopy(DEFAULT_STATS))
+                for name in STATS_KEYS:
+                    value = values[name]
+                    if name == 'usage':
+                        stats[name] += value
+                    elif name == 'max':
+                        stats[name] = max(stats[name], value)
+                    elif name == 'mean':
+                        stats[name].append(value)
+                    elif name == 'min':
+                        stats[name] = min(stats[name], value)
+                        
+        for service_name, values in services.items():
+            values['mean'] = round(sp_stats.tmean(values['mean']), 2)
+            values['rate'] = round(values['usage'] / total_seconds, 2)
             
-            for name in STATS_KEYS:
-                value = values[name]
-                if name == 'usage':
-                    stats[name] += value
-                elif name == 'max':
-                    stats[name] = max(stats[name], value)
-                elif name == 'mean':
-                    stats[name].append(value)
-                elif name == 'min':
-                    stats[name] = min(stats[name], value)
-                    
-    for service_name, values in services.items():
-        values['mean'] = round(sp_stats.tmean(values['mean']), 2)
-        values['rate'] = round(values['usage'] / total_seconds, 2)
-        
-    print(key_prefix, key_suffix)
-        
-    return services
-        
-def get_by_hour_patterns(now):
-    return ['{}*:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR, elem) for elem in get_hourly_suffixes(now)]
-
-def get_by_minute_patterns(now):
-    return ['{}*:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, elem) for elem in get_minutely_suffixes(now)]
+        self.hset_aggr_keys(services, key_prefix, key_suffix)
+    
+# ##############################################################################
             
-def create_summary_by_day():
-    result = create_summary(DT_PATTERNS.CURRENT_DAY_START, 'daily', 'hour', 'minute')
-    
-    #pprint(result)
-    
-create_summary_by_day()
-"""
-
 class ProcessRawTimes(_AggregatingService):
     def handle(self):
         
@@ -347,6 +283,8 @@ class ProcessRawTimes(_AggregatingService):
             # Services use RPUSH for storing raw times so we are safe to use LTRIM
             # in order to do away with the already processed ones
             self.server.kvdb.conn.ltrim(key, batch_total, -1)
+            
+# ##############################################################################
 
 class AggregateByMinute(_AggregatingService):
     """ Aggregates per-minute times.
@@ -410,17 +348,24 @@ class AggregateByMonth(_AggregatingService):
         
         self.aggregate_partly_aggregated(delta, source_strftime_format, source, target)
         
-class CreateSummaryByDay(_AggregatingService):
+# ##############################################################################
+        
+class CreateSummaryByDay(_SummarizingService):
+    """ Creates a summary for the current day.
+    """
+    def handle(self):
+        self.create_summary(DT_PATTERNS.CURRENT_DAY_START, 'daily', 'hour', 'minute')
+
+class CreateSummaryByWeek(_SummarizingService):
     pass
 
-class CreateSummaryByWeek(_AggregatingService):
+class CreateSummaryByMonth(_SummarizingService):
     pass
 
-class CreateSummaryByMonth(_AggregatingService):
+class CreateSummaryByYear(_SummarizingService):
     pass
 
-class CreateSummaryByYear(_AggregatingService):
-    pass
+# ##############################################################################
             
 class StatsReturningService(AdminService):
     """ A base class for services returning time-oriented statistics.
@@ -579,4 +524,3 @@ class GetByService(StatsReturningService):
         if stats_elem:
             stats_elem = stats_elem[0]
             self.response.payload = Bunch(stats_elem.to_dict())
-            
