@@ -174,6 +174,9 @@ class _AggregatingService(AdminService):
         
     def hset_aggr_keys(self, service_stats, key_prefix, key_suffix):
         for service_name, values in service_stats.items():
+            if service_name.endswith(':'):
+                service_name = service_name[:-1]
+                
             aggr_key = '{}{}:{}'.format(key_prefix, service_name, key_suffix)
             for name in STATS_KEYS:
                 self.hset_aggr_key(aggr_key, name, values[name])
