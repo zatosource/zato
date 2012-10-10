@@ -217,25 +217,25 @@ class ZatoContext(PythonConfig):
             {'name': 'zato.stats.AggregateByMinute', 'seconds':60, 
              'service':'zato.server.service.internal.stats.AggregateByMinute'},
             
-            {'name': 'zato.stats.AggregateByHour', 'seconds':10, 
+            {'name': 'zato.stats.AggregateByHour', 'minutes':60,
              'service':'zato.server.service.internal.stats.AggregateByHour'},
             
-            {'name': 'zato.stats.AggregateByDay', 'minutes':60, 
+            {'name': 'zato.stats.AggregateByDay', 'minutes':60,
              'service':'zato.server.service.internal.stats.AggregateByDay'},
             
             {'name': 'zato.stats.AggregateByMonth', 'minutes':60,
              'service':'zato.server.service.internal.stats.AggregateByMonth'},
             
-            {'name': 'zato.stats.CreateSummaryByDay', 'seconds':10, 
+            {'name': 'zato.stats.CreateSummaryByDay', 'minutes':10,
              'service':'zato.server.service.internal.stats.CreateSummaryByDay'},
             
-            {'name': 'zato.stats.CreateSummaryByWeek', 'minutes':60, 
+            {'name': 'zato.stats.CreateSummaryByWeek', 'minutes':10,
              'service':'zato.server.service.internal.stats.CreateSummaryByWeek'},
             
-            {'name': 'zato.stats.CreateSummaryByMonth', 'seconds':10, 
+            {'name': 'zato.stats.CreateSummaryByMonth', 'minutes':60,
              'service':'zato.server.service.internal.stats.CreateSummaryByMonth'},
             
-            {'name': 'zato.stats.CreateSummaryByYear', 'seconds':10, 
+            {'name': 'zato.stats.CreateSummaryByYear', 'minutes':60,
              'service':'zato.server.service.internal.stats.CreateSummaryByYear'},
 
         ]

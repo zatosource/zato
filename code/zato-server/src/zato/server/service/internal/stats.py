@@ -24,7 +24,7 @@ from calendar import mdays
 from collections import OrderedDict
 from contextlib import closing
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from heapq import nlargest
 from itertools import chain
 from operator import itemgetter
@@ -35,7 +35,7 @@ from bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta, MO
 from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule
 
 # SciPy
@@ -66,6 +66,7 @@ class DT_PATTERNS(object):
     
     SUMMARY_SUFFIX_PATTERNS = {
         'daily': '%Y:%m:%d',
+        'weekly': '%Y:%m:%d',
         'monthly': '%Y:%m',
         'yearly': '%Y',
     }
@@ -114,6 +115,7 @@ class _AggregatingService(AdminService):
     
     def collect_service_stats(self, keys_pattern, key_prefix, key_suffix, total_seconds, 
                               suffix_needs_colon=True, chop_off_service_name=True, needs_rate=True):
+
         service_stats = {}
         if suffix_needs_colon:
             key_suffix = ':' + key_suffix
@@ -205,7 +207,7 @@ class _SummarizingService(_AggregatingService):
     
     def get_hourly_suffixes(self, now):
         start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
-        until = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
+        until = parse((now - timedelta(hours=2)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
         
         return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=until))
     
@@ -237,14 +239,16 @@ class _SummarizingService(_AggregatingService):
     def get_by_month_patterns(self, now):
         return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH, self.get_monthly_suffixes)
     
-    def create_summary(self, start_pattern, target, *pattern_names):
+    def create_summary(self, target, *pattern_names):
         now = datetime.utcnow()
-        #now = parse('2012-10-08 22:10:33.074743')
-        
         key_prefix = KVDB.SERVICE_SUMMARY_PREFIX_PATTERN.format(target)
-        key_suffix = now.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
-    
-        start = parse(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
+        
+        if target == 'weekly':
+            start = parse((now + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d 00:00:00')) # Current week start
+            key_suffix = start.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
+        else:
+            start = parse(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
+            key_suffix = now.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
         total_seconds = (now - start).total_seconds()
         
         patterns = []
@@ -387,18 +391,19 @@ class CreateSummaryByDay(_SummarizingService):
     """ Creates a summary for the current day.
     """
     def handle(self):
-        self.create_summary(DT_PATTERNS.CURRENT_DAY_START, 'daily', 'hour', 'minute')
+        self.create_summary('daily', 'hour', 'minute')
 
 class CreateSummaryByWeek(_SummarizingService):
-    pass
+    def handle(self):
+        self.create_summary('weekly', 'day', 'hour', 'minute')
 
 class CreateSummaryByMonth(_SummarizingService):
     def handle(self):
-        self.create_summary(DT_PATTERNS.CURRENT_DAY_START, 'monthly', 'day', 'hour', 'minute')
+        self.create_summary('monthly', 'day', 'hour', 'minute')
 
 class CreateSummaryByYear(_SummarizingService):
     def handle(self):
-        self.create_summary(DT_PATTERNS.CURRENT_DAY_START, 'yearly', 'month', 'day', 'hour', 'minute')
+        self.create_summary('yearly', 'month', 'day', 'hour', 'minute')
 
 # ##############################################################################
             
