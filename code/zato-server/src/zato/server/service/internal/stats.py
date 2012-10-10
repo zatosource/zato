@@ -65,11 +65,22 @@ class DT_PATTERNS(object):
     PREVIOUS_DAY_END = '%Y-%m-%d 23:59:59'
     
     SUMMARY_SUFFIX_PATTERNS = {
-        'daily': '%Y:%m:%d',
-        'weekly': '%Y:%m:%d',
-        'monthly': '%Y:%m',
-        'yearly': '%Y',
+        'by-day': '%Y:%m:%d',
+        'by-week': '%Y:%m:%d',
+        'by-month': '%Y:%m',
+        'by-year': '%Y',
     }
+
+# ##############################################################################    
+    
+class StatsReturningSimpleIO:
+    """ Consult StatsElem's docstring for the description of output parameters.
+    """
+    input_required = ('start', 'stop')
+    input_optional = ('service_name', 'n', 'n_type')
+    output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
+        'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
+        'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services')
     
 # ##############################################################################
 
@@ -243,7 +254,7 @@ class _SummarizingService(_AggregatingService):
         now = datetime.utcnow()
         key_prefix = KVDB.SERVICE_SUMMARY_PREFIX_PATTERN.format(target)
         
-        if target == 'weekly':
+        if target == 'by-week':
             start = parse((now + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d 00:00:00')) # Current week start
             key_suffix = start.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
         else:
@@ -391,35 +402,32 @@ class CreateSummaryByDay(_SummarizingService):
     """ Creates a summary for the current day.
     """
     def handle(self):
-        self.create_summary('daily', 'hour', 'minute')
+        self.create_summary('by-day', 'hour', 'minute')
 
 class CreateSummaryByWeek(_SummarizingService):
     def handle(self):
-        self.create_summary('weekly', 'day', 'hour', 'minute')
+        self.create_summary('by-week', 'day', 'hour', 'minute')
 
 class CreateSummaryByMonth(_SummarizingService):
     def handle(self):
-        self.create_summary('monthly', 'day', 'hour', 'minute')
+        self.create_summary('by-month', 'day', 'hour', 'minute')
 
 class CreateSummaryByYear(_SummarizingService):
     def handle(self):
-        self.create_summary('yearly', 'month', 'day', 'hour', 'minute')
+        self.create_summary('by-year', 'month', 'day', 'hour', 'minute')
 
 # ##############################################################################
             
 class StatsReturningService(AdminService):
     """ A base class for services returning time-oriented statistics.
     """
-    class SimpleIO:
-        """ Consult StatsElem's docstring for the description of output parameters.
-        """
-        input_required = ('start', 'stop')
-        input_optional = ('service_name', 'n', 'n_type')
-        output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
-            'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
-            'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services')
+    SimpleIO = StatsReturningSimpleIO
+    stats_key_prefix = KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE
+    
+    def get_suffixes(self, start, stop):
+        return [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
 
-    def get_stats(self, start, stop, service='*', n=None, n_type=None):
+    def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True):
         """ Returns statistics for a given interval, as defined by 'start' and 'stop'.
         service default to '*' for all services in that period and may be set to return
         a one-element list of information regarding that particular service. Setting 'n' 
@@ -436,44 +444,45 @@ class StatsReturningService(AdminService):
     
         start = parse(start)
         stop = parse(stop)
-        
         delta_seconds = (stop - start).seconds
         
-        time_elems = [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
+        suffixes = self.get_suffixes(start, stop)
         
         # We make several passes. First two passes are made over Redis keys, one gathers the services, if any at all,
-        # and another one actually collects statistics for each service found. Next pass computes trends
-        # for mean response time and service usage. Another one computes each of the service's
+        # and another one actually collects statistics for each service found. Next pass, a partly optional one,
+        # computes trends for mean response time and service usage. Another one computes each of the service's
         # average rate and updates other attributes basing on values collected in the previous step.
         # Optionally, the last one will pick only top n elements of a given type (top mean response time
         # or top usage).
         
         # 1st pass
-        for suffix in time_elems:
-            keys = self.server.kvdb.conn.keys('{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service, suffix))
+        for suffix in suffixes:
+            keys = self.server.kvdb.conn.keys('{}{}:{}'.format(self.stats_key_prefix, service, suffix))
             for key in keys:
-                service_name = key.replace(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, '').replace(':{}'.format(suffix), '')
+                service_name = key.replace(self.stats_key_prefix, '').replace(':{}'.format(suffix), '')
             
                 stats_elem = StatsElem(service_name)
                 stats_elems[service_name] = stats_elem
                 
-                # When building trends, we can't expect there will be data for all the time
+                # When building statistics, we can't expect there will be data for all the time
                 # elems built above so to guard against it, this is a dictionary whose keys are the
                 # said elems and values are mean/usage for each elem. The values will remain
                 # 0/0.0 if there is no data for the time elem, which may mean that in this
                 # particular time slice the service wasn't invoked at all.
                 stats_elem.expected_time_elems = OrderedDict(
-                    (elem, Bunch({'mean':0, 'usage':0.0})) for elem in time_elems)
+                    (elem, Bunch({'mean':0, 'usage':0.0})) for elem in suffixes)
                 
         # 2nd pass
         for service, stats_elem in stats_elems.items():
-            for suffix in time_elems:
-                key = '{}{}:{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, service, suffix)
+            for suffix in suffixes:
+                key = '{}{}:{}'.format(self.stats_key_prefix, service, suffix)
                 
                 # We can convert all the values to floats here to ease with computing
                 # all the stuff and convert them still to integers later on, when necessary.
                 key_values = Bunch(
                     ((name, float(value)) for (name, value) in self.server.kvdb.conn.hgetall(key).items()))
+                
+                print(key, key_values)
                 
                 if key_values:
     
@@ -492,20 +501,9 @@ class StatsReturningService(AdminService):
                         
         mean_all_services = '{:.0f}'.format(sp_stats.tmean(mean_all_services_list)) if mean_all_services_list else 0
                         
-        # 3rd pass
+        # 3rd pass (partly optional)
         for stats_elem in stats_elems.values():
-            values = stats_elem.expected_time_elems.values()
             
-            stats_elem.mean_trend_int = [int(elem.mean) for elem in values]
-            stats_elem.mean_trend = ','.join(str(elem) for elem in stats_elem.mean_trend_int)
-            stats_elem.mean = float('{:.2f}'.format(sp_stats.tmean(stats_elem.mean_trend_int)))
-    
-            stats_elem.usage_trend_int = [int(elem.usage) for elem in values]
-            stats_elem.usage = sum(stats_elem.usage_trend_int)
-            stats_elem.usage_trend = ','.join(str(elem) for elem in stats_elem.usage_trend_int)
-    
-            stats_elem.rate = float('{:.1f}'.format(sum(stats_elem.usage_trend_int) / delta_seconds))
-    
             stats_elem.mean_all_services = mean_all_services
             stats_elem.all_services_time = int(all_services_stats.time)
             stats_elem.all_services_usage = int(all_services_stats.usage)
@@ -514,7 +512,22 @@ class StatsReturningService(AdminService):
                 if all_services_stats[name]:
                     value = float('{:.2f}'.format(100.0 * getattr(stats_elem, name) / all_services_stats[name]))
                     setattr(stats_elem, '{}_perc_all_services'.format(name), value)
-    
+                    
+            values = stats_elem.expected_time_elems.values()
+
+            stats_elem.mean_trend_int = [int(elem.mean) for elem in values]            
+            stats_elem.usage_trend_int = [int(elem.usage) for elem in values]
+            
+            stats_elem.mean = float('{:.2f}'.format(sp_stats.tmean(stats_elem.mean_trend_int)))
+            stats_elem.usage = sum(stats_elem.usage_trend_int)
+
+            TODO ~!@@) @* @* @*@) tod osd= =sdf sdfo =-34=-t 34DFLGEO_$ eo-#$
+            stats_elem.rate = float('{:.1f}'.format(sum(stats_elem.usage_trend_int) / delta_seconds))
+            
+            if needs_trends:
+                stats_elem.mean_trend = ','.join(str(elem) for elem in stats_elem.mean_trend_int)
+                stats_elem.usage_trend = ','.join(str(elem) for elem in stats_elem.usage_trend_int)
+                
         # 4th pass (optional)
         if n:
             if not n_type:
@@ -564,3 +577,36 @@ class GetByService(StatsReturningService):
         if stats_elem:
             stats_elem = stats_elem[0]
             self.response.payload = Bunch(stats_elem.to_dict())
+
+class GetSummaryBase(StatsReturningService):
+    """ A base class for returning the summary of statistics for a given period.
+    """
+    SimpleIO = StatsReturningSimpleIO
+    stats_key_prefix = None
+
+    def get_suffixes(self, start, _ignored):
+        return [start.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[self.summary_type])]
+    
+    def handle(self):
+        self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(
+            self.request.input.start, self.request.input.stop, needs_trends=False))
+
+class GetSummaryByDay(GetSummaryBase):
+    SimpleIO = StatsReturningSimpleIO
+    summary_type = 'by-day'
+    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_DAY
+
+class GetSummaryByWeek(GetSummaryBase):
+    SimpleIO = StatsReturningSimpleIO
+    summary_type = 'by-week'
+    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_WEEK
+    
+class GetSummaryByMonth(GetSummaryBase):
+    SimpleIO = StatsReturningSimpleIO
+    summary_type = 'by-month'
+    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_MONTH
+
+class GetSummaryByYear(GetSummaryBase):
+    SimpleIO = StatsReturningSimpleIO
+    summary_type = 'by-year'
+    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_YEAR

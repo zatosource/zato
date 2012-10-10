@@ -172,7 +172,7 @@ class Request(ValueConverter):
             self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
         else:
             self.payload = self.raw_request
-        
+            
         if required_list:
             params = self.get_params(required_list, path_prefix, default_value, use_text)
             self.input.update(params)
@@ -229,6 +229,11 @@ class Request(ValueConverter):
                         param, param_name, value, self.has_simple_io_config, format_exc(e))
                     self.logger.error(msg)
                     raise Exception(msg)
+        else:
+            if self.logger.isEnabledFor(TRACE1):
+                msg = 'payload repr=[{}], type=[{}]'.format(repr(self.payload), type(self.payload))
+                self.logger.log(TRACE1, msg)
+
         return params
 
 class Response(object):

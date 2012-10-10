@@ -180,6 +180,7 @@ class KVDB:
     
     SERVICE_SUMMARY_PREFIX_PATTERN = 'zato:stats:service:summary:{}:'
     SERVICE_SUMMARY_BY_DAY = 'zato:stats:service:summary:by-day:'
+    SERVICE_SUMMARY_BY_WEEK = 'zato:stats:service:summary:by-week:'
     SERVICE_SUMMARY_BY_MONTH = 'zato:stats:service:summary:by-month:'
     SERVICE_SUMMARY_BY_YEAR = 'zato:stats:service:summary:by-year:'
     
