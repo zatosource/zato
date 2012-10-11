@@ -33,9 +33,13 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
     
     var show_hide = [String.format('.{0}-csv', side), '#compare_to', String.format('.{0}-date', side)];
     
-    $.each(['start', 'stop'], function(idx, time) {
+    var directions = ['start', 'stop'];
+    $.each(directions, function(idx, time) {
         $(String.format('#{0}-{1}', side, time)).val(json[time]);
         $(String.format('#{0}-{1}-label', side, time)).text(json[time+'_label']);
+		if(directions[idx] == 'stop' && !json[time]) {
+			$('.direction-optional').addClass('hidden');
+		}
     });
     
     $.fn.zato.stats.top_n.show_hide([String.format('.{0}-date', side)], true);
