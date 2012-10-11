@@ -508,11 +508,6 @@ class StatsReturningService(AdminService):
             stats_elem.all_services_time = int(all_services_stats.time)
             stats_elem.all_services_usage = int(all_services_stats.usage)
             
-            for name in('time', 'usage'):
-                if all_services_stats[name]:
-                    value = float('{:.2f}'.format(100.0 * getattr(stats_elem, name) / all_services_stats[name]))
-                    setattr(stats_elem, '{}_perc_all_services'.format(name), value)
-                    
             values = stats_elem.expected_time_elems.values()
 
             stats_elem.mean_trend_int = [int(elem.mean) for elem in values]            
@@ -523,6 +518,11 @@ class StatsReturningService(AdminService):
 
             stats_elem.rate = float('{:.2f}'.format(sum(stats_elem.usage_trend_int) / delta_seconds))
             
+            for name in('time', 'usage'):
+                if all_services_stats[name]:
+                    value = float('{:.2f}'.format(100.0 * getattr(stats_elem, name) / all_services_stats[name]))
+                    setattr(stats_elem, '{}_perc_all_services'.format(name), value)
+
             if needs_trends:
                 stats_elem.mean_trend = ','.join(str(elem) for elem in stats_elem.mean_trend_int)
                 stats_elem.usage_trend = ','.join(str(elem) for elem in stats_elem.usage_trend_int)
