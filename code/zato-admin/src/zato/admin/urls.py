@@ -259,8 +259,9 @@ urlpatterns = patterns('',
         impexp.export, name='kvdb-data-dict-impexp-export'),
     
     # Statistics
-    url(r'^zato/stats/trends/data/$', stats.trends_data, name='stats-trends-data'),
+    url(r'^zato/stats/trends/data/$', stats.stats_trends_data, name='stats-trends-data'),
     url(r'^zato/stats/trends/(?P<choice>.*)/$', stats.trends, name='stats-trends'),
+    url(r'^zato/stats/summary/data/$', stats.stats_summary_data, name='stats-summary-data'),
     url(r'^zato/stats/summary/(?P<choice>.*)/$', stats.summary, name='stats-summary'),
     url(r'^zato/stats/settings/$', stats.settings, name='stats-settings'),
     url(r'^zato/stats/settings/save/$', stats.settings_save, name='stats-settings-save'),

@@ -27,7 +27,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
     
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/stats/trends.js"></script>
+    <script type="text/javascript" src="/static/js/stats/trends_summary.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -143,6 +143,7 @@
 </div>
 
     <form>
+        <input type="hidden" id="choice" value="{{ choice }}" />
         <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
         <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
         <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
