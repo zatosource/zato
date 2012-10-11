@@ -396,7 +396,7 @@ class ParallelServer(BrokerMessageReceiver):
     def run_forever(self):
         
         task_dispatcher = _TaskDispatcher(self, self.config)
-        task_dispatcher.setThreadCount(2) # TODO: Make it configurable
+        task_dispatcher.setThreadCount(4) # TODO: Make it configurable
 
         logger.debug('host:[{0}], port:[{1}]'.format(self.host, self.port))
 

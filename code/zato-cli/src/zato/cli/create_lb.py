@@ -55,9 +55,9 @@ defaults
 
     stats uri /zato-lb-stats # ZATO defaults:stats uri
 
-    timeout connect 5000 # ZATO defaults:timeout connect
-    timeout client 5000 # ZATO defaults:timeout client
-    timeout server 5000 # ZATO defaults:timeout server
+    timeout connect 15000 # ZATO defaults:timeout connect
+    timeout client 15000 # ZATO defaults:timeout client
+    timeout server 15000 # ZATO defaults:timeout server
 
     stats enable
     stats realm   Haproxy\ Statistics
