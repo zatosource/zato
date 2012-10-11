@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from calendar import mdays
+from calendar import mdays, monthrange
 from collections import OrderedDict
 from contextlib import closing
 from copy import deepcopy
@@ -174,7 +174,7 @@ class _AggregatingService(AdminService):
             total_seconds = delta.total_seconds() 
         else:
             # I.e. number of days in the month * seconds a day has
-            total_seconds = mdays[delta_diff.month] * 86400
+            total_seconds = mdays[delta_diff.month] * 86400 # TODO: Use calendar.monthrange instead of mdays so leap years are taken into account
         
         key_suffix = delta_diff.strftime(source_strftime_format)
         service_stats = self.collect_service_stats(
@@ -585,7 +585,7 @@ class GetSummaryBase(StatsReturningService):
         
     stats_key_prefix = None
     
-    def get_start_date(self, start):
+    def get_start_date(self):
         return self.request.input.start
     
     def get_end_date(self, start):
@@ -633,7 +633,20 @@ class GetSummaryByWeek(GetSummaryBase):
 class GetSummaryByMonth(GetSummaryBase):
     summary_type = 'by-month'
     stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_MONTH
+    
+    def get_end_date(self, start):
+        if start == date.today().strftime('%Y-%m'):
+            return datetime.utcnow().isoformat()
+        else:
+            start = parse(start)
+            return '{0}-{1:0>2}-{2}T23:59:59'.format(start.year, start.month, monthrange(start.year, start.month)[1])
 
 class GetSummaryByYear(GetSummaryBase):
     summary_type = 'by-year'
     stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_YEAR
+
+    def get_end_date(self, start):
+        if date.today().isoformat().startswith(start):
+            return datetime.utcnow().isoformat()
+        else:
+            return '{}-12-31T23:59:59'.format(start)
