@@ -623,7 +623,7 @@ class GetSummaryByWeek(GetSummaryBase):
         start = parse(start)
         
         # Is it the current week?
-        if start.isocalendar()[1] == date.today().isocalendar()[1]:
+        if start.year == today.year and start.isocalendar()[1] == date.today().isocalendar()[1]:
             return datetime.utcnow().isoformat()
             
         # It's not the current one, find Sunday nearest to the start
