@@ -24,7 +24,7 @@ import logging
 from copy import deepcopy
 from cStringIO import StringIO
 from csv import DictWriter
-from datetime import datetime
+from datetime import date, datetime
 
 # anyjson
 from anyjson import dumps
@@ -84,13 +84,22 @@ job_mappings = {
     JobAttrFormMapping('zato.stats.AggregateByMinute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
 
-def _get_stats(cluster, start, stop, n, n_type):
+stats_type_service = {
+    'trends': 'zato:stats.get-trends',
+    'summary-today': 'zato:stats.get-summary-by-day',
+}
+
+def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     """ Returns at most n statistics elements of a given n_type for the period
     between start and stop.
     """
     out = []
-    zato_message, _  = invoke_admin_service(cluster, 'zato:stats.get-trends',
-        {'start':start, 'stop':stop, 'n':n, 'n_type':n_type})
+    input_dict = {'start':start, 'n':n, 'n_type':n_type}
+    
+    if stop:
+        input_dict['stop'] = stop
+
+    zato_message, _  = invoke_admin_service(cluster, stats_type_service[stats_type], input_dict)
     
     if zato_path('response.item_list.item').get_from(zato_message) is not None:
         for msg_item in zato_message.response.item_list.item:
@@ -98,8 +107,8 @@ def _get_stats(cluster, start, stop, n, n_type):
             
     return out
 
-@meth_allowed('GET')
-def trends(req, choice):
+def _get_stats_params(req, choice):
+    
     labels = {'last_hour':'Last hour', 'today':'Today', 'yesterday':'Yesterday', 'last_24h':'Last 24h',
             'this_week':'This week', 'this_month':'This month', 'this_year':'This year'}
     
@@ -120,7 +129,7 @@ def trends(req, choice):
     
     if not choice in labels:
         raise ValueError('choice:[{}] is not one of:[{}]'.format(choice, labels.keys()))
-        
+    
     start, stop = '', ''
     n = req.GET.get('n', 10)
     now = datetime.utcnow()
@@ -128,32 +137,22 @@ def trends(req, choice):
     if req.zato.get('cluster'):
         
         def _params_last_hour():
-            trend_elems = 60
-            start = now + relativedelta(minutes=-trend_elems)
+            elems = 60
+            start = now + relativedelta(minutes=-elems)
             return start.replace(tzinfo=UTC), now.replace(tzinfo=UTC)
+        
+        def _params_today():
+            start = date.today().isoformat() + 'T00:00+00:00'
+            return start, ''
             
         start, stop = locals()['_params_' + choice]()
         start = from_utc_to_user(start, req.zato.user_profile)
-        stop = from_utc_to_user(stop, req.zato.user_profile)
+        if stop:
+            stop = from_utc_to_user(stop, req.zato.user_profile)
+        
+    return start, stop, n, labels[choice], compare_to[choice]
 
-    return_data = {
-        'start': start,
-        'stop': stop,
-        'n': n,
-        'label': labels[choice], 
-        'n_form': NForm(initial={'n':n}),
-        'compare_form': CompareForm(compare_to=compare_to[choice]),
-        'zato_clusters': req.zato.clusters,
-        'cluster_id': req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
-        'sample_dt': get_sample_dt(req.zato.user_profile),
-    }
-    
-    return_data.update(get_js_dt_format(req.zato.user_profile))
-    
-    return TemplateResponse(req, 'zato/stats/trends.html', return_data)
-
-def _trends_data_csv(user_profile, req_input, cluster):
+def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
     n_type_keys = {
         'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services', 
@@ -166,7 +165,7 @@ def _trends_data_csv(user_profile, req_input, cluster):
     writer = DictWriter(buff, n_type_keys[req_input.n_type], extrasaction='ignore')
     writer.writeheader()
     
-    for stat in _get_stats(cluster, req_input.start, req_input.stop, req_input.n, req_input.n_type):
+    for stat in _get_stats(cluster, req_input.start, req_input.stop, req_input.n, req_input.n_type, stats_type):
         d = stat.to_dict()
         d['start'] = req_input.start
         d['stop'] = req_input.stop
@@ -180,7 +179,7 @@ def _trends_data_csv(user_profile, req_input, cluster):
     
     return response
 
-def _trends_data_html(user_profile, req_input, cluster):
+def _stats_data_html(user_profile, req_input, cluster, stats_type):
     
     return_data = {'has_stats':False, 'start':req_input.start, 'stop':req_input.stop}
     settings = {}
@@ -191,14 +190,14 @@ def _trends_data_html(user_profile, req_input, cluster):
             settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
         
     for name in('mean', 'usage'):
-        d = {'cluster_id':cluster.id, 'side':req_input.side}
+        d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': stats_type == 'trends'}
         if req_input.n:
             stats = _get_stats(cluster, 
                 from_user_to_utc(req_input.start, user_profile),
                 from_user_to_utc(req_input.stop, user_profile),
-                req_input.n, name)
+                req_input.n, name, stats_type)
             
-            # I.e. whether it's not an empty list (assuming both stats will always be available or none will be)
+            # I.e. whether it's not an empty list (assuming both stats will always be available or neither will be)
             return_data['has_stats'] = len(stats)
             
             return_data['{}_csv_href'.format(name)] = '{}?{}&amp;format=csv&amp;n_type={}&amp;cluster={}'.format(
@@ -214,8 +213,7 @@ def _trends_data_html(user_profile, req_input, cluster):
         
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-@meth_allowed('GET', 'POST')
-def trends_data(req):
+def stats_data(req, stats_type):
     """ n and n_type will always be given. format may be None and will
     default to 'html'. Also, either start/stop or left_start/left_stop/shift
     will be present - if the latter, start and stop will be computed as left_start/left_stop
@@ -226,7 +224,7 @@ def trends_data(req):
     
     for name in req_input:
         req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
-
+        
     try:
         req_input.n = int(req_input.n)
     except ValueError:
@@ -250,11 +248,43 @@ def trends_data(req):
             delta = relativedelta(**shift_params[req_input.shift])
             req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
 
-    return globals()['_trends_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster)
+    return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster, stats_type)
+
+@meth_allowed('GET', 'POST')
+def stats_trends_data(req):
+    return stats_data(req, 'trends')
+
+@meth_allowed('GET', 'POST')
+def stats_summary_data(req):
+    return stats_data(req, 'summary-{}'.format(req.POST.get('choice', 'missing-value')))
+
+def trends_summary(req, choice):
+    start, stop, n, label, compare_to = _get_stats_params(req, choice)
+        
+    return_data = {
+        'start': start,
+        'stop': stop,
+        'n': n,
+        'choice': choice, 
+        'label': label, 
+        'n_form': NForm(initial={'n':n}),
+        'compare_form': CompareForm(compare_to=compare_to),
+        'zato_clusters': req.zato.clusters,
+        'cluster_id': req.zato.cluster_id,
+        'choose_cluster_form':req.zato.choose_cluster_form,
+        'sample_dt': get_sample_dt(req.zato.user_profile),
+    }
     
+    return_data.update(get_js_dt_format(req.zato.user_profile))
+    return TemplateResponse(req, 'zato/stats/trends_summary.html', return_data)
+
+@meth_allowed('GET')
+def trends(req, choice):
+    return trends_summary(req, choice)
+
 @meth_allowed('GET')
 def summary(req, choice):
-    pass
+    return trends_summary(req, choice)
     
 @meth_allowed('GET')
 def settings(req):

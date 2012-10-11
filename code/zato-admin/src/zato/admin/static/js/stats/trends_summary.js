@@ -91,6 +91,7 @@ $.fn.zato.stats.top_n.shift = function(side, shift, date_prefix) {
 	
 	data['side'] = side;
 	data['shift'] = shift;
+	data['choice'] = $('#choice').val();
     
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': side});
 }
@@ -121,6 +122,8 @@ $.fn.zato.stats.top_n.initial_data = function() {
     });
     
     data['side'] = 'left';
+	data['choice'] = $('#choice').val();
+	
     $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
 };
 

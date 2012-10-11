@@ -45,6 +45,7 @@ from scipy import stats as sp_stats
 from zato.common import KVDB, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
+from zato.server.service import Integer
 from zato.server.service.internal import AdminService
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
@@ -414,7 +415,7 @@ class StatsReturningService(AdminService):
         """ Consult StatsElem's docstring for the description of output parameters.
         """
         input_required = ('start', 'stop')
-        input_optional = ('service_name', 'n', 'n_type')
+        input_optional = ('service_name', Integer('n'), 'n_type')
         output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
             'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
             'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services')
@@ -430,6 +431,8 @@ class StatsReturningService(AdminService):
         a one-element list of information regarding that particular service. Setting 'n' 
         to a positive integer will make it return only top n services.
         """
+        print(start, stop, service, n, n_type, needs_trends)
+        
         stats_elems = {}
         all_services_stats = Bunch({'usage':0, 'time':0})
     
@@ -554,7 +557,7 @@ class GetTrends(StatsReturningService):
     along with their trends.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
-        input_required = StatsReturningService.SimpleIO.input_required + ('n', 'n_type')
+        input_required = StatsReturningService.SimpleIO.input_required + (Integer('n'), 'n_type')
 
     def handle(self):
         self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(self.request.input.start, 
@@ -581,7 +584,7 @@ class GetSummaryBase(StatsReturningService):
     """ A base class for returning the summary of statistics for a given period.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
-        input_required = ('start',)
+        input_required = ('start', 'n', 'n_type')
         
     stats_key_prefix = None
     
@@ -598,7 +601,8 @@ class GetSummaryBase(StatsReturningService):
     
     def handle(self):
         self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(
-            self.get_start_date(), self.get_end_date(self.request.input.start), needs_trends=False))
+            self.get_start_date(), self.get_end_date(self.request.input.start), 
+            n=self.request.input.n, n_type=self.request.input.n_type, needs_trends=False))
 
 class GetSummaryByDay(GetSummaryBase):
     summary_type = 'by-day'
