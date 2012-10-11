@@ -97,6 +97,15 @@ skip_by = {
     'this_year': 'year',
 }
 
+short_date_choice_format = {
+    'day': 'date',
+    'week': 'date',
+    'month': 'month_year',
+    'year': 'year',
+}
+
+# ##############################################################################
+
 def _get_start_stop(user_profile, stats_type, start, stop):
     if stats_type.startswith('summary'):
         if not start:
@@ -107,6 +116,11 @@ def _get_start_stop(user_profile, stats_type, start, stop):
         return start.isoformat(), None
     else:
         return start, stop
+        
+def _short_utc_to_user(dt, user_profile, choice):
+    for k, v in short_date_choice_format.items():
+        if k in choice:
+            return from_utc_to_user(dt, user_profile, v)
 
 def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     """ Returns at most n statistics elements of a given n_type for the period
@@ -126,7 +140,7 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
             
     return out
 
-def _get_stats_params(req, choice):
+def _get_stats_params(req, choice, is_summary):
     
     labels = {'last_hour':'Last hour', 'today':'Today', 'yesterday':'Yesterday', 'last_24h':'Last 24h',
             'this_week':'This week', 'this_month':'This month', 'this_year':'This year'}
@@ -167,11 +181,18 @@ def _get_stats_params(req, choice):
             return start, ''
             
         start, stop = locals()['_params_' + choice]()
-        start = from_utc_to_user(start, req.zato.user_profile)
+        
+        if is_summary:
+            start = _short_utc_to_user(start, req.zato.user_profile, choice)
+        else:
+            start = from_utc_to_user(start, req.zato.user_profile)
+        
         if stop:
             stop = from_utc_to_user(stop, req.zato.user_profile)
         
     return start, stop, n, labels[choice], compare_to[choice]
+
+# ##############################################################################
 
 def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
@@ -202,7 +223,8 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
 def _stats_data_html(user_profile, req_input, cluster, stats_type):
     
-    start, stop = _get_start_stop(user_profile, stats_type, req_input.start, req_input.stop)
+    start, stop = req_input.start, req_input.stop
+    #_get_start_stop(user_profile, stats_type, req_input.start, req_input.stop)
     return_data = {'has_stats':False, 'start':start, 'stop':stop}
     settings = {}
     query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
@@ -270,9 +292,8 @@ def stats_data(req, stats_type):
             delta = relativedelta(**shift_params[req_input.shift])
             req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
             
-    print(99, req_input.start)
-
-    return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster, stats_type)
+    return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
+        req_input, req.zato.cluster, stats_type)
 
 @meth_allowed('GET', 'POST')
 def stats_trends_data(req):
@@ -282,8 +303,8 @@ def stats_trends_data(req):
 def stats_summary_data(req):
     return stats_data(req, 'summary-{}'.format(req.POST.get('choice', 'missing-value')))
 
-def trends_summary(req, choice, stats_title):
-    start, stop, n, label, compare_to = _get_stats_params(req, choice)
+def trends_summary(req, choice, stats_title, is_summary):
+    start, stop, n, label, compare_to = _get_stats_params(req, choice, is_summary)
         
     return_data = {
         'start': start,
@@ -307,11 +328,13 @@ def trends_summary(req, choice, stats_title):
 
 @meth_allowed('GET')
 def trends(req, choice):
-    return trends_summary(req, choice, 'Trends')
+    return trends_summary(req, choice, 'Trends', False)
 
 @meth_allowed('GET')
 def summary(req, choice):
-    return trends_summary(req, choice, 'Summary')
+    return trends_summary(req, choice, 'Summary', True)
+
+# ##############################################################################
     
 @meth_allowed('GET')
 def settings(req):
@@ -367,7 +390,8 @@ def settings_save(req):
 
     for mapping in job_mappings:
 
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
+        zato_message, _  = invoke_admin_service(
+            req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
         if zato_path('response.item').get_from(zato_message) is not None:
             item = zato_message.response.item
             
@@ -398,6 +422,8 @@ def settings_save(req):
         
     return redirect('{}?cluster={}'.format(reverse('stats-settings'), req.zato.cluster_id))
 
+# ##############################################################################
+
 @meth_allowed('GET')
 def maintenance(req):
     return_data = {
@@ -426,6 +452,5 @@ def maintenance_delete(req):
         
     return redirect('{}?cluster={}'.format(reverse('stats-maintenance'), req.zato.cluster_id))
 
-@meth_allowed('GET')
-def by_service(req):
-    pass
+# ##############################################################################
+

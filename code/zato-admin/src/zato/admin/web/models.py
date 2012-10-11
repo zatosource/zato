@@ -40,6 +40,7 @@ class UserProfile(models.Model):
         self.date_format_py = DATE_FORMATS[self.date_format]
         self.time_format_py = TIME_FORMATS[self.time_format]
         self.month_year_format_py = MONTH_YEAR_FORMATS[self.date_format]
+        self.year_format_py = 'Y'
         self.date_time_format_py = '{} {}'.format(self.date_format_py, self.time_format_py)
     
     def __repr__(self):
