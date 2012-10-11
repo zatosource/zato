@@ -121,6 +121,13 @@ def _short_utc_to_user(dt, user_profile, choice):
     for k, v in short_date_choice_format.items():
         if k in choice:
             return from_utc_to_user(dt, user_profile, v)
+            
+def _long_user_to_utc(dt, user_profile, choice):
+    #for k, v in short_date_choice_format.items():
+    #    if k in choice:
+    #        return from_utc_to_user(dt, user_profile, v)
+    print(88, dt, choice, from_user_to_utc(dt, user_profile))
+    return from_user_to_utc(dt, user_profile)
 
 def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     """ Returns at most n statistics elements of a given n_type for the period
@@ -177,7 +184,7 @@ def _get_stats_params(req, choice, is_summary):
             return start.replace(tzinfo=UTC), now.replace(tzinfo=UTC)
         
         def _params_today():
-            start = date.today().isoformat() + 'T00:00+00:00'
+            start = now.strftime('%Y-%m-%dT%H:%M+00:00')
             return start, ''
             
         start, stop = locals()['_params_' + choice]()
@@ -223,9 +230,7 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
 def _stats_data_html(user_profile, req_input, cluster, stats_type):
     
-    start, stop = req_input.start, req_input.stop
-    #_get_start_stop(user_profile, stats_type, req_input.start, req_input.stop)
-    return_data = {'has_stats':False, 'start':start, 'stop':stop}
+    return_data = {'has_stats':False, 'start':req_input.start, 'stop':req_input.stop}
     settings = {}
     query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
     
@@ -237,8 +242,8 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
         d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': stats_type == 'trends'}
         if req_input.n:
             stats = _get_stats(cluster, 
-                from_user_to_utc(req_input.start, user_profile),
-                from_user_to_utc(req_input.stop, user_profile),
+                _long_user_to_utc(req_input.start, user_profile, stats_type),
+                _long_user_to_utc(req_input.stop, user_profile, stats_type),
                 req_input.n, name, stats_type)
             
             # I.e. whether it's not an empty list (assuming both stats will always be available or neither will be)
