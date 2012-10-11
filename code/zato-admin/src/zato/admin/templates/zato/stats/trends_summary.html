@@ -40,7 +40,7 @@
     </p>
 {% else %}
 
-<h2 class="zato">Statistics : Trends : <span id="page_label">{{ label }}</span></h2>
+<h2 class="zato">Statistics : {{ stats_title }} : <span id="page_label">{{ label }}</span></h2>
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
@@ -63,18 +63,17 @@
                         <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
                     </form>
                 </div>
-                <div id="compare_to" style="text-align:right;margin-top:4px" class="hidden">
+                <div id="compare_to" style="text-align:right;margin-top:4px">
                     Compare to previous:
-                    <a href="javascript:$.fn.zato.stats.top_n.shift('right', 'prev_hour', 'left');">hour</a>,
-                    <a href="javascript:$.fn.zato.stats.top_n.shift('right', 'prev_day', 'left');">hour/day</a>,
-                    <a href="javascript:$.fn.zato.stats.top_n.shift('right', 'prev_week', 'left');">hour/day/week</a>,
-                    <a href="javascript:$.fn.zato.stats.top_n.show_start_stop_picker()">other</a>
+{% for item in compare_to %}
+<a href="javascript:$.fn.zato.stats.top_n.shift('right', '{{ item.0 }}', 'left');">{{ item.1 }}</a>{% if not forloop.last %},{% endif %}{% if forloop.last and needs_compare_to_other%}, <a href="javascript:$.fn.zato.stats.top_n.show_start_stop_picker()">other</a>{% endif %}
+{% endfor %}
                 </div>
                 
             <div class="left-date hidden" style="text-align:left;margin-top:14px">
-                <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'prev_hour')" style="text-decoration:none">&larr;</a>
-                    <span class="form_hint"><span id="left-start-label">left-start-label placeholder</span> - <span id="left-stop-label">left-stop-label placeholder</span></span> 
-                <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'next_hour')" style="text-decoration:none">&rarr;</a>
+<a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'prev_{{ skip_by }}')" style="text-decoration:none">&larr;</a>
+    <span class="form_hint"><span id="left-start-label">left-start-label placeholder</span><span class="direction-optional"> - </span><span id="left-stop-label" class="direction-optional">left-stop-label placeholder</span></span> 
+<a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'next_{{ skip_by }}')" style="text-decoration:none">&rarr;</a>
             </div>
                 
                 
@@ -82,9 +81,9 @@
             <td style="text-align:right">
                 <div>&nbsp;</div>
                 <div class="right-date hidden" style="text-align:right;margin-top:14px">
-                    <a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'prev_hour')" style="text-decoration:none">&larr;</a>
-                        <span class="form_hint"><span id="right-start-label">right-start-label placeholder</span> - <span id="right-stop-label">right-stop-label placeholder</span></span> 
-                    <a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'next_hour')" style="text-decoration:none">&rarr;</a>
+<a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'prev_{{ skip_by }}')" style="text-decoration:none">&larr;</a>
+    <span class="form_hint"><span id="right-start-label">right-start-label placeholder</span> - <span id="right-stop-label">right-stop-label placeholder</span></span> 
+<a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'next_{{ skip_by }}')" style="text-decoration:none">&rarr;</a>
                 </div>
             </td>
         </tr>

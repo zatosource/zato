@@ -57,6 +57,18 @@ DATE_FORMATS = {
     'yyyy.mm.dd': 'Y.m.d',
 }
 
+MONTH_YEAR_FORMATS = {
+    'dd/mm/yyyy': 'd/m',
+    'dd-mm-yyyy': 'd-m',
+    'dd.mm.yyyy': 'd.m',
+    'dd.mm.yy': 'd.m',
+    'mm-dd-yy': 'm-y',
+    'mm-dd-yyyy': 'm-Y',
+    'yyyy/mm/dd': 'Y/m',
+    'yyyy-mm-dd': 'Y-m',
+    'yyyy.mm.dd': 'Y.m',
+}
+
 TIME_FORMATS = {
     '12': 'g:i.s A',
     '24': 'H:i:s',
@@ -96,7 +108,7 @@ def from_utc_to_user(dt, user_profile, format='date_time'):
     """
     return django_date_filter(_from_utc_to_local(dt, user_profile.timezone), getattr(user_profile, '{}_format_py'.format(format)))
     
-def from_user_to_utc(dt, user_profile):
+def from_user_to_utc(dt, user_profile, format='date_time'):
     """ Converts a datetime object from a user-selected timezone to UTC.
     """
     # The underlying parser gets confused by stuff like '15.08.12 9:56.59 PM',
@@ -106,4 +118,6 @@ def from_user_to_utc(dt, user_profile):
         # Reverse the string, replace the first occurence of . with a : and reverse it back
         dt = dt[::-1].replace('.', ':', 1)[::-1]
     
-    return _from_local_to_utc(dt, user_profile.timezone, user_profile.date_format_py.startswith('d')).replace(tzinfo=None)
+    dt_format = getattr(user_profile, '{}_format_py'.format(format))
+    print(dt, dt_format)
+    return _from_local_to_utc(dt, user_profile.timezone, dt_format.startswith('d')).replace(tzinfo=None)

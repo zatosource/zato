@@ -53,7 +53,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
-from zato.admin.web.forms.stats import CompareForm, MaintenanceForm, NForm, SettingsForm
+from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed
 from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
 
@@ -89,6 +89,25 @@ stats_type_service = {
     'summary-today': 'zato:stats.get-summary-by-day',
 }
 
+skip_by = {
+    'last_hour': 'hour',
+    'today': 'day',
+    'this_week': 'week',
+    'this_month': 'month',
+    'this_year': 'year',
+}
+
+def _get_start_stop(user_profile, stats_type, start, stop):
+    if stats_type.startswith('summary'):
+        if not start:
+            start = date.today().isoformat() + 'T00:00+00:00'
+            
+        start = from_user_to_utc(start, user_profile, 'month_year')
+        
+        return start.isoformat(), None
+    else:
+        return start, stop
+
 def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     """ Returns at most n statistics elements of a given n_type for the period
     between start and stop.
@@ -114,14 +133,16 @@ def _get_stats_params(req, choice):
     
     compare_to = {
         'last_hour':[
-            ('prev_hour', 'The previous hour'),
-            ('prev_day', 'Same hour the previous day'),
-            ('prev_week', 'Same hour and day the previous week'),
+            ('prev_hour', 'hour'),
+            ('prev_day', 'hour/day'),
+            ('prev_week', 'hour/day/week'),
         ], 
 
-        'today':[('', '')], 
+        'today':[
+            ('prev_day', 'day'),
+            ('prev_week', 'day/week'),
+        ], 
         'yesterday':[('', '')], 
-        'last_24h':[('', '')],
         'this_week':[('', '')], 
         'this_month':[('', '')], 
         'this_year':[('', '')]
@@ -181,7 +202,8 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
 def _stats_data_html(user_profile, req_input, cluster, stats_type):
     
-    return_data = {'has_stats':False, 'start':req_input.start, 'stop':req_input.stop}
+    start, stop = _get_start_stop(user_profile, stats_type, req_input.start, req_input.stop)
+    return_data = {'has_stats':False, 'start':start, 'stop':stop}
     settings = {}
     query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
     
@@ -247,6 +269,8 @@ def stats_data(req, stats_type):
             base_value = parse(req_input[name])
             delta = relativedelta(**shift_params[req_input.shift])
             req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
+            
+    print(99, req_input.start)
 
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, req_input, req.zato.cluster, stats_type)
 
@@ -258,7 +282,7 @@ def stats_trends_data(req):
 def stats_summary_data(req):
     return stats_data(req, 'summary-{}'.format(req.POST.get('choice', 'missing-value')))
 
-def trends_summary(req, choice):
+def trends_summary(req, choice, stats_title):
     start, stop, n, label, compare_to = _get_stats_params(req, choice)
         
     return_data = {
@@ -268,11 +292,14 @@ def trends_summary(req, choice):
         'choice': choice, 
         'label': label, 
         'n_form': NForm(initial={'n':n}),
-        'compare_form': CompareForm(compare_to=compare_to),
+        'compare_to': compare_to,
+        'needs_compare_to_other': choice in('last_hour', 'today'),
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
         'sample_dt': get_sample_dt(req.zato.user_profile),
+        'stats_title': stats_title,
+        'skip_by': skip_by[choice],
     }
     
     return_data.update(get_js_dt_format(req.zato.user_profile))
@@ -280,11 +307,11 @@ def trends_summary(req, choice):
 
 @meth_allowed('GET')
 def trends(req, choice):
-    return trends_summary(req, choice)
+    return trends_summary(req, choice, 'Trends')
 
 @meth_allowed('GET')
 def summary(req, choice):
-    return trends_summary(req, choice)
+    return trends_summary(req, choice, 'Summary')
     
 @meth_allowed('GET')
 def settings(req):

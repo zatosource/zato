@@ -24,7 +24,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 # Zato
-from zato.admin.web import DATE_FORMATS, TIME_FORMATS
+from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
 
 class UserProfile(models.Model):
     class Meta:
@@ -39,12 +39,13 @@ class UserProfile(models.Model):
         super(UserProfile, self).__init__(*args, **kwargs)
         self.date_format_py = DATE_FORMATS[self.date_format]
         self.time_format_py = TIME_FORMATS[self.time_format]
+        self.month_year_format_py = MONTH_YEAR_FORMATS[self.date_format]
         self.date_time_format_py = '{} {}'.format(self.date_format_py, self.time_format_py)
     
     def __repr__(self):
-        return '<{} at {} user:[{}] timezone:[{}] date_format_py:[{}] time_format_py:[{}] date_time_format_py:[{}]>'.format(
+        return '<{} at {} user:[{}] timezone:[{}] date_format_py:[{}] time_format_py:[{}] month_year_format_py:[{}] date_time_format_py:[{}]>'.format(
             self.__class__.__name__, hex(id(self)), self.user, self.timezone, self.date_format_py,
-            self.time_format_py, self.date_time_format_py)
+            self.time_format_py, self.month_year_format_py, self.date_time_format_py)
     
     __unicode__ = __repr__
     
