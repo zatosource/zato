@@ -1,3 +1,5 @@
+{% load humanize %}
+
     <tr id="{{ side }}-tr-usage">
         <td>
             <table style="width:100%" class="stats-table" id="{{ side }}-usage">
@@ -25,7 +27,7 @@
                     <td style="text-align:right;width:30px">{% if item.rate < 0.1 %}&lt;0.1{% else %}{{ item.rate }}{% endif %}</td>
                     <td style="text-align:right;width:30px">{% if item.usage_perc_all_services < 0.1 %}&lt;0.1{% else %}{{ item.usage_perc_all_services|floatformat:"1" }}{% endif %}</td>
                     <td style="text-align:right;width:30px">{% if item.time_perc_all_services < 0.1 %}&lt;0.1{% else %}{{ item.time_perc_all_services|floatformat:"1" }}{% endif %}</td>
-                    <td style="text-align:right;width:30px">{{ item.all_services_usage }}</td>
+                    <td style="text-align:right;width:30px">{{ item.all_services_usage|intcomma }}</td>
                     {% if needs_trends %}<td style="text-align:right;width:30px"><span class="{{ side }}-trend">{{ item.usage_trend }}</span></td>{% endif %}
                 </tr>
             {% empty %}
