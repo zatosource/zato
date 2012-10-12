@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from calendar import monthrange
 from copy import deepcopy
 from cStringIO import StringIO
 from csv import DictWriter
@@ -34,7 +35,7 @@ from bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import MO, relativedelta
 
 # Django
 from django.contrib import messages
@@ -49,15 +50,18 @@ from django.template.response import TemplateResponse
 from django_settings.models import PositiveInteger, Setting
 
 # pytz
+import pytz
 from pytz import UTC
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed
-from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
+from zato.common import DEFAULT_STATS_SETTINGS, SECONDS_IN_DAY, StatsElem, zato_path
 
 logger = logging.getLogger(__name__)
+
+SUMMARY_PREFIX = 'summary-'
 
 class JobAttrForm(object):
     def __init__(self, form_name, job_attr):
@@ -76,7 +80,7 @@ class JobAttrFormMapping(object):
     def __repr__(self):
         return '<{} at {} job_name:[{}], attrs:[{}]>'.format(self.__class__.__name__, hex(id(self)),
             self.job_name, repr(self.attrs))
-
+    
 # A mapping a job type, its name and the execution interval unit
 job_mappings = {
     JobAttrFormMapping('zato.stats.ProcessRawTimes', 
@@ -86,7 +90,7 @@ job_mappings = {
 
 stats_type_service = {
     'trends': 'zato:stats.get-trends',
-    'summary-today': 'zato:stats.get-summary-by-day',
+    '{}today'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
 }
 
 skip_by = {
@@ -107,7 +111,7 @@ short_date_choice_format = {
 # ##############################################################################
 
 def _get_start_stop(user_profile, stats_type, start, stop):
-    if stats_type.startswith('summary'):
+    if stats_type.startswith(SUMMARY_PREFIX):
         if not start:
             start = date.today().isoformat() + 'T00:00+00:00'
             
@@ -122,12 +126,71 @@ def _short_utc_to_user(dt, user_profile, choice):
         if k in choice:
             return from_utc_to_user(dt, user_profile, v)
             
-def _long_user_to_utc(dt, user_profile, choice):
-    #for k, v in short_date_choice_format.items():
-    #    if k in choice:
-    #        return from_utc_to_user(dt, user_profile, v)
-    print(88, dt, choice, from_user_to_utc(dt, user_profile))
-    return from_user_to_utc(dt, user_profile)
+def _long_user_to_utc(start, user_profile, summary_type):
+    """ Takes input in the user's timezone and calculates start/stop in UTC.
+    """
+    
+    summary_type = summary_type.replace(SUMMARY_PREFIX, '')
+    
+    if summary_type in('today', 'yesterday'):
+        
+        # In daily summaries we always start on midnight ..
+        start = from_user_to_utc('{} 00:00'.format(start), user_profile)
+        
+        # .. it's one day earlier though if it was yesterday
+        if summary_type == 'yesterday':
+            start = start + relativedelta(days=-1)
+            
+        # We can afford skipping a minute or so of statistics
+        stop = start + relativedelta(hours=23, minutes=59, seconds=59)
+
+    elif summary_type == 'week':    
+        
+        # Find the last Monday in the user's timezone
+        start = parse(start, dayfirst=user_profile.date_format_py.startswith('d'))
+        start = start + relativedelta(weekday=MO(-1))
+        
+        # Only now we can convert it to UTC
+        start = from_user_to_utc(start, user_profile)
+        
+        # Luckily, a week has always 7 days
+        stop = start + relativedelta(days=7)
+        
+    elif summary_type == 'month':
+
+        # Find the first day of month in user's timezone
+        start = parse(start, dayfirst=user_profile.date_format_py.startswith('d'))
+        start = start.replace(day=1)
+        
+        # How many days the current month has. Note that we're doing it before
+        # switching to UTC as this will very well change the month so if the
+        # start on input was '02-2012' (Feb 2012), it would've been changed to
+        # Jan 2012 in UTC and that in turn would've meant 31 days instead of 29.
+        days = monthrange(start.year, start.month)[1]
+
+        # Now we can safely convert to UTC
+        start = from_user_to_utc(start, user_profile)
+        
+        # stop will be equal to the number of seconds since in the month user
+        # was referring to
+        stop = start + relativedelta(seconds=days*SECONDS_IN_DAY)
+        
+    elif summary_type == 'year':
+        # Midnight 1st of Jan in user's timezone won't necessarily be midnight 1st of Jun in UTC
+        
+        year = int(start)
+        
+        start = datetime(year=year, month=1, day=1, hour=0, minute=0, second=0).isoformat()
+        stop = datetime(year=year, month=12, day=31, hour=23, minute=59, second=59).isoformat()
+        
+        start = from_user_to_utc(start, user_profile)
+        stop = from_user_to_utc(stop, user_profile)
+        
+    now = datetime.utcnow()    
+    if stop > now:
+        stop = now
+        
+    return start.isoformat(), stop.isoformat()
 
 def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     """ Returns at most n statistics elements of a given n_type for the period
@@ -237,14 +300,17 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
     if req_input.n:
         for name in('atttention_slow_threshold', 'atttention_top_threshold'):
             settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
+            
+    if stats_type.startswith(SUMMARY_PREFIX):
+        start, stop = _long_user_to_utc(req_input.start, user_profile, stats_type)
+    else:
+        start = from_user_to_utc(req_input.start, user_profile)
+        stop = from_user_to_utc(req_input.stop, user_profile)
         
     for name in('mean', 'usage'):
         d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': stats_type == 'trends'}
         if req_input.n:
-            stats = _get_stats(cluster, 
-                _long_user_to_utc(req_input.start, user_profile, stats_type),
-                _long_user_to_utc(req_input.stop, user_profile, stats_type),
-                req_input.n, name, stats_type)
+            stats = _get_stats(cluster, start, stop, req_input.n, name, stats_type)
             
             # I.e. whether it's not an empty list (assuming both stats will always be available or neither will be)
             return_data['has_stats'] = len(stats)
@@ -306,7 +372,7 @@ def stats_trends_data(req):
 
 @meth_allowed('GET', 'POST')
 def stats_summary_data(req):
-    return stats_data(req, 'summary-{}'.format(req.POST.get('choice', 'missing-value')))
+    return stats_data(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
 
 def trends_summary(req, choice, stats_title, is_summary):
     start, stop, n, label, compare_to = _get_stats_params(req, choice, is_summary)

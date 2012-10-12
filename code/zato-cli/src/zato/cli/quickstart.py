@@ -387,8 +387,9 @@ class Quickstart(ZatoCommand):
             'zato:stats.get-trends':'zato.server.service.internal.stats.GetTrends',
             'zato:stats.get-by-service':'zato.server.service.internal.stats.GetByService',
             'zato:stats.get-summary-by-day':'zato.server.service.internal.stats.GetSummaryByDay',
-            'zato:stats.get-summary-by-week':'zato.server.service.internal.stats.GetSummaryByWeek',
             'zato:stats.get-summary-by-month':'zato.server.service.internal.stats.GetSummaryByMonth',
+            'zato:stats.get-summary-by-range':'zato.server.service.internal.stats.GetSummaryByRange',
+            'zato:stats.get-summary-by-week':'zato.server.service.internal.stats.GetSummaryByWeek',
             'zato:stats.get-summary-by-year':'zato.server.service.internal.stats.GetSummaryByYear',
             'zato:stats.delete':'zato.server.service.internal.stats.Delete',
         }

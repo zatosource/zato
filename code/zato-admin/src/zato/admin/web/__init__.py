@@ -58,10 +58,10 @@ DATE_FORMATS = {
 }
 
 MONTH_YEAR_FORMATS = {
-    'dd/mm/yyyy': 'd/m',
-    'dd-mm-yyyy': 'd-m',
-    'dd.mm.yyyy': 'd.m',
-    'dd.mm.yy': 'd.m',
+    'dd/mm/yyyy': 'm/Y',
+    'dd-mm-yyyy': 'm-Y',
+    'dd.mm.yyyy': 'm.Y',
+    'dd.mm.yy': 'm.y',
     'mm-dd-yy': 'm-y',
     'mm-dd-yyyy': 'm-Y',
     'yyyy/mm/dd': 'Y/m',

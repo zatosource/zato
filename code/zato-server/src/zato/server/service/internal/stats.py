@@ -42,7 +42,7 @@ from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule
 from scipy import stats as sp_stats
 
 # Zato
-from zato.common import KVDB, StatsElem, ZatoException
+from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
 from zato.server.service import Integer
@@ -175,7 +175,7 @@ class _AggregatingService(AdminService):
             total_seconds = delta.total_seconds() 
         else:
             # I.e. number of days in the month * seconds a day has
-            total_seconds = mdays[delta_diff.month] * 86400 # TODO: Use calendar.monthrange instead of mdays so leap years are taken into account
+            total_seconds = mdays[delta_diff.month] * SECONDS_IN_DAY # TODO: Use calendar.monthrange instead of mdays so leap years are taken into account
         
         key_suffix = delta_diff.strftime(source_strftime_format)
         service_stats = self.collect_service_stats(
@@ -654,3 +654,13 @@ class GetSummaryByYear(GetSummaryBase):
             return datetime.utcnow().isoformat()
         else:
             return '{}-12-31T23:59:59'.format(start)
+
+class GetSummaryByRange(GetSummaryBase):
+    summary_type = 'by-day'
+    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_DAY
+    
+    def get_end_date(self, start):
+        if start == date.today().isoformat():
+            return datetime.utcnow().isoformat()
+        else:
+            return '{}T23:59:59'.format(start)
