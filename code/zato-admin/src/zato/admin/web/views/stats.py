@@ -264,6 +264,17 @@ def _get_stats_params(req, choice, is_summary):
 
 # ##############################################################################
 
+def _stats_start_stop(start, stop, user_profile, stats_type):
+    if stats_type.startswith(SUMMARY_PREFIX):
+        start, stop = _long_user_to_utc(start, user_profile, stats_type)
+    else:
+        start = from_user_to_utc(start, user_profile)
+        stop = from_user_to_utc(stop, user_profile)
+        
+    return start, stop
+
+# ##############################################################################
+
 def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
     n_type_keys = {
@@ -272,6 +283,8 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
         'usage': ['start', 'stop', 'service_name', 'usage', 'rate', 'usage_perc_all_services', 
                   'time_perc_all_services', 'all_services_usage', 'usage_trend'],
         }
+    
+    start, stop = _stats_start_stop(req_input.start, req_input.stop, user_profile, stats_type)
     
     buff = StringIO()
     writer = DictWriter(buff, n_type_keys[req_input.n_type], extrasaction='ignore')
@@ -297,16 +310,12 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
     settings = {}
     query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
     
+    start, stop = _stats_start_stop(req_input.start, req_input.stop, user_profile, stats_type)
+    
     if req_input.n:
         for name in('atttention_slow_threshold', 'atttention_top_threshold'):
             settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
             
-    if stats_type.startswith(SUMMARY_PREFIX):
-        start, stop = _long_user_to_utc(req_input.start, user_profile, stats_type)
-    else:
-        start = from_user_to_utc(req_input.start, user_profile)
-        stop = from_user_to_utc(req_input.stop, user_profile)
-        
     for name in('mean', 'usage'):
         d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': stats_type == 'trends'}
         if req_input.n:
