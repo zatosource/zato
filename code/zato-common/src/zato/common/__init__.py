@@ -88,6 +88,8 @@ zato_data_xpath = etree.XPath(zato_data_path, namespaces={'soapenv':soapenv_name
 zato_result_path = '/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:zato_env/zato:result'
 zato_result_path_xpath = etree.XPath(zato_result_path, namespaces={'soapenv':soapenv_namespace, 'zato':zato_namespace})
 
+SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
+
 #iso8601_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
 soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
