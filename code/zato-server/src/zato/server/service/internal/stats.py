@@ -200,45 +200,51 @@ class _AggregatingService(AdminService):
 class _SummarizingService(_AggregatingService):
     """ Base class for services creating summaries.
     """
-    def get_minutely_suffixes(self, now):
-        start = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
-        until = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
+    def get_minutely_suffixes(self, now, start=None, stop=None):
+        if not start:
+            start = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
+            print('Got new start', start)
+        if not stop:
+            stop = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
+            print('Got new stop', stop)
+            
+        print('Got start and stop', start, stop)
         
-        return (elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=until))
+        return (elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
     
-    def get_hourly_suffixes(self, now):
+    def get_hourly_suffixes(self, now, start=None, stop=None):
         start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
         until = parse((now - timedelta(hours=2)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
         
         return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=until))
     
-    def get_daily_suffixes(self, now):
+    def get_daily_suffixes(self, now, start=None, stop=None):
         start = parse(now.strftime(DT_PATTERNS.CURRENT_MONTH_START))
         until = parse((now - timedelta(days=1)).strftime(DT_PATTERNS.PREVIOUS_DAY_END))
         
         return (elem.strftime('%Y:%m:%d') for elem in rrule(DAILY, dtstart=start, until=until))
     
-    def get_monthly_suffixes(self, now):
+    def get_monthly_suffixes(self, now, start=None, stop=None):
         start = parse(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
         delta = relativedelta(now, months=1)
         until = parse((now - delta).strftime(DT_PATTERNS.PREVIOUS_MONTH_END))
         
         return (elem.strftime('%Y:%m') for elem in rrule(MONTHLY, dtstart=start, until=until))
     
-    def _get_patterns(self, now, kvdb_key, method):
-        return ('{}*:{}'.format(kvdb_key, elem) for elem in method(now))
+    def _get_patterns(self, now, start, stop, kvdb_key, method):
+        return ('{}*:{}'.format(kvdb_key, elem) for elem in method(now, start, stop))
     
-    def get_by_minute_patterns(self, now):
-        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, self.get_minutely_suffixes)
+    def get_by_minute_patterns(self, now, start=None, stop=None):
+        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, self.get_minutely_suffixes)
     
-    def get_by_hour_patterns(self, now):
-        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR, self.get_hourly_suffixes)
+    def get_by_hour_patterns(self, now, start=None, stop=None):
+        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR, self.get_hourly_suffixes)
     
-    def get_by_day_patterns(self, now):
-        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_DAY, self.get_daily_suffixes)
+    def get_by_day_patterns(self, now, start=None, stop=None):
+        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_DAY, self.get_daily_suffixes)
     
-    def get_by_month_patterns(self, now):
-        return self._get_patterns(now, KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH, self.get_monthly_suffixes)
+    def get_by_month_patterns(self, now, start=None, stop=None):
+        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH, self.get_monthly_suffixes)
     
     def create_summary(self, target, *pattern_names):
         now = datetime.utcnow()
@@ -425,14 +431,15 @@ class StatsReturningService(AdminService):
     def get_suffixes(self, start, stop):
         return [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
 
-    def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True):
+    def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True, stats_key_prefix=None):
         """ Returns statistics for a given interval, as defined by 'start' and 'stop'.
         service default to '*' for all services in that period and may be set to return
         a one-element list of information regarding that particular service. Setting 'n' 
         to a positive integer will make it return only top n services.
         """
-        print(start, stop, service, n, n_type, needs_trends)
-        
+        if not stats_key_prefix:
+            stats_key_prefix = self.stats_key_prefix
+            
         stats_elems = {}
         all_services_stats = Bunch({'usage':0, 'time':0})
     
@@ -462,9 +469,10 @@ class StatsReturningService(AdminService):
         
         # 1st pass
         for suffix in suffixes:
-            keys = self.server.kvdb.conn.keys('{}{}:{}'.format(self.stats_key_prefix, service, suffix))
+            keys = self.server.kvdb.conn.keys('{}{}:{}'.format(stats_key_prefix, service, suffix))
             for key in keys:
-                service_name = key.replace(self.stats_key_prefix, '').replace(':{}'.format(suffix), '')
+                print(key)
+                service_name = key.replace(stats_key_prefix, '').replace(':{}'.format(suffix), '')
             
                 stats_elem = StatsElem(service_name)
                 stats_elems[service_name] = stats_elem
@@ -480,7 +488,7 @@ class StatsReturningService(AdminService):
         # 2nd pass
         for service, stats_elem in stats_elems.items():
             for suffix in suffixes:
-                key = '{}{}:{}'.format(self.stats_key_prefix, service, suffix)
+                key = '{}{}:{}'.format(stats_key_prefix, service, suffix)
                 
                 # We can convert all the values to floats here to ease with computing
                 # all the stuff and convert them still to integers later on, when necessary.
@@ -625,9 +633,10 @@ class GetSummaryByWeek(GetSummaryBase):
     
     def get_end_date(self, start):
         start = parse(start)
+        today = date.today()
         
         # Is it the current week?
-        if start.year == today.year and start.isocalendar()[1] == date.today().isocalendar()[1]:
+        if start.year == today.year and start.isocalendar()[1] == today.isocalendar()[1]:
             return datetime.utcnow().isoformat()
             
         # It's not the current one, find Sunday nearest to the start
@@ -655,12 +664,43 @@ class GetSummaryByYear(GetSummaryBase):
         else:
             return '{}-12-31T23:59:59'.format(start)
 
-class GetSummaryByRange(GetSummaryBase):
-    summary_type = 'by-day'
-    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_DAY
+class GetSummaryByRange(StatsReturningService, _SummarizingService):
+    """ Returns a summary of statistics across a range of UTC start and stop parameters.
+    """
+    MINIMUM_DIFFERENCE = 3 # In minutes
     
-    def get_end_date(self, start):
-        if start == date.today().isoformat():
-            return datetime.utcnow().isoformat()
-        else:
-            return '{}T23:59:59'.format(start)
+    def handle(self):
+        start = '2011-10-11T21:00:00'
+        stop = '2012-10-11T22:43:16.719468'
+        
+        self.get_slices(start, stop)
+    
+    def get_slices(self, orig_start, orig_stop):
+        """ Slices the time range into a series of per-minute/-hour/-day/-month or -year statistics.
+        """
+        start = parse(orig_start)
+        stop = parse(orig_stop)
+
+        delta = relativedelta(stop, start)
+        mins_only = not any((delta.years, delta.days, delta.hours))
+        
+        # We require that start and stop be at least that many minutes apart and, obviosuly,
+        # that start lives farther in the past.
+        if mins_only and delta.minutes < self.MINIMUM_DIFFERENCE or delta.minutes <= 0:
+            raise ValueError('stop and start must be at least [{}] minutes apart, start must be farther in past; start:[{}], stop:[{}]'.format(
+                self.MINIMUM_DIFFERENCE, orig_start, orig_stop))
+        
+        #for item in self.get_stats(orig_start, orig_stop, needs_trends=False, stats_key_prefix=KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE):
+        #    print(item.to_dict())
+        #    print()
+        
+        print(mins_only, start, stop, delta.years, delta.days, delta.hours, delta.minutes, delta.microseconds)
+        print((stop - start).total_seconds())
+        
+if __name__ == '__main__':
+    start = '2011-10-11T21:00:00'
+    stop = '2012-10-11T22:43:16.719468'
+    
+    service = GetSummaryByRange()
+    service.get_slices(start, stop)
+        
