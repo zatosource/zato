@@ -107,6 +107,8 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.server',
             'zato.server.service.internal.service',
             'zato.server.service.internal.stats',
+            'zato.server.service.internal.stats.summary',
+            'zato.server.service.internal.stats.trends',
         ]
     
     @Object
@@ -227,16 +229,16 @@ class ZatoContext(PythonConfig):
              'service':'zato.server.service.internal.stats.AggregateByMonth'},
             
             {'name': 'zato.stats.CreateSummaryByDay', 'minutes':10,
-             'service':'zato.server.service.internal.stats.CreateSummaryByDay'},
+             'service':'zato.server.service.internal.stats.summary.CreateSummaryByDay'},
             
             {'name': 'zato.stats.CreateSummaryByWeek', 'minutes':10,
-             'service':'zato.server.service.internal.stats.CreateSummaryByWeek'},
+             'service':'zato.server.service.internal.stats.summary.CreateSummaryByWeek'},
             
             {'name': 'zato.stats.CreateSummaryByMonth', 'minutes':60,
-             'service':'zato.server.service.internal.stats.CreateSummaryByMonth'},
+             'service':'zato.server.service.internal.stats.summary.CreateSummaryByMonth'},
             
             {'name': 'zato.stats.CreateSummaryByYear', 'minutes':60,
-             'service':'zato.server.service.internal.stats.CreateSummaryByYear'},
+             'service':'zato.server.service.internal.stats.summary.CreateSummaryByYear'},
 
         ]
 
