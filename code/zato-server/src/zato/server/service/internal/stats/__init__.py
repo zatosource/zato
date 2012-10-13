@@ -20,13 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from calendar import mdays, monthrange
+from calendar import mdays
 from collections import OrderedDict
 from contextlib import closing
-from copy import deepcopy
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from heapq import nlargest
-from itertools import chain
 from operator import itemgetter
 from sys import maxint
 
@@ -35,8 +33,8 @@ from bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta, MO
-from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import MINUTELY, rrule
 
 # SciPy
 from scipy import stats as sp_stats
@@ -49,28 +47,6 @@ from zato.server.service import Integer
 from zato.server.service.internal import AdminService
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
-DEFAULT_STATS = {k:0 for k in STATS_KEYS}
-DEFAULT_STATS['mean'] = []
-DEFAULT_STATS['min'] = maxint
-
-class DT_PATTERNS(object):
-    CURRENT_YEAR_START = '%Y-01-01'
-    CURRENT_MONTH_START = '%Y-%m-01'
-    CURRENT_DAY_START = '%Y-%m-%d 00:00:00'
-    
-    CURRENT_HOUR_END = '%Y-%m-%d %H:59:59'
-    
-    PREVIOUS_HOUR_START = '%Y-%m-%d %H:00:00'
-    
-    PREVIOUS_MONTH_END = '%Y-%m'
-    PREVIOUS_DAY_END = '%Y-%m-%d 23:59:59'
-    
-    SUMMARY_SUFFIX_PATTERNS = {
-        'by-day': '%Y:%m:%d',
-        'by-week': '%Y:%m:%d',
-        'by-month': '%Y:%m',
-        'by-year': '%Y',
-    }
 
 # ##############################################################################    
     
@@ -86,8 +62,8 @@ class Delete(AdminService):
         
 # ##############################################################################
 
-class _AggregatingService(AdminService):
-    """ A base class for all services that process raw times into aggregates values.
+class BaseAggregatingService(AdminService):
+    """ A base class for all services that process statistics into aggregated values.
     """
     def aggregate_raw_times(self, key, service_name, max_batch_size=None):
         """ Aggregates values from a list living under a given key. Returns its
@@ -197,101 +173,7 @@ class _AggregatingService(AdminService):
         
 # ##############################################################################
         
-class _SummarizingService(_AggregatingService):
-    """ Base class for services creating summaries.
-    """
-    def get_minutely_suffixes(self, now, start=None, stop=None):
-        if not start:
-            start = parse((now - timedelta(hours=1)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
-            print('Got new start', start)
-        if not stop:
-            stop = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
-            print('Got new stop', stop)
-            
-        print('Got start and stop', start, stop)
-        
-        return (elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
-    
-    def get_hourly_suffixes(self, now, start=None, stop=None):
-        start = parse(now.strftime(DT_PATTERNS.CURRENT_DAY_START))
-        until = parse((now - timedelta(hours=2)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
-        
-        return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=until))
-    
-    def get_daily_suffixes(self, now, start=None, stop=None):
-        start = parse(now.strftime(DT_PATTERNS.CURRENT_MONTH_START))
-        until = parse((now - timedelta(days=1)).strftime(DT_PATTERNS.PREVIOUS_DAY_END))
-        
-        return (elem.strftime('%Y:%m:%d') for elem in rrule(DAILY, dtstart=start, until=until))
-    
-    def get_monthly_suffixes(self, now, start=None, stop=None):
-        start = parse(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
-        delta = relativedelta(now, months=1)
-        until = parse((now - delta).strftime(DT_PATTERNS.PREVIOUS_MONTH_END))
-        
-        return (elem.strftime('%Y:%m') for elem in rrule(MONTHLY, dtstart=start, until=until))
-    
-    def _get_patterns(self, now, start, stop, kvdb_key, method):
-        return ('{}*:{}'.format(kvdb_key, elem) for elem in method(now, start, stop))
-    
-    def get_by_minute_patterns(self, now, start=None, stop=None):
-        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, self.get_minutely_suffixes)
-    
-    def get_by_hour_patterns(self, now, start=None, stop=None):
-        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR, self.get_hourly_suffixes)
-    
-    def get_by_day_patterns(self, now, start=None, stop=None):
-        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_DAY, self.get_daily_suffixes)
-    
-    def get_by_month_patterns(self, now, start=None, stop=None):
-        return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH, self.get_monthly_suffixes)
-    
-    def create_summary(self, target, *pattern_names):
-        now = datetime.utcnow()
-        key_prefix = KVDB.SERVICE_SUMMARY_PREFIX_PATTERN.format(target)
-        
-        if target == 'by-week':
-            start = parse((now + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d 00:00:00')) # Current week start
-            key_suffix = start.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
-        else:
-            start = parse(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
-            key_suffix = now.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
-        total_seconds = (now - start).total_seconds()
-        
-        patterns = []
-        for name in pattern_names:
-            patterns.append(getattr(self, 'get_by_{}_patterns'.format(name))(now))
-        
-        services = {}
-        
-        for elem in chain(*patterns):
-            prefix, suffix = elem.split('*')
-            suffix = suffix[1:]
-            stats = self.collect_service_stats(elem, prefix, suffix, None, False, False, False)
-            
-            for service_name, values in stats.items():
-                stats = services.setdefault(service_name, deepcopy(DEFAULT_STATS))
-                
-                for name in STATS_KEYS:
-                    value = values[name]
-                    if name == 'usage':
-                        stats[name] += value
-                    elif name == 'max':
-                        stats[name] = max(stats[name], value)
-                    elif name == 'mean':
-                        stats[name].append(value)
-                    elif name == 'min':
-                        stats[name] = min(stats[name], value)
-                        
-        for service_name, values in services.items():
-            values['mean'] = round(sp_stats.tmean(values['mean']), 2)
-            values['rate'] = round(values['usage'] / total_seconds, 2)
-            
-        self.hset_aggr_keys(services, key_prefix, key_suffix)
-    
-# ##############################################################################
-            
-class ProcessRawTimes(_AggregatingService):
+class ProcessRawTimes(BaseAggregatingService):
     def handle(self):
         
         # 
@@ -330,7 +212,7 @@ class ProcessRawTimes(_AggregatingService):
             
 # ##############################################################################
 
-class AggregateByMinute(_AggregatingService):
+class AggregateByMinute(BaseAggregatingService):
     """ Aggregates per-minute times.
     """
     def handle(self):
@@ -359,7 +241,7 @@ class AggregateByMinute(_AggregatingService):
             # Raw per-minute statistics keys will expire by themselves, we don't need
             # to delete them manually.
             
-class AggregateByHour(_AggregatingService):
+class AggregateByHour(BaseAggregatingService):
     """ Creates per-hour stats.
     """
     def handle(self):
@@ -370,7 +252,7 @@ class AggregateByHour(_AggregatingService):
         
         self.aggregate_partly_aggregated(delta, source_strftime_format, source, target)
         
-class AggregateByDay(_AggregatingService):
+class AggregateByDay(BaseAggregatingService):
     """ Creates per-day stats.
     """
     def handle(self):
@@ -381,7 +263,7 @@ class AggregateByDay(_AggregatingService):
         
         self.aggregate_partly_aggregated(delta, source_strftime_format, source, target)
         
-class AggregateByMonth(_AggregatingService):
+class AggregateByMonth(BaseAggregatingService):
     """ Creates per-month stats.
     """
     def handle(self):
@@ -394,26 +276,6 @@ class AggregateByMonth(_AggregatingService):
         
 # ##############################################################################
         
-class CreateSummaryByDay(_SummarizingService):
-    """ Creates a summary for the current day.
-    """
-    def handle(self):
-        self.create_summary('by-day', 'hour', 'minute')
-
-class CreateSummaryByWeek(_SummarizingService):
-    def handle(self):
-        self.create_summary('by-week', 'day', 'hour', 'minute')
-
-class CreateSummaryByMonth(_SummarizingService):
-    def handle(self):
-        self.create_summary('by-month', 'day', 'hour', 'minute')
-
-class CreateSummaryByYear(_SummarizingService):
-    def handle(self):
-        self.create_summary('by-year', 'month', 'day', 'hour', 'minute')
-
-# ##############################################################################
-            
 class StatsReturningService(AdminService):
     """ A base class for services returning time-oriented statistics.
     """
@@ -431,7 +293,7 @@ class StatsReturningService(AdminService):
     def get_suffixes(self, start, stop):
         return [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
 
-    def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True, stats_key_prefix=None):
+    def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True, stats_key_prefix=None, suffixes=None):
         """ Returns statistics for a given interval, as defined by 'start' and 'stop'.
         service default to '*' for all services in that period and may be set to return
         a one-element list of information regarding that particular service. Setting 'n' 
@@ -458,7 +320,8 @@ class StatsReturningService(AdminService):
         else:
             delta_seconds = delta.seconds
         
-        suffixes = self.get_suffixes(start, stop)
+        if not suffixes:
+            suffixes = self.get_suffixes(start, stop)
         
         # We make several passes. First two passes are made over Redis keys, one gathers the services, if any at all,
         # and another one actually collects statistics for each service found. Next pass, a partly optional one,
@@ -560,17 +423,6 @@ class StatsReturningService(AdminService):
             for stats_elem in stats_elems.values():
                 yield stats_elem
 
-class GetTrends(StatsReturningService):
-    """ Returns top N slowest or most commonly used services for a given period
-    along with their trends.
-    """
-    class SimpleIO(StatsReturningService.SimpleIO):
-        input_required = StatsReturningService.SimpleIO.input_required + (Integer('n'), 'n_type')
-
-    def handle(self):
-        self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(self.request.input.start, 
-            self.request.input.stop, n=int(self.request.input.n), n_type=self.request.input.n_type))
-
 class GetByService(StatsReturningService):
     """ Returns statistics regarding a particular service.
     """
@@ -588,119 +440,4 @@ class GetByService(StatsReturningService):
             stats_elem = stats_elem[0]
             self.response.payload = Bunch(stats_elem.to_dict())
 
-class GetSummaryBase(StatsReturningService):
-    """ A base class for returning the summary of statistics for a given period.
-    """
-    class SimpleIO(StatsReturningService.SimpleIO):
-        input_required = ('start', 'n', 'n_type')
-        
-    stats_key_prefix = None
-    
-    def get_start_date(self):
-        return self.request.input.start
-    
-    def get_end_date(self, start):
-        raise NotImplementedError('Should be implemented by subclasses')
-
-    def get_suffixes(self, start, _ignored):
-        # Note that the caller expects a list of patterns while a summary is for
-        # a concrete date. Hence we're returning a one-element list to make everyone happy.
-        return [start.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[self.summary_type])]
-    
-    def handle(self):
-        self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(
-            self.get_start_date(), self.get_end_date(self.request.input.start), 
-            n=self.request.input.n, n_type=self.request.input.n_type, needs_trends=False))
-
-class GetSummaryByDay(GetSummaryBase):
-    summary_type = 'by-day'
-    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_DAY
-    
-    def get_end_date(self, start):
-        if start == date.today().isoformat():
-            return datetime.utcnow().isoformat()
-        else:
-            return '{}T23:59:59'.format(start)
-
-class GetSummaryByWeek(GetSummaryBase):
-    summary_type = 'by-week'
-    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_WEEK
-    
-    def get_start_date(self):
-        """ Find the nearest Monday preceding the start date given on input.
-        """
-        return (parse(self.request.input.start) + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d')
-    
-    def get_end_date(self, start):
-        start = parse(start)
-        today = date.today()
-        
-        # Is it the current week?
-        if start.year == today.year and start.isocalendar()[1] == today.isocalendar()[1]:
-            return datetime.utcnow().isoformat()
-            
-        # It's not the current one, find Sunday nearest to the start
-        else:
-            return (start + relativedelta(weekday=SU(+1))).strftime('%Y-%m-%d 23:59:59')
-    
-class GetSummaryByMonth(GetSummaryBase):
-    summary_type = 'by-month'
-    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_MONTH
-    
-    def get_end_date(self, start):
-        if start == date.today().strftime('%Y-%m'):
-            return datetime.utcnow().isoformat()
-        else:
-            start = parse(start)
-            return '{0}-{1:0>2}-{2}T23:59:59'.format(start.year, start.month, monthrange(start.year, start.month)[1])
-
-class GetSummaryByYear(GetSummaryBase):
-    summary_type = 'by-year'
-    stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_YEAR
-
-    def get_end_date(self, start):
-        if date.today().isoformat().startswith(start):
-            return datetime.utcnow().isoformat()
-        else:
-            return '{}-12-31T23:59:59'.format(start)
-
-class GetSummaryByRange(StatsReturningService, _SummarizingService):
-    """ Returns a summary of statistics across a range of UTC start and stop parameters.
-    """
-    MINIMUM_DIFFERENCE = 3 # In minutes
-    
-    def handle(self):
-        start = '2011-10-11T21:00:00'
-        stop = '2012-10-11T22:43:16.719468'
-        
-        self.get_slices(start, stop)
-    
-    def get_slices(self, orig_start, orig_stop):
-        """ Slices the time range into a series of per-minute/-hour/-day/-month or -year statistics.
-        """
-        start = parse(orig_start)
-        stop = parse(orig_stop)
-
-        delta = relativedelta(stop, start)
-        mins_only = not any((delta.years, delta.days, delta.hours))
-        
-        # We require that start and stop be at least that many minutes apart and, obviosuly,
-        # that start lives farther in the past.
-        if mins_only and delta.minutes < self.MINIMUM_DIFFERENCE or delta.minutes <= 0:
-            raise ValueError('stop and start must be at least [{}] minutes apart, start must be farther in past; start:[{}], stop:[{}]'.format(
-                self.MINIMUM_DIFFERENCE, orig_start, orig_stop))
-        
-        #for item in self.get_stats(orig_start, orig_stop, needs_trends=False, stats_key_prefix=KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE):
-        #    print(item.to_dict())
-        #    print()
-        
-        print(mins_only, start, stop, delta.years, delta.days, delta.hours, delta.minutes, delta.microseconds)
-        print((stop - start).total_seconds())
-        
-if __name__ == '__main__':
-    start = '2011-10-11T21:00:00'
-    stop = '2012-10-11T22:43:16.719468'
-    
-    service = GetSummaryByRange()
-    service.get_slices(start, stop)
-        
+# ##############################################################################

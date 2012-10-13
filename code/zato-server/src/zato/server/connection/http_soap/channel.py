@@ -21,8 +21,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from cStringIO import StringIO
 from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from pprint import pprint
 from traceback import format_exc
 
 # anyjson
@@ -215,7 +217,12 @@ class _BaseMessageHandler(object):
 
         logger.debug('[{0}] impl_name:[{1}]'.format(cid, service_info.impl_name))
 
-        logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, self.server.service_store.services))
+        if(logger.isEnabledFor(TRACE1)):
+            buff = StringIO()
+            pprint(self.server.service_store.services, stream=buff)
+            logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, buff.getvalue()))
+            buff.close()
+            
         service_data = self.server.service_store.service_data(service_info.impl_name)
         
         return payload_from_request(request, data_format, transport), service_info, service_data

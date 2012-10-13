@@ -39,6 +39,7 @@ from zato.common.odb.query import _service as _service
 logger = logging.getLogger(__name__)
 
 def _get_service_by_impl_name(session, cluster_id, impl_name):
+    logger.debug('Looking for impl_name:[{}] in cluster_id:[{}]'.format(impl_name, cluster_id))
     return _service(session, cluster_id).\
            filter(Service.impl_name==impl_name).\
            one()
