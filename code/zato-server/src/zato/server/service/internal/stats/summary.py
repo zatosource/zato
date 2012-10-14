@@ -19,6 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import logging
 from calendar import monthrange
 from copy import deepcopy
 from datetime import date, datetime, timedelta
@@ -28,13 +30,13 @@ from sys import maxint
 # dateutil
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta, MO
-from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule
+from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule, rruleset, YEARLY
 
 # SciPy
 from scipy import stats as sp_stats
 
 # Zato
-from zato.common import KVDB
+from zato.common import KVDB, StatsElem
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService
 
 # ##############################################################################
@@ -52,6 +54,7 @@ class DT_PATTERNS(object):
     
     PREVIOUS_HOUR_START = '%Y-%m-%d %H:00:00'
     
+    PREVIOUS_YEAR_END = '%Y'
     PREVIOUS_MONTH_END = '%Y-%m'
     PREVIOUS_DAY_END = '%Y-%m-%d 23:59:59'
     
@@ -61,6 +64,13 @@ class DT_PATTERNS(object):
         'by-month': '%Y:%m',
         'by-year': '%Y',
     }
+    
+def stop_excluding_rrset(freq, start, stop):
+    rrs = rruleset()
+    rrs.rrule(rrule(freq, dtstart=start, until=stop))
+    rrs.exdate(stop)
+    
+    return rrs
 
 # ##############################################################################
 
@@ -102,7 +112,7 @@ class BaseSummarizingService(BaseAggregatingService):
         if not stop:
             stop = parse(now.strftime(DT_PATTERNS.CURRENT_HOUR_END))
             
-        return (elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
+        return (elem.strftime('%Y:%m:%d:%H:%M') for elem in stop_excluding_rrset(MINUTELY, start, stop))
     
     def get_hourly_suffixes(self, now, start=None, stop=None):
         if not start:
@@ -110,7 +120,7 @@ class BaseSummarizingService(BaseAggregatingService):
         if not stop:
             stop = parse((now - timedelta(hours=2)).strftime(DT_PATTERNS.PREVIOUS_HOUR_START))
         
-        return (elem.strftime('%Y:%m:%d:%H') for elem in rrule(HOURLY, dtstart=start, until=stop))
+        return (elem.strftime('%Y:%m:%d:%H') for elem in stop_excluding_rrset(HOURLY, start, stop))
     
     def get_daily_suffixes(self, now, start=None, stop=None):
         if not start:
@@ -118,7 +128,7 @@ class BaseSummarizingService(BaseAggregatingService):
         if not stop:
             stop = parse((now - timedelta(days=1)).strftime(DT_PATTERNS.PREVIOUS_DAY_END))
         
-        return (elem.strftime('%Y:%m:%d') for elem in rrule(DAILY, dtstart=start, until=stop))
+        return (elem.strftime('%Y:%m:%d') for elem in stop_excluding_rrset(DAILY, start, stop))
     
     def get_monthly_suffixes(self, now, start=None, stop=None):
         if not start:
@@ -127,7 +137,16 @@ class BaseSummarizingService(BaseAggregatingService):
             delta = relativedelta(now, months=1)
             stop = parse((start - delta).strftime(DT_PATTERNS.PREVIOUS_MONTH_END))
         
-        return (elem.strftime('%Y:%m') for elem in rrule(MONTHLY, dtstart=start, until=stop))
+        return (elem.strftime('%Y:%m') for elem in stop_excluding_rrset(MONTHLY, start, stop))
+        
+    def get_yearly_suffixes(self, now, start=None, stop=None):
+        if not start:
+            start = parse(now.strftime(DT_PATTERNS.CURRENT_YEAR_START))
+        if not stop:
+            delta = relativedelta(now, years=1)
+            stop = parse((start - delta).strftime(DT_PATTERNS.PREVIOUS_YEAR_END))
+        
+        return (elem.strftime('%Y') for elem in stop_excluding_rrset(YEARLY, start, stop))
     
     def _get_patterns(self, now, start, stop, kvdb_key, method):
         return ('{}*:{}'.format(kvdb_key, elem) for elem in method(now, start, stop))
@@ -375,7 +394,8 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         slice_in_between_stop = datetime(year=stop.year, month=stop.month, day=stop.day)
     
         if start.hour or start.minute:
-            for slice in self._get_slices_by_hours(start, slice_in_between_start, relativedelta(start, slice_in_between_start)):
+            for slice in self._get_slices_by_hours(start, slice_in_between_start, relativedelta(
+                                                       start, slice_in_between_start)):
                 yield slice
                 
             yield self.by_days(slice_in_between_start, slice_in_between_stop)
@@ -394,7 +414,8 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         slice_in_between_stop = datetime(year=stop.year, month=stop.month, day=1)
     
         if start.day != 1:
-            for slice in self._get_slices_by_days(start, slice_in_between_start, relativedelta(start, slice_in_between_start)):
+            for slice in self._get_slices_by_days(start, slice_in_between_start, relativedelta(
+                                                      start, slice_in_between_start)):
                 yield slice
                 
             yield self.by_months(slice_in_between_start, slice_in_between_stop)
@@ -463,28 +484,79 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
             
         return slices
     
-    def handle(self):
-        start = '2011-10-11T21:00:00'
-        stop = '2012-10-11T22:43:16.719468'
+    def merge_slices(self, slices):
+        """ Merges a list of stats slices into a single aggregated elem.
+        """
+        stats_elems = {}
         
-        all_slice_stats = []
+        total_seconds = 0
+        all_services_usage = 0
+        all_services_time = 0
+        
+        # This is a sum of all per-service usage elems across all slices. 
+        # Later on it will be divided by the total number of seconds.
+        service_usage = {}
+        
+        for slice in slices:
+            for stats in slice.stats:
+                stats_elem = stats_elems.setdefault(stats.service_name, StatsElem(stats.service_name))
+                stats_elem += stats
+
+                total_seconds += slice.total_seconds
+                stats_elem.all_services_usage = stats.all_services_usage
+                stats_elem.all_services_time = stats.all_services_time
+                
+                #if stats.service_name == 'zato.stats.GetByService':
+                #    print(stats.to_dict())
+                #print()
+
+            #print()
+            #print()
+            #print()
+
+        #for service_name, stats_elem in stats_elems.items():
+        #    stats_elem.all_services_usage = all_services_usage
+        #    stats_elem.all_services_time = all_services_time
+            
+        if total_seconds:
+            for service_name, stats_elem in stats_elems.items():
+                stats_elem.rate = round(stats_elem.usage / total_seconds, 5)
+                    
+        from pprint import pprint
+        
+        for k, v in sorted(stats_elems.items()):
+            print(k)
+            pprint(v.to_dict())
+            print()
+        
+        #pprint(stats_elems['zato.stats.GetByService'].to_dict())
+        #print()
+            
+    
+    def handle(self):
+        
+        start = '2012-10-13T23:35:15'
+        stop = '2012-10-14T00:35:15'
+        
+        if(self.logger.isEnabledFor(logging.DEBUG)):
+            self.logger.DEBUG(
+                'Getting slices for start:[{}], stop:[{}]'.format(self.request.input.start, self.request.input.stop))
+        
+        slices = []
         
         for slice in self.get_slices(start, stop):
             if slice.total_seconds:
                 get_suffixes_method = getattr(self, 'get_{}_suffixes'.format(self.SLICE_TYPE_METHOD[slice.slice_type]))
-                suffixes = get_suffixes_method(None, slice.start, slice.stop)
+                suffixes = tuple(get_suffixes_method(None, slice.start, slice.stop))
                 
-                stats = self.get_stats(slice.start.isoformat(), slice.stop.isoformat(), needs_trends=False, stats_key_prefix=slice.slice_type, suffixes=suffixes)
-                all_slice_stats.append(SliceStats(slice.slice_type, stats, slice.total_seconds))
+                stats = self.get_stats(slice.start.isoformat(), slice.stop.isoformat(), 
+                        needs_trends=False, stats_key_prefix=slice.slice_type, suffixes=suffixes)
+                slices.append(SliceStats(slice.slice_type, stats, slice.total_seconds))
+                
+        stats = self.merge_slices(slices)
                     
         '''for slice_stats in all_slice_stats:
             for stats in slice_stats.stats:
-                print(stats)
-            print()'''
-        
-if __name__ == '__main__':
-    start = '2011-10-11T21:00:00'
-    stop = '2012-10-11T22:43:16.719468'
-    
-    service = GetSummaryByRange()
-    service.get_slices(start, stop)
+                print(stats.to_dict())
+            print()
+            '''
