@@ -43,7 +43,6 @@ from scipy import stats as sp_stats
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
-from zato.server.service import Integer
 from zato.server.service.internal import AdminService
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
@@ -283,7 +282,7 @@ class StatsReturningService(AdminService):
         """ Consult StatsElem's docstring for the description of output parameters.
         """
         input_required = ('start', 'stop')
-        input_optional = ('service_name', Integer('n'), 'n_type')
+        input_optional = ('service_name', 'n', 'n_type')
         output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
             'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
             'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services')
@@ -293,7 +292,8 @@ class StatsReturningService(AdminService):
     def get_suffixes(self, start, stop):
         return [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
 
-    def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True, stats_key_prefix=None, suffixes=None):
+    def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True, 
+            stats_key_prefix=None, suffixes=None):
         """ Returns statistics for a given interval, as defined by 'start' and 'stop'.
         service default to '*' for all services in that period and may be set to return
         a one-element list of information regarding that particular service. Setting 'n' 
@@ -334,7 +334,6 @@ class StatsReturningService(AdminService):
         for suffix in suffixes:
             keys = self.server.kvdb.conn.keys('{}{}:{}'.format(stats_key_prefix, service, suffix))
             for key in keys:
-                print(key)
                 service_name = key.replace(stats_key_prefix, '').replace(':{}'.format(suffix), '')
             
                 stats_elem = StatsElem(service_name)
@@ -357,7 +356,7 @@ class StatsReturningService(AdminService):
                 # all the stuff and convert them still to integers later on, when necessary.
                 key_values = Bunch(
                     ((name, float(value)) for (name, value) in self.server.kvdb.conn.hgetall(key).items()))
-                
+                    
                 if key_values:
     
                     time = (key_values.usage * key_values.mean)
@@ -383,7 +382,7 @@ class StatsReturningService(AdminService):
             stats_elem.all_services_usage = int(all_services_stats.usage)
             
             values = stats_elem.expected_time_elems.values()
-
+            
             stats_elem.mean_trend_int = [int(elem.mean) for elem in values]            
             stats_elem.usage_trend_int = [int(elem.usage) for elem in values]
             
@@ -400,6 +399,7 @@ class StatsReturningService(AdminService):
             if needs_trends:
                 stats_elem.mean_trend = ','.join(str(elem) for elem in stats_elem.mean_trend_int)
                 stats_elem.usage_trend = ','.join(str(elem) for elem in stats_elem.usage_trend_int)
+                
                 
         # 4th pass (optional)
         if n:

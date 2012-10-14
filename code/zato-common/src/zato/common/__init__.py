@@ -317,11 +317,13 @@ class StatsElem(object):
     usage_perc_all_services - this service's usage as a percentage of all_services_usage (up to 2 decimal points)
     time_perc_all_services - this service's share as a percentage of all_services_time (up to 2 decimal points)
     expected_time_elems - an OrderedDict of all the time slots mapped to a mean time and rate 
+    temp_rate - a temporary place for keeping request rates, needed to get a weighted mean of uneven execution periods
+    temp_mean - a temporary place for keeping mean times, needed to get a weighted mean of uneven execution periods
     """
-    def __init__(self, service_name=None):
+    def __init__(self, service_name=None, mean=None):
         self.service_name = service_name
         self.usage = 0
-        self.mean = 0
+        self.mean = mean
         self.rate = 0.0
         self.time = 0
         self.usage_trend_int = []
@@ -334,6 +336,8 @@ class StatsElem(object):
         self.usage_perc_all_services = 0
         self.time_perc_all_services = 0
         self.expected_time_elems = OrderedDict()
+        self.temp_rate = 0
+        self.temp_mean = 0
         
     def get_attrs(self, ignore=[]):
         for attr in dir(self):
@@ -341,7 +345,7 @@ class StatsElem(object):
                 continue
             yield attr
     
-    def to_dict(self, ignore=['expected_time_elems', 'mean_trend_int', 'usage_trend_int', ]):
+    def to_dict(self, ignore=['expected_time_elems', 'mean_trend_int', 'usage_trend_int', 'temp_rate', 'temp_mean']):
         return {attr: getattr(self, attr) for attr in self.get_attrs(ignore)}
     
     @staticmethod
@@ -365,3 +369,10 @@ class StatsElem(object):
         buff.close()
         
         return value
+
+    def __iadd__(self, other):
+        self.max_resp_time = max(self.max_resp_time, other.max_resp_time)
+        self.min_resp_time = min(self.min_resp_time, other.min_resp_time)
+        self.usage += other.usage
+        
+        return self
