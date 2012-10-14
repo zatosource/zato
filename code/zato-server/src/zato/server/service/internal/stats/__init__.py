@@ -34,7 +34,7 @@ from bunch import Bunch
 # dateutil
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
-from dateutil.rrule import MINUTELY, rrule
+from dateutil.rrule import MINUTELY, rrule, rruleset
 
 # SciPy
 from scipy import stats as sp_stats
@@ -46,6 +46,13 @@ from zato.common.odb.model import Service
 from zato.server.service.internal import AdminService
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
+
+def stop_excluding_rrset(freq, start, stop):
+    rrs = rruleset()
+    rrs.rrule(rrule(freq, dtstart=start, until=stop))
+    rrs.exdate(stop)
+    
+    return rrs
 
 # ##############################################################################    
     
@@ -290,7 +297,7 @@ class StatsReturningService(AdminService):
     stats_key_prefix = KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE
     
     def get_suffixes(self, start, stop):
-        return [elem.strftime('%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop)]
+        return [elem.strftime('%Y:%m:%d:%H:%M') for elem in stop_excluding_rrset(MINUTELY, start, stop)]
 
     def get_stats(self, start, stop, service='*', n=None, n_type=None, needs_trends=True, 
             stats_key_prefix=None, suffixes=None):
@@ -399,7 +406,6 @@ class StatsReturningService(AdminService):
             if needs_trends:
                 stats_elem.mean_trend = ','.join(str(elem) for elem in stats_elem.mean_trend_int)
                 stats_elem.usage_trend = ','.join(str(elem) for elem in stats_elem.usage_trend_int)
-                
                 
         # 4th pass (optional)
         if n:

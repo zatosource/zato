@@ -37,7 +37,8 @@ from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, StatsElem
-from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService
+from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
+    stop_excluding_rrset
 
 # ##############################################################################
 
@@ -65,13 +66,6 @@ class DT_PATTERNS(object):
         'by-year': '%Y',
     }
     
-def stop_excluding_rrset(freq, start, stop):
-    rrs = rruleset()
-    rrs.rrule(rrule(freq, dtstart=start, until=stop))
-    rrs.exdate(stop)
-    
-    return rrs
-
 # ##############################################################################
 
 class SummarySlice(object):
@@ -535,8 +529,8 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
     
     def handle(self):
         
-        start = '2012-10-13T23:35:15'
-        stop = '2012-10-14T00:35:15'
+        start = '2012-10-13T23:56:49'
+        stop = '2012-10-14T00:56:49'
         
         if(self.logger.isEnabledFor(logging.DEBUG)):
             self.logger.DEBUG(
