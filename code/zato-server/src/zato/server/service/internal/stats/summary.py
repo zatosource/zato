@@ -36,7 +36,7 @@ from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule, rruleset, YE
 from scipy import stats as sp_stats
 
 # Zato
-from zato.common import KVDB, StatsElem
+from zato.common import KVDB, StatsElem, ZatoException
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
 
@@ -86,14 +86,17 @@ class SummarySlice(object):
 class SliceStats(object):
     """ A wrapper for combining statistics and how many seconds they represent.
     """
-    def __init__(self, slice_type, stats, total_seconds):
+    def __init__(self, slice_type, stats, start, stop, total_seconds):
         self.slice_type = slice_type
+        self.start = start
+        self.stop = stop
         self.stats = stats
         self.total_seconds = total_seconds
         
     def __repr__(self):
-        return '<{} at {} slice_type:[{}], stats:[{}], total_seconds:[{}]>'.format(
-            self.__class__.__name__, hex(id(self)), self.slice_type, self.stats, self.total_seconds)
+        return '<{} at {} slice_type:[{}], stats:[{}], start:[{}], stop:[{}], total_seconds:[{}]>'.format(
+            self.__class__.__name__, hex(id(self)), self.slice_type, self.stats, self.start, self.stop, 
+            self.total_seconds)
 
 # ##############################################################################
 
@@ -443,10 +446,22 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         stop = parse(orig_stop)
     
         delta = relativedelta(stop, start)
+        print(dir(delta))
+        
         by_mins = not any((delta.years, delta.months, delta.days, delta.hours))
         by_hours_mins = not any((delta.years, delta.months, delta.days))
         by_days_hours_mins = not any((delta.years, delta.months))
         by_months_days_hours_mins = not delta.years
+        
+        print(delta, delta.years, delta.months, delta.days, delta.hours, by_mins, by_hours_mins, by_days_hours_mins, by_months_days_hours_mins)
+        
+        # Sanity check, find out whether more than one predicate is True.
+        predicates = (by_mins, by_hours_mins, by_days_hours_mins, by_months_days_hours_mins)
+        sum_preds = sum(int(elem) for elem in predicates)
+        if sum_preds > 1:
+            msg = 'sum:[{}] of predicates:[{}] is > 1, delta:[{}, {} {} {} {}], start:[{}], stop:[{}]'.format(
+                sum_preds, predicates, delta, delta.years, delta.months, delta.days, delta.hours, start, stop)
+            raise ZatoException(self.cid, msg)
         
         # We require that start and stop be at least that many minutes apart and, obviosuly,
         # that start lives farther in the past.
@@ -493,12 +508,18 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         
         for slice in slices:
             for stats in slice.stats:
+                
+                print()
+                print(slice.start, slice.stop, stats.to_dict())
+                
+                '''
                 stats_elem = stats_elems.setdefault(stats.service_name, StatsElem(stats.service_name))
                 stats_elem += stats
 
                 total_seconds += slice.total_seconds
                 stats_elem.all_services_usage = stats.all_services_usage
                 stats_elem.all_services_time = stats.all_services_time
+                '''
                 
                 #if stats.service_name == 'zato.stats.GetByService':
                 #    print(stats.to_dict())
@@ -512,6 +533,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         #    stats_elem.all_services_usage = all_services_usage
         #    stats_elem.all_services_time = all_services_time
             
+        '''
         if total_seconds:
             for service_name, stats_elem in stats_elems.items():
                 stats_elem.rate = round(stats_elem.usage / total_seconds, 5)
@@ -525,12 +547,13 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         
         #pprint(stats_elems['zato.stats.GetByService'].to_dict())
         #print()
+        '''
             
     
     def handle(self):
         
-        start = '2012-10-13T23:56:49'
-        stop = '2012-10-14T00:56:49'
+        start = '2012-10-14T23:56:49'
+        stop = '2012-10-15T00:56:49'
         
         if(self.logger.isEnabledFor(logging.DEBUG)):
             self.logger.DEBUG(
@@ -539,15 +562,21 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         slices = []
         
         for slice in self.get_slices(start, stop):
+            print(slice)
+            '''
             if slice.total_seconds:
                 get_suffixes_method = getattr(self, 'get_{}_suffixes'.format(self.SLICE_TYPE_METHOD[slice.slice_type]))
                 suffixes = tuple(get_suffixes_method(None, slice.start, slice.stop))
                 
-                stats = self.get_stats(slice.start.isoformat(), slice.stop.isoformat(), 
-                        needs_trends=False, stats_key_prefix=slice.slice_type, suffixes=suffixes)
-                slices.append(SliceStats(slice.slice_type, stats, slice.total_seconds))
+                start_iso = slice.start.isoformat()
+                stop_iso = slice.stop.isoformat()
                 
-        stats = self.merge_slices(slices)
+                stats = self.get_stats(start_iso, stop_iso, needs_trends=False, 
+                    stats_key_prefix=slice.slice_type, suffixes=suffixes)
+                slices.append(SliceStats(slice.slice_type, stats, start_iso, stop_iso, slice.total_seconds))
+                '''
+                
+        #stats = self.merge_slices(slices)
                     
         '''for slice_stats in all_slice_stats:
             for stats in slice_stats.stats:
