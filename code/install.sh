@@ -14,12 +14,12 @@ rm -rf ../code/lib
 rm -rf ../code/parts
 rm -rf ../code/zato_extra_paths
 
-sudo apt-get install haproxy uuid-dev uuid-runtime libevent-dev bzr
-sudo apt-get install python2.7-dev swig python-pip libpq-dev python-zdaemon
-sudo apt-get install libyaml-dev libxml2-dev libxslt1-dev
-sudo apt-get install libatlas-dev libblas3gf libatlas3gf-base libumfpack5.4.0
-sudo apt-get install liblapack-dev libgfortran3 liblapack3gf gfortran
-sudo apt-get install python-numpy python-scipy
+sudo apt-get install haproxy uuid-dev uuid-runtime libevent-dev bzr \
+    python2.7-dev swig python-pip libpq-dev python-zdaemon \
+    libyaml-dev libxml2-dev libxslt1-dev \
+    libatlas-dev libblas3gf libatlas3gf-base libumfpack5.4.0 \
+    liblapack-dev libgfortran3 liblapack3gf gfortran \
+    python-numpy python-scipy
 
 mkdir ../code/zato_extra_paths
 
