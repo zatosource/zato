@@ -17,4 +17,5 @@ code/zato-admin/src/zato/admin/static/css/.sass-cache/
 *.pyc
 *.pyo
 *.egg-info*
+*.*~
 ~
