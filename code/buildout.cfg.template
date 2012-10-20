@@ -67,7 +67,7 @@ eggs =
     psutil
     psycopg2
     pygments
-    pymqi
+#PYMQI_MARKER    pymqi
     pyparsing
     python-dateutil
     pyzmq-static
