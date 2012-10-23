@@ -60,6 +60,7 @@ eggs =
     mock
     mosquitto
     ordereddict
+    paodate
     Paste
     pesto
     pika
