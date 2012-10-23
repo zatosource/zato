@@ -43,6 +43,7 @@ from scipy import stats as sp_stats
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
+from zato.server.service import Integer
 from zato.server.service.internal import AdminService
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
@@ -289,12 +290,40 @@ class StatsReturningService(AdminService):
         """ Consult StatsElem's docstring for the description of output parameters.
         """
         input_required = ('start', 'stop')
-        input_optional = ('service_name', 'n', 'n_type')
+        input_optional = ('service_name', Integer('n'), 'n_type')
         output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
             'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
             'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services')
     
     stats_key_prefix = KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE
+    
+    def set_percent_of_all_services(self, all_services_stats, stats_elem):
+        """ Sets how many per cent out of a total of all services this particular service constitutes.
+        """
+        for name in('time', 'usage'):
+            if all_services_stats[name]:
+                value = float('{:.2f}'.format(100.0 * getattr(stats_elem, name) / all_services_stats[name]))
+                setattr(stats_elem, '{}_perc_all_services'.format(name), value)
+                
+    def yield_top_n(self, n, n_type, stats_elems):
+        """ Yields top N services.
+        """
+        if not n_type:
+            msg = 'n_type must not be not None if n is neither, n:[{}], n_type:[{}]'.format(n, n_type)
+            self.logger.error(msg)
+            raise ZatoException(self.cid, msg)
+
+        else:
+            data = dict.fromkeys(stats_elems, 0)
+            for name in data:
+                data[name] = getattr(stats_elems[name], n_type)
+
+            # It's itemgetter(1 ,0) because idx=1 is the actual value and idx=0
+            # is a name so in the end nlargest returns values in ascending order
+            # while also sorting lexicographically services that happen to have equal values.
+            names = nlargest(n, data.items(), key=itemgetter(1, 0)) 
+            for name, value in names:
+                yield stats_elems[name]
     
     def get_suffixes(self, start, stop):
         return [elem.strftime('%Y:%m:%d:%H:%M') for elem in stop_excluding_rrset(MINUTELY, start, stop)]
@@ -395,13 +424,9 @@ class StatsReturningService(AdminService):
             
             stats_elem.mean = float('{:.2f}'.format(sp_stats.tmean(stats_elem.mean_trend_int)))
             stats_elem.usage = sum(stats_elem.usage_trend_int)
-
             stats_elem.rate = float('{:.2f}'.format(sum(stats_elem.usage_trend_int) / delta_seconds))
             
-            for name in('time', 'usage'):
-                if all_services_stats[name]:
-                    value = float('{:.2f}'.format(100.0 * getattr(stats_elem, name) / all_services_stats[name]))
-                    setattr(stats_elem, '{}_perc_all_services'.format(name), value)
+            self.set_percent_of_all_services(all_services_stats, stats_elem)
 
             if needs_trends:
                 stats_elem.mean_trend = ','.join(str(elem) for elem in stats_elem.mean_trend_int)
@@ -409,22 +434,9 @@ class StatsReturningService(AdminService):
                 
         # 4th pass (optional)
         if n:
-            if not n_type:
-                msg = 'n_type must not be not None if n is neither, n:[{}], n_type:[{}]'.format(n, n_type)
-                self.logger.error(msg)
-                raise ZatoException(self.cid, msg)
+            for stats_elem in self.yield_top_n(n, n_type, stats_elems):
+                yield stats_elem
 
-            else:
-                data = dict.fromkeys(stats_elems, 0)
-                for name in data:
-                    data[name] = getattr(stats_elems[name], n_type)
-
-                # It's itemgetter(1 ,0) because idx=1 is the actual value and idx=0
-                # is a name so in the end nlargest returns values in ascending order
-                # while also sorting lexicographically services that happen to have equal values.
-                names = nlargest(n, data.items(), key=itemgetter(1, 0)) 
-                for name, value in names:
-                    yield stats_elems[name]
         else:
             for stats_elem in stats_elems.values():
                 yield stats_elem
