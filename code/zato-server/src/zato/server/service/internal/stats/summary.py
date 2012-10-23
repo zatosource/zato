@@ -27,16 +27,23 @@ from datetime import date, datetime, timedelta
 from itertools import chain
 from sys import maxint
 
+# Bunch
+from bunch import Bunch
+
 # dateutil
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta, MO
 from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule, rruleset, YEARLY
+
+# paodate
+from paodate import Date
 
 # SciPy
 from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
+from zato.server.service import Integer
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
 
@@ -437,6 +444,38 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
     
         for slice in self._get_slices_by_months(slice_in_between_stop, stop, relativedelta(slice_in_between_stop, stop)):
             yield slice
+            
+    def _get_slice_period_type(self, start, stop):
+        """ Returns information regarding whether a given period should be sliced
+        by minutes, hours, days, months and/or years.
+        """
+        start = Date(start)
+        stop = Date(stop)
+        
+        delta = stop - start
+
+        by_mins = False
+        by_hours_mins = False
+        by_days_hours_mins = False
+        by_months_days_hours_mins = False
+        
+        by_mins = delta.total_minutes <= 60
+        by_hours_mins = delta.total_minutes > 60
+        by_days_hours_mins = delta.total_days > 1
+        by_months_days_hours_mins = delta.total_months > 1
+        
+        if any((by_days_hours_mins, by_months_days_hours_mins)):
+            by_hours_mins = False
+        
+        if by_months_days_hours_mins:
+            by_days_hours_mins = False
+            
+        return delta, {
+            'by_mins': by_mins, 
+            'by_hours_mins': by_hours_mins, 
+            'by_days_hours_mins': by_days_hours_mins, 
+            'by_months_days_hours_mins': by_months_days_hours_mins,
+        }
     
     def get_slices(self, orig_start, orig_stop):
         """ Slices the time range into a series of per-minute/-hour/-day/-month or -year statistics.
@@ -444,16 +483,16 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         slices = []
         start = parse(orig_start)
         stop = parse(orig_stop)
+        
+        # TODO: ValueError: stop and start must be at least [3] 
+        # minutes apart, start must be farther in past; start:[2012-12-08T23:00:00], stop:[2012-10-23T10:01:02.444751]
     
-        delta = relativedelta(stop, start)
-        print(dir(delta))
+        delta, result = self._get_slice_period_type(start, stop)
         
-        by_mins = not any((delta.years, delta.months, delta.days, delta.hours))
-        by_hours_mins = not any((delta.years, delta.months, delta.days))
-        by_days_hours_mins = not any((delta.years, delta.months))
-        by_months_days_hours_mins = not delta.years
-        
-        print(delta, delta.years, delta.months, delta.days, delta.hours, by_mins, by_hours_mins, by_days_hours_mins, by_months_days_hours_mins)
+        by_mins = result['by_mins']
+        by_hours_mins = result['by_hours_mins']
+        by_days_hours_mins = result['by_days_hours_mins']
+        by_months_days_hours_mins = result['by_months_days_hours_mins']
         
         # Sanity check, find out whether more than one predicate is True.
         predicates = (by_mins, by_hours_mins, by_days_hours_mins, by_months_days_hours_mins)
@@ -465,7 +504,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         
         # We require that start and stop be at least that many minutes apart and, obviosuly,
         # that start lives farther in the past.
-        if by_mins and delta.minutes < self.MINIMUM_DIFFERENCE:
+        if by_mins and delta.total_minutes < self.MINIMUM_DIFFERENCE:
             raise ValueError(
                 'stop and start must be at least [{}] minutes apart, start must be '\
                 'farther in past; start:[{}], stop:[{}]'.format(
@@ -479,7 +518,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
             for slice in self._get_slices_by_hours(start, stop, delta):
                 slices.append(slice)
                         
-        elif by_days_hours_mins or (by_months_days_hours_mins and delta.months == 1):
+        elif by_days_hours_mins or (by_months_days_hours_mins and delta.total_months == 1):
             for slice in self._get_slices_by_days(start, stop, delta):
                 slices.append(slice)
                 
@@ -493,93 +532,116 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
             
         return slices
     
-    def merge_slices(self, slices):
+    def merge_slices(self, slices, n=None, n_type=None):
         """ Merges a list of stats slices into a single aggregated elem.
         """
-        stats_elems = {}
+        all_services_stats = Bunch({'usage':0, 'time':0, 'mean':0})
+        total_seconds = 0.0
         
-        total_seconds = 0
-        all_services_usage = 0
-        all_services_time = 0
+        merged_stats_elems = {}
         
-        # This is a sum of all per-service usage elems across all slices. 
-        # Later on it will be divided by the total number of seconds.
-        service_usage = {}
+        merged_template = {
+         'usage_perc_all_services': 0.0, 
+         'all_services_time': 0, 
+         'time_perc_all_services': 0.0, 
+         'min_resp_time': 0.0, 
+         'service_name': None, 
+         'max_resp_time': 0.0, 
+         'rate': 0.0, 
+         'mean_all_services': 0.0, 
+         'all_services_usage': 0, 
+         'time': 0, 
+         'usage': 0, 
+         'mean': 0.0
+        }
+
         
         for slice in slices:
-            for stats in slice.stats:
-                
-                print()
-                print(slice.start, slice.stop, stats.to_dict())
-                
-                '''
-                stats_elem = stats_elems.setdefault(stats.service_name, StatsElem(stats.service_name))
-                stats_elem += stats
 
-                total_seconds += slice.total_seconds
-                stats_elem.all_services_usage = stats.all_services_usage
-                stats_elem.all_services_time = stats.all_services_time
-                '''
-                
-                #if stats.service_name == 'zato.stats.GetByService':
-                #    print(stats.to_dict())
-                #print()
-
-            #print()
-            #print()
-            #print()
-
-        #for service_name, stats_elem in stats_elems.items():
-        #    stats_elem.all_services_usage = all_services_usage
-        #    stats_elem.all_services_time = all_services_time
+            seen_repeated_stats = False
+            total_seconds += slice.total_seconds
             
-        '''
-        if total_seconds:
-            for service_name, stats_elem in stats_elems.items():
-                stats_elem.rate = round(stats_elem.usage / total_seconds, 5)
+            if slice.stats:
+                
+                for stats_elem in slice.stats:
+                    # Each slice has a list of per-service stats. Each of the statistics
+                    # has certain data repeated hence it's required we pick this data
+                    # once only.
+                    if not seen_repeated_stats:
+                        all_services_stats.time += stats_elem.all_services_time
+                        all_services_stats.usage += stats_elem.all_services_usage
+                        seen_repeated_stats = True
+
+                    # Fetch an existing elem or assign a new one
+                    merged_stats_elem = merged_stats_elems.setdefault(stats_elem.service_name, StatsElem(stats_elem.service_name))
+
+                    # Total time spent by this service and its total usage
+                    merged_stats_elem.time += stats_elem.time
+                    merged_stats_elem.usage += stats_elem.usage
+                    all_services_stats.mean += stats_elem.mean
                     
-        from pprint import pprint
-        
-        for k, v in sorted(stats_elems.items()):
-            print(k)
-            pprint(v.to_dict())
-            print()
-        
-        #pprint(stats_elems['zato.stats.GetByService'].to_dict())
-        #print()
-        '''
+                    # Minimum and maximum execution time 
+                    merged_stats_elem.min_resp_time = min(merged_stats_elem.min_resp_time, stats_elem.min_resp_time)
+                    merged_stats_elem.max_resp_time = max(merged_stats_elem.max_resp_time, stats_elem.max_resp_time)
+                    
+                    # Temporary data, will be divided by total_seconds later on,
+                    # after collecting all the stats.
+                    merged_stats_elem.temp_rate += slice.total_seconds * stats_elem.rate
+                    
+                    # Temporary data, aggregated later on
+                    merged_stats_elem.temp_mean += stats_elem.mean
+                    merged_stats_elem.temp_mean_count += 1
+
+        if merged_stats_elems:
+            mean_all_services = all_services_stats.mean / len(merged_stats_elems)
+        else:
+            mean_all_services = 0
+                
+        for value in merged_stats_elems.values():
             
+            value.all_services_time = all_services_stats.time
+            value.all_services_usage = all_services_stats.usage
+            value.time = round(value.time, 1)
+            
+            if total_seconds:
+                value.rate = round(value.temp_rate / total_seconds, 1)
+                value.rate = round(value.temp_rate / total_seconds, 1)
+                value.mean_all_services = mean_all_services
+                
+                if value.temp_mean:
+                    value.mean = round(value.temp_mean / value.temp_mean_count)
+                    
+                self.set_percent_of_all_services(all_services_stats, value)
+        
+        if n:
+            for stats_elem in self.yield_top_n(n, n_type, merged_stats_elems):
+                yield stats_elem
+        else:
+            for stats_elem in merged_stats_elems.values():
+                yield stats_elem
     
     def handle(self):
         
-        start = '2012-10-14T23:56:49'
-        stop = '2012-10-15T00:56:49'
+        start = self.request.input.start #'2012-10-13T18:48:00'
+        stop = self.request.input.stop   #'2012-10-13T18:52:00'
         
         if(self.logger.isEnabledFor(logging.DEBUG)):
             self.logger.DEBUG(
-                'Getting slices for start:[{}], stop:[{}]'.format(self.request.input.start, self.request.input.stop))
+                'Getting slices for start:[{}], stop:[{}]'.format(start, stop))
         
         slices = []
         
         for slice in self.get_slices(start, stop):
-            print(slice)
-            '''
             if slice.total_seconds:
+
                 get_suffixes_method = getattr(self, 'get_{}_suffixes'.format(self.SLICE_TYPE_METHOD[slice.slice_type]))
                 suffixes = tuple(get_suffixes_method(None, slice.start, slice.stop))
                 
                 start_iso = slice.start.isoformat()
                 stop_iso = slice.stop.isoformat()
                 
-                stats = self.get_stats(start_iso, stop_iso, needs_trends=False, 
-                    stats_key_prefix=slice.slice_type, suffixes=suffixes)
+                stats = self.get_stats(start_iso, stop_iso, needs_trends=False, stats_key_prefix=slice.slice_type, suffixes=suffixes)
                 slices.append(SliceStats(slice.slice_type, stats, start_iso, stop_iso, slice.total_seconds))
-                '''
-                
-        #stats = self.merge_slices(slices)
-                    
-        '''for slice_stats in all_slice_stats:
-            for stats in slice_stats.stats:
-                print(stats.to_dict())
-            print()
-            '''
+
+        for stats_elem in self.merge_slices(slices, self.request.input.n, self.request.input.n_type):
+            self.response.payload.append(stats_elem.to_dict())

@@ -293,8 +293,8 @@ class SourceInfo(object):
         self.server_name = None
 
 class StatsElem(object):
-    """ A single element of a statistics query result. All values make sense
-    only within the time interval of the original query, e.g. a 'min_resp_time'
+    """ A single element of a statistics query result concerning a particular service. 
+    All values make sense only within the time interval of the original query, e.g. a 'min_resp_time'
     may be 18 ms in this element because it represents statistics regarding, say,
     the last hour yet in a different period the 'min_resp_time' may be a completely
     different value. Likewise, 'all' in the description of parameters below means
@@ -318,7 +318,8 @@ class StatsElem(object):
     time_perc_all_services - this service's share as a percentage of all_services_time (up to 2 decimal points)
     expected_time_elems - an OrderedDict of all the time slots mapped to a mean time and rate 
     temp_rate - a temporary place for keeping request rates, needed to get a weighted mean of uneven execution periods
-    temp_mean - a temporary place for keeping mean times, needed to get a weighted mean of uneven execution periods
+    temp_mean - just like temp_rate but for mean response times
+    temp_mean_count - how many periods containing a mean rate there were
     """
     def __init__(self, service_name=None, mean=None):
         self.service_name = service_name
@@ -338,14 +339,17 @@ class StatsElem(object):
         self.expected_time_elems = OrderedDict()
         self.temp_rate = 0
         self.temp_mean = 0
+        self.temp_mean_count = 0
         
     def get_attrs(self, ignore=[]):
         for attr in dir(self):
-            if attr.startswith('__') or callable(getattr(self, attr)) or attr in ignore:
+            if attr.startswith('__') or attr.startswith('temp_') or callable(getattr(self, attr)) or attr in ignore:
                 continue
             yield attr
     
-    def to_dict(self, ignore=['expected_time_elems', 'mean_trend_int', 'usage_trend_int', 'temp_rate', 'temp_mean']):
+    def to_dict(self, ignore=None):
+        if not ignore:
+            ignore = ['expected_time_elems', 'mean_trend_int', 'usage_trend_int']
         return {attr: getattr(self, attr) for attr in self.get_attrs(ignore)}
     
     @staticmethod
