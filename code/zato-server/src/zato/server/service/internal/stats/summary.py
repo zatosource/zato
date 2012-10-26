@@ -445,12 +445,16 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         for slice in self._get_slices_by_months(slice_in_between_stop, stop, relativedelta(slice_in_between_stop, stop)):
             yield slice
             
-    def _get_slice_period_type(self, start, stop):
+    def _get_slice_period_type(self, start, stop, orig_start, orig_stop):
         """ Returns information regarding whether a given period should be sliced
         by minutes, hours, days, months and/or years.
         """
         start = Date(start)
         stop = Date(stop)
+        
+        if start > stop:
+            msg = 'start:[{}] must not be greater than stop:[{}]'.format(orig_start, orig_stop)
+            raise ZatoException(self.cid, msg)
         
         delta = stop - start
 
@@ -487,7 +491,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         # TODO: ValueError: stop and start must be at least [3] 
         # minutes apart, start must be farther in past; start:[2012-12-08T23:00:00], stop:[2012-10-23T10:01:02.444751]
     
-        delta, result = self._get_slice_period_type(start, stop)
+        delta, result = self._get_slice_period_type(start, stop, orig_start, orig_stop)
         
         by_mins = result['by_mins']
         by_hours_mins = result['by_hours_mins']
@@ -622,8 +626,8 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
     
     def handle(self):
         
-        start = self.request.input.start #'2012-10-13T18:48:00'
-        stop = self.request.input.stop   #'2012-10-13T18:52:00'
+        start = self.request.input.start
+        stop = self.request.input.stop
         
         if(self.logger.isEnabledFor(logging.DEBUG)):
             self.logger.DEBUG(
