@@ -141,8 +141,7 @@ def _long_user_to_utc(start, user_profile, summary_type):
         if summary_type == 'yesterday':
             start = start + relativedelta(days=-1)
             
-        # We can afford skipping a minute or so of statistics
-        stop = start + relativedelta(hours=23, minutes=59, seconds=59)
+        stop = start + relativedelta(days=1)
 
     elif summary_type == 'week':    
         
@@ -319,6 +318,7 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
     for name in('mean', 'usage'):
         d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': stats_type == 'trends'}
         if req_input.n:
+
             stats = _get_stats(cluster, start, stop, req_input.n, name, stats_type)
             
             # I.e. whether it's not an empty list (assuming both stats will always be available or neither will be)
@@ -375,13 +375,49 @@ def stats_data(req, stats_type):
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
         req_input, req.zato.cluster, stats_type)
 
+def stats_data2(req, stats_type):
+
+    raise ValueError('zzz')
+    
+    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 
+        'left-start', 'left-stop', 'right-start', 'right-stop', 'shift', 'side'))
+    
+    for name in req_input:
+        req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
+        
+    try:
+        req_input.n = int(req_input.n)
+    except ValueError:
+        req_input.n = 0
+        
+    req_input.format = req_input.format or 'html'
+    
+    shift_params = {
+        'prev_hour': {'minutes': -60},
+        'prev_day': {'days': -1},
+        'prev_week': {'days': -7},
+        
+        'next_hour': {'minutes': 60},
+        'next_day': {'days': 1},
+        'next_week': {'days': 7},
+    }
+    
+    if req_input.shift:
+        for name in('start', 'stop'):
+            base_value = parse(req_input[name])
+            delta = relativedelta(**shift_params[req_input.shift])
+            req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
+            
+    return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
+        req_input, req.zato.cluster, stats_type)
+
 @meth_allowed('GET', 'POST')
 def stats_trends_data(req):
     return stats_data(req, 'trends')
 
 @meth_allowed('GET', 'POST')
 def stats_summary_data(req):
-    return stats_data(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
+    return stats_data2(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
 
 def trends_summary(req, choice, stats_title, is_summary):
     start, stop, n, label, compare_to = _get_stats_params(req, choice, is_summary)
