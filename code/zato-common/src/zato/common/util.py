@@ -521,3 +521,14 @@ def utcnow():
     out and return their own timestamps at will.
     """
     return _utcnow()
+
+def _now(tz):
+    """ See zato.common.util.utcnow for docstring.
+    """
+    return datetime.now(tz)
+
+def now(tz=None):
+    """ A thin wrapper around datetime.now added so that tests can mock it
+    out and return their own timestamps at will.
+    """
+    return _now(tz)

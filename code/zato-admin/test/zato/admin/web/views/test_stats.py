@@ -37,12 +37,12 @@ from mock import patch
 from nose.tools import eq_
 
 # pytz
-from pytz import utc
+from pytz import timezone, utc
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.models import UserProfile
-from zato.common.util import utcnow
+from zato.common.util import from_local_to_utc, now, utcnow
 
 SHIFT_TYPES = 'prev_hour', 'prev_day', 'prev_week'
 
@@ -80,8 +80,10 @@ def shift(base_date, user_profile, shift_type, duration, format):
         
     return utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop
 
-def get_date_data(date_type, user_profile):
+def get_date_data(stats_type, date_type, user_profile):
     if date_type == 'last_hour':
+        # stop is what current time is now so return it in UTC and user's TZ
+        # along with start which will be equal to stop - 1 hour.
         utc_stop = utc.fromutc(utcnow())
         utc_start = utc.fromutc(utc_stop + relativedelta(hours=-1))
         
@@ -89,8 +91,26 @@ def get_date_data(date_type, user_profile):
         user_stop = from_utc_to_user(utc_stop, user_profile)
         
         return utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, 'one hour'
+    
+    elif date_type == 'today':
+        # start is today's midnight but it needs to be in user's TZ. stop is current time simply.
+        tz = timezone(user_profile.timezone)
+        
+        user_now = now(tz).replace(tzinfo=None)
+        user_today_midnight = datetime(user_now.year, user_now.month, user_now.day, hour=0, minute=0)
+        
+        utc_start = from_local_to_utc(user_today_midnight, user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, user_profile.timezone)
+        
+        user_start = from_utc_to_user(utc_start, user_profile)
+        user_stop = from_utc_to_user(utc_stop, user_profile)
+        
+        return utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, 'today'
+    
+    else:
+        raise ValueError('Unrecognized stats_type:[{}]'.format(stats_type))
 
-class TrendsTestCase(TestCase):
+class StatsTestCase(TestCase):
     def setUp(self):
         self.user_profile = UserProfile()
         self.user_profile.timezone = 'Europe/Berlin'
@@ -99,12 +119,19 @@ class TrendsTestCase(TestCase):
         self.user_profile.month_year_format_py = 'm-Y'
         self.user_profile.date_time_format_py = 'd-m-Y H:i:s'
         
-    def _utcnow(self):
+    def _fake_now(self):
         return datetime(2012, 3, 1, 0, 47, 24, 54903) # 1st of March in a leap year
         
+    def _utcnow(self):
+        return self._fake_now()
+    
+    def _now(self, *ignored):
+        return self._fake_now()
+
+class TrendsTestCase(StatsTestCase):
     def test_default_start_stop(self):
         with patch('zato.common.util._utcnow', self._utcnow):
-            utc_start, utc_stop, user_start, user_stop, label = get_date_data('last_hour', self.user_profile)
+            utc_start, utc_stop, user_start, user_stop, label = get_date_data('trends', 'last_hour', self.user_profile)
             eq_(utc_start, '2012-02-29T23:47:24.054903+00:00')
             eq_(utc_stop, '2012-03-01T00:47:24.054903+00:00')
             eq_(user_start, '01-03-2012 00:47:24')
@@ -137,7 +164,16 @@ class TrendsTestCase(TestCase):
             eq_(utc_stop, '2012-02-23T00:47:24.054903+00:00')
             eq_(user_start, '23-02-2012 00:47:24')
             eq_(user_stop, '23-02-2012 01:47:24')
-            
+
+class SummaryTestCase(StatsTestCase):
+    def test_default_start_stop(self):
+        with patch('zato.common.util._now', self._now):
+            utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'today', self.user_profile)
+            eq_(utc_start, '2012-02-29T23:00:00+00:00')
+            eq_(utc_stop, '2012-02-29T23:47:24.054903+00:00')
+            eq_(user_start, '01-03-2012 00:00:00')
+            eq_(user_stop, '01-03-2012 00:47:24')
+            eq_(label, 'today')
 
 '''
 # stdlib
