@@ -510,3 +510,14 @@ def from_utc_to_local(dt, tz_name):
     local_tz = pytz.timezone(tz_name)
     dt = local_tz.normalize(dt.astimezone(local_tz))
     return dt
+
+def _utcnow():
+    """ See zato.common.util.utcnow for docstring.
+    """
+    return datetime.utcnow()
+
+def utcnow():
+    """ A thin wrapper around datetime.utcnow added so that tests can mock it
+    out and return their own timestamps at will.
+    """
+    return _utcnow()

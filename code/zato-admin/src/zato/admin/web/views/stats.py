@@ -185,6 +185,9 @@ def _long_user_to_utc(start, user_profile, summary_type):
         start = from_user_to_utc(start, user_profile)
         stop = from_user_to_utc(stop, user_profile)
         
+    else:
+        raise ValueError('Could not understand summary_type:[{}]'.format(summary_type))
+        
     now = datetime.utcnow()    
     if stop > now:
         stop = now
@@ -337,6 +340,11 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
         
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
+def _stats_data_test(*ignored_args, **ignored_kwargs):
+    """ A fake stats-returning function which is actually mocked out in tests only.
+    """
+    raise NotImplementedError('This function should not be called directly')
+
 def stats_data(req, stats_type):
     """ n and n_type will always be given. format may be None and will
     default to 'html'. Also, either start/stop or left_start/left_stop/shift
@@ -377,8 +385,6 @@ def stats_data(req, stats_type):
 
 def stats_data2(req, stats_type):
 
-    raise ValueError('zzz')
-    
     req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 
         'left-start', 'left-stop', 'right-start', 'right-stop', 'shift', 'side'))
     
@@ -413,6 +419,7 @@ def stats_data2(req, stats_type):
 
 @meth_allowed('GET', 'POST')
 def stats_trends_data(req):
+    print(req.zato.user_profile)
     return stats_data(req, 'trends')
 
 @meth_allowed('GET', 'POST')
