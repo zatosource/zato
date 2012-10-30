@@ -118,6 +118,9 @@ def from_user_to_utc(dt, user_profile, format='date_time'):
     if user_profile.time_format == '12':
         # Reverse the string, replace the first occurence of . with a : and reverse it back
         dt = dt[::-1].replace('.', ':', 1)[::-1]
+        
+    if format == 'year':
+        dt = '01-01-' + dt
     
     dt_format = getattr(user_profile, '{}_format_py'.format(format))
     return _from_local_to_utc(dt, user_profile.timezone, dt_format.startswith('d')).replace(tzinfo=None)
