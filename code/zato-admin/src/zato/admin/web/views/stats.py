@@ -51,13 +51,14 @@ from django_settings.models import PositiveInteger, Setting
 
 # pytz
 import pytz
-from pytz import UTC
+from pytz import timezone, utc
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed
 from zato.common import DEFAULT_STATS_SETTINGS, SECONDS_IN_DAY, StatsElem, zato_path
+from zato.common.util import from_local_to_utc, make_repr, now, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ class JobAttrForm(object):
     def __init__(self, form_name, job_attr):
         self.form_name = form_name
         self.job_attr = job_attr
-        
+
     def __repr__(self):
         return '<{} at {} form_name:[{}], job_attr:[{}]>'.format(self.__class__.__name__, hex(id(self)),
             self.form_name, repr(self.job_attr))
@@ -76,11 +77,22 @@ class JobAttrFormMapping(object):
     def __init__(self, job_name, attrs):
         self.job_name = job_name
         self.attrs = attrs
-        
+
     def __repr__(self):
         return '<{} at {} job_name:[{}], attrs:[{}]>'.format(self.__class__.__name__, hex(id(self)),
             self.job_name, repr(self.attrs))
-    
+
+class DateInfo(object):
+    def __init__(self, utc_start, utc_stop, user_start, user_stop, label=None):
+        self.utc_start = utc_start
+        self.utc_stop = utc_stop
+        self.user_start = user_start
+        self.user_stop = user_stop
+        self.label = label
+
+    def __repr__(self):
+        return make_repr(self)
+
 # A mapping a job type, its name and the execution interval unit
 job_mappings = {
     JobAttrFormMapping('zato.stats.ProcessRawTimes', 
@@ -93,15 +105,20 @@ stats_type_service = {
     '{}today'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
 }
 
-skip_by = {
+skip_by_duration = {
     'last_hour': 'hour',
+    'prev_hour': 'hour',
+    'next_hour': 'hour',
     'today': 'day',
+    'prev_hour_day': 'hour',
+    'prev_hour_day_week': 'hour',
     'this_week': 'week',
     'this_month': 'month',
     'this_year': 'year',
 }
 
-short_date_choice_format = {
+user_format = {
+    'hour': 'date_time',
     'day': 'date',
     'week': 'date',
     'month': 'month_year',
@@ -110,89 +127,162 @@ short_date_choice_format = {
 
 # ##############################################################################
 
-def _get_start_stop(user_profile, stats_type, start, stop):
-    if stats_type.startswith(SUMMARY_PREFIX):
-        if not start:
-            start = date.today().isoformat() + 'T00:00+00:00'
-            
-        start = from_user_to_utc(start, user_profile, 'month_year')
-        
-        return start.isoformat(), None
-    else:
-        return start, stop
-        
-def _short_utc_to_user(dt, user_profile, choice):
-    for k, v in short_date_choice_format.items():
-        if k in choice:
-            return from_utc_to_user(dt, user_profile, v)
-            
-def _long_user_to_utc(start, user_profile, summary_type):
-    """ Takes input in the user's timezone and calculates start/stop in UTC.
+compare_to = {
+    'last_hour':[
+        ('prev_hour', 'hour'),
+        ('prev_hour_day', 'hour/day'),
+        ('prev_hour_day_week', 'hour/day/week'),
+    ],
+
+    'today':[
+        ('prev_day', 'day'),
+        ('prev_week', 'day/week'),
+    ],
+    'yesterday':[('', '')],
+    'this_week':[('', '')],
+    'this_month':[('', '')],
+    'this_year':[('', '')]
+}
+
+# The two dictionary below return keyword args passed into relativedelta for both start and
+# stop dates. The former is a delta relative to the base_date, the latter
+# is relative to the resulting start_date.
+
+start_delta_kwargs = {
+    'prev_hour': {'hours':-1},
+    'prev_hour_day': {'days':-1},
+    'prev_hour_day_week': {'weeks':-1},
+    
+    'prev_day': {'days':-1},
+    'prev_week': {'weeks':-1},
+    'prev_month': {'months':-1},
+    'prev_year': {'years':-1},
+    
+    'next_hour': {'hours':1},
+    'next_day': {'days':1},
+    'next_week': {'weeks':1},
+    'next_month': {'months':1},
+    'next_year': {'years':1},
+}
+
+stop_delta_kwargs = {
+    'hour': {'hours':1},
+    'day': {'days':1},
+    'week': {'weeks':1},
+    'month': {'months':1},
+    'year': {'years':1},
+}
+
+def shift(utc_base_date, user_profile, shift_type, duration, format):
+    """ Shifts the base date by the amount specified and returns resulting start
+    and stop dates in UTC and user timezone.
     """
+    if shift_type not in start_delta_kwargs:
+        raise ValueError('Unknown shift_type:[{}]'.format(shift_type))
+
+    _start_delta_kwargs = start_delta_kwargs[shift_type]
+    _stop_delta_kwargs = stop_delta_kwargs[duration]
     
-    summary_type = summary_type.replace(SUMMARY_PREFIX, '')
+    utc_start = utc_base_date + relativedelta(**_start_delta_kwargs)
+    utc_stop = utc_start + relativedelta(**_stop_delta_kwargs)
     
-    if summary_type in('today', 'yesterday'):
+    user_start = from_utc_to_user(utc_start, user_profile, format)
+    user_stop = from_utc_to_user(utc_stop, user_profile, format)
         
-        # In daily summaries we always start on midnight ..
-        start = from_user_to_utc('{} 00:00'.format(start), user_profile)
-        
-        # .. it's one day earlier though if it was yesterday
-        if summary_type == 'yesterday':
-            start = start + relativedelta(days=-1)
-            
-        stop = start + relativedelta(days=1)
+    return DateInfo(utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop)
 
-    elif summary_type == 'week':    
+def get_default_date(date_type, user_profile, format):
+    """ Returns default start and stop date in UTC and user's timezone depending
+    on the stats type and duration requested.
+    """
+    def get_today(_user_profile, _format):
+        """ user_start is today's midnight but it needs to be in user's TZ. user_stop is current time simply,
+        in user's timezone again.
+        """
+        user_now = now(timezone(_user_profile.timezone)).replace(tzinfo=None)
+        user_today_midnight = datetime(user_now.year, user_now.month, user_now.day)
         
-        # Find the last Monday in the user's timezone
-        start = parse(start, dayfirst=user_profile.date_format_py.startswith('d'))
-        start = start + relativedelta(weekday=MO(-1))
+        utc_start = from_local_to_utc(user_today_midnight, _user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, _user_profile.timezone)
         
-        # Only now we can convert it to UTC
-        start = from_user_to_utc(start, user_profile)
+        user_start = from_utc_to_user(utc_start, _user_profile, _format)
+        user_stop = None
         
-        # Luckily, a week has always 7 days
-        stop = start + relativedelta(days=7)
+        return utc_start, utc_stop, user_start, user_stop
+    
+    if date_type == 'last_hour':
+        # stop is what current time is now so return it in UTC and user's TZ
+        # along with start which will be equal to stop - 1 hour.
+        utc_stop = utc.fromutc(utcnow())
+        utc_start = utc.fromutc(utc_stop + relativedelta(hours=-1))
         
-    elif summary_type == 'month':
-
-        # Find the first day of month in user's timezone
-        start = parse(start, dayfirst=user_profile.date_format_py.startswith('d'))
-        start = start.replace(day=1)
+        user_start = from_utc_to_user(utc_start, user_profile)
+        user_stop = from_utc_to_user(utc_stop, user_profile)
         
-        # How many days the current month has. Note that we're doing it before
-        # switching to UTC as this will very well change the month so if the
-        # start on input was '02-2012' (Feb 2012), it would've been changed to
-        # Jan 2012 in UTC and that in turn would've meant 31 days instead of 29.
-        days = monthrange(start.year, start.month)[1]
-
-        # Now we can safely convert to UTC
-        start = from_user_to_utc(start, user_profile)
+        label = 'one hour'
         
-        # stop will be equal to the number of seconds since in the month user
-        # was referring to
-        stop = start + relativedelta(seconds=days*SECONDS_IN_DAY)
+    elif date_type == 'today':
+        utc_start, utc_stop, user_start, user_stop = get_today(user_profile, format)
+        label = 'today'
+    
+    elif date_type == 'yesterday':
+        # Yesterday's start is today's start - 1 day
+        today_utc_start, today_utc_stop, today_user_start, user_stop = get_today(user_profile, format)
         
-    elif summary_type == 'year':
-        # Midnight 1st of Jan in user's timezone won't necessarily be midnight 1st of Jun in UTC
+        utc_start = today_utc_start + relativedelta(days=-1)
+        utc_stop = utc_start + relativedelta(days=1)
         
-        year = int(start)
+        user_start = from_utc_to_user(utc_start, user_profile, format)
         
-        start = datetime(year=year, month=1, day=1, hour=0, minute=0, second=0).isoformat()
-        stop = datetime(year=year, month=12, day=31, hour=23, minute=59, second=59).isoformat()
+        label = 'yesterday'
         
-        start = from_user_to_utc(start, user_profile)
-        stop = from_user_to_utc(stop, user_profile)
+    elif date_type == 'this_week':
+        # This week extends from Monday midnight to right now
+        user_now = now(timezone(user_profile.timezone)).replace(tzinfo=None)
+        user_prev_monday = user_now + relativedelta(weekday=MO(-1))
+        user_prev_monday = datetime(year=user_prev_monday.year, month=user_prev_monday.month, day=user_prev_monday.day)
         
+        utc_start = from_local_to_utc(user_prev_monday, user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, user_profile.timezone)
+        
+        user_start = from_utc_to_user(utc_start, user_profile, format)
+        user_stop = from_utc_to_user(utc_stop, user_profile, format)
+        
+        label = 'this week'
+        
+    elif date_type == 'this_month':
+        # From midnight the first day of month up until now
+        user_now = now(timezone(user_profile.timezone)).replace(tzinfo=None)
+        user_1st_of_month = datetime(year=user_now.year, month=user_now.month, day=1)
+        
+        utc_start = from_local_to_utc(user_1st_of_month, user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, user_profile.timezone)
+        
+        user_start = from_utc_to_user(utc_start, user_profile, format)
+        user_stop = None
+        
+        label = 'this month'
+        
+    elif date_type == 'this_year':
+        # From midnight the first day of year up until now
+        user_now = now(timezone(user_profile.timezone)).replace(tzinfo=None)
+        user_new_year = datetime(year=user_now.year, month=1, day=1)
+        
+        utc_start = from_local_to_utc(user_new_year, user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, user_profile.timezone)
+        
+        user_start = from_utc_to_user(utc_start, user_profile, format)
+        user_stop = None
+        
+        label = 'this year'
+    
     else:
-        raise ValueError('Could not understand summary_type:[{}]'.format(summary_type))
-        
-    now = datetime.utcnow()    
-    if stop > now:
-        stop = now
-        
-    return start.isoformat(), stop.isoformat()
+        raise ValueError('Unrecognized date_type:[{}]'.format(date_type))
+    
+    return DateInfo(utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, label)
+
+# ##############################################################################
+
 
 def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     """ Returns at most n statistics elements of a given n_type for the period
@@ -211,69 +301,6 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
             out.append(StatsElem.from_xml(msg_item))
             
     return out
-
-def _get_stats_params(req, choice, is_summary):
-    
-    labels = {'last_hour':'Last hour', 'today':'Today', 'yesterday':'Yesterday', 'last_24h':'Last 24h',
-            'this_week':'This week', 'this_month':'This month', 'this_year':'This year'}
-    
-    compare_to = {
-        'last_hour':[
-            ('prev_hour', 'hour'),
-            ('prev_day', 'hour/day'),
-            ('prev_week', 'hour/day/week'),
-        ], 
-
-        'today':[
-            ('prev_day', 'day'),
-            ('prev_week', 'day/week'),
-        ], 
-        'yesterday':[('', '')], 
-        'this_week':[('', '')], 
-        'this_month':[('', '')], 
-        'this_year':[('', '')]
-    }
-    
-    if not choice in labels:
-        raise ValueError('choice:[{}] is not one of:[{}]'.format(choice, labels.keys()))
-    
-    start, stop = '', ''
-    n = req.GET.get('n', 10)
-    now = datetime.utcnow()
-    
-    if req.zato.get('cluster'):
-        
-        def _params_last_hour():
-            elems = 60
-            start = now + relativedelta(minutes=-elems)
-            return start.replace(tzinfo=UTC), now.replace(tzinfo=UTC)
-        
-        def _params_today():
-            start = now.strftime('%Y-%m-%dT%H:%M+00:00')
-            return start, ''
-            
-        start, stop = locals()['_params_' + choice]()
-        
-        if is_summary:
-            start = _short_utc_to_user(start, req.zato.user_profile, choice)
-        else:
-            start = from_utc_to_user(start, req.zato.user_profile)
-        
-        if stop:
-            stop = from_utc_to_user(stop, req.zato.user_profile)
-        
-    return start, stop, n, labels[choice], compare_to[choice]
-
-# ##############################################################################
-
-def _stats_start_stop(start, stop, user_profile, stats_type):
-    if stats_type.startswith(SUMMARY_PREFIX):
-        start, stop = _long_user_to_utc(start, user_profile, stats_type)
-    else:
-        start = from_user_to_utc(start, user_profile)
-        stop = from_user_to_utc(stop, user_profile)
-        
-    return start, stop
 
 # ##############################################################################
 
@@ -308,11 +335,16 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
 def _stats_data_html(user_profile, req_input, cluster, stats_type):
     
-    return_data = {'has_stats':False, 'start':req_input.start, 'stop':req_input.stop}
+    return_data = {
+        'has_stats':False, 
+        'utc_start':req_input.utc_start, 
+        'utc_stop':req_input.utc_stop,
+        'user_start':req_input.user_start, 
+        'user_stop':req_input.user_stop,
+    }
+    
     settings = {}
     query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
-    
-    start, stop = _stats_start_stop(req_input.start, req_input.stop, user_profile, stats_type)
     
     if req_input.n:
         for name in('atttention_slow_threshold', 'atttention_top_threshold'):
@@ -322,7 +354,7 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
         d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': stats_type == 'trends'}
         if req_input.n:
 
-            stats = _get_stats(cluster, start, stop, req_input.n, name, stats_type)
+            stats = _get_stats(cluster, req_input.utc_start, req_input.utc_stop, req_input.n, name, stats_type)
             
             # I.e. whether it's not an empty list (assuming both stats will always be available or neither will be)
             return_data['has_stats'] = len(stats)
@@ -335,7 +367,7 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
             
         return_data[name] = loader.render_to_string('zato/stats/trends-table-{}.html'.format(name), d)
         
-    for name in('start', 'stop'):
+    for name in('user_start', 'user_stop'):
         return_data['{}_label'.format(name)] = return_data[name]
         
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -351,8 +383,9 @@ def stats_data(req, stats_type):
     will be present - if the latter, start and stop will be computed as left_start/left_stop
     shifted by the value pointed to by shift.
     """
-    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 
-        'left-start', 'left-stop', 'right-start', 'right-stop', 'shift', 'side'))
+    req_input = Bunch.fromkeys(('utc_start', 'utc_stop', 'user_start', 'user_stop',
+        'n', 'n_type', 'format', 'left-start', 'left-stop', 'right-start', 'right-stop', 
+        'shift', 'side'))
     
     for name in req_input:
         req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
@@ -363,87 +396,53 @@ def stats_data(req, stats_type):
         req_input.n = 0
         
     req_input.format = req_input.format or 'html'
-    
-    shift_params = {
-        'prev_hour': {'minutes': -60},
-        'prev_day': {'days': -1},
-        'prev_week': {'days': -7},
-        
-        'next_hour': {'minutes': 60},
-        'next_day': {'days': 1},
-        'next_week': {'days': 7},
-    }
-    
-    if req_input.shift:
-        for name in('start', 'stop'):
-            base_value = parse(req_input[name])
-            delta = relativedelta(**shift_params[req_input.shift])
-            req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
-            
-    return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
-        req_input, req.zato.cluster, stats_type)
 
-def stats_data2(req, stats_type):
-
-    req_input = Bunch.fromkeys(('start', 'stop', 'n', 'n_type', 'format', 
-        'left-start', 'left-stop', 'right-start', 'right-stop', 'shift', 'side'))
-    
-    for name in req_input:
-        req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
-        
-    try:
-        req_input.n = int(req_input.n)
-    except ValueError:
-        req_input.n = 0
-        
-    req_input.format = req_input.format or 'html'
-    
-    shift_params = {
-        'prev_hour': {'minutes': -60},
-        'prev_day': {'days': -1},
-        'prev_week': {'days': -7},
-        
-        'next_hour': {'minutes': 60},
-        'next_day': {'days': 1},
-        'next_week': {'days': 7},
-    }
-    
     if req_input.shift:
-        for name in('start', 'stop'):
-            base_value = parse(req_input[name])
-            delta = relativedelta(**shift_params[req_input.shift])
-            req_input[name] = django_date_filter(base_value + delta, req.zato.user_profile.date_time_format_py)
-            
+        duration = skip_by_duration[req_input.shift]
+        format = user_format[duration]
+
+        shift_info = shift(parse(req_input.utc_start), req.zato.user_profile, req_input.shift, duration, format)
+
+        req_input['utc_start'] = shift_info.utc_start
+        req_input['utc_stop'] = shift_info.utc_stop
+        
+        req_input['user_start'] = shift_info.user_start
+        req_input['user_stop'] = shift_info.user_stop
+
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
         req_input, req.zato.cluster, stats_type)
 
 @meth_allowed('GET', 'POST')
 def stats_trends_data(req):
-    print(req.zato.user_profile)
     return stats_data(req, 'trends')
 
 @meth_allowed('GET', 'POST')
 def stats_summary_data(req):
-    return stats_data2(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
+    return stats_data(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
 
 def trends_summary(req, choice, stats_title, is_summary):
-    start, stop, n, label, compare_to = _get_stats_params(req, choice, is_summary)
+    info = get_default_date(choice, req.zato.user_profile, 'date')
+    
+    n = 10 # TODO: Actually read it off somewhere
+    _compare_to = compare_to[choice]
         
     return_data = {
-        'start': start,
-        'stop': stop,
+        'utc_start': info.utc_start,
+        'utc_stop': info.utc_stop,
+        'user_start': info.user_start,
+        'user_stop': info.user_stop,
         'n': n,
         'choice': choice, 
-        'label': label, 
+        'label': info.label, 
         'n_form': NForm(initial={'n':n}),
-        'compare_to': compare_to,
+        'compare_to': _compare_to,
         'needs_compare_to_other': choice in('last_hour', 'today'),
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,
         'sample_dt': get_sample_dt(req.zato.user_profile),
         'stats_title': stats_title,
-        'skip_by': skip_by[choice],
+        'skip_by': skip_by_duration[choice],
     }
     
     return_data.update(get_js_dt_format(req.zato.user_profile))
@@ -576,4 +575,3 @@ def maintenance_delete(req):
     return redirect('{}?cluster={}'.format(reverse('stats-maintenance'), req.zato.cluster_id))
 
 # ##############################################################################
-
