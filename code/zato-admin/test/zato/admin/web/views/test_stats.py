@@ -28,7 +28,7 @@ from uuid import uuid4
 
 # dateutil
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import MO, relativedelta
 
 # mock
 from mock import patch
@@ -84,19 +84,19 @@ def shift(base_date, user_profile, shift_type, duration, format):
 
 def get_date_data(stats_type, date_type, user_profile, format):
 
-    def get_today(_user_profile):
-        # start is today's midnight but it needs to be in user's TZ. stop is current time simply.
-        
-        tz = timezone(_user_profile.timezone)
-        
-        user_now = now(tz).replace(tzinfo=None)
-        user_today_midnight = datetime(user_now.year, user_now.month, user_now.day, hour=0, minute=0)
+
+    def get_today(_user_profile, _format):
+        """ user_start is today's midnight but it needs to be in user's TZ. user_stop is current time simply,
+        in user's timezone again.
+        """
+        user_now = now(timezone(_user_profile.timezone)).replace(tzinfo=None)
+        user_today_midnight = datetime(user_now.year, user_now.month, user_now.day)
         
         utc_start = from_local_to_utc(user_today_midnight, _user_profile.timezone)
         utc_stop = from_local_to_utc(user_now, _user_profile.timezone)
         
-        user_start = from_utc_to_user(utc_start, _user_profile, format)
-        user_stop = from_utc_to_user(utc_stop, _user_profile, format)
+        user_start = from_utc_to_user(utc_start, _user_profile, _format)
+        user_stop = from_utc_to_user(utc_stop, _user_profile, _format)
         
         return utc_start, utc_stop, user_start, user_stop
     
@@ -109,15 +109,15 @@ def get_date_data(stats_type, date_type, user_profile, format):
         user_start = from_utc_to_user(utc_start, user_profile)
         user_stop = from_utc_to_user(utc_stop, user_profile)
         
-        return utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, 'one hour'
-    
+        label = 'one hour'
+        
     elif date_type == 'today':
-        utc_start, utc_stop, user_start, user_stop = get_today(user_profile)
-        return utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, 'today'
+        utc_start, utc_stop, user_start, user_stop = get_today(user_profile, format)
+        label = 'today'
     
     elif date_type == 'yesterday':
         # Yesterday's start is today's start - 1 day
-        today_utc_start, today_utc_stop, today_user_start, today_user_stop = get_today(user_profile)
+        today_utc_start, today_utc_stop, today_user_start, today_user_stop = get_today(user_profile, format)
         
         utc_start = today_utc_start + relativedelta(days=-1)
         utc_stop = utc_start + relativedelta(days=1)
@@ -125,10 +125,52 @@ def get_date_data(stats_type, date_type, user_profile, format):
         user_start = from_utc_to_user(utc_start, user_profile, format)
         user_stop = from_utc_to_user(utc_stop, user_profile, format)
         
-        return utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, 'yesterday'
+        label = 'yesterday'
+        
+    elif date_type == 'this_week':
+        # This week extends from Monday midnight to right now
+        user_now = now(timezone(user_profile.timezone)).replace(tzinfo=None)
+        user_prev_monday = user_now + relativedelta(weekday=MO(-1))
+        user_prev_monday = datetime(year=user_prev_monday.year, month=user_prev_monday.month, day=user_prev_monday.day)
+        
+        utc_start = from_local_to_utc(user_prev_monday, user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, user_profile.timezone)
+        
+        user_start = from_utc_to_user(utc_start, user_profile, format)
+        user_stop = from_utc_to_user(utc_stop, user_profile, format)
+        
+        label = 'this week'
+        
+    elif date_type == 'this_month':
+        # From midnight the first day of month up until now
+        user_now = now(timezone(user_profile.timezone)).replace(tzinfo=None)
+        user_1st_of_month = datetime(year=user_now.year, month=user_now.month, day=1)
+        
+        utc_start = from_local_to_utc(user_1st_of_month, user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, user_profile.timezone)
+        
+        user_start = from_utc_to_user(utc_start, user_profile, format)
+        user_stop = from_utc_to_user(utc_stop, user_profile, format)
+        
+        label = 'this month'
+        
+    elif date_type == 'this_year':
+        # From midnight the first day of year up until now
+        user_now = now(timezone(user_profile.timezone)).replace(tzinfo=None)
+        user_new_year = datetime(year=user_now.year, month=1, day=1)
+        
+        utc_start = from_local_to_utc(user_new_year, user_profile.timezone)
+        utc_stop = from_local_to_utc(user_now, user_profile.timezone)
+        
+        user_start = from_utc_to_user(utc_start, user_profile, format)
+        user_stop = from_utc_to_user(utc_stop, user_profile, format)
+        
+        label = 'this year'
     
     else:
         raise ValueError('Unrecognized date_type:[{}]'.format(date_type))
+    
+    return utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, label
 
 class StatsTestCase(TestCase):
     def setUp(self):
@@ -206,12 +248,30 @@ class SummaryTestCase(StatsTestCase):
             
     def test_start_stop_this_week(self):
         with patch('zato.common.util._now', self._now):
-            utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'yesterday', self.user_profile, 'date')
-            eq_(utc_start, '2012-02-28T23:00:00+00:00')
-            eq_(utc_stop, '2012-02-29T23:00:00+00:00')
-            eq_(user_start, '29-02-2012')
+            utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'this_week', self.user_profile, 'date')
+            eq_(utc_start, '2012-02-26T23:00:00+00:00')
+            eq_(utc_stop, '2012-02-29T23:47:24.054903+00:00')
+            eq_(user_start, '27-02-2012')
             eq_(user_stop, '01-03-2012')
             eq_(label, 'this week')
+            
+    def test_start_stop_this_month(self):
+        with patch('zato.common.util._now', self._now):
+            utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'this_month', self.user_profile, 'date')
+            eq_(utc_start, '2012-02-29T23:00:00+00:00')
+            eq_(utc_stop, '2012-02-29T23:47:24.054903+00:00')
+            eq_(user_start, '01-03-2012')
+            eq_(user_stop, '01-03-2012')
+            eq_(label, 'this month')
+            
+    def test_start_stop_this_year(self):
+        with patch('zato.common.util._now', self._now):
+            utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'this_year', self.user_profile, 'date')
+            eq_(utc_start, '2011-12-31T23:00:00+00:00')
+            eq_(utc_stop, '2012-02-29T23:47:24.054903+00:00')
+            eq_(user_start, '01-01-2012')
+            eq_(user_stop, '01-03-2012')
+            eq_(label, 'this year')
             
     def test_shift_prev_day(self):
         now = '01-03-2012'
