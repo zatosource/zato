@@ -198,7 +198,7 @@ class StatsTestCase(TestCase):
         return self._fake_now()
 
 class TrendsTestCase(StatsTestCase):
-    def xtest_start_stop_last_hour(self):
+    def test_start_stop_last_hour(self):
         with patch('zato.common.util._utcnow', self._utcnow):
             utc_start, utc_stop, user_start, user_stop, label = get_date_data('trends', 'last_hour', self.user_profile, 'date_time')
             eq_(utc_start, '2012-02-29T23:47:24.054903+00:00')
@@ -207,7 +207,7 @@ class TrendsTestCase(StatsTestCase):
             eq_(user_stop, '01-03-2012 01:47:24')
             eq_(label, 'one hour')
             
-    def xtest_shift_prev_hour(self):
+    def test_shift_prev_hour(self):
         with patch('zato.common.util._utcnow', self._utcnow):
             now = utcnow()
             utc_start, utc_stop, user_start, user_stop = shift(now, self.user_profile, 'prev_hour', 'hour', 'date_time')
@@ -216,7 +216,7 @@ class TrendsTestCase(StatsTestCase):
             eq_(user_start, '29-02-2012 23:47:24')
             eq_(user_stop, '01-03-2012 00:47:24')
             
-    def xtest_shift_prev_day(self):
+    def test_shift_prev_day(self):
         with patch('zato.common.util._utcnow', self._utcnow):
             now = utcnow()
             utc_start, utc_stop, user_start, user_stop = shift(now, self.user_profile, 'prev_day', 'hour', 'date_time')
@@ -225,7 +225,7 @@ class TrendsTestCase(StatsTestCase):
             eq_(user_start, '29-02-2012 00:47:24')
             eq_(user_stop, '29-02-2012 01:47:24')
             
-    def xtest_shift_prev_week(self):
+    def test_shift_prev_week(self):
         with patch('zato.common.util._utcnow', self._utcnow):
             now = utcnow()
             utc_start, utc_stop, user_start, user_stop = shift(now, self.user_profile, 'prev_week', 'hour', 'date_time')
@@ -235,7 +235,7 @@ class TrendsTestCase(StatsTestCase):
             eq_(user_stop, '23-02-2012 01:47:24')
 
 class SummaryTestCase(StatsTestCase):
-    def xtest_start_stop_today(self):
+    def test_start_stop_today(self):
         with patch('zato.common.util._now', self._now):
             utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'today', self.user_profile, 'date')
             eq_(utc_start, '2012-02-29T23:00:00+00:00')
@@ -244,7 +244,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(user_stop, None)
             eq_(label, 'today')
             
-    def xtest_start_stop_yesterday(self):
+    def test_start_stop_yesterday(self):
         with patch('zato.common.util._now', self._now):
             utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'yesterday', self.user_profile, 'date')
             eq_(utc_start, '2012-02-28T23:00:00+00:00')
@@ -253,7 +253,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(user_stop, None)
             eq_(label, 'yesterday')
             
-    def xtest_start_stop_this_week(self):
+    def test_start_stop_this_week(self):
         with patch('zato.common.util._now', self._now):
             utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'this_week', self.user_profile, 'date')
             eq_(utc_start, '2012-02-26T23:00:00+00:00')
@@ -262,7 +262,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(user_stop, '01-03-2012') # The date now() returns
             eq_(label, 'this week')
             
-    def xtest_start_stop_this_month(self):
+    def test_start_stop_this_month(self):
         with patch('zato.common.util._now', self._now):
             utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'this_month', self.user_profile, 'month_year')
             eq_(utc_start, '2012-02-29T23:00:00+00:00')
@@ -271,7 +271,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(user_stop, None)
             eq_(label, 'this month')
             
-    def xtest_start_stop_this_year(self):
+    def test_start_stop_this_year(self):
         with patch('zato.common.util._now', self._now):
             utc_start, utc_stop, user_start, user_stop, label = get_date_data('summary', 'this_year', self.user_profile, 'year')
             eq_(utc_start, '2011-12-31T23:00:00+00:00')
@@ -280,7 +280,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(user_stop, None)
             eq_(label, 'this year')
             
-    def xtest_shift_prev_day_by_day(self):
+    def test_shift_prev_day_by_day(self):
         now = '01-03-2012'
         utc_start, utc_stop, user_start, user_stop = shift(now, self.user_profile, 'prev_day', 'day', 'date')
         eq_(utc_start, '2012-02-28T23:00:00+00:00')
@@ -288,7 +288,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(user_start, '29-02-2012')
         eq_(user_stop, '01-03-2012')
         
-    def xtest_shift_prev_week_by_day(self):
+    def test_shift_prev_week_by_day(self):
         now = '01-03-2012'
         utc_start, utc_stop, user_start, user_stop = shift(now, self.user_profile, 'prev_week', 'day', 'date')
         eq_(utc_start, '2012-02-22T23:00:00+00:00')
@@ -296,7 +296,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(user_start, '23-02-2012')
         eq_(user_stop, '24-02-2012')
 
-    def xtest_shift_prev_week_by_week(self):
+    def test_shift_prev_week_by_week(self):
         now = '27-02-2012'
         utc_start, utc_stop, user_start, user_stop = shift(now, self.user_profile, 'prev_week', 'week', 'date')
         eq_(utc_start, '2012-02-19T23:00:00+00:00')
@@ -304,7 +304,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(user_start, '20-02-2012')
         eq_(user_stop, '27-02-2012')
 
-    def xtest_shift_prev_month_by_month(self):
+    def test_shift_prev_month_by_month(self):
         now = '03-2012'
         utc_start, utc_stop, user_start, user_stop = shift(now, self.user_profile, 'prev_month', 'month', 'month_year')
         eq_(utc_start, '2012-02-29T22:00:00+00:00')
