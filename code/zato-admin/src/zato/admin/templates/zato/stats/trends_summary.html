@@ -56,10 +56,19 @@
                 <div style="float:left">
                     <form action="." method="GET">
                         Show {{ n_form.n }}  items <input type="submit" value="OK" />
-                        <input type="hidden" name="start" id="left-start" value="{{ start }}" />
-                        <input type="hidden" name="stop" id="left-stop" value="{{ stop }}" />
-                        <input type="hidden" name="right_start" id="right-start" value="{{ start }}" />
-                        <input type="hidden" name="right_stop" id="right-stop" value="{{ stop }}" />
+
+                        <input type="hidden" name="left_utc_start" id="left-utc_start" value="{{ utc_start }}" />
+                        <input type="hidden" name="left_utc_stop" id="left-utc_stop" value="{{ utc_stop }}" />
+                        
+                        <input type="hidden" name="left_user_start" id="left-user_start" value="{{ user_start }}" />
+                        <input type="hidden" name="left_user_stop" id="left-user_stop" value="{{ user_stop }}" />
+                        
+                        <input type="hidden" name="right_utc_start" id="right-utc_start" value="{{ utc_start }}" />
+                        <input type="hidden" name="right_utc_stop" id="right-utc_stop" value="{{ utc_stop }}" />
+                        
+                        <input type="hidden" name="right_user_start" id="right-user_start" value="{{ user_start }}" />
+                        <input type="hidden" name="right_user_stop" id="right-user_stop" value="{{ user_stop }}" />
+                        
                         <input type="hidden" name="cluster" id="cluster_id" value="{{ cluster_id }}" />
                     </form>
                 </div>
@@ -72,7 +81,7 @@
                 
             <div class="left-date hidden" style="text-align:left;margin-top:14px">
 <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'prev_{{ skip_by }}')" style="text-decoration:none">&larr;</a>
-    <span class="form_hint"><span id="left-start-label">left-start-label placeholder</span><span class="direction-optional"> - </span><span id="left-stop-label" class="direction-optional">left-stop-label placeholder</span></span> 
+    <span class="form_hint"><span id="left-user_start-label">left-user_start-label placeholder</span><span class="direction-optional"> - </span><span id="left-user_stop-label" class="direction-optional">left-user_stop-label placeholder</span></span> 
 <a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'next_{{ skip_by }}')" style="text-decoration:none">&rarr;</a>
             </div>
                 
@@ -82,7 +91,7 @@
                 <div>&nbsp;</div>
                 <div class="right-date hidden" style="text-align:right;margin-top:14px">
 <a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'prev_{{ skip_by }}')" style="text-decoration:none">&larr;</a>
-    <span class="form_hint"><span id="right-start-label">right-start-label placeholder</span> - <span id="right-stop-label">right-stop-label placeholder</span></span> 
+    <span class="form_hint"><span id="right-user_start-label">right-user_start-label placeholder</span> - <span id="right-user_stop-label">right-user_stop-label placeholder</span></span> 
 <a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'next_{{ skip_by }}')" style="text-decoration:none">&rarr;</a>
                 </div>
             </td>

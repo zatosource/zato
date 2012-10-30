@@ -33,11 +33,16 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
     
     var show_hide = [String.format('.{0}-csv', side), '#compare_to', String.format('.{0}-date', side)];
     
-    var directions = ['start', 'stop'];
+    var directions = ['utc_start', 'utc_stop', 'user_start', 'user_stop'];
+	
     $.each(directions, function(idx, time) {
-        $(String.format('#{0}-{1}', side, time)).val(json[time]);
-        $(String.format('#{0}-{1}-label', side, time)).text(json[time+'_label']);
-		if(directions[idx] == 'stop' && !json[time]) {
+		if(json[time]) {
+			$(String.format('#{0}-{1}', side, time)).val(json[time]);
+			if($.fn.zato.startswith(time, 'user')) {
+				$(String.format('#{0}-{1}-label', side, time)).text(json[time+'_label']);
+			}
+		}
+		if(directions[idx] == 'user_stop' && !json[time]) {
 			$('.direction-optional').addClass('hidden');
 		}
     });
@@ -87,7 +92,14 @@ $.fn.zato.stats.top_n.shift = function(side, shift, date_prefix) {
 	$(String.format('.{0}-loading-tr', side)).show();
 	$(String.format('tr[id^="{0}-tr-mean"], tr[id^="{0}-tr-usage"]', side)).empty().remove();
 	
-	var keys = [String.format('{0}-start', date_prefix), String.format('{0}-stop', date_prefix), 'n', 'cluster_id'];
+	var keys = [
+		String.format('{0}-utc_start', date_prefix), 
+		String.format('{0}-utc_stop', date_prefix), 
+		String.format('{0}-user_start', date_prefix), 
+		String.format('{0}-user_stop', date_prefix), 
+		'n', 
+		'cluster_id']
+	;
 	
 	$.each(keys, function(idx, key) {
 		data[key.replace('left-', '').replace('right-', '').replace('custom-', '')] = $('#'+key).val();
@@ -117,7 +129,7 @@ $.fn.zato.stats.top_n.change_date = function(side, shift) {
 
 $.fn.zato.stats.top_n.initial_data = function() {
     var data = {};
-    var keys = ['cluster_id', 'left-start', 'left-stop', 'n'];
+    var keys = ['cluster_id', 'left-utc_start', 'left-utc_stop', 'left-user_start', 'left-user_stop', 'n'];
     var value = null;
     
     $.each(keys, function(idx, key) {
