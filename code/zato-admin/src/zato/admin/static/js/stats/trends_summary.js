@@ -121,7 +121,7 @@ $.fn.zato.stats.top_n.show_start_stop_picker = function() {
 $.fn.zato.stats.top_n.change_date = function(side, shift) {
     $('#shift').val('');
     if(side == 'left') {
-        $('#page_label').text('Custom set, step one hour')
+        $('#page_label').text('Custom set, step one ' + $('#step').val());
     }
 
     $.fn.zato.stats.top_n.shift(side, shift);
