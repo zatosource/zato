@@ -87,7 +87,7 @@ class DateInfo(object):
         self.utc_start = utc_start
         self.utc_stop = utc_stop
         self.user_start = user_start
-        self.user_stop = user_stop
+        self.user_stop = user_stop or ''
         self.label = label
         self.step = step
 
@@ -103,15 +103,6 @@ job_mappings = {
         [JobAttrForm('raw_times', 'seconds'),  JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
     JobAttrFormMapping('zato.stats.AggregateByMinute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
-
-stats_type_service = {
-    'trends': 'zato:stats.get-trends',
-    '{}today'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
-    '{}yesterday'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
-    '{}this_week'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
-    '{}this_month'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
-    '{}this_year'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
-}
 
 compare_to = {
     'last_hour':[
@@ -358,7 +349,12 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     if stop:
         input_dict['stop'] = stop
         
-    zato_message, _  = invoke_admin_service(cluster, stats_type_service[stats_type], input_dict)
+    if stats_type == 'trends':
+        service_name = 'zato:stats.get-trends'
+    else:
+        service_name = 'zato:stats.get-summary-by-range'
+    
+    zato_message, _  = invoke_admin_service(cluster, service_name, input_dict)
     
     if zato_path('response.item_list.item').get_from(zato_message) is not None:
         for msg_item in zato_message.response.item_list.item:
@@ -368,8 +364,8 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
 
 # ##############################################################################
 
-def _stats_data_csv(user_profile, req_input, cluster, stats_type):
-
+def _stats_data_csv(user_profile, req_input, cluster, stats_type, is_custom):
+    
     n_type_keys = {
         'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services', 
                   'usage_perc_all_services', 'time_perc_all_services', 'all_services_usage', 'mean_trend'],
@@ -377,16 +373,14 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
                   'time_perc_all_services', 'all_services_usage', 'usage_trend'],
         }
     
-    start, stop = _stats_start_stop(req_input.start, req_input.stop, user_profile, stats_type)
-    
     buff = StringIO()
     writer = DictWriter(buff, n_type_keys[req_input.n_type], extrasaction='ignore')
     writer.writeheader()
     
-    for stat in _get_stats(cluster, req_input.start, req_input.stop, req_input.n, req_input.n_type, stats_type):
+    for stat in _get_stats(cluster, req_input.utc_start, req_input.utc_stop, req_input.n, req_input.n_type, stats_type):
         d = stat.to_dict()
-        d['start'] = req_input.start
-        d['stop'] = req_input.stop
+        d['start'] = req_input.user_start
+        d['stop'] = req_input.user_stop if stats_type == 'trends' or is_custom else ''
         writer.writerow(d)
         
     out = buff.getvalue()
@@ -399,24 +393,42 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
 
 def _stats_data_html(user_profile, req_input, cluster, stats_type, is_custom):
     
+    is_trends = stats_type == 'trends'
+    if is_trends:
+        data_url = reverse('stats-trends-data')
+    else:
+        data_url = reverse('stats-summary-data')
+        
     return_data = {
         'has_stats':False, 
         'utc_start':req_input.utc_start, 
         'utc_stop':req_input.utc_stop,
         'user_start':req_input.user_start, 
         'user_stop':req_input.user_stop,
-        'is_custom': is_custom
+        'is_custom': is_custom,
+        'is_trends': is_trends,
     }
     
     settings = {}
-    query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key != 'format')
+    
+    # We will deal with these ignored keys one by one later on
+    ignored_keys = ['format']
+    if not is_custom:
+        ignored_keys.extend(('utc_start', 'utc_stop'))
+        
+    query_data = '&amp;'.join('{}={}'.format(key, value) for key, value in req_input.items() if key not in ignored_keys)
+
+    for name in req_input:
+        if name.startswith('orig_'):
+            target_name = name.replace('orig_', '')
+            query_data += '&amp;{}={}'.format(target_name, req_input[name])
     
     if req_input.n:
         for name in('atttention_slow_threshold', 'atttention_top_threshold'):
             settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
             
     for name in('mean', 'usage'):
-        d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': stats_type == 'trends'}
+        d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': is_trends}
         if req_input.n:
 
             stats = _get_stats(cluster, req_input.utc_start, req_input.utc_stop, req_input.n, name, stats_type)
@@ -425,7 +437,7 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type, is_custom):
             return_data['has_stats'] = len(stats)
             
             return_data['{}_csv_href'.format(name)] = '{}?{}&amp;format=csv&amp;n_type={}&amp;cluster={}'.format(
-                reverse('stats-trends-data'), query_data, name, cluster.id)
+                data_url, query_data, name, cluster.id)
             
             d.update({name:stats})
             d.update(settings)
@@ -455,6 +467,15 @@ def stats_data(req, stats_type):
     for name in req_input:
         req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
         
+    # Now, this may look odd but for some reason UTC timestamps submitted
+    # in the form of '2012-10-31T21:47:11.592868+00:00' get translated
+    # by Django into '2012-10-31T21:47:11.592868+00:00' so the plus sign disappears.
+    # We bring it back taking an advantage of the fact that ' 00:00' alone is never
+    # a proper string of characters in a UTC timestamp.
+    for name in('utc_start', 'utc_stop'):
+        req_input[name] = req_input[name].replace(' 00:00', '+00:00')
+        req_input['orig_{}'.format(name)] = req_input[name]
+        
     try:
         req_input.n = int(req_input.n)
     except ValueError:
@@ -481,7 +502,7 @@ def stats_data(req, stats_type):
         
         req_input['user_start'] = req_input.user_start
         req_input['user_stop'] = req_input.user_stop
-
+        
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
         req_input, req.zato.cluster, stats_type, is_custom)
 
