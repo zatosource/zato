@@ -141,19 +141,21 @@ $.fn.zato.stats.top_n.change_date = function(side, shift) {
 };
 
 $.fn.zato.stats.top_n.initial_data = function() {
-    var data = {};
-    var keys = ['cluster_id', 'left-utc_start', 'left-utc_stop', 'left-user_start', 'left-user_stop', 'n'];
-    var value = null;
-    
-    $.each(keys, function(idx, key) {
-        value = $('#'+key).val();
-        data[key.replace('left-', '')] = value;
-    });
-    
-    data['side'] = 'left';
-	data['choice'] = $('#choice').val();
-	
-    $.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
+	if($('#cluster_id').val()) {
+		var data = {};
+		var keys = ['cluster_id', 'left-utc_start', 'left-utc_stop', 'left-user_start', 'left-user_stop', 'n'];
+		var value = null;
+		
+		$.each(keys, function(idx, key) {
+			value = $('#'+key).val();
+			data[key.replace('left-', '')] = value;
+		});
+		
+		data['side'] = 'left';
+		data['choice'] = $('#choice').val();
+		
+		$.fn.zato.post('../data/', $.fn.zato.stats.top_n.data_callback, data, 'json', true, {'side': 'left'});
+	}
 };
 
 $.fn.zato.stats.top_n.on_custom_date = function() {
