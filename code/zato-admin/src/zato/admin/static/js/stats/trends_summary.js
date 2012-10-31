@@ -47,7 +47,7 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
 		}
     });
 	
-	if(json.is_custom) {
+	if(json.is_custom || json.is_trends) {
 		$.fn.zato.toggle_visible_hidden('right-user_stop-hyphen', true);
 		$.fn.zato.toggle_visible_hidden('right-user_stop-label', true);
 	}
