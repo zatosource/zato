@@ -43,7 +43,8 @@ from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
-from zato.server.service import Integer
+from zato.common.util import TRACE1
+from zato.server.service import Integer, UTC
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
 
@@ -236,7 +237,7 @@ class GetSummaryBase(StatsReturningService):
     """ A base class for returning the summary of statistics for a given period.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
-        input_required = ('start', 'n', 'n_type')
+        input_required = (UTC('start'), 'n', 'n_type')
         
     stats_key_prefix = None
     
@@ -488,9 +489,6 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         start = parse(orig_start)
         stop = parse(orig_stop)
         
-        # TODO: ValueError: stop and start must be at least [3] 
-        # minutes apart, start must be farther in past; start:[2012-12-08T23:00:00], stop:[2012-10-23T10:01:02.444751]
-    
         delta, result = self._get_slice_period_type(start, stop, orig_start, orig_stop)
         
         by_mins = result['by_mins']
@@ -558,7 +556,6 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
          'usage': 0, 
          'mean': 0.0
         }
-
         
         for slice in slices:
 
@@ -629,9 +626,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         start = self.request.input.start
         stop = self.request.input.stop
         
-        if(self.logger.isEnabledFor(logging.DEBUG)):
-            self.logger.DEBUG(
-                'Getting slices for start:[{}], stop:[{}]'.format(start, stop))
+        self.logger.debug('Getting slices for start:[{}], stop:[{}]'.format(start, stop))
         
         slices = []
         

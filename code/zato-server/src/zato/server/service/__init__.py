@@ -74,6 +74,8 @@ class ValueConverter(object):
             value = int(value)
         elif isinstance(param, Unicode):
             value = unicode(value)
+        elif isinstance(param, UTC):
+            value = value.replace('+00:00', '')
         else:
             if value and value != ZATO_NONE and has_simple_io_config:
                 if any(param_name==elem for elem in self.int_parameters) or \
@@ -110,6 +112,10 @@ class Integer(ForceType):
     
 class Unicode(ForceType):
     """ Gets transformed into a unicode object.
+    """
+    
+class UTC(ForceType):
+    """ Will have the timezone part removed.
     """
 
 class ServiceInput(Bunch):

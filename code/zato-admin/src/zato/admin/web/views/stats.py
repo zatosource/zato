@@ -83,12 +83,13 @@ class JobAttrFormMapping(object):
             self.job_name, repr(self.attrs))
 
 class DateInfo(object):
-    def __init__(self, utc_start, utc_stop, user_start, user_stop, label=None):
+    def __init__(self, utc_start, utc_stop, user_start, user_stop, label=None, step=None):
         self.utc_start = utc_start
         self.utc_stop = utc_stop
         self.user_start = user_start
         self.user_stop = user_stop
         self.label = label
+        self.step = step
 
     def __repr__(self):
         return make_repr(self)
@@ -103,66 +104,101 @@ job_mappings = {
 stats_type_service = {
     'trends': 'zato:stats.get-trends',
     '{}today'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
+    '{}yesterday'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
+    '{}this_week'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
+    '{}this_month'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
+    '{}this_year'.format(SUMMARY_PREFIX): 'zato:stats.get-summary-by-range',
 }
-
-skip_by_duration = {
-    'last_hour': 'hour',
-    'prev_hour': 'hour',
-    'next_hour': 'hour',
-    'today': 'day',
-    'prev_hour_day': 'hour',
-    'prev_hour_day_week': 'hour',
-    'this_week': 'week',
-    'this_month': 'month',
-    'this_year': 'year',
-}
-
-user_format = {
-    'hour': 'date_time',
-    'day': 'date',
-    'week': 'date',
-    'month': 'month_year',
-    'year': 'year',
-}
-
-# ##############################################################################
 
 compare_to = {
     'last_hour':[
-        ('prev_hour', 'hour'),
-        ('prev_hour_day', 'hour/day'),
-        ('prev_hour_day_week', 'hour/day/week'),
+        ('last_hour_prev_hour', 'hour'),
+        ('last_hour_prev_hour_day', 'hour/day'),
+        ('last_hour_prev_hour_day_week', 'hour/day/week'),
     ],
-
-    'today':[
-        ('prev_day', 'day'),
-        ('prev_week', 'day/week'),
+    'today': [
+        ('today_prev_day', 'day'),
+        ('today_prev_day_week', 'day/week'),
     ],
-    'yesterday':[('', '')],
-    'this_week':[('', '')],
-    'this_month':[('', '')],
-    'this_year':[('', '')]
+    'yesterday': [
+        ('yesterday_prev_day', 'day'),
+        ('yesterday_prev_day_week', 'day/week'),
+    ],
+    'this_week': [
+        ('this_week_prev_week', 'week'),
+        ('this_week_prev_week_month', 'week/month'),
+    ],
+    'this_month': [
+        ('this_month_prev_month', 'month'),
+        ('this_month_prev_month_year', 'month/year'),
+    ],
+    'this_year': [
+        ('this_year_prev_year', 'year'),
+    ],
 }
 
-# The two dictionary below return keyword args passed into relativedelta for both start and
-# stop dates. The former is a delta relative to the base_date, the latter
-# is relative to the resulting start_date.
-
 start_delta_kwargs = {
-    'prev_hour': {'hours':-1},
-    'prev_hour_day': {'days':-1},
-    'prev_hour_day_week': {'weeks':-1},
+    'last_hour_prev': {'hours':-1},
+    'last_hour_next': {'hours':1},
+    'last_hour_prev_hour': {'hours':-1},
+    'last_hour_prev_hour_day': {'days':-1},
+    'last_hour_prev_hour_day_week': {'weeks':-1},
     
-    'prev_day': {'days':-1},
-    'prev_week': {'weeks':-1},
-    'prev_month': {'months':-1},
-    'prev_year': {'years':-1},
+    'today_prev': {'days':-1},
+    'today_next': {'days':1},
+    'today_prev_day': {'days':-1},
+    'today_prev_day_week': {'weeks':-1},
     
-    'next_hour': {'hours':1},
-    'next_day': {'days':1},
-    'next_week': {'weeks':1},
-    'next_month': {'months':1},
-    'next_year': {'years':1},
+    'yesterday_prev': {'days':-1},
+    'yesterday_next': {'days':1},
+    'yesterday_prev_day': {'days':-1},
+    'yesterday_prev_day_week': {'weeks':-1},
+    
+    'this_week_prev': {'weeks':-1},
+    'this_week_next': {'weeks':1},
+    'this_week_prev_week': {'weeks':-1},
+    'this_week_prev_week_month': {'months':-1},
+    
+    'this_month_prev': {'months':-1},
+    'this_month_next': {'months':1},
+    'this_month_prev_month': {'months':-1},
+    'this_month_prev_month_year': {'years':-1},
+    
+    'this_year_prev': {'years':-1},
+    'this_year_next': {'years':1},
+    'this_year_prev_year': {'years':-1},
+}
+
+skip_by_duration = {
+    'last_hour_prev': 'hour',
+    'last_hour_next': 'hour',
+    'last_hour_prev_hour': 'hour',
+    'last_hour_prev_hour_day': 'hour',
+    'last_hour_prev_hour_day_week': 'hour',
+    
+    'today_prev': 'day',
+    'today_next': 'day',
+    'today_prev_day': 'day',
+    'today_prev_day_week': 'day',
+    
+    'yesterday_prev': 'day',
+    'yesterday_next': 'day',
+    'yesterday_prev_day': 'day',
+    'yesterday_prev_day_week': 'day',
+    
+    'this_week_prev': 'week',
+    'this_week_next': 'week',
+    'this_week_prev_week': 'week',
+    'this_week_prev_week_month': 'week',
+    
+    'this_month_prev': 'month',
+    'this_month_next': 'month',
+    'this_month_prev_month': 'month',
+    'this_month_prev_month_year': 'month',
+    
+    'this_year_prev': 'year',
+    'this_year_next': 'year',
+    'this_year_prev_year': 'year',
 }
 
 stop_delta_kwargs = {
@@ -173,22 +209,41 @@ stop_delta_kwargs = {
     'year': {'years':1},
 }
 
-def shift(utc_base_date, user_profile, shift_type, duration, format):
+user_format = {
+    'hour': 'date_time',
+    'day': 'date',
+    'week': 'date',
+    'month': 'month_year',
+    'year': 'year',
+}
+
+def shift(utc_base_date, user_start, user_profile, shift_type, duration, format):
     """ Shifts the base date by the amount specified and returns resulting start
     and stop dates in UTC and user timezone.
     """
     if shift_type not in start_delta_kwargs:
         raise ValueError('Unknown shift_type:[{}]'.format(shift_type))
-
-    _start_delta_kwargs = start_delta_kwargs[shift_type]
-    _stop_delta_kwargs = stop_delta_kwargs[duration]
     
-    utc_start = utc_base_date + relativedelta(**_start_delta_kwargs)
+    _start_delta_kwargs = start_delta_kwargs[shift_type]
+
+    # Special-case month duration because UTC '2012-09-30 22:00:00+00:00' (which is 2012-10-01 CEST)
+    # minus one month happens to be '2012-08-30 22:00:00+00:00' instead of '2012-09-31 22:00:00+00:00'
+    # so it's 2012-08-30 CEST instead of 2012-09-01. In other words, we would've jumped from Oct 2012 to Aug 2012 directly.
+    
+    if duration != 'month':
+        utc_start = utc_base_date + relativedelta(**_start_delta_kwargs)
+    else:
+        user_start = datetime.strptime(user_start, user_profile.month_year_format_strptime)
+        current_month_start = datetime(user_start.year, user_start.month, 1)
+        prev_month_start = current_month_start + relativedelta(**_start_delta_kwargs)
+        utc_start = from_local_to_utc(prev_month_start, user_profile.timezone)
+    
+    _stop_delta_kwargs = stop_delta_kwargs[duration]
     utc_stop = utc_start + relativedelta(**_stop_delta_kwargs)
     
     user_start = from_utc_to_user(utc_start, user_profile, format)
     user_stop = from_utc_to_user(utc_stop, user_profile, format)
-        
+
     return DateInfo(utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop)
 
 def get_default_date(date_type, user_profile, format):
@@ -219,11 +274,13 @@ def get_default_date(date_type, user_profile, format):
         user_start = from_utc_to_user(utc_start, user_profile)
         user_stop = from_utc_to_user(utc_stop, user_profile)
         
-        label = 'one hour'
+        label = 'Last hour'
+        step = 'hour'
         
     elif date_type == 'today':
         utc_start, utc_stop, user_start, user_stop = get_today(user_profile, format)
-        label = 'today'
+        label = 'Today'
+        step = 'day'
     
     elif date_type == 'yesterday':
         # Yesterday's start is today's start - 1 day
@@ -234,7 +291,8 @@ def get_default_date(date_type, user_profile, format):
         
         user_start = from_utc_to_user(utc_start, user_profile, format)
         
-        label = 'yesterday'
+        label = 'Yesterday'
+        step = 'day'
         
     elif date_type == 'this_week':
         # This week extends from Monday midnight to right now
@@ -248,7 +306,8 @@ def get_default_date(date_type, user_profile, format):
         user_start = from_utc_to_user(utc_start, user_profile, format)
         user_stop = from_utc_to_user(utc_stop, user_profile, format)
         
-        label = 'this week'
+        label = 'This week'
+        step = 'week'
         
     elif date_type == 'this_month':
         # From midnight the first day of month up until now
@@ -261,7 +320,8 @@ def get_default_date(date_type, user_profile, format):
         user_start = from_utc_to_user(utc_start, user_profile, format)
         user_stop = None
         
-        label = 'this month'
+        label = 'This month'
+        step = 'month'
         
     elif date_type == 'this_year':
         # From midnight the first day of year up until now
@@ -274,12 +334,13 @@ def get_default_date(date_type, user_profile, format):
         user_start = from_utc_to_user(utc_start, user_profile, format)
         user_stop = None
         
-        label = 'this year'
+        label = 'This year'
+        step = 'year'
     
     else:
         raise ValueError('Unrecognized date_type:[{}]'.format(date_type))
     
-    return DateInfo(utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, label)
+    return DateInfo(utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop, label, step)
 
 # ##############################################################################
 
@@ -293,7 +354,7 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     
     if stop:
         input_dict['stop'] = stop
-
+        
     zato_message, _  = invoke_admin_service(cluster, stats_type_service[stats_type], input_dict)
     
     if zato_path('response.item_list.item').get_from(zato_message) is not None:
@@ -401,7 +462,7 @@ def stats_data(req, stats_type):
         duration = skip_by_duration[req_input.shift]
         format = user_format[duration]
 
-        shift_info = shift(parse(req_input.utc_start), req.zato.user_profile, req_input.shift, duration, format)
+        shift_info = shift(parse(req_input.utc_start), req_input.user_start, req.zato.user_profile, req_input.shift, duration, format)
 
         req_input['utc_start'] = shift_info.utc_start
         req_input['utc_stop'] = shift_info.utc_stop
@@ -421,7 +482,14 @@ def stats_summary_data(req):
     return stats_data(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
 
 def trends_summary(req, choice, stats_title, is_summary):
-    info = get_default_date(choice, req.zato.user_profile, 'date')
+    if choice == 'this_month':
+        format = 'month_year'
+    elif choice == 'this_year':
+        format = 'year'
+    else:
+        format = 'date'
+        
+    info = get_default_date(choice, req.zato.user_profile, format)
     
     n = 10 # TODO: Actually read it off somewhere
     _compare_to = compare_to[choice]
@@ -442,7 +510,8 @@ def trends_summary(req, choice, stats_title, is_summary):
         'choose_cluster_form':req.zato.choose_cluster_form,
         'sample_dt': get_sample_dt(req.zato.user_profile),
         'stats_title': stats_title,
-        'skip_by': skip_by_duration[choice],
+        'step': info.step,
+        'needs_stop': choice == 'last_hour',
     }
     
     return_data.update(get_js_dt_format(req.zato.user_profile))

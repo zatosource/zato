@@ -80,9 +80,9 @@
                 </div>
                 
             <div class="left-date hidden" style="text-align:left;margin-top:14px">
-<a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'prev_{{ skip_by }}')" style="text-decoration:none">&larr;</a>
-    <span class="form_hint"><span id="left-user_start-label">left-user_start-label placeholder</span><span class="direction-optional"> - </span><span id="left-user_stop-label" class="direction-optional">left-user_stop-label placeholder</span></span> 
-<a href="javascript:$.fn.zato.stats.top_n.change_date('left', 'next_{{ skip_by }}')" style="text-decoration:none">&rarr;</a>
+<a href="javascript:$.fn.zato.stats.top_n.change_date('left', '{{ choice }}_prev')" style="text-decoration:none">&larr;</a>
+    <span class="form_hint"><span id="left-user_start-label">left-user_start-label placeholder</span>{% if needs_stop %}<span class="direction-optional"> - </span><span id="left-user_stop-label" class="direction-optional">left-user_stop-label placeholder</span></span>{% endif %}
+<a href="javascript:$.fn.zato.stats.top_n.change_date('left', '{{ choice }}_next')" style="text-decoration:none">&rarr;</a>
             </div>
                 
                 
@@ -90,9 +90,9 @@
             <td style="text-align:right">
                 <div>&nbsp;</div>
                 <div class="right-date hidden" style="text-align:right;margin-top:14px">
-<a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'prev_{{ skip_by }}')" style="text-decoration:none">&larr;</a>
-    <span class="form_hint"><span id="right-user_start-label">right-user_start-label placeholder</span> - <span id="right-user_stop-label">right-user_stop-label placeholder</span></span> 
-<a href="javascript:$.fn.zato.stats.top_n.change_date('right', 'next_{{ skip_by }}')" style="text-decoration:none">&rarr;</a>
+<a href="javascript:$.fn.zato.stats.top_n.change_date('right', '{{ choice }}_prev')" style="text-decoration:none">&larr;</a>
+    <span class="form_hint"><span id="right-user_start-label">right-user_start-label placeholder</span>{% if needs_stop %} - <span id="right-user_stop-label">right-user_stop-label placeholder</span></span>{% endif %}
+<a href="javascript:$.fn.zato.stats.top_n.change_date('right', '{{ choice }}_next')" style="text-decoration:none">&rarr;</a>
                 </div>
             </td>
         </tr>
@@ -152,6 +152,7 @@
 
     <form>
         <input type="hidden" id="choice" value="{{ choice }}" />
+        <input type="hidden" id="step" value="{{ step }}" />
         <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
         <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
         <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />

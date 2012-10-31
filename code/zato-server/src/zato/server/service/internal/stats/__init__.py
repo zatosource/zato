@@ -43,7 +43,7 @@ from scipy import stats as sp_stats
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
-from zato.server.service import Integer
+from zato.server.service import Integer, UTC
 from zato.server.service.internal import AdminService
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
@@ -61,7 +61,7 @@ class Delete(AdminService):
     """ Deletes aggregated statistics from a given interval.
     """
     class SimpleIO:
-        input_required = ('start', 'stop')
+        input_required = (UTC('start'), UTC('stop'))
 
     def handle(self):
         self.broker_client.send(
@@ -289,7 +289,7 @@ class StatsReturningService(AdminService):
     class SimpleIO:
         """ Consult StatsElem's docstring for the description of output parameters.
         """
-        input_required = ('start', 'stop')
+        input_required = (UTC('start'), UTC('stop'))
         input_optional = ('service_name', Integer('n'), 'n_type')
         output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
             'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
