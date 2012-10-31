@@ -710,3 +710,19 @@ $.fn.zato.dir = function(item) {
 $.fn.zato.startswith = function(s, prefix) {
     return s.indexOf(prefix) === 0;
 }
+
+$.fn.zato.toggle_visible_hidden = function(id, is_visible) {
+	var elem = $('#'+ id);
+	var remove_class = '';
+	var add_class = '';
+	
+    if(is_visible) {
+		remove_class = 'hidden';
+		add_class = 'visible';
+    }
+    else {
+		remove_class = 'visible';
+		add_class = 'hidden';
+    }
+	$(elem).removeClass(remove_class).addClass(add_class);
+}

@@ -93,6 +93,9 @@ class DateInfo(object):
 
     def __repr__(self):
         return make_repr(self)
+    
+    def __getitem__(self, name):
+        return object.__getattribute__(self, name)
 
 # A mapping a job type, its name and the execution interval unit
 job_mappings = {
@@ -243,7 +246,7 @@ def shift(utc_base_date, user_start, user_profile, shift_type, duration, format)
     
     user_start = from_utc_to_user(utc_start, user_profile, format)
     user_stop = from_utc_to_user(utc_stop, user_profile, format)
-
+    
     return DateInfo(utc_start.isoformat(), utc_stop.isoformat(), user_start, user_stop)
 
 def get_default_date(date_type, user_profile, format):
@@ -394,7 +397,7 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type):
     
     return response
 
-def _stats_data_html(user_profile, req_input, cluster, stats_type):
+def _stats_data_html(user_profile, req_input, cluster, stats_type, is_custom):
     
     return_data = {
         'has_stats':False, 
@@ -402,6 +405,7 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type):
         'utc_stop':req_input.utc_stop,
         'user_start':req_input.user_start, 
         'user_stop':req_input.user_stop,
+        'is_custom': is_custom
     }
     
     settings = {}
@@ -446,7 +450,7 @@ def stats_data(req, stats_type):
     """
     req_input = Bunch.fromkeys(('utc_start', 'utc_stop', 'user_start', 'user_stop',
         'n', 'n_type', 'format', 'left-start', 'left-stop', 'right-start', 'right-stop', 
-        'shift', 'side'))
+        'shift', 'side', 'custom_range'))
     
     for name in req_input:
         req_input[name] = req.GET.get(name, '') or req.POST.get(name, '')
@@ -457,21 +461,29 @@ def stats_data(req, stats_type):
         req_input.n = 0
         
     req_input.format = req_input.format or 'html'
+    is_custom = False
 
     if req_input.shift:
         duration = skip_by_duration[req_input.shift]
         format = user_format[duration]
 
         shift_info = shift(parse(req_input.utc_start), req_input.user_start, req.zato.user_profile, req_input.shift, duration, format)
-
-        req_input['utc_start'] = shift_info.utc_start
-        req_input['utc_stop'] = shift_info.utc_stop
         
-        req_input['user_start'] = shift_info.user_start
-        req_input['user_stop'] = shift_info.user_stop
+        for date_type in('utc', 'user'):
+            for direction in('start', 'stop'):
+                full_name = '{}_{}'.format(date_type, direction)
+                req_input[full_name] = shift_info[full_name]
+        
+    elif req_input.custom_range:
+        is_custom = True
+        req_input['utc_start'] = utc.fromutc(from_user_to_utc(req_input.user_start, req.zato.user_profile)).isoformat()
+        req_input['utc_stop'] = utc.fromutc(from_user_to_utc(req_input.user_stop, req.zato.user_profile)).isoformat()
+        
+        req_input['user_start'] = req_input.user_start
+        req_input['user_stop'] = req_input.user_stop
 
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
-        req_input, req.zato.cluster, stats_type)
+        req_input, req.zato.cluster, stats_type, is_custom)
 
 @meth_allowed('GET', 'POST')
 def stats_trends_data(req):
@@ -491,7 +503,11 @@ def trends_summary(req, choice, stats_title, is_summary):
         
     info = get_default_date(choice, req.zato.user_profile, format)
     
-    n = 10 # TODO: Actually read it off somewhere
+    try:
+        n = int(req.GET.get('n', 10))
+    except ValueError:
+        n = 10
+        
     _compare_to = compare_to[choice]
         
     return_data = {
@@ -504,7 +520,6 @@ def trends_summary(req, choice, stats_title, is_summary):
         'label': info.label, 
         'n_form': NForm(initial={'n':n}),
         'compare_to': _compare_to,
-        'needs_compare_to_other': choice in('last_hour', 'today'),
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
         'choose_cluster_form':req.zato.choose_cluster_form,

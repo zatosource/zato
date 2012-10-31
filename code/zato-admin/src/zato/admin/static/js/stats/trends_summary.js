@@ -46,6 +46,15 @@ $.fn.zato.stats.top_n.data_callback = function(data, status) {
 			$('.direction-optional').addClass('hidden');
 		}
     });
+	
+	if(json.is_custom) {
+		$.fn.zato.toggle_visible_hidden('right-user_stop-hyphen', true);
+		$.fn.zato.toggle_visible_hidden('right-user_stop-label', true);
+	}
+	else {
+		$.fn.zato.toggle_visible_hidden('right-user_stop-hyphen', false);
+		$.fn.zato.toggle_visible_hidden('right-user_stop-label', false);
+	}
     
     $.fn.zato.stats.top_n.show_hide([String.format('.{0}-date', side)], true);
     
@@ -98,8 +107,12 @@ $.fn.zato.stats.top_n.shift = function(side, shift, date_prefix) {
 		String.format('{0}-user_start', date_prefix), 
 		String.format('{0}-user_stop', date_prefix), 
 		'n', 
-		'cluster_id']
-	;
+		'cluster_id',
+	];
+	
+	if(date_prefix == 'custom') {
+		keys.push('custom_range');
+	}
 	
 	$.each(keys, function(idx, key) {
 		data[key.replace('left-', '').replace('right-', '').replace('custom-', '')] = $('#'+key).val();
@@ -157,7 +170,7 @@ $.fn.zato.stats.top_n.on_custom_date = function() {
 $.fn.zato.stats.top_n.setup_forms = function() {
 
 	$.each(['start', 'stop'], function(ignored, suffix) {
-		var field_id = String.format('#custom-{0}', suffix)
+		var field_id = String.format('#custom-user_{0}', suffix)
 		$(field_id).attr('data-bvalidator', 'required');
 		$(field_id).attr('data-bvalidator-msg', 'This is a required field');
 
