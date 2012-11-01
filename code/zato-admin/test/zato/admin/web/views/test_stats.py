@@ -120,7 +120,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.utc_start, '2012-02-29T23:00:00+00:00')
             eq_(info.utc_stop, '2012-02-29T23:47:24.054903+00:00')
             eq_(info.user_start, '01-03-2012')
-            eq_(info.user_stop, None)
+            eq_(info.user_stop, '')
             eq_(info.label, 'Today')
             eq_(info.step, 'day')
             
@@ -130,7 +130,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.utc_start, '2012-02-28T23:00:00+00:00')
             eq_(info.utc_stop, '2012-02-29T23:00:00+00:00')
             eq_(info.user_start, '29-02-2012')
-            eq_(info.user_stop, None)
+            eq_(info.user_stop, '')
             eq_(info.label, 'Yesterday')
             eq_(info.step, 'day')
             
@@ -150,7 +150,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.utc_start, '2012-02-29T23:00:00+00:00')
             eq_(info.utc_stop, '2012-02-29T23:47:24.054903+00:00')
             eq_(info.user_start, '03-2012')
-            eq_(info.user_stop, None)
+            eq_(info.user_stop, '')
             eq_(info.label, 'This month')
             eq_(info.step, 'month')
             
@@ -160,7 +160,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.utc_start, '2011-12-31T23:00:00+00:00')
             eq_(info.utc_stop, '2012-02-29T23:47:24.054903+00:00')
             eq_(info.user_start, '2012')
-            eq_(info.user_stop, None)
+            eq_(info.user_stop, '')
             eq_(info.label, 'This year')
             eq_(info.step, 'year')
             

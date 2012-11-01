@@ -38,11 +38,11 @@ class GetSummaryByRangeTestCase(ServiceTestCase):
         
         service = GetSummaryByRange()
 
-        def _check_expected(start, stop, by_mins, by_hours_mins, by_days_hours_mins, by_months_days_hours_mins):
-            start = parse(start)
-            stop = parse(stop)
+        def _check_expected(orig_start, orig_stop, by_mins, by_hours_mins, by_days_hours_mins, by_months_days_hours_mins):
+            start = parse(orig_start)
+            stop = parse(orig_stop)
             
-            delta, result = service._get_slice_period_type(start, stop)
+            delta, result = service._get_slice_period_type(start, stop, orig_start, orig_stop)
             
             expected = {
                 'by_mins': by_mins,
