@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
 from calendar import monthrange
 from copy import deepcopy
 from datetime import date, datetime, timedelta
@@ -33,7 +32,7 @@ from bunch import Bunch
 # dateutil
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta, MO
-from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, rrule, rruleset, YEARLY
+from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, YEARLY
 
 # paodate
 from paodate import Date
@@ -43,8 +42,7 @@ from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
-from zato.common.util import TRACE1
-from zato.server.service import Integer, UTC
+from zato.server.service import UTC
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
 

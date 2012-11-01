@@ -20,15 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from cStringIO import StringIO
 from datetime import datetime
-from random import choice, randint
 from unittest import TestCase
-from uuid import uuid4
 
 # dateutil
 from dateutil.parser import parse
-from dateutil.relativedelta import MO, relativedelta
 
 # mock
 from mock import patch
@@ -37,10 +33,10 @@ from mock import patch
 from nose.tools import eq_
 
 # pytz
-from pytz import timezone, utc
+from pytz import utc
 
 # Zato
-from zato.admin.web import from_user_to_utc, from_utc_to_user
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.models import UserProfile
 from zato.admin.web.views.stats import get_default_date, shift
 from zato.common.util import utcnow

@@ -25,11 +25,8 @@ from dateutil.parser import parse
 # nose
 from nose.tools import eq_
 
-# paodate
-from paodate import Date
-
 # Zato
-from zato.common.test import Expected, ServiceTestCase
+from zato.common.test import ServiceTestCase
 from zato.server.service.internal.stats.summary import GetSummaryByRange
 
 class GetSummaryByRangeTestCase(ServiceTestCase):
