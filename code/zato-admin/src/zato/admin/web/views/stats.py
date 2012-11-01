@@ -21,11 +21,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from calendar import monthrange
 from copy import deepcopy
 from cStringIO import StringIO
 from csv import DictWriter
-from datetime import date, datetime
+from datetime import datetime
 
 # anyjson
 from anyjson import dumps
@@ -43,21 +42,19 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template import loader
-from django.template.defaultfilters import date as django_date_filter
 from django.template.response import TemplateResponse
 
 # django-settings
 from django_settings.models import PositiveInteger, Setting
 
 # pytz
-import pytz
 from pytz import timezone, utc
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed
-from zato.common import DEFAULT_STATS_SETTINGS, SECONDS_IN_DAY, StatsElem, zato_path
+from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
 from zato.common.util import from_local_to_utc, make_repr, now, utcnow
 
 logger = logging.getLogger(__name__)

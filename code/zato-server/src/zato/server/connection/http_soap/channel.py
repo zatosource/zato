@@ -22,7 +22,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from cStringIO import StringIO
-from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from pprint import pprint
 from traceback import format_exc

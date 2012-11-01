@@ -45,7 +45,7 @@ from sqlalchemy.util import NamedTuple
 
 # Zato
 from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
-from zato.common.broker_message import MESSAGE_TYPE, SERVICE
+from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
 from zato.common.util import new_cid, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
