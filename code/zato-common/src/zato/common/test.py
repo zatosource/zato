@@ -56,6 +56,34 @@ class Expected(object):
             return self.data
         else:
             return self.data[0]
+
+class FakeKVDB(object):
+    class FakeConn(object):
+        def return_none(self, *ignored_args, **ignored_kwargs):
+            return None
+        
+        get = hget = return_none
+        
+    def __init__(self):
+        self.conn = self.FakeConn()
+        
+    def translate(self, *ignored_args, **ignored_kwargs):
+        raise NotImplementedError()
+
+class FakeServices(object):
+    def __getitem__(self, ignored):
+        return {'slow_threshold': 1234}
+    
+class FakeServiceStore(object):
+    def __init__(self):
+        self.services = FakeServices()
+        
+class FakeServer(object):
+    """ A fake mock server used in test cases.
+    """
+    def __init__(self):
+        self.kvdb = FakeKVDB()
+        self.service_store = FakeServiceStore()
         
 class ServiceTestCase(TestCase):
     
@@ -69,7 +97,7 @@ class ServiceTestCase(TestCase):
         worker_store.worker_config = MagicMock
         worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None))
         
-        class_.update(instance, None, None, worker_store, new_cid(), request, request_string, 
+        class_.update(instance, FakeServer(), None, worker_store, new_cid(), request, request_string, 
             simple_io_config={})
 
         def get_data(self, *ignored_args, **ignored_kwargs):
