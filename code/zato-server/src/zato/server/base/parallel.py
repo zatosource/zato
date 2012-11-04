@@ -30,9 +30,6 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch, SimpleBunch
 
-# zope.server
-#from zope.server.http.httpserver import HTTPServer
-
 # Paste
 from paste.util.multidict import MultiDict
 
