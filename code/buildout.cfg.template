@@ -83,8 +83,6 @@ eggs =
     urllib3
     waitress
     Werkzeug
-    zope.component
-    zope.server
     zato-admin
     zato-agent
     zato-broker

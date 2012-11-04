@@ -52,15 +52,15 @@ class Security(object):
         self.url_sec_lock = RLock()
         self._wss = WSSE()
                  
-    def handle(self, cid, url_data, request_data, body, headers):
+    def handle(self, cid, url_data, path_info, body, headers):
         """ Calls other concrete security methods as appropriate.
         """
         sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.sec_type
         
         handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-        getattr(self, handler_name)(cid, sec_def, request_data, body, headers)
+        getattr(self, handler_name)(cid, sec_def, path_info, body, headers)
 
-    def _handle_security_basic_auth(self, cid, sec_def, request_data, body, headers):
+    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, headers):
         """ Performs the authentication using HTTP Basic Auth.
         """
         env = {'HTTP_AUTHORIZATION':headers.get('AUTHORIZATION')}
@@ -74,7 +74,7 @@ class Security(object):
             logger.error(msg)
             raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
         
-    def _handle_security_wss(self, cid, sec_def, request_data, body, headers):
+    def _handle_security_wss(self, cid, sec_def, path_info, body, headers):
         """ Performs the authentication using WS-Security.
         """
         if not body:
@@ -101,16 +101,16 @@ class Security(object):
             logger.error(msg)
             raise Unauthorized(cid, msg, 'zato-wss')
         
-    def _handle_security_tech_acc(self, cid, sec_def, request_data, body, headers):
+    def _handle_security_tech_acc(self, cid, sec_def, path_info, body, headers):
         """ Performs the authentication using technical accounts.
         """
-        zato_headers = ('X_ZATO_USER', 'X_ZATO_PASSWORD')
+        zato_headers = ('HTTP_X_ZATO_USER', 'HTTP_X_ZATO_PASSWORD')
         
         for header in zato_headers:
             if not headers.get(header, None):
                 error_msg = ("[{0}] The header [{1}] doesn't exist or is empty, URI:[{2}, "
                       "headers:[{3}]]").\
-                        format(cid, header, request_data.uri, headers)
+                        format(cid, header, path_info, headers)
                 logger.error(error_msg)
                 raise Unauthorized(cid, error_msg, 'zato-tech-acc')
 
@@ -118,17 +118,17 @@ class Security(object):
         # user gets a generic 'username or password' message
         msg_template = '[{0}] The {1} is incorrect, URI:[{2}], X_ZATO_USER:[{3}]'
 
-        if headers['X_ZATO_USER'] != sec_def.name:
-            error_msg = msg_template.format(cid, 'username', request_data.uri, headers['X_ZATO_USER'])
-            user_msg = msg_template.format(cid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
+        if headers['HTTP_X_ZATO_USER'] != sec_def.name:
+            error_msg = msg_template.format(cid, 'username', path_info, headers['HTTP_X_ZATO_USER'])
+            user_msg = msg_template.format(cid, 'username or password', path_info, headers['HTTP_X_ZATO_USER'])
             logger.error(error_msg)
             raise Unauthorized(cid, user_msg, 'zato-tech-acc')
         
-        incoming_password = sha256(headers['X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
+        incoming_password = sha256(headers['HTTP_X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
         
         if incoming_password != sec_def.password:
-            error_msg = msg_template.format(cid, 'password', request_data.uri, headers['X_ZATO_USER'])
-            user_msg = msg_template.format(cid, 'username or password', request_data.uri, headers['X_ZATO_USER'])
+            error_msg = msg_template.format(cid, 'password', path_info, headers['HTTP_X_ZATO_USER'])
+            user_msg = msg_template.format(cid, 'username or password', path_info, headers['HTTP_X_ZATO_USER'])
             logger.error(error_msg)
             raise Unauthorized(cid, user_msg, 'zato-tech-acc')
         

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, socket
+import logging, os, socket, traceback
 from copy import deepcopy
 from errno import ENOENT
 from thread import start_new_thread
@@ -39,11 +39,10 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 # Paste
 from paste.util.multidict import MultiDict
 
-# zope.server
-from zope.server.http.httpserverchannel import HTTPServerChannel
-from zope.server.http.httptask import HTTPTask
-from zope.server.serverchannelbase import task_lock
-from zope.server.taskthreads import ThreadedTaskDispatcher
+# waitress
+from waitress.channel import HTTPChannel
+from waitress.task import JustTesting, ThreadedTaskDispatcher, WSGITask
+from waitress.utilities import InternalServerError
 
 # Zato
 from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
@@ -568,7 +567,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         self.server = server
         self.server_config = server_config
         
-    def setThreadCount(self, count):
+    def set_thread_count(self, count):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
         """
@@ -592,7 +591,7 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                 # this thread is running on.
                 worker_config.server = self.server
                 
-                start_new_thread(self.handlerThread, (thread_no, worker_config))
+                start_new_thread(self.handler_thread, (thread_no, worker_config))
                 
                 thread_no = thread_no + 1
             if running > count:
@@ -605,12 +604,15 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
         finally:
             mlock.release()
             
-    def handlerThread(self, thread_no, worker_config):
+    def shutdown(self):
+        self.server.shutdown()
+        super(_TaskDispatcher, self).shutdown()
+            
+    def handler_thread(self, thread_no, worker_config):
         """ Mostly copy & paste from the base classes except for the part
         that passes the arguments to the thread.
         """
-
-        # We're in a new thread so we can start new thread-specific clients.
+        
         _local = local()
         _local.store = WorkerStore(worker_config)
         _local.store._init()
@@ -624,62 +626,92 @@ class _TaskDispatcher(ThreadedTaskDispatcher):
                     break
                 try:
                     task.service(_local)
-                except Exception, e:
-                    logger.error('Exception during task {0}'.format(
-                        format_exc(e)))
+                except Exception as e:
+                    self.logger.exception(
+                        'Exception when servicing %r' % task)
+                    if isinstance(e, JustTesting):
+                        break
         finally:
             mlock = self.thread_mgmt_lock
             mlock.acquire()
             try:
                 self.stop_count -= 1
-                try: del threads[thread_no]
-                except KeyError: pass
+                threads.pop(thread_no, None)
             finally:
                 mlock.release()
-                
+
 # ##############################################################################
 
-class _HTTPTask(HTTPTask):
-    """ An HTTP task which knows how to use ZMQ sockets.
+class _WSGITask(WSGITask):
+    """ An HTTP task which knows how to use Zato-specific thread-local data.
     """
-    def service(self, thread_ctx):
+    
+    def __init__(self, thread_local_ctx, channel, request):
+        super(_WSGITask, self).__init__(channel, request)
+        self.thread_local_ctx = thread_local_ctx
+        
+    def get_environment(self):
+        env = super(_WSGITask, self).get_environment()
+        env['zato.thread_local_ctx'] = self.thread_local_ctx
+        env['zato.http.response.headers'] = {}
+        env['zato.http.response.status'] = b'200 OK'
+        return env
+    
+    def service(self):
         try:
             try:
                 self.start()
-                self.channel.server.executeRequest(self, thread_ctx)
+                self.execute()
                 self.finish()
             except socket.error:
-                self.close_on_finish = 1
+                self.close_on_finish = True
                 if self.channel.adj.log_socket_errors:
                     raise
         finally:
-            if self.close_on_finish:
-                self.channel.close_when_done()
+            pass
                 
-class _HTTPServerChannel(HTTPServerChannel):
+class _HTTPServerChannel(HTTPChannel):
     """ A subclass which uses Zato's own _HTTPTasks.
     """
-    task_class = _HTTPTask
+    task_class = _WSGITask
     
-    def service(self, thread_ctx):
+    def service(self, thread_local_ctx):
         """Execute all pending tasks"""
-        while True:
-            task = None
-            task_lock.acquire()
-            try:
-                if self.tasks:
-                    task = self.tasks.pop(0)
+        with self.task_lock:
+            while self.requests:
+                request = self.requests[0]
+                if request.error:
+                    task = self.error_task_class(self, request)
                 else:
-                    # No more tasks
-                    self.running_tasks = False
-                    self.set_async()
-                    break
-            finally:
-                task_lock.release()
-            try:
-                task.service(thread_ctx)
-            except:
-                # propagate the exception, but keep executing tasks
-                self.server.addTask(self)
-                raise
-            
+                    task = self.task_class(thread_local_ctx, self, request)
+                try:
+                    task.service()
+                except:
+                    self.logger.exception('Exception when serving %s' %
+                                          task.request.path)
+                    if not task.wrote_header:
+                        if self.adj.expose_tracebacks:
+                            body = traceback.format_exc()
+                        else:
+                            body = ('The server encountered an unexpected '
+                                    'internal server error')
+                        request = self.parser_class(self.adj)
+                        request.error = InternalServerError(body)
+                        task = self.error_task_class(self, request)
+                        task.service() # must not fail
+                    else:
+                        task.close_on_finish = True
+                # we cannot allow self.requests to drop to empty til
+                # here; otherwise the mainloop gets confused
+                if task.close_on_finish:
+                    self.close_when_flushed = True
+                    for request in self.requests:
+                        request._close()
+                    self.requests = []
+                else:
+                    request = self.requests.pop(0)
+                    request._close()
+
+        self.force_flush = True
+        self.server.pull_trigger()
+        self.last_activity = time.time()
