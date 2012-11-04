@@ -41,8 +41,8 @@ from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 
-_reason_not_found = responses[NOT_FOUND]
-_reason_internal_server_error = responses[INTERNAL_SERVER_ERROR]
+_status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
+_status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
 
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>{body}</soap:Body></soap:Envelope>"""
 
@@ -99,45 +99,38 @@ class RequestDispatcher(object):
         # to use.
         return msg        
     
-    def dispatch(self, cid, req_timestamp, task, thread_ctx):
+    def dispatch(self, cid, req_timestamp, wsgi_environ, thread_ctx):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth, 
         the security validation is being performed. Otherwise, that step 
         is postponed until a concrete transport-specific handler is invoked.
         """
-        headers = task.request_data.headers
-        soap_action = headers.get('SOAPACTION', '')
-        url_data = self.security.url_sec_get(task.request_data.path, soap_action)
+        path_info = wsgi_environ['PATH_INFO']
+        soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')
+        url_data = self.security.url_sec_get(path_info, soap_action)
 
         if url_data:
             transport = url_data['transport']
             try:
-                bs = task.request_data.getBodyStream()
-                if task.request_data.body_rcv:
-                    payload = bs.read()
-                else:
-                    payload = bs.getvalue()
-                    
-                headers = task.request_data.headers
-                
+                payload = wsgi_environ['wsgi.input'].read()
                 if url_data.sec_def != ZATO_NONE:
                     if url_data.sec_def.sec_type in(security_def_type.tech_account, security_def_type.basic_auth, 
                                                 security_def_type.wss):
-                        self.security.handle(cid, url_data, task.request_data, payload, headers)
+                        self.security.handle(cid, url_data, path_info, payload, wsgi_environ)
                     else:
                         log_msg = '[{0}] sec_def.sec_type:[{1}] needs no auth'.format(cid, url_data.sec_def.sec_type)
                         logger.debug(log_msg)
                 else:
-                    log_msg = '[{0}] No security for URL [{1}]'.format(cid, task.request_data.uri)
+                    log_msg = '[{0}] No security for URL [{1}]'.format(cid, path_info)
                     logger.debug(log_msg)
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
 
                 data_format = url_data['data_format']
-                service_info, response = handler.handle(cid, task, payload, headers, transport, thread_ctx, self.simple_io_config, data_format, task.request_data)
-                task.response_headers['Content-Type'] = response.content_type
-                task.response_headers.update(response.headers)
-                task.setResponseStatus(response.status_code, responses[response.status_code])
+                service_info, response = handler.handle(cid, wsgi_environ, payload, transport, thread_ctx, self.simple_io_config, data_format, path_info)
+                wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
+                wsgi_environ['zato.http.response.headers'].update(response.headers)
+                wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, responses[response.status_code])
 
                 return response.payload
 
@@ -148,28 +141,26 @@ class RequestDispatcher(object):
                     status = e.status
                     reason = e.reason
                     if isinstance(e, Unauthorized):
-                        task.response_headers['WWW-Authenticate'] = e.challenge
+                        wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
                 else:
                     response = _format_exc
-                    status = INTERNAL_SERVER_ERROR
-                    reason = _reason_internal_server_error
                     
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
                 if logger.isEnabledFor(logging.DEBUG):
-                    msg = 'Caught an exception, cid:[{0}], status:[{1}], reason:[{2}], _format_exc:[{3}]'.format(
-                        cid, status, reason, _format_exc)
+                    msg = 'Caught an exception, cid:[{0}], status:[{1}], _format_exc:[{2}]'.format(
+                        cid, _status_internal_server_error, _format_exc)
                     logger.debug(msg)
                     
                 if transport == 'soap':
                     response = client_soap_error(cid, response)
                     
-                task.setResponseStatus(status, reason)
+                wsgi_environ['zato.http.response.status'] = _status_internal_server_error
                 return response
         else:
-            response = "[{}] The URL:[{}] or SOAP action:[{}] doesn't exist".format(cid, task.request_data.uri, soap_action)
-            task.setResponseStatus(NOT_FOUND, _reason_not_found)
+            response = "[{}] The URL:[{}] or SOAP action:[{}] doesn't exist".format(cid, path_info, soap_action)
+            wsgi_environ['zato.http.response.status'] = _status_not_found
             
             logger.error(response)
             return response
@@ -180,12 +171,12 @@ class _BaseMessageHandler(object):
         self.http_soap = http_soap
         self.server = server # A ParallelServer instance
     
-    def init(self, cid, task, request, headers, transport, data_format):
+    def init(self, cid, path_info, request, headers, transport, data_format):
         logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(cid, request, headers))
 
         if transport == 'soap':
             # HTTP headers are all uppercased at this point.
-            soap_action = headers.get('SOAPACTION')
+            soap_action = headers.get('HTTP_SOAPACTION')
     
             if not soap_action:
                 raise BadRequest(cid, 'Client did not send the SOAPAction header')
@@ -199,7 +190,7 @@ class _BaseMessageHandler(object):
         else:
             soap_action = ''
 
-        _soap_actions = self.http_soap.getall(task.request_data.path)
+        _soap_actions = self.http_soap.getall(path_info)
         
         for _soap_action_info in _soap_actions:
             
@@ -210,7 +201,7 @@ class _BaseMessageHandler(object):
                 break
         else:
             msg = '[{0}] Could not find the service config for URL:[{1}], SOAP action:[{2}]'.format(
-                cid, task.request_data.uri, soap_action)
+                cid, path_info, soap_action)
             logger.warn(msg)
             raise NotFound(cid, msg)
 
@@ -229,12 +220,12 @@ class _BaseMessageHandler(object):
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, cid, task, raw_request, headers, transport, thread_ctx, simple_io_config, data_format, request_data):
-        payload, service_info, service_data = self.init(cid, task, raw_request, headers, transport, data_format)
+    def handle(self, cid, wsgi_environ, raw_request, transport, thread_ctx, simple_io_config, data_format, path_info):
+        payload, service_info, service_data = self.init(cid, path_info, raw_request, wsgi_environ, transport, data_format)
 
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
         service_instance.update(service_instance, self.server, thread_ctx.store.broker_client, thread_ctx.store, 
-                cid, payload, raw_request, transport, simple_io_config, data_format, request_data)
+                cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ)
 
         service_instance.pre_handle()
         service_instance.handle()

@@ -290,7 +290,7 @@ class StatsReturningService(AdminService):
         """ Consult StatsElem's docstring for the description of output parameters.
         """
         input_required = (UTC('start'), UTC('stop'))
-        input_optional = ('service_name', Integer('n'), 'n_type')
+        input_optional = ('service_name', 'n', 'n_type')
         output_optional = ('service_name', 'usage', 'mean', 'rate', 'time', 'usage_trend', 'mean_trend',
             'min_resp_time', 'max_resp_time', 'all_services_usage', 'all_services_time',
             'mean_all_services', 'usage_perc_all_services', 'time_perc_all_services')

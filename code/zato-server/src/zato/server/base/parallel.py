@@ -27,14 +27,17 @@ from threading import Thread
 from time import sleep
 from traceback import format_exc
 
+# Bunch
+from bunch import Bunch, SimpleBunch
+
 # zope.server
-from zope.server.http.httpserver import HTTPServer
+#from zope.server.http.httpserver import HTTPServer
 
 # Paste
 from paste.util.multidict import MultiDict
 
-# Bunch
-from bunch import Bunch, SimpleBunch
+# waitress
+from waitress.server import WSGIServer
 
 # Zato
 from zato.broker.client import BrokerClient
@@ -54,41 +57,38 @@ from zato.server.stats import add_stats_jobs
 
 logger = logging.getLogger(__name__)
 
-class ZatoHTTPListener(HTTPServer):
+class ZatoHTTPListener(WSGIServer):
     
-    SERVER_IDENT = 'Zato'
+    #SERVER_IDENT = 'Zato'
     channel_class = _HTTPServerChannel
     
-    def __init__(self, server, task_dispatcher, broker_client=None):
-        self.server = server
-        self.broker_client = broker_client
-        super(ZatoHTTPListener, self).__init__(self.server.host, self.server.port, task_dispatcher)
+    def __init__(self, parallel_server, **kwargs):
+        self.server = parallel_server
+        _dispatcher = _TaskDispatcher(self.server, parallel_server.config)
+        _dispatcher.set_thread_count(6) # TODO: Make it configurable
+        super(ZatoHTTPListener, self).__init__(self.on_wsgi_request, _dispatcher=_dispatcher, port=17010, **kwargs)
 
-    def executeRequest(self, task, thread_local_ctx):
+    def on_wsgi_request(self, wsgi_environ, start_response):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
         cid = new_cid()
+        thread_local_ctx = wsgi_environ['zato.thread_local_ctx']
         
         try:
-            # It's either SOAP or a plain HTTP request
-            payload = thread_local_ctx.store.request_dispatcher.dispatch(cid, datetime.utcnow(), task, thread_local_ctx)
-        # Any exception at this point must be our fault.
+            payload = thread_local_ctx.store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, thread_local_ctx)
+        # Any exception at this point must be our fault
         except Exception, e:
             tb = format_exc(e)
-            task.setResponseStatus(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
-            error_msg = '[{0}] Exception caught [{1}]'.format(cid, tb)
+            status = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
+            error_msg = b'[{0}] Exception caught [{1}]'.format(cid, tb)
             logger.error(error_msg)
-            
             payload = error_msg
-            task.response_headers['Content-Type'] = 'text/plain'
             
-        task.response_headers['X-Zato-CID'] = cid
-            
-        # Can't set it any earlier, this is the only place we're sure the payload
-        # won't be modified anymore.
-        task.response_headers['Content-Length'] = str(len(payload))
-        task.write(payload)
+        headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
+        start_response(wsgi_environ['zato.http.response.status'], headers)
+        
+        return [payload]
 
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, crypto_manager=None,
@@ -393,47 +393,31 @@ class ParallelServer(BrokerMessageReceiver):
             
         self.odb.server_up_down(server.id, SERVER_UP_STATUS.RUNNING, True)
 
-    def run_forever(self):
+    def shutdown(self):
+            
+        # Close all the connector subprocesses this server has started
+        pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
+                (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
+                (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
+                )
         
-        task_dispatcher = _TaskDispatcher(self, self.config)
-        task_dispatcher.setThreadCount(4) # TODO: Make it configurable
-
-        logger.debug('host:[{0}], port:[{1}]'.format(self.host, self.port))
-
-        ZatoHTTPListener(self, task_dispatcher)
-
-        try:
-            while True:
-                asyncore.poll(5)
-
-        except KeyboardInterrupt:
-            logger.info('Shutting down')
+        for action, msg_type in pairs:
+            msg = {}
+            msg['action'] = action
+            msg['odb_token'] = self.odb.odb_token
+            self.broker_client.publish(msg, msg_type=msg_type)
+            time.sleep(0.2)
+        
+        self.broker_client.stop()
+        
+        if self.singleton_server:
+            self.singleton_server.pickup.stop()
             
-            # Close all the connector subprocesses this server has started
-            pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
-                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
-                    (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
-                    )
+            if self.singleton_server.is_cluster_wide:
+                self.odb.clear_cluster_wide()
             
-            for action, msg_type in pairs:
-                msg = {}
-                msg['action'] = action
-                msg['odb_token'] = self.odb.odb_token
-                self.broker_client.publish(msg, msg_type=msg_type)
-                time.sleep(0.2)
-            
-            self.broker_client.stop()
-            
-            if self.singleton_server:
-                self.singleton_server.pickup.stop()
-                
-                if self.singleton_server.is_cluster_wide:
-                    self.odb.clear_cluster_wide()
-                
-            self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
-            self.odb.close()
-
-            task_dispatcher.shutdown()
+        self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
+        self.odb.close()
             
 # ##############################################################################
 

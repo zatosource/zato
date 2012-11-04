@@ -278,9 +278,9 @@ class GetWSDL(AdminService):
         output_optional = ('wsdl', 'wsdl_name', 'content_type')
 
     def handle(self):
-        if self.request.request_data.query:
+        if self.wsgi_environ['QUERY_STRING']:
             use_sio = False
-            query = parse_qs(self.request.request_data.query)
+            query = parse_qs(self.wsgi_environ['QUERY_STRING'])
             service_name = query.get('service', (None,))[0]
             cluster_id = query.get('cluster_id', (None,))[0]
         else:

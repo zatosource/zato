@@ -143,7 +143,7 @@ class Request(ValueConverter):
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
                  'simple_io_config', 'bool_parameter_prefixes', 'int_parameters', 
-                 'int_parameter_suffixes', 'is_xml', 'data_format', 'request_data')
+                 'int_parameter_suffixes', 'is_xml', 'data_format')
 
     def __init__(self, logger, simple_io_config={}, data_format=None):
         self.logger = logger
@@ -158,7 +158,6 @@ class Request(ValueConverter):
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         self.is_xml = None
         self.data_format = data_format
-        self.request_data = None
 
     def init(self, cid, io, data_format):
         """ Initializes the object with an invocation-specific data.
@@ -481,6 +480,7 @@ class Service(object):
         self.worker_store = None
         self.odb = None
         self.data_format = None
+        self.wsgi_environ = None
         self.request = Request(self.logger)
         self.response = Response(self.logger)
         self.invocation_time = None # When was the service invoked
@@ -705,7 +705,7 @@ class Service(object):
     @staticmethod
     def update(service, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
-               request_data=None, init=True):
+               wsgi_environ=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -718,7 +718,7 @@ class Service(object):
         service.request.simple_io_config = simple_io_config
         service.response.simple_io_config = simple_io_config
         service.data_format = data_format
-        service.request.request_data = request_data
+        service.wsgi_environ = wsgi_environ
         service.translate = server.kvdb.translate
         
         if init:

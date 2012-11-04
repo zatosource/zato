@@ -33,6 +33,9 @@ import logging.config
 # psycopg2
 import psycopg2
 
+# waitress
+from waitress import serve
+
 # Zato
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 
@@ -66,12 +69,6 @@ def run(host, port, base_dir, start_singleton):
     parallel_server.fs_server_config = config
     parallel_server.stats_jobs = app_context.get_object('stats_jobs')
 
-    '''work_dir = config.hot_deploy.work_dir
-    if not os.path.isabs(work_dir):
-        work_dir = os.path.abspath(os.path.join(repo_location, work_dir))
-
-    parallel_server.work_dir = work_dir'''
-
     pickup_dir = config.hot_deploy.pickup_dir
     if not os.path.isabs(pickup_dir):
         pickup_dir = os.path.join(repo_location, pickup_dir)
@@ -90,7 +87,11 @@ def run(host, port, base_dir, start_singleton):
         parallel_server.singleton_server.parallel_server = parallel_server
 
     parallel_server.after_init()
-    parallel_server.run_forever()
+    
+    wsgi_server_class = app_context.get_object('wsgi_server_class')
+    wsgi_server = wsgi_server_class(parallel_server, expose_tracebacks=True)
+    wsgi_server.run()
+    
 
 if __name__ == '__main__':
     host, port, base_dir = sys.argv[1:4]
