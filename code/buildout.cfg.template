@@ -71,6 +71,7 @@ eggs =
 #PYMQI_MARKER    pymqi
     pyparsing
     python-dateutil
+    pytz
     pyzmq-static
     redis
     requests
