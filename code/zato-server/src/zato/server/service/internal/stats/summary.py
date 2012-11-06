@@ -613,7 +613,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
                 self.set_percent_of_all_services(all_services_stats, value)
         
         if n:
-            for stats_elem in self.yield_top_n(n, n_type, merged_stats_elems):
+            for stats_elem in self.yield_top_n(int(n), n_type, merged_stats_elems):
                 yield stats_elem
         else:
             for stats_elem in merged_stats_elems.values():
