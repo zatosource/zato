@@ -73,6 +73,7 @@ eggs =
     python-dateutil
     pytz
     pyzmq-static
+    quicli
     redis
     requests
     sec-wall
