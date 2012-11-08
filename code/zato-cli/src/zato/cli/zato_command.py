@@ -38,15 +38,15 @@ from zato.common import version as zato_version
 zato ca create load_balancer_agent/server/zato_admin .
 zato create load_balancer/odb/server/zato_admin .
 zato delete odb .
-zato quickstart .
+zato quickstart create/start .
 zato info .
 zato start .
 zato stop .
-zato version
-zato --version
+zato version .
+#zato --version
 """
 
-def main():
+def get_parser():
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument('path', help='Path to a directory')
     
@@ -60,11 +60,12 @@ def main():
     #
     ca = subs.add_parser('ca')
     ca_subs = ca.add_subparsers()
-    ca_create = ca_subs.add_parser('create')
+    ca_create = ca_subs.add_parser('create', help='Create crypto material for a Zato component')
     ca_create_subs = ca_create.add_subparsers()
-    ca_create_load_balancer_agent = ca_create_subs.add_parser('load_balancer_agent', parents=[base_parser])
-    ca_create_server = ca_create_subs.add_parser('server', parents=[base_parser])
-    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', parents=[base_parser])
+    ca_create_load_balancer_agent = ca_create_subs.add_parser('load_balancer_agent', 
+        help='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
+    ca_create_server = ca_create_subs.add_parser('server', help='Create crypto material for a Zato server', parents=[base_parser])
+    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', help='Create crypto material for a Zato web console', parents=[base_parser])
     
     # 
     # create
@@ -109,5 +110,9 @@ def main():
     #
     version = subs.add_parser('version', parents=[base_parser])
     
-    args = parser.parse_args()
+    return parser
+
+def main():
+    
+    args = get_parser().parse_args()
     print(111)
