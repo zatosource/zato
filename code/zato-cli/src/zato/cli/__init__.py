@@ -17,8 +17,71 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+'''
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import argparse, time
+
+# quicli
+from quicli.progress import PercentageProgress
+
+"""
+zato ca create load_balancer_agent/server/zato_admin
+zato create broker/load_balancer/odb/server/zato_admin
+zato delete odb
+zato quickstart
+zato info .
+zato start .
+zato stop .
+"""
+
+parser = argparse.ArgumentParser()
+subs = parser.add_subparsers()
+
+ca = subs.add_parser('ca')
+ca_subs = ca.add_subparsers()
+ca_create = ca_subs.add_parser('create')
+ca_create_subs = ca_create.add_subparsers()
+ca_create_load_balancer_agent = ca_create_subs.add_parser('load_balancer_agent')
+ca_create_server = ca_create_subs.add_parser('server')
+ca_create_zato_admin = ca_create_subs.add_parser('zato_admin')
+
+create = subs.add_parser('create')
+create_subs = create.add_subparsers()
+create_broker = create_subs.add_parser('broker')
+create_load_balancer = create_subs.add_parser('load_balancer')
+create_odb = create_subs.add_parser('odb')
+create_server = create_subs.add_parser('server')
+create_zato_admin = create_subs.add_parser('zato_admin')
+
+delete = subs.add_parser('delete')
+delete_subs = delete.add_subparsers()
+delete_odb = delete_subs.add_parser('odb')
+
+info = subs.add_parser('info')
+quickstart = subs.add_parser('quickstart')
+start = subs.add_parser('start')
+stop = subs.add_parser('stop')
+'''
+
+'''
+things_to_do = range(50)
+
+progress = PercentageProgress(len(things_to_do))
+progress.start()
+
+for something in things_to_do:
+    time.sleep(0.1)
+    progress.update(something)
+    
+progress.finish()
+'''
+
+#args = parser.parse_args()
+
+
+'''
 # stdlib
 import argparse, glob, os, subprocess, sys, tempfile, time
 from cStringIO import StringIO
@@ -556,3 +619,4 @@ class ManageCommand(ZatoCommand):
 
         os.chdir(self.component_dir)
         self._get_dispatch()[found]()
+'''

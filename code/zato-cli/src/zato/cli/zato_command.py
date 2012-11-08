@@ -21,113 +21,93 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import sys
+import argparse, time
+
+# bzrlib
+from bzrlib.lazy_import import lazy_import
+
+lazy_import(globals(), """
+    # quicli
+    from quicli.progress import PercentageProgress
+""")
 
 # Zato
-from zato.cli import quickstart, start, stop, odb_delete, info
-
-USAGE = """
-Zato 1.0 - the open-source ESB and application server
-
-TODO: Read the version off of somewhere in the line above
-https:// TODO: Add URL here
-
-Commands:
-
-  zato start       Starts a given component
-  zato stop        Stops a given component
-
-  zato info        Shows information about a running component
-
-  zato ca          Certificate Authority for use with Zato components
-  zato odb         Manages the Operational Database
-
-  zato create      Creates a new component
-  zato quickstart  Quickly creates a ready to use Zato environment
-
-All commands accept -h and --help parameters, e.g. 'zato start --help' will show help on using the 'zato start' command.
-
-Refer to online documentation at http:// TODO: URL for more information and usage examples.
+from zato.common import version as zato_version
+    
+"""
+zato ca create load_balancer_agent/server/zato_admin .
+zato create load_balancer/odb/server/zato_admin .
+zato delete odb .
+zato quickstart .
+zato info .
+zato start .
+zato stop .
+zato version
+zato --version
 """
 
-class PrintHelp(object):
-    def __init__(self, command):
-        self.command = command
-
-    def run(self, work_args):
-        print(help[self.command])
-        sys.exit(0)
-
-commands = {
-    'start': start.Start(),
-    'stop': stop.Stop(),
-
-    'info': info.Info(),
-
-    'ca': PrintHelp('ca'),
-    'ca create-ca': '',
-    'ca create-lb-agent': '',
-    'ca create-server': '',
-    'ca create-zato-admin': '',
-
-    'odb create': '',
-    'odb delete': odb_delete.Delete(),
-
-    'create': PrintHelp('create'),
-    'create lb-agent': '',
-    'create server': '',
-    'create zato-admin': '',
-
-    'quickstart': quickstart.Quickstart(),
-}
-
-def _help_only(argv):
-    return len(argv) == 2 or len(argv) > 2 and argv[2] in ('--help', '-h')
-
-def _unknown_command(command):
-    print('Unknown command: {0}'.format(command))
-    print(USAGE)
-    sys.exit(2)
-
-def _get_handler_work_args(argv):
-    if _help_only(argv):
-        if len(argv) == 2:
-            work_args = []
-        else:
-            work_args = sys.argv[2:]
-
-        command = argv[1]
-        handler = commands.get(command, None)
-        if not handler:
-            _unknown_command('zato {0}'.format(command))
-
-        return handler, work_args
-
-    else:
-        command1 = argv[1]
-        command2 = ''
-
-        if command1 in('quickstart', 'start', 'stop', 'info'):
-            work_args = sys.argv[2:]
-        else:
-            if len(argv) >= 2:
-                command2 = argv[2]
-            work_args = sys.argv[3:]
-
-        command = command1
-        if command2:
-            command += ' ' + command2
-
-        handler = commands.get(command, None)
-        if not handler:
-            _unknown_command('zato {0}'.format(command))
-
-    return handler, work_args
-
 def main():
-    if len(sys.argv) < 2:
-        print(USAGE)
-        sys.exit(2)
-
-    handler, work_args = _get_handler_work_args(sys.argv)
-    handler.run(work_args=work_args)
+    base_parser = argparse.ArgumentParser(add_help=False)
+    base_parser.add_argument('path', help='Path to a directory')
+    
+    parser = argparse.ArgumentParser(prog='zato')
+    parser.add_argument('--version', action='version', version=zato_version)
+    
+    subs = parser.add_subparsers()
+    
+    #
+    # ca
+    #
+    ca = subs.add_parser('ca')
+    ca_subs = ca.add_subparsers()
+    ca_create = ca_subs.add_parser('create')
+    ca_create_subs = ca_create.add_subparsers()
+    ca_create_load_balancer_agent = ca_create_subs.add_parser('load_balancer_agent', parents=[base_parser])
+    ca_create_server = ca_create_subs.add_parser('server', parents=[base_parser])
+    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', parents=[base_parser])
+    
+    # 
+    # create
+    #
+    create = subs.add_parser('create')
+    create_subs = create.add_subparsers()
+    create_load_balancer = create_subs.add_parser('load_balancer')
+    create_odb = create_subs.add_parser('odb')
+    create_server = create_subs.add_parser('server')
+    create_zato_admin = create_subs.add_parser('zato_admin')
+    
+    #
+    # delete
+    #
+    delete = subs.add_parser('delete')
+    delete_subs = delete.add_subparsers()
+    delete_odb = delete_subs.add_parser('odb', parents=[base_parser])
+    
+    #
+    # info
+    #
+    info = subs.add_parser('info', parents=[base_parser])
+    
+    
+    #
+    # quickstart
+    #
+    quickstart = subs.add_parser('quickstart', parents=[base_parser])
+    
+    #
+    # start
+    #
+    start = subs.add_parser('start', parents=[base_parser])
+    
+    #
+    # stop
+    #
+    stop = subs.add_parser('stop', parents=[base_parser])
+    
+    #
+    # version
+    #
+    version = subs.add_parser('version', parents=[base_parser])
+    
+    args = parser.parse_args()
+    print(111)
