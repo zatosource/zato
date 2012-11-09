@@ -159,7 +159,7 @@ class ZatoCommand(object):
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
         
-        if self.verbose:
+        if args.store_log:
             verbose_handler = logging.FileHandler('zato.{}.log'.format(fs_safe_now()))
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             verbose_handler.setFormatter(verbose_formatter)
