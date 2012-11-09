@@ -28,14 +28,23 @@ from zato.cli import ca_create_ca as ca_create_ca_mod
 from zato.common import version as zato_version
     
 """
-zato ca create ca/load_balancer_agent/server/zato_admin .
-zato create load_balancer/odb/server/zato_admin .
+#zato ca create ca .
+zato ca create load_balancer_agent .
+zato ca create server .
+zato ca create zato_admin .
+zato component-version .
+zato create load_balancer .
+zato create odb .
+zato create server .
+zato_admin .
 zato delete odb .
-zato quickstart create/start .
+zato from-config-file ./zato.config.file
+zato quickstart create .
+zato quickstart start .
 zato info .
 zato start .
 zato stop .
-zato version .
+zato --batch
 #zato --version
 """
 
@@ -44,8 +53,8 @@ def get_parser():
     base_parser.add_argument('path', help='Path to a directory')
     base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
     base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
-    base_parser.add_argument('--store-options', 
-        help='Whether to store options in a file for a later use', action='store_true')
+    base_parser.add_argument('--store-config', 
+        help='Whether to store config options in a file for a later use', action='store_true')
     
     parser = argparse.ArgumentParser(prog='zato')
     parser.add_argument('--version', action='version', version=zato_version)
@@ -55,9 +64,9 @@ def get_parser():
     #
     # ca
     #
-    ca = subs.add_parser('ca')
+    ca = subs.add_parser('ca', help='Basic certificate authority (CA) management')
     ca_subs = ca.add_subparsers()
-    ca_create = ca_subs.add_parser('create', help='Create crypto material for a Zato component')
+    ca_create = ca_subs.add_parser('create', help='Create crypto material for Zato components')
     ca_create_subs = ca_create.add_subparsers()
 
     ca_create_ca = ca_create_subs.add_parser('ca', 
@@ -78,11 +87,19 @@ def get_parser():
     ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', 
         help='Create crypto material for a Zato web console', parents=[base_parser])
     ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
+
+    # 
+    # component-version
+    #
+    component_version = subs.add_parser('component-version',
+        help='Shows the version of a Zato component installed in a given directory', 
+        parents=[base_parser])
+    component_version.set_defaults(command='component_version')
     
     # 
     # create
     #
-    create = subs.add_parser('create')
+    create = subs.add_parser('create', help='Creates new Zato components')
     create_subs = create.add_subparsers()
     create_load_balancer = create_subs.add_parser('load_balancer')
     create_odb = create_subs.add_parser('odb')
@@ -92,36 +109,39 @@ def get_parser():
     #
     # delete
     #
-    delete = subs.add_parser('delete')
+    delete = subs.add_parser('delete', help='Deletes Zato components')
     delete_subs = delete.add_subparsers()
     delete_odb = delete_subs.add_parser('odb', parents=[base_parser])
     
     #
     # info
     #
-    info = subs.add_parser('info', parents=[base_parser])
+    info = subs.add_parser('info', help='Detailed information regarding a chosen Zato component',
+        parents=[base_parser])
+        
+    #
+    # from-config-file
+    #
+    from_config_file = subs.add_parser('from-config-file', help='Run commands from a config file',
+        parents=[base_parser])
     
     
     #
     # quickstart
     #
-    quickstart = subs.add_parser('quickstart', parents=[base_parser])
+    quickstart = subs.add_parser('quickstart', help='Quickly set up and manage Zato clusters',
+        parents=[base_parser])
     
     #
     # start
     #
-    start = subs.add_parser('start', parents=[base_parser])
+    start = subs.add_parser('start', help='Starts a Zato component', parents=[base_parser])
     
     #
     # stop
     #
-    stop = subs.add_parser('stop', parents=[base_parser])
-    
-    #
-    # version
-    #
-    version = subs.add_parser('version', parents=[base_parser])
-    
+    stop = subs.add_parser('stop', help='Stops a Zato component', parents=[base_parser])
+
     return parser
 
 def main():

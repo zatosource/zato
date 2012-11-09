@@ -164,6 +164,9 @@ class ZatoCommand(object):
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
+            
+        if args.store_config:
+            self.store_config(args)
         
         self.engine = None
         
@@ -200,41 +203,24 @@ class ZatoCommand(object):
     def _get_user_host(self):
         return getuser() + "@" + gethostname()
 
-    def _save_opts(self, args):
-        """ Stores the options in a config file for a later re-use.
+    def store_config(self, args):
+        """ Stores the config options in a config file for a later use.
         """
-        # Not all commands need parameters, e.g. zato ca create-ca doesn't need any.
-        if self.opts:
-            response = ""
-            print("")
-            while response.lower() not in ("y", "n"):
-                msg = "Would you like to store the command line options in a config file for a later re-use (y/n)? "
-                response = raw_input(msg)
+        now = fs_safe_now()
+        file_name = 'zato.{}.config'.format(now)
+        file_args = StringIO()
 
-            if response.lower() == "y":
+        for arg, value in args._get_kwargs():
+            if value:
+                file_args.write('{}={}\n'.format(arg, value))
 
-                time_=  time.gmtime()
+        body = '# {} - {}\n{}'.format(now, self._get_user_host(), file_args.getvalue())
 
-                now = self._get_now(time_)
-                file_name = "{command_name}-{now}.config".format(
-                    command_name=self.command_name.replace(" ", "-"),
-                    now=now)
+        open(file_name, 'w').write(body)
+        file_args.close()
 
-                file_args = StringIO()
-
-                for arg, value in args._get_kwargs():
-                    if value:
-                        file_args.write("{arg}={value}\n".format(arg=arg, value=value))
-
-                body = """# Created on {time_} by {user_host}
-{file_args}""".format(time_=time.asctime(time_), user_host=self._get_user_host(),
-                      file_args=file_args.getvalue())
-
-                open(file_name, "w").write(body)
-                file_args.close()
-
-                print("\nOptions saved in file {file_name}\n".format(
-                    file_name=os.path.abspath(file_name)))
+        self.logger.debug('Options saved in file {file_name}'.format(
+            file_name=os.path.abspath(file_name)))
 
     def _get_engine(self, args):
         engine_url = engine_def.format(engine=args.odb_type, username=args.odb_user,
