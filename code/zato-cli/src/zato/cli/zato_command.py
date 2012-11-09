@@ -23,19 +23,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import argparse, time
 
-# bzrlib
-from bzrlib.lazy_import import lazy_import
-
-lazy_import(globals(), """
-    # quicli
-    from quicli.progress import PercentageProgress
-""")
-
 # Zato
+from zato.cli import ca_create_ca as ca_create_ca_mod
 from zato.common import version as zato_version
     
 """
-zato ca create load_balancer_agent/server/zato_admin .
+zato ca create ca/load_balancer_agent/server/zato_admin .
 zato create load_balancer/odb/server/zato_admin .
 zato delete odb .
 zato quickstart create/start .
@@ -49,6 +42,10 @@ zato version .
 def get_parser():
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument('path', help='Path to a directory')
+    base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
+    base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
+    base_parser.add_argument('--store-options', 
+        help='Whether to store options in a file for a later use', action='store_true')
     
     parser = argparse.ArgumentParser(prog='zato')
     parser.add_argument('--version', action='version', version=zato_version)
@@ -62,10 +59,25 @@ def get_parser():
     ca_subs = ca.add_subparsers()
     ca_create = ca_subs.add_parser('create', help='Create crypto material for a Zato component')
     ca_create_subs = ca_create.add_subparsers()
-    ca_create_load_balancer_agent = ca_create_subs.add_parser('load_balancer_agent', 
+
+    ca_create_ca = ca_create_subs.add_parser('ca', 
+        help='Create a new certificate authority ', parents=[base_parser])
+    ca_create_ca.set_defaults(command='ca_create_ca')
+        
+    for opt in ca_create_ca_mod.CreateCA.opts:
+        ca_create_ca.add_argument(opt['name'], help=opt['help'])
+    
+    ca_create_lb_agent = ca_create_subs.add_parser('lb_agent', 
         help='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
-    ca_create_server = ca_create_subs.add_parser('server', help='Create crypto material for a Zato server', parents=[base_parser])
-    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', help='Create crypto material for a Zato web console', parents=[base_parser])
+    ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
+        
+    ca_create_server = ca_create_subs.add_parser('server', 
+       help='Create crypto material for a Zato server', parents=[base_parser])
+    ca_create_server.set_defaults(command='ca_create_server')
+       
+    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', 
+        help='Create crypto material for a Zato web console', parents=[base_parser])
+    ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
     
     # 
     # create
@@ -113,6 +125,11 @@ def get_parser():
     return parser
 
 def main():
+    command_class = {
+        'ca_create_ca': ca_create_ca_mod.CreateCA
+    }
     
     args = get_parser().parse_args()
-    print(111)
+    class_ = command_class[args.command]
+    class_(args).execute(args)
+

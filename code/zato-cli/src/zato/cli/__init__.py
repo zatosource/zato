@@ -17,83 +17,25 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-'''
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import argparse, time
-
-# quicli
-from quicli.progress import PercentageProgress
-
-"""
-zato ca create load_balancer_agent/server/zato_admin
-zato create broker/load_balancer/odb/server/zato_admin
-zato delete odb
-zato quickstart
-zato info .
-zato start .
-zato stop .
-"""
-
-parser = argparse.ArgumentParser()
-subs = parser.add_subparsers()
-
-ca = subs.add_parser('ca')
-ca_subs = ca.add_subparsers()
-ca_create = ca_subs.add_parser('create')
-ca_create_subs = ca_create.add_subparsers()
-ca_create_load_balancer_agent = ca_create_subs.add_parser('load_balancer_agent')
-ca_create_server = ca_create_subs.add_parser('server')
-ca_create_zato_admin = ca_create_subs.add_parser('zato_admin')
-
-create = subs.add_parser('create')
-create_subs = create.add_subparsers()
-create_broker = create_subs.add_parser('broker')
-create_load_balancer = create_subs.add_parser('load_balancer')
-create_odb = create_subs.add_parser('odb')
-create_server = create_subs.add_parser('server')
-create_zato_admin = create_subs.add_parser('zato_admin')
-
-delete = subs.add_parser('delete')
-delete_subs = delete.add_subparsers()
-delete_odb = delete_subs.add_parser('odb')
-
-info = subs.add_parser('info')
-quickstart = subs.add_parser('quickstart')
-start = subs.add_parser('start')
-stop = subs.add_parser('stop')
-'''
-
-'''
-things_to_do = range(50)
-
-progress = PercentageProgress(len(things_to_do))
-progress.start()
-
-for something in things_to_do:
-    time.sleep(0.1)
-    progress.update(something)
-    
-progress.finish()
-'''
-
-#args = parser.parse_args()
-
-
-'''
-# stdlib
-import argparse, glob, os, subprocess, sys, tempfile, time
+import argparse, glob, logging, os, subprocess, sys, tempfile, time
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
 
-# SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+# bzrlib
+from bzrlib.lazy_import import lazy_import
 
 # Zato
 from zato.common.odb import engine_def
+from zato.common.util import fs_safe_now
+
+lazy_import(globals(), """
+    # SQLAlchemy
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+""")
 
 ################################################################################
 
@@ -207,19 +149,24 @@ class ZatoCommand(object):
     add_batch = True
     add_config_file = True
 
-    def __init__(self):
+    def __init__(self, args):
+        self.verbose = args.verbose
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        
+        console_handler = logging.StreamHandler()
+        console_formatter = logging.Formatter('%(message)s')
+        console_handler.setFormatter(console_formatter)
+        self.logger.addHandler(console_handler)
+        
+        if self.verbose:
+            verbose_handler = logging.FileHandler('zato.{}.log'.format(fs_safe_now()))
+            verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            verbose_handler.setFormatter(verbose_formatter)
+            self.logger.addHandler(verbose_handler)
+        
         self.engine = None
-
-    # TODO: Remove it if it's not needed
-    def print_zato_opts(self):
-        buff = StringIO()
-        template = "  {name:<23} {help}\n"
-        for opt in self.opts:
-            buff.write(template.format(**opt))
-
-        print(buff.getvalue())
-        buff.close()
-
+        
     def _get_password(self, template, needs_confirm):
         """ Runs an infinite loop until a user enters the password. User needs
         to confirm the password if 'needs_confirm' is True. New line characters
@@ -227,7 +174,7 @@ class ZatoCommand(object):
         "", "\nsecret\n" becomes "secret" and "\nsec\nret\n" becomes "sec\nret".
         """
         keep_running = True
-        print("")
+        self.logger.info("")
 
         while keep_running:
             password1 = getpass(template + " (will not be echoed): ")
@@ -237,10 +184,10 @@ class ZatoCommand(object):
             password2 = getpass("Enter the password again. Will not be echoed: ")
 
             if password1 != password2:
-                print("\nPasswords do not match.\n")
+                self.logger.info("\nPasswords do not match.\n")
             else:
                 if not password1:
-                    print("\nNo password entered.\n")
+                    self.logger.info("\nNo password entered.\n")
                 else:
                     return password1.strip("\n")
 
@@ -362,14 +309,14 @@ class ZatoCommand(object):
             if os.listdir(work_dir):
                 msg = ("\nDirectory {work_dir} is not empty, please re-run the command " +
                       "in an empty directory.\n").format(work_dir=work_dir)
-                print(msg)
+                self.logger.info(msg)
                 sys.exit(2)
 
         # Do we need the directory to contain any specific files?
         if self.file_needed:
             if not os.path.exists(self.file_needed):
                 msg = self._on_file_missing(work_args)
-                print("\n{msg}\n".format(msg=msg))
+                self.logger.info("\n{msg}\n".format(msg=msg))
                 sys.exit(2)
 
         # Now let's see if the user wants us to be run through the config file
@@ -513,7 +460,7 @@ class CACreateCommand(ZatoCommand):
   - certificate {cert_name}
   - CSR: {csr_name}""".format(**format_args)
 
-        print(msg)
+        self.logger.info(msg)
 
         # In case someone needs to invoke us directly and wants to find out
         # what the format_args were.
@@ -607,16 +554,16 @@ class ManageCommand(ZatoCommand):
 
         if not found:
             msg = """\nDirectory {0} doesn't seem to belong to a Zato component. Expected one of the following files to exist {1}\n""".format(self.component_dir, sorted(self.command_files))
-            print(msg)
+            self.logger.info(msg)
             sys.exit(2)
 
         elif len(found) > 1:
             msg = """\nExpected the directory {0} to contain exactly one of the following files {1}, found {2} instead.\n""".format(self.component_dir, sorted(self.command_files), sorted(found))
-            print(msg)
+            self.logger.info(msg)
             sys.exit(2)
 
         found = list(found)[0]
 
         os.chdir(self.component_dir)
         self._get_dispatch()[found]()
-'''
+
