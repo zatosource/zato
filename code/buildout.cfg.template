@@ -56,7 +56,6 @@ eggs =
     inotifyx
     lxml
     nosexcover
-    M2Crypto
     mock
     mosquitto
     ordereddict
