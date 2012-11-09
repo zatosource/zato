@@ -36,7 +36,7 @@ zato component-version .
 zato create load_balancer .
 zato create odb .
 zato create server .
-zato_admin .
+zato create zato_admin .
 zato delete odb .
 zato from-config-file ./zato.config.file
 zato quickstart create .
@@ -45,6 +45,8 @@ zato info .
 zato start .
 zato stop .
 zato --batch
+zato --store-config
+#zato --store-log
 #zato --version
 """
 
@@ -76,7 +78,7 @@ def get_parser():
     for opt in ca_create_ca_mod.CreateCA.opts:
         ca_create_ca.add_argument(opt['name'], help=opt['help'])
     
-    ca_create_lb_agent = ca_create_subs.add_parser('lb_agent', 
+    ca_create_lb_agent = ca_create_subs.add_parser('load_balancer_agent', 
         help='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
     ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
         
