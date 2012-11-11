@@ -69,32 +69,32 @@ default_ca_name = 'Sample CA'
 default_common_name = 'localhost'
 
 common_odb_opts = [
-        dict(name='odb_type', help=_opts_odb_type, choices=supported_db_types),
-        dict(name='odb_host', help=_opts_odb_host),
-        dict(name='odb_port', help=_opts_odb_port),
-        dict(name='odb_user', help=_opts_odb_user),
-        dict(name='odb_dbname', help=_opts_odb_dbname),
-        dict(name='--odb-schema', help=_opts_odb_schema + ' (PostgreSQL only)'),
-        dict(name='--odb-password', help='ODB database password'),
+        {'name':'odb_type', 'help':_opts_odb_type, 'choices':supported_db_types},
+        {'name':'odb_host', 'help':_opts_odb_host},
+        {'name':'odb_port', 'help':_opts_odb_port},
+        {'name':'odb_user', 'help':_opts_odb_user},
+        {'name':'odb_dbname', 'help':_opts_odb_dbname},
+        {'name':'--odb-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
+        {'name':'--odb-password', 'help':'ODB database password'},
 ]
 
 broker_opts = [
-    dict(name='broker_host', help=_opts_broker_host),
-    dict(name='broker_start_port', help=_opts_broker_start_port),
+    {'name':'broker_host', 'help':_opts_broker_host},
+    {'name':'broker_start_port', 'help':_opts_broker_start_port},
 ]
 
 common_ca_create_opts = [
-    dict(name='--organization', help='Organization name (defaults to {organization})'.format(**ca_defaults)),
-    dict(name='--locality', help='Locality name (defaults to {locality})'.format(**ca_defaults)),
-    dict(name='--state-or-province', help='State or province name (defaults to {state_or_province})'.format(**ca_defaults)),
-    dict(name='--country', help='Country (defaults to {country})'.format(**ca_defaults)),
-    dict(name='--common-name', help='Common name (defaults to {default})'.format(default=default_common_name)),
+    {'name=':'organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
+    {'name=':'locality', 'help':'Locality name (defaults to {locality})'.format(**ca_defaults)},
+    {'name=':'state-or-province', 'help':'State or province name (defaults to {state_or_province})'.format(**ca_defaults)},
+    {'name=':'country', 'help':'Country (defaults to {country})'.format(**ca_defaults)},
+    {'name=':'common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
 ]
 
 kvdb_opts = [
-    dict(name='kvdb_host', help=_opts_kvdb_host),
-    dict(name='kvdb_port', help=_opts_kvdb_port),
-    dict(name='--kvdb-password', help='kvdb database password'),
+    {'name':'kvdb_host', 'help':_opts_kvdb_host},
+    {'name':'kvdb_port', 'help':_opts_kvdb_port},
+    {'name':'--kvdb-password', 'help':'kvdb database password'},
 ]
 
 common_logging_conf_contents = """
@@ -142,12 +142,12 @@ class ZatoCommand(object):
     the arguments, checking whether a config file or command line switches should
     be used, asks for passwords etc.
     """
-
     needs_empty_dir = False
     file_needed = None
     needs_password_confirm = True
     add_batch = True
     add_config_file = True
+    target_dir = None
 
     def __init__(self, args):
         self.verbose = args.verbose
@@ -177,31 +177,31 @@ class ZatoCommand(object):
         "", "\nsecret\n" becomes "secret" and "\nsec\nret\n" becomes "sec\nret".
         """
         keep_running = True
-        self.logger.info("")
+        self.logger.info('')
 
         while keep_running:
-            password1 = getpass(template + " (will not be echoed): ")
+            password1 = getpass(template + ' (will not be echoed): ')
             if not needs_confirm:
-                return password1.strip("\n")
+                return password1.strip('\n')
 
-            password2 = getpass("Enter the password again. Will not be echoed: ")
+            password2 = getpass('Enter the password again. Will not be echoed: ')
 
             if password1 != password2:
-                self.logger.info("\nPasswords do not match.\n")
+                self.logger.info('Passwords do not match')
             else:
                 if not password1:
-                    self.logger.info("\nNo password entered.\n")
+                    self.logger.info('No password entered')
                 else:
-                    return password1.strip("\n")
+                    return password1.strip('\n')
 
     def _get_now(self, time_=None):
         if not time_:
             time_ = time.gmtime()
 
-        return time.strftime("%Y-%m-%d_%H-%M-%S", time_)
+        return time.strftime('%Y-%m-%d_%H-%M-%S', time_)
 
     def _get_user_host(self):
-        return getuser() + "@" + gethostname()
+        return getuser() + '@' + gethostname()
 
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
@@ -236,21 +236,58 @@ class ZatoCommand(object):
         """ Get the password from a user for each argument that needs a password.
         """
         for opt_name, opt_help in check_password:
-            opt_name = opt_name.replace("--", "").replace("-", "_")
+            opt_name = opt_name.replace('--', '').replace('-', '_')
             if not getattr(args, opt_name, None):
                 password = self._get_password(opt_help, self.needs_password_confirm)
                 setattr(args, opt_name, password)
 
         return args
 
-    def _run_config_file(self, args, check_password):
+    def _get_arg(self, args, name, default):
+        value = getattr(args, name, None)
+        return value if value else default
+
+    def run(self, args, offer_save_opts=True, work_args=None):
+        """ Parses the command line or the args passed in and figures out
+        whether the user wishes to use a config file or command line switches.
+        """
+        # Do we need to have a clean directory to work in?
+        if self.needs_empty_dir:
+            work_dir = os.path.abspath(os.path.join(os.getcwd(), self.target_dir))
+            if os.listdir(work_dir):
+                msg = ('Directory {} is not empty, please re-run the command ' +
+                      'in an empty directory').format(work_dir)
+                self.logger.info(msg)
+                sys.exit(2)
+
+        # Do we need the directory to contain any specific files?
+        if self.file_needed:
+            if not os.path.exists(os.path.join(self.target_dir, self.file_needed)):
+                msg = self._on_file_missing(work_args)
+                self.logger.info(msg)
+                sys.exit(2)
+        
+        check_password = []
+        for opt_dict in self.opts:
+            name = opt_dict['name']
+            if 'password' in name:
+                check_password.append((name, opt_dict['help']))
+        
+        if check_password:
+            args = self._check_passwords(args, check_password)
+            
+        self.execute(args)
+        
+class FromConfigFile(ZatoCommand):
+    opts = []
+    def execute(self, args):
         """ Runs the command with arguments read from a config file.
         """
-        f = open(args.config_file)
+        f = open(args.path)
         for line in f:
-            if line.lstrip().startswith("#"):
+            if line.lstrip().startswith('#'):
                 continue
-            arg, value = line.split("=", 1)
+            arg, value = line.split('=', 1)
 
             arg = arg.strip()
             value = value.strip()
@@ -260,148 +297,69 @@ class ZatoCommand(object):
         if not self.batch:
             args = self._check_passwords(args, check_password)
         self.execute(args)
-        print("")
-
-    def _run_command_line(self, args, offer_save_opts, check_password=[]):
-        """ Runs the command with command line arguments. Makes sure all the passwords
-        have been entered before passing the control to the appropriate command's _run
-        method.
-        """
-        if not self.batch:
-            args = self._check_passwords(args, check_password)
-        self.execute(args)
-
-        if offer_save_opts and not self.batch and self.add_config_file:
-            self._save_opts(args)
-
-    def _set_batch(self, args):
-        self.batch = True if getattr(args, "batch", None) else False
-
-    def _get_arg(self, args, name, default):
-        value = getattr(args, name, None)
-        return value if value else default
-
-    def run(self, offer_save_opts=True, work_args=None):
-        """ Parses the command line or the args passed in and figures out
-        whether the user wishes to use a config file or command line switches.
-        """
-        # Must use 'is None' because work_args may be as well a []
-        if work_args is None:
-            work_args = sys.argv
-
-        # Do we need to have a clean directory to work in?
-        if self.needs_empty_dir:
-            work_dir = os.path.abspath(os.path.join(os.getcwd(), self.target_dir))
-            if os.listdir(work_dir):
-                msg = ("\nDirectory {work_dir} is not empty, please re-run the command " +
-                      "in an empty directory.\n").format(work_dir=work_dir)
-                self.logger.info(msg)
-                sys.exit(2)
-
-        # Do we need the directory to contain any specific files?
-        if self.file_needed:
-            if not os.path.exists(self.file_needed):
-                msg = self._on_file_missing(work_args)
-                self.logger.info("\n{msg}\n".format(msg=msg))
-                sys.exit(2)
-
-        # Now let's see if the user wants us to be run through the config file
-        # or via command line switches?
-        parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-                                         description=self.description, prog="zato " + self.command_name)
-
-        if self.add_config_file:
-            parser.add_argument("--config-file", help="Config file to use", dest="config_file")
-
-        if self.add_batch:
-            parser.add_argument("--batch", help="Batch mode (doesn't ask questions)", dest="batch")
-
-        check_password = []
-        for opt_dict in self.opts:
-            name = opt_dict["name"]
-            if "password" in name:
-                check_password.append((name, opt_dict["help"]))
-
-        # I don't think there's any nicer way for running either from a config
-        # file or from the command line *if* we'd like to keep sane help messages
-        # automatically generated by argparse.
-        if "--config-file" in sys.argv:
-            args = parser.parse_args(work_args)
-            self._set_batch(args)
-            self._run_config_file(args, check_password)
-        else:
-            for opt_dict in self.opts:
-
-                name = opt_dict.pop("name")
-                parser.add_argument(name, **opt_dict)
-
-            args = parser.parse_args(work_args)
-            self._set_batch(args)
-            self._run_command_line(args, offer_save_opts, check_password)
 
 class CACreateCommand(ZatoCommand):
     """ A base class for all commands that create new crypto material.
     """
-    file_needed = ".zato-ca-dir"
+    file_needed = '.zato-ca-dir'
 
-    def __init__(self, target_dir):
-        super(CACreateCommand, self).__init__()
-        self.target_dir = os.path.abspath(target_dir)
+    def __init__(self, args):
+        super(CACreateCommand, self).__init__(args)
+        self.target_dir = os.path.abspath(args.path)
 
     def _on_file_missing(self):
-        msg = "{target_dir} doesn't seem to be a CA directory, the file '{file_needed}' is missing."
-        return msg.format(target_dir=os.path.abspath(self.target_dir), file_needed=self.file_needed)
+        msg = "{} doesn't seem to be a CA directory, the '{}' file is missing."
+        return msg.format(self.target_dir, self.file_needed)
 
     def _execute(self, args, extension):
-
         now = self._get_now()
-        openssl_template = open(os.path.join(self.target_dir, "ca-material/openssl-template.conf")).read()
+        openssl_template = open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf')).read()
         template_args = {}
 
-        common_name = self._get_arg(args, "common_name", default_common_name)
-        organization = self._get_arg(args, "organization", ca_defaults["organization"])
-        organizational_unit = self._get_arg(args, "organizational_unit", self.get_organizational_unit(args))
-        locality = self._get_arg(args, "locality", ca_defaults["locality"])
-        state_or_province = self._get_arg(args, "state_or_province", ca_defaults["state_or_province"])
-        country = self._get_arg(args, "country", ca_defaults["country"])
+        common_name = self._get_arg(args, 'common_name', default_common_name)
+        organization = self._get_arg(args, 'organization', ca_defaults['organization'])
+        organizational_unit = self._get_arg(args, 'organizational_unit', self.get_organizational_unit(args))
+        locality = self._get_arg(args, 'locality', ca_defaults['locality'])
+        state_or_province = self._get_arg(args, 'state_or_province', ca_defaults['state_or_province'])
+        country = self._get_arg(args, 'country', ca_defaults['country'])
 
-        template_args["common_name"] = common_name
-        template_args["organization"] = organization
-        template_args["organizational_unit"] = organizational_unit
-        template_args["locality"] = locality
-        template_args["state_or_province"] = state_or_province
-        template_args["country"] = country
+        template_args['common_name'] = common_name
+        template_args['organization'] = organization
+        template_args['organizational_unit'] = organizational_unit
+        template_args['locality'] = locality
+        template_args['state_or_province'] = state_or_province
+        template_args['country'] = country
 
-        template_args["target_dir"] = self.target_dir
+        template_args['target_dir'] = self.target_dir
 
         f = tempfile.NamedTemporaryFile()
         f.write(openssl_template.format(**template_args))
         f.flush()
 
         file_args = {
-            "now":now,
-            "target_dir":self.target_dir
+            'now':now,
+            'target_dir':self.target_dir
         }
 
-        for arg in("cluster_name", "server_name"):
+        for arg in('cluster_name', 'server_name'):
             if hasattr(args, arg):
                 file_args[arg] = getattr(args, arg)
 
-        file_args["file_prefix"] = self.get_file_prefix(file_args)
+        file_args['file_prefix'] = self.get_file_prefix(file_args)
 
-        csr_name = "{target_dir}/out-csr/{file_prefix}-csr-{now}.pem".format(**file_args)
-        priv_key_name = "{target_dir}/out-priv/{file_prefix}-priv-{now}.pem".format(**file_args)
-        pub_key_name = "{target_dir}/out-pub/{file_prefix}-pub-{now}.pem".format(**file_args)
-        cert_name = "{target_dir}/out-cert/{file_prefix}-cert-{now}.pem".format(**file_args)
+        csr_name = '{target_dir}/out-csr/{file_prefix}-csr-{now}.pem'.format(**file_args)
+        priv_key_name = '{target_dir}/out-priv/{file_prefix}-priv-{now}.pem'.format(**file_args)
+        pub_key_name = '{target_dir}/out-pub/{file_prefix}-pub-{now}.pem'.format(**file_args)
+        cert_name = '{target_dir}/out-cert/{file_prefix}-cert-{now}.pem'.format(**file_args)
 
         format_args = {
-            "config": f.name,
-            "extension": extension,
-            "csr_name": csr_name,
-            "priv_key_name": priv_key_name,
-            "pub_key_name": pub_key_name,
-            "cert_name": cert_name,
-            "target_dir": self.target_dir
+            'config': f.name,
+            'extension': extension,
+            'csr_name': csr_name,
+            'priv_key_name': priv_key_name,
+            'pub_key_name': pub_key_name,
+            'cert_name': cert_name,
+            'target_dir': self.target_dir
         }
 
         # Create the CSR and keys ..
@@ -409,36 +367,36 @@ class CACreateCommand(ZatoCommand):
                   -out {csr_name} \
                   -keyout {priv_key_name} \
                   -pubkey \
-                  -newkey rsa:2048 -config {config}""".format(**format_args)
+                  -newkey rsa:2048 -config {config} >/dev/null 2>&1""".format(**format_args)
         os.system(cmd)
 
         # .. note that we were using "-pubkey" flag above so we now have to extract
         # the public key from the CSR.
 
-        split_line = "-----END PUBLIC KEY-----"
+        split_line = '-----END PUBLIC KEY-----'
         csr_pub = open(csr_name).read()
         csr_pub = csr_pub.split(split_line)
 
         pub = csr_pub[0] + split_line
         csr = csr_pub[1].lstrip()
 
-        open(csr_name, "w").write(csr)
-        open(pub_key_name, "w").write(pub)
+        open(csr_name, 'w').write(csr)
+        open(pub_key_name, 'w').write(pub)
 
         # Generate the certificate
         cmd = """openssl ca -batch -passin file:{target_dir}/ca-material/ca-password -config {config} \
                  -out {cert_name} \
                  -extensions {extension} \
                  -in {csr_name} \
-                 """.format(**format_args)
+                 >/dev/null 2>&1""".format(**format_args)
 
         os.system(cmd)
         f.close()
 
-        # Now delete the default certificate stored in "./", we don't really
-        # need it because we have its copy in "./out-cert" anyway.
-        last_serial = open(os.path.join(self.target_dir, "ca-material/ca-serial.old")).read().strip()
-        os.remove(os.path.join(self.target_dir, last_serial + ".pem"))
+        # Now delete the default certificate stored in './', we don't really
+        # need it because we have its copy in './out-cert' anyway.
+        last_serial = open(os.path.join(self.target_dir, 'ca-material/ca-serial.old')).read().strip()
+        os.remove(os.path.join(self.target_dir, last_serial + '.pem'))
 
         msg = """\nCrypto material generated and saved in:
   - private key: {priv_key_name}
@@ -446,7 +404,10 @@ class CACreateCommand(ZatoCommand):
   - certificate {cert_name}
   - CSR: {csr_name}""".format(**format_args)
 
-        self.logger.info(msg)
+        if self.verbose:
+            self.logger.debug(msg)
+        else:
+            self.logger.info('OK')
 
         # In case someone needs to invoke us directly and wants to find out
         # what the format_args were.
