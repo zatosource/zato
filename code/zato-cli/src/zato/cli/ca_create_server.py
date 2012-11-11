@@ -19,35 +19,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from copy import deepcopy
-
 # Zato
-from zato.cli import CACreateCommand, common_ca_create_opts
+from zato.cli import CACreateCommand
 
 class CreateServer(CACreateCommand):
-    command_name = "ca create-server"
-
     opts = [
-        dict(name="cluster_name", help="Cluster name"),
-        dict(name="server_name", help="Server name"),
-        dict(name="--organizational-unit", help="Organizational unit name (defaults to cluster_name:server_name)"),
+        {'name':'cluster_name', 'help':'Cluster name'},
+        {'name':'server_name', 'help':'Server name'},
+        {'name':'--organizational-unit', 'help':'Organizational unit name (defaults to cluster_name:server_name)'},
     ]
-    opts += deepcopy(common_ca_create_opts)
-
-    description = "Creates the server's crypto material (keys, the certificate and a CSR)"
 
     def get_file_prefix(self, file_args):
-        return "{cluster_name}-{server_name}".format(**file_args)
+        return '{cluster_name}-{server_name}'.format(**file_args)
 
     def get_organizational_unit(self, args):
-        return args.cluster_name + ":" + args.server_name
+        return args.cluster_name + ':' + args.server_name
 
     def execute(self, args):
-        return self._execute(args, "v3_client_server")
-
-def main(target_dir):
-    CreateServer(target_dir).run()
-
-if __name__ == "__main__":
-    main(".")
+        return self._execute(args, 'v3_client_server')

@@ -24,13 +24,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse, time
 
 # Zato
-from zato.cli import ca_create_ca as ca_create_ca_mod
+from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_server as ca_create_server_mod, \
+     FromConfigFile
 from zato.common import version as zato_version
     
 """
 #zato ca create ca .
 zato ca create load_balancer_agent .
-zato ca create server .
+# zato ca create server .
 zato ca create zato_admin .
 zato component-version .
 zato create load_balancer .
@@ -49,6 +50,12 @@ zato --store-config
 #zato --store-log
 #zato --version
 """
+
+def add_opts(parser, opts):
+    """ Adds parser-specific options.
+    """
+    for opt in opts:
+        parser.add_argument(opt['name'], help=opt['help'])
 
 def get_parser():
     base_parser = argparse.ArgumentParser(add_help=False)
@@ -74,9 +81,7 @@ def get_parser():
     ca_create_ca = ca_create_subs.add_parser('ca', 
         help='Create a new certificate authority ', parents=[base_parser])
     ca_create_ca.set_defaults(command='ca_create_ca')
-        
-    for opt in ca_create_ca_mod.CreateCA.opts:
-        ca_create_ca.add_argument(opt['name'], help=opt['help'])
+    add_opts(ca_create_ca, ca_create_ca_mod.CreateCA.opts)
     
     ca_create_lb_agent = ca_create_subs.add_parser('load_balancer_agent', 
         help='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
@@ -85,7 +90,8 @@ def get_parser():
     ca_create_server = ca_create_subs.add_parser('server', 
        help='Create crypto material for a Zato server', parents=[base_parser])
     ca_create_server.set_defaults(command='ca_create_server')
-       
+    add_opts(ca_create_server, ca_create_server_mod.CreateServer.opts)
+
     ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', 
         help='Create crypto material for a Zato web console', parents=[base_parser])
     ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
@@ -126,7 +132,7 @@ def get_parser():
     #
     from_config_file = subs.add_parser('from-config-file', help='Run commands from a config file',
         parents=[base_parser])
-    
+    from_config_file.set_defaults(command='from_config_file')
     
     #
     # quickstart
@@ -148,10 +154,10 @@ def get_parser():
 
 def main():
     command_class = {
-        'ca_create_ca': ca_create_ca_mod.CreateCA
+        'ca_create_ca': ca_create_ca_mod.CreateCA,
+        'ca_create_server': ca_create_server_mod.CreateServer,
+        'from_config_file': FromConfigFile,
     }
-    
     args = get_parser().parse_args()
-    class_ = command_class[args.command]
-    class_(args).execute(args)
+    command_class[args.command](args).run(args)
 
