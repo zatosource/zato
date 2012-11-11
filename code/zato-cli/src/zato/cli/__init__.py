@@ -398,7 +398,7 @@ class CACreateCommand(ZatoCommand):
         last_serial = open(os.path.join(self.target_dir, 'ca-material/ca-serial.old')).read().strip()
         os.remove(os.path.join(self.target_dir, last_serial + '.pem'))
 
-        msg = """\nCrypto material generated and saved in:
+        msg = """Crypto material generated and saved in:
   - private key: {priv_key_name}
   - public key: {pub_key_name}
   - certificate {cert_name}
