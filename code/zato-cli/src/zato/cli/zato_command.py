@@ -24,14 +24,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse, time
 
 # Zato
-from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_server as ca_create_server_mod, \
-     ca_create_lb_agent as ca_create_lb_agent_mod, \
+from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
+     ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod,\
      FromConfigFile
 from zato.common import version as zato_version
     
 """
 #zato ca create ca .
-zato ca create lb_agent .
+#zato ca create lb_agent .
 # zato ca create server .
 zato ca create zato_admin .
 zato component-version .
@@ -87,6 +87,7 @@ def get_parser():
     ca_create_lb_agent = ca_create_subs.add_parser('lb_agent', 
         help='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
     ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
+    add_opts(ca_create_lb_agent, ca_create_lb_agent_mod.CreateLBAgent.opts)
         
     ca_create_server = ca_create_subs.add_parser('server', 
        help='Create crypto material for a Zato server', parents=[base_parser])
@@ -96,6 +97,7 @@ def get_parser():
     ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', 
         help='Create crypto material for a Zato web console', parents=[base_parser])
     ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
+    add_opts(ca_create_zato_admin, ca_create_zato_admin_mod.CreateZatoAdmin.opts)
 
     # 
     # component-version
@@ -158,6 +160,7 @@ def main():
         'ca_create_ca': ca_create_ca_mod.CreateCA,
         'ca_create_lb_agent': ca_create_lb_agent_mod.CreateLBAgent,
         'ca_create_server': ca_create_server_mod.CreateServer,
+        'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
         'from_config_file': FromConfigFile,
     }
     args = get_parser().parse_args()
