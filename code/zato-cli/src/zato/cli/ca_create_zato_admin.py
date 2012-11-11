@@ -19,33 +19,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from copy import deepcopy
-
 # Zato
-from zato.cli import CACreateCommand, common_ca_create_opts
+from zato.cli import CACreateCommand
 
 class CreateZatoAdmin(CACreateCommand):
-    command_name = "ca create-zato-admin"
-
     opts = [
-        dict(name="--organizational-unit", help="Organizational unit name (defaults to ZatoAdmin)"),
+        {'name':'organizational-unit', 'help':'Organizational unit name'},
     ]
-    opts += deepcopy(common_ca_create_opts)
-
-    description = "Creates the ZatoAdmin's crypto material (keys, the certificate and a CSR)"
 
     def get_file_prefix(self, file_args):
-        return "zato-admin"
+        return 'zato-admin'
 
     def get_organizational_unit(self, args):
-        return "zato-admin"
+        return 'zato-admin'
 
     def execute(self, args):
-        return self._execute(args, "v3_client_server")
-
-def main(target_dir):
-    CreateZatoAdmin(target_dir).run()
-
-if __name__ == "__main__":
-    main(".")
+        return self._execute(args, 'v3_client_server')
