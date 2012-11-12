@@ -17,9 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
 # stdlib
-import argparse, glob, logging, os, subprocess, sys, tempfile, time
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
@@ -27,14 +25,20 @@ from socket import gethostname
 # bzrlib
 from bzrlib.lazy_import import lazy_import
 
-# Zato
-from zato.common.odb import engine_def
-from zato.common.util import fs_safe_now
-
 lazy_import(globals(), """
+
+    # stdlib
+    import argparse, glob, json, logging, os, subprocess, sys, tempfile, time
+    from datetime import datetime
+
     # SQLAlchemy
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
+    import sqlalchemy
+    from sqlalchemy import orm # import sessionmaker
+    
+    # Zato
+    from zato import common
+    from zato.common import odb #.odb import engine_def, version_raw
+    from zato.common import util #.util import fs_safe_now
 """)
 
 ################################################################################
@@ -43,6 +47,7 @@ ZATO_LB_DIR = b'.zato-lb-dir'
 ZATO_ADMIN_DIR = b'.zato-admin-dir'
 ZATO_BROKER_DIR = b'.zato-broker-dir'
 ZATO_SERVER_DIR = b'.zato-server-dir'
+ZATO_INFO_FILE = b'.zato-info'
 
 _opts_odb_type = 'ODB database type'
 _opts_odb_host = 'ODB database host'
@@ -149,6 +154,7 @@ class ZatoCommand(object):
     add_batch = True
     add_config_file = True
     target_dir = None
+    opts = []
 
     def __init__(self, args):
         self.verbose = args.verbose
@@ -203,6 +209,13 @@ class ZatoCommand(object):
 
     def _get_user_host(self):
         return getuser() + '@' + gethostname()
+    
+    def store_initial_info(self, target_dir):
+        info = {'version': common.version_raw,
+                'created_user_host': self._get_user_host(),
+                'created_ts': datetime.utcnow().isoformat(),
+            }
+        open(os.path.join(target_dir, ZATO_INFO_FILE), 'wb').write(json.dumps(info))
 
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
@@ -254,7 +267,7 @@ class ZatoCommand(object):
         """
         # Do we need to have a clean directory to work in?
         if self.needs_empty_dir:
-            work_dir = os.path.abspath(os.path.join(os.getcwd(), self.target_dir))
+            work_dir = os.path.abspath(os.path.join(os.getcwd(), args.path))
             if os.listdir(work_dir):
                 msg = ('Directory {} is not empty, please re-run the command ' +
                       'in an empty directory').format(work_dir)
@@ -263,8 +276,9 @@ class ZatoCommand(object):
 
         # Do we need the directory to contain any specific files?
         if self.file_needed:
-            if not os.path.exists(os.path.join(self.target_dir, self.file_needed)):
-                msg = self._on_file_missing(work_args)
+            full_path = os.path.join(args.path, self.file_needed)
+            if not os.path.exists(full_path):
+                msg = 'Could not find file [{}]'.format(full_path)
                 self.logger.info(msg)
                 sys.exit(2)
         

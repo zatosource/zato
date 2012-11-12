@@ -229,6 +229,9 @@ class CreateServer(ZatoCommand):
         
         engine = self._get_engine(args)
         session = self._get_session(engine)
+        
+        # Initial info
+        self.store_initial_info(self.target_dir)
 
         cluster = session.query(Cluster).filter(Cluster.name==cluster_name).first()
         if not cluster:

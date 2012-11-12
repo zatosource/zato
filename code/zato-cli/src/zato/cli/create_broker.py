@@ -62,6 +62,9 @@ class CreateBroker(ZatoCommand):
         open(os.path.join(self.target_dir, 'config/repo', 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='../../logs/broker.log'))
         open(os.path.join(self.target_dir, 'config/repo', 'broker.conf'), 'w').write(config_template.format(**config))
         open(os.path.join(self.target_dir, ZATO_BROKER_DIR), 'w').close()
+        
+        # Initial info
+        self.store_initial_info(self.target_dir)
 
         msg = """\nSuccessfully created a Zato broker.
 You can now go to {path} and start it with the 'zato start .' command.

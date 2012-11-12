@@ -26,6 +26,7 @@ import argparse, time
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod,\
+     component_version as component_version_mod, \
      FromConfigFile
 from zato.common import version as zato_version
     
@@ -106,6 +107,7 @@ def get_parser():
         help='Shows the version of a Zato component installed in a given directory', 
         parents=[base_parser])
     component_version.set_defaults(command='component_version')
+    add_opts(component_version, component_version_mod.ComponentVersion.opts)
     
     # 
     # create
@@ -161,8 +163,8 @@ def main():
         'ca_create_lb_agent': ca_create_lb_agent_mod.CreateLBAgent,
         'ca_create_server': ca_create_server_mod.CreateServer,
         'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
+        'component_version': component_version_mod.ComponentVersion,
         'from_config_file': FromConfigFile,
     }
     args = get_parser().parse_args()
     command_class[args.command](args).run(args)
-

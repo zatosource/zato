@@ -231,7 +231,7 @@ PORTS.BROKER_PUB_CONSUMING_CONNECTOR_ZMQ_SUB = 72
 major = 1
 minor = 0
 micro = 0
-releaselevel = 'alpha0'
+releaselevel = 'a0'
 
 class VersionInfo(object):
     def __init__(self, major, minor, micro, releaselevel):
@@ -241,8 +241,10 @@ class VersionInfo(object):
         self.releaselevel = releaselevel
     
 version_info = VersionInfo(major, minor, micro, releaselevel)
-version = 'Zato {}.{}.{}.{}'.format(version_info.major, version_info.minor, 
+version_raw = '{}.{}.{}.{}'.format(version_info.major, version_info.minor, 
     version_info.micro, version_info.releaselevel)
+version = 'Zato {}'.format(version_raw)
+
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):

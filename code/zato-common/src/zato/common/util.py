@@ -532,8 +532,3 @@ def now(tz=None):
     out and return their own timestamps at will.
     """
     return _now(tz)
-
-def get_zato_version():
-    """ Returns the current Zato version.
-    """
-    return '1.0dev12345678'
