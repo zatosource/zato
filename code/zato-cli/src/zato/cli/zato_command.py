@@ -30,9 +30,9 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
 from zato.common import version as zato_version
     
 """
-#zato ca create ca .
-#zato ca create lb_agent .
-# zato ca create server .
+# zato ca create ca .
+zato ca create lb_agent .
+zato ca create server .
 zato ca create zato_admin .
 zato component-version .
 zato create load_balancer .

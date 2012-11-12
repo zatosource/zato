@@ -133,21 +133,11 @@ class CreateCA(ZatoCommand):
         # Create the CA's cert and the private key
 
         template_args = {}
+        for name in('organization', 'organizational_unit', 'locality', 'state_or_province', 'country'):
+            value = self._get_arg(args, name, ca_defaults[name])
+            template_args[name] = value
 
-        common_name = self._get_arg(args, 'common_name', default_ca_name)
-        organization = self._get_arg(args, 'organization', ca_defaults['organization'])
-        organizational_unit = self._get_arg(args, 'organizational_unit', default_ca_name)
-        locality = self._get_arg(args, 'locality', ca_defaults['locality'])
-        state_or_province = self._get_arg(args, 'state_or_province', ca_defaults['state_or_province'])
-        country = self._get_arg(args, 'country', ca_defaults['country'])
-
-        template_args['common_name'] = common_name
-        template_args['organization'] = organization
-        template_args['organizational_unit'] = organizational_unit
-        template_args['locality'] = locality
-        template_args['state_or_province'] = state_or_province
-        template_args['country'] = country
-
+        template_args['common_name'] = self._get_arg(args, 'common_name', default_ca_name)
         template_args['target_dir'] = self.target_dir
 
         f = tempfile.NamedTemporaryFile()
@@ -161,10 +151,8 @@ class CreateCA(ZatoCommand):
         os.system(cmd)
         f.close()
 
-        os.mkdir(os.path.join(self.target_dir, 'out-csr'))
-        os.mkdir(os.path.join(self.target_dir, 'out-cert'))
-        os.mkdir(os.path.join(self.target_dir, 'out-priv'))
-        os.mkdir(os.path.join(self.target_dir, 'out-pub'))
+        for name in('csr', 'cert', 'priv', 'pub'):
+            os.mkdir(os.path.join(self.target_dir, 'out-{}'.format(name)))
 
         # Mark the directory being a Zato CA one.
         open(os.path.join(self.target_dir, '.zato-ca-dir'), 'w')

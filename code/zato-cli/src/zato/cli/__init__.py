@@ -84,11 +84,11 @@ broker_opts = [
 ]
 
 common_ca_create_opts = [
-    {'name=':'organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
-    {'name=':'locality', 'help':'Locality name (defaults to {locality})'.format(**ca_defaults)},
-    {'name=':'state-or-province', 'help':'State or province name (defaults to {state_or_province})'.format(**ca_defaults)},
-    {'name=':'country', 'help':'Country (defaults to {country})'.format(**ca_defaults)},
-    {'name=':'common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
+    {'name':'--organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
+    {'name':'--locality', 'help':'Locality name (defaults to {locality})'.format(**ca_defaults)},
+    {'name':'--state-or-province', 'help':'State or province name (defaults to {state_or_province})'.format(**ca_defaults)},
+    {'name':'--country', 'help':'Country (defaults to {country})'.format(**ca_defaults)},
+    {'name':'--common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
 ]
 
 kvdb_opts = [
