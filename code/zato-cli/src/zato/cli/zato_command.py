@@ -31,9 +31,9 @@ from zato.common import version as zato_version
     
 """
 # zato ca create ca .
-zato ca create lb_agent .
-zato ca create server .
-zato ca create zato_admin .
+# zato ca create lb_agent .
+# zato ca create server .
+# zato ca create zato_admin .
 zato component-version .
 zato create load_balancer .
 zato create odb .

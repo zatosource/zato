@@ -59,7 +59,8 @@ supported_db_types = ('oracle', 'postgresql')
 
 ca_defaults = {
     'organization': 'My Company',
-    'organizational_unit': 'My Unit',
+    'organizational_unit': 'My Unit', # When it's an optional argument
+    'organizational-unit': 'My Unit', # When it's a required one
     'locality': 'My Town',
     'state_or_province': 'My State',
     'country': 'US'
@@ -314,22 +315,26 @@ class CACreateCommand(ZatoCommand):
     def _execute(self, args, extension):
         now = self._get_now()
         openssl_template = open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf')).read()
+        
+        ou_attrs = ('organizational_unit', 'organizational-unit')
         template_args = {}
+        for name in('organization', 'locality', 'state_or_province', 'country'):
+            value = self._get_arg(args, name, ca_defaults[name])
+            template_args[name.replace('-', '_')] = value
 
-        common_name = self._get_arg(args, 'common_name', default_common_name)
-        organization = self._get_arg(args, 'organization', ca_defaults['organization'])
-        organizational_unit = self._get_arg(args, 'organizational_unit', self.get_organizational_unit(args))
-        locality = self._get_arg(args, 'locality', ca_defaults['locality'])
-        state_or_province = self._get_arg(args, 'state_or_province', ca_defaults['state_or_province'])
-        country = self._get_arg(args, 'country', ca_defaults['country'])
-
-        template_args['common_name'] = common_name
-        template_args['organization'] = organization
-        template_args['organizational_unit'] = organizational_unit
-        template_args['locality'] = locality
-        template_args['state_or_province'] = state_or_province
-        template_args['country'] = country
-
+        for name in ou_attrs:
+            has_name = self._get_arg(args, name, None)
+            if has_name:
+                value = self._get_arg(args, name, ca_defaults[name])
+                template_args[name.replace('-', '_')] = value
+                break
+        else:
+            if hasattr(self, 'get_organizational_unit'):
+                template_args['organizational_unit'] = self.get_organizational_unit(args)
+            else:
+                template_args['organizational_unit'] = ca_defaults['organizational_unit']
+            
+        template_args['common_name'] = self._get_arg(args, 'common_name', default_ca_name)
         template_args['target_dir'] = self.target_dir
 
         f = tempfile.NamedTemporaryFile()
@@ -367,7 +372,8 @@ class CACreateCommand(ZatoCommand):
                   -out {csr_name} \
                   -keyout {priv_key_name} \
                   -pubkey \
-                  -newkey rsa:2048 -config {config} >/dev/null 2>&1""".format(**format_args)
+                  -newkey rsa:2048 -config {config} \
+                  >/dev/null 2>&1""".format(**format_args)
         os.system(cmd)
 
         # .. note that we were using "-pubkey" flag above so we now have to extract
@@ -388,7 +394,7 @@ class CACreateCommand(ZatoCommand):
                  -out {cert_name} \
                  -extensions {extension} \
                  -in {csr_name} \
-                 >/dev/null 2>&1""".format(**format_args)
+                  >/dev/null 2>&1""".format(**format_args)
 
         os.system(cmd)
         f.close()
