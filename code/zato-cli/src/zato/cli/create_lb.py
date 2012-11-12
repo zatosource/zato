@@ -19,12 +19,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import os, uuid
-
 # Zato
 from zato.cli import common_logging_conf_contents, ZatoCommand, ZATO_LB_DIR
 from zato.common.defaults import http_plain_server_port
+
+# bzrlib
+from bzrlib.lazy_import import lazy_import
+
+lazy_import(globals(), """
+    # quicli
+    import os, uuid
+    
+""")
 
 config_template = """{
   "haproxy_command": "haproxy",
@@ -104,11 +110,9 @@ class CreateLoadBalancer(ZatoCommand):
 
     needs_empty_dir = True
 
-    def __init__(self, target_dir):
-        super(CreateLoadBalancer, self).__init__()
-        self.target_dir = target_dir
-
-    description = "Creates a Load Balancer's agent."
+    def __init__(self, args):
+        super(CreateLoadBalancer, self).__init__(args)
+        self.target_dir = os.path.abspath(args.path)
 
     def execute(self, args, use_default_backend=False, server02_port=None):
 
@@ -135,11 +139,13 @@ class CreateLoadBalancer(ZatoCommand):
         # Initial info
         self.store_initial_info(self.target_dir)
 
-        msg = """\nSuccessfully created a Load Balancer's agent.
-You can now go to {path} and start it with the 'zato start lb-agent' command.
-""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
-
-        print(msg)
+        if self.verbose:
+            msg = """Successfully created a Load Balancer's agent.
+                You can now go to {path} and start it with the 'zato start lb-agent' command.""".format(
+                    path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
+            self.logger.debug(msg)
+        else:
+            self.logger.info('OK')
 
 def main(target_dir):
     CreateLoadBalancer(target_dir).run()
