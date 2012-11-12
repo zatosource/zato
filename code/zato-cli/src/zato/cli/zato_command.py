@@ -25,8 +25,8 @@ import argparse, time
 
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
-     ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod,\
-     component_version as component_version_mod, \
+     ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod, \
+     component_version as component_version_mod, create_lb as create_lb_mod, \
      FromConfigFile
 from zato.common import version as zato_version
     
@@ -35,13 +35,13 @@ from zato.common import version as zato_version
 # zato ca create lb_agent .
 # zato ca create server .
 # zato ca create zato_admin .
-zato component-version .
+# zato component-version .
 zato create load_balancer .
 zato create odb .
 zato create server .
 zato create zato_admin .
 zato delete odb .
-zato from-config-file ./zato.config.file
+zato from-config ./zato.config.file
 zato quickstart create .
 zato quickstart start .
 zato info .
@@ -49,8 +49,8 @@ zato start .
 zato stop .
 zato --batch
 zato --store-config
-#zato --store-log
-#zato --version
+# zato --store-log
+# zato --version
 """
 
 def add_opts(parser, opts):
@@ -114,10 +114,18 @@ def get_parser():
     #
     create = subs.add_parser('create', help='Creates new Zato components')
     create_subs = create.add_subparsers()
-    create_load_balancer = create_subs.add_parser('load_balancer')
-    create_odb = create_subs.add_parser('odb')
-    create_server = create_subs.add_parser('server')
-    create_zato_admin = create_subs.add_parser('zato_admin')
+    
+    create_lb = create_subs.add_parser('load_balancer', parents=[base_parser])
+    create_lb.set_defaults(command='create_lb')
+    
+    create_odb = create_subs.add_parser('odb', parents=[base_parser])
+    create_odb.set_defaults(command='create_odb')
+    
+    create_server = create_subs.add_parser('server', parents=[base_parser])
+    create_server.set_defaults(command='create_server')
+    
+    create_zato_admin = create_subs.add_parser('zato_admin', parents=[base_parser])
+    create_zato_admin.set_defaults(command='create_zato_admin')
     
     #
     # delete
@@ -135,9 +143,8 @@ def get_parser():
     #
     # from-config-file
     #
-    from_config_file = subs.add_parser('from-config-file', help='Run commands from a config file',
-        parents=[base_parser])
-    from_config_file.set_defaults(command='from_config_file')
+    from_config = subs.add_parser('from-config', help='Run commands from a config file', parents=[base_parser])
+    from_config.set_defaults(command='from_config')
     
     #
     # quickstart
@@ -164,6 +171,7 @@ def main():
         'ca_create_server': ca_create_server_mod.CreateServer,
         'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
         'component_version': component_version_mod.ComponentVersion,
+        'create_lb': create_lb_mod.CreateLoadBalancer,
         'from_config_file': FromConfigFile,
     }
     args = get_parser().parse_args()

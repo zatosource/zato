@@ -167,7 +167,7 @@ class ZatoCommand(object):
         self.logger.addHandler(console_handler)
         
         if args.store_log:
-            verbose_handler = logging.FileHandler('zato.{}.log'.format(fs_safe_now()))
+            verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now()))
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
@@ -278,7 +278,7 @@ class ZatoCommand(object):
         if self.file_needed:
             full_path = os.path.join(args.path, self.file_needed)
             if not os.path.exists(full_path):
-                msg = 'Could not find file [{}]'.format(full_path)
+                msg = 'Could not find file {}'.format(full_path)
                 self.logger.info(msg)
                 sys.exit(2)
         
