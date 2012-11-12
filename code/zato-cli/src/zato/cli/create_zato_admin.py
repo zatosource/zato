@@ -85,6 +85,9 @@ class CreateZatoAdmin(ZatoCommand):
         open(os.path.join(self.target_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/admin.log'))
         open(os.path.join(self.target_dir, 'zato-admin.conf'), 'w').write(config_template.format(**config))
         open(os.path.join(self.target_dir, ZATO_ADMIN_DIR), 'w').close()
+        
+        # Initial info
+        self.store_initial_info(self.target_dir)
 
         msg = """\nSuccessfully created a Zato Admin instance.
 You can now go to {path} and start it with the 'zato start zato-admin' command.

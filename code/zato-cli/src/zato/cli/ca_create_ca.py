@@ -27,7 +27,8 @@ from bzrlib.lazy_import import lazy_import
 
 lazy_import(globals(), """
     # quicli
-    from quicli.progress import PercentageProgress
+    from quicli import progress
+    
 """)
 
 
@@ -156,6 +157,9 @@ class CreateCA(ZatoCommand):
 
         # Mark the directory being a Zato CA one.
         open(os.path.join(self.target_dir, '.zato-ca-dir'), 'w')
+        
+        # Initial info
+        self.store_initial_info(self.target_dir)
 
         if self.verbose:
             msg = 'Successfully created a certificate authority in {path}'.format(
@@ -163,4 +167,3 @@ class CreateCA(ZatoCommand):
             self.logger.debug(msg)
         else:
             self.logger.info('OK')
-

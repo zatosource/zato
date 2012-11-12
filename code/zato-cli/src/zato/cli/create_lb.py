@@ -131,6 +131,9 @@ class CreateLoadBalancer(ZatoCommand):
         zato_config = zato_config_template.format(stats_socket=stats_socket,
                 stats_password=uuid.uuid4().hex, default_backend=backend)
         open(os.path.join(self.target_dir, 'config', 'zato.config'), 'w').write(zato_config)
+        
+        # Initial info
+        self.store_initial_info(self.target_dir)
 
         msg = """\nSuccessfully created a Load Balancer's agent.
 You can now go to {path} and start it with the 'zato start lb-agent' command.
