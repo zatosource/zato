@@ -21,10 +21,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os, uuid
+from copy import deepcopy
 from multiprocessing import cpu_count
 
 # Zato
-from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents
+from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents, common_odb_opts
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster
 from zato.common.util import encrypt
@@ -102,6 +103,7 @@ pub_key_location = './config/repo/config-pub.pem'
 
 class Create(ZatoCommand):
     needs_empty_dir = True
+    opts = deepcopy(common_odb_opts)
 
     def __init__(self, args, cluster_name=None):
         super(Create, self).__init__(args)
