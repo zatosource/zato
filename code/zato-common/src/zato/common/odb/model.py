@@ -55,7 +55,7 @@ class ZatoInstallState(Base):
     __tablename__ = 'install_state'
 
     id = Column(Integer,  Sequence('install_state_seq'), primary_key=True)
-    version = Column(String(200), unique=True, nullable=False)
+    version = Column(Integer, unique=True, nullable=False)
     install_time = Column(DateTime(), nullable=False)
     source_host = Column(String(200), nullable=False)
     source_user = Column(String(200), nullable=False)

@@ -30,43 +30,33 @@ from sqlalchemy.exc import ProgrammingError
 
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
+from zato.common.odb import VERSION
 from zato.common.odb.model import Base, ZatoInstallState
 
-ODB_VERSION = "1.0"
-
 class CreateODB(ZatoCommand):
-    command_name = "create odb"
-
     opts = deepcopy(common_odb_opts)
-    description = "Creates a Zato Operational Database (ODB)."
 
     def execute(self, args):
         engine = self._get_engine(args)
         session = self._get_session(engine)
+        
+        if engine.dialect.has_table(engine.connect(), 'install_state'):
+            version = session.query(ZatoInstallState.version).one().version
+            msg = ('The ODB (v. {}) already exists, not creating it. ' +
+                  "Use the 'zato delete odb' command first if you'd like to start afresh and "+
+                  'recreate all ODB objects.').format(version)
+            self.logger.error(msg)
+            
+            return self.SYS_ERROR.ODB_EXISTS
 
-        try:
-            state = session.query(ZatoInstallState).filter_by(version=ODB_VERSION).all()
-        except ProgrammingError, e:
-            # Can be ignored, it simply means the table doesn't exist yet.
-            session.rollback()
-            state = False
-
-        if state:
-            # TODO: the 'drop_odb' below is incorrect..
-            print(("\nODB {version} already exists, not creating it. " +
-                  "(Use drop_odb first if you'd like to start afresh and "+
-                  "recreate all ODB objects)").format(version=ODB_VERSION))
         else:
             Base.metadata.create_all(engine)
-            state = ZatoInstallState(None, ODB_VERSION, datetime.now(), gethostname(), getuser())
+            state = ZatoInstallState(None, VERSION, datetime.now(), gethostname(), getuser())
 
             session.add(state)
             session.commit()
 
-            print("\nSuccessfully created the ODB.")
-
-def main():
-    CreateODB().run()
-
-if __name__ == "__main__":
-    main()
+            if self.verbose:
+                self.logger.debug('Successfully created the ODB')
+            else:
+                self.logger.info('OK')

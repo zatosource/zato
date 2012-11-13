@@ -59,18 +59,16 @@ class COMPONENTS(object):
     SERVER = _ComponentName('SERVER', 'Server')
     ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
 
-_opts_odb_type = 'ODB database type'
-_opts_odb_host = 'ODB database host'
-_opts_odb_port = 'ODB database port'
-_opts_odb_user = 'ODB database user'
-_opts_odb_schema = 'ODB database schema'
-_opts_odb_dbname = 'ODB database name'
+_opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES)
+_opts_odb_host = 'Operational database host'
+_opts_odb_port = 'Operational database port'
+_opts_odb_user = 'Operational database user'
+_opts_odb_schema = 'Operational database schema'
+_opts_odb_dbname = 'Operational database name'
 _opts_broker_host = 'broker host'
 _opts_broker_start_port = 'broker starting port'
 _opts_kvdb_host = 'kvdb database host'
 _opts_kvdb_port = 'kvdb database port'
-
-supported_db_types = ('oracle', 'postgresql')
 
 ca_defaults = {
     'organization': 'My Company',
@@ -85,12 +83,12 @@ default_ca_name = 'Sample CA'
 default_common_name = 'localhost'
 
 common_odb_opts = [
-        {'name':'odb_type', 'help':_opts_odb_type, 'choices':supported_db_types},
+        {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES},
         {'name':'odb_host', 'help':_opts_odb_host},
         {'name':'odb_port', 'help':_opts_odb_port},
         {'name':'odb_user', 'help':_opts_odb_user},
         {'name':'odb_dbname', 'help':_opts_odb_dbname},
-        {'name':'--odb-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
+        {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
         {'name':'--odb-password', 'help':'ODB database password'},
 ]
 
@@ -165,6 +163,13 @@ class ZatoCommand(object):
     add_config_file = True
     target_dir = None
     opts = []
+    
+    class SYS_ERROR(object):
+        """ All non-zero sys.exit return codes the commands may use.
+        """
+        ODB_EXISTS = 1
+        FILE_MISSING = 2
+        NOT_A_ZATO_COMPONENT = 3
 
     def __init__(self, args):
         self.verbose = args.verbose
@@ -248,12 +253,12 @@ class ZatoCommand(object):
             file_name=os.path.abspath(file_name)))
 
     def _get_engine(self, args):
-        engine_url = engine_def.format(engine=args.odb_type, username=args.odb_user,
+        engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
                         password=args.odb_password, host=args.odb_host, db_name=args.odb_dbname)
-        return create_engine(engine_url)
+        return sqlalchemy.create_engine(engine_url)
 
     def _get_session(self, engine):
-        Session = sessionmaker()
+        Session = orm.sessionmaker()
         Session.configure(bind=engine)
         return Session()
 
@@ -302,7 +307,7 @@ class ZatoCommand(object):
         if check_password:
             args = self._check_passwords(args, check_password)
             
-        self.execute(args)
+        sys.exit(self.execute(args))
         
 class FromConfigFile(ZatoCommand):
     opts = []

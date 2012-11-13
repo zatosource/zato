@@ -26,7 +26,7 @@ import argparse, time
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod, \
-     component_version as component_version_mod, create_lb as create_lb_mod, \
+     component_version as component_version_mod, create_lb as create_lb_mod, create_odb as create_odb_mod, \
      FromConfigFile
 from zato.common import version as zato_version
     
@@ -44,7 +44,7 @@ zato delete odb .
 zato from-config ./zato.config.file
 zato quickstart create .
 zato quickstart start .
-zato info .
+zato info . # TODO: .lb-dir
 zato start .
 zato stop .
 zato --batch
@@ -61,7 +61,6 @@ def add_opts(parser, opts):
 
 def get_parser():
     base_parser = argparse.ArgumentParser(add_help=False)
-    base_parser.add_argument('path', help='Path to a directory')
     base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
     base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
     base_parser.add_argument('--store-config', 
@@ -83,21 +82,25 @@ def get_parser():
     ca_create_ca = ca_create_subs.add_parser('ca', 
         help='Create a new certificate authority ', parents=[base_parser])
     ca_create_ca.set_defaults(command='ca_create_ca')
+    ca_create_ca.add_argument('path', help='Path to an empty directory to hold the CA')
     add_opts(ca_create_ca, ca_create_ca_mod.CreateCA.opts)
     
     ca_create_lb_agent = ca_create_subs.add_parser('lb_agent', 
         help='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
     ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
+    ca_create_lb_agent.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_lb_agent, ca_create_lb_agent_mod.CreateLBAgent.opts)
         
     ca_create_server = ca_create_subs.add_parser('server', 
        help='Create crypto material for a Zato server', parents=[base_parser])
     ca_create_server.set_defaults(command='ca_create_server')
+    ca_create_server.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_server, ca_create_server_mod.CreateServer.opts)
 
     ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', 
         help='Create crypto material for a Zato web console', parents=[base_parser])
     ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
+    ca_create_zato_admin.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_zato_admin, ca_create_zato_admin_mod.CreateZatoAdmin.opts)
 
     # 
@@ -107,6 +110,7 @@ def get_parser():
         help='Shows the version of a Zato component installed in a given directory', 
         parents=[base_parser])
     component_version.set_defaults(command='component_version')
+    component_version.add_argument('path', help='Path to a Zato component')
     add_opts(component_version, component_version_mod.ComponentVersion.opts)
     
     # 
@@ -120,6 +124,7 @@ def get_parser():
     
     create_odb = create_subs.add_parser('odb', parents=[base_parser])
     create_odb.set_defaults(command='create_odb')
+    add_opts(create_odb, create_odb_mod.CreateODB.opts)
     
     create_server = create_subs.add_parser('server', parents=[base_parser])
     create_server.set_defaults(command='create_server')
@@ -172,6 +177,7 @@ def main():
         'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
         'component_version': component_version_mod.ComponentVersion,
         'create_lb': create_lb_mod.CreateLoadBalancer,
+        'create_odb': create_odb_mod.CreateODB,
         'from_config_file': FromConfigFile,
     }
     args = get_parser().parse_args()
