@@ -170,6 +170,7 @@ class ZatoCommand(object):
         ODB_EXISTS = 1
         FILE_MISSING = 2
         NOT_A_ZATO_COMPONENT = 3
+        NO_ODB_FOUND = 4
 
     def __init__(self, args):
         self.verbose = args.verbose
@@ -236,7 +237,7 @@ class ZatoCommand(object):
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
         """
-        now = fs_safe_now()
+        now = util.fs_safe_now()
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
 

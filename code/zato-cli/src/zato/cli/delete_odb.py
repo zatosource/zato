@@ -27,20 +27,19 @@ from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import drop_all
 
 class Delete(ZatoCommand):
-    command_name = "odb delete"
-
     needs_password_confirm = False
     opts = deepcopy(common_odb_opts)
-    description = "Deletes a Zato Operational Database (ODB), does not make any backups."
 
     def execute(self, args):
         engine = self._get_engine(args)
-        drop_all(engine)
-
-        print("\nSuccessfully dropped the ODB.")
-
-def main():
-    Delete().run()
-
-if __name__ == "__main__":
-    main()
+        
+        if engine.dialect.has_table(engine.connect(), 'install_state'):
+            drop_all(engine)
+            
+            if self.verbose:
+                self.logger.debug('Successfully deleted the ODB')
+            else:
+                self.logger.info('OK')
+        else:
+            self.logger.error('No ODB found')
+            return self.SYS_ERROR.NO_ODB_FOUND

@@ -27,6 +27,7 @@ import argparse, time
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod, \
      component_version as component_version_mod, create_lb as create_lb_mod, create_odb as create_odb_mod, \
+     delete_odb as delete_odb_mod, \
      FromConfigFile
 from zato.common import version as zato_version
     
@@ -37,7 +38,7 @@ from zato.common import version as zato_version
 # zato ca create zato_admin .
 # zato component-version .
 # zato create load_balancer .
-zato create odb .
+# zato create odb .
 zato create server .
 zato create zato_admin .
 zato delete odb .
@@ -124,7 +125,7 @@ def get_parser():
     
     create_odb = create_subs.add_parser('odb', parents=[base_parser])
     create_odb.set_defaults(command='create_odb')
-    add_opts(create_odb, create_odb_mod.CreateODB.opts)
+    add_opts(create_odb, create_odb_mod.Create.opts)
     
     create_server = create_subs.add_parser('server', parents=[base_parser])
     create_server.set_defaults(command='create_server')
@@ -138,6 +139,8 @@ def get_parser():
     delete = subs.add_parser('delete', help='Deletes Zato components')
     delete_subs = delete.add_subparsers()
     delete_odb = delete_subs.add_parser('odb', parents=[base_parser])
+    delete_odb .set_defaults(command='delete_odb')
+    add_opts(delete_odb, delete_odb_mod.Delete.opts)
     
     #
     # info
@@ -177,7 +180,8 @@ def main():
         'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
         'component_version': component_version_mod.ComponentVersion,
         'create_lb': create_lb_mod.CreateLoadBalancer,
-        'create_odb': create_odb_mod.CreateODB,
+        'create_odb': create_odb_mod.Create,
+        'delete_odb': delete_odb_mod.Delete,
         'from_config_file': FromConfigFile,
     }
     args = get_parser().parse_args()

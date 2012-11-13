@@ -33,7 +33,7 @@ from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import VERSION
 from zato.common.odb.model import Base, ZatoInstallState
 
-class CreateODB(ZatoCommand):
+class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
 
     def execute(self, args):
