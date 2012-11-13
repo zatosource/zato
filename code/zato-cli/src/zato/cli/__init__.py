@@ -49,6 +49,16 @@ ZATO_BROKER_DIR = b'.zato-broker-dir'
 ZATO_SERVER_DIR = b'.zato-server-dir'
 ZATO_INFO_FILE = b'.zato-info'
 
+class COMPONENTS(object):
+    class _ComponentName(object):
+        def __init__(self, code, name):
+            self.code = code
+            self.name = name
+
+    LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
+    SERVER = _ComponentName('SERVER', 'Server')
+    ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
+
 _opts_odb_type = 'ODB database type'
 _opts_odb_host = 'ODB database host'
 _opts_odb_port = 'ODB database port'
@@ -210,10 +220,11 @@ class ZatoCommand(object):
     def _get_user_host(self):
         return getuser() + '@' + gethostname()
     
-    def store_initial_info(self, target_dir):
+    def store_initial_info(self, target_dir, component):
         info = {'version': common.version_raw,
                 'created_user_host': self._get_user_host(),
                 'created_ts': datetime.utcnow().isoformat(),
+                'component': component
             }
         open(os.path.join(target_dir, ZATO_INFO_FILE), 'wb').write(json.dumps(info))
 
@@ -267,7 +278,7 @@ class ZatoCommand(object):
         """
         # Do we need to have a clean directory to work in?
         if self.needs_empty_dir:
-            work_dir = os.path.abspath(os.path.join(os.getcwd(), args.path))
+            work_dir = os.path.abspath(args.path)
             if os.listdir(work_dir):
                 msg = ('Directory {} is not empty, please re-run the command ' +
                       'in an empty directory').format(work_dir)

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.cli import common_logging_conf_contents, ZatoCommand, ZATO_LB_DIR
+from zato.cli import common_logging_conf_contents, COMPONENTS, ZatoCommand, ZATO_LB_DIR
 from zato.common.defaults import http_plain_server_port
 
 # bzrlib
@@ -68,8 +68,7 @@ defaults
     stats enable
     stats realm   Haproxy\ Statistics
 
-    # Note: Although it may seem just the opposite, the password below is
-    # written in plain-text. It's not a hash or anything similar.
+    # Note: The password below is a UUID4 written in plain-text.
     stats auth    admin1:{stats_password}
 
     stats refresh 5s
@@ -125,7 +124,6 @@ class CreateLoadBalancer(ZatoCommand):
 
         open(os.path.join(self.target_dir, 'config', 'lb-agent.conf'), 'w').write(config_template)
         open(os.path.join(self.target_dir, 'config', 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path)))
-        open(os.path.join(self.target_dir, ZATO_LB_DIR), 'w').close()
         
         if use_default_backend:
             backend = default_backend.format(server01_port=http_plain_server_port, server02_port=server02_port)
@@ -137,12 +135,10 @@ class CreateLoadBalancer(ZatoCommand):
         open(os.path.join(self.target_dir, 'config', 'zato.config'), 'w').write(zato_config)
         
         # Initial info
-        self.store_initial_info(self.target_dir)
+        self.store_initial_info(self.target_dir, COMPONENTS.LOAD_BALANCER.code)
 
         if self.verbose:
-            msg = """Successfully created a Load Balancer's agent.
-                You can now go to {path} and start it with the 'zato start lb-agent' command.""".format(
-                    path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
+            msg = "Successfully created a load-balancer's agent in {}".format(self.target_dir)
             self.logger.debug(msg)
         else:
             self.logger.info('OK')
