@@ -33,7 +33,7 @@ lazy_import(globals(), """
 
 
 # Zato
-from zato.cli import ca_defaults, default_ca_name, ZatoCommand
+from zato.cli import ca_defaults, default_ca_name, ZatoCommand, COMPONENTS
 
 openssl_template = '''
 dir                            = {target_dir}
@@ -159,7 +159,7 @@ class CreateCA(ZatoCommand):
         open(os.path.join(self.target_dir, '.zato-ca-dir'), 'w')
         
         # Initial info
-        self.store_initial_info(self.target_dir)
+        self.store_initial_info(self.target_dir, COMPONENTS.CA.code)
 
         if self.verbose:
             msg = 'Successfully created a certificate authority in {path}'.format(

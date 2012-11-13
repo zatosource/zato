@@ -55,6 +55,7 @@ class COMPONENTS(object):
             self.code = code
             self.name = name
 
+    CA = _ComponentName('CA', 'CA (certificate authority)')
     LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
     SERVER = _ComponentName('SERVER', 'Server')
     ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
