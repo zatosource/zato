@@ -129,7 +129,7 @@ def encrypt(data, pub_key, padding=RSA.pkcs1_padding, b64=True):
     b64 - should the encrypted data be BASE64-encoded before being returned,
                 defaults to True
     """
-    logger.debug("Using pub_key:[%s]" % pub_key)
+    logger.debug('Using pub_key:[{}]'.format(pub_key))
 
     bio = BIO.MemoryBuffer(pub_key)
     bio.close()
