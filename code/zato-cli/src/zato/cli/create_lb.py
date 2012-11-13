@@ -142,9 +142,3 @@ class CreateLoadBalancer(ZatoCommand):
             self.logger.debug(msg)
         else:
             self.logger.info('OK')
-
-def main(target_dir):
-    CreateLoadBalancer(target_dir).run()
-
-if __name__ == "__main__":
-    main(".")
