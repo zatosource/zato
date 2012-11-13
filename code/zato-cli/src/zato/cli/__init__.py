@@ -171,6 +171,7 @@ class ZatoCommand(object):
         FILE_MISSING = 2
         NOT_A_ZATO_COMPONENT = 3
         NO_ODB_FOUND = 4
+        DIR_NOT_EMPTY = 5
 
     def __init__(self, args):
         self.verbose = args.verbose
@@ -289,7 +290,7 @@ class ZatoCommand(object):
                 msg = ('Directory {} is not empty, please re-run the command ' +
                       'in an empty directory').format(work_dir)
                 self.logger.info(msg)
-                sys.exit(2)
+                sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY)
 
         # Do we need the directory to contain any specific files?
         if self.file_needed:
@@ -297,7 +298,7 @@ class ZatoCommand(object):
             if not os.path.exists(full_path):
                 msg = 'Could not find file {}'.format(full_path)
                 self.logger.info(msg)
-                sys.exit(2)
+                sys.exit(self.SYS_ERROR.FILE_MISSING)
         
         check_password = []
         for opt_dict in self.opts:
