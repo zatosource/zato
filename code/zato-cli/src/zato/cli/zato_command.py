@@ -47,9 +47,9 @@ zato create zato_admin .
 zato from-config ./zato.config.file
 zato quickstart create .
 zato quickstart start .
-zato info . # TODO: .lb-dir
-zato services dump . token
-zato services install . dump
+zato info . # TODO: replace .lb-dir with .zato-info['component']
+zato services export . token
+zato services import . dump
 zato start .
 zato stop .
 zato update server --priv-key ./path --pub-key ./path --cert ./path
@@ -127,7 +127,7 @@ def get_parser():
     
     create_lb = create_subs.add_parser('load_balancer', parents=[base_parser], 
         description='Creates a new Zato load-balancer')
-    create_lb.add_argument('path', help='Path to an empty directory')
+    create_lb.add_argument('path', help='Path to an empty directory to install the load-balancer in')
     create_lb.set_defaults(command='create_lb')
     
     create_odb = create_subs.add_parser('odb', parents=[base_parser])
@@ -135,7 +135,10 @@ def get_parser():
     add_opts(create_odb, create_odb_mod.Create.opts)
     
     create_server = create_subs.add_parser('server', parents=[base_parser], description='Creates a new Zato server')
-    create_server.add_argument('path', help='Path to an empty directory')
+    create_server.add_argument('path', help='Path to an empty directory to install the server in')
+    create_server.add_argument('crypto_pub_key', help="Path to the server's public key in PEM")
+    create_server.add_argument('crypto_priv_key', help="Path to the server's private key in PEM")
+    create_server.add_argument('crypto_cert', help="Path to the server's certificate in PEM")
     create_server.set_defaults(command='create_server')
     add_opts(create_server, create_server_mod.Create.opts)
     
