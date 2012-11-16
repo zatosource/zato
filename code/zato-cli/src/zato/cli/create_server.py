@@ -20,7 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+<<<<<<< HEAD
 import os, shutil, uuid
+=======
+import os, uuid
+>>>>>>> 27a58062d80ba5fd1b0996ece35b0a397de2bbaa
 from copy import deepcopy
 from multiprocessing import cpu_count
 
@@ -112,6 +116,7 @@ class Create(ZatoCommand):
     opts.append({'name':'pub_key_path', 'help':"Path to the server's public key"})
     opts.append({'name':'priv_key_path', 'help':"Path to the server's private key"})
     opts.append({'name':'cert_path', 'help':"Path to the server's certificate"})
+
 
     def __init__(self, args, cluster_name=None):
         super(Create, self).__init__(args)
