@@ -49,16 +49,6 @@ ZATO_BROKER_DIR = b'.zato-broker-dir'
 ZATO_SERVER_DIR = b'.zato-server-dir'
 ZATO_INFO_FILE = b'.zato-info'
 
-class COMPONENTS(object):
-    class _ComponentName(object):
-        def __init__(self, code, name):
-            self.code = code
-            self.name = name
-
-    LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
-    SERVER = _ComponentName('SERVER', 'Server')
-    ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
-
 _opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES)
 _opts_odb_host = 'Operational database host'
 _opts_odb_port = 'Operational database port'
@@ -158,7 +148,8 @@ class ZatoCommand(object):
     """
     needs_empty_dir = False
     file_needed = None
-    needs_password_confirm = True
+    needs_secrets_confirm = True
+    allow_empty_secrets = False
     add_batch = True
     add_config_file = True
     target_dir = None
@@ -172,6 +163,16 @@ class ZatoCommand(object):
         NOT_A_ZATO_COMPONENT = 3
         NO_ODB_FOUND = 4
         DIR_NOT_EMPTY = 5
+        
+    class COMPONENTS(object):
+        class _ComponentName(object):
+            def __init__(self, code, name):
+                self.code = code
+                self.name = name
+    
+        LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
+        SERVER = _ComponentName('SERVER', 'Server')
+        ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
 
     def __init__(self, args):
         self.verbose = args.verbose
@@ -194,29 +195,29 @@ class ZatoCommand(object):
         
         self.engine = None
         
-    def _get_password(self, template, needs_confirm):
-        """ Runs an infinite loop until a user enters the password. User needs
-        to confirm the password if 'needs_confirm' is True. New line characters
-        are always stripped before returning the password, so that "\n" becomes
+    def _get_secret(self, template, needs_confirm, allow_empty, secret_name='password'):
+        """ Runs an infinite loop until a user enters the secret. User needs
+        to confirm the secret if 'needs_confirm' is True. New line characters
+        are always stripped before returning the secret, so that "\n" becomes
         "", "\nsecret\n" becomes "secret" and "\nsec\nret\n" becomes "sec\nret".
         """
         keep_running = True
         self.logger.info('')
 
         while keep_running:
-            password1 = getpass(template + ' (will not be echoed): ')
+            secret1 = getpass(template + ' (will not be echoed): ')
             if not needs_confirm:
-                return password1.strip('\n')
+                return secret1.strip('\n')
 
-            password2 = getpass('Enter the password again. Will not be echoed: ')
+            secret2 = getpass('Enter the {} again. Will not be echoed: '.format(secret_name))
 
-            if password1 != password2:
-                self.logger.info('Passwords do not match')
+            if secret1 != secret2:
+                self.logger.info('{}s do not match'.format(secret_name.capitalize()))
             else:
-                if not password1:
-                    self.logger.info('No password entered')
+                if not secret1 and not allow_empty:
+                    self.logger.info('No {} entered'.format(secret_name))
                 else:
-                    return password1.strip('\n')
+                    return secret1.strip('\n')
 
     def _get_now(self, time_=None):
         if not time_:
@@ -270,7 +271,7 @@ class ZatoCommand(object):
         for opt_name, opt_help in check_password:
             opt_name = opt_name.replace('--', '').replace('-', '_')
             if not getattr(args, opt_name, None):
-                password = self._get_password(opt_help, self.needs_password_confirm)
+                password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets)
                 setattr(args, opt_name, password)
 
         return args
@@ -303,7 +304,7 @@ class ZatoCommand(object):
         check_password = []
         for opt_dict in self.opts:
             name = opt_dict['name']
-            if 'password' in name:
+            if 'password' in name or 'secret' in name:
                 check_password.append((name, opt_dict['help']))
         
         if check_password:

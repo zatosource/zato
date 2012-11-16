@@ -41,7 +41,9 @@ from zato.common import version as zato_version
 # zato create odb .
 zato create server .
 zato create zato_admin .
+# zato decrypt . --secret
 # zato delete odb .
+# zato encrypt . --secret
 zato from-config ./zato.config.file
 zato quickstart create .
 zato quickstart start .
@@ -50,6 +52,7 @@ zato services dump . token
 zato services install . dump
 zato start .
 zato stop .
+zato update server --priv-key ./path --pub-key ./path --cert ./path
 zato --batch
 zato --store-config
 # zato --store-log
@@ -134,6 +137,7 @@ def get_parser():
     create_server = create_subs.add_parser('server', parents=[base_parser], description='Creates a new Zato server')
     create_server.add_argument('path', help='Path to an empty directory')
     create_server.set_defaults(command='create_server')
+    add_opts(create_server, create_server_mod.Create.opts)
     
     create_zato_admin = create_subs.add_parser('zato_admin', parents=[base_parser])
     create_zato_admin.set_defaults(command='create_zato_admin')

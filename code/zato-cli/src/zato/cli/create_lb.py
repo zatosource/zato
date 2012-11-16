@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.cli import common_logging_conf_contents, COMPONENTS, ZatoCommand, ZATO_LB_DIR
+from zato.cli import common_logging_conf_contents, ZatoCommand, ZATO_LB_DIR
 from zato.common.defaults import http_plain_server_port
 
 # bzrlib
@@ -135,7 +135,7 @@ class CreateLoadBalancer(ZatoCommand):
         open(os.path.join(self.target_dir, 'config', 'zato.config'), 'w').write(zato_config)
         
         # Initial info
-        self.store_initial_info(self.target_dir, COMPONENTS.LOAD_BALANCER.code)
+        self.store_initial_info(self.target_dir, self.COMPONENTS.LOAD_BALANCER.code)
 
         if self.verbose:
             msg = "Successfully created a load-balancer's agent in {}".format(self.target_dir)
