@@ -28,7 +28,7 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod, \
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
-     create_zato_admin as create_zato_admin_mod, delete_odb as delete_odb_mod, \
+     create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
      FromConfigFile
 from zato.common import version as zato_version
     
@@ -42,10 +42,10 @@ from zato.common import version as zato_version
 # zato create odb .
 # zato create cluster
 # zato create server .
-zato create zato_admin .
-zato decrypt . --secret
+# zato create zato_admin .
+# zato decrypt . --secret
 # zato delete odb .
-zato encrypt . --secret
+# zato encrypt . --secret
 zato from-config ./zato.config.file
 zato quickstart create .
 zato quickstart start .
@@ -54,7 +54,7 @@ zato services export . token
 zato services import . dump
 zato start .
 zato stop .
-zato update server --priv-key ./path --pub-key ./path --cert ./path
+zato update component --priv-key ./path --pub-key ./path --cert ./path
 zato --batch
 zato --store-config
 # zato --store-log
@@ -149,6 +149,14 @@ def get_parser():
     create_zato_admin.add_argument('path', help='Path to an empty directory to install a new Zato Admin web console in')
     create_zato_admin.set_defaults(command='create_zato_admin')
     add_opts(create_zato_admin, create_zato_admin_mod.Create.opts)
+
+    #
+    # decrypt
+    #
+    decrypt = subs.add_parser('decrypt', parents=[base_parser], description='Decrypts secrets using a private key')
+    decrypt.add_argument('path', help='Path to the private key in PEM')
+    decrypt.set_defaults(command='decrypt')
+    add_opts(decrypt, crypto_mod.Decrypt.opts)
     
     #
     # delete
@@ -156,8 +164,16 @@ def get_parser():
     delete = subs.add_parser('delete', description='Deletes Zato components')
     delete_subs = delete.add_subparsers()
     delete_odb = delete_subs.add_parser('odb', parents=[base_parser], description='Deletes a Zato ODB')
-    delete_odb .set_defaults(command='delete_odb')
+    delete_odb.set_defaults(command='delete_odb')
     add_opts(delete_odb, delete_odb_mod.Delete.opts)
+    
+    #
+    # encrypt
+    #
+    encrypt = subs.add_parser('encrypt', parents=[base_parser], description='Encrypts secrets using a public key')
+    encrypt.add_argument('path', help='Path to the public key in PEM')
+    encrypt.set_defaults(command='encrypt')
+    add_opts(encrypt, crypto_mod.Encrypt.opts)
     
     #
     # info
@@ -209,6 +225,8 @@ def main():
         'create_server': create_server_mod.Create,
         'create_zato_admin': create_zato_admin_mod.Create,
         'delete_odb': delete_odb_mod.Delete,
+        'decrypt': crypto_mod.Decrypt,
+        'encrypt': crypto_mod.Encrypt,
         'from_config_file': FromConfigFile,
     }
     args = get_parser().parse_args()

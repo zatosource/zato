@@ -274,7 +274,7 @@ class ZatoCommand(object):
         for opt_name, opt_help in check_password:
             opt_name = opt_name.replace('--', '').replace('-', '_')
             if not getattr(args, opt_name, None):
-                password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets)
+                password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets, opt_name)
                 setattr(args, opt_name, password)
 
         return args

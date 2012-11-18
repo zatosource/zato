@@ -95,7 +95,7 @@ class Create(ZatoCommand):
             'DATABASE_HOST': args.odb_host,
             'DATABASE_PORT': args.odb_port,
             'SITE_ID': uuid.uuid4().int,
-            'SECRET_KEY': uuid.uuid4().hex,
+            'SECRET_KEY': encrypt(uuid.uuid4().hex, pub_key),
             'TECH_ACCOUNT_NAME':args.tech_account_name,
             'TECH_ACCOUNT_PASSWORD':encrypt(args.tech_account_password, pub_key),
         }
@@ -106,8 +106,9 @@ class Create(ZatoCommand):
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.ZATO_ADMIN.code)
 
-        msg = """\nSuccessfully created a Zato Admin instance.
-You can now go to {path} and start it with the 'zato start zato-admin' command.
-""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
-
-        print(msg)
+        if self.verbose:
+            msg = """Successfully created a Zato Admin instance.
+You can start it with the 'zato start zato_admin {path}' command.""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
+            self.logger.debug(msg)
+        else:
+            self.logger.info('OK')
