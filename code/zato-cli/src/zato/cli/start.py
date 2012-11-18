@@ -43,15 +43,6 @@ zdaemon_conf_name_contents = """<runner>
 
 class Start(ManageCommand):
 
-    command_name = 'start'
-    description = """Starts a Zato component installed in the 'component_dir'. The same command is used for starting servers, load-balancer agents and Zato Admin instances.
-component_dir must point to an existing directory into which the given component has been installed.
-
-Examples:
-  Assuming a Zato server has been installed in /opt/zato/server1, the command to start the server is 'zato start /opt/zato/server1'.
-  If a load-balancer's agent has been installed in /home/zato/lb-agent1, the command to start it is 'zato start /home/zato/lb-agent1'.
-"""
-
     def _on_server(self):
 
         server_conf = ConfigObj(os.path.join(self.config_dir, 'repo', 'server.conf'))

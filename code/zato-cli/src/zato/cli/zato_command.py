@@ -27,8 +27,8 @@ import argparse, time
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod, \
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
-     create_lb as create_lb_mod, create_odb as create_odb_mod, \
-     create_server as create_server_mod, delete_odb as delete_odb_mod, \
+     create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
+     create_zato_admin as create_zato_admin_mod, delete_odb as delete_odb_mod, \
      FromConfigFile
 from zato.common import version as zato_version
     
@@ -44,7 +44,7 @@ from zato.common import version as zato_version
 # zato create server .
 zato create zato_admin .
 zato decrypt . --secret
-zato delete odb .
+# zato delete odb .
 zato encrypt . --secret
 zato from-config ./zato.config.file
 zato quickstart create .
@@ -145,8 +145,10 @@ def get_parser():
     create_server.set_defaults(command='create_server')
     add_opts(create_server, create_server_mod.Create.opts)
     
-    create_zato_admin = create_subs.add_parser('zato_admin', parents=[base_parser])
+    create_zato_admin = create_subs.add_parser('zato_admin', parents=[base_parser], description='Creates a new Zato Admin web console')
+    create_zato_admin.add_argument('path', help='Path to an empty directory to install a new Zato Admin web console in')
     create_zato_admin.set_defaults(command='create_zato_admin')
+    add_opts(create_zato_admin, create_zato_admin_mod.Create.opts)
     
     #
     # delete
@@ -178,7 +180,14 @@ def get_parser():
     #
     # start
     #
-    start = subs.add_parser('start', description='Starts a Zato component', parents=[base_parser])
+    start_desc = """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer agents and Zato Admin instances.
+'path' must point to an existing directory into which the given component has been installed.
+
+Examples:
+  Assuming a Zato server has been installed in /opt/zato/server1, the command to start the server is 'zato start /opt/zato/server1'.
+  If a load-balancer's agent has been installed in /home/zato/lb-agent1, the command to start it is 'zato start /home/zato/lb-agent1'.
+"""
+    start = subs.add_parser('start', description=start_desc, parents=[base_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
     
     #
     # stop
@@ -198,6 +207,7 @@ def main():
         'create_lb': create_lb_mod.CreateLoadBalancer,
         'create_odb': create_odb_mod.Create,
         'create_server': create_server_mod.Create,
+        'create_zato_admin': create_zato_admin_mod.Create,
         'delete_odb': delete_odb_mod.Delete,
         'from_config_file': FromConfigFile,
     }
