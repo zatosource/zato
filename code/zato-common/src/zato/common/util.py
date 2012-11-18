@@ -61,7 +61,7 @@ from dateutil.parser import parse
 from lxml import objectify
 
 # M2Crypto
-from M2Crypto import BIO, RSA
+from M2Crypto import RSA
 
 # pip
 from pip.download import is_archive_file
@@ -75,8 +75,9 @@ from springpython.remoting.http import CAValidatingHTTPSConnection
 from springpython.remoting.xmlrpc import SSLClientTransport
 
 # Zato
-from zato.common import KVDB, SIMPLE_IO, soap_body_xpath, ZatoException
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
+from zato.common import KVDB, SIMPLE_IO, soap_body_xpath, ZatoException
+from zato.common.crypto import CryptoManager
 
 logger = logging.getLogger(__name__)
 
@@ -124,13 +125,32 @@ def pprint(obj):
 def encrypt(data, pub_key, padding=RSA.pkcs1_padding, b64=True):
     """ Encrypt data using the given public key.
     data - data to be encrypted
-    pub_key - public key to use
+    pub_key - public key to use (as a PEM string)
     padding - padding to use, defaults to PKCS#1
-    b64 - should the encrypted data be BASE64-encoded before being returned,
-                defaults to True
+    b64 - should the encrypted data be BASE64-encoded before being returned, defaults to True
     """
     logger.debug('Using pub_key:[{}]'.format(pub_key))
+    
+    cm = CryptoManager(pub_key=pub_key)
+    cm.load_keys()
+    
+    return cm.encrypt(data, padding, b64)
 
+def decrypt(data, priv_key, padding=RSA.pkcs1_padding, b64=True):
+    """ Decrypts data using the given private key.
+    data - data to be encrypted
+    priv_key - private key to use (as a PEM string)
+    padding - padding to use, defaults to PKCS#1
+    b64 - should the data be BASE64-decoded before being decrypted, defaults to True
+    """
+    logger.debug('Using priv_key:[{}]'.format(priv_key))
+    
+    cm = CryptoManager(priv_key=priv_key)
+    cm.load_keys()
+    
+    return cm.decrypt(data, padding, b64)
+
+    '''
     bio = BIO.MemoryBuffer(pub_key)
     bio.close()
     rsa = RSA.load_pub_key_bio(bio)
@@ -141,13 +161,8 @@ def encrypt(data, pub_key, padding=RSA.pkcs1_padding, b64=True):
         encrypted = b64encode(encrypted)
 
     return encrypted
+    '''
 
-def sign(data, priv_key):
-    """ Signs the data using a private key from the given path and returns
-    the BASE64-encoded signature.
-    """
-    sig = priv_key.sign(sha1(data).digest())
-    return b64encode(sig)
 
 # Based on
 # http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored
