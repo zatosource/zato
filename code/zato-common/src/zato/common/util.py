@@ -271,7 +271,7 @@ def new_cid():
     formatted ticket attached to each of the requests processed by Zato servers.
     """
     
-    # The number below (24) needs to be kept in sync with zato.common.log_message.CID_LENGTH
+    # The number below (29) needs to be kept in sync with zato.common.log_message.CID_LENGTH
     # and the Service.sample_cid column
     return 'K{0:0>29}'.format(getrandbits(96))
 

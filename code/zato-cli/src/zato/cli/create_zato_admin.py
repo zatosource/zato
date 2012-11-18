@@ -70,7 +70,7 @@ class CreateZatoAdmin(ZatoCommand):
             'port': zato_admin_port,
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
-            'DATABASE_NAME': args.odb_dbname,
+            'DATABASE_NAME': args.odb_db_name,
             'DATABASE_USER': args.odb_user,
             'DATABASE_PASSWORD': args.odb_password,
             'DATABASE_HOST': args.odb_host,

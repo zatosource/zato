@@ -20,16 +20,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-<<<<<<< HEAD
 import os, shutil, uuid
-=======
-import os, uuid
->>>>>>> 27a58062d80ba5fd1b0996ece35b0a397de2bbaa
 from copy import deepcopy
 from multiprocessing import cpu_count
 
 # Zato
-from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents, common_odb_opts
+from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents, common_odb_opts, \
+     kvdb_opts
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster
 from zato.common.util import encrypt
@@ -54,6 +51,7 @@ host={odb_host}
 password={odb_password}
 pool_size={odb_pool_size}
 username={odb_user}
+token={odb_token}
 
 [hot_deploy]
 pickup_dir=../../pickup-dir
@@ -81,6 +79,8 @@ context_class=zato.server.spring_context.ZatoContext
 
 [misc]
 internal_services_may_be_deleted=False
+initial_cluster_name = {initial_cluster_name}
+initial_server_name = {initial_server_name}
 
 [kvdb]
 host={kvdb_host}
@@ -107,16 +107,15 @@ pub_key_location = './config/repo/config-pub.pem'
 class Create(ZatoCommand):
     needs_empty_dir = True
     allow_empty_secrets = True
+    
     opts = deepcopy(common_odb_opts)
+    opts.extend(deepcopy(kvdb_opts))
     
-    opts.append({'name':'kvdb_host', 'help':'Key/value DB host'})
-    opts.append({'name':'kvdb_port', 'help':'Key/value DB port'})
-    opts.append({'name':'kvdb_password', 'help':'Key/value DB password'})
-    
-    opts.append({'name':'pub_key_path', 'help':"Path to the server's public key"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the server's private key"})
-    opts.append({'name':'cert_path', 'help':"Path to the server's certificate"})
-
+    opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
+    opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
+    opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
+    opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
+    opts.append({'name':'server_name', 'help':"Server's name"})
 
     def __init__(self, args, cluster_name=None):
         super(Create, self).__init__(args)
@@ -136,8 +135,6 @@ class Create(ZatoCommand):
 
     def execute(self, args, server_pub_key=None, starting_port=http_plain_server_port,
                 parallel_count=cpu_count() * 2):
-        
-        print(args)
         
         cluster_name = args.cluster if 'cluster' in args else self.cluster_name
 
@@ -178,15 +175,19 @@ class Create(ZatoCommand):
             server_conf_template.format(
                 starting_port=starting_port,
                 parallel_count=parallel_count, 
-                odb_db_name=args.odb_dbname, 
+                odb_db_name=args.odb_db_name, 
                 odb_engine=args.odb_type, 
                 odb_host=args.odb_host,
                 odb_password=encrypt(args.odb_password, pub_key), 
                 odb_pool_size=default_odb_pool_size, 
                 odb_user=args.odb_user, 
+                odb_token=uuid.uuid4().hex, 
                 kvdb_host=args.kvdb_host,
                 kvdb_port=args.kvdb_port, 
-                kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else ''))
+                kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else '',
+                initial_cluster_name=args.cluster_name, 
+                initial_server_name=args.server_name, 
+                ))
         server_conf.close()
         
         self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))

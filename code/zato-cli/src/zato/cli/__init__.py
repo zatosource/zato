@@ -54,11 +54,11 @@ _opts_odb_host = 'Operational database host'
 _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
 _opts_odb_schema = 'Operational database schema'
-_opts_odb_dbname = 'Operational database name'
-_opts_broker_host = 'broker host'
-_opts_broker_start_port = 'broker starting port'
-_opts_kvdb_host = 'kvdb database host'
-_opts_kvdb_port = 'kvdb database port'
+_opts_odb_db_name = 'Operational database name'
+_opts_broker_host = 'Broker host'
+_opts_broker_port = 'Broker port'
+_opts_kvdb_host = 'Key/value DB host'
+_opts_kvdb_port = 'Key/value DB port'
 
 ca_defaults = {
     'organization': 'My Company',
@@ -77,14 +77,14 @@ common_odb_opts = [
         {'name':'odb_host', 'help':_opts_odb_host},
         {'name':'odb_port', 'help':_opts_odb_port},
         {'name':'odb_user', 'help':_opts_odb_user},
-        {'name':'odb_dbname', 'help':_opts_odb_dbname},
+        {'name':'odb_db_name', 'help':_opts_odb_db_name},
         {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
         {'name':'--odb-password', 'help':'ODB database password'},
 ]
 
 broker_opts = [
     {'name':'broker_host', 'help':_opts_broker_host},
-    {'name':'broker_start_port', 'help':_opts_broker_start_port},
+    {'name':'broker_port', 'help':_opts_broker_port},
 ]
 
 common_ca_create_opts = [
@@ -98,7 +98,7 @@ common_ca_create_opts = [
 kvdb_opts = [
     {'name':'kvdb_host', 'help':_opts_kvdb_host},
     {'name':'kvdb_port', 'help':_opts_kvdb_port},
-    {'name':'--kvdb-password', 'help':'kvdb database password'},
+    {'name':'--kvdb-password', 'help':'Key/value database password'},
 ]
 
 common_logging_conf_contents = """
@@ -163,6 +163,7 @@ class ZatoCommand(object):
         NOT_A_ZATO_COMPONENT = 3
         NO_ODB_FOUND = 4
         DIR_NOT_EMPTY = 5
+        CLUSTER_NAME_ALREADY_EXISTS = 6
         
     class COMPONENTS(object):
         class _ComponentName(object):
@@ -257,7 +258,7 @@ class ZatoCommand(object):
 
     def _get_engine(self, args):
         engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
-                        password=args.odb_password, host=args.odb_host, db_name=args.odb_dbname)
+                        password=args.odb_password, host=args.odb_host, db_name=args.odb_db_name)
         return sqlalchemy.create_engine(engine_url)
 
     def _get_session(self, engine):
