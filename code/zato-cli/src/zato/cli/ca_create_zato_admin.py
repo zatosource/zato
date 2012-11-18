@@ -27,7 +27,7 @@ from zato.cli import CACreateCommand, common_ca_create_opts
 
 class CreateZatoAdmin(CACreateCommand):
     opts = [
-        {'name':'organizational-unit', 'help':'Organizational unit name'},
+        {'name':'--organizational-unit', 'help':'Organizational unit name'},
     ]
     opts += deepcopy(common_ca_create_opts)
 
