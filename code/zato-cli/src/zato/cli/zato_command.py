@@ -26,7 +26,8 @@ import argparse, time
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod, \
-     component_version as component_version_mod, create_lb as create_lb_mod, create_odb as create_odb_mod, \
+     component_version as component_version_mod, create_cluster as create_cluster_mod, \
+     create_lb as create_lb_mod, create_odb as create_odb_mod, \
      create_server as create_server_mod, delete_odb as delete_odb_mod, \
      FromConfigFile
 from zato.common import version as zato_version
@@ -39,6 +40,7 @@ from zato.common import version as zato_version
 # zato component-version .
 # zato create load_balancer .
 # zato create odb .
+zato create cluster
 zato create server .
 zato create zato_admin .
 # zato decrypt . --secret
@@ -125,20 +127,21 @@ def get_parser():
     create = subs.add_parser('create', description='Creates new Zato components')
     create_subs = create.add_subparsers()
     
+    create_cluster = create_subs.add_parser('cluster', parents=[base_parser], description='Creates a new Zato cluster in the ODB')
+    create_cluster.set_defaults(command='create_cluster')
+    add_opts(create_cluster, create_cluster_mod.Create.opts)
+    
     create_lb = create_subs.add_parser('load_balancer', parents=[base_parser], 
         description='Creates a new Zato load-balancer')
     create_lb.add_argument('path', help='Path to an empty directory to install the load-balancer in')
     create_lb.set_defaults(command='create_lb')
     
-    create_odb = create_subs.add_parser('odb', parents=[base_parser])
+    create_odb = create_subs.add_parser('odb', parents=[base_parser], description='Creates a new Zato ODB (Operational Database)')
     create_odb.set_defaults(command='create_odb')
     add_opts(create_odb, create_odb_mod.Create.opts)
     
     create_server = create_subs.add_parser('server', parents=[base_parser], description='Creates a new Zato server')
     create_server.add_argument('path', help='Path to an empty directory to install the server in')
-    create_server.add_argument('crypto_pub_key', help="Path to the server's public key in PEM")
-    create_server.add_argument('crypto_priv_key', help="Path to the server's private key in PEM")
-    create_server.add_argument('crypto_cert', help="Path to the server's certificate in PEM")
     create_server.set_defaults(command='create_server')
     add_opts(create_server, create_server_mod.Create.opts)
     
@@ -191,6 +194,7 @@ def main():
         'ca_create_server': ca_create_server_mod.CreateServer,
         'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
         'component_version': component_version_mod.ComponentVersion,
+        'create_cluster': create_cluster_mod.Create,
         'create_lb': create_lb_mod.CreateLoadBalancer,
         'create_odb': create_odb_mod.Create,
         'create_server': create_server_mod.Create,

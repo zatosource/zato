@@ -357,12 +357,14 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.odb_data.password = self.crypto_manager.decrypt(self.odb_data['password'])
         self.config.odb_data.pool_size = self.odb_data['pool_size']
         self.config.odb_data.username = self.odb_data['username']
+        self.config.odb_data.token = self.odb_data['token']
         self.config.odb_data.is_odb = True
         
         # This is the call that creates an SQLAlchemy connection
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
+        self.odb.token = self.config.odb_data.token
         
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.

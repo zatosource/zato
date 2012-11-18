@@ -83,19 +83,18 @@ class Cluster(Base):
     odb_db_name = Column(String(200), nullable=False)
     odb_schema = Column(String(200), nullable=True)
     broker_host = Column(String(200), nullable=False)
-    broker_start_port = Column(Integer(), nullable=False)
-    broker_token = Column(String(32), nullable=False)
+    broker_port = Column(Integer(), nullable=False)
     lb_host = Column(String(200), nullable=False)
-    lb_agent_port = Column(Integer(), nullable=False)
     lb_port = Column(Integer(), nullable=False)
+    lb_agent_port = Column(Integer(), nullable=False)
     cw_srv_id = Column(Integer(), nullable=True)
     cw_srv_keep_alive_dt = Column(DateTime(), nullable=True)
 
     def __init__(self, id=None, name=None, description=None, odb_type=None,
                  odb_host=None, odb_port=None, odb_user=None, odb_db_name=None,
                  odb_schema=None, broker_host=None, 
-                 broker_start_port=None, broker_token=None, lb_host=None, lb_agent_port=None,
-                 lb_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
+                 broker_port=None, lb_host=None, lb_port=None,
+                 lb_agent_port=None, cw_srv_id=None, cw_srv_keep_alive_dt=None):
         self.id = id
         self.name = name
         self.description = description
@@ -106,8 +105,7 @@ class Cluster(Base):
         self.odb_db_name = odb_db_name
         self.odb_schema = odb_schema
         self.broker_host = broker_host
-        self.broker_start_port = broker_start_port
-        self.broker_token = broker_token
+        self.broker_port = broker_port
         self.lb_host = lb_host
         self.lb_agent_port = lb_agent_port
         self.lb_port = lb_port

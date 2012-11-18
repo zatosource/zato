@@ -549,8 +549,8 @@ class Quickstart(ZatoCommand):
             # Cluster
             #
             cluster = Cluster(None, cluster_name, 'An automatically generated quickstart cluster',
-                args.odb_type, args.odb_host, args.odb_port, args.odb_user, args.odb_dbname, 
-                args.odb_schema, args.broker_host, args.broker_start_port, cb.token, 'localhost', 20151,  11223)
+                args.odb_type, args.odb_host, args.odb_port, args.odb_user, args.odb_db_name, 
+                args.odb_schema, args.broker_host, args.broker_port, cb.token, 'localhost', 11223, 20151)
 
             #
             # Servers

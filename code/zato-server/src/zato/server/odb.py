@@ -51,11 +51,11 @@ logger = logging.getLogger(__name__)
 class ODBManager(SessionWrapper):
     """ Manages connections to the server's Operational Database.
     """
-    def __init__(self, well_known_data=None, odb_token=None, crypto_manager=None, 
+    def __init__(self, well_known_data=None, token=None, crypto_manager=None, 
                  server=None, cluster=None, pool=None):
         super(ODBManager, self).__init__()
         self.well_known_data = well_known_data
-        self.odb_token = odb_token
+        self.token = token
         self.crypto_manager = crypto_manager
         self.server = server
         self.cluster = cluster
@@ -69,13 +69,13 @@ class ODBManager(SessionWrapper):
             self.init_session(self.pool, False)
         try:
             self.server = self._session.query(Server).\
-                   filter(Server.odb_token == self.odb_token).\
+                   filter(Server.odb_token == self.token).\
                    one()
             self.cluster = self.server.cluster
             return self.server
         except Exception, e:
             msg = 'Could not find the server in the ODB, token:[{0}]'.format(
-                self.odb_token)
+                self.token)
             logger.error(msg)
             raise
 
