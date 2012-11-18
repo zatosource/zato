@@ -22,13 +22,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os, shutil, uuid
 from copy import deepcopy
+from datetime import datetime
 from multiprocessing import cpu_count
+
+# SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents, common_odb_opts, \
      kvdb_opts
+from zato.common import SERVER_JOIN_STATUS
 from zato.common.defaults import http_plain_server_port
-from zato.common.odb.model import Cluster
+from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
 from zato.server.repo import RepoManager
 
@@ -117,10 +122,9 @@ class Create(ZatoCommand):
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
 
-    def __init__(self, args, cluster_name=None):
+    def __init__(self, args):
         super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
-        self.cluster_name = cluster_name
         self.dirs_prepared = False
         self.odb_token = uuid.uuid4().hex
 
@@ -136,67 +140,102 @@ class Create(ZatoCommand):
     def execute(self, args, server_pub_key=None, starting_port=http_plain_server_port,
                 parallel_count=cpu_count() * 2):
         
-        cluster_name = args.cluster if 'cluster' in args else self.cluster_name
-
-        if not self.dirs_prepared:
-            self.prepare_directories()
-
-        repo_dir = os.path.join(self.target_dir, 'config/repo')
-
-        shutil.copyfile(os.path.abspath(args.pub_key_path), os.path.join(repo_dir, 'zs-pub-key.pem'))
-        shutil.copyfile(os.path.abspath(args.priv_key_path), os.path.join(repo_dir, 'zs-priv-key.pem'))
-        shutil.copyfile(os.path.abspath(args.cert_path), os.path.join(repo_dir, 'zs-cert.pem'))
-        
-        pub_key = open(os.path.join(repo_dir, 'zs-pub-key.pem')).read()
-
-        repo_manager = RepoManager(repo_dir)
-        repo_manager.ensure_repo_consistency()
-        self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
-
-        self.logger.debug('Creating files..')
-        for file_name, contents in sorted(files.items()):
-            file_name = os.path.join(self.target_dir, file_name)
-            self.logger.debug('Creating {}'.format(file_name))
-            f = file(file_name, 'w')
-            f.write(contents)
-            f.close()
-
-        logging_conf_loc = os.path.join(self.target_dir, 'config/repo/logging.conf')
-
-        logging_conf = open(logging_conf_loc).read()
-        open(logging_conf_loc, 'w').write(logging_conf.format(
-            log_path=os.path.join(self.target_dir, 'logs', 'zato.log')))
-
-        self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
-
-        server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
-        server_conf = open(server_conf_loc, 'w')
-        server_conf.write(
-            server_conf_template.format(
-                starting_port=starting_port,
-                parallel_count=parallel_count, 
-                odb_db_name=args.odb_db_name, 
-                odb_engine=args.odb_type, 
-                odb_host=args.odb_host,
-                odb_password=encrypt(args.odb_password, pub_key), 
-                odb_pool_size=default_odb_pool_size, 
-                odb_user=args.odb_user, 
-                odb_token=uuid.uuid4().hex, 
-                kvdb_host=args.kvdb_host,
-                kvdb_port=args.kvdb_port, 
-                kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else '',
-                initial_cluster_name=args.cluster_name, 
-                initial_server_name=args.server_name, 
-                ))
-        server_conf.close()
-        
-        self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
-        
         engine = self._get_engine(args)
         session = self._get_session(engine)
         
-        # Initial info
-        self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
+        cluster = session.query(Cluster).\
+                   filter(Cluster.name == args.cluster_name).\
+                   first()
+        
+        if not cluster:
+            msg = "Cluster [{}] doesn't exist in the ODB".format(args.cluster_name)
+            return self.SYS_ERROR.NO_SUCH_CLUSTER
+        
+        server = Server()
+        server.cluster_id = cluster.id
+        server.name = args.server_name
+        server.odb_token = self.odb_token
+        server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
+        server.last_join_mod_by = self._get_user_host()
+        server.last_join_mod_date = datetime.utcnow()
+        
+        session.add(server)
+
+        try:
+            if not self.dirs_prepared:
+                self.prepare_directories()
+    
+            repo_dir = os.path.join(self.target_dir, 'config/repo')
+    
+            shutil.copyfile(os.path.abspath(args.pub_key_path), os.path.join(repo_dir, 'zs-pub-key.pem'))
+            shutil.copyfile(os.path.abspath(args.priv_key_path), os.path.join(repo_dir, 'zs-priv-key.pem'))
+            shutil.copyfile(os.path.abspath(args.cert_path), os.path.join(repo_dir, 'zs-cert.pem'))
+            
+            pub_key = open(os.path.join(repo_dir, 'zs-pub-key.pem')).read()
+    
+            repo_manager = RepoManager(repo_dir)
+            repo_manager.ensure_repo_consistency()
+            self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
+    
+            self.logger.debug('Creating files..')
+            for file_name, contents in sorted(files.items()):
+                file_name = os.path.join(self.target_dir, file_name)
+                self.logger.debug('Creating {}'.format(file_name))
+                f = file(file_name, 'w')
+                f.write(contents)
+                f.close()
+    
+            logging_conf_loc = os.path.join(self.target_dir, 'config/repo/logging.conf')
+    
+            logging_conf = open(logging_conf_loc).read()
+            open(logging_conf_loc, 'w').write(logging_conf.format(
+                log_path=os.path.join(self.target_dir, 'logs', 'zato.log')))
+    
+            self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
+    
+            server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
+            server_conf = open(server_conf_loc, 'w')
+            server_conf.write(
+                server_conf_template.format(
+                    starting_port=starting_port,
+                    parallel_count=parallel_count, 
+                    odb_db_name=args.odb_db_name, 
+                    odb_engine=args.odb_type, 
+                    odb_host=args.odb_host,
+                    odb_password=encrypt(args.odb_password, pub_key), 
+                    odb_pool_size=default_odb_pool_size, 
+                    odb_user=args.odb_user, 
+                    odb_token=self.odb_token, 
+                    kvdb_host=args.kvdb_host,
+                    kvdb_port=args.kvdb_port, 
+                    kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else '',
+                    initial_cluster_name=args.cluster_name, 
+                    initial_server_name=args.server_name, 
+                    ))
+            server_conf.close()
+            
+            self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
+            
+            # Initial info
+            self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
+            
+            session.commit()
+
+        except IntegrityError, e:
+            msg = 'Server name [{}] already exists'.format(args.server_name)
+            if self.verbose:
+                msg += '. Caught an exception:[{}]'.format(format_exc(e))
+                self.logger.error(msg)
+            self.logger.error(msg)
+            session.rollback()
+            
+            return self.SYS_ERROR.SERVER_NAME_ALREADY_EXISTS
+            
+        except Exception, e:
+            msg = 'Could not create the server, e:[{}]'.format(format_exc(e))
+            session.rollback()
+        else:
+            self.logger.debug('Server added to the ODB')        
 
         if self.verbose:
             msg = """Successfully created a new server.

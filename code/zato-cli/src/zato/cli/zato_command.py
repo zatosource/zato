@@ -40,12 +40,12 @@ from zato.common import version as zato_version
 # zato component-version .
 # zato create load_balancer .
 # zato create odb .
-zato create cluster
-zato create server .
+# zato create cluster
+# zato create server .
 zato create zato_admin .
-# zato decrypt . --secret
-# zato delete odb .
-# zato encrypt . --secret
+zato decrypt . --secret
+zato delete odb .
+zato encrypt . --secret
 zato from-config ./zato.config.file
 zato quickstart create .
 zato quickstart start .

@@ -164,6 +164,8 @@ class ZatoCommand(object):
         NO_ODB_FOUND = 4
         DIR_NOT_EMPTY = 5
         CLUSTER_NAME_ALREADY_EXISTS = 6
+        SERVER_NAME_ALREADY_EXISTS = 7
+        NO_SUCH_CLUSTER = 8
         
     class COMPONENTS(object):
         class _ComponentName(object):
