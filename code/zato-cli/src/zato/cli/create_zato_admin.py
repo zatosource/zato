@@ -81,22 +81,18 @@ class CreateZatoAdmin(ZatoCommand):
             'TECH_ACCOUNT_PASSWORD':self.tech_account_password,
         }
 
-        os.mkdir(os.path.join(self.target_dir, "logs"))
-        open(os.path.join(self.target_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/admin.log'))
-        open(os.path.join(self.target_dir, 'zato-admin.conf'), 'w').write(config_template.format(**config))
-        open(os.path.join(self.target_dir, ZATO_ADMIN_DIR), 'w').close()
+        os.mkdir(os.path.join(self.target_dir, 'logs'))
+        os.mkdir(os.path.join(self.target_dir, 'config'))
+        os.mkdir(os.path.join(self.target_dir, 'config', 'repo'))
+        
+        open(os.path.join(self.target_dir, 'config', 'repo', 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/zato-admin.log'))
+        open(os.path.join(self.target_dir, 'config', 'repo', 'zato-admin.conf'), 'w').write(config_template.format(**config))
         
         # Initial info
-        self.store_initial_info(self.target_dir)
+        self.store_initial_info(self.target_dir, self.COMPONENTS.ZATO_ADMIN)
 
         msg = """\nSuccessfully created a Zato Admin instance.
 You can now go to {path} and start it with the 'zato start zato-admin' command.
 """.format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
 
         print(msg)
-
-def main(target_dir):
-    CreateZatoAdmin(target_dir).run()
-
-if __name__ == '__main__':
-    main('.')
