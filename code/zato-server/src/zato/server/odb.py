@@ -68,7 +68,6 @@ class ODBManager(SessionWrapper):
         if not self.session_initialized:
             self.init_session(self.pool, False)
         try:
-            print(22, self.token)
             self.server = self._session.query(Server).\
                    filter(Server.odb_token == self.token).\
                    one()
