@@ -29,7 +29,7 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     FromConfigFile
+     start as start_mod, FromConfigFile
 from zato.common import version as zato_version
     
 """
@@ -204,6 +204,8 @@ Examples:
   If a load-balancer's agent has been installed in /home/zato/lb-agent1, the command to start it is 'zato start /home/zato/lb-agent1'.
 """
     start = subs.add_parser('start', description=start_desc, parents=[base_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
+    start.add_argument('path', help='Path to the Zato component to be started')
+    start.set_defaults(command='start')
     
     #
     # stop
@@ -228,6 +230,7 @@ def main():
         'decrypt': crypto_mod.Decrypt,
         'encrypt': crypto_mod.Encrypt,
         'from_config_file': FromConfigFile,
+        'start': start_mod.Start,
     }
     args = get_parser().parse_args()
     command_class[args.command](args).run(args)

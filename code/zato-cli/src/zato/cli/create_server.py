@@ -40,7 +40,7 @@ from zato.server.repo import RepoManager
 server_conf_template = """[bind]
 host=localhost
 starting_port={starting_port}
-parallel_count={parallel_count}
+parallel_count=1 # Don't change it
 
 [crypto]
 priv_key_location=zs-priv-key.pem
@@ -137,8 +137,7 @@ class Create(ZatoCommand):
 
         self.dirs_prepared = True
 
-    def execute(self, args, server_pub_key=None, starting_port=http_plain_server_port,
-                parallel_count=cpu_count() * 2):
+    def execute(self, args, server_pub_key=None, starting_port=http_plain_server_port, parallel_count=1):
         
         engine = self._get_engine(args)
         session = self._get_session(engine)

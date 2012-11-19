@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json, os
+import json, os, sys
 
 # ConfigObj
 from configobj import ConfigObj
@@ -29,6 +29,7 @@ from configobj import ConfigObj
 from zato.admin.zato_settings import _update_globals
 from zato.admin.wsgi_server import main as zato_admin_main
 from zato.cli import ManageCommand
+from zato.common.util import get_executable
 
 zdaemon_conf_name_contents = """<runner>
     program {program}
@@ -61,9 +62,8 @@ class Start(ManageCommand):
             # server, in which case we refrain from starting new processes now.
             if os.path.exists(socket_name):
                 msg = 'Server at {0} is already running'.format(self.component_dir)
-                print(msg)
-                return
-
+                self.logger.debug(msg)
+                return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
 
         for idx in range(parallel_count):
 
@@ -76,14 +76,16 @@ class Start(ManageCommand):
 
             zdaemon_conf_name = 'zdaemon-{0}.conf'.format(server_no)
             socket_prefix = 'server-{0}'.format(server_no)
-            program = 'python -m zato.server.main {0} {1} {2} {3}'.format(host,
-                                            port, base_dir, start_singleton)
-            logfile_path_prefix = 'zdaemon-{0}'.format(server_no)
+            program = '{} -m zato.server.main {} {} {} {}'.format(get_executable(), host, port, base_dir, start_singleton)
+            logfile_path_prefix = 'zdaemon-{}'.format(server_no)
 
             self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                                 logfile_path_prefix, program)
 
-        print('Zato server at {0} has been started'.format(self.component_dir))
+        if self.verbose:
+            self.logger.debug('Zato server at {0} has been started'.format(self.component_dir))
+        else:
+            self.logger.info('OK')
 
     def _on_lb(self):
 
@@ -92,7 +94,7 @@ class Start(ManageCommand):
 
         zdaemon_conf_name = 'zdaemon-lb.conf'
         socket_prefix = 'lb-agent'
-        program = 'python -m zato.agent.load_balancer.main {0}'.format(config_path)
+        program = '{} -m zato.agent.load_balancer.main {}'.format(get_executable(), config_path)
         logfile_path_prefix = 'zdaemon-lb-agent'
 
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
@@ -123,30 +125,3 @@ class Start(ManageCommand):
         open('./.zato-admin.pid', 'w').write(str(os.getpid()))
 
         zato_admin_main(config['host'], config['port'])
-        
-    def _on_broker(self):
-        config_path = os.path.join(self.config_dir, 'repo', 'broker.conf')
-
-        zdaemon_conf_name = 'zdaemon-broker.conf'
-        socket_prefix = 'broker'
-        program = 'python -m zato.broker.main {0}'.format(config_path)
-        logfile_path_prefix = 'zdaemon-broker'
-        
-        socket_name = 'broker.sock'
-        socket_name = os.path.join(self.config_dir, 'zdaemon', socket_name)
-        
-        if os.path.exists(socket_name):
-            msg = 'Broker at {0} is already running'.format(self.component_dir)
-            print(msg)
-            return
-
-        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
-                            logfile_path_prefix, program)
-        
-        print('Broker started at {0}'.format(self.component_dir))
-        
-def main(target_dir):
-    Start(target_dir).run()
-
-if __name__ == '__main__':
-    main('.')

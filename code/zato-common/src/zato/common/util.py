@@ -150,19 +150,11 @@ def decrypt(data, priv_key, padding=RSA.pkcs1_padding, b64=True):
     
     return cm.decrypt(data, padding, b64)
 
-    '''
-    bio = BIO.MemoryBuffer(pub_key)
-    bio.close()
-    rsa = RSA.load_pub_key_bio(bio)
-
-    encrypted = rsa.public_encrypt(data, padding)
-
-    if b64:
-        encrypted = b64encode(encrypted)
-
-    return encrypted
-    '''
-
+def get_executable():
+    """ Returns the wrapper buildout uses for executing Zato commands. This has
+    all the dependencies added to PYTHONPATH.
+    """
+    return os.path.join(os.path.dirname(sys.executable), 'py')
 
 # Based on
 # http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored

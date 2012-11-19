@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # stdlib
+import json, os
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
@@ -166,6 +167,7 @@ class ZatoCommand(object):
         CLUSTER_NAME_ALREADY_EXISTS = 6
         SERVER_NAME_ALREADY_EXISTS = 7
         NO_SUCH_CLUSTER = 8
+        COMPONENT_ALREADY_RUNNING = 9
         
     class COMPONENTS(object):
         class _ComponentName(object):
@@ -461,17 +463,17 @@ class ManageCommand(ZatoCommand):
 
     def _get_dispatch(self):
         return {
-            ZATO_ADMIN_DIR: self._on_zato_admin,
-            ZATO_BROKER_DIR: self._on_broker,
-            ZATO_LB_DIR: self._on_lb,
-            ZATO_SERVER_DIR: self._on_server,
+            self.COMPONENTS.LOAD_BALANCER: self._on_lb,
+            self.COMPONENTS.SERVER.code: self._on_server,
+            self.COMPONENTS.ZATO_ADMIN.code: self._on_zato_admin,
         }
 
-    command_files = set([ZATO_ADMIN_DIR, ZATO_BROKER_DIR, ZATO_LB_DIR, ZATO_SERVER_DIR])
-
-    opts = [
-        dict(name="component_dir", help="A directory in which the component has been installed")
-    ]
+    command_files = set([ZATO_INFO_FILE])
+    
+    def _on_lb(self, *ignored_args, **ignored_kwargs):
+        raise NotImplementedError('Should be implemented by subclasses')
+    
+    _on_zato_admin = _on_server = _on_lb
 
     def _zdaemon_start(self, contents_template,  zdaemon_conf_name,
                        socket_prefix, logfile_path_prefix, program):
@@ -534,7 +536,8 @@ class ManageCommand(ZatoCommand):
                 return pid
 
     def execute(self, args):
-        self.component_dir = os.path.abspath(args.component_dir)
+
+        self.component_dir = os.path.abspath(args.path)
         self.config_dir = os.path.join(self.component_dir, 'config')
         listing = set(os.listdir(self.component_dir))
 
@@ -542,17 +545,12 @@ class ManageCommand(ZatoCommand):
         found = self.command_files & listing
 
         if not found:
-            msg = """\nDirectory {0} doesn't seem to belong to a Zato component. Expected one of the following files to exist {1}\n""".format(self.component_dir, sorted(self.command_files))
+            msg = """Directory {} doesn't seem to belong to a Zato component. Expected one of the following files to exist {}""".format(self.component_dir, sorted(self.command_files))
             self.logger.info(msg)
-            sys.exit(2)
-
-        elif len(found) > 1:
-            msg = """\nExpected the directory {0} to contain exactly one of the following files {1}, found {2} instead.\n""".format(self.component_dir, sorted(self.command_files), sorted(found))
-            self.logger.info(msg)
-            sys.exit(2)
+            sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT)
 
         found = list(found)[0]
+        json_data = json.load(open(os.path.join(self.component_dir, found)))
 
         os.chdir(self.component_dir)
-        self._get_dispatch()[found]()
-
+        self._get_dispatch()[json_data['component']]()

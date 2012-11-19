@@ -63,7 +63,7 @@ class ZatoHTTPListener(WSGIServer):
         self.server = parallel_server
         _dispatcher = _TaskDispatcher(self.server, parallel_server.config)
         _dispatcher.set_thread_count(6) # TODO: Make it configurable
-        super(ZatoHTTPListener, self).__init__(self.on_wsgi_request, _dispatcher=_dispatcher, port=17010, **kwargs)
+        super(ZatoHTTPListener, self).__init__(self.on_wsgi_request, _dispatcher=_dispatcher, port=parallel_server.port, **kwargs)
 
     def on_wsgi_request(self, wsgi_environ, start_response):
         """ Handles incoming HTTP requests. Each request is being handled by one
@@ -152,7 +152,7 @@ class ParallelServer(BrokerMessageReceiver):
             MESSAGE_TYPE.TO_SINGLETON: self.on_broker_msg_singleton,
             }
         
-        self.broker_client = BrokerClient(self.kvdb, '127.0.0.1', 'parallel', callbacks)
+        self.broker_client = BrokerClient(self.kvdb, '127.0.0.1', 'parallel', callbacks) # TODO: Actually use the broker host from config
         self.broker_client.start()
         
         self.broker_client.subscribe(TOPICS[MESSAGE_TYPE.TO_SINGLETON])
@@ -402,7 +402,7 @@ class ParallelServer(BrokerMessageReceiver):
         for action, msg_type in pairs:
             msg = {}
             msg['action'] = action
-            msg['odb_token'] = self.odb.odb_token
+            msg['odb_token'] = self.odb.token
             self.broker_client.publish(msg, msg_type=msg_type)
             time.sleep(0.2)
         

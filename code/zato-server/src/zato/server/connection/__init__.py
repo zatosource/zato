@@ -38,7 +38,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_ODB_POOL_NAME
-from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
+from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, TRACE1
 from zato.server.base import BaseWorker
 from zato.server.kvdb import KVDB
 
@@ -218,7 +218,7 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     # Of course, this needs to be squared away before Zato gets into any Linux 
     # distribution but then the situation will be much simpler as we simply won't 
     # have to patch up anything, the distro will take care of any dependencies.
-    executable = os.path.join(os.path.dirname(sys.executable), 'py')
+    executable = get_executable()
     
     if file_[-1] in('c', 'o'): # Need to use the source code file
         file_ = file_[:-1]
