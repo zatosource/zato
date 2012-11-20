@@ -70,6 +70,19 @@ class KVDB(object):
             config['unix_socket_path'] = self.config.unix_socket_path
             
         self.conn = StrictRedis(**config)
+        
+    def pubsub(self):
+        return self.conn.pubsub()
 
     def translate(self, system1, key1, value1, system2, key2, default=''):
         return self.conn.hget(_KVDB.SEPARATOR.join((_KVDB.TRANSLATION, system1, key1, value1, system2, key2)), 'value2') or default
+    
+    def copy(self):
+        kvdb = KVDB()
+        kvdb.config = self.config
+        kvdb.decrypt_func = self.decrypt_func
+        kvdb.init()
+        
+        print(444, kvdb)
+        
+        return kvdb

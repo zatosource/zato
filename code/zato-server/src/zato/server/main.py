@@ -30,14 +30,26 @@ logging.captureWarnings(True)
 import os, sys
 import logging.config
 
+# gunicorn
+from gunicorn.app.base import Application
+
 # psycopg2
 import psycopg2
 
-# waitress
-from waitress import serve
-
 # Zato
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
+
+class ZatoGunicornApplication(Application):
+    def __init__(self, zato_wsgi_app, *args, **kwargs):
+        self.zato_wsgi_app = zato_wsgi_app
+        super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
+        
+    def init(self, *ignored_args, **ignored_kwargs):
+        self.cfg.set('post_fork', self.zato_wsgi_app.post_fork)
+        self.cfg.set('workers', 1)
+        
+    def load(self):
+        return self.zato_wsgi_app
 
 def run(host, port, base_dir, start_singleton):
 
@@ -86,13 +98,11 @@ def run(host, port, base_dir, start_singleton):
         # server instance to the singleton server.
         parallel_server.singleton_server.parallel_server = parallel_server
 
-    parallel_server.after_init()
-    
-    wsgi_server_class = app_context.get_object('wsgi_server_class')
-    wsgi_server = wsgi_server_class(parallel_server, expose_tracebacks=True)
-    wsgi_server.run()
-    
+    #parallel_server.after_init()
 
+    zato_gunicorn_app = ZatoGunicornApplication(parallel_server)
+    zato_gunicorn_app.run()
+ 
 if __name__ == '__main__':
     host, port, base_dir = sys.argv[1:4]
     start_singleton = True if len(sys.argv) >= 5 else False

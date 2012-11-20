@@ -75,8 +75,11 @@ class BaseWorker(BrokerMessageReceiver):
     def _setup_broker_client(self):
         """ Connects to the broker and sets up all the sockets.
         """
-        self.broker_client = BrokerClient(self.kvdb, '127.0.0.1', self.broker_client_id, self.broker_callbacks)
+        self.broker_client = BrokerClient(self.kvdb, self.broker_client_id)
         self.broker_client.start()
+        
+        import time
+        time.sleep(1)
         
         for msg_type, topic in TOPICS.items():
             if msg_type in self.broker_messages:

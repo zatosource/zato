@@ -25,7 +25,7 @@ from springpython.config import Object, PythonConfig
 # Zato
 from zato.common import DEFAULT_STATS_SETTINGS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import CryptoManager
-from zato.server.base.parallel import ParallelServer, ZatoHTTPListener
+from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.connection.http_soap.security import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore
@@ -201,10 +201,6 @@ class ZatoContext(PythonConfig):
         server.scheduler = self.scheduler()
 
         return server
-    
-    @Object
-    def wsgi_server_class(self):
-        return ZatoHTTPListener
 
     # #######################################################
     # Scheduler management

@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, time
+import logging, os, time
 from threading import Thread
 
 # anyjson
@@ -42,6 +42,76 @@ from zato.common.broker_message import MESSAGE_TYPE, TOPICS
 
 logger = logging.getLogger(__name__)
 
+class _ClientThread(Thread):
+    def __init__(self, kvdb_config, pubsub, parent_thread_name, on_message=None):
+        Thread.__init__(self)
+        self.kvdb_config = kvdb_config
+        self.pubsub = pubsub
+        self.parent_thread_name = parent_thread_name
+        self.on_message = on_message
+        self.client = None
+        
+    def run(self):
+        from redis import StrictRedis
+        conn = StrictRedis('localhost')
+
+        if self.pubsub == 'sub':
+            self.client = conn.pubsub()
+            while True:
+                for msg in self.client.listen():
+                    logger.info('AAAA {}'.format(str(msg)))
+                    self.on_message(Bunch(msg))
+        else:
+            self.client = conn
+            
+    def publish(self, topic, msg):
+        return self.client.publish(topic, msg)
+    
+    def subscribe(self, topic):
+        return self.client.subscribe(topic)
+
+class BrokerClient(Thread):
+    def __init__(self, kvdb, client_type):
+        Thread.__init__(self)
+        self.kvdb_config = kvdb.config
+        self.decrypt_func = kvdb.decrypt_func
+        self.name = '{}-{}'.format(client_type, new_cid())
+        
+    def run(self):
+        logger.info('Starting broker client, host:[{}], port:[{}], name:[{}]'.format(
+            self.kvdb_config.host, self.kvdb_config.port, self.name))
+        
+        self.pub_client = _ClientThread(self.kvdb_config, 'pub', self.name)
+        self.sub_client = _ClientThread(self.kvdb_config, 'sub', self.name, self.on_message)
+        
+        self.pub_client.start()
+        self.sub_client.start()
+        
+    def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL):
+        msg['msg_type'] = msg_type
+        topic = TOPICS[msg_type]
+        self.pub_client.publish(topic, dumps(msg))
+        
+    def send(self, msg):
+        msg['msg_type'] = MESSAGE_TYPE.TO_PARALLEL_ANY
+        msg = dumps(msg)
+        
+        topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
+        key = broker_msg = b'zato:broker:to-parallel:any:{}'.format(new_cid())
+        
+        self.kvdb.conn.set(key, str(msg))
+        self.kvdb.conn.expire(key, 15) # In seconds, TODO: Document it and make configurable
+        
+        self._pub_client.publish(topic, broker_msg)
+        
+    def subscribe(self, topic):
+        self.sub_client.subscribe(topic)    
+        
+    def on_message(self, msg):
+        print(222, msg)
+
+
+'''
 def _mosq_msg_to_dict(msg):
     """ Converts a Mosquitto message to a Python dictionary.
     """
@@ -54,11 +124,11 @@ class _ClientThread(Thread):
     """ A background thread that will be used either for publishing or receiving
     of MQTT messages.
     """
-    def __init__(self, address, pubsub, name, on_message):
+    def __init__(self, kvdb, pubsub, name, on_message=None):
         Thread.__init__(self)
-        self.address = address
+        self.kvdb = kvdb
         self.pubsub = pubsub
-        self.name = self.client_id = 'zato-{}-{}-{}'.format(self.pubsub, name, new_cid())
+        self.name = name + '-' + new_cid()
         self.on_message = on_message
         self.keep_running = ZATO_NONE
         
@@ -69,21 +139,35 @@ class _ClientThread(Thread):
         return self._client.subscribe(topic)
         
     def run(self):
-        self._client = Mosquitto(self.client_id)
-        self._client.connect(self.address)
-        self._client.on_message = self.on_message
-        
-        msg = 'Client [{}] connected to broker [{}]'.format(self.client_id, self.address)
-        logger.info(msg)
+        logger.info('pubsub:[{}], name:[{}], pid:[{}], tid:[{}]'.format(self.pubsub, self.name, os.getpid(), self.ident))
+                    
+        if self.pubsub == 'sub':
+            #self._client = self.kvdb.pubsub()
+            pass
+        else:
+            self._client = self.kvdb
         
         self.keep_running = True
-        
-        try:
+        if self.pubsub == 'sub':
+            from redis import StrictRedis
+            conn = StrictRedis(host='localhost')
+            self._client = conn.pubsub()
+
             while self.keep_running:
-                self._client.loop()
-        except KeyboardInterrupt:
-            self._client.disconnect()
+                for msg in self._client.listen():
+                    logger.info('AAAA {}'.format(str(msg)))
+                    self.on_message(Bunch(msg))
             
+            #try:
+            #    for msg in self._client.listen():
+            #        self.on_message(Bunch(msg))
+            #except KeyboardInterrupt:
+            #    if self.pubsub == 'sub':
+            #        self._client.connection.disconnect()
+            #    else:
+            #        self._client.disconnect()
+            
+
     def stop(self):
         self.keep_running = False
     
@@ -115,51 +199,56 @@ class BrokerClient(object):
         self.address = address
         self.name = name
         self.callbacks = callbacks
-        self._pub_client = _ClientThread(self.address, 'pub', self.name, self.on_message)
-        self._sub_client = _ClientThread(self.address, 'sub', self.name, self.on_message)
+        self._pub_client = _ClientThread(self.kvdb.copy().conn, 'pub', name)
+        self._sub_client = _ClientThread(self.kvdb.copy(), 'sub', name, self.on_message)
         self._to_parallel_any_topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
         
     def start(self):
-        for client in(self._pub_client, self._sub_client):
-            client.start()
-            while client.keep_running == ZATO_NONE:
-                time.sleep(0.01)
+        self._pub_client.start()
+        self._sub_client.start()
+        
+        while self._sub_client.keep_running == ZATO_NONE:
+            time.sleep(0.01)
         
     def stop(self):
         self._pub_client.stop()
         self._sub_client.stop()
 
-    def on_message(self, client, obj, msg):
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('client [{}], obj [{}], msg [{}]'.format(client, obj, _mosq_msg_to_dict(msg)))
+    def on_message(self, msg):
+        #if logger.isEnabledFor(logging.DEBUG):
+        logger.info('Got broker message:[{}]'.format(msg))
         
-        # Replace payload with stuff read off the KVDB in case this is where the actual message happens to reside.
-        if msg.topic == self._to_parallel_any_topic:
-            tmp_key = '{}.tmp'.format(msg.payload)
+        if msg.type == 'message':
+    
+            data = loads(msg.data)
             
-            try:
-                self.kvdb.conn.rename(msg.payload, tmp_key)
-            except redis.ResponseError, e:
-                if e.message != 'ERR no such key': # Doh, I hope Redis guys don't change it out of a sudden :/
-                    raise
-                else:
-                    payload = None
-            else:
-                payload = self.kvdb.conn.get(tmp_key)
-                self.kvdb.conn.delete(tmp_key) # Note that it would've expired anyway
-                if not payload:
-                    logger.warning('No KVDB payload for key [{}] (already expired?)'.format(tmp_key))
-                else:
-                    payload = loads(payload)
-        else:
-            payload = loads(msg.payload)
-            
-        if payload:
-            payload = Bunch(payload)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug('Got broker message payload [{}]'.format(payload))
+            # Replace payload with stuff read off the KVDB in case this is where the actual message happens to reside.
+            if msg.channel == self._to_parallel_any_topic:
+                tmp_key = '{}.tmp'.format(msg.data)
                 
-            return self.callbacks[payload['msg_type']](payload)
+                try:
+                    self.kvdb.conn.rename(msg.payload, tmp_key)
+                except redis.ResponseError, e:
+                    if e.message != 'ERR no such key': # Doh, I hope Redis guys don't change it out of a sudden :/
+                        raise
+                    else:
+                        payload = None
+                else:
+                    payload = self.kvdb.conn.get(tmp_key)
+                    self.kvdb.conn.delete(tmp_key) # Note that it would've expired anyway
+                    if not payload:
+                        logger.warning('No KVDB payload for key [{}] (already expired?)'.format(tmp_key))
+                    else:
+                        payload = loads(payload)
+            else:
+                payload = data
+                
+            if payload:
+                payload = Bunch(payload)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug('Got broker message payload [{}]'.format(payload))
+                    
+                return self.callbacks[payload['msg_type']](payload)
         
     def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL):
         msg['msg_type'] = msg_type
@@ -180,3 +269,4 @@ class BrokerClient(object):
         
     def subscribe(self, topic):
         self._sub_client.subscribe(topic)        
+'''
