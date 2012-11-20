@@ -15,7 +15,6 @@ parts =
     pyyaml-install
     zato
     patch_apscheduler
-    patch_mosquitto
 
 develop =
     zato-admin
@@ -52,6 +51,7 @@ eggs =
     django-settings
     fs
     gevent
+    gunicorn
     hiredis
     inotifyx
     lxml
@@ -76,12 +76,12 @@ eggs =
     redis
     requests
     sec-wall
+    setproctitle
     springpython
     SQLAlchemy
     threadpool
     tornado
     urllib3
-    waitress
     Werkzeug
     zato-admin
     zato-agent
@@ -127,11 +127,6 @@ cmds = cd ${buildout:directory}/parts/gevent_zeromq_patched-src; ../../bin/pytho
 recipe = collective.recipe.patch
 egg = apscheduler
 patches = patches/apscheduler/scheduler.py.diff
-
-[patch_mosquitto]
-recipe = collective.recipe.patch
-egg = mosquitto
-patches = patches/mosquitto/mosquitto.py.diff
 
 [pyyaml-src]
 recipe = hexagonit.recipe.download

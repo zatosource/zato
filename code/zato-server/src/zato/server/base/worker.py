@@ -39,11 +39,6 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 # Paste
 from paste.util.multidict import MultiDict
 
-# waitress
-from waitress.channel import HTTPChannel
-from waitress.task import JustTesting, ThreadedTaskDispatcher, WSGITask
-from waitress.utilities import InternalServerError
-
 # Zato
 from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
@@ -70,7 +65,7 @@ class WorkerStore(BaseWorker):
     because configuration updates are extremaly rare when compared to regular
     access by worker threads.
     """
-    def __init__(self, worker_config):
+    def __init__(self, worker_config, server):
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.worker_config = worker_config
@@ -93,14 +88,14 @@ class WorkerStore(BaseWorker):
                         config[soap_action] = deepcopy(item)
         
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
-        self.request_dispatcher.soap_handler = SOAPHandler(soap_config, self.worker_config.server)
-        self.request_dispatcher.plain_http_handler = PlainHTTPHandler(plain_http_config, self.worker_config.server)
+        self.request_dispatcher.soap_handler = SOAPHandler(soap_config, server)
+        self.request_dispatcher.plain_http_handler = PlainHTTPHandler(plain_http_config, server)
         
         # Statistics maintenance
-        self.stats_maint = MaintenanceTool(self.worker_config.server.kvdb.conn)
+        self.stats_maint = MaintenanceTool(server.kvdb.conn)
 
         self.request_dispatcher.security = ConnectionHTTPSOAPSecurity(
-            self.worker_config.server.odb.get_url_security(self.worker_config.server.cluster_id)[0],
+            server.odb.get_url_security(server.cluster_id)[0],
             self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
         # Create all the expected connections
@@ -108,7 +103,7 @@ class WorkerStore(BaseWorker):
         self.init_ftp()
         self.init_http_soap()
         
-        self.kvdb = self.worker_config.server.kvdb
+        self.kvdb = server.kvdb
         
         self.broker_client_id = 'worker-thread'
         self.broker_messages = (MESSAGE_TYPE.TO_PARALLEL_ANY, MESSAGE_TYPE.TO_PARALLEL_ALL)
@@ -557,7 +552,8 @@ class WorkerStore(BaseWorker):
         return self._on_message_invoke_service(msg, 'publish', 'SERVICE_PUBLISH', args)
         
 # ##############################################################################
-            
+
+'''            
 class _TaskDispatcher(ThreadedTaskDispatcher):
     """ A task dispatcher which knows how to pass custom arguments down to
     the worker threads.
@@ -715,3 +711,4 @@ class _HTTPServerChannel(HTTPChannel):
         self.force_flush = True
         self.server.pull_trigger()
         self.last_activity = time.time()
+'''

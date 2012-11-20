@@ -33,16 +33,13 @@ from bunch import Bunch, SimpleBunch
 # Paste
 from paste.util.multidict import MultiDict
 
-# waitress
-from waitress.server import WSGIServer
-
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common import SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
-from zato.server.base.worker import _HTTPServerChannel, _TaskDispatcher
+from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
@@ -54,39 +51,6 @@ from zato.server.stats import add_stats_jobs
 
 logger = logging.getLogger(__name__)
 
-class ZatoHTTPListener(WSGIServer):
-    
-    #SERVER_IDENT = 'Zato'
-    channel_class = _HTTPServerChannel
-    
-    def __init__(self, parallel_server, **kwargs):
-        self.server = parallel_server
-        _dispatcher = _TaskDispatcher(self.server, parallel_server.config)
-        _dispatcher.set_thread_count(6) # TODO: Make it configurable
-        super(ZatoHTTPListener, self).__init__(self.on_wsgi_request, _dispatcher=_dispatcher, port=parallel_server.port, **kwargs)
-
-    def on_wsgi_request(self, wsgi_environ, start_response):
-        """ Handles incoming HTTP requests. Each request is being handled by one
-        of the threads created in ParallelServer.run_forever method.
-        """
-        cid = new_cid()
-        thread_local_ctx = wsgi_environ['zato.thread_local_ctx']
-        
-        try:
-            payload = thread_local_ctx.store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, thread_local_ctx)
-        # Any exception at this point must be our fault
-        except Exception, e:
-            tb = format_exc(e)
-            status = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
-            error_msg = b'[{0}] Exception caught [{1}]'.format(cid, tb)
-            logger.error(error_msg)
-            payload = error_msg
-            
-        headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
-        start_response(wsgi_environ['zato.http.response.status'], headers)
-        
-        return [payload]
-
 class ParallelServer(BrokerMessageReceiver):
     def __init__(self, host=None, port=None, crypto_manager=None,
                  odb=None, odb_data=None, singleton_server=None, worker_config=None, 
@@ -96,7 +60,7 @@ class ParallelServer(BrokerMessageReceiver):
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
                  hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
-                 id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None):
+                 id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None, worker_store=None):
         self.host = host
         self.port = port
         self.crypto_manager = crypto_manager
@@ -125,9 +89,35 @@ class ParallelServer(BrokerMessageReceiver):
         self.cluster_id = cluster_id
         self.kvdb = kvdb
         self.stats_jobs = stats_jobs
+        self.worker_store = worker_store
         
         # The main config store
         self.config = ConfigStore()
+        
+    def __call__(self, wsgi_environ, start_response):
+        """ Handles incoming HTTP requests. Each request is being handled by one
+        of the threads created in ParallelServer.run_forever method.
+        """
+        cid = new_cid()
+        
+        try:
+            payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ)
+        # Any exception at this point must be our fault
+        except Exception, e:
+            tb = format_exc(e)
+            status = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
+            error_msg = b'[{0}] Exception caught [{1}]'.format(cid, tb)
+            logger.error(error_msg)
+            payload = error_msg
+            
+        print(wsgi_environ)
+            
+        #headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
+        #start_response(wsgi_environ['zato.http.response.status'], headers)
+        
+        start_response('200 OK', {})
+        
+        return [payload]
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
@@ -152,12 +142,13 @@ class ParallelServer(BrokerMessageReceiver):
             MESSAGE_TYPE.TO_SINGLETON: self.on_broker_msg_singleton,
             }
         
-        self.broker_client = BrokerClient(self.kvdb, '127.0.0.1', 'parallel', callbacks) # TODO: Actually use the broker host from config
+        
+        self.broker_client = BrokerClient(self.kvdb, 'parallel') # TODO: Actually use the broker host from config
         self.broker_client.start()
         
-        self.broker_client.subscribe(TOPICS[MESSAGE_TYPE.TO_SINGLETON])
-        
         if self.singleton_server:
+        
+            #self.broker_client.subscribe(TOPICS[MESSAGE_TYPE.TO_SINGLETON])
             
             # Normalize hot-deploy configuration
             if not self.hot_deploy_config:
@@ -289,7 +280,18 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.simple_io['int_parameters'] = self.int_parameters
         self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
         self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
-
+        
+        self.worker_store = WorkerStore(self.config, self)
+        self.worker_store._init()
+        
+        for x in range(2):
+            time.sleep(1)
+            print('sleep', x)
+        
+        for x in range(2000):
+            self.broker_client.publish({'payload':'aaa', 'action':'10203'})
+            print(x)
+        
     def init_connectors(self):
         """ Starts all the connector subprocesses.
         """
@@ -346,50 +348,56 @@ class ParallelServer(BrokerMessageReceiver):
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
         
-    def after_init(self):
+    @staticmethod
+    def post_fork(arbiter, worker):
+        """ A Gunicorn hook.
+        """
+        print(333, arbiter, worker, worker.app.zato_wsgi_app)
+        
+        parallel_server = worker.app.zato_wsgi_app
         
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
-        self.config.odb_data = Bunch()
-        self.config.odb_data.db_name = self.odb_data['db_name']
-        self.config.odb_data.engine = self.odb_data['engine']
-        self.config.odb_data.extra = self.odb_data['extra']
-        self.config.odb_data.host = self.odb_data['host']
-        self.config.odb_data.password = self.crypto_manager.decrypt(self.odb_data['password'])
-        self.config.odb_data.pool_size = self.odb_data['pool_size']
-        self.config.odb_data.username = self.odb_data['username']
-        self.config.odb_data.token = self.odb_data['token']
-        self.config.odb_data.is_odb = True
+        parallel_server.config.odb_data = Bunch()
+        parallel_server.config.odb_data.db_name = parallel_server.odb_data['db_name']
+        parallel_server.config.odb_data.engine = parallel_server.odb_data['engine']
+        parallel_server.config.odb_data.extra = parallel_server.odb_data['extra']
+        parallel_server.config.odb_data.host = parallel_server.odb_data['host']
+        parallel_server.config.odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
+        parallel_server.config.odb_data.pool_size = parallel_server.odb_data['pool_size']
+        parallel_server.config.odb_data.username = parallel_server.odb_data['username']
+        parallel_server.config.odb_data.token = parallel_server.odb_data['token']
+        parallel_server.config.odb_data.is_odb = True
         
         # This is the call that creates an SQLAlchemy connection
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
+        parallel_server.sql_pool_store[ZATO_ODB_POOL_NAME] = parallel_server.config.odb_data
         
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
-        self.odb.token = self.config.odb_data.token
+        parallel_server.odb.pool = parallel_server.sql_pool_store[ZATO_ODB_POOL_NAME]
+        parallel_server.odb.token = parallel_server.config.odb_data.token
         
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
-        server = self.odb.fetch_server()
+        server = parallel_server.odb.fetch_server()
         
         if not server:
             raise Exception('Server does not exist in the ODB')
         
-        self.id = server.id
-        self.name = server.name
-        self.cluster_id = server.cluster_id
+        parallel_server.id = server.id
+        parallel_server.name = server.name
+        parallel_server.cluster_id = server.cluster_id
 
-        self._after_init_common(server)
+        parallel_server._after_init_common(server)
         
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            self._after_init_accepted(server)
+            parallel_server._after_init_accepted(server)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
             
-            self._after_init_non_accepted(server)
+            parallel_server._after_init_non_accepted(server)
             
-        self.odb.server_up_down(server.id, SERVER_UP_STATUS.RUNNING, True)
+        parallel_server.odb.server_up_down(server.id, SERVER_UP_STATUS.RUNNING, True)
 
     def shutdown(self):
             
