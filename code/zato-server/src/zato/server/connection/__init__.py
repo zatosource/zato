@@ -38,9 +38,9 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_ODB_POOL_NAME
+from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, TRACE1
-from zato.server.base import BaseWorker
-from zato.server.kvdb import KVDB
+from zato.server.base import BrokerMessageReceiver
 
 class BaseConnection(object):
     """ A base class for connections to any external resourced accessed through
@@ -139,7 +139,7 @@ class BaseConnection(object):
                     self.logger.error(msg)
                     raise
 
-class BaseConnector(BaseWorker):
+class BaseConnector(BrokerMessageReceiver):
     """ A base class for both channels and outgoing connectors.
     """
     def __init__(self, repo_location, def_id):

@@ -64,23 +64,3 @@ class BrokerMessageReceiver(object):
         always returns False which rejects all the incoming messages.
         """
         return False
-            
-class BaseWorker(BrokerMessageReceiver):
-    
-    def _init(self):
-        """ Initializes the instance, sets up the broker client.
-        """
-        self._setup_broker_client()
-
-    def _setup_broker_client(self):
-        """ Connects to the broker and sets up all the sockets.
-        """
-        self.broker_client = BrokerClient(self.kvdb, self.broker_client_id)
-        self.broker_client.start()
-        
-        import time
-        time.sleep(1)
-        
-        for msg_type, topic in TOPICS.items():
-            if msg_type in self.broker_messages:
-                self.broker_client.subscribe(topic)

@@ -207,10 +207,9 @@ class Security(object):
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
-        #with self.url_sec_lock:
-        #    self.basic_auth_config[msg.name]['config']['password'] = msg.password
-        #    self._update_url_sec(msg, security_def_type.basic_auth)
-        print(33, msg)
+        with self.url_sec_lock:
+            self.basic_auth_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, security_def_type.basic_auth)
 
 # ##############################################################################
 

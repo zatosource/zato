@@ -43,7 +43,7 @@ from paste.util.multidict import MultiDict
 from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
-from zato.server.base import BaseWorker
+from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import PlainHTTPHandler, RequestDispatcher, SOAPHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
@@ -53,7 +53,7 @@ from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
 
-class WorkerStore(BaseWorker):
+class WorkerStore(BrokerMessageReceiver):
     """ Each worker thread has its own configuration store. The store is assigned
     to the thread's threading.local variable. All the methods assume the data's
     being already validated and sanitized by one of Zato's internal services.
@@ -65,13 +65,15 @@ class WorkerStore(BaseWorker):
     because configuration updates are extremaly rare when compared to regular
     access by worker threads.
     """
-    def __init__(self, worker_config, server):
-
+    def __init__(self, worker_config=None, server=None):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.worker_config = worker_config
-        
+        self.server = server
         self.update_lock = RLock()
+        self.kvdb = server.kvdb
+        self.broker_client = None
         
+    def init(self):
         plain_http_config = MultiDict()
         soap_config = MultiDict()
         
@@ -88,29 +90,20 @@ class WorkerStore(BaseWorker):
                         config[soap_action] = deepcopy(item)
         
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
-        self.request_dispatcher.soap_handler = SOAPHandler(soap_config, server)
-        self.request_dispatcher.plain_http_handler = PlainHTTPHandler(plain_http_config, server)
+        self.request_dispatcher.soap_handler = SOAPHandler(soap_config, self.server)
+        self.request_dispatcher.plain_http_handler = PlainHTTPHandler(plain_http_config, self.server)
         
         # Statistics maintenance
-        self.stats_maint = MaintenanceTool(server.kvdb.conn)
+        self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
         self.request_dispatcher.security = ConnectionHTTPSOAPSecurity(
-            server.odb.get_url_security(server.cluster_id)[0],
+            self.server.odb.get_url_security(self.server.cluster_id)[0],
             self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
         # Create all the expected connections
         self.init_sql()
         self.init_ftp()
         self.init_http_soap()
-        
-        self.kvdb = server.kvdb
-        
-        self.broker_client_id = 'worker-thread'
-        self.broker_messages = (MESSAGE_TYPE.TO_PARALLEL_ANY, MESSAGE_TYPE.TO_PARALLEL_ALL)
-        self.broker_callbacks = {
-            MESSAGE_TYPE.TO_PARALLEL_ANY: self.on_broker_msg,
-            MESSAGE_TYPE.TO_PARALLEL_ALL: self.on_broker_msg,
-            }
         
     def filter(self, msg):
         # TODO: Fix it, worker doesn't need to accept all the messages

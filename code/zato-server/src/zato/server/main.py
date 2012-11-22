@@ -29,6 +29,7 @@ logging.captureWarnings(True)
 # stdlib
 import os, sys
 import logging.config
+from threading import currentThread
 
 # gunicorn
 from gunicorn.app.base import Application
@@ -47,12 +48,13 @@ class ZatoGunicornApplication(Application):
     def init(self, *ignored_args, **ignored_kwargs):
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork)
         self.cfg.set('workers', 1)
+        self.cfg.set('worker_class', 'sync')
         
     def load(self):
         return self.zato_wsgi_app
 
 def run(host, port, base_dir, start_singleton):
-
+    
     # We're doing it here even if someone doesn't use PostgreSQL at all
     # so we're not suprised when someone suddenly starts using PG.
     # TODO: Make sure it's registered for each of the subprocess when the code's
