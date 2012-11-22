@@ -99,7 +99,7 @@ class RequestDispatcher(object):
         # to use.
         return msg        
     
-    def dispatch(self, cid, req_timestamp, wsgi_environ, thread_ctx):
+    def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth, 
         the security validation is being performed. Otherwise, that step 
@@ -127,7 +127,7 @@ class RequestDispatcher(object):
                 handler = getattr(self, '{0}_handler'.format(transport))
 
                 data_format = url_data['data_format']
-                service_info, response = handler.handle(cid, wsgi_environ, payload, transport, thread_ctx, self.simple_io_config, data_format, path_info)
+                service_info, response = handler.handle(cid, wsgi_environ, payload, transport, worker_store, self.simple_io_config, data_format, path_info)
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
                 wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, responses[response.status_code])
@@ -220,11 +220,11 @@ class _BaseMessageHandler(object):
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
     
-    def handle(self, cid, wsgi_environ, raw_request, transport, thread_ctx, simple_io_config, data_format, path_info):
+    def handle(self, cid, wsgi_environ, raw_request, transport, worker_store, simple_io_config, data_format, path_info):
         payload, service_info, service_data = self.init(cid, path_info, raw_request, wsgi_environ, transport, data_format)
 
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
-        service_instance.update(service_instance, self.server, thread_ctx.store.broker_client, thread_ctx.store, 
+        service_instance.update(service_instance, self.server, worker_store.broker_client, worker_store, 
                 cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ)
 
         service_instance.pre_handle()

@@ -25,11 +25,11 @@ from springpython.config import Object, PythonConfig
 # Zato
 from zato.common import DEFAULT_STATS_SETTINGS, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import CryptoManager
+from zato.common.kvdb import KVDB
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.connection.http_soap.security import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore
-from zato.server.kvdb import KVDB
 from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.repo import RepoManager

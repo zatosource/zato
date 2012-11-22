@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import asyncore, logging, os, time
 from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, responses
-from threading import Thread
+from threading import currentThread, Thread
 from time import sleep
 from traceback import format_exc
 
@@ -101,7 +101,7 @@ class ParallelServer(BrokerMessageReceiver):
         cid = new_cid()
         
         try:
-            payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ)
+            payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, self.worker_store)
         # Any exception at this point must be our fault
         except Exception, e:
             tb = format_exc(e)
@@ -110,7 +110,7 @@ class ParallelServer(BrokerMessageReceiver):
             logger.error(error_msg)
             payload = error_msg
             
-        print(wsgi_environ)
+        #print(wsgi_environ)
             
         #headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
         #start_response(wsgi_environ['zato.http.response.status'], headers)
@@ -118,11 +118,22 @@ class ParallelServer(BrokerMessageReceiver):
         start_response('200 OK', {})
         
         return [payload]
+    
+    def has_singleton(self):
+        """ The first process to be started will also start the singleton thread
+        and store a flag in the file-system (a file) which will mean that the singleton
+        has already been started. That way the following servers won't attempt to start it.
+        This wouldn't be needed if gunicorn had a means for running a piece of code
+        only if a given worker is the first one to spawn. This also sounds like something
+        that can be contributed to gunicorn.
+        """
+        return False
         
     def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
+        has_singleton = self.has_singleton()
         # .. Remove all the deployed services from the DB ..
         self.odb.drop_deployed_services(server.id)
         
@@ -137,19 +148,22 @@ class ParallelServer(BrokerMessageReceiver):
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
         self.kvdb.init()
-
-        callbacks = {
-            MESSAGE_TYPE.TO_SINGLETON: self.on_broker_msg_singleton,
+        
+        self.worker_store = WorkerStore(self.config, self)
+        
+        broker_callbacks = {
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
             }
         
+        if has_singleton:
+            broker_callbacks[TOPICS[MESSAGE_TYPE.TO_SINGLETON]] = self.on_broker_msg_singleton
         
-        self.broker_client = BrokerClient(self.kvdb, 'parallel') # TODO: Actually use the broker host from config
+        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks)
         self.broker_client.start()
+
+        if has_singleton:
         
-        if self.singleton_server:
-        
-            #self.broker_client.subscribe(TOPICS[MESSAGE_TYPE.TO_SINGLETON])
-            
             # Normalize hot-deploy configuration
             if not self.hot_deploy_config:
                 self.hot_deploy_config = Bunch()
@@ -281,16 +295,9 @@ class ParallelServer(BrokerMessageReceiver):
         self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
         self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
         
-        self.worker_store = WorkerStore(self.config, self)
-        self.worker_store._init()
-        
-        for x in range(2):
-            time.sleep(1)
-            print('sleep', x)
-        
-        for x in range(2000):
-            self.broker_client.publish({'payload':'aaa', 'action':'10203'})
-            print(x)
+        self.worker_store.worker_config = self.config
+        self.worker_store.broker_client = self.broker_client
+        self.worker_store.init()
         
     def init_connectors(self):
         """ Starts all the connector subprocesses.
@@ -352,8 +359,6 @@ class ParallelServer(BrokerMessageReceiver):
     def post_fork(arbiter, worker):
         """ A Gunicorn hook.
         """
-        print(333, arbiter, worker, worker.app.zato_wsgi_app)
-        
         parallel_server = worker.app.zato_wsgi_app
         
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
