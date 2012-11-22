@@ -40,7 +40,7 @@ from zato.common import version as zato_version
 # zato component-version .
 # zato create load_balancer .
 # zato create odb .
-# zato create cluster
+# zzz zato create cluster
 # zato create server .
 # zato create zato_admin .
 # zato decrypt . --secret
