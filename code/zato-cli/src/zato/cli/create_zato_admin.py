@@ -24,7 +24,7 @@ import os, shutil, uuid
 from copy import deepcopy
 
 # Zato
-from zato.cli import ZATO_ADMIN_DIR, ZatoCommand, common_logging_conf_contents, common_odb_opts
+from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZATO_ADMIN_DIR, ZatoCommand
 from zato.common.defaults import zato_admin_host, zato_admin_port
 from zato.common.util import encrypt
 
@@ -63,8 +63,7 @@ class Create(ZatoCommand):
     opts.append({'name':'priv_key_path', 'help':"Path to the Zato Admin's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the Zato Admin's certificate in PEM"})
     
-    opts.append({'name':'tech_account_name', 'help':'Technical account name to use for connecting to Zato clusters'})
-    opts.append({'name':'--tech_account_password', 'help':"Technical account password"})
+    opts += deepcopy(get_tech_account_opts())
     
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)

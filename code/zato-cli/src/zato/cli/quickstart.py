@@ -157,76 +157,6 @@ class Quickstart(ZatoCommand):
             
         return next_id
     
-    def add_ping_services(self, session, cluster):
-        """ Add a ping service and channels, with and without security checks.
-        """
-        passwords = {
-            'ping.plain_http.basic_auth': None,
-            'ping.soap.basic_auth': None,
-            'ping.soap.wss.clear_text': None,
-        }
-        
-        for password in passwords:
-            passwords[password] = uuid4().hex
-
-        ping_impl_name = 'zato.server.service.internal.Ping'
-        ping_service_name = 'zato.Ping'
-        ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
-        session.add(ping_service)
-        
-        #
-        # .. no security ..
-        #
-        ping_no_sec_channel = HTTPSOAP(None, 'zato.ping', True, True, 'channel', 
-            'plain_http', None, '/zato/ping', None, '', None, SIMPLE_IO.FORMAT.JSON, service=ping_service, cluster=cluster)
-        session.add(ping_no_sec_channel)
-
-
-        #
-        # All the possible options
-        # 
-        # Plain HTTP / Basic auth
-        # SOAP / Basic auth
-        # SOAP / WSS / Clear text
-        #
-
-        transports = ['plain_http', 'soap']
-        wss_types = ['clear_text']
-        
-        for transport in transports:
-            
-            if transport == 'plain_http':
-                data_format = SIMPLE_IO.FORMAT.JSON
-            else:
-                data_format = SIMPLE_IO.FORMAT.XML
-
-            base_name = 'ping.{0}.basic_auth'.format(transport)
-            zato_name = 'zato.{0}'.format(base_name)
-            url = '/zato/{0}'.format(base_name)
-            soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else ('', None)
-            password = passwords[base_name]
-            
-            sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', password, cluster)
-            session.add(sec)
-            
-            channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
-                               soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
-            session.add(channel)
-            
-            if transport == 'soap':
-                for wss_type in wss_types:
-                    base_name = 'ping.{0}.wss.{1}'.format(transport, wss_type)
-                    zato_name = 'zato.{0}'.format(base_name)
-                    url = '/zato/{0}'.format(base_name)
-                    password = passwords[base_name]
-                    
-                    sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, False, True, 3600, 3600, cluster)
-                    session.add(sec)
-                    
-                    channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
-                                       soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
-                    session.add(channel)
-                
     def execute(self, args):
         
         try:
@@ -342,24 +272,6 @@ class Quickstart(ZatoCommand):
             server2 = Server(None, 'zato-quickstart-server-02', cluster, cs2.odb_token, SERVER_JOIN_STATUS.ACCEPTED, 
                              datetime.now(), 'zato-quickstart/' + current_host())
             session.add(server2)
-            
-            #
-            # TechnicalAccount for the web admin
-            #
-            salt = uuid4().hex
-            password = tech_account_password(tech_account_password_clear, salt)
-            
-            tech_account = TechnicalAccount(None, tech_account_name, True, password, salt, cluster)
-            session.add(tech_account)
-                
-            # Ping services
-            self.add_ping_services(session, cluster)
-            
-            # SOAP services
-            self.add_soap_services(session, cluster, tech_account)
-            
-            # JSON services
-            self.add_json_services(session, cluster, tech_account)
             
             # Commit all the stuff.
             session.commit()
