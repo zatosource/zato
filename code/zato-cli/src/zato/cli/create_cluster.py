@@ -23,14 +23,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from copy import deepcopy
 from datetime import datetime
 from traceback import format_exc
+from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.cli import ZatoCommand, common_odb_opts, broker_opts
+from zato.cli import common_odb_opts, broker_opts, get_tech_account_opts, ZatoCommand
+from zato.common import SIMPLE_IO
 from zato.common.defaults import http_plain_server_port
-from zato.common.odb.model import Cluster
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Service, TechnicalAccount, WSSDefinition
+from zato.common.util import service_name_from_impl, tech_account_password
 
 class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
@@ -40,7 +43,9 @@ class Create(ZatoCommand):
     opts.append({'name':'lb_port', 'help':'Load-balancer port'})
     opts.append({'name':'lb_agent_port', 'help':'Load-balancer agent host'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
-
+    
+    opts += deepcopy(get_tech_account_opts('for Zato admin instances to use'))
+    
     def execute(self, args):
         
         engine = self._get_engine(args)
@@ -55,8 +60,15 @@ class Create(ZatoCommand):
             setattr(cluster, name, getattr(args, name))
         session.add(cluster)
         
-        self.add_soap_services(session)
-        self.add_json_services(session)
+        salt = uuid4().hex
+        password = tech_account_password(args.tech_account_password, salt)
+        
+        tech_account = TechnicalAccount(None, args.tech_account_name, True, password, salt, cluster)
+        session.add(tech_account)
+        
+        self.add_soap_services(session, cluster, tech_account)
+        self.add_json_services(session, cluster, tech_account)
+        self.add_ping_services(session, cluster)
         
         try:
             session.commit()
@@ -76,7 +88,7 @@ class Create(ZatoCommand):
         else:
             self.logger.info('OK')
             
-    def add_soap_services(self, session):
+    def add_soap_services(self, session, cluster, tech_account):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
         soap_services = {
@@ -293,3 +305,73 @@ class Create(ZatoCommand):
             http_soap = HTTPSOAP(None, service_name, True, True, 'channel', 'plain_http', 
                 None, url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=tech_account)
             session.add(http_soap)
+
+    def add_ping_services(self, session, cluster):
+        """ Add a ping service and channels, with and without security checks.
+        """
+        passwords = {
+            'ping.plain_http.basic_auth': None,
+            'ping.soap.basic_auth': None,
+            'ping.soap.wss.clear_text': None,
+        }
+        
+        for password in passwords:
+            passwords[password] = uuid4().hex
+
+        ping_impl_name = 'zato.server.service.internal.Ping'
+        ping_service_name = 'zato.Ping'
+        ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
+        session.add(ping_service)
+        
+        #
+        # .. no security ..
+        #
+        ping_no_sec_channel = HTTPSOAP(None, 'zato.ping', True, True, 'channel', 
+            'plain_http', None, '/zato/ping', None, '', None, SIMPLE_IO.FORMAT.JSON, service=ping_service, cluster=cluster)
+        session.add(ping_no_sec_channel)
+
+
+        #
+        # All the possible options
+        # 
+        # Plain HTTP / Basic auth
+        # SOAP / Basic auth
+        # SOAP / WSS / Clear text
+        #
+
+        transports = ['plain_http', 'soap']
+        wss_types = ['clear_text']
+        
+        for transport in transports:
+            
+            if transport == 'plain_http':
+                data_format = SIMPLE_IO.FORMAT.JSON
+            else:
+                data_format = SIMPLE_IO.FORMAT.XML
+
+            base_name = 'ping.{0}.basic_auth'.format(transport)
+            zato_name = 'zato.{0}'.format(base_name)
+            url = '/zato/{0}'.format(base_name)
+            soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else ('', None)
+            password = passwords[base_name]
+            
+            sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', password, cluster)
+            session.add(sec)
+            
+            channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
+                               soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
+            session.add(channel)
+            
+            if transport == 'soap':
+                for wss_type in wss_types:
+                    base_name = 'ping.{0}.wss.{1}'.format(transport, wss_type)
+                    zato_name = 'zato.{0}'.format(base_name)
+                    url = '/zato/{0}'.format(base_name)
+                    password = passwords[base_name]
+                    
+                    sec = WSSDefinition(None, zato_name, True, zato_name, password, wss_type, False, True, 3600, 3600, cluster)
+                    session.add(sec)
+                    
+                    channel = HTTPSOAP(None, zato_name, True, True, 'channel', transport, None, url, None, soap_action, 
+                                       soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
+                    session.add(channel)

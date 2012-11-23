@@ -80,7 +80,7 @@ common_odb_opts = [
         {'name':'odb_user', 'help':_opts_odb_user},
         {'name':'odb_db_name', 'help':_opts_odb_db_name},
         {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
-        {'name':'--odb-password', 'help':'ODB database password'},
+        {'name':'--odb_password', 'help':'ODB database password'},
 ]
 
 broker_opts = [
@@ -99,8 +99,14 @@ common_ca_create_opts = [
 kvdb_opts = [
     {'name':'kvdb_host', 'help':_opts_kvdb_host},
     {'name':'kvdb_port', 'help':_opts_kvdb_port},
-    {'name':'--kvdb-password', 'help':'Key/value database password'},
+    {'name':'--kvdb_password', 'help':'Key/value database password'},
 ]
+
+def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
+    return [
+        {'name':'tech_account_name', 'help':'Technical account name {}'.format(help_suffix)},
+        {'name':'--tech_account_password', 'help':'Technical account password'},
+    ]
 
 common_logging_conf_contents = """
 [loggers]
