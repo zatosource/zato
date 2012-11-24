@@ -29,7 +29,7 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     start as start_mod, FromConfigFile
+     quickstart as quickstart_mod, start as start_mod, FromConfigFile
 from zato.common import version as zato_version
     
 """
@@ -40,7 +40,7 @@ from zato.common import version as zato_version
 # zato component-version .
 # zato create load_balancer .
 # zato create odb .
-# zzz zato create cluster
+# zato create cluster
 # zato create server .
 # zato create zato_admin .
 # zato decrypt . --secret
@@ -91,19 +91,19 @@ def get_parser():
         description='Create a new certificate authority ', parents=[base_parser])
     ca_create_ca.set_defaults(command='ca_create_ca')
     ca_create_ca.add_argument('path', help='Path to an empty directory to hold the CA')
-    add_opts(ca_create_ca, ca_create_ca_mod.CreateCA.opts)
+    add_opts(ca_create_ca, ca_create_ca_mod.Create.opts)
     
     ca_create_lb_agent = ca_create_subs.add_parser('lb_agent', 
         description='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
     ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
     ca_create_lb_agent.add_argument('path', help='Path to a CA directory')
-    add_opts(ca_create_lb_agent, ca_create_lb_agent_mod.CreateLBAgent.opts)
+    add_opts(ca_create_lb_agent, ca_create_lb_agent_mod.Create.opts)
         
     ca_create_server = ca_create_subs.add_parser('server', 
        description='Create crypto material for a Zato server', parents=[base_parser])
     ca_create_server.set_defaults(command='ca_create_server')
     ca_create_server.add_argument('path', help='Path to a CA directory')
-    add_opts(ca_create_server, ca_create_server_mod.CreateServer.opts)
+    add_opts(ca_create_server, ca_create_server_mod.Create.opts)
 
     ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', 
         description='Create crypto material for a Zato web console', parents=[base_parser])
@@ -190,8 +190,18 @@ def get_parser():
     #
     # quickstart
     #
-    quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato clusters',
-        parents=[base_parser])
+    quickstart = subs.add_parser('quickstart', description='Quickly set up and manage Zato clusters', parents=[base_parser])
+    quickstart_subs = quickstart.add_subparsers()
+    
+    quickstart_create = quickstart_subs.add_parser('create', description=quickstart_mod.Create.__doc__, parents=[base_parser])
+    quickstart_create.add_argument('path', help='Path to an empty directory for the quickstart cluster')
+    quickstart_create.set_defaults(command='quickstart_create')
+    add_opts(quickstart_create, quickstart_mod.Create.opts)
+    
+    quickstart_start = quickstart_subs.add_parser('start', description=quickstart_mod.Start.__doc__, parents=[base_parser])
+    quickstart_start.add_argument('path', help='Path to a quickstart cluster')
+    quickstart_start.set_defaults(command='quickstart_start')
+    add_opts(quickstart_start, quickstart_mod.Start.opts)
     
     #
     # start
@@ -216,9 +226,9 @@ Examples:
 
 def main():
     command_class = {
-        'ca_create_ca': ca_create_ca_mod.CreateCA,
-        'ca_create_lb_agent': ca_create_lb_agent_mod.CreateLBAgent,
-        'ca_create_server': ca_create_server_mod.CreateServer,
+        'ca_create_ca': ca_create_ca_mod.Create,
+        'ca_create_lb_agent': ca_create_lb_agent_mod.Create,
+        'ca_create_server': ca_create_server_mod.Create,
         'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
         'component_version': component_version_mod.ComponentVersion,
         'create_cluster': create_cluster_mod.Create,
@@ -230,7 +240,9 @@ def main():
         'decrypt': crypto_mod.Decrypt,
         'encrypt': crypto_mod.Encrypt,
         'from_config_file': FromConfigFile,
-        'start': start_mod.Start,
+        'quickstart_create': quickstart_mod.Create,
+        'quickstart_start': quickstart_mod.Create,
+        #'start': start_mod.Start,
     }
     args = get_parser().parse_args()
     command_class[args.command](args).run(args)

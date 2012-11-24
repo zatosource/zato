@@ -102,7 +102,7 @@ subjectKeyIdentifier           = hash
 extendedKeyUsage               = serverAuth,clientAuth
 '''
 
-class CreateCA(ZatoCommand):
+class Create(ZatoCommand):
 
     opts = [
         {'name':'--organization', 'help':'CA organization name (defaults to {organization})'.format(**ca_defaults)},
@@ -118,10 +118,10 @@ class CreateCA(ZatoCommand):
     needs_empty_dir = True
 
     def __init__(self, args):
-        super(CreateCA, self).__init__(args)
+        super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
 
-    def execute(self, args):
+    def execute(self, args, show_output=True):
 
         # Prepare the directory layout
         os.mkdir(os.path.join(self.target_dir, 'ca-material'))
@@ -161,9 +161,10 @@ class CreateCA(ZatoCommand):
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.CA.code)
 
-        if self.verbose:
-            msg = 'Successfully created a certificate authority in {path}'.format(
-                path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
-            self.logger.debug(msg)
-        else:
-            self.logger.info('OK')
+        if show_output:
+            if self.verbose:
+                msg = 'Successfully created a certificate authority in {path}'.format(
+                    path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
+                self.logger.debug(msg)
+            else:
+                self.logger.info('OK')

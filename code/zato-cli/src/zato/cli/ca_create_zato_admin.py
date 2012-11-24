@@ -19,9 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from copy import deepcopy
-
 # Zato
 from zato.cli import CACreateCommand, common_ca_create_opts
 
@@ -29,7 +26,7 @@ class CreateZatoAdmin(CACreateCommand):
     opts = [
         {'name':'--organizational-unit', 'help':'Organizational unit name'},
     ]
-    opts += deepcopy(common_ca_create_opts)
+    opts += common_ca_create_opts
 
     def get_file_prefix(self, file_args):
         return 'zato-admin'

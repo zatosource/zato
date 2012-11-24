@@ -81,7 +81,7 @@ class WorkerStore(BrokerMessageReceiver):
         for url_path in copy:
             for soap_action in copy[url_path]:
                 item = copy[url_path][soap_action]
-                if item.connection == 'channel':
+                if item['connection'] == 'channel':
                     if item.transport == 'plain_http':
                         config = plain_http_config.setdefault(url_path, Bunch())
                         config[soap_action] = deepcopy(item)

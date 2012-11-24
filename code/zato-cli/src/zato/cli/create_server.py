@@ -114,7 +114,7 @@ class Create(ZatoCommand):
     allow_empty_secrets = True
     
     opts = deepcopy(common_odb_opts)
-    opts.extend(deepcopy(kvdb_opts))
+    opts.extend(kvdb_opts)
     
     opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})

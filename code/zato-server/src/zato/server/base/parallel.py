@@ -28,7 +28,7 @@ from time import sleep
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch, SimpleBunch
+from bunch import Bunch
 
 # Paste
 from paste.util.multidict import MultiDict
@@ -193,7 +193,7 @@ class ParallelServer(BrokerMessageReceiver):
                 _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
                     in self.odb.get_job_list(server.cluster.id):
                 if is_active:
-                    job_data = SimpleBunch({'name':name, 'is_active':is_active, 
+                    job_data = Bunch({'name':name, 'is_active':is_active, 
                         'job_type':job_type, 'start_date':start_date, 
                         'extra':extra, 'service':service_impl_name, 'weeks':weeks, 
                         'days':days, 'hours':hours, 'minutes':minutes, 
@@ -272,8 +272,8 @@ class ParallelServer(BrokerMessageReceiver):
         # All the HTTP/SOAP channels.
         http_soap = MultiDict()
         for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
-            _info = SimpleBunch()
-            _info[item.soap_action] = SimpleBunch()
+            _info = Bunch()
+            _info[item.soap_action] = Bunch()
             _info[item.soap_action].id = item.id
             _info[item.soap_action].name = item.name
             _info[item.soap_action].is_internal = item.is_internal

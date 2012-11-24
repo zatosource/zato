@@ -29,7 +29,7 @@ from uuid import uuid4
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.cli import common_odb_opts, broker_opts, get_tech_account_opts, ZatoCommand
+from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
 from zato.common import SIMPLE_IO
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Service, TechnicalAccount, WSSDefinition
@@ -37,14 +37,13 @@ from zato.common.util import service_name_from_impl, tech_account_password
 
 class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
-    opts += deepcopy(broker_opts)
     
     opts.append({'name':'lb_host', 'help':"Load-balancer host"})
     opts.append({'name':'lb_port', 'help':'Load-balancer port'})
     opts.append({'name':'lb_agent_port', 'help':'Load-balancer agent host'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
     
-    opts += deepcopy(get_tech_account_opts('for Zato admin instances to use'))
+    opts += get_tech_account_opts('for Zato admin instances to use')
     
     def execute(self, args):
         

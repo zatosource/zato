@@ -32,7 +32,7 @@ from sqlalchemy.exc import IntegrityError
 from paste.util.multidict import MultiDict
 
 # Bunch
-from bunch import SimpleBunch
+from bunch import Bunch
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, ZATO_NONE
@@ -111,7 +111,7 @@ class ODBManager(SessionWrapper):
         result = MultiDict()
 
         query = http_soap_security_list(self._session, cluster_id)
-        columns = SimpleBunch()
+        columns = Bunch()
         
         # So ConfigDict has its data in the format it expects
         for c in query.statement.columns:
@@ -119,13 +119,13 @@ class ODBManager(SessionWrapper):
             
         for item in query.all():
             
-            _info = SimpleBunch()
-            _info[item.soap_action] = SimpleBunch()
+            _info = Bunch()
+            _info[item.soap_action] = Bunch()
             _info[item.soap_action].transport = item.transport
             _info[item.soap_action].data_format = item.data_format
 
             if item.security_id:
-                _info[item.soap_action].sec_def = SimpleBunch()
+                _info[item.soap_action].sec_def = Bunch()
                 
                 # Will raise KeyError if the DB gets somehow misconfigured.
                 db_class = sec_type_db_class[item.sec_type]

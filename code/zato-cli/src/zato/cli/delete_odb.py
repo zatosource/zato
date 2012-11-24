@@ -19,16 +19,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from copy import deepcopy
-
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import drop_all
 
 class Delete(ZatoCommand):
     needs_password_confirm = False
-    opts = deepcopy(common_odb_opts)
+    opts = common_odb_opts
 
     def execute(self, args):
         engine = self._get_engine(args)
