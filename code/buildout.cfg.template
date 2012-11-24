@@ -94,6 +94,12 @@ eggs =
     tornado
     urllib3
     Werkzeug
+    zato-admin
+    zato-agent
+    zato-broker
+    zato-cli
+    zato-common
+    zato-server
     zc.buildout
     zc.recipe.egg
     ZConfig
