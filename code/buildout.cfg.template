@@ -4,8 +4,6 @@ find-links = https://launchpad.net/inotifyx/dev
 unzip = true
 
 parts =
-    bunch_patched-src
-    bunch_patched-install
     cython-src
     cython-install
     gevent_zeromq_patched-src
@@ -42,23 +40,33 @@ eggs =
     apscheduler
     argparse
     boto
+    bunch
     bzr
     circuits
+    codegen
+    collective.recipe.patch
     configobj
+    coverage
+    distribute
     distutils2
     Django
     django-debug-toolbar-django13
     django-settings
     fs
     gevent
+    greenlet
     gunicorn
+    hexagonit.recipe.download
     hiredis
     inotifyx
+    iw.recipe.cmd
     lxml
-    nosexcover
     mock
+    nose
+    nosexcover
     ordereddict
     paodate
+    parse
     Paste
     pesto
     pika
@@ -70,34 +78,27 @@ eggs =
     pyparsing
     python-dateutil
     pytz
+    pyzmq
     pyzmq-static
     quicli
     redis
+    repoze.lru
     requests
     sec-wall
     setproctitle
+    setuptools
+    six
     springpython
     SQLAlchemy
     threadpool
     tornado
     urllib3
     Werkzeug
-    zato-admin
-    zato-agent
-    zato-broker
-    zato-cli
-    zato-common
-    zato-server
+    zc.buildout
+    zc.recipe.egg
+    ZConfig
     zdaemon
-
-[bunch_patched-src]
-recipe = zerokspot.recipe.git
-repository=git://github.com/dsuch/bunch.git
-
-[bunch_patched-install]
-recipe = iw.recipe.cmd
-on_install = true
-cmds = cd ${buildout:directory}/parts/bunch_patched-src; ../../bin/python setup.py install
+    zerokspot.recipe.git
 
 [console_scripts]
 recipe = zc.recipe.egg
