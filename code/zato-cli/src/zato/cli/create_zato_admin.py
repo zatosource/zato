@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, shutil, uuid
 from copy import deepcopy
+import os, shutil, uuid
 
 # Zato
 from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZATO_ADMIN_DIR, ZatoCommand
@@ -63,7 +63,7 @@ class Create(ZatoCommand):
     opts.append({'name':'priv_key_path', 'help':"Path to the Zato Admin's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the Zato Admin's certificate in PEM"})
     
-    opts += deepcopy(get_tech_account_opts())
+    opts += get_tech_account_opts()
     
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
@@ -107,7 +107,7 @@ class Create(ZatoCommand):
 
         if self.verbose:
             msg = """Successfully created a Zato Admin instance.
-You can start it with the 'zato start zato_admin {path}' command.""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
+You can start it with the 'zato start {path}' command.""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
             self.logger.debug(msg)
         else:
             self.logger.info('OK')

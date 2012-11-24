@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, re, sys
+import logging, os, random, re, sys
 from base64 import b64encode
 from cStringIO import StringIO
 from datetime import datetime
@@ -84,7 +84,9 @@ logger = logging.getLogger(__name__)
 TRACE1 = 6
 logging.addLevelName(TRACE1, "TRACE1")
 
-_repr_template = Template("<$class_name at $mem_loc$attrs>")
+_repr_template = Template('<$class_name at $mem_loc$attrs>')
+
+random.seed()
 
 ################################################################################
 

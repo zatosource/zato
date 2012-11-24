@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from copy import deepcopy
 from datetime import datetime
 from getpass import getuser
 from socket import gethostname
@@ -34,18 +33,19 @@ from zato.common.odb import VERSION
 from zato.common.odb.model import Base, ZatoInstallState
 
 class Create(ZatoCommand):
-    opts = deepcopy(common_odb_opts)
+    opts = common_odb_opts
 
-    def execute(self, args):
+    def execute(self, args, show_output=True):
         engine = self._get_engine(args)
         session = self._get_session(engine)
         
         if engine.dialect.has_table(engine.connect(), 'install_state'):
-            version = session.query(ZatoInstallState.version).one().version
-            msg = ('The ODB (v. {}) already exists, not creating it. ' +
-                  "Use the 'zato delete odb' command first if you'd like to start afresh and "+
-                  'recreate all ODB objects.').format(version)
-            self.logger.error(msg)
+            if show_output:
+                version = session.query(ZatoInstallState.version).one().version
+                msg = ('The ODB (v. {}) already exists, not creating it. ' +
+                      "Use the 'zato delete odb' command first if you'd like to start afresh and "+
+                      'recreate all ODB objects.').format(version)
+                self.logger.error(msg)
             
             return self.SYS_ERROR.ODB_EXISTS
 
@@ -56,7 +56,8 @@ class Create(ZatoCommand):
             session.add(state)
             session.commit()
 
-            if self.verbose:
-                self.logger.debug('Successfully created the ODB')
-            else:
-                self.logger.info('OK')
+            if show_output:
+                if self.verbose:
+                    self.logger.debug('Successfully created the ODB')
+                else:
+                    self.logger.info('OK')

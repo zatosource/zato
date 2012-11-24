@@ -20,21 +20,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, shutil, sys, stat, traceback
+import os, random
 from copy import deepcopy
-from datetime import datetime
-from uuid import uuid4
+
+# Bunch
+from bunch import Bunch
 
 # Zato
-from zato.cli import ZatoCommand, common_odb_opts, broker_opts, create_odb, \
-     create_lb, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, create_broker, create_server, create_zato_admin, kvdb_opts
-from zato.common import SERVER_JOIN_STATUS, SIMPLE_IO
-from zato.common.defaults import http_plain_server_port
-from zato.common.odb import ping_queries
-from zato.common.odb.model import *
-from zato.common.util import current_host, service_name_from_impl, tech_account_password
-from zato.server import main
+from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
+     ca_create_zato_admin, create_odb, create_server, ZatoCommand
 
 zato_qs_start_template = """#!/usr/bin/env sh
 
@@ -104,9 +98,63 @@ zato_qs_restart = """#!/usr/bin/env sh
 ./zato-qs-start.sh
 """ 
 
+random.seed()
+
 ################################################################################
 
-class Quickstart(ZatoCommand):
+class Create(ZatoCommand):
+    """ Quickly creates a working cluster
+    """
+    allow_empty_secrets = True
+    opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
+    
+    def execute(self, args):
+        """ Create 1) CA and crypto material 2) ODB, 3) server1, 4) server2, 5) load-balancer and 6) Zato admin.
+        """
+        cluster_name = 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
+        server1_name = 'server1'
+        server2_name = 'server2'
+        
+        # 1) CA
+        ca_path = os.path.join(args.path, 'ca')
+        os.mkdir(ca_path)
+        ca_args = Bunch()
+        ca_args.path = ca_path
+        ca_args.verbose = args.verbose
+        ca_args.store_log = args.store_log
+        ca_args.store_config = args.store_config
+        ca_args.cluster_name = cluster_name
+        
+        ca_args_server1 = deepcopy(ca_args)
+        ca_args_server1.server_name = server1_name
+        
+        ca_args_server2 = deepcopy(ca_args)
+        ca_args_server2.server_name = server2_name
+        
+        ca_create_ca.Create(ca_args).execute(ca_args, False)
+        ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
+        
+        ca_create_server.Create(ca_args_server1).execute(ca_args_server1, False)
+        ca_create_server.Create(ca_args_server2).execute(ca_args_server2, False)
+        
+        self.logger.debug('[1/6] CA created')
+        
+        # 2) ODB
+        if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
+            self.logger.debug('[2/6] ODB already exists, not creating it')
+        else:
+            self.logger.debug('[2/6] ODB created')
+            
+            
+        
+
+class Start(ZatoCommand):
+    """ Starts a quickstart cluster
+    """
+    
+
+'''    
+    
     command_name = "quickstart"
     needs_empty_dir = True
 
@@ -174,9 +222,9 @@ class Quickstart(ZatoCommand):
             
             engine = self._get_engine(args)
 
-            print('\nPinging database..')
+            print('Pinging database')
             engine.execute(ping_queries[args.odb_type])
-            print('Ping OK\n')
+            print('Ping OK')
             
             session = self._get_session(engine)
 
@@ -258,9 +306,9 @@ class Quickstart(ZatoCommand):
             #
             # Cluster
             #
-            cluster = Cluster(None, cluster_name, 'An automatically generated quickstart cluster',
-                args.odb_type, args.odb_host, args.odb_port, args.odb_user, args.odb_db_name, 
-                args.odb_schema, args.broker_host, args.broker_port, cb.token, 'localhost', 11223, 20151)
+            #cluster = Cluster(None, cluster_name, 'An automatically generated quickstart cluster',
+            #    args.odb_type, args.odb_host, args.odb_port, args.odb_user, args.odb_db_name, 
+            #    args.odb_schema, args.broker_host, args.broker_port, cb.token, 'localhost', 11223, 20151)
 
             #
             # Servers
@@ -284,16 +332,11 @@ class Quickstart(ZatoCommand):
             print('Quickstart OK. You can now start the newly created Zato components by issuing the ./zato-qs-start.sh command\n')
             
         except Exception, e:
-            print("\nAn exception has been caught, quitting now!\n")
+            print("An exception has been caught, quitting now!")
             traceback.print_exc()
             print("")
         except KeyboardInterrupt:
-            print("\nQuitting.")
+            print("Quitting")
             sys.exit(1)
-            
 
-def main(target_dir):
-    Quickstart(target_dir).run()
-
-if __name__ == "__main__":
-    main(".")
+'''

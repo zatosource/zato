@@ -83,11 +83,6 @@ common_odb_opts = [
         {'name':'--odb_password', 'help':'ODB database password'},
 ]
 
-broker_opts = [
-    {'name':'broker_host', 'help':_opts_broker_host},
-    {'name':'broker_port', 'help':_opts_broker_port},
-]
-
 common_ca_create_opts = [
     {'name':'--organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
     {'name':'--locality', 'help':'Locality name (defaults to {locality})'.format(**ca_defaults)},
@@ -181,6 +176,7 @@ class ZatoCommand(object):
                 self.code = code
                 self.name = name
     
+        CA = _ComponentName('CA', 'Certificate authority')
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SERVER = _ComponentName('SERVER', 'Server')
         ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
@@ -189,6 +185,7 @@ class ZatoCommand(object):
         self.verbose = args.verbose
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        self.logger.handlers[:] = []
         
         console_handler = logging.StreamHandler()
         console_formatter = logging.Formatter('%(message)s')
@@ -220,7 +217,7 @@ class ZatoCommand(object):
             if not needs_confirm:
                 return secret1.strip('\n')
 
-            secret2 = getpass('Enter the {} again. Will not be echoed: '.format(secret_name))
+            secret2 = getpass('Enter the {} again (will not be echoed): '.format(secret_name))
 
             if secret1 != secret2:
                 self.logger.info('{}s do not match'.format(secret_name.capitalize()))
@@ -356,7 +353,7 @@ class CACreateCommand(ZatoCommand):
         msg = "{} doesn't seem to be a CA directory, the '{}' file is missing."
         return msg.format(self.target_dir, self.file_needed)
 
-    def _execute(self, args, extension):
+    def _execute(self, args, extension, show_output=True):
         now = self._get_now()
         openssl_template = open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf')).read()
         
@@ -454,10 +451,11 @@ class CACreateCommand(ZatoCommand):
   - certificate {cert_name}
   - CSR: {csr_name}""".format(**format_args)
 
-        if self.verbose:
-            self.logger.debug(msg)
-        else:
-            self.logger.info('OK')
+        if show_output:
+            if self.verbose:
+                self.logger.debug(msg)
+            else:
+                self.logger.info('OK')
 
         # In case someone needs to invoke us directly and wants to find out
         # what the format_args were.
