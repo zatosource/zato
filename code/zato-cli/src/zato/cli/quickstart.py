@@ -31,6 +31,7 @@ from bunch import Bunch
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_zato_admin, create_cluster, create_lb, create_odb, create_server, ZatoCommand
+from zato.common.defaults import http_plain_server_port
 from zato.common.util import make_repr
 
 random.seed()
@@ -161,14 +162,14 @@ class Create(ZatoCommand):
         3) ODB initial data 
         4) server1 
         5) server2 
-        6) load-balancer 
+        6) load-balancer
         7) Zato admin
         """
-        next_step  = count(1)
+        next_step = count(1)
+        next_port = count(http_plain_server_port)
         total_steps = 7
         cluster_name = 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
-        server1_name = 'server1'
-        server2_name = 'server2'
+        server_names = {'1':'server1', '2':'server2'}
         tech_account_name = 'techacct-{}'.format(random.getrandbits(20)).zfill(7)
         tech_account_password = uuid4().hex
         broker_host = 'localhost'
@@ -187,10 +188,10 @@ class Create(ZatoCommand):
         ca_args.path = ca_path
         
         ca_args_server1 = deepcopy(ca_args)
-        ca_args_server1.server_name = server1_name
+        ca_args_server1.server_name = server_names['1']
         
         ca_args_server2 = deepcopy(ca_args)
-        ca_args_server2.server_name = server2_name
+        ca_args_server2.server_name = server_names['2']
         
         ca_create_ca.Create(ca_args).execute(ca_args, False)
         ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
@@ -199,9 +200,11 @@ class Create(ZatoCommand):
         ca_create_server.Create(ca_args_server2).execute(ca_args_server2, False)
         
         ca_create_zato_admin.Create(ca_args).execute(ca_args, False)
+
+        server_crypto_loc = {}
+        for key in server_names:
+            server_crypto_loc[key] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[key]))
         
-        server1_crypto_loc = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server1_name))
-        server2_crypto_loc = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server2_name))
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
         zato_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'zato-admin')
         
@@ -233,20 +236,38 @@ class Create(ZatoCommand):
         
         #
         # 4) server1 
+        # 5) server2
         #
-        server_path = os.path.join(args.path, server1_name)
-        os.mkdir(server_path)
+        for key in server_names:
+            server_path = os.path.join(args.path, server_names[key])
+            os.mkdir(server_path)
+            
+            create_server_args = self._bunch_from_args(args, cluster_name)
+            create_server_args.server_name = server_names[key]
+            create_server_args.path = server_path
+            create_server_args.cert_path = server_crypto_loc[key].cert_path
+            create_server_args.pub_key_path = server_crypto_loc[key].pub_path
+            create_server_args.priv_key_path = server_crypto_loc[key].priv_path
+            
+            create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
+            
+            self.logger.debug('[{}/{}] server{} created'.format(next_step.next(), total_steps, key))
+            
+        #
+        # 6) load-balancer
+        #
+        lb_path = os.path.join(args.path, 'load-balancer')
+        os.mkdir(lb_path)
         
-        create_server_args = self._bunch_from_args(args, cluster_name)
-        create_server_args.server_name = server1_name
-        create_server_args.path = server_path
-        create_server_args.cert_path = server1_crypto_loc.cert_path
-        create_server_args.pub_key_path = server1_crypto_loc.pub_path
-        create_server_args.priv_key_path = server1_crypto_loc.priv_path
+        create_lb_args = self._bunch_from_args(args, cluster_name)
+        create_lb_args.path = lb_path
         
-        create_server.Create(create_server_args).execute(create_server_args, show_output=False)
+        # Need to substract 1 because we've already called .next() twice
+        # when creating servers above.
+        server2_port = next_port.next()-1 
         
-        self.logger.debug('[{}/{}] server1 created'.format(next_step.next(), total_steps))
+        create_lb.Create(create_lb_args).execute(create_lb_args, True, server2_port, False)
+        self.logger.debug('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps)) # Need to substract 
         
 
 class Start(ZatoCommand):

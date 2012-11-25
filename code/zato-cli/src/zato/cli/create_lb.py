@@ -104,16 +104,16 @@ default_backend="""
     server http_plain--zato-quickstart-server-02 127.0.0.1:{server02_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--zato-quickstart-server-02
 """
 
-class CreateLoadBalancer(ZatoCommand):
+class Create(ZatoCommand):
     command_name = 'create lb-agent'
 
     needs_empty_dir = True
 
     def __init__(self, args):
-        super(CreateLoadBalancer, self).__init__(args)
+        super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
 
-    def execute(self, args, use_default_backend=False, server02_port=None):
+    def execute(self, args, use_default_backend=False, server02_port=None, show_output=True):
 
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon'))
@@ -137,8 +137,9 @@ class CreateLoadBalancer(ZatoCommand):
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.LOAD_BALANCER.code)
 
-        if self.verbose:
-            msg = "Successfully created a load-balancer's agent in {}".format(self.target_dir)
-            self.logger.debug(msg)
-        else:
-            self.logger.info('OK')
+        if show_output:
+            if self.verbose:
+                msg = "Successfully created a load-balancer's agent in {}".format(self.target_dir)
+                self.logger.debug(msg)
+            else:
+                self.logger.info('OK')
