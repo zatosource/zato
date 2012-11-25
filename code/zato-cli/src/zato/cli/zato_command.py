@@ -232,7 +232,7 @@ def main():
         'ca_create_zato_admin': ca_create_zato_admin_mod.Create,
         'component_version': component_version_mod.ComponentVersion,
         'create_cluster': create_cluster_mod.Create,
-        'create_lb': create_lb_mod.CreateLoadBalancer,
+        'create_lb': create_lb_mod.Create,
         'create_odb': create_odb_mod.Create,
         'create_server': create_server_mod.Create,
         'create_zato_admin': create_zato_admin_mod.Create,
