@@ -24,6 +24,7 @@ import os, shutil, uuid
 from copy import deepcopy
 from datetime import datetime
 from multiprocessing import cpu_count
+from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
@@ -39,8 +40,7 @@ from zato.server.repo import RepoManager
 
 server_conf_template = """[bind]
 host=localhost
-starting_port={starting_port}
-parallel_count=1 # Don't change it
+port={port}
 
 [crypto]
 priv_key_location=zs-priv-key.pem
@@ -128,16 +128,19 @@ class Create(ZatoCommand):
         self.dirs_prepared = False
         self.odb_token = uuid.uuid4().hex
 
-    def prepare_directories(self):
-        self.logger.debug('Creating directories..')
+    def prepare_directories(self, show_output):
+        if show_output:
+            self.logger.debug('Creating directories..')
+            
         for d in sorted(directories):
             d = os.path.join(self.target_dir, d)
-            self.logger.debug('Creating {d}'.format(d=d))
+            if show_output:
+                self.logger.debug('Creating {d}'.format(d=d))
             os.mkdir(d)
 
         self.dirs_prepared = True
 
-    def execute(self, args, server_pub_key=None, starting_port=http_plain_server_port, parallel_count=1):
+    def execute(self, args, port=http_plain_server_port, show_output=True):
         
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -162,7 +165,7 @@ class Create(ZatoCommand):
 
         try:
             if not self.dirs_prepared:
-                self.prepare_directories()
+                self.prepare_directories(show_output)
     
             repo_dir = os.path.join(self.target_dir, 'config/repo')
     
@@ -174,12 +177,15 @@ class Create(ZatoCommand):
     
             repo_manager = RepoManager(repo_dir)
             repo_manager.ensure_repo_consistency()
-            self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
-    
-            self.logger.debug('Creating files..')
+            
+            if show_output:
+                self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
+                self.logger.debug('Creating files..')
+                
             for file_name, contents in sorted(files.items()):
                 file_name = os.path.join(self.target_dir, file_name)
-                self.logger.debug('Creating {}'.format(file_name))
+                if show_output:
+                    self.logger.debug('Creating {}'.format(file_name))
                 f = file(file_name, 'w')
                 f.write(contents)
                 f.close()
@@ -190,14 +196,14 @@ class Create(ZatoCommand):
             open(logging_conf_loc, 'w').write(logging_conf.format(
                 log_path=os.path.join(self.target_dir, 'logs', 'zato.log')))
     
-            self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
+            if show_output:
+                self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
     
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
                 server_conf_template.format(
-                    starting_port=starting_port,
-                    parallel_count=parallel_count, 
+                    port=port,
                     odb_db_name=args.odb_db_name, 
                     odb_engine=args.odb_type, 
                     odb_host=args.odb_host,
@@ -213,7 +219,8 @@ class Create(ZatoCommand):
                     ))
             server_conf.close()
             
-            self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
+            if show_output:
+                self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
             
             # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
@@ -232,13 +239,16 @@ class Create(ZatoCommand):
             
         except Exception, e:
             msg = 'Could not create the server, e:[{}]'.format(format_exc(e))
+            self.logger.error(msg)
             session.rollback()
         else:
-            self.logger.debug('Server added to the ODB')        
+            if show_output:
+                self.logger.debug('Server added to the ODB')
 
-        if self.verbose:
-            msg = """Successfully created a new server.
-You can now start it with the 'zato start {}' command.""".format(self.target_dir)
-            self.logger.debug(msg)
-        else:
-            self.logger.info('OK')
+        if show_output:
+            if self.verbose:
+                msg = """Successfully created a new server.
+    You can now start it with the 'zato start {}' command.""".format(self.target_dir)
+                self.logger.debug(msg)
+            else:
+                self.logger.info('OK')

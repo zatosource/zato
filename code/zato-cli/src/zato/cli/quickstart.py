@@ -31,6 +31,9 @@ from bunch import Bunch
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_zato_admin, create_cluster, create_lb, create_odb, create_server, ZatoCommand
+from zato.common.util import make_repr
+
+random.seed()
 
 zato_qs_start_template = """#!/usr/bin/env sh
 
@@ -100,13 +103,35 @@ zato_qs_restart = """#!/usr/bin/env sh
 ./zato-qs-start.sh
 """ 
 
-random.seed()
+
+class CryptoMaterialLocation(object):
+    """ Locates and remembers location of various crypto material for Zato components.
+    """
+    def __init__(self, ca_dir, component_pattern):
+        self.ca_dir = ca_dir
+        self.component_pattern = component_pattern
+        self.cert_path = None
+        self.pub_path = None
+        self.priv_path = None
+        self.locate()
+        
+    def __repr__(self):
+        return make_repr(self)
+        
+    def locate(self):
+        for crypto_name in('cert', 'priv', 'pub'):
+            path = os.path.join(self.ca_dir, 'out-{}'.format(crypto_name))
+            for name in os.listdir(path):
+                full_path = os.path.join(path, name)
+                if '{}-{}'.format(self.component_pattern, crypto_name) in full_path:
+                    setattr(self, '{}_path'.format(crypto_name), full_path)
 
 ################################################################################
 
 class Create(ZatoCommand):
     """ Quickly creates a working cluster
     """
+    #needs_empty_dir = True
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     
@@ -175,6 +200,11 @@ class Create(ZatoCommand):
         
         ca_create_zato_admin.Create(ca_args).execute(ca_args, False)
         
+        server1_crypto_loc = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server1_name))
+        server2_crypto_loc = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server2_name))
+        lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
+        zato_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'zato-admin')
+        
         self.logger.debug('[{}/{}] CA created'.format(next_step.next(), total_steps))
         
         #
@@ -201,10 +231,28 @@ class Create(ZatoCommand):
         
         self.logger.debug('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
         
+        #
+        # 4) server1 
+        #
+        server_path = os.path.join(args.path, server1_name)
+        os.mkdir(server_path)
+        
+        create_server_args = self._bunch_from_args(args, cluster_name)
+        create_server_args.server_name = server1_name
+        create_server_args.path = server_path
+        create_server_args.cert_path = server1_crypto_loc.cert_path
+        create_server_args.pub_key_path = server1_crypto_loc.pub_path
+        create_server_args.priv_key_path = server1_crypto_loc.priv_path
+        
+        create_server.Create(create_server_args).execute(create_server_args, show_output=False)
+        
+        self.logger.debug('[{}/{}] server1 created'.format(next_step.next(), total_steps))
+        
 
 class Start(ZatoCommand):
     """ Starts a quickstart cluster
     """
+    
     
 
 '''    
