@@ -22,7 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.cli import CACreateCommand, common_ca_create_opts
 
-class CreateZatoAdmin(CACreateCommand):
+class Create(CACreateCommand):
     opts = [
         {'name':'--organizational-unit', 'help':'Organizational unit name'},
     ]
@@ -34,5 +34,5 @@ class CreateZatoAdmin(CACreateCommand):
     def get_organizational_unit(self, args):
         return 'zato-admin'
 
-    def execute(self, args):
-        return self._execute(args, 'v3_client_server')
+    def execute(self, args, show_output=True):
+        return self._execute(args, 'v3_client_server', show_output)

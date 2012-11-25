@@ -109,7 +109,7 @@ def get_parser():
         description='Create crypto material for a Zato web console', parents=[base_parser])
     ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
     ca_create_zato_admin.add_argument('path', help='Path to a CA directory')
-    add_opts(ca_create_zato_admin, ca_create_zato_admin_mod.CreateZatoAdmin.opts)
+    add_opts(ca_create_zato_admin, ca_create_zato_admin_mod.Create.opts)
 
     # 
     # component-version
@@ -229,7 +229,7 @@ def main():
         'ca_create_ca': ca_create_ca_mod.Create,
         'ca_create_lb_agent': ca_create_lb_agent_mod.Create,
         'ca_create_server': ca_create_server_mod.Create,
-        'ca_create_zato_admin': ca_create_zato_admin_mod.CreateZatoAdmin,
+        'ca_create_zato_admin': ca_create_zato_admin_mod.Create,
         'component_version': component_version_mod.ComponentVersion,
         'create_cluster': create_cluster_mod.Create,
         'create_lb': create_lb_mod.CreateLoadBalancer,

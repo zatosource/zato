@@ -45,7 +45,7 @@ class Create(ZatoCommand):
     
     opts += get_tech_account_opts('for Zato admin instances to use')
     
-    def execute(self, args):
+    def execute(self, args, show_output=True):
         
         engine = self._get_engine(args)
         session = self._get_session(engine)
@@ -81,11 +81,12 @@ class Create(ZatoCommand):
             
             return self.SYS_ERROR.CLUSTER_NAME_ALREADY_EXISTS
 
-        if self.verbose:
-            msg = 'Successfully created a new cluster [{}]'.format(args.cluster_name)
-            self.logger.debug(msg)
-        else:
-            self.logger.info('OK')
+        if show_output:
+            if self.verbose:
+                msg = 'Successfully created a new cluster [{}]'.format(args.cluster_name)
+                self.logger.debug(msg)
+            else:
+                self.logger.info('OK')
             
     def add_soap_services(self, session, cluster, tech_account):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
