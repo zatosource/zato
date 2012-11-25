@@ -22,13 +22,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os, random
 from copy import deepcopy
+from itertools import count
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
 
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, create_odb, create_server, ZatoCommand
+     ca_create_zato_admin, create_cluster, create_lb, create_odb, create_server, ZatoCommand
 
 zato_qs_start_template = """#!/usr/bin/env sh
 
@@ -108,22 +110,56 @@ class Create(ZatoCommand):
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     
+    def _bunch_from_args(self, args, cluster_name):
+        bunch = Bunch()
+        bunch.verbose = args.verbose
+        bunch.store_log = args.store_log
+        bunch.store_config = args.store_config
+        bunch.odb_type = args.odb_type
+        bunch.odb_host = args.odb_host
+        bunch.odb_port = args.odb_port
+        bunch.odb_user = args.odb_user
+        bunch.odb_db_name = args.odb_db_name
+        bunch.kvdb_host = args.kvdb_host
+        bunch.kvdb_port = args.kvdb_port
+        bunch.postgresql_schema = args.postgresql_schema
+        bunch.odb_password = args.odb_password
+        bunch.kvdb_password = args.kvdb_password
+        bunch.cluster_name = cluster_name
+        
+        return bunch
+    
     def execute(self, args):
-        """ Create 1) CA and crypto material 2) ODB, 3) server1, 4) server2, 5) load-balancer and 6) Zato admin.
+        """ Quickly creates Zato components
+        1) CA and crypto material
+        2) ODB
+        3) ODB initial data 
+        4) server1 
+        5) server2 
+        6) load-balancer 
+        7) Zato admin
         """
+        next_step  = count(1)
+        total_steps = 7
         cluster_name = 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
         server1_name = 'server1'
         server2_name = 'server2'
+        tech_account_name = 'techacct-{}'.format(random.getrandbits(20)).zfill(7)
+        tech_account_password = uuid4().hex
+        broker_host = 'localhost'
+        broker_port = 6379
+        lb_host = 'localhost'
+        lb_port = 11223
+        lb_agent_port = 20151
         
+        #
         # 1) CA
+        #
         ca_path = os.path.join(args.path, 'ca')
         os.mkdir(ca_path)
-        ca_args = Bunch()
+        
+        ca_args = self._bunch_from_args(args, cluster_name)
         ca_args.path = ca_path
-        ca_args.verbose = args.verbose
-        ca_args.store_log = args.store_log
-        ca_args.store_config = args.store_config
-        ca_args.cluster_name = cluster_name
         
         ca_args_server1 = deepcopy(ca_args)
         ca_args_server1.server_name = server1_name
@@ -137,15 +173,33 @@ class Create(ZatoCommand):
         ca_create_server.Create(ca_args_server1).execute(ca_args_server1, False)
         ca_create_server.Create(ca_args_server2).execute(ca_args_server2, False)
         
-        self.logger.debug('[1/6] CA created')
+        ca_create_zato_admin.Create(ca_args).execute(ca_args, False)
         
+        self.logger.debug('[{}/{}] CA created'.format(next_step.next(), total_steps))
+        
+        #
         # 2) ODB
+        #
         if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.debug('[2/6] ODB already exists, not creating it')
+            self.logger.debug('[{}/{}] ODB schema already exists, not creating it'.format(next_step.next(), total_steps))
         else:
-            self.logger.debug('[2/6] ODB created')
+            self.logger.debug('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
             
-            
+        #
+        # 3) ODB initial data
+        #
+        
+        create_cluster_args = self._bunch_from_args(args, cluster_name)
+        create_cluster_args.broker_host = broker_host
+        create_cluster_args.broker_port = broker_port
+        create_cluster_args.lb_host = lb_host
+        create_cluster_args.lb_port = lb_port
+        create_cluster_args.lb_agent_port = lb_agent_port
+        create_cluster_args.tech_account_name = tech_account_name
+        create_cluster_args.tech_account_password = tech_account_password
+        create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
+        
+        self.logger.debug('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
         
 
 class Start(ZatoCommand):

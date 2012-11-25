@@ -79,7 +79,7 @@ common_odb_opts = [
         {'name':'odb_port', 'help':_opts_odb_port},
         {'name':'odb_user', 'help':_opts_odb_user},
         {'name':'odb_db_name', 'help':_opts_odb_db_name},
-        {'name':'--postgresql-schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
+        {'name':'--postgresql_schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
         {'name':'--odb_password', 'help':'ODB database password'},
 ]
 
