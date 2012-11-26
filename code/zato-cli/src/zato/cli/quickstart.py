@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, random
+import os, random, stat, sys
 from copy import deepcopy
 from itertools import count
 from uuid import uuid4
@@ -95,7 +95,6 @@ $ZATO_BIN stop .
 
 cd $BASE_DIR
 echo Zato quickstart environment stopped
-exit 0
 """
 
 zato_qs_restart = """#!/usr/bin/env sh
@@ -164,10 +163,11 @@ class Create(ZatoCommand):
         5) server2 
         6) load-balancer
         7) Zato admin
+        8) Scripts
         """
         next_step = count(1)
         next_port = count(http_plain_server_port)
-        total_steps = 7
+        total_steps = 8
         cluster_name = 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
         server_names = {'1':'server1', '2':'server2'}
         tech_account_name = 'techacct-{}'.format(random.getrandbits(20)).zfill(7)
@@ -208,20 +208,19 @@ class Create(ZatoCommand):
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
         zato_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'zato-admin')
         
-        self.logger.debug('[{}/{}] CA created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] CA created'.format(next_step.next(), total_steps))
         
         #
         # 2) ODB
         #
         if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.debug('[{}/{}] ODB schema already exists, not creating it'.format(next_step.next(), total_steps))
+            self.logger.info('[{}/{}] ODB schema already exists, not creating it'.format(next_step.next(), total_steps))
         else:
-            self.logger.debug('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
+            self.logger.info('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
             
         #
         # 3) ODB initial data
         #
-        
         create_cluster_args = self._bunch_from_args(args, cluster_name)
         create_cluster_args.broker_host = broker_host
         create_cluster_args.broker_port = broker_port
@@ -232,7 +231,7 @@ class Create(ZatoCommand):
         create_cluster_args.tech_account_password = tech_account_password
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
         
-        self.logger.debug('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
         
         #
         # 4) server1 
@@ -251,7 +250,7 @@ class Create(ZatoCommand):
             
             create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
             
-            self.logger.debug('[{}/{}] server{} created'.format(next_step.next(), total_steps, key))
+            self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, key))
             
         #
         # 6) load-balancer
@@ -267,7 +266,7 @@ class Create(ZatoCommand):
         server2_port = next_port.next()-1 
         
         create_lb.Create(create_lb_args).execute(create_lb_args, True, server2_port, False)
-        self.logger.debug('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
         
         #
         # 7) Zato admin
@@ -284,15 +283,29 @@ class Create(ZatoCommand):
         create_zato_admin_args.tech_account_password = tech_account_password
         
         create_zato_admin.Create(create_zato_admin_args).execute(create_zato_admin_args, False)
-        self.logger.debug('[{}/{}] Zato admin created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Zato admin created'.format(next_step.next(), total_steps))
         
-        
+        #
+        # 8) Scripts
+        #
+        zato_bin = os.path.join(os.path.dirname(sys.executable), 'zato')
+        zato_qs_start_path = os.path.join(args.path, 'zato-qs-start.sh')
+        zato_qs_stop_path = os.path.join(args.path, 'zato-qs-stop.sh')
+        zato_qs_restart_path = os.path.join(args.path, 'zato-qs-restart.sh')
 
-class Start(ZatoCommand):
-    """ Starts a quickstart cluster
-    """
-    
-    
+        open(zato_qs_start_path, 'w').write(zato_qs_start_template.format(zato_bin=zato_bin))
+        open(zato_qs_stop_path, 'w').write(zato_qs_stop_template.format(zato_bin=zato_bin))
+        open(zato_qs_restart_path, 'w').write(zato_qs_restart)
+
+        file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
+        
+        os.chmod(zato_qs_start_path, file_mod)
+        os.chmod(zato_qs_stop_path, file_mod)
+        os.chmod(zato_qs_restart_path, file_mod)
+        
+        msg = 'Quickstart cluster {} created. Start it by issuing the {}/zato-qs-start.sh command'.format(
+            cluster_name, args.path)
+        self.logger.info(msg)
 
 '''    
     

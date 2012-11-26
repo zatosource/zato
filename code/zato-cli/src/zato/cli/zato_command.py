@@ -48,7 +48,6 @@ from zato.common import version as zato_version
 # zato encrypt . --secret
 zato from-config ./zato.config.file
 zato quickstart create .
-zato quickstart start .
 zato info . # TODO: replace .lb-dir with .zato-info['component']
 zato services export . token
 zato services import . dump
@@ -198,11 +197,6 @@ def get_parser():
     quickstart_create.set_defaults(command='quickstart_create')
     add_opts(quickstart_create, quickstart_mod.Create.opts)
     
-    quickstart_start = quickstart_subs.add_parser('start', description=quickstart_mod.Start.__doc__, parents=[base_parser])
-    quickstart_start.add_argument('path', help='Path to a quickstart cluster')
-    quickstart_start.set_defaults(command='quickstart_start')
-    add_opts(quickstart_start, quickstart_mod.Start.opts)
-    
     #
     # start
     #
@@ -241,7 +235,6 @@ def main():
         'encrypt': crypto_mod.Encrypt,
         'from_config_file': FromConfigFile,
         'quickstart_create': quickstart_mod.Create,
-        'quickstart_start': quickstart_mod.Create,
         #'start': start_mod.Start,
     }
     args = get_parser().parse_args()
