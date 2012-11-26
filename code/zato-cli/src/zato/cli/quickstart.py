@@ -30,7 +30,7 @@ from bunch import Bunch
 
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, create_cluster, create_lb, create_odb, create_server, ZatoCommand
+     ca_create_zato_admin, create_cluster, create_lb, create_odb, create_server, create_zato_admin, ZatoCommand
 from zato.common.defaults import http_plain_server_port
 from zato.common.util import make_repr
 
@@ -267,7 +267,25 @@ class Create(ZatoCommand):
         server2_port = next_port.next()-1 
         
         create_lb.Create(create_lb_args).execute(create_lb_args, True, server2_port, False)
-        self.logger.debug('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps)) # Need to substract 
+        self.logger.debug('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
+        
+        #
+        # 7) Zato admin
+        #
+        zato_admin_path = os.path.join(args.path, 'zato-admin')
+        os.mkdir(zato_admin_path)
+        
+        create_zato_admin_args = self._bunch_from_args(args, cluster_name)
+        create_zato_admin_args.path = zato_admin_path
+        create_zato_admin_args.cert_path = zato_admin_crypto_loc.cert_path
+        create_zato_admin_args.pub_key_path = zato_admin_crypto_loc.pub_path
+        create_zato_admin_args.priv_key_path = zato_admin_crypto_loc.priv_path
+        create_zato_admin_args.tech_account_name = tech_account_name
+        create_zato_admin_args.tech_account_password = tech_account_password
+        
+        create_zato_admin.Create(create_zato_admin_args).execute(create_zato_admin_args, False)
+        self.logger.debug('[{}/{}] Zato admin created'.format(next_step.next(), total_steps))
+        
         
 
 class Start(ZatoCommand):

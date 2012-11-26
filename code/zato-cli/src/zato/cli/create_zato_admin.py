@@ -69,7 +69,7 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
-    def execute(self, args):
+    def execute(self, args, show_output=True):
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
 
@@ -105,9 +105,10 @@ class Create(ZatoCommand):
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.ZATO_ADMIN.code)
 
-        if self.verbose:
-            msg = """Successfully created a Zato Admin instance.
-You can start it with the 'zato start {path}' command.""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
-            self.logger.debug(msg)
-        else:
-            self.logger.info('OK')
+        if show_output:
+            if self.verbose:
+                msg = """Successfully created a Zato Admin instance.
+    You can start it with the 'zato start {path}' command.""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
+                self.logger.debug(msg)
+            else:
+                self.logger.info('OK')
