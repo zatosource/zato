@@ -44,43 +44,29 @@ zdaemon_conf_name_contents = """<runner>
 
 class Start(ManageCommand):
 
-    def _on_server(self):
+    def _on_server(self, show_output=True):
 
         server_conf = ConfigObj(os.path.join(self.config_dir, 'repo', 'server.conf'))
+        port = server_conf['main']['gunicorn_bind'].split(':')[1]
+        server_prefix = '{0}'.format(port).zfill(5)
 
-        parallel_count = int(server_conf['bind']['parallel_count'])
-        starting_port = int(server_conf['bind'].get('starting_port'))
+        socket_name = 'server-{0}.sock'.format(server_prefix)
+        socket_name = os.path.join(self.config_dir, 'zdaemon', socket_name)
 
-        for idx in xrange(parallel_count):
+        # If we have a socket of that name then we already have a running
+        # server, in which case we refrain from starting new processes now.
+        if os.path.exists(socket_name):
+            msg = 'Server at {0} is already running'.format(self.component_dir)
+            self.logger.debug(msg)
+            return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
 
-            server_no = '{0}'.format(starting_port+idx).zfill(5)
+        zdaemon_conf_name = 'zdaemon-{0}.conf'.format(port)
+        socket_prefix = 'server-{0}'.format(port)
+        program = '{} -m zato.server.main {}'.format(get_executable(), self.component_dir)
+        logfile_path_prefix = 'zdaemon-{}'.format(port)
 
-            socket_name = 'server-{0}.sock'.format(server_no)
-            socket_name = os.path.join(self.config_dir, 'zdaemon', socket_name)
-
-            # If we have a socket of that name then we already have a running
-            # server, in which case we refrain from starting new processes now.
-            if os.path.exists(socket_name):
-                msg = 'Server at {0} is already running'.format(self.component_dir)
-                self.logger.debug(msg)
-                return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
-
-        for idx in range(parallel_count):
-
-            server_no = '{0}'.format(starting_port+idx).zfill(5)
-
-            host = 'localhost'
-            port = starting_port+idx
-            base_dir = self.component_dir
-            start_singleton = True if idx == 0 else ''
-
-            zdaemon_conf_name = 'zdaemon-{0}.conf'.format(server_no)
-            socket_prefix = 'server-{0}'.format(server_no)
-            program = '{} -m zato.server.main {} {} {} {}'.format(get_executable(), host, port, base_dir, start_singleton)
-            logfile_path_prefix = 'zdaemon-{}'.format(server_no)
-
-            self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
-                                logfile_path_prefix, program)
+        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
+                            logfile_path_prefix, program)
 
         if self.verbose:
             self.logger.debug('Zato server at {0} has been started'.format(self.component_dir))

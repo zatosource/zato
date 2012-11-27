@@ -467,7 +467,7 @@ class ManageCommand(ZatoCommand):
 
     def _get_dispatch(self):
         return {
-            self.COMPONENTS.LOAD_BALANCER: self._on_lb,
+            self.COMPONENTS.LOAD_BALANCER.code: self._on_lb,
             self.COMPONENTS.SERVER.code: self._on_server,
             self.COMPONENTS.ZATO_ADMIN.code: self._on_zato_admin,
         }

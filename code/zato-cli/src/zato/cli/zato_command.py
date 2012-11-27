@@ -235,7 +235,7 @@ def main():
         'encrypt': crypto_mod.Encrypt,
         'from_config_file': FromConfigFile,
         'quickstart_create': quickstart_mod.Create,
-        #'start': start_mod.Start,
+        'start': start_mod.Start,
     }
     args = get_parser().parse_args()
     command_class[args.command](args).run(args)
