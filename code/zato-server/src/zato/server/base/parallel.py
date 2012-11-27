@@ -99,6 +99,7 @@ class ParallelServer(BrokerMessageReceiver):
         of the threads created in ParallelServer.run_forever method.
         """
         cid = new_cid()
+        wsgi_environ['zato.http.response.headers'] = {}
         
         try:
             payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, self.worker_store)
@@ -110,12 +111,8 @@ class ParallelServer(BrokerMessageReceiver):
             logger.error(error_msg)
             payload = error_msg
             
-        #print(wsgi_environ)
-            
-        #headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
-        #start_response(wsgi_environ['zato.http.response.status'], headers)
-        
-        start_response('200 OK', {})
+        headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
+        start_response(wsgi_environ['zato.http.response.status'], headers)
         
         return [payload]
     
@@ -147,6 +144,7 @@ class ParallelServer(BrokerMessageReceiver):
         # Key-value DB
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
+        self.kvdb.decrypt_func = self.crypto_manager.decrypt
         self.kvdb.init()
         
         self.worker_store = WorkerStore(self.config, self)
@@ -179,7 +177,8 @@ class ParallelServer(BrokerMessageReceiver):
                     os.path.join(
                         self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
                 
-            kwargs = {'broker_client':self.broker_client}
+            # TODO: Passing a broker client around isn't thread-safe
+            kwargs = {'broker_client':self.broker_client} 
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
             
             # Let the scheduler fully initialize
@@ -200,7 +199,6 @@ class ParallelServer(BrokerMessageReceiver):
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
                     self.singleton_server.scheduler.create_edit('create', job_data)
-                    
 
             # Let's see if we can become a connector server, the one to start all
             # the connectors, and start the connectors only once throughout the whole cluster.

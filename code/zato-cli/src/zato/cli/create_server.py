@@ -38,9 +38,14 @@ from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
 from zato.server.repo import RepoManager
 
-server_conf_template = """[bind]
-host=localhost
-port={port}
+server_conf_template = """[main]
+gunicorn_bind=localhost:{port}
+gunicorn_worker_class=gevent
+gunicorn_workers=4
+gunicorn_user=
+gunicorn_group=
+gunicorn_proc_name=
+gunicorn_logger_class=
 
 [crypto]
 priv_key_location=zs-priv-key.pem
