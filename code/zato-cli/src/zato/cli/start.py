@@ -83,8 +83,6 @@ class Start(ManageCommand):
         program = '{} -m zato.agent.load_balancer.main {}'.format(get_executable(), config_path)
         logfile_path_prefix = 'zdaemon-lb-agent'
         
-        print(33333, program)
-
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
 
         # Now start HAProxy
