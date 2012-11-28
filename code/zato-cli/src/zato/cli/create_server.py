@@ -48,10 +48,10 @@ gunicorn_proc_name=
 gunicorn_logger_class=
 
 [crypto]
-priv_key_location=zs-priv-key.pem
-pub_key_location=zs-pub-key.pem
-cert_location=zs-cert.pem
-ca_certs_location=ca-chain.pem
+priv_key_location=zato-server-priv-key.pem
+pub_key_location=zato-server-pub-key.pem
+cert_location=zato-server-cert.pem
+ca_certs_location=zato-server-ca-certs.pem
 
 [odb]
 db_name={odb_db_name}
@@ -172,13 +172,13 @@ class Create(ZatoCommand):
             if not self.dirs_prepared:
                 self.prepare_directories(show_output)
     
-            repo_dir = os.path.join(self.target_dir, 'config/repo')
+            repo_dir = os.path.join(self.target_dir, 'config', 'repo')
     
-            shutil.copyfile(os.path.abspath(args.pub_key_path), os.path.join(repo_dir, 'zs-pub-key.pem'))
-            shutil.copyfile(os.path.abspath(args.priv_key_path), os.path.join(repo_dir, 'zs-priv-key.pem'))
-            shutil.copyfile(os.path.abspath(args.cert_path), os.path.join(repo_dir, 'zs-cert.pem'))
+            shutil.copyfile(os.path.abspath(args.pub_key_path), os.path.join(repo_dir, 'zato-server-pub-key.pem'))
+            shutil.copyfile(os.path.abspath(args.priv_key_path), os.path.join(repo_dir, 'zato-server-priv-key.pem'))
+            shutil.copyfile(os.path.abspath(args.cert_path), os.path.join(repo_dir, 'zato-server-cert.pem'))
             
-            pub_key = open(os.path.join(repo_dir, 'zs-pub-key.pem')).read()
+            pub_key = open(os.path.join(repo_dir, 'zato-server-pub-key.pem')).read()
     
             repo_manager = RepoManager(repo_dir)
             repo_manager.ensure_repo_consistency()

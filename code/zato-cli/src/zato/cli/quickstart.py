@@ -257,6 +257,10 @@ class Create(ZatoCommand):
         
         create_lb_args = self._bunch_from_args(args, cluster_name)
         create_lb_args.path = lb_path
+        create_lb_args.cert_path = lb_agent_crypto_loc.cert_path
+        create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path
+        create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path
+        create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path
         
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
