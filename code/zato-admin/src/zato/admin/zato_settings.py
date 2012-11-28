@@ -19,9 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-SSL_KEY_FILE = 'zato-admin-priv-key.pem'
-SSL_CERT_FILE = 'zato-admin-cert.pem'
-SSL_CA_CERTS = 'ca-chain.pem'
+# Zato
+from zato.common.util import decrypt
+
+SSL_KEY_FILE = './config/repo/zato-admin-priv-key.pem'
+SSL_CERT_FILE = './config/repo/zato-admin-cert.pem'
+SSL_CA_CERTS = './config/repo/zato-admin-ca-certs.pem'
 
 LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
@@ -33,6 +36,8 @@ def _update_globals(config):
         else:
             default = globals()['DATABASES']['default']
             k = k.replace('DATABASE_', '', 1)
+            if k == 'PASSWORD':
+                v = decrypt(v, open(SSL_KEY_FILE).read())
             default[k] = str(v)
 
 # ##############################################################################
@@ -41,9 +46,9 @@ def _update_globals(config):
 engine_friendly_name = {
     'postgresql': 'PostgreSQL',
     'oracle': 'Oracle',
-    'mysql': 'MySQL',
     
     # These are not supported /yet/.
+    #'mysql': 'MySQL',
     #'mssql': 'MS SQL Server',
     #'access': 'MS Access',
     #'firebird': 'Firebird',
@@ -54,12 +59,12 @@ engine_friendly_name = {
 odb_engine_friendly_name = {
     'postgresql': 'PostgreSQL',
     'oracle': 'Oracle',
-    'mysql': 'MySQL',
+    #'mysql': 'MySQL',
 }
 
 django_sqlalchemy_engine = {
     'postgresql': 'postgresql_psycopg2',
-    'mysql':'mysql',
+    #'mysql':'mysql',
     'oracle':'oracle',
     'dummy':'dummy'
 }

@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
+from random import getrandbits
 import os, shutil, uuid
 
 # Zato
@@ -32,7 +33,7 @@ config_template = """{{
   "host": "{host}",
   "port": {port},
   "db_type": "{db_type}",
-  "log_config": "{log_config}",
+  "log_config": "./config/repo/{log_config}",
 
   "DEBUG": 1,
 
@@ -53,6 +54,16 @@ config_template = """{{
 }}
 """
 
+initial_data_json = """[{{
+"pk": {SITE_ID},
+"model": "sites.site",
+"fields": {{
+    "name": "Zato admin",
+    "domain":"zatoadmin.example.com"
+    }}
+}}]
+"""
+
 class Create(ZatoCommand):
     needs_empty_dir = True
     allow_empty_secrets = True
@@ -62,6 +73,7 @@ class Create(ZatoCommand):
     opts.append({'name':'pub_key_path', 'help':"Path to the Zato Admin's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the Zato Admin's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the Zato Admin's certificate in PEM"})
+    opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
     
     opts += get_tech_account_opts()
     
@@ -77,9 +89,9 @@ class Create(ZatoCommand):
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(repo_dir)
         
-        shutil.copyfile(os.path.abspath(args.pub_key_path), os.path.join(repo_dir, 'zato-admin-pub-key.pem'))
-        shutil.copyfile(os.path.abspath(args.priv_key_path), os.path.join(repo_dir, 'zato-admin-priv-key.pem'))
-        shutil.copyfile(os.path.abspath(args.cert_path), os.path.join(repo_dir, 'zato-admin-cert.pem'))        
+        for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
+            file_name = os.path.join(repo_dir, 'zato-admin-{}.pem'.format(name))
+            shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
         
         pub_key = open(os.path.join(repo_dir, 'zato-admin-pub-key.pem')).read()
         
@@ -93,7 +105,7 @@ class Create(ZatoCommand):
             'DATABASE_PASSWORD': encrypt(args.odb_password, pub_key),
             'DATABASE_HOST': args.odb_host,
             'DATABASE_PORT': args.odb_port,
-            'SITE_ID': uuid.uuid4().int,
+            'SITE_ID': getrandbits(20),
             'SECRET_KEY': encrypt(uuid.uuid4().hex, pub_key),
             'TECH_ACCOUNT_NAME':args.tech_account_name,
             'TECH_ACCOUNT_PASSWORD':encrypt(args.tech_account_password, pub_key),
@@ -101,6 +113,7 @@ class Create(ZatoCommand):
         
         open(os.path.join(self.target_dir, 'config', 'repo', 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/zato-admin.log'))
         open(os.path.join(self.target_dir, 'config', 'repo', 'zato-admin.conf'), 'w').write(config_template.format(**config))
+        open(os.path.join(self.target_dir, 'config', 'repo', 'initial-data.json'), 'w').write(initial_data_json.format(**config))
         
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.ZATO_ADMIN.code)

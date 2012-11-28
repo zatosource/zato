@@ -78,6 +78,7 @@ def run(base_dir):
 
     # Configure the logging first, before configuring the actual server.
     logging.addLevelName('TRACE1', TRACE1)
+    print(33333333, repo_location, os.path.join(repo_location, 'logging.conf'))
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
 
     config = get_config(repo_location, 'server.conf')
