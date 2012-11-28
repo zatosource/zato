@@ -77,18 +77,19 @@ class WorkerStore(BrokerMessageReceiver):
         plain_http_config = MultiDict()
         soap_config = MultiDict()
         
-        copy = deepcopy(self.worker_config.http_soap)
-        for url_path in copy:
-            for soap_action in copy[url_path]:
-                item = copy[url_path][soap_action]
-                if item['connection'] == 'channel':
-                    if item.transport == 'plain_http':
-                        config = plain_http_config.setdefault(url_path, Bunch())
-                        config[soap_action] = deepcopy(item)
-                    else:
-                        config = soap_config.setdefault(url_path, Bunch())
-                        config[soap_action] = deepcopy(item)
+        dol = deepcopy(self.worker_config.http_soap).dict_of_lists()
         
+        for url_path in dol:
+            for item in dol[url_path]:
+                for soap_action, channel_info in item.items():
+                    if channel_info['connection'] == 'channel':
+                        if channel_info.transport == 'plain_http':
+                            config = plain_http_config.setdefault(url_path, Bunch())
+                            config[soap_action] = deepcopy(channel_info)
+                        else:
+                            config = soap_config.setdefault(url_path, Bunch())
+                            config[soap_action] = deepcopy(channel_info)
+                
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
         self.request_dispatcher.soap_handler = SOAPHandler(soap_config, self.server)
         self.request_dispatcher.plain_http_handler = PlainHTTPHandler(plain_http_config, self.server)
