@@ -30,14 +30,17 @@ LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
 def _update_globals(config):
     globals()['DATABASES'] = {'default': {}}
+    priv_key = open(SSL_KEY_FILE).read()
     for k, v in config.items():
         if not k.startswith('DATABASE_'):
+            if k == 'TECH_ACCOUNT_PASSWORD':
+                v = decrypt(v, priv_key)
             globals()[k] = v
         else:
             default = globals()['DATABASES']['default']
             k = k.replace('DATABASE_', '', 1)
             if k == 'PASSWORD':
-                v = decrypt(v, open(SSL_KEY_FILE).read())
+                v = decrypt(v, priv_key)
             default[k] = str(v)
 
 # ##############################################################################
