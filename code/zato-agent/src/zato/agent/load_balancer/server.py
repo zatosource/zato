@@ -60,7 +60,7 @@ class LoadBalancerAgent(SSLServer):
 
         self.config_dir = os.path.dirname(json_config_path)
         self.json_config = json.loads(open(json_config_path).read())
-
+        
         self.work_dir = os.path.abspath(os.path.join(self.config_dir, self.json_config['work_dir']))
         self.haproxy_command = self.json_config['haproxy_command']
         self.verify_fields = self.json_config['verify_fields']

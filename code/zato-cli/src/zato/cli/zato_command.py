@@ -134,6 +134,7 @@ def get_parser():
         description='Creates a new Zato load-balancer')
     create_lb.add_argument('path', help='Path to an empty directory to install the load-balancer in')
     create_lb.set_defaults(command='create_lb')
+    add_opts(create_lb, create_lb_mod.Create.opts)
     
     create_odb = create_subs.add_parser('odb', parents=[base_parser], description='Creates a new Zato ODB (Operational Database)')
     create_odb.set_defaults(command='create_odb')

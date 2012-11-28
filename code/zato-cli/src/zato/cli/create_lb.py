@@ -28,7 +28,7 @@ from bzrlib.lazy_import import lazy_import
 
 lazy_import(globals(), """
     # quicli
-    import os, uuid
+    import os, shutil, uuid
     
 """)
 
@@ -36,9 +36,9 @@ config_template = """{
   "haproxy_command": "haproxy",
   "host": "localhost",
   "port": 20151,
-  "keyfile": "./lba-priv-key.pem",
-  "certfile": "./lba-cert.pem",
-  "ca_certs": "./ca-chain.pem",
+  "keyfile": "./repo/zato-lba-priv-key.pem",
+  "certfile": "./repo/zato-lba-cert.pem",
+  "ca_certs": "./repo/zato-lba-ca-certs.pem",
   "work_dir": "../",
   "verify_fields": {},
   "log_config": "./logging.conf",
@@ -105,7 +105,13 @@ default_backend="""
 """
 
 class Create(ZatoCommand):
-    command_name = 'create lb-agent'
+
+    opts = []
+    opts.append({'name':'pub_key_path', 'help':"Path to the load-balancer agent's public key in PEM"})
+    opts.append({'name':'priv_key_path', 'help':"Path to the load-balancer agent's private key in PEM"})
+    opts.append({'name':'cert_path', 'help':"Path to the load-balancer agent's certificate in PEM"})
+    opts.append({'name':'cert_path', 'help':"Path to the load-balancer agent's certificate in PEM"})
+    opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the load-balancer's agent will trust"})
 
     needs_empty_dir = True
 
@@ -114,7 +120,7 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
 
     def execute(self, args, use_default_backend=False, server02_port=None, show_output=True):
-
+        
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon'))
         os.mkdir(os.path.join(self.target_dir, 'logs'))
@@ -133,6 +139,14 @@ class Create(ZatoCommand):
         zato_config = zato_config_template.format(stats_socket=stats_socket,
                 stats_password=uuid.uuid4().hex, default_backend=backend)
         open(os.path.join(self.target_dir, 'config', 'zato.config'), 'w').write(zato_config)
+        
+        repo_dir = os.path.join(self.target_dir, 'config', 'repo')
+        os.mkdir(repo_dir)
+        
+        for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
+            arg_name = '{}_path'.format(name.replace('-', '_'))
+            full_path = os.path.join(repo_dir, 'zato-lba-{}.pem'.format(name))
+            shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
         
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.LOAD_BALANCER.code)
