@@ -68,6 +68,7 @@ def get_lb_client(cluster):
     which may use ZatoAdmin's SSL material (the client from zato.common can't use
     it because it would make it dependent on the zato.admin package).
     """
+    print(333333, ssl_ca_certs, ssl_key_file, ssl_cert_file)
     return _get_lb_client(cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,
                           ssl_key_file, ssl_cert_file, LB_AGENT_CONNECT_TIMEOUT)
 

@@ -106,6 +106,7 @@ class CryptoMaterialLocation(object):
     def __init__(self, ca_dir, component_pattern):
         self.ca_dir = ca_dir
         self.component_pattern = component_pattern
+        self.ca_certs_path = os.path.join(self.ca_dir, 'ca-material', 'ca-cert.pem')
         self.cert_path = None
         self.pub_path = None
         self.priv_path = None
@@ -204,7 +205,7 @@ class Create(ZatoCommand):
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
         zato_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'zato-admin')
         
-        self.logger.info('[{}/{}] CA created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Certificate authority created'.format(next_step.next(), total_steps))
         
         #
         # 2) ODB
@@ -275,6 +276,7 @@ class Create(ZatoCommand):
         create_zato_admin_args.cert_path = zato_admin_crypto_loc.cert_path
         create_zato_admin_args.pub_key_path = zato_admin_crypto_loc.pub_path
         create_zato_admin_args.priv_key_path = zato_admin_crypto_loc.priv_path
+        create_zato_admin_args.ca_certs_path = zato_admin_crypto_loc.ca_certs_path
         create_zato_admin_args.tech_account_name = tech_account_name
         create_zato_admin_args.tech_account_password = tech_account_password
         
@@ -301,6 +303,6 @@ class Create(ZatoCommand):
         
         self.logger.info('[{}/{}] Management scripts created'.format(next_step.next(), total_steps))
         
-        msg = 'Quickstart cluster {} created. Start it by issuing the {}/zato-qs-start.sh command'.format(
+        msg = 'Quickstart cluster {} created. Start it by issuing the {}/zato-qs-start.sh command.'.format(
             cluster_name, args.path)
         self.logger.info(msg)

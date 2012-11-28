@@ -168,7 +168,7 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
 def index(req):
 
     initial = {}
-    initial['odb_type'] = sqlalchemy_django_engine[DATABASE_ENGINE]
+    initial['odb_type'] = sqlalchemy_django_engine[DATABASE_ENGINE.replace('django.db.backends.', '')]
     initial['odb_host'] = DATABASE_HOST
     initial['odb_port'] = DATABASE_PORT
     initial['odb_user'] = DATABASE_USER

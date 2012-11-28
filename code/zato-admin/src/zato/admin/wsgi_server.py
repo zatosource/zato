@@ -31,9 +31,10 @@ from django.core.servers.basehttp import AdminMediaHandler
 # Werkzeug
 from werkzeug.debug import DebuggedApplication
 
-def main(host, port):
+def main(host, port, base_dir):
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
     call_command('syncdb', interactive=True)
+    call_command('loaddata', os.path.join(base_dir, 'config', 'repo', 'initial-data.json'))
 
     app = WSGIHandler()
     app = DebuggedApplication(app, evalex=True)

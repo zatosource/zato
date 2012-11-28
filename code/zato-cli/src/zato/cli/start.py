@@ -82,32 +82,26 @@ class Start(ManageCommand):
         socket_prefix = 'lb-agent'
         program = '{} -m zato.agent.load_balancer.main {}'.format(get_executable(), config_path)
         logfile_path_prefix = 'zdaemon-lb-agent'
+        
+        print(33333, program)
 
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
 
-        # Now start HAProxy.
-        '''
-        config_path = os.path.join(self.config_dir, 'zato.config')
+        # Now start HAProxy
 
-        zdaemon_conf_name = 'zdaemon-haproxy.conf'
-        socket_prefix = 'haproxy'
-        program = 'haproxy -f {0}'.format(config_path)
-        logfile_path_prefix = 'zdaemon-haproxy'
-
-        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
-                            logfile_path_prefix, program)
-                            '''
-
-        print('Zato load balancer and agent started at {0}'.format(self.component_dir))
+        if self.verbose:
+            self.logger.debug('Zato load balancer and agent started in {0}'.format(self.component_dir))
+        else:
+            self.logger.info('OK')
 
     def _on_zato_admin(self):
 
         # Update Django settings.
-        config = json.loads(open('./zato-admin.conf').read())
+        config = json.loads(open('./config/repo/zato-admin.conf').read())
         config['config_dir'] = os.path.abspath(self.component_dir)
         _update_globals(config)
 
         # Store the PID so that the server can be later stopped by its PID.
         open('./.zato-admin.pid', 'w').write(str(os.getpid()))
 
-        zato_admin_main(config['host'], config['port'])
+        zato_admin_main(config['host'], config['port'], self.component_dir)

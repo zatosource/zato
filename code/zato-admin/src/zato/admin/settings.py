@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 
 # Zato
 from zato.common.odb import engine_def
-from zato.common.util import TRACE1
+from zato.common.util import decrypt, TRACE1
 from zato_settings import *
 
 if 'DEBUG' not in globals():
@@ -112,18 +112,22 @@ DONT_REQUIRE_LOGIN = [
 # fetches values from the 'zato-admin.conf' file.
 
 if 'DATABASES' in globals():
-    DATABASES['default']['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
+    db_data = DATABASES['default']
+    db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
+    
+    for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT'):
+        globals()['DATABASE_{}'.format(name)] = DATABASES['default'][name]
+
+    # Crypto
+    ssl_key_file = os.path.abspath(os.path.join(config_dir, SSL_KEY_FILE))
+    ssl_cert_file = os.path.abspath(os.path.join(config_dir, SSL_CERT_FILE))
+    ssl_ca_certs = os.path.abspath(os.path.join(config_dir, SSL_CA_CERTS))
     
     # SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
-    engine = create_engine(engine_def.format(engine=db_type, username=DATABASE_USER,
-                    password=DATABASE_PASSWORD, host=DATABASE_HOST, db_name=DATABASE_NAME))
+    engine = create_engine(engine_def.format(engine=db_type, username=db_data['USER'],
+        password=db_data['PASSWORD'], host=db_data['HOST'], db_name=db_data['NAME']))
     SASession.configure(bind=engine)
-    
-    # Crypto
-    ssl_key_file = os.path.join(config_dir, SSL_KEY_FILE)
-    ssl_cert_file = os.path.join(config_dir, SSL_CERT_FILE)
-    ssl_ca_certs = os.path.join(config_dir, SSL_CA_CERTS)
     
     TEMPLATE_DEBUG = True
 else:
@@ -138,3 +142,10 @@ else:
     ssl_ca_certs = 'dummy'
     
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+    
+    DATABASE_ENGINE = DATABASES['default']['ENGINE']
+    DATABASE_NAME = 'dummy'
+    DATABASE_USER = 'dummy'
+    DATABASE_PASSWORD = 'dummy'
+    DATABASE_HOST = 'dummy'
+    DATABASE_PORT = 123456
