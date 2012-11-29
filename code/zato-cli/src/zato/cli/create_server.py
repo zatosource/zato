@@ -41,12 +41,15 @@ from zato.server.repo import RepoManager
 server_conf_template = """[main]
 gunicorn_bind=localhost:{port}
 gunicorn_worker_class=gevent
-gunicorn_workers=1
+gunicorn_workers={gunicorn_workers}
 gunicorn_timeout=240
 gunicorn_user=
 gunicorn_group=
 gunicorn_proc_name=
 gunicorn_logger_class=
+
+deployment_lock_expires=600
+deployment_lock_timeout=180
 
 [crypto]
 priv_key_location=zato-server-priv-key.pem
@@ -210,6 +213,7 @@ class Create(ZatoCommand):
             server_conf.write(
                 server_conf_template.format(
                     port=port,
+                    gunicorn_workers=cpu_count() * 2,
                     odb_db_name=args.odb_db_name, 
                     odb_engine=args.odb_type, 
                     odb_host=args.odb_host,
