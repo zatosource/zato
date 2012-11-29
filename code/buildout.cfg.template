@@ -84,6 +84,7 @@ eggs =
     redis
     repoze.lru
     requests
+    retools
     sec-wall
     setproctitle
     setuptools

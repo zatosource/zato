@@ -42,6 +42,7 @@ server_conf_template = """[main]
 gunicorn_bind=localhost:{port}
 gunicorn_worker_class=gevent
 gunicorn_workers=1
+gunicorn_timeout=240
 gunicorn_user=
 gunicorn_group=
 gunicorn_proc_name=

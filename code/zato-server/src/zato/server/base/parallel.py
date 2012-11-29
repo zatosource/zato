@@ -26,12 +26,16 @@ from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import currentThread, Thread
 from time import sleep
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
 
 # Paste
 from paste.util.multidict import MultiDict
+
+# retools
+from retools.lock import Lock
 
 # Zato
 from zato.broker.client import BrokerClient
@@ -60,7 +64,8 @@ class ParallelServer(BrokerMessageReceiver):
                  plain_xml_content_type=None, json_content_type=None,
                  internal_service_modules=None, service_modules=None, base_dir=None,
                  hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
-                 id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None, worker_store=None):
+                 id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None, worker_store=None,
+                 deployment_lock_expires=None, deployment_lock_timeout=None):
         self.host = host
         self.port = port
         self.crypto_manager = crypto_manager
@@ -90,11 +95,13 @@ class ParallelServer(BrokerMessageReceiver):
         self.kvdb = kvdb
         self.stats_jobs = stats_jobs
         self.worker_store = worker_store
+        self.deployment_lock_expires = deployment_lock_expires
+        self.deployment_lock_timeout = deployment_lock_timeout
         
         # The main config store
         self.config = ConfigStore()
         
-    def __call__(self, wsgi_environ, start_response):
+    def on_wsgi_request(self, wsgi_environ, start_response):
         """ Handles incoming HTTP requests. Each request is being handled by one
         of the threads created in ParallelServer.run_forever method.
         """
@@ -116,36 +123,56 @@ class ParallelServer(BrokerMessageReceiver):
         
         return [payload]
     
-    def has_singleton(self):
-        """ The first process to be started will also start the singleton thread
-        and store a flag in the file-system (a file) which will mean that the singleton
-        has already been started. That way the following servers won't attempt to start it.
-        This wouldn't be needed if gunicorn had a means for running a piece of code
-        only if a given worker is the first one to spawn. This also sounds like something
-        that can be contributed to gunicorn.
+    def maybe_on_first_worker(self, server, redis_conn, deployment_key):
+        """ This method will execute code with a Redis lock held. We need a lock
+        because we can have multiple worker processes fighting over the right to
+        redeploy services. The first worker to grab the lock will actually perform
+        the redeployment and set a flag meaning that for this particular deployment
+        key (and remember that each server restart means a new deployment key)
+        the services have been already deployed. Later workers will check that
+        the flag exists and will skip the deployment altogether.
         """
-        return False
+        lock_name = 'zato:server:lock:{}'.format(deployment_key)
+        already_deployed_flag = 'zato:server:deployed:{}'.format(deployment_key)
         
-    def _after_init_common(self, server):
+        with Lock(lock_name, self.deployment_lock_expires, self.deployment_lock_timeout, redis_conn):
+            if redis_conn.get(already_deployed_flag):
+                # There has been already the first worker who's done everything
+                # there is to be done so we may just return.
+                msg = 'Not attempting to grab the lock_name:[{}]'.format(lock_name)
+                logger.error(msg)
+            else:
+                # We are this server's first worker so we need to re-populate
+                # the database and create the flag indicating we're done.
+                msg = 'Got Redis lock_name:[{}], expires:[{}], timeout:[{}]'.format(
+                    lock_name, self.deployment_lock_expires, self.deployment_lock_timeout)
+                logger.error(msg)
+                
+                # .. Remove all the deployed services from the DB ..
+                self.odb.drop_deployed_services(server.id)
+                
+                # .. and re-deploy the back from a clear state.
+                self.service_store.import_services_from_anywhere(
+                    self.internal_service_modules + self.service_modules, self.base_dir)
+                
+                # Add the statistics-related scheduler jobs to the ODB
+                add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
+                
+                # Add the flag to Redis
+                redis_conn.set(already_deployed_flag, 1)
+                redis_conn.expire(already_deployed_flag, self.deployment_lock_expires)
+        
+    def _after_init_common(self, server, deployment_key):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
-        has_singleton = self.has_singleton()
-        # .. Remove all the deployed services from the DB ..
-        self.odb.drop_deployed_services(server.id)
-        
-        # .. and re-deploy the back from a clear state.
-        self.service_store.import_services_from_anywhere(
-            self.internal_service_modules + self.service_modules, self.base_dir)
-        
-        # Add the statistics-related scheduler jobs to the ODB
-        add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
-        
         # Key-value DB
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
         self.kvdb.decrypt_func = self.crypto_manager.decrypt
         self.kvdb.init()
+        
+        is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
         
         self.worker_store = WorkerStore(self.config, self)
         
@@ -154,13 +181,13 @@ class ParallelServer(BrokerMessageReceiver):
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
             }
         
-        if has_singleton:
+        if is_first:
             broker_callbacks[TOPICS[MESSAGE_TYPE.TO_SINGLETON]] = self.on_broker_msg_singleton
         
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks)
         self.broker_client.start()
 
-        if has_singleton:
+        if is_first:
         
             # Normalize hot-deploy configuration
             if not self.hot_deploy_config:
@@ -355,7 +382,7 @@ class ParallelServer(BrokerMessageReceiver):
         
     @staticmethod
     def post_fork(arbiter, worker):
-        """ A Gunicorn hook.
+        """ A Gunicorn hook which initializes the worker.
         """
         parallel_server = worker.app.zato_wsgi_app
         
@@ -388,7 +415,7 @@ class ParallelServer(BrokerMessageReceiver):
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id
 
-        parallel_server._after_init_common(server)
+        parallel_server._after_init_common(server, arbiter.zato_deployment_key)
         
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
@@ -401,6 +428,14 @@ class ParallelServer(BrokerMessageReceiver):
             parallel_server._after_init_non_accepted(server)
             
         parallel_server.odb.server_up_down(server.id, SERVER_UP_STATUS.RUNNING, True)
+        
+    @staticmethod
+    def on_starting(arbiter):
+        """ A Gunicorn hook for setting the deployment key for this particular
+        set of server processes. It needs to be added to the arbiter because
+        we want for each worker to be (re-)started to see the same key.
+        """
+        setattr(arbiter, 'zato_deployment_key', uuid4().hex)
 
     def shutdown(self):
             
