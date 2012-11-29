@@ -47,13 +47,14 @@ from zato.common import version as zato_version
 # zato delete odb .
 # zato encrypt . --secret
 zato from-config ./zato.config.file
-zato quickstart create .
+# zato quickstart create .
 zato info . # TODO: replace .lb-dir with .zato-info['component']
 zato services export . token
 zato services import . dump
-zato start .
+!!! zato start .
 zato stop .
-zato update component --priv-key ./path --pub-key ./path --cert ./path
+zato update crypto . --priv-key ./path --pub-key ./path --cert ./path
+zato update password .
 zato --batch
 zato --store-config
 # zato --store-log

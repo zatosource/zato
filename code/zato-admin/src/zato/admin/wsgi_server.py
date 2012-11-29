@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
-from wsgiref.simple_server import make_server
+import json, os
+from logging import getLogger
 
 # Django
 from django.core.handlers.wsgi import WSGIHandler
@@ -30,19 +30,32 @@ from django.core.servers.basehttp import AdminMediaHandler
 
 # Werkzeug
 from werkzeug.debug import DebuggedApplication
+from werkzeug.serving import run_simple
 
-def main(host, port, base_dir):
+# Zato
+from zato.admin.zato_settings import update_globals
+
+logger = getLogger(__name__)
+
+def main():
+    
+    print(os.path.abspath('.'))
+    
+    # Update Django settings.
+    config = json.loads(open('./config/repo/zato-admin.conf').read())
+    config['config_dir'] = os.path.abspath('.')
+    update_globals(config)
+    
+    # Store the PID so that the server can be later stopped by its PID.
+    open('./.zato-admin.pid', 'w').write(str(os.getpid()))
+        
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
     call_command('syncdb', interactive=True)
-    call_command('loaddata', os.path.join(base_dir, 'config', 'repo', 'initial-data.json'))
+    call_command('loaddata', os.path.join('.', 'config', 'repo', 'initial-data.json'))
 
     app = WSGIHandler()
     app = DebuggedApplication(app, evalex=True)
-    server = make_server(host, port, AdminMediaHandler(app))
-
-    # TODO: Make the server actually listen on HTTPS instead of HTTP
-    print("ZatoAdmin ready at https://{0}:{1}/".format(host, port))
-    server.serve_forever()
+    run_simple(config['host'], config['port'], app)
 
 if __name__ == '__main__':
     main()
