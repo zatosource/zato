@@ -87,6 +87,7 @@ class Create(ZatoCommand):
 
         os.mkdir(os.path.join(self.target_dir, 'logs'))
         os.mkdir(os.path.join(self.target_dir, 'config'))
+        os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon'))
         os.mkdir(repo_dir)
         
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):

@@ -26,7 +26,6 @@ import json, os, sys
 from configobj import ConfigObj
 
 # Zato
-from zato.admin.zato_settings import _update_globals
 from zato.admin.wsgi_server import main as zato_admin_main
 from zato.cli import ManageCommand
 from zato.common.util import get_executable
@@ -94,12 +93,14 @@ class Start(ManageCommand):
 
     def _on_zato_admin(self):
 
-        # Update Django settings.
-        config = json.loads(open('./config/repo/zato-admin.conf').read())
-        config['config_dir'] = os.path.abspath(self.component_dir)
-        _update_globals(config)
+        zdaemon_conf_name = 'zdaemon-zato-admin.conf'
+        socket_prefix = 'zato-admin'
+        program = '{} -m zato.admin.wsgi_server'.format(get_executable())
+        logfile_path_prefix = 'zdaemon-zato-admin'
+        
+        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
 
-        # Store the PID so that the server can be later stopped by its PID.
-        open('./.zato-admin.pid', 'w').write(str(os.getpid()))
-
-        zato_admin_main(config['host'], config['port'], self.component_dir)
+        if self.verbose:
+            self.logger.debug('Zato admin started in {0}'.format(self.component_dir))
+        else:
+            self.logger.info('OK')

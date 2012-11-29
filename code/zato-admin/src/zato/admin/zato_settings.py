@@ -28,7 +28,7 @@ SSL_CA_CERTS = './config/repo/zato-admin-ca-certs.pem'
 
 LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
-def _update_globals(config):
+def update_globals(config):
     globals()['DATABASES'] = {'default': {}}
     priv_key = open(SSL_KEY_FILE).read()
     for k, v in config.items():
