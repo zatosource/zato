@@ -27,6 +27,7 @@ from thread import start_new_thread
 from threading import local, RLock
 from time import sleep
 from traceback import format_exc
+from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
@@ -35,6 +36,10 @@ from bunch import Bunch
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import DAILY, MINUTELY, rrule
+
+# gunicorn
+from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
+from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Paste
 from paste.util.multidict import MultiDict
@@ -52,6 +57,16 @@ from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
+
+class GeventWorker(GunicornGeventWorker):
+    def __init__(self, *args, **kwargs):
+        self.deployment_key = uuid4().hex
+        super(GunicornGeventWorker, self).__init__(*args, **kwargs)
+
+class SyncWorker(GunicornSyncWorker):
+    def __init__(self, *args, **kwargs):
+        self.deployment_key = uuid4().hex
+        super(GunicornSyncWorker, self).__init__(*args, **kwargs)
 
 class WorkerStore(BrokerMessageReceiver):
     """ Each worker thread has its own configuration store. The store is assigned
@@ -546,163 +561,3 @@ class WorkerStore(BrokerMessageReceiver):
         return self._on_message_invoke_service(msg, 'publish', 'SERVICE_PUBLISH', args)
         
 # ##############################################################################
-
-'''            
-class _TaskDispatcher(ThreadedTaskDispatcher):
-    """ A task dispatcher which knows how to pass custom arguments down to
-    the worker threads.
-    """
-    def __init__(self, server, server_config):
-        super(_TaskDispatcher, self).__init__()
-        self.server = server
-        self.server_config = server_config
-        
-    def set_thread_count(self, count):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-        mlock = self.thread_mgmt_lock
-        mlock.acquire()
-        try:
-            threads = self.threads
-            thread_no = 0
-            running = len(threads) - self.stop_count
-            while running < count:
-                # Start threads.
-                while thread_no in threads:
-                    thread_no = thread_no + 1
-                threads[thread_no] = 1
-                running += 1
-
-                # Each thread gets its own copy of the initial configuration ..
-                worker_config = self.server_config.copy()
-
-                # .. be careful with this, it's a reference to the main ParallelServer
-                # this thread is running on.
-                worker_config.server = self.server
-                
-                start_new_thread(self.handler_thread, (thread_no, worker_config))
-                
-                thread_no = thread_no + 1
-            if running > count:
-                # Stop threads.
-                to_stop = running - count
-                self.stop_count += to_stop
-                for n in range(to_stop):
-                    self.queue.put(None)
-                    running -= 1
-        finally:
-            mlock.release()
-            
-    def shutdown(self):
-        self.server.shutdown()
-        super(_TaskDispatcher, self).shutdown()
-            
-    def handler_thread(self, thread_no, worker_config):
-        """ Mostly copy & paste from the base classes except for the part
-        that passes the arguments to the thread.
-        """
-        
-        _local = local()
-        _local.store = WorkerStore(worker_config)
-        _local.store._init()
-        
-        threads = self.threads
-        try:
-            while threads.get(thread_no):
-                task = self.queue.get()
-                if task is None:
-                    # Special value: kill this thread.
-                    break
-                try:
-                    task.service(_local)
-                except Exception as e:
-                    self.logger.exception(
-                        'Exception when servicing %r' % task)
-                    if isinstance(e, JustTesting):
-                        break
-        finally:
-            mlock = self.thread_mgmt_lock
-            mlock.acquire()
-            try:
-                self.stop_count -= 1
-                threads.pop(thread_no, None)
-            finally:
-                mlock.release()
-
-# ##############################################################################
-
-class _WSGITask(WSGITask):
-    """ An HTTP task which knows how to use Zato-specific thread-local data.
-    """
-    
-    def __init__(self, thread_local_ctx, channel, request):
-        super(_WSGITask, self).__init__(channel, request)
-        self.thread_local_ctx = thread_local_ctx
-        
-    def get_environment(self):
-        env = super(_WSGITask, self).get_environment()
-        env['zato.thread_local_ctx'] = self.thread_local_ctx
-        env['zato.http.response.headers'] = {}
-        env['zato.http.response.status'] = b'200 OK'
-        return env
-    
-    def service(self):
-        try:
-            try:
-                self.start()
-                self.execute()
-                self.finish()
-            except socket.error:
-                self.close_on_finish = True
-                if self.channel.adj.log_socket_errors:
-                    raise
-        finally:
-            pass
-                
-class _HTTPServerChannel(HTTPChannel):
-    """ A subclass which uses Zato's own _HTTPTasks.
-    """
-    task_class = _WSGITask
-    
-    def service(self, thread_local_ctx):
-        """Execute all pending tasks"""
-        with self.task_lock:
-            while self.requests:
-                request = self.requests[0]
-                if request.error:
-                    task = self.error_task_class(self, request)
-                else:
-                    task = self.task_class(thread_local_ctx, self, request)
-                try:
-                    task.service()
-                except:
-                    self.logger.exception('Exception when serving %s' %
-                                          task.request.path)
-                    if not task.wrote_header:
-                        if self.adj.expose_tracebacks:
-                            body = traceback.format_exc()
-                        else:
-                            body = ('The server encountered an unexpected '
-                                    'internal server error')
-                        request = self.parser_class(self.adj)
-                        request.error = InternalServerError(body)
-                        task = self.error_task_class(self, request)
-                        task.service() # must not fail
-                    else:
-                        task.close_on_finish = True
-                # we cannot allow self.requests to drop to empty til
-                # here; otherwise the mainloop gets confused
-                if task.close_on_finish:
-                    self.close_when_flushed = True
-                    for request in self.requests:
-                        request._close()
-                    self.requests = []
-                else:
-                    request = self.requests.pop(0)
-                    request._close()
-
-        self.force_flush = True
-        self.server.pull_trigger()
-        self.last_activity = time.time()
-'''

@@ -46,10 +46,13 @@ class ZatoGunicornApplication(Application):
         self.config_main = config_main
         self.zato_host = None
         self.zato_port = None
+        self.zato_config = {}
         super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
         
     def init(self, *ignored_args, **ignored_kwargs):
-        self.cfg.set('post_fork', self.zato_wsgi_app.post_fork)
+        self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
+        self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
+        
         for k, v in self.config_main.items():
             if k.startswith('gunicorn') and v:
                 k = k.replace('gunicorn_', '')
@@ -61,9 +64,17 @@ class ZatoGunicornApplication(Application):
                         self.zato_host = host
                         self.zato_port = port
                 self.cfg.set(k, v)
+            else:
+                if 'deployment_lock' in k:
+                    v = int(v)
+                    
+                self.zato_config[k] = v
+                
+        for name in('deployment_lock_expires', 'deployment_lock_timeout'):
+            setattr(self.zato_wsgi_app, name, self.zato_config[name])
         
     def load(self):
-        return self.zato_wsgi_app
+        return self.zato_wsgi_app.on_wsgi_request
 
 def run(base_dir):
     
