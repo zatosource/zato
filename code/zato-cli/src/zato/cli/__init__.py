@@ -170,6 +170,7 @@ class ZatoCommand(object):
         SERVER_NAME_ALREADY_EXISTS = 7
         NO_SUCH_CLUSTER = 8
         COMPONENT_ALREADY_RUNNING = 9
+        NO_PID_FOUND = 10
         
     class COMPONENTS(object):
         class _ComponentName(object):

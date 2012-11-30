@@ -29,7 +29,7 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     quickstart as quickstart_mod, start as start_mod, FromConfigFile
+     FromConfigFile, quickstart as quickstart_mod, start as start_mod, stop as stop_mod
 from zato.common import version as zato_version
     
 """
@@ -218,6 +218,8 @@ Examples:
     # stop
     #
     stop = subs.add_parser('stop', description='Stops a Zato component', parents=[base_parser])
+    stop.add_argument('path', help='Path to the Zato component to be stopped')
+    stop.set_defaults(command='stop')
 
     return parser
 
@@ -239,6 +241,7 @@ def main():
         'from_config_file': FromConfigFile,
         'quickstart_create': quickstart_mod.Create,
         'start': start_mod.Start,
+        'stop':stop_mod.Stop,
     }
     args = get_parser().parse_args()
     command_class[args.command](args).run(args)
