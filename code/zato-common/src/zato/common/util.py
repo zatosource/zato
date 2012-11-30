@@ -158,6 +158,11 @@ def get_executable():
     """
     return os.path.join(os.path.dirname(sys.executable), 'py')
 
+def get_zato_command():
+    """ Returns the full path to the 'zato' command' in a buildout environment.
+    """
+    return os.path.join(os.path.dirname(sys.executable), 'zato')
+
 # Based on
 # http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored
 class ColorFormatter(logging.Formatter):
@@ -338,6 +343,9 @@ def get_crypto_manager(repo_location, app_context, config, load_keys=True):
         
     return crypto_manager
 
+def get_current_user():
+    return getpwuid(getuid()).pw_name
+
 def service_name_from_impl(impl_name):
     """ Turns a Zato internal service's implementation name into a shorter
     service name
@@ -356,7 +364,7 @@ def deployment_info(method, object_, timestamp, fs_location, remote_host='', rem
             'remote_host': remote_host,
             'remote_user': remote_user,
             'current_host': current_host(),
-            'current_user': getpwuid(getuid()).pw_name,
+            'current_user': get_current_user(),
         }
 
 def get_body_payload(body):

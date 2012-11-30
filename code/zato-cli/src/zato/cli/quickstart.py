@@ -32,11 +32,14 @@ from bunch import Bunch
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_zato_admin, create_cluster, create_lb, create_odb, create_server, create_zato_admin, ZatoCommand
 from zato.common.defaults import http_plain_server_port
-from zato.common.util import make_repr
+from zato.common.markov_passwords import generate_password
+from zato.common.util import get_zato_command, make_repr
 
 random.seed()
 
 zato_qs_start_template = """#!/usr/bin/env sh
+
+export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
 BASE_DIR=`pwd`
 ZATO_BIN={zato_bin}
@@ -46,24 +49,31 @@ echo Starting the Zato quickstart environment
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
 $ZATO_BIN start .
+echo [1/4] Load-balancer started
 
 # .. servers ..
 cd $BASE_DIR/server1
 $ZATO_BIN start .
+echo [2/4] server1 started
 
 cd $BASE_DIR/server2
 $ZATO_BIN start .
+echo [3/4] server2 started
 
 # .. web admin comes as the last one because it may ask Django-related questions.
 cd $BASE_DIR/zato-admin
 $ZATO_BIN start .
+echo [4/4] Zato admin started
 
 cd $BASE_DIR
 echo Zato quickstart environment started
+echo Visit https://TODO for more information and support options
 exit 0
 """ 
 
 zato_qs_stop_template = """#!/usr/bin/env sh
+
+export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
 BASE_DIR=`pwd`
 ZATO_BIN={zato_bin}
@@ -284,7 +294,12 @@ class Create(ZatoCommand):
         create_zato_admin_args.tech_account_name = tech_account_name
         create_zato_admin_args.tech_account_password = tech_account_password
         
-        create_zato_admin.Create(create_zato_admin_args).execute(create_zato_admin_args, False)
+        password = generate_password()
+        admin_created = create_zato_admin.Create(create_zato_admin_args).execute(create_zato_admin_args, False, password)
+        
+        # Need to reset the logger here because executing the create_zato_admin command
+        # loads the Zato admin's logger which doesn't like that of ours.
+        self.reset_logger(args, True)
         self.logger.info('[{}/{}] Zato admin created'.format(next_step.next(), total_steps))
         
         #
@@ -306,7 +321,12 @@ class Create(ZatoCommand):
         os.chmod(zato_qs_restart_path, file_mod)
         
         self.logger.info('[{}/{}] Management scripts created'.format(next_step.next(), total_steps))
+        self.logger.info('Quickstart cluster {} created'.format(cluster_name))
         
-        msg = 'Quickstart cluster {} created. Start it by issuing the {}/zato-qs-start.sh command.'.format(
-            cluster_name, args.path)
-        self.logger.info(msg)
+        if admin_created:
+            self.logger.info('Zato admin user:[admin], password:[{}]'.format(password))
+        else:
+            self.logger.info('User [admin] already exists in the ODB')
+            
+        self.logger.info('Start the cluster by issuing the {}/zato-qs-start.sh command'.format(args.path))
+        self.logger.info('Visit https://TODO for more information and support options')

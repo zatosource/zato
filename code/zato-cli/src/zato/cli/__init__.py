@@ -155,6 +155,7 @@ class ZatoCommand(object):
     add_batch = True
     add_config_file = True
     target_dir = None
+    show_output = True
     opts = []
     
     class SYS_ERROR(object):
@@ -182,7 +183,20 @@ class ZatoCommand(object):
         ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
 
     def __init__(self, args):
+        self.show_output = False if 'ZATO_CLI_DONT_SHOW_OUTPUT' in os.environ else True
         self.verbose = args.verbose
+        self.reset_logger(args)
+            
+        if args.store_config:
+            self.store_config(args)
+        
+        self.engine = None
+        
+    def reset_logger(self, args, reload_=False):
+        if reload_:
+            logging.shutdown()
+            reload(logging)
+        
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
         self.logger.handlers[:] = []
@@ -197,11 +211,6 @@ class ZatoCommand(object):
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
-            
-        if args.store_config:
-            self.store_config(args)
-        
-        self.engine = None
         
     def _get_secret(self, template, needs_confirm, allow_empty, secret_name='password'):
         """ Runs an infinite loop until a user enters the secret. User needs
