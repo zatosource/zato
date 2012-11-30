@@ -26,7 +26,6 @@ import json, os, sys
 from configobj import ConfigObj
 
 # Zato
-from zato.admin.wsgi_server import main as zato_admin_main
 from zato.cli import ManageCommand
 from zato.common.util import get_executable
 
@@ -67,10 +66,11 @@ class Start(ManageCommand):
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix,
                             logfile_path_prefix, program)
 
-        if self.verbose:
-            self.logger.debug('Zato server at {0} has been started'.format(self.component_dir))
-        else:
-            self.logger.info('OK')
+        if self.show_output:
+            if self.verbose:
+                self.logger.debug('Zato server at {0} has been started'.format(self.component_dir))
+            else:
+                self.logger.info('OK')
 
     def _on_lb(self):
 
@@ -86,21 +86,23 @@ class Start(ManageCommand):
 
         # Now start HAProxy
 
-        if self.verbose:
-            self.logger.debug('Zato load balancer and agent started in {0}'.format(self.component_dir))
-        else:
-            self.logger.info('OK')
+        if self.show_output:
+            if self.verbose:
+                self.logger.debug('Zato load balancer and agent started in {0}'.format(self.component_dir))
+            else:
+                self.logger.info('OK')
 
     def _on_zato_admin(self):
 
         zdaemon_conf_name = 'zdaemon-zato-admin.conf'
         socket_prefix = 'zato-admin'
-        program = '{} -m zato.admin.wsgi_server'.format(get_executable())
+        program = '{} -m zato.admin.main'.format(get_executable())
         logfile_path_prefix = 'zdaemon-zato-admin'
         
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
 
-        if self.verbose:
-            self.logger.debug('Zato admin started in {0}'.format(self.component_dir))
-        else:
-            self.logger.info('OK')
+        if self.show_output:
+            if self.verbose:
+                self.logger.debug('Zato admin started in {0}'.format(self.component_dir))
+            else:
+                self.logger.info('OK')

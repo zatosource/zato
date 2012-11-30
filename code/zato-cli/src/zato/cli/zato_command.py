@@ -42,6 +42,7 @@ from zato.common import version as zato_version
 # zato create odb .
 # zato create cluster
 # zato create server .
+zato create user .
 # zato create zato_admin .
 # zato decrypt . --secret
 # zato delete odb .

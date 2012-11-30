@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import os
+
 # Zato
 from zato.common.util import decrypt
 
@@ -28,13 +31,15 @@ SSL_CA_CERTS = './config/repo/zato-admin-ca-certs.pem'
 
 LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 
-def update_globals(config):
+def update_globals(config, base_dir='.'):
     globals()['DATABASES'] = {'default': {}}
-    priv_key = open(SSL_KEY_FILE).read()
+    priv_key = open(os.path.abspath(os.path.join(base_dir, SSL_KEY_FILE))).read()
     for k, v in config.items():
         if not k.startswith('DATABASE_'):
             if k == 'TECH_ACCOUNT_PASSWORD':
                 v = decrypt(v, priv_key)
+            elif k == 'log_config':
+                v = os.path.join(base_dir, v)
             globals()[k] = v
         else:
             default = globals()['DATABASES']['default']

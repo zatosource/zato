@@ -39,8 +39,6 @@ logger = getLogger(__name__)
 
 def main():
     
-    print(os.path.abspath('.'))
-    
     # Update Django settings.
     config = json.loads(open('./config/repo/zato-admin.conf').read())
     config['config_dir'] = os.path.abspath('.')
@@ -50,7 +48,6 @@ def main():
     open('./.zato-admin.pid', 'w').write(str(os.getpid()))
         
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
-    call_command('syncdb', interactive=True)
     call_command('loaddata', os.path.join('.', 'config', 'repo', 'initial-data.json'))
 
     app = WSGIHandler()

@@ -132,6 +132,14 @@ class ParallelServer(BrokerMessageReceiver):
         the services have been already deployed. Later workers will check that
         the flag exists and will skip the deployment altogether.
         """
+        def import_initial_services_jobs():
+            # (re-)deploy the services from a clear state
+            self.service_store.import_services_from_anywhere(
+                self.internal_service_modules + self.service_modules, self.base_dir)
+            
+            # Add the statistics-related scheduler jobs to the ODB
+            add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
+            
         lock_name = 'zato:server:lock:{}'.format(deployment_key)
         already_deployed_flag = 'zato:server:deployed:{}'.format(deployment_key)
         
@@ -140,23 +148,22 @@ class ParallelServer(BrokerMessageReceiver):
                 # There has been already the first worker who's done everything
                 # there is to be done so we may just return.
                 msg = 'Not attempting to grab the lock_name:[{}]'.format(lock_name)
-                logger.error(msg)
+                logger.debug(msg)
+                
+                # Simply deploy services, the first worker has already cleared out the ODB
+                import_initial_services_jobs()
             else:
                 # We are this server's first worker so we need to re-populate
                 # the database and create the flag indicating we're done.
                 msg = 'Got Redis lock_name:[{}], expires:[{}], timeout:[{}]'.format(
                     lock_name, self.deployment_lock_expires, self.deployment_lock_timeout)
-                logger.error(msg)
+                logger.debug(msg)
                 
                 # .. Remove all the deployed services from the DB ..
                 self.odb.drop_deployed_services(server.id)
-                
-                # .. and re-deploy the back from a clear state.
-                self.service_store.import_services_from_anywhere(
-                    self.internal_service_modules + self.service_modules, self.base_dir)
-                
-                # Add the statistics-related scheduler jobs to the ODB
-                add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
+
+                # .. deploy them back.
+                import_initial_services_jobs()
                 
                 # Add the flag to Redis
                 redis_conn.set(already_deployed_flag, 1)

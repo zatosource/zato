@@ -20,13 +20,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import os, json, shutil, uuid
 from copy import deepcopy
 from random import getrandbits
-import os, shutil, uuid
+from traceback import format_exc
 
-# Zato
+# Django
+from django.core.management import call_command# Zato
+# TODO: There really shouldn't be any direct dependency between zato-cli and zato-admin
+from zato.admin.zato_settings import update_globals 
+
 from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZATO_ADMIN_DIR, ZatoCommand
 from zato.common.defaults import zato_admin_host, zato_admin_port
+from zato.common.markov_passwords import generate_password
 from zato.common.util import encrypt
 
 config_template = """{{
@@ -81,14 +87,20 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
-    def execute(self, args, show_output=True):
+    def execute(self, args, show_output=True, password=None):
+        os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
+        zato_admin_conf_path = os.path.join(repo_dir, 'zato-admin.conf')
+        initial_data_json_path = os.path.join(repo_dir, 'initial-data.json')
 
         os.mkdir(os.path.join(self.target_dir, 'logs'))
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon'))
         os.mkdir(repo_dir)
+        
+        user_name = 'admin'
+        password = password if password else generate_password()
         
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'zato-admin-{}.pem'.format(name))
@@ -112,12 +124,40 @@ class Create(ZatoCommand):
             'TECH_ACCOUNT_PASSWORD':encrypt(args.tech_account_password, pub_key),
         }
         
-        open(os.path.join(self.target_dir, 'config', 'repo', 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/zato-admin.log'))
-        open(os.path.join(self.target_dir, 'config', 'repo', 'zato-admin.conf'), 'w').write(config_template.format(**config))
-        open(os.path.join(self.target_dir, 'config', 'repo', 'initial-data.json'), 'w').write(initial_data_json.format(**config))
+        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/zato-admin.log'))
+        open(zato_admin_conf_path, 'w').write(config_template.format(**config))
+        open(initial_data_json_path, 'w').write(initial_data_json.format(**config))
         
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.ZATO_ADMIN.code)
+        
+        config = json.loads(open(os.path.join(repo_dir, 'zato-admin.conf')).read())
+        config['config_dir'] = self.target_dir
+        update_globals(config, self.target_dir)
+        
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+        
+        # Can't import these without DJANGO_SETTINGS_MODULE being set
+        from django.contrib.auth.models import User
+        from django.db import connection
+        from django.db.utils import IntegrityError
+        
+        call_command('syncdb', interactive=False, verbosity=0)
+        call_command('loaddata', initial_data_json_path, verbosity=0)
+        
+        try:
+            call_command('createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
+                                     last_name='admin-last-name', email='admin@invalid.example.com')
+            admin_created = True
+        except IntegrityError, e:
+            admin_created = False
+            connection._rollback()
+            msg = 'Ignoring IntegrityError e:[{}]'.format(format_exc(e))
+            self.logger.info(msg)
+            
+        user = User.objects.get(username=user_name)
+        user.set_password(password)
+        user.save()
 
         if show_output:
             if self.verbose:
@@ -126,3 +166,5 @@ class Create(ZatoCommand):
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')
+
+        return admin_created
