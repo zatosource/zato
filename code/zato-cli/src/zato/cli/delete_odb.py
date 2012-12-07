@@ -24,6 +24,8 @@ from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import drop_all
 
 class Delete(ZatoCommand):
+    """ Deletes Zato components
+    """
     needs_password_confirm = False
     opts = common_odb_opts
 

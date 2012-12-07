@@ -103,7 +103,8 @@ extendedKeyUsage               = serverAuth,clientAuth
 '''
 
 class Create(ZatoCommand):
-
+    """Creates a new certificate authority
+    """
     opts = [
         {'name':'--organization', 'help':'CA organization name (defaults to {organization})'.format(**ca_defaults)},
         {'name':'--organizational-unit', 

@@ -138,7 +138,7 @@ class CryptoMaterialLocation(object):
 class Create(ZatoCommand):
     """ Quickly creates a working cluster
     """
-    #needs_empty_dir = True
+    needs_empty_dir = True
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     

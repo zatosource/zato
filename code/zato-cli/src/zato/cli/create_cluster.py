@@ -36,6 +36,8 @@ from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Service, Tec
 from zato.common.util import service_name_from_impl, tech_account_password
 
 class Create(ZatoCommand):
+    """ Creates a new Zato cluster in the ODB
+    """
     opts = deepcopy(common_odb_opts)
     
     opts.append({'name':'lb_host', 'help':"Load-balancer host"})

@@ -23,6 +23,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.cli import CACreateCommand, common_ca_create_opts
 
 class Create(CACreateCommand):
+    """ Creates crypto material for a Zato server
+    """
     opts = [
         {'name':'cluster_name', 'help':'Cluster name'},
         {'name':'server_name', 'help':'Server name'},
