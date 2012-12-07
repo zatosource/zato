@@ -28,6 +28,8 @@ from zato.common.crypto import CryptoManager
 from zato.common.util import decrypt, encrypt
 
 class Encrypt(ZatoCommand):
+    """ Encrypts secrets using a public key
+    """
     allow_empty_secrets = True
     opts = [{'name':'--secret', 'help':'Secret to encrypt'}]
     
@@ -38,6 +40,8 @@ class Encrypt(ZatoCommand):
         self.logger.info('Encrypted value is [{}]'.format(cm.encrypt(args.secret)))
     
 class Decrypt(ZatoCommand):
+    """ Decrypts secrets using a private key
+    """
     allow_empty_secrets = True
     opts = [{'name':'--secret', 'help':'Secret to decrypt'}]
     

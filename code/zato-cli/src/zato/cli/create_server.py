@@ -119,6 +119,8 @@ priv_key_location = './config/repo/config-priv.pem'
 pub_key_location = './config/repo/config-pub.pem'
 
 class Create(ZatoCommand):
+    """ Creates a new Zato server
+    """
     needs_empty_dir = True
     allow_empty_secrets = True
     

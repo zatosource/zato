@@ -23,9 +23,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.cli import ManageCommand
 
 class Info(ManageCommand):
-    command_name = 'info'
-    description = 'Shows information about a running component'
-
+    """ Shows detailed information regarding a chosen Zato component
+    """
     def _on_server(self):
 
         ports_pids = self._zdaemon_command('status')

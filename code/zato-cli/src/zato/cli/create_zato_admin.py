@@ -71,6 +71,8 @@ initial_data_json = """[{{
 """
 
 class Create(ZatoCommand):
+    """ Creates a new Zato Admin web console
+    """
     needs_empty_dir = True
     allow_empty_secrets = True
     

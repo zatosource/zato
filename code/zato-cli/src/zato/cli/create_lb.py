@@ -105,7 +105,8 @@ default_backend="""
 """
 
 class Create(ZatoCommand):
-
+    """ Creates a new Zato load-balancer
+    """
     opts = []
     opts.append({'name':'pub_key_path', 'help':"Path to the load-balancer agent's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the load-balancer agent's private key in PEM"})

@@ -29,7 +29,7 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     FromConfigFile, quickstart as quickstart_mod, start as start_mod, stop as stop_mod
+     FromConfigFile, info as info_mod, quickstart as quickstart_mod, start as start_mod, stop as stop_mod
 from zato.common import version as zato_version
     
 """
@@ -88,26 +88,22 @@ def get_parser():
     ca_create = ca_subs.add_parser('create', description='Creates crypto material for Zato components')
     ca_create_subs = ca_create.add_subparsers()
 
-    ca_create_ca = ca_create_subs.add_parser('ca', 
-        description='Create a new certificate authority ', parents=[base_parser])
+    ca_create_ca = ca_create_subs.add_parser('ca', description=ca_create_ca_mod.Create.__doc__, parents=[base_parser])
     ca_create_ca.set_defaults(command='ca_create_ca')
     ca_create_ca.add_argument('path', help='Path to an empty directory to hold the CA')
     add_opts(ca_create_ca, ca_create_ca_mod.Create.opts)
     
-    ca_create_lb_agent = ca_create_subs.add_parser('lb_agent', 
-        description='Create crypto material for a Zato load-balancer agent', parents=[base_parser])
+    ca_create_lb_agent = ca_create_subs.add_parser('lb_agent', description=ca_create_lb_agent_mod.Create.__doc__, parents=[base_parser])
     ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
     ca_create_lb_agent.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_lb_agent, ca_create_lb_agent_mod.Create.opts)
         
-    ca_create_server = ca_create_subs.add_parser('server', 
-       description='Create crypto material for a Zato server', parents=[base_parser])
+    ca_create_server = ca_create_subs.add_parser('server', description=ca_create_server_mod.Create.__doc__, parents=[base_parser])
     ca_create_server.set_defaults(command='ca_create_server')
     ca_create_server.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_server, ca_create_server_mod.Create.opts)
 
-    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', 
-        description='Create crypto material for a Zato web console', parents=[base_parser])
+    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', description=ca_create_zato_admin_mod.Create.__doc__, parents=[base_parser])
     ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
     ca_create_zato_admin.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_zato_admin, ca_create_zato_admin_mod.Create.opts)
@@ -128,26 +124,25 @@ def get_parser():
     create = subs.add_parser('create', description='Creates new Zato components')
     create_subs = create.add_subparsers()
     
-    create_cluster = create_subs.add_parser('cluster', parents=[base_parser], description='Creates a new Zato cluster in the ODB')
+    create_cluster = create_subs.add_parser('cluster', description=create_cluster_mod.Create.__doc__, parents=[base_parser])
     create_cluster.set_defaults(command='create_cluster')
     add_opts(create_cluster, create_cluster_mod.Create.opts)
     
-    create_lb = create_subs.add_parser('load_balancer', parents=[base_parser], 
-        description='Creates a new Zato load-balancer')
+    create_lb = create_subs.add_parser('load_balancer', description=create_lb_mod.Create.__doc__, parents=[base_parser])
     create_lb.add_argument('path', help='Path to an empty directory to install the load-balancer in')
     create_lb.set_defaults(command='create_lb')
     add_opts(create_lb, create_lb_mod.Create.opts)
     
-    create_odb = create_subs.add_parser('odb', parents=[base_parser], description='Creates a new Zato ODB (Operational Database)')
+    create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
     create_odb.set_defaults(command='create_odb')
     add_opts(create_odb, create_odb_mod.Create.opts)
     
-    create_server = create_subs.add_parser('server', parents=[base_parser], description='Creates a new Zato server')
+    create_server = create_subs.add_parser('server', description=create_server_mod.Create.__doc__, parents=[base_parser])
     create_server.add_argument('path', help='Path to an empty directory to install the server in')
     create_server.set_defaults(command='create_server')
     add_opts(create_server, create_server_mod.Create.opts)
     
-    create_zato_admin = create_subs.add_parser('zato_admin', parents=[base_parser], description='Creates a new Zato Admin web console')
+    create_zato_admin = create_subs.add_parser('zato_admin', description=create_zato_admin_mod.Create.__doc__, parents=[base_parser])
     create_zato_admin.add_argument('path', help='Path to an empty directory to install a new Zato Admin web console in')
     create_zato_admin.set_defaults(command='create_zato_admin')
     add_opts(create_zato_admin, create_zato_admin_mod.Create.opts)
@@ -155,7 +150,7 @@ def get_parser():
     #
     # decrypt
     #
-    decrypt = subs.add_parser('decrypt', parents=[base_parser], description='Decrypts secrets using a private key')
+    decrypt = subs.add_parser('decrypt', description=crypto_mod.Decrypt.__doc__, parents=[base_parser])
     decrypt.add_argument('path', help='Path to the private key in PEM')
     decrypt.set_defaults(command='decrypt')
     add_opts(decrypt, crypto_mod.Decrypt.opts)
@@ -163,16 +158,16 @@ def get_parser():
     #
     # delete
     #
-    delete = subs.add_parser('delete', description='Deletes Zato components')
+    delete = subs.add_parser('delete', description=delete_odb_mod.Delete.__doc__)
     delete_subs = delete.add_subparsers()
-    delete_odb = delete_subs.add_parser('odb', parents=[base_parser], description='Deletes a Zato ODB')
+    delete_odb = delete_subs.add_parser('odb', description='Deletes a Zato ODB', parents=[base_parser])
     delete_odb.set_defaults(command='delete_odb')
     add_opts(delete_odb, delete_odb_mod.Delete.opts)
     
     #
     # encrypt
     #
-    encrypt = subs.add_parser('encrypt', parents=[base_parser], description='Encrypts secrets using a public key')
+    encrypt = subs.add_parser('encrypt', description=crypto_mod.Encrypt.__doc__, parents=[base_parser])
     encrypt.add_argument('path', help='Path to the public key in PEM')
     encrypt.set_defaults(command='encrypt')
     add_opts(encrypt, crypto_mod.Encrypt.opts)
@@ -180,8 +175,7 @@ def get_parser():
     #
     # info
     #
-    info = subs.add_parser('info', description='Detailed information regarding a chosen Zato component',
-        parents=[base_parser])
+    info = subs.add_parser('info', description=info_mod.Info.__doc__, parents=[base_parser])
         
     #
     # from-config-file
@@ -203,21 +197,14 @@ def get_parser():
     #
     # start
     #
-    start_desc = """Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer agents and Zato Admin instances.
-'path' must point to an existing directory into which the given component has been installed.
-
-Examples:
-  Assuming a Zato server has been installed in /opt/zato/server1, the command to start the server is 'zato start /opt/zato/server1'.
-  If a load-balancer's agent has been installed in /home/zato/lb-agent1, the command to start it is 'zato start /home/zato/lb-agent1'.
-"""
-    start = subs.add_parser('start', description=start_desc, parents=[base_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
+    start = subs.add_parser('start', description=start_mod.Start.__doc__, parents=[base_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
     start.add_argument('path', help='Path to the Zato component to be started')
     start.set_defaults(command='start')
     
     #
     # stop
     #
-    stop = subs.add_parser('stop', description='Stops a Zato component', parents=[base_parser])
+    stop = subs.add_parser('stop', description=stop_mod.Stop.__doc__, parents=[base_parser])
     stop.add_argument('path', help='Path to the Zato component to be stopped')
     stop.set_defaults(command='stop')
 

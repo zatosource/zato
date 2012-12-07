@@ -33,6 +33,8 @@ from zato.common.odb import VERSION
 from zato.common.odb.model import Base, ZatoInstallState
 
 class Create(ZatoCommand):
+    """ Creates a new Zato ODB (Operational Database)
+    """
     opts = common_odb_opts
 
     def execute(self, args, show_output=True):

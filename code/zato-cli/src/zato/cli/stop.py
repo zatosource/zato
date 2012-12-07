@@ -26,7 +26,8 @@ import json, os, signal, sys
 from zato.cli import ManageCommand
 
 class Stop(ManageCommand):
-
+    """ Stops a Zato component
+    """
     def _signal(self, pid_file, component_name, signal_name, signal_code):
         """ Sends a signal to a process known by its ID.
         """
