@@ -56,7 +56,6 @@ zato services import . dump
 # zato stop .
 zato update crypto . --priv-key ./path --pub-key ./path --cert ./path
 zato update password admin-username .
-zato --batch
 # zato --store-config
 # zato --store-log
 # zato --version

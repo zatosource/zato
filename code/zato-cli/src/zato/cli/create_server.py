@@ -30,7 +30,7 @@ from traceback import format_exc
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.cli import ZatoCommand, ZATO_SERVER_DIR, common_logging_conf_contents, common_odb_opts, \
+from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, \
      kvdb_opts
 from zato.common import SERVER_JOIN_STATUS
 from zato.common.defaults import http_plain_server_port
@@ -111,9 +111,7 @@ default_odb_pool_size = 1
 
 directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work',
                'work/hot-deploy', 'work/hot-deploy/current', 'work/hot-deploy/backup', 'work/hot-deploy/backup/last')
-files = {ZATO_SERVER_DIR: '',
-         'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
-}
+files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),}
 
 priv_key_location = './config/repo/config-priv.pem'
 pub_key_location = './config/repo/config-pub.pem'

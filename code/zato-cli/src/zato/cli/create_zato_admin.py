@@ -30,7 +30,7 @@ from django.core.management import call_command# Zato
 # TODO: There really shouldn't be any direct dependency between zato-cli and zato-admin
 from zato.admin.zato_settings import update_globals 
 
-from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZATO_ADMIN_DIR, ZatoCommand
+from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZatoCommand
 from zato.common.defaults import zato_admin_host, zato_admin_port
 from zato.common.markov_passwords import generate_password
 from zato.common.util import encrypt
