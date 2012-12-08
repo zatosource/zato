@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.cli import common_logging_conf_contents, ZatoCommand, ZATO_LB_DIR
+from zato.cli import common_logging_conf_contents, ZatoCommand
 from zato.common.defaults import http_plain_server_port
 
 # bzrlib

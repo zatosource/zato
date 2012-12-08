@@ -44,10 +44,6 @@ lazy_import(globals(), """
 
 ################################################################################
 
-ZATO_LB_DIR = b'.zato-lb-dir'
-ZATO_ADMIN_DIR = b'.zato-admin-dir'
-ZATO_BROKER_DIR = b'.zato-broker-dir'
-ZATO_SERVER_DIR = b'.zato-server-dir'
 ZATO_INFO_FILE = b'.zato-info'
 
 _opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES)
