@@ -58,6 +58,7 @@ eggs =
     gunicorn
     hexagonit.recipe.download
     hiredis
+    importing
     inotifyx
     iw.recipe.cmd
     lxml

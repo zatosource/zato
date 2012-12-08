@@ -168,7 +168,7 @@ class Create(ZatoCommand):
         bunch.odb_db_name = args.odb_db_name
         bunch.kvdb_host = args.kvdb_host
         bunch.kvdb_port = args.kvdb_port
-        bunch.postgresql_schema = args.postgresql_schema
+        bunch.postgresql_schema = getattr(args, 'postgresql_schema', None)
         bunch.odb_password = args.odb_password
         bunch.kvdb_password = args.kvdb_password
         bunch.cluster_name = cluster_name
