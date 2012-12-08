@@ -52,10 +52,10 @@ zato from-config ./zato.config.file
 zato info . # TODO: replace .lb-dir with .zato-info['component']
 zato services export . token
 zato services import . dump
-!!! zato start .
-zato stop .
+# zato start .
+# zato stop .
 zato update crypto . --priv-key ./path --pub-key ./path --cert ./path
-zato update password .
+zato update password admin-username .
 zato --batch
 zato --store-config
 # zato --store-log
