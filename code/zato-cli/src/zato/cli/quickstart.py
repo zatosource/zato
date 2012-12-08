@@ -37,11 +37,23 @@ from zato.common.util import get_zato_command, make_repr
 
 random.seed()
 
-zato_qs_start_template = """#!/usr/bin/env sh
+# Taken from http://stackoverflow.com/a/246128
+script_dir = """SOURCE="${BASH_SOURCE[0]}"
+BASE_DIR="$( dirname "$SOURCE" )"
+while [ -h "$SOURCE" ]
+do 
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$BASE_DIR/$SOURCE"
+  BASE_DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
+done
+BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+"""
+
+zato_qs_start_template = """#!/bin/bash
 
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
-BASE_DIR=`pwd`
+{script_dir}
 ZATO_BIN={zato_bin}
 
 echo Starting the Zato quickstart environment
@@ -71,11 +83,11 @@ echo Visit https://TODO for more information and support options
 exit 0
 """ 
 
-zato_qs_stop_template = """#!/usr/bin/env sh
+zato_qs_stop_template = """#!/bin/bash
 
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
-BASE_DIR=`pwd`
+{script_dir}
 ZATO_BIN={zato_bin}
 
 echo Stopping the Zato quickstart environment
@@ -83,30 +95,32 @@ echo Stopping the Zato quickstart environment
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
 $ZATO_BIN stop .
-
-# .. the broker ..
-cd $BASE_DIR/broker
-$ZATO_BIN stop .
+echo [1/4] Load-balancer stopped
 
 # .. servers ..
 cd $BASE_DIR/server1
 $ZATO_BIN stop .
+echo [2/4] server1 stopped
 
 cd $BASE_DIR/server2
 $ZATO_BIN stop .
+echo [2/4] server2 stopped
 
-# .. web admin comes as the last one because it may ask Django-related questions.
 cd $BASE_DIR/zato-admin
 $ZATO_BIN stop .
+echo [4/4] Zato admin stopped
 
 cd $BASE_DIR
 echo Zato quickstart environment stopped
 """
 
-zato_qs_restart = """#!/usr/bin/env sh
+zato_qs_restart = """#!/bin/bash
 
-./zato-qs-stop.sh
-./zato-qs-start.sh
+{script_dir}
+cd $BASE_DIR
+
+$BASE_DIR/zato-qs-stop.sh
+$BASE_DIR/zato-qs-start.sh
 """ 
 
 
@@ -310,9 +324,9 @@ class Create(ZatoCommand):
         zato_qs_stop_path = os.path.join(args.path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args.path, 'zato-qs-restart.sh')
 
-        open(zato_qs_start_path, 'w').write(zato_qs_start_template.format(zato_bin=zato_bin))
-        open(zato_qs_stop_path, 'w').write(zato_qs_stop_template.format(zato_bin=zato_bin))
-        open(zato_qs_restart_path, 'w').write(zato_qs_restart)
+        open(zato_qs_start_path, 'w').write(zato_qs_start_template.format(zato_bin=zato_bin, script_dir=script_dir))
+        open(zato_qs_stop_path, 'w').write(zato_qs_stop_template.format(zato_bin=zato_bin, script_dir=script_dir))
+        open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir))
 
         file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
         
