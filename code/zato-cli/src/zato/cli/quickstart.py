@@ -199,6 +199,11 @@ class Create(ZatoCommand):
         lb_port = 11223
         lb_agent_port = 20151
         
+        # This could've been set to True by user in the command-line so we'd want
+        # to unset it so that individual commands quickstart invokes don't attempt
+        # to store their own configs.
+        args.store_config = False
+        
         #
         # 1) CA
         #

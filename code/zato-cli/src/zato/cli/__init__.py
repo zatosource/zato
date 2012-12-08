@@ -260,7 +260,7 @@ class ZatoCommand(object):
         now = util.fs_safe_now()
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
-
+        
         for arg, value in args._get_kwargs():
             if value:
                 file_args.write('{}={}\n'.format(arg, value))
@@ -305,11 +305,16 @@ class ZatoCommand(object):
         # Do we need to have a clean directory to work in?
         if self.needs_empty_dir:
             work_dir = os.path.abspath(args.path)
-            if os.listdir(work_dir):
-                msg = ('Directory {} is not empty, please re-run the command ' +
-                      'in an empty directory').format(work_dir)
-                self.logger.info(msg)
-                sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY)
+            for elem in os.listdir(work_dir):
+                if elem.startswith('zato') and elem.endswith('config'):
+                    # This is a zato.{}.config file. The had been written there
+                    # before we got to this point and it's OK to skip it.
+                    continue
+                else:
+                    msg = ('Directory {} is not empty, please re-run the command ' +
+                          'in an empty directory').format(work_dir)
+                    self.logger.info(msg)
+                    sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY)
 
         # Do we need the directory to contain any specific files?
         if self.file_needed:
