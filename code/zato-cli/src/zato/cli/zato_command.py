@@ -29,7 +29,7 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     FromConfigFile, info as info_mod, quickstart as quickstart_mod, start as start_mod, stop as stop_mod
+     FromConfig, info as info_mod, run_command, quickstart as quickstart_mod, start as start_mod, stop as stop_mod
 from zato.common import version as zato_version
     
 """
@@ -47,7 +47,7 @@ zato create user .
 # zato decrypt . --secret
 # zato delete odb .
 # zato encrypt . --secret
-zato from-config ./zato.config.file
+# zato from-config ./zato.config.file
 # zato quickstart create .
 zato info . # TODO: replace .lb-dir with .zato-info['component']
 zato services export . token
@@ -179,7 +179,8 @@ def get_parser():
     #
     # from-config-file
     #
-    from_config = subs.add_parser('from-config', description='Run commands from a config file', parents=[base_parser])
+    from_config = subs.add_parser('from-config', description=FromConfig.__doc__, parents=[base_parser])
+    from_config.add_argument('path', help='Path to a Zato command config file')
     from_config.set_defaults(command='from_config')
     
     #
@@ -210,24 +211,4 @@ def get_parser():
     return parser
 
 def main():
-    command_class = {
-        'ca_create_ca': ca_create_ca_mod.Create,
-        'ca_create_lb_agent': ca_create_lb_agent_mod.Create,
-        'ca_create_server': ca_create_server_mod.Create,
-        'ca_create_zato_admin': ca_create_zato_admin_mod.Create,
-        'component_version': component_version_mod.ComponentVersion,
-        'create_cluster': create_cluster_mod.Create,
-        'create_lb': create_lb_mod.Create,
-        'create_odb': create_odb_mod.Create,
-        'create_server': create_server_mod.Create,
-        'create_zato_admin': create_zato_admin_mod.Create,
-        'delete_odb': delete_odb_mod.Delete,
-        'decrypt': crypto_mod.Decrypt,
-        'encrypt': crypto_mod.Encrypt,
-        'from_config_file': FromConfigFile,
-        'quickstart_create': quickstart_mod.Create,
-        'start': start_mod.Start,
-        'stop':stop_mod.Stop,
-    }
-    args = get_parser().parse_args()
-    command_class[args.command](args).run(args)
+    return run_command(get_parser().parse_args())

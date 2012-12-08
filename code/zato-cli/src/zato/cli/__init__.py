@@ -26,6 +26,9 @@ from socket import gethostname
 # bzrlib
 from bzrlib.lazy_import import lazy_import
 
+# Importing
+from peak.util.imports import importString
+
 lazy_import(globals(), """
 
     # stdlib
@@ -139,6 +142,34 @@ class=zato.common.util.ColorFormatter
 
 ################################################################################
 
+def run_command(args):
+    command_class = {}
+    command_imports = (
+        ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
+        ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
+        ('ca_create_server', 'zato.cli.ca_create_server.Create'),
+        ('ca_create_zato_admin', 'zato.cli.ca_create_zato_admin.Create'),
+        ('component_version', 'zato.cli.component_version.ComponentVersion'),
+        ('create_cluster', 'zato.cli.create_cluster.Create'),
+        ('create_lb', 'zato.cli.create_lb.Create'),
+        ('create_odb', 'zato.cli.create_odb.Create'),
+        ('create_server', 'zato.cli.create_server.Create'),
+        ('create_zato_admin', 'zato.cli.create_zato_admin.Create'),
+        ('delete_odb', 'zato.cli.delete_odb.Delete'),
+        ('decrypt', 'zato.cli.crypto.Decrypt'),
+        ('encrypt', 'zato.cli.crypto.Encrypt'),
+        ('from_config', 'zato.cli.FromConfig'),
+        ('quickstart_create', 'zato.cli.quickstart.Create'),
+        ('start', 'zato.cli.start.Start'),
+        ('stop', 'zato.cli.stop.Stop'),
+    )
+    for k, v in command_imports:
+        command_class[k] = importString(v)
+        
+    command_class[args.command](args).run(args)
+
+################################################################################
+
 class ZatoCommand(object):
     """ A base class for all Zato CLI commands. Handles common things like parsing
     the arguments, checking whether a config file or command line switches should
@@ -148,7 +179,6 @@ class ZatoCommand(object):
     file_needed = None
     needs_secrets_confirm = True
     allow_empty_secrets = False
-    add_batch = True
     add_config_file = True
     target_dir = None
     show_output = True
@@ -331,8 +361,9 @@ class ZatoCommand(object):
             
         sys.exit(self.execute(args))
         
-class FromConfigFile(ZatoCommand):
-    opts = []
+class FromConfig(ZatoCommand):
+    """ Executes commands from a command config file.
+    """
     def execute(self, args):
         """ Runs the command with arguments read from a config file.
         """
@@ -347,9 +378,7 @@ class FromConfigFile(ZatoCommand):
 
             setattr(args, arg, value)
 
-        if not self.batch:
-            args = self._check_passwords(args, check_password)
-        self.execute(args)
+        run_command(args)
 
 class CACreateCommand(ZatoCommand):
     """ A base class for all commands that create new crypto material.
@@ -473,7 +502,6 @@ class CACreateCommand(ZatoCommand):
         return format_args
 
 class ManageCommand(ZatoCommand):
-    add_batch = False
     add_config_file = False
 
     def _get_dispatch(self):
