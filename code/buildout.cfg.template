@@ -92,6 +92,7 @@ eggs =
     six
     springpython
     SQLAlchemy
+    texttable
     threadpool
     tornado
     urllib3

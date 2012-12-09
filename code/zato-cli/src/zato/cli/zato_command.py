@@ -49,7 +49,7 @@ zato create user .
 # zato encrypt . --secret
 # zato from-config ./zato.config.file
 # zato quickstart create .
-zato info . # TODO: replace .lb-dir with .zato-info['component']
+!!!! zato info . # TODO: replace .lb-dir with .zato-info['component']
 zato services export . token
 zato services import . dump
 # zato start .
@@ -65,7 +65,15 @@ def add_opts(parser, opts):
     """ Adds parser-specific options.
     """
     for opt in opts:
-        parser.add_argument(opt['name'], help=opt['help'])
+        arguments = {}
+        for name in('help', 'action'):
+            try:
+                arguments[name] = opt[name]
+            except KeyError:
+                # Almost no commands use the 'action' parameter
+                pass
+            
+        parser.add_argument(opt['name'], **arguments)
 
 def get_parser():
     base_parser = argparse.ArgumentParser(add_help=False)
@@ -175,6 +183,9 @@ def get_parser():
     # info
     #
     info = subs.add_parser('info', description=info_mod.Info.__doc__, parents=[base_parser])
+    info.add_argument('path', help='Path to a Zato component')
+    info.set_defaults(command='info')
+    add_opts(info, info_mod.Info.opts)
         
     #
     # from-config-file

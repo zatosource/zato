@@ -159,6 +159,7 @@ def run_command(args):
         ('decrypt', 'zato.cli.crypto.Decrypt'),
         ('encrypt', 'zato.cli.crypto.Encrypt'),
         ('from_config', 'zato.cli.FromConfig'),
+        ('info', 'zato.cli.info.Info'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
@@ -596,4 +597,4 @@ class ManageCommand(ZatoCommand):
         json_data = json.load(open(os.path.join(self.component_dir, found)))
 
         os.chdir(self.component_dir)
-        self._get_dispatch()[json_data['component']]()
+        self._get_dispatch()[json_data['component']](args)

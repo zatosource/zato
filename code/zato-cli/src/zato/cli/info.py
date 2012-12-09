@@ -19,43 +19,76 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import os
+from anyjson import dumps
+from datetime import datetime
+
+# psutil
+from psutil import Process
+
+# pytz
+from pytz import UTC
+
+# Texttable
+from texttable import Texttable
+
 # Zato
 from zato.cli import ManageCommand
+
+DEFAULT_COLS_WIDTH = '30,90'
 
 class Info(ManageCommand):
     """ Shows detailed information regarding a chosen Zato component
     """
-    def _on_server(self):
+    opts = [{'name':'--json', 'help':'Whether to return the output in JSON', 'action':'store_true'}]
+    opts = [{'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH)}]
+    
+    def _on_server(self, args):
+        
+        out = {
+            'full_path': os.path.abspath(args.path),
+            'master_proc_connections': None,
+            'master_proc_pid': None,
+            'master_proc_name': None,
+            'master_proc_create_time': None,
+            'master_proc_create_time_utc': None,
+            'master_proc_username': None,            
+            'master_proc_workers_no': None,
+            'master_proc_workers_pids': None,
+        }
 
-        ports_pids = self._zdaemon_command('status')
-        pids = ports_pids.values()
-
-        if all(pids):
-            parallel_status = 'is running'
-        elif any(pids):
-            parallel_status = 'is running but some processes are missing'
+        master_proc_pid = self._zdaemon_command('status')
+        master_proc_pid = master_proc_pid.values()
+        if master_proc_pid:
+            master_proc_pid = int(master_proc_pid[0])
+            master_proc = Process(master_proc_pid)
+            workers_pids = sorted(elem.pid for elem in master_proc.get_children())
+            
+            out['master_proc_connections'] = master_proc.get_connections()
+            out['master_proc_pid'] = master_proc.pid
+            out['master_proc_create_time'] = datetime.fromtimestamp(master_proc.create_time).isoformat()
+            out['master_proc_create_time_utc'] = datetime.fromtimestamp(master_proc.create_time, UTC).isoformat()
+            out['master_proc_username'] = master_proc.username
+            out['master_proc_name'] = master_proc.name
+            out['master_proc_workers_no'] = len(workers_pids)
+            out['master_proc_workers_pids'] = workers_pids
+            
+        if getattr(args, 'json', False):
+            self.logger.info(dumps(out))
         else:
-            parallel_status = 'is not running'
-
-        msg = '\nZato server at {0} {1}.\n'.format(self.component_dir, parallel_status)
-        msg += '\nParallel servers:'
-        for idx, (port, pid) in enumerate(sorted(ports_pids.items())):
-            pid_info = 'PID ' + pid if pid else '(process not running)'
-            msg += '\n {0}) port {1}, {2}'.format(idx+1, port, pid_info)
-
-        msg += '\n'
-
-        print(msg)
-
-
+            cols_width = args.cols_width if args.cols_width else DEFAULT_COLS_WIDTH
+            cols_width = (elem.strip() for elem in cols_width.split(','))
+            cols_width = [int(elem) for elem in cols_width]
+            table = Texttable()
+            table.set_cols_width(cols_width)
+            rows = [['Key', 'Value']]
+            rows.extend(sorted(out.items()))
+            table.add_rows(rows)
+            self.logger.info(table.draw())
+        
     def _on_lb_agent(self):
         pass
 
     def _on_zato_admin(self):
         pass
-
-def main(target_dir):
-    Info(target_dir).run()
-
-if __name__ == '__main__':
-    main('.')

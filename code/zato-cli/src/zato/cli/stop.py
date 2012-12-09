@@ -59,10 +59,10 @@ class Stop(ManageCommand):
         os.kill(pid, signal_code)
         open(pid_file, 'w').truncate()
 
-    def _on_server(self):
+    def _on_server(self, *ignored):
         self._try_stop('No Zato server running in {}', 'Stopped Zato server in {}')
 
-    def _on_lb(self):
+    def _on_lb(self, *ignored):
         def stop_haproxy():
             json_config = json.loads(open(os.path.join(self.component_dir, 'config', 'lb-agent.conf')).read())
             pid_file = os.path.abspath(os.path.join(self.component_dir, json_config['pid_file']))
@@ -70,5 +70,5 @@ class Stop(ManageCommand):
             
         self._try_stop('Zato load-balancer and agent in {} are not running', 'Stopped load-balancer and agent in {}', stop_haproxy)
 
-    def _on_zato_admin(self):
+    def _on_zato_admin(self, *ignored):
         self._try_stop('No ZatoAdmin running in {}', 'Stopped ZatoAdmin in {}')
