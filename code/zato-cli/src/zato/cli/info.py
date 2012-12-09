@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from anyjson import dumps
+from anyjson import dumps, loads
 from datetime import datetime
 
 # psutil
@@ -34,20 +34,26 @@ from pytz import UTC
 from texttable import Texttable
 
 # Zato
-from zato.cli import ManageCommand
+from zato.cli import ManageCommand, ZATO_INFO_FILE
 
 DEFAULT_COLS_WIDTH = '30,90'
 
 class Info(ManageCommand):
     """ Shows detailed information regarding a chosen Zato component
     """
-    opts = [{'name':'--json', 'help':'Whether to return the output in JSON', 'action':'store_true'}]
-    opts = [{'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH)}]
+    opts = [
+        {'name':'--json', 'help':'Whether to return the output in JSON', 'action':'store_true'},
+        {'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH)}
+    ]
     
     def _on_server(self, args):
         
+        component_details = open(os.path.join(args.path, ZATO_INFO_FILE)).read()
+        
         out = {
             'full_path': os.path.abspath(args.path),
+            'component_details': component_details,
+            'component_running': False,
             'master_proc_connections': None,
             'master_proc_pid': None,
             'master_proc_name': None,
@@ -61,6 +67,7 @@ class Info(ManageCommand):
         master_proc_pid = self._zdaemon_command('status')
         master_proc_pid = master_proc_pid.values()
         if master_proc_pid:
+            out['component_running'] = True
             master_proc_pid = int(master_proc_pid[0])
             master_proc = Process(master_proc_pid)
             workers_pids = sorted(elem.pid for elem in master_proc.get_children())
@@ -74,21 +81,33 @@ class Info(ManageCommand):
             out['master_proc_workers_no'] = len(workers_pids)
             out['master_proc_workers_pids'] = workers_pids
             
+            for pid in workers_pids:
+                worker = Process(pid)
+                worker_memory_percent = worker.get_memory_percent()
+                out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker.create_time).isoformat()
+                out['worker_{}_create_time_utc'.format(pid)] = datetime.fromtimestamp(worker.create_time, UTC).isoformat()
+                out['worker_{}_connections'.format(pid)] = worker.get_connections()
+            
         if getattr(args, 'json', False):
+            out['component_details'] = loads(out['component_details'])
             self.logger.info(dumps(out))
         else:
             cols_width = args.cols_width if args.cols_width else DEFAULT_COLS_WIDTH
             cols_width = (elem.strip() for elem in cols_width.split(','))
             cols_width = [int(elem) for elem in cols_width]
+            
             table = Texttable()
             table.set_cols_width(cols_width)
+            
+            # Use text ('t') instead of auto so that boolean values don't get converted into ints
+            table.set_cols_dtype(['t', 't']) 
+            
             rows = [['Key', 'Value']]
             rows.extend(sorted(out.items()))
+            
             table.add_rows(rows)
+            
             self.logger.info(table.draw())
         
-    def _on_lb_agent(self):
-        pass
 
-    def _on_zato_admin(self):
-        pass
+    _on_lb = _on_zato_admin = _on_server
