@@ -49,7 +49,7 @@ zato create user .
 # zato encrypt . --secret
 # zato from-config ./zato.config.file
 # zato quickstart create .
-!!!! zato info . # TODO: replace .lb-dir with .zato-info['component']
+# zato info . # TODO: replace .lb-dir with .zato-info['component']
 zato services export . token
 zato services import . dump
 # zato start .
