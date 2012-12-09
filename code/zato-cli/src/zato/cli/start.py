@@ -48,7 +48,7 @@ Examples:
   - Assuming a Zato server has been installed in /opt/zato/server1, the command to start the server is 'zato start /opt/zato/server1'.
   - If a load-balancer's agent has been installed in /home/zato/lb-agent1, the command to start it is 'zato start /home/zato/lb-agent1'."""
     
-    def _on_server(self, show_output=True):
+    def _on_server(self, show_output=True, *ignored):
 
         server_conf = ConfigObj(os.path.join(self.config_dir, 'repo', 'server.conf'))
         port = server_conf['main']['gunicorn_bind'].split(':')[1]
@@ -78,7 +78,7 @@ Examples:
             else:
                 self.logger.info('OK')
 
-    def _on_lb(self):
+    def _on_lb(self, *ignored):
 
         # Start the agent which will in turn start the load balancer
         config_path = os.path.join(self.config_dir, 'lb-agent.conf')
@@ -98,7 +98,7 @@ Examples:
             else:
                 self.logger.info('OK')
 
-    def _on_zato_admin(self):
+    def _on_zato_admin(self, *ignored):
 
         zdaemon_conf_name = 'zdaemon-zato-admin.conf'
         socket_prefix = 'zato-admin'
