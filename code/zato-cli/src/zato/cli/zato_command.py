@@ -55,7 +55,7 @@ zato services export . token
 zato services import . dump
 # zato start .
 # zato stop .
-zato update crypto . --priv-key ./path --pub-key ./path --cert ./path
+!!!!! zato update crypto . --priv-key ./path --pub-key ./path --cert ./path
 # zato update password . admin-username
 # zato --store-config
 # zato --store-log
@@ -230,6 +230,11 @@ def get_parser():
     #
     update = subs.add_parser('update', description='Updates Zato components and users')
     update_subs = update.add_subparsers()
+    
+    update_crypto = update_subs.add_parser('crypto', description=crypto_mod.UpdateCrypto.__doc__, parents=[base_parser])
+    update_crypto.add_argument('path', help='Path to a Zato component')
+    update_crypto.set_defaults(command='update_crypto')
+    add_opts(update_crypto, crypto_mod.UpdateCrypto.opts)
     
     update_password = update_subs.add_parser('password', description=zato_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
     update_password.add_argument('path', help='Path to a Zato admin directory')

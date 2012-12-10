@@ -86,3 +86,12 @@ class CryptoManager(object):
         """
         signed = self.priv_key.sign(sha256(data).digest())
         return b64encode(signed)
+
+    def reset(self):
+        """ Sets all the keys to None.
+        """
+        self.priv_key_location = None
+        self.pub_key_location = None
+        
+        self.priv_key = None
+        self.pub_key = None
