@@ -64,7 +64,7 @@ class Stop(ManageCommand):
 
     def _on_lb(self, *ignored):
         def stop_haproxy():
-            json_config = json.loads(open(os.path.join(self.component_dir, 'config', 'lb-agent.conf')).read())
+            json_config = json.loads(open(os.path.join(self.component_dir, 'config', 'repo', 'lb-agent.conf')).read())
             pid_file = os.path.abspath(os.path.join(self.component_dir, json_config['pid_file']))
             self._signal(pid_file, 'load-balancer', 'SIGUSR1', signal.SIGUSR1)
             

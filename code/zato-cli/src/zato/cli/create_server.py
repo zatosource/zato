@@ -36,7 +36,6 @@ from zato.common import SERVER_JOIN_STATUS
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
-from zato.server.repo import RepoManager
 
 server_conf_template = """[main]
 gunicorn_bind=localhost:{port}
@@ -183,9 +182,6 @@ class Create(ZatoCommand):
             shutil.copyfile(os.path.abspath(args.cert_path), os.path.join(repo_dir, 'zato-server-cert.pem'))
             
             pub_key = open(os.path.join(repo_dir, 'zato-server-pub-key.pem')).read()
-    
-            repo_manager = RepoManager(repo_dir)
-            repo_manager.ensure_repo_consistency()
             
             if show_output:
                 self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))

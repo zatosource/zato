@@ -213,6 +213,7 @@ class ZatoCommand(object):
         ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
 
     def __init__(self, args):
+        self.original_dir = os.getcwd()
         self.show_output = False if 'ZATO_CLI_DONT_SHOW_OUTPUT' in os.environ else True
         self.verbose = args.verbose
         self.reset_logger(args)

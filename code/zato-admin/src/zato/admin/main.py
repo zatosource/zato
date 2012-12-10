@@ -34,13 +34,16 @@ from werkzeug.serving import run_simple
 
 # Zato
 from zato.admin.zato_settings import update_globals
+from zato.common.repo import RepoManager
 
 logger = getLogger(__name__)
 
 def main():
     
-    # Update Django settings.
-    config = json.loads(open('./config/repo/zato-admin.conf').read())
+    repo_dir = os.path.join('.', 'config', 'repo')
+    
+    # Update Django settings
+    config = json.loads(open(os.path.join(repo_dir, 'zato-admin.conf')).read())
     config['config_dir'] = os.path.abspath('.')
     update_globals(config)
     
@@ -48,7 +51,9 @@ def main():
     open('./.zato-admin.pid', 'w').write(str(os.getpid()))
         
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
-    call_command('loaddata', os.path.join('.', 'config', 'repo', 'initial-data.json'))
+    call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
+    
+    RepoManager(repo_dir).ensure_repo_consistency()
 
     app = WSGIHandler()
     app = DebuggedApplication(app, evalex=True)

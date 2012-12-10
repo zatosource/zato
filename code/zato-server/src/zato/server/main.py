@@ -38,6 +38,7 @@ from gunicorn.app.base import Application
 import psycopg2
 
 # Zato
+from zato.common.repo import RepoManager
 from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
 
 class ZatoGunicornApplication(Application):
@@ -77,6 +78,8 @@ class ZatoGunicornApplication(Application):
         return self.zato_wsgi_app.on_wsgi_request
 
 def run(base_dir):
+
+    os.chdir(base_dir)
     
     # We're doing it here even if someone doesn't use PostgreSQL at all
     # so we're not suprised when someone suddenly starts using PG.
@@ -115,17 +118,8 @@ def run(base_dir):
     pickup = app_context.get_object('pickup')
     pickup.pickup_dir = pickup_dir
     pickup.pickup_event_processor.pickup_dir = pickup_dir
-
-    '''
-    if start_singleton:
-        singleton_server = app_context.get_object('singleton_server')
-        singleton_server.initial_sleep_time = int(config.singleton.initial_sleep_time) / 1000.
-        parallel_server.singleton_server = singleton_server
-
-        # Wow, this line looks weird. What it does is simply assigning a parallel
-        # server instance to the singleton server.
-        parallel_server.singleton_server.parallel_server = parallel_server
-        '''
+    
+    RepoManager(repo_location).ensure_repo_consistency()
 
     zato_gunicorn_app.run()
  

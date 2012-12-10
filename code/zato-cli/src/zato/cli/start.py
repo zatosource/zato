@@ -81,11 +81,11 @@ Examples:
     def _on_lb(self, *ignored):
 
         # Start the agent which will in turn start the load balancer
-        config_path = os.path.join(self.config_dir, 'lb-agent.conf')
+        repo_dir = os.path.join(self.config_dir, 'repo')
 
         zdaemon_conf_name = 'zdaemon-lb.conf'
         socket_prefix = 'lb-agent'
-        program = '{} -m zato.agent.load_balancer.main {}'.format(get_executable(), config_path)
+        program = '{} -m zato.agent.load_balancer.main {}'.format(get_executable(), repo_dir)
         logfile_path_prefix = 'zdaemon-lb-agent'
         
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
