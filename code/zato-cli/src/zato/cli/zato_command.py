@@ -43,7 +43,7 @@ from zato.common import version as zato_version
 # zato create odb .
 # zato create cluster
 # zato create server .
-zato create user .
+# zato create user .
 # zato create zato_admin .
 # zato decrypt . --secret
 # zato delete odb .
@@ -149,6 +149,11 @@ def get_parser():
     create_server.add_argument('path', help='Path to an empty directory to install the server in')
     create_server.set_defaults(command='create_server')
     add_opts(create_server, create_server_mod.Create.opts)
+    
+    create_user = create_subs.add_parser('user', description=zato_admin_auth_mod.CreateUser.__doc__, parents=[base_parser])
+    create_user.add_argument('path', help='Path to a Zato admin')
+    create_user.set_defaults(command='create_user')
+    add_opts(create_user, zato_admin_auth_mod.CreateUser.opts)
     
     create_zato_admin = create_subs.add_parser('zato_admin', description=create_zato_admin_mod.Create.__doc__, parents=[base_parser])
     create_zato_admin.add_argument('path', help='Path to an empty directory to install a new Zato Admin web console in')
