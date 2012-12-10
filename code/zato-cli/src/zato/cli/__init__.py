@@ -154,6 +154,7 @@ def run_command(args):
         ('create_lb', 'zato.cli.create_lb.Create'),
         ('create_odb', 'zato.cli.create_odb.Create'),
         ('create_server', 'zato.cli.create_server.Create'),
+        ('create_user', 'zato.cli.zato_admin_auth.CreateUser'),
         ('create_zato_admin', 'zato.cli.create_zato_admin.Create'),
         ('delete_odb', 'zato.cli.delete_odb.Delete'),
         ('decrypt', 'zato.cli.crypto.Decrypt'),

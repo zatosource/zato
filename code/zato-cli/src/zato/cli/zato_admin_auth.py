@@ -45,3 +45,23 @@ class UpdatePassword(_ZatoAdminAuthCommand):
         
         from django.contrib.auth.management.commands.changepassword import Command
         Command().handle(args.username)
+
+class CreateUser(_ZatoAdminAuthCommand):
+    """ Creates a new Zato admin user
+    """
+    class _FakeStdout(object):
+        """ django.contrib.auth.management.commands.createsuperuser.Command needs a self.stdout
+        so we fake it here
+        """
+        def __init__(self, logger):
+            self.logger = logger
+            
+        def write(self, msg):
+            self.logger.info(msg.strip())
+        
+    def execute(self, args):
+        self._prepare(args)
+        
+        from django.contrib.auth.management.commands.createsuperuser import Command
+        Command.stdout = CreateUser._FakeStdout(self.logger)
+        Command().handle(interactive=True)
