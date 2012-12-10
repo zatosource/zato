@@ -32,7 +32,6 @@ from zato.server.connection.http_soap.security import Security as ConnectionHTTP
 from zato.server.connection.sql import PoolStore
 from zato.server.odb import ODBManager
 from zato.server.pickup import Pickup, PickupEventProcessor
-from zato.server.repo import RepoManager
 from zato.server.scheduler import Scheduler
 from zato.server.service.store import ServiceStore
 
@@ -58,15 +57,6 @@ class ZatoContext(PythonConfig):
     @Object
     def pickup_event_processor(self):
         return PickupEventProcessor()
-
-    # #######################################################
-    # Repository management
-
-    @Object
-    def config_repo_manager(self):
-        repo_manager = RepoManager()
-
-        return repo_manager
 
     # #######################################################
     # Services
@@ -197,7 +187,6 @@ class ZatoContext(PythonConfig):
         server = SingletonServer()
         server.pickup = self.pickup()
         server.pickup.pickup_event_processor.server = server
-        server.config_repo_manager = self.config_repo_manager()
         server.scheduler = self.scheduler()
 
         return server

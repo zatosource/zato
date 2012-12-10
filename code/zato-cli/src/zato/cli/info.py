@@ -48,10 +48,12 @@ class Info(ManageCommand):
     
     def _on_server(self, args):
         
-        component_details = open(os.path.join(args.path, ZATO_INFO_FILE)).read()
+        os.chdir(self.original_dir)
+        abs_args_path = os.path.abspath(args.path)
+        component_details = open(os.path.join(abs_args_path, ZATO_INFO_FILE)).read()
         
         out = {
-            'full_path': os.path.abspath(args.path),
+            'full_path': abs_args_path,
             'component_details': component_details,
             'component_running': False,
             'master_proc_connections': None,
@@ -66,7 +68,7 @@ class Info(ManageCommand):
 
         master_proc_pid = self._zdaemon_command('status')
         master_proc_pid = master_proc_pid.values()
-        if master_proc_pid:
+        if master_proc_pid and master_proc_pid[0]:
             out['component_running'] = True
             master_proc_pid = int(master_proc_pid[0])
             master_proc = Process(master_proc_pid)

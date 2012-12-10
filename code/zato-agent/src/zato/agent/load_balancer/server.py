@@ -39,6 +39,7 @@ from zato.agent.load_balancer.config import backend_template, config_from_string
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
 from zato.common import ZATO_OK
 from zato.common.haproxy import haproxy_stats
+from zato.common.repo import RepoManager
 from zato.common.util import TRACE1
 
 public_method_prefix = "_lb_agent_"
@@ -56,28 +57,30 @@ for version, commands in haproxy_stats.items():
 HAPROXY_VALIDATE_TIMEOUT=0.3
 
 class LoadBalancerAgent(SSLServer):
-    def __init__(self, json_config_path):
+    def __init__(self, repo_dir):
 
-        self.config_dir = os.path.dirname(json_config_path)
-        self.json_config = json.loads(open(json_config_path).read())
+        self.repo_dir = os.path.abspath(repo_dir)
+        self.json_config = json.loads(open(os.path.join(self.repo_dir, 'lb-agent.conf')).read())
         
-        self.work_dir = os.path.abspath(os.path.join(self.config_dir, self.json_config['work_dir']))
+        self.work_dir = os.path.abspath(os.path.join(self.repo_dir, self.json_config['work_dir']))
         self.haproxy_command = self.json_config['haproxy_command']
         self.verify_fields = self.json_config['verify_fields']
 
-        self.keyfile = os.path.abspath(os.path.join(self.config_dir, self.json_config['keyfile']))
-        self.certfile = os.path.abspath(os.path.join(self.config_dir, self.json_config['certfile']))
-        self.ca_certs = os.path.abspath(os.path.join(self.config_dir, self.json_config['ca_certs']))
+        self.keyfile = os.path.abspath(os.path.join(self.repo_dir, self.json_config['keyfile']))
+        self.certfile = os.path.abspath(os.path.join(self.repo_dir, self.json_config['certfile']))
+        self.ca_certs = os.path.abspath(os.path.join(self.repo_dir, self.json_config['ca_certs']))
         
         self.pid_path = os.path.abspath(os.path.join(self.work_dir, self.json_config['pid_file']))
 
-        log_config = os.path.abspath(os.path.join(self.config_dir, self.json_config['log_config']))
+        log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
         logging.config.fileConfig(log_config)
 
-        self.config_path = os.path.join(self.config_dir, config_file)
+        self.config_path = os.path.join(self.repo_dir, config_file)
         self.config = self._read_config()
         self.start_time = datetime.utcnow().replace(tzinfo=UTC).isoformat()
         self.haproxy_stats = HAProxyStats(self.config.global_["stats_socket"])
+        
+        RepoManager(self.repo_dir).ensure_repo_consistency()
 
         super(LoadBalancerAgent, self).__init__(host=self.json_config['host'],
                 port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
