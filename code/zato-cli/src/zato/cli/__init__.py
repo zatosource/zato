@@ -163,6 +163,7 @@ def run_command(args):
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
+        ('update_password', 'zato.cli.zato_admin_auth.UpdatePassword'),
     )
     for k, v in command_imports:
         command_class[k] = importString(v)

@@ -29,7 +29,8 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     FromConfig, info as info_mod, run_command, quickstart as quickstart_mod, start as start_mod, stop as stop_mod
+     FromConfig, info as info_mod, run_command, quickstart as quickstart_mod, start as start_mod, stop as stop_mod, \
+     zato_admin_auth as zato_admin_auth_mod
 from zato.common import version as zato_version
     
 """
@@ -49,13 +50,13 @@ zato create user .
 # zato encrypt . --secret
 # zato from-config ./zato.config.file
 # zato quickstart create .
-# zato info . # TODO: replace .lb-dir with .zato-info['component']
+# zato info .
 zato services export . token
 zato services import . dump
 # zato start .
 # zato stop .
 zato update crypto . --priv-key ./path --pub-key ./path --cert ./path
-zato update password admin-username .
+# zato update password . admin-username
 # zato --store-config
 # zato --store-log
 # zato --version
@@ -218,7 +219,18 @@ def get_parser():
     stop = subs.add_parser('stop', description=stop_mod.Stop.__doc__, parents=[base_parser])
     stop.add_argument('path', help='Path to the Zato component to be stopped')
     stop.set_defaults(command='stop')
-
+    
+    #
+    # update
+    #
+    update = subs.add_parser('update', description='Updates Zato components and users')
+    update_subs = update.add_subparsers()
+    
+    update_password = update_subs.add_parser('password', description=zato_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
+    update_password.add_argument('path', help='Path to a Zato admin directory')
+    update_password.set_defaults(command='update_password')
+    add_opts(update_password, zato_admin_auth_mod.UpdatePassword.opts)
+    
     return parser
 
 def main():
