@@ -140,14 +140,9 @@ class Create(ZatoCommand):
         else:
             backend = '\n# ZATO default_backend_empty'
 
-        zato_config = zato_config_template.format(stats_socket=stats_socket,
-                stats_password=uuid.uuid4().hex, default_backend=backend)
+        zato_config = zato_config_template.format(stats_socket=stats_socket, stats_password=uuid.uuid4().hex, default_backend=backend)
         open(os.path.join(repo_dir, 'zato.config'), 'w').write(zato_config)
-        
-        for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
-            arg_name = '{}_path'.format(name.replace('-', '_'))
-            full_path = os.path.join(repo_dir, 'zato-lba-{}.pem'.format(name))
-            shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
+        self.copy_lb_crypto(repo_dir, args)
         
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.LOAD_BALANCER.code)

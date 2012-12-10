@@ -104,10 +104,7 @@ class Create(ZatoCommand):
         user_name = 'admin'
         password = password if password else generate_password()
         
-        for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
-            file_name = os.path.join(repo_dir, 'zato-admin-{}.pem'.format(name))
-            shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
-        
+        self.copy_zato_admin_crypto(repo_dir, args)
         pub_key = open(os.path.join(repo_dir, 'zato-admin-pub-key.pem')).read()
         
         config = {

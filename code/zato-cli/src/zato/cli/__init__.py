@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 # stdlib
-import json, os
+import json, os, shutil
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
@@ -164,6 +164,7 @@ def run_command(args):
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
+        ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
         ('update_password', 'zato.cli.zato_admin_auth.UpdatePassword'),
     )
     for k, v in command_imports:
@@ -364,6 +365,17 @@ class ZatoCommand(object):
             args = self._check_passwords(args, check_password)
             
         sys.exit(self.execute(args))
+        
+    def copy_lb_crypto(self, repo_dir, args):
+        for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
+            arg_name = '{}_path'.format(name.replace('-', '_'))
+            full_path = os.path.join(repo_dir, 'zato-lba-{}.pem'.format(name))
+            shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
+            
+    def copy_zato_admin_crypto(self, repo_dir, args):
+        for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
+            file_name = os.path.join(repo_dir, 'zato-admin-{}.pem'.format(name))
+            shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
         
 class FromConfig(ZatoCommand):
     """ Executes commands from a command config file.
