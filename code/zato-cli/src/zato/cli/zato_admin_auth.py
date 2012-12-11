@@ -29,9 +29,10 @@ from zato.cli import ManageCommand
 class _ZatoAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
         os.chdir(args.path)
-        config = json.loads(open(os.path.join(args.path, './config/repo/zato-admin.conf')).read())
+        base_dir = os.path.join(self.original_dir, args.path)
+        config = json.loads(open(os.path.join(base_dir, './config/repo/zato-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
-        update_globals(config, args.path)
+        update_globals(config, base_dir)
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
 class UpdatePassword(_ZatoAdminAuthCommand):
