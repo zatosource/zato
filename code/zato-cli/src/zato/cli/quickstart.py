@@ -273,6 +273,7 @@ class Create(ZatoCommand):
             create_server_args.cert_path = server_crypto_loc[key].cert_path
             create_server_args.pub_key_path = server_crypto_loc[key].pub_path
             create_server_args.priv_key_path = server_crypto_loc[key].priv_path
+            create_server_args.ca_certs_path = server_crypto_loc[key].ca_certs_path
             
             create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
             

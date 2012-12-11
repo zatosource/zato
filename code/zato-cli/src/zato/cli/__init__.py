@@ -365,18 +365,24 @@ class ZatoCommand(object):
             args = self._check_passwords(args, check_password)
             
         sys.exit(self.execute(args))
-        
-    def copy_lb_crypto(self, repo_dir, args):
+
+    def _copy_lb_server_crypto(self, repo_dir, args, middle_part):
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
             arg_name = '{}_path'.format(name.replace('-', '_'))
-            full_path = os.path.join(repo_dir, 'zato-lba-{}.pem'.format(name))
+            full_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
             shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
+        
+    def copy_lb_crypto(self, repo_dir, args):
+        self._copy_lb_server_crypto(repo_dir, args, 'lba')
+            
+    def copy_server_crypto(self, repo_dir, args):
+        self._copy_lb_server_crypto(repo_dir, args, 'server')
             
     def copy_zato_admin_crypto(self, repo_dir, args):
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'zato-admin-{}.pem'.format(name))
             shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
-        
+            
 class FromConfig(ZatoCommand):
     """ Executes commands from a command config file.
     """

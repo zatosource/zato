@@ -127,6 +127,7 @@ class Create(ZatoCommand):
     opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
+    opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
 
@@ -176,11 +177,7 @@ class Create(ZatoCommand):
                 self.prepare_directories(show_output)
     
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
-    
-            shutil.copyfile(os.path.abspath(args.pub_key_path), os.path.join(repo_dir, 'zato-server-pub-key.pem'))
-            shutil.copyfile(os.path.abspath(args.priv_key_path), os.path.join(repo_dir, 'zato-server-priv-key.pem'))
-            shutil.copyfile(os.path.abspath(args.cert_path), os.path.join(repo_dir, 'zato-server-cert.pem'))
-            
+            self.copy_server_crypto(repo_dir, args)
             pub_key = open(os.path.join(repo_dir, 'zato-server-pub-key.pem')).read()
             
             if show_output:
