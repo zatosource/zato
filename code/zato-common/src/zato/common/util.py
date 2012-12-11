@@ -549,3 +549,22 @@ def now(tz=None):
     out and return their own timestamps at will.
     """
     return _now(tz)
+
+def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
+    """ Clears out any KVDB locks by Zato servers.
+    """
+    if kvdb_config:
+        kvdb.config = kvdb_config
+        
+    if decrypt_func:
+        kvdb.decrypt_func = decrypt_func
+        
+    kvdb.init()
+    
+    for name in kvdb.conn.keys('{}*{}*'.format(KVDB.LOCK_SERVER_PREFIX, server_token)):
+        value = kvdb.conn.get(name)
+        logger.error('Deleting lock:[{}], value:[{}]'.format(name, value))
+        kvdb.conn.delete(name)
+        
+    kvdb.close()
+    

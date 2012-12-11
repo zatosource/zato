@@ -85,7 +85,7 @@ class BaseZMQConnector(BaseConnector):
             return True
         
         elif msg.action == ZMQ_CONNECTOR.CLOSE:
-            return self.odb.odb_token == msg['odb_token']
+            return self.odb.token == msg['token']
         
         elif msg.action in(DEFINITION.ZMQ_EDIT, DEFINITION.ZMQ_DELETE):
             return self.def_.id == msg.id

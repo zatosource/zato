@@ -120,7 +120,7 @@ class BaseAMQPConnector(BaseConnector):
         or outgoing connections.
         """
         if msg.action == AMQP_CONNECTOR.CLOSE:
-            if self.odb.odb_token == msg['odb_token']:
+            if self.odb.token == msg['token']:
                 return True
             
         elif msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):

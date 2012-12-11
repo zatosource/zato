@@ -27,7 +27,7 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import os, sys
+import glob, os, sys
 import logging.config
 from threading import currentThread
 
@@ -38,8 +38,9 @@ from gunicorn.app.base import Application
 import psycopg2
 
 # Zato
+from zato.common import KVDB
 from zato.common.repo import RepoManager
-from zato.common.util import get_app_context, get_config, get_crypto_manager, TRACE1
+from zato.common.util import clear_locks, get_app_context, get_config, get_crypto_manager, TRACE1
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, config_main, *args, **kwargs):
@@ -53,6 +54,7 @@ class ZatoGunicornApplication(Application):
     def init(self, *ignored_args, **ignored_kwargs):
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
+        self.cfg.set('worker_exit', self.zato_wsgi_app.worker_exit) # Cleans up various resources held
         
         for k, v in self.config_main.items():
             if k.startswith('gunicorn') and v:
@@ -110,6 +112,7 @@ def run(base_dir):
     parallel_server.base_dir = base_dir
     parallel_server.fs_server_config = config
     parallel_server.stats_jobs = app_context.get_object('stats_jobs')
+    parallel_server.app_context = app_context
 
     pickup_dir = config.hot_deploy.pickup_dir
     if not os.path.isabs(pickup_dir):
@@ -118,9 +121,14 @@ def run(base_dir):
     pickup = app_context.get_object('pickup')
     pickup.pickup_dir = pickup_dir
     pickup.pickup_event_processor.pickup_dir = pickup_dir
-    
+
+    # Remove all locks possibly left over by previous server instances
+    clear_locks(app_context.get_object('kvdb'), config.main.token, config.kvdb, crypto_manager.decrypt)
+        
+    # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
+    # Run the app at last
     zato_gunicorn_app.run()
  
 if __name__ == '__main__':

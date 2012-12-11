@@ -69,7 +69,7 @@ class ODBManager(SessionWrapper):
             self.init_session(self.pool, False)
         try:
             self.server = self._session.query(Server).\
-                   filter(Server.odb_token == self.token).\
+                   filter(Server.token == self.token).\
                    one()
             self.cluster = self.server.cluster
             return self.server
