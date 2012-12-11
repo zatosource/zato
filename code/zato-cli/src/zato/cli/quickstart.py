@@ -104,7 +104,7 @@ echo [2/4] server1 stopped
 
 cd $BASE_DIR/server2
 $ZATO_BIN stop .
-echo [2/4] server2 stopped
+echo [3/4] server2 stopped
 
 cd $BASE_DIR/zato-admin
 $ZATO_BIN stop .
