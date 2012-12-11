@@ -64,7 +64,7 @@ from lxml import objectify
 from M2Crypto import RSA
 
 # pip
-from pip.download import is_archive_file
+from pip.download import is_archive_file, unpack_file_url
 
 # pytz
 import pytz
@@ -291,10 +291,11 @@ def new_cid():
     # and the Service.sample_cid column
     return 'K{0:0>29}'.format(getrandbits(96))
 
-def get_config(repo_location, config_name):
+def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object.
     """
-    return bunchify(ConfigObj(os.path.join(repo_location, config_name)))
+    conf = ConfigObj(os.path.join(repo_location, config_name))
+    return bunchify(conf) if bunchified else conf
 
 def _get_ioc_config(location, config_class):
     """ Instantiates an Inversion of Control container from the given location
@@ -413,9 +414,6 @@ def fs_safe_now():
     removed.
     """
     return re.sub('[-:. ]', '_', str(datetime.utcnow()))
-
-# pip
-from pip.download import unpack_file_url
 
 class _DummyLink(object):
     """ A dummy class for staying consistent with pip's API in certain places

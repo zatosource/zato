@@ -111,7 +111,6 @@ class Create(ZatoCommand):
     opts.append({'name':'pub_key_path', 'help':"Path to the load-balancer agent's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the load-balancer agent's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the load-balancer agent's certificate in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the load-balancer agent's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the load-balancer's agent will trust"})
 
     needs_empty_dir = True
