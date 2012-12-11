@@ -135,17 +135,17 @@ class Server(Base):
     up_status = Column(String(40), nullable=True)
     up_mod_date = Column(DateTime(), nullable=True)
 
-    odb_token = Column(String(32), nullable=False)
+    token = Column(String(32), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('servers', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, cluster=None, odb_token=None,
+    def __init__(self, id=None, name=None, cluster=None, token=None,
                  last_join_status=None, last_join_mod_date=None, last_join_mod_by=None):
         self.id = id
         self.name = name
         self.cluster = cluster
-        self.odb_token = odb_token
+        self.token = token
         self.last_join_status = last_join_status
         self.last_join_mod_date = last_join_mod_date
         self.last_join_mod_by = last_join_mod_by
@@ -451,7 +451,7 @@ class Job(Base):
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
     id = Column(Integer,  Sequence('job_id_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
+    name = Column(String(200), nullable=False, unique=True)
     is_active = Column(Boolean(), nullable=False)
     job_type = Column(Enum('one_time', 'interval_based', 'cron_style',
                            name='job_type'), nullable=False)

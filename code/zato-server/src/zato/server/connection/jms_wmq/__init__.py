@@ -79,7 +79,7 @@ class BaseJMSWMQConnector(BaseConnector):
             return True
         
         elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
-            return self.odb.odb_token == msg['odb_token']
+            return self.odb.token == msg['token']
         
         elif msg.action in(DEFINITION.JMS_WMQ_EDIT, DEFINITION.JMS_WMQ_DELETE):
             return self.def_.id == msg.id

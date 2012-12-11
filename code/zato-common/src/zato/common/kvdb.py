@@ -111,3 +111,6 @@ class KVDB(object):
         kvdb.decrypt_func = self.decrypt_func
         
         return kvdb
+
+    def close(self):
+        self.conn.connection_pool.disconnect()

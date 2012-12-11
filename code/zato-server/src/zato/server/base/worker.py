@@ -347,8 +347,8 @@ class WorkerStore(BrokerMessageReceiver):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
-        service_instance = self.worker_config.server.service_store.new_instance(msg.service)
-        service_instance.update(service_instance, self.worker_config.server, self.broker_client,
+        service_instance = self.server.service_store.new_instance(msg.service)
+        service_instance.update(service_instance, self.server, self.broker_client,
             self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
             msg.data_format if hasattr(msg, 'data_format') else None)
         
@@ -468,10 +468,10 @@ class WorkerStore(BrokerMessageReceiver):
         if it's not an internal one.
         """
         # Where to delete it from in the second step
-        fs_location = self.worker_config.server.service_store.services[msg.impl_name]['deployment_info']['fs_location']
+        fs_location = self.server.service_store.services[msg.impl_name]['deployment_info']['fs_location']
         
         # Delete it from the service store
-        del self.worker_config.server.service_store.services[msg.impl_name]
+        del self.server.service_store.services[msg.impl_name]
         
         # Delete it from the filesystem, including any bytecode left over. Note that
         # other parallel servers may wish to do exactly the same so we just ignore
@@ -490,7 +490,7 @@ class WorkerStore(BrokerMessageReceiver):
                 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
         for name in('is_active', 'slow_threshold'):
-            self.worker_config.server.service_store.services[msg.impl_name][name] = msg[name]
+            self.server.service_store.services[msg.impl_name][name] = msg[name]
 
 # ##############################################################################
 

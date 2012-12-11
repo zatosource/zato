@@ -173,7 +173,7 @@ class BaseConnector(BrokerMessageReceiver):
         config_odb = fs_server_config.odb
         self.odb = app_context.get_object('odb_manager')
         self.odb.crypto_manager = crypto_manager
-        self.odb.odb_token = config_odb.token
+        self.odb.token = fs_server_config.main.token
         
         # Key-value DB
         self.kvdb = KVDB()

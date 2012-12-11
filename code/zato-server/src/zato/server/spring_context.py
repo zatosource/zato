@@ -137,6 +137,8 @@ class ZatoContext(PythonConfig):
 
     # #######################################################
     # Key-value DB
+    
+    @Object
     def kvdb(self):
         return KVDB()
     

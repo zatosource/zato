@@ -28,6 +28,9 @@ from time import sleep
 from traceback import format_exc
 from uuid import uuid4
 
+# anyjson
+from anyjson import dumps
+
 # Bunch
 from bunch import Bunch
 
@@ -39,9 +42,9 @@ from retools.lock import Lock
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common import SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, ZMQ_CONNECTOR
-from zato.common.util import new_cid
+from zato.common.util import clear_locks, new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -65,7 +68,7 @@ class ParallelServer(BrokerMessageReceiver):
                  internal_service_modules=None, service_modules=None, base_dir=None,
                  hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
                  id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None, worker_store=None,
-                 deployment_lock_expires=None, deployment_lock_timeout=None):
+                 deployment_lock_expires=None, deployment_lock_timeout=None, app_context=None):
         self.host = host
         self.port = port
         self.crypto_manager = crypto_manager
@@ -97,6 +100,7 @@ class ParallelServer(BrokerMessageReceiver):
         self.worker_store = worker_store
         self.deployment_lock_expires = deployment_lock_expires
         self.deployment_lock_timeout = deployment_lock_timeout
+        self.app_context = app_context
         
         # The main config store
         self.config = ConfigStore()
@@ -130,7 +134,11 @@ class ParallelServer(BrokerMessageReceiver):
         the redeployment and set a flag meaning that for this particular deployment
         key (and remember that each server restart means a new deployment key)
         the services have been already deployed. Later workers will check that
-        the flag exists and will skip the deployment altogether.
+        the flag exists and will skip the deployment altogether. 
+        
+        The first worker to be started will also start a singleton thread later on so it will now
+        create a lock file so that other processes won't be able to start the singleton
+        thread again until the server is fully restarted.
         """
         def import_initial_services_jobs():
             # (re-)deploy the services from a clear state
@@ -140,8 +148,10 @@ class ParallelServer(BrokerMessageReceiver):
             # Add the statistics-related scheduler jobs to the ODB
             add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
             
-        lock_name = 'zato:server:lock:{}'.format(deployment_key)
-        already_deployed_flag = 'zato:server:deployed:{}'.format(deployment_key)
+        lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, deployment_key)
+        already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED, self.fs_server_config.main.token, deployment_key)
+        
+        logger.debug('Will use the lock_name: [{}]'.format(lock_name))
         
         with Lock(lock_name, self.deployment_lock_expires, self.deployment_lock_timeout, redis_conn):
             if redis_conn.get(already_deployed_flag):
@@ -165,9 +175,14 @@ class ParallelServer(BrokerMessageReceiver):
                 # .. deploy them back.
                 import_initial_services_jobs()
                 
-                # Add the flag to Redis
-                redis_conn.set(already_deployed_flag, 1)
-                redis_conn.expire(already_deployed_flag, self.deployment_lock_expires)
+                # Add the flag to Redis indicating that this server has already
+                # deployed its services. Note that by default the expiration
+                # time is more than a century in the future. It will be cleared out
+                # next time the server will be started.
+                redis_conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
+                redis_conn.expire(already_deployed_flag, self.deployment_lock_expires) 
+                
+                return True
         
     def _after_init_common(self, server, deployment_key):
         """ Initializes parts of the server that don't depend on whether the
@@ -195,7 +210,11 @@ class ParallelServer(BrokerMessageReceiver):
         self.broker_client.start()
 
         if is_first:
-        
+            
+            self.singleton_server = self.app_context.get_object('singleton_server')
+            self.singleton_server.initial_sleep_time = int(self.fs_server_config.singleton.initial_sleep_time) / 1000.0
+            self.singleton_server.parallel_server = self
+            
             # Normalize hot-deploy configuration
             if not self.hot_deploy_config:
                 self.hot_deploy_config = Bunch()
@@ -219,7 +238,7 @@ class ParallelServer(BrokerMessageReceiver):
             self.singleton_server.scheduler.wait_for_init()
             self.singleton_server.server_id = server.id
     
-    def _after_init_accepted(self, server):
+    def _after_init_accepted(self, server, deployment_key):
         
         if self.singleton_server:
             for(_, name, is_active, job_type, start_date, extra, service_name, service_impl_name,
@@ -232,6 +251,7 @@ class ParallelServer(BrokerMessageReceiver):
                         'days':days, 'hours':hours, 'minutes':minutes, 
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})
+                    #logger.error(str(job_data))
                     self.singleton_server.scheduler.create_edit('create', job_data)
 
             # Let's see if we can become a connector server, the one to start all
@@ -402,7 +422,7 @@ class ParallelServer(BrokerMessageReceiver):
         parallel_server.config.odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
         parallel_server.config.odb_data.pool_size = parallel_server.odb_data['pool_size']
         parallel_server.config.odb_data.username = parallel_server.odb_data['username']
-        parallel_server.config.odb_data.token = parallel_server.odb_data['token']
+        parallel_server.config.odb_data.token = parallel_server.fs_server_config.main.token
         parallel_server.config.odb_data.is_odb = True
         
         # This is the call that creates an SQLAlchemy connection
@@ -427,7 +447,7 @@ class ParallelServer(BrokerMessageReceiver):
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            parallel_server._after_init_accepted(server)
+            parallel_server._after_init_accepted(server, arbiter.zato_deployment_key)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
@@ -444,7 +464,11 @@ class ParallelServer(BrokerMessageReceiver):
         """
         setattr(arbiter, 'zato_deployment_key', uuid4().hex)
 
-    def shutdown(self):
+    @staticmethod
+    def worker_exit(arbiter, worker):
+        """ A Gunicorn hook for closing down all the resources held.
+        """
+        print(33333333333)
             
         # Close all the connector subprocesses this server has started
         pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
@@ -455,20 +479,23 @@ class ParallelServer(BrokerMessageReceiver):
         for action, msg_type in pairs:
             msg = {}
             msg['action'] = action
-            msg['odb_token'] = self.odb.token
-            self.broker_client.publish(msg, msg_type=msg_type)
+            msg['token'] = worker.odb.token
+            worker.broker_client.publish(msg, msg_type=msg_type)
             time.sleep(0.2)
         
-        self.broker_client.stop()
+        worker.broker_client.stop()
         
-        if self.singleton_server:
-            self.singleton_server.pickup.stop()
+        if worker.singleton_server:
+            worker.singleton_server.pickup.stop()
             
-            if self.singleton_server.is_cluster_wide:
-                self.odb.clear_cluster_wide()
+            if worker.singleton_server.is_cluster_wide:
+                worker.odb.clear_cluster_wide()
             
-        self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
-        self.odb.close()
+        worker.odb.server_up_down(worker.id, SERVER_UP_STATUS.CLEAN_DOWN)
+        worker.odb.close()
+        
+        # Clear any remaining locks
+        clear_locks(worker.kvdb.copy(), worker.fs_server_config.main.token)
             
 # ##############################################################################
 

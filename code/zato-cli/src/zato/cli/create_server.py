@@ -47,8 +47,10 @@ gunicorn_group=
 gunicorn_proc_name=
 gunicorn_logger_class=
 
-deployment_lock_expires=600
+deployment_lock_expires=4294967296 # 2 ** 32 seconds ≅ 136 years
 deployment_lock_timeout=180
+
+token={token}
 
 [crypto]
 priv_key_location=zato-server-priv-key.pem
@@ -64,7 +66,6 @@ host={odb_host}
 password={odb_password}
 pool_size={odb_pool_size}
 username={odb_user}
-token={odb_token}
 
 [hot_deploy]
 pickup_dir=../../pickup-dir
@@ -108,7 +109,7 @@ errors=
 
 default_odb_pool_size = 1
 
-directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work',
+directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work', 'locks',
                'work/hot-deploy', 'work/hot-deploy/current', 'work/hot-deploy/backup', 'work/hot-deploy/backup/last')
 files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),}
 
@@ -135,7 +136,7 @@ class Create(ZatoCommand):
         super(Create, self).__init__(args)
         self.target_dir = os.path.abspath(args.path)
         self.dirs_prepared = False
-        self.odb_token = uuid.uuid4().hex
+        self.token = uuid.uuid4().hex
 
     def prepare_directories(self, show_output):
         if show_output:
@@ -165,7 +166,7 @@ class Create(ZatoCommand):
         server = Server()
         server.cluster_id = cluster.id
         server.name = args.server_name
-        server.odb_token = self.odb_token
+        server.token = self.token
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
         server.last_join_mod_by = self._get_user_host()
         server.last_join_mod_date = datetime.utcnow()
@@ -213,7 +214,7 @@ class Create(ZatoCommand):
                     odb_password=encrypt(args.odb_password, pub_key), 
                     odb_pool_size=default_odb_pool_size, 
                     odb_user=args.odb_user, 
-                    odb_token=self.odb_token, 
+                    token=self.token, 
                     kvdb_host=args.kvdb_host,
                     kvdb_port=args.kvdb_port, 
                     kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else '',
