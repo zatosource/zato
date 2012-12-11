@@ -37,6 +37,9 @@ from bunch import Bunch
 # Paste
 from paste.util.multidict import MultiDict
 
+# Spring Python
+from springpython.context import DisposableObject
+
 # retools
 from retools.lock import Lock
 
@@ -58,7 +61,7 @@ from zato.server.stats import add_stats_jobs
 
 logger = logging.getLogger(__name__)
 
-class ParallelServer(BrokerMessageReceiver):
+class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def __init__(self, host=None, port=None, crypto_manager=None,
                  odb=None, odb_data=None, singleton_server=None, worker_config=None, 
                  repo_location=None, sql_pool_store=None, int_parameters=None, 
@@ -464,36 +467,39 @@ class ParallelServer(BrokerMessageReceiver):
         """
         setattr(arbiter, 'zato_deployment_key', uuid4().hex)
 
-    @staticmethod
-    def worker_exit(arbiter, worker):
-        """ A Gunicorn hook for closing down all the resources held.
+    def destroy(self):
+        """ A Spring Python hook for closing down all the resources held.
         """
-        # Close all the connector subprocesses this server has started
-        pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
-                (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
-                (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
-                )
-        
-        for action, msg_type in pairs:
-            msg = {}
-            msg['action'] = action
-            msg['token'] = worker.odb.token
-            worker.broker_client.publish(msg, msg_type=msg_type)
-            time.sleep(0.2)
-        
-        worker.broker_client.stop()
-        
-        if worker.singleton_server:
-            worker.singleton_server.pickup.stop()
+        if self.singleton_server:
             
-            if worker.singleton_server.is_cluster_wide:
-                worker.odb.clear_cluster_wide()
+            # Close all the connector subprocesses this server has possibly started
+            pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
+                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
+                    (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
+                    )
             
-        worker.odb.server_up_down(worker.id, SERVER_UP_STATUS.CLEAN_DOWN)
-        worker.odb.close()
-        
+            for action, msg_type in pairs:
+                msg = {}
+                msg['action'] = action
+                msg['token'] = self.odb.token
+                self.broker_client.publish(msg, msg_type=msg_type)
+                time.sleep(0.2)
+            
+            self.broker_client.close()
+
+            # Pick-up processor
+            self.singleton_server.pickup.stop()
+            
+            # Cluster-wide flags
+            if self.singleton_server.is_cluster_wide:
+                self.odb.clear_cluster_wide()
+            
         # Clear any remaining locks
-        clear_locks(worker.kvdb.copy(), worker.fs_server_config.main.token)
+        clear_locks(self.kvdb.copy(), self.fs_server_config.main.token)
+        
+        # Tell the ODB we've gone through a clean shutdown
+        self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
+        self.odb.close()
             
 # ##############################################################################
 

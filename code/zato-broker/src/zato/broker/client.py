@@ -69,6 +69,10 @@ class _ClientThread(Thread):
             
     def publish(self, topic, msg):
         return self.client.publish(topic, msg)
+    
+    def close(self):
+        self.keep_running = False
+        self.client.close()
 
 class BrokerClient(Thread):
     """ Zato broker client. Starts two background threads, one for publishing
@@ -165,3 +169,7 @@ class BrokerClient(Thread):
                     logger.debug('Got broker message payload [{}]'.format(payload))
                     
                 return self.topic_callbacks[msg.channel](payload)
+
+    def close(self):
+        for client in(self.pub_client, self.sub_client):
+            client.close()
