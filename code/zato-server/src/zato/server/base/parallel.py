@@ -468,8 +468,6 @@ class ParallelServer(BrokerMessageReceiver):
     def worker_exit(arbiter, worker):
         """ A Gunicorn hook for closing down all the resources held.
         """
-        print(33333333333)
-            
         # Close all the connector subprocesses this server has started
         pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
                 (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
