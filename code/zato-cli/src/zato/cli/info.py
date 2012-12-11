@@ -35,6 +35,7 @@ from texttable import Texttable
 
 # Zato
 from zato.cli import ManageCommand, ZATO_INFO_FILE
+from zato.common.util import current_host
 
 DEFAULT_COLS_WIDTH = '30,90'
 
@@ -53,9 +54,12 @@ class Info(ManageCommand):
         component_details = open(os.path.join(abs_args_path, ZATO_INFO_FILE)).read()
         
         out = {
-            'full_path': abs_args_path,
             'component_details': component_details,
+            'component_full_path': abs_args_path,
+            'component_host': current_host(),
             'component_running': False,
+            'current_time': datetime.now().isoformat(),
+            'current_time_utc': datetime.utcnow().isoformat(),
             'master_proc_connections': None,
             'master_proc_pid': None,
             'master_proc_name': None,
