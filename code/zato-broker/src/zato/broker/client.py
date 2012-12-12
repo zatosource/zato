@@ -39,6 +39,8 @@ from zato.common.broker_message import MESSAGE_TYPE, TOPICS
 
 logger = logging.getLogger(__name__)
 
+REMOTE_END_CLOSED_SOCKET = 'Socket closed on remote end'
+
 class _ClientThread(Thread):
     def __init__(self, kvdb, pubsub, name, topic_callbacks=None, on_message=None):
         Thread.__init__(self)
@@ -64,6 +66,11 @@ class _ClientThread(Thread):
                         self.on_message(Bunch(msg))
             except KeyboardInterrupt:
                 self.keep_running = False
+            except redis.ConnectionError, e:
+                if e.message != REMOTE_END_CLOSED_SOCKET: # Hm, there's no error code, only the message
+                    raise
+                msg = 'Caught [{}], will quit now'.format(REMOTE_END_CLOSED_SOCKET)
+                logger.info(msg)
         else:
             self.client = self.kvdb
             
@@ -172,4 +179,5 @@ class BrokerClient(Thread):
 
     def close(self):
         for client in(self.pub_client, self.sub_client):
-            client.close()
+            client.keep_running = False
+            client.kvdb.close()
