@@ -181,7 +181,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 # Add the flag to Redis indicating that this server has already
                 # deployed its services. Note that by default the expiration
                 # time is more than a century in the future. It will be cleared out
-                # next time the server will be started.
+                # next time the server will be started. This also means that when
+                # a process dies and it's the one holding the singleton thread,
+                # no other process will be able to start the singleton thread
+                # until the server is fully restarted so that the locks are cleared.
+                
                 redis_conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
                 redis_conn.expire(already_deployed_flag, self.deployment_lock_expires) 
                 
@@ -409,6 +413,24 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
+    
+    def get_config_odb_data(self, config, parallel_server):
+        """ Returns configuration with regards to ODB data.
+        """
+        odb_data = Bunch()
+        odb_data.db_name = parallel_server.odb_data['db_name']
+        odb_data.engine = parallel_server.odb_data['engine']
+        odb_data.extra = parallel_server.odb_data['extra']
+        odb_data.host = parallel_server.odb_data['host']
+        odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
+        odb_data.pool_size = parallel_server.odb_data['pool_size']
+        odb_data.username = parallel_server.odb_data['username']
+        odb_data.token = parallel_server.fs_server_config.main.token
+        odb_data.is_odb = True
+        
+        return odb_data
+    
+        zzz zzz zzz zzz !!! zzz
         
     @staticmethod
     def post_fork(arbiter, worker):
@@ -494,11 +516,16 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             if self.singleton_server.is_cluster_wide:
                 self.odb.clear_cluster_wide()
             
-        # Clear any remaining locks
-        clear_locks(self.kvdb.copy(), self.fs_server_config.main.token)
-        
-        # Tell the ODB we've gone through a clean shutdown
-        if self.odb.session_initialized:
+        # Tell the ODB we've gone through a clean shutdown but only if this is 
+        # the main process going down (Arbiter) not one of Gunicorn workers.
+        # We know it's the main process because its ODB's session has never
+        # been initialized.
+        if not self.odb.session_initialized:
+            print(333333, self.sql_pool_store, self.config.odb_data, self.config)
+            self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
+            self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
+            self.odb.init_session(self.odb.pool, False)
+            
             self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
             
