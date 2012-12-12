@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
+import logging, threading
 from contextlib import closing
 from datetime import datetime, timedelta
 from traceback import format_exc
@@ -67,6 +67,7 @@ class ODBManager(SessionWrapper):
         """
         if not self.session_initialized:
             self.init_session(self.pool, False)
+            
         try:
             self.server = self._session.query(Server).\
                    filter(Server.token == self.token).\
@@ -78,7 +79,7 @@ class ODBManager(SessionWrapper):
                 self.token)
             logger.error(msg)
             raise
-
+        
     def server_up_down(self, server_id, status, update_host=False):
         """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
         and what host it's running on.

@@ -563,7 +563,7 @@ def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
     
     for name in kvdb.conn.keys('{}*{}*'.format(KVDB.LOCK_SERVER_PREFIX, server_token)):
         value = kvdb.conn.get(name)
-        logger.error('Deleting lock:[{}], value:[{}]'.format(name, value))
+        logger.debug('Deleting lock:[{}], value:[{}]'.format(name, value))
         kvdb.conn.delete(name)
         
     kvdb.close()

@@ -498,8 +498,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         clear_locks(self.kvdb.copy(), self.fs_server_config.main.token)
         
         # Tell the ODB we've gone through a clean shutdown
-        self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
-        self.odb.close()
+        if self.odb.session_initialized:
+            self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
+            self.odb.close()
             
 # ##############################################################################
 

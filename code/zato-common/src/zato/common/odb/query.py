@@ -80,8 +80,6 @@ def _job(session, cluster_id):
 def job_list(session, cluster_id, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
-    print(dir(_job(session, cluster_id)))
-    print(_job(session, cluster_id).statement)
     return _job(session, cluster_id)
     
 def job_by_name(session, cluster_id, name):
