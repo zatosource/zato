@@ -80,13 +80,13 @@ class ODBManager(SessionWrapper):
             logger.error(msg)
             raise
         
-    def server_up_down(self, server_id, status, update_host=False):
+    def server_up_down(self, token, status, update_host=False):
         """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
         and what host it's running on.
         """
         with closing(self.session()) as session:
             server = session.query(Server).\
-            filter(Server.id==server_id).\
+            filter(Server.token==token).\
             one()
 
             server.up_status = status

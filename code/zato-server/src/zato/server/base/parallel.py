@@ -414,7 +414,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
     
-    def get_config_odb_data(self, config, parallel_server):
+    def get_config_odb_data(self, parallel_server):
         """ Returns configuration with regards to ODB data.
         """
         odb_data = Bunch()
@@ -430,8 +430,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         
         return odb_data
     
-        zzz zzz zzz zzz !!! zzz
-        
+    def set_odb_pool(self):
+        # This is the call that creates an SQLAlchemy connection
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
+        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
+        self.odb.token = self.config.odb_data.token
+    
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
@@ -439,22 +443,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server = worker.app.zato_wsgi_app
         
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
-        parallel_server.config.odb_data = Bunch()
-        parallel_server.config.odb_data.db_name = parallel_server.odb_data['db_name']
-        parallel_server.config.odb_data.engine = parallel_server.odb_data['engine']
-        parallel_server.config.odb_data.extra = parallel_server.odb_data['extra']
-        parallel_server.config.odb_data.host = parallel_server.odb_data['host']
-        parallel_server.config.odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
-        parallel_server.config.odb_data.pool_size = parallel_server.odb_data['pool_size']
-        parallel_server.config.odb_data.username = parallel_server.odb_data['username']
-        parallel_server.config.odb_data.token = parallel_server.fs_server_config.main.token
-        parallel_server.config.odb_data.is_odb = True
-        
-        # This is the call that creates an SQLAlchemy connection
-        parallel_server.sql_pool_store[ZATO_ODB_POOL_NAME] = parallel_server.config.odb_data
-        
-        parallel_server.odb.pool = parallel_server.sql_pool_store[ZATO_ODB_POOL_NAME]
-        parallel_server.odb.token = parallel_server.config.odb_data.token
+        parallel_server.config.odb_data = parallel_server.get_config_odb_data(parallel_server)
+        parallel_server.set_odb_pool()
         
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
@@ -479,7 +469,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             
             parallel_server._after_init_non_accepted(server)
             
-        parallel_server.odb.server_up_down(server.id, SERVER_UP_STATUS.RUNNING, True)
+        parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True)
         
     @staticmethod
     def on_starting(arbiter):
@@ -521,12 +511,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # We know it's the main process because its ODB's session has never
         # been initialized.
         if not self.odb.session_initialized:
-            print(333333, self.sql_pool_store, self.config.odb_data, self.config)
-            self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
-            self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
+            
+            self.config.odb_data = self.get_config_odb_data(self)
+            self.set_odb_pool()
+            
             self.odb.init_session(self.odb.pool, False)
             
-            self.odb.server_up_down(self.id, SERVER_UP_STATUS.CLEAN_DOWN)
+            self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
             
 # ##############################################################################
