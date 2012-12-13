@@ -45,20 +45,6 @@ class ZatoContext(PythonConfig):
         return CryptoManager()
 
     # #######################################################
-    # Hot-deployment
-
-    #@Object
-    #def pickup(self):
-    #    pickup = Pickup()
-    #    pickup.pickup_event_processor = self.pickup_event_processor()
-    #
-    #    return pickup
-
-    #@Object
-    #def pickup_event_processor(self):
-    #    return PickupEventProcessor()
-
-    # #######################################################
     # Services
 
     @Object
@@ -187,8 +173,6 @@ class ZatoContext(PythonConfig):
     @Object
     def singleton_server(self):
         server = SingletonServer()
-        #server.pickup = self.pickup()
-        #server.pickup.pickup_event_processor.server = server
         server.scheduler = self.scheduler()
 
         return server

@@ -106,8 +106,6 @@ def run(base_dir):
     
     zato_gunicorn_app = ZatoGunicornApplication(parallel_server, config.main)
     
-    #pickup = get_pickup('gevent' in zato_gunicorn_app.cfg.settings['worker_class'].value)
-    
     parallel_server.crypto_manager = crypto_manager
     parallel_server.odb_data = config.odb
     parallel_server.host = zato_gunicorn_app.zato_host
@@ -121,9 +119,6 @@ def run(base_dir):
     pickup_dir = config.hot_deploy.pickup_dir
     if not os.path.isabs(pickup_dir):
         pickup_dir = os.path.join(repo_location, pickup_dir)
-
-    #pickup.pickup_dir = pickup_dir
-    #pickup.pickup_event_processor.pickup_dir = pickup_dir
 
     # Remove all locks possibly left over by previous server instances
     clear_locks(app_context.get_object('kvdb'), config.main.token, config.kvdb, crypto_manager.decrypt)
