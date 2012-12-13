@@ -19,15 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import sys
+def get_pickup(needs_gevent):
+    if needs_gevent:
+        from zato.server.pickup.gevent_pickup import Pickup, PickupEventProcessor
+    else:
+        from zato.server.pickup.generic import Pickup, PickupEventProcessor
 
-if 'linux' in sys.platform:
-    from zato.server.pickup.linux import Pickup, PickupEventProcessor
-else:
-    from zato.server.pickup.generic import Pickup, PickupEventProcessor
-
-
-# To silence out import checkers
-Pickup = Pickup
-PickupEventProcessor = PickupEventProcessor
+    return Pickup(pickup_event_processor=PickupEventProcessor())

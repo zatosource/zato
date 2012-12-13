@@ -31,7 +31,7 @@ from zato.server.base.singleton import SingletonServer
 from zato.server.connection.http_soap.security import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore
 from zato.server.odb import ODBManager
-from zato.server.pickup import Pickup, PickupEventProcessor
+#from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.scheduler import Scheduler
 from zato.server.service.store import ServiceStore
 
@@ -47,16 +47,16 @@ class ZatoContext(PythonConfig):
     # #######################################################
     # Hot-deployment
 
-    @Object
-    def pickup(self):
-        pickup = Pickup()
-        pickup.pickup_event_processor = self.pickup_event_processor()
+    #@Object
+    #def pickup(self):
+    #    pickup = Pickup()
+    #    pickup.pickup_event_processor = self.pickup_event_processor()
+    #
+    #    return pickup
 
-        return pickup
-
-    @Object
-    def pickup_event_processor(self):
-        return PickupEventProcessor()
+    #@Object
+    #def pickup_event_processor(self):
+    #    return PickupEventProcessor()
 
     # #######################################################
     # Services
@@ -187,8 +187,8 @@ class ZatoContext(PythonConfig):
     @Object
     def singleton_server(self):
         server = SingletonServer()
-        server.pickup = self.pickup()
-        server.pickup.pickup_event_processor.server = server
+        #server.pickup = self.pickup()
+        #server.pickup.pickup_event_processor.server = server
         server.scheduler = self.scheduler()
 
         return server

@@ -63,8 +63,8 @@ class SingletonServer(BrokerMessageReceiver):
         self.scheduler.singleton = self
 
         # Start the hot-reload pickup monitor
-        #self.logger.info('Pickup notifier starting')
-        #self.pickup.watch()
+        self.logger.info('Pickup notifier starting')
+        self.pickup.watch()
         
     def become_cluster_wide(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
             server_id, cluster_id, starting_up):
