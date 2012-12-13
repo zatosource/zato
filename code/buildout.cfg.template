@@ -54,6 +54,7 @@ eggs =
     django-settings
     fs
     gevent
+    gevent_inotifyx
     greenlet
     gunicorn
     hexagonit.recipe.download
@@ -96,6 +97,7 @@ eggs =
     threadpool
     tornado
     urllib3
+    watchdog
     Werkzeug
     zato-admin
     zato-agent

@@ -41,6 +41,7 @@ import psycopg2
 from zato.common import KVDB
 from zato.common.repo import RepoManager
 from zato.common.util import clear_locks, get_app_context, get_config, get_crypto_manager, TRACE1
+from zato.server.pickup import get_pickup
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, config_main, *args, **kwargs):
@@ -74,6 +75,8 @@ class ZatoGunicornApplication(Application):
                 
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
+            
+        self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
         
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
@@ -103,6 +106,8 @@ def run(base_dir):
     
     zato_gunicorn_app = ZatoGunicornApplication(parallel_server, config.main)
     
+    #pickup = get_pickup('gevent' in zato_gunicorn_app.cfg.settings['worker_class'].value)
+    
     parallel_server.crypto_manager = crypto_manager
     parallel_server.odb_data = config.odb
     parallel_server.host = zato_gunicorn_app.zato_host
@@ -117,9 +122,8 @@ def run(base_dir):
     if not os.path.isabs(pickup_dir):
         pickup_dir = os.path.join(repo_location, pickup_dir)
 
-    pickup = app_context.get_object('pickup')
-    pickup.pickup_dir = pickup_dir
-    pickup.pickup_event_processor.pickup_dir = pickup_dir
+    #pickup.pickup_dir = pickup_dir
+    #pickup.pickup_event_processor.pickup_dir = pickup_dir
 
     # Remove all locks possibly left over by previous server instances
     clear_locks(app_context.get_object('kvdb'), config.main.token, config.kvdb, crypto_manager.decrypt)

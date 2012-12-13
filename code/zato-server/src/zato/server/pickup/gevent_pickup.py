@@ -24,7 +24,7 @@ import logging, os
 from time import sleep
 
 # inotifyx
-import inotifyx
+import gevent_inotifyx as inotifyx
 
 # Spring Python
 from springpython.context import ApplicationContextAware

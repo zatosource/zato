@@ -57,6 +57,7 @@ from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_ch
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
 from zato.server.connection.zmq_.outgoing import start_connector as zmq_outgoing_start_connector
+from zato.server.pickup import get_pickup
 from zato.server.stats import add_stats_jobs
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                  internal_service_modules=None, service_modules=None, base_dir=None,
                  hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
                  id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None, worker_store=None,
-                 deployment_lock_expires=None, deployment_lock_timeout=None, app_context=None):
+                 deployment_lock_expires=None, deployment_lock_timeout=None, app_context=None,
+                 has_gevent=None):
         self.host = host
         self.port = port
         self.crypto_manager = crypto_manager
@@ -104,6 +106,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.deployment_lock_expires = deployment_lock_expires
         self.deployment_lock_timeout = deployment_lock_timeout
         self.app_context = app_context
+        self.has_gevent = has_gevent
         
         # The main config store
         self.config = ConfigStore()
@@ -221,6 +224,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.singleton_server = self.app_context.get_object('singleton_server')
             self.singleton_server.initial_sleep_time = int(self.fs_server_config.singleton.initial_sleep_time) / 1000.0
             self.singleton_server.parallel_server = self
+            
+            pickup_dir = self.fs_server_config.hot_deploy.pickup_dir
+            if not os.path.isabs(pickup_dir):
+                pickup_dir = os.path.join(self.repo_location, pickup_dir)
+        
+            self.singleton_server.pickup = get_pickup(self.has_gevent)
+            self.singleton_server.pickup.pickup_dir = pickup_dir
+            self.singleton_server.pickup.pickup_event_processor.pickup_dir = pickup_dir
+            self.singleton_server.pickup.pickup_event_processor.server = self.singleton_server
             
             # Normalize hot-deploy configuration
             if not self.hot_deploy_config:
