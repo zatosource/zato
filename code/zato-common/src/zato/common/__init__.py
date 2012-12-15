@@ -166,11 +166,16 @@ class KVDB:
     
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
     DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id'
+
+    LOCK_PREFIX = 'zato:lock:'    
     
-    LOCK_SERVER_PREFIX = 'zato:lock:server:'
+    LOCK_SERVER_PREFIX = '{}server:'.format(LOCK_PREFIX)
     LOCK_SERVER_ALREADY_DEPLOYED = '{}already-deployed:'.format(LOCK_SERVER_PREFIX)
     LOCK_SERVER_STARTING = '{}starting:'.format(LOCK_SERVER_PREFIX)
-    LOCK_PACKAGE_UPLOADING = '{}package-uploading:'.format(LOCK_SERVER_PREFIX)
+    
+    LOCK_PACKAGE_PREFIX = '{}package:'.format(LOCK_PREFIX)
+    LOCK_PACKAGE_UPLOADING = '{}uploading:'.format(LOCK_PACKAGE_PREFIX)
+    LOCK_PACKAGE_ALREADY_UPLOADED = '{}already-uploaded:'.format(LOCK_PACKAGE_PREFIX)
     
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'

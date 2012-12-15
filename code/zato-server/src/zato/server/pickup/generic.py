@@ -59,7 +59,7 @@ class Pickup(BasePickup):
         
         try:
             while self.keep_running:
-                sleep(0.1)
+                sleep(3)
         except KeyboardInterrupt:
             observer.stop()
 
