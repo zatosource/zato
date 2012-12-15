@@ -182,6 +182,8 @@ class Create(AdminService):
             
         if success:
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
+            msg = 'Uploaded package id:[{}], payload_name:[{}]'.format(package_id, payload_name)
+            self.logger.info(msg)
         else:
             msg = 'Package id:[{}], payload_name:[{}] has not been deployed'.format(package_id, payload_name)
             self.logger.warn(msg)
@@ -210,10 +212,7 @@ class Create(AdminService):
                 
     def get_package(self, package_id, session):
         return session.query(DeploymentPackage).\
-            join(DeploymentStatus, DeploymentPackage.id==DeploymentStatus.package_id).\
             filter(DeploymentPackage.id==package_id).\
-            filter(DeploymentStatus.status==DEPLOYMENT_STATUS.AWAITING_DEPLOYMENT).\
-            filter(DeploymentStatus.server_id==self.server.id).\
             first()
                 
     def handle(self):
@@ -221,11 +220,17 @@ class Create(AdminService):
         server_token = self.server.fs_server_config.main.token
         lock_name = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_UPLOADING, server_token, package_id)
 
+        # TODO: Stuff below - and the methods used - needs to be rectified. 
+        # As of now any worker process will always set deployment status
+        # to DEPLOYMENT_STATUS.DEPLOYED but what we really want is per-worker
+        # reporting of whether the deployment succeeded or not.
+
         with Lock(lock_name, self.server.deployment_lock_expires, self.server.deployment_lock_timeout, self.server.kvdb.conn):
             with closing(self.odb.session()) as session:
+                
+                # Only the first worker will get here ..
                 if self.get_package(package_id, session):
                     self.backup_current_work_dir()
-                    self.deploy_package(self.request.input.package_id, session)
-                else:
-                    self.logger.debug('package_id:[{}] has been already handled by another worker on server.id:[{}], token:[{}]'.format(
-                        package_id, self.server.id, server_token))
+                    
+                # .. all workers get here.
+                self.deploy_package(self.request.input.package_id, session)
