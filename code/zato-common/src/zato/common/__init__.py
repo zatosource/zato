@@ -170,6 +170,7 @@ class KVDB:
     LOCK_SERVER_PREFIX = 'zato:lock:server:'
     LOCK_SERVER_ALREADY_DEPLOYED = '{}already-deployed:'.format(LOCK_SERVER_PREFIX)
     LOCK_SERVER_STARTING = '{}starting:'.format(LOCK_SERVER_PREFIX)
+    LOCK_PACKAGE_UPLOADING = '{}package-uploading:'.format(LOCK_SERVER_PREFIX)
     
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'

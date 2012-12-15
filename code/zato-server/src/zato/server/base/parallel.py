@@ -198,15 +198,29 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
+        self.worker_store = WorkerStore(self.config, self)
+        
         # Key-value DB
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
         self.kvdb.decrypt_func = self.crypto_manager.decrypt
         self.kvdb.init()
         
-        is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
+        # Normalize hot-deploy configuration
+        self.hot_deploy_config = Bunch()
+        self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
+            self.repo_location, self.fs_server_config.hot_deploy.work_dir))
+        self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
+        self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
+        self.hot_deploy_config.current_work_dir = os.path.normpath(os.path.join(
+            self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.current_work_dir))
+        self.hot_deploy_config.backup_work_dir = os.path.normpath(os.path.join(
+            self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.backup_work_dir))
+        self.hot_deploy_config.last_backup_work_dir = os.path.normpath(
+            os.path.join(
+                self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
         
-        self.worker_store = WorkerStore(self.config, self)
+        is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
         
         broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
@@ -218,7 +232,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks)
         self.broker_client.start()
-
+        
         if is_first:
             
             self.singleton_server = self.app_context.get_object('singleton_server')
@@ -234,21 +248,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.singleton_server.pickup.pickup_event_processor.pickup_dir = pickup_dir
             self.singleton_server.pickup.pickup_event_processor.server = self.singleton_server
             
-            # Normalize hot-deploy configuration
-            if not self.hot_deploy_config:
-                self.hot_deploy_config = Bunch()
-                self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
-                    self.repo_location, self.fs_server_config.hot_deploy.work_dir))
-                self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
-                self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
-                self.hot_deploy_config.current_work_dir = os.path.normpath(os.path.join(
-                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.current_work_dir))
-                self.hot_deploy_config.backup_work_dir = os.path.normpath(os.path.join(
-                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.backup_work_dir))
-                self.hot_deploy_config.last_backup_work_dir = os.path.normpath(
-                    os.path.join(
-                        self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
-                
             # TODO: Passing a broker client around isn't thread-safe
             kwargs = {'broker_client':self.broker_client} 
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
