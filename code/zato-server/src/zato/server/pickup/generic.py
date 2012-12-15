@@ -19,90 +19,50 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-"""Generic pick-up manager.
-
-Checks contents of the pickup dir every few seconds and processes new files.
-Doesn't detect modifications.
-"""
 # stdlib
-import logging
-import os
-import time
-import threading
+import logging, os
+from time import sleep
 
 # Spring Python
 from springpython.context import ApplicationContextAware
 
+# watchdog
+from watchdog.observers.polling import PollingObserver
+from watchdog.events import FileSystemEventHandler
+
 # Zato
-from zato.common.hotdeploy import validate_egg
+from zato.common.util import hot_deploy
+from zato.server.pickup import BasePickup, BasePickupEventProcessor
 
+logger = logging.getLogger(__name__)
 
-__all__ = ["Pickup", "PickupEventProcessor"]
+__all__ = ['Pickup', 'PickupEventProcessor']
 
-_INTERVAL = 1.0
+class PickupEventProcessor(FileSystemEventHandler, BasePickupEventProcessor):
+    def process(self, event):
+        self.hot_deploy(event.name)
+        
+    def on_created(self, event):
+        print(33, event)
+        
+    def on_modified(self, event):
+        print(22, event)
 
-
-class Watcher(threading.Thread):
-    def __init__(self, pickup_dir, processor):
-        super(Watcher, self).__init__()
-        self._pickup_dir = pickup_dir
-        self._processor = processor
-        self._is_running = False
-        self._seen = set()
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
-
-    def run(self):
-        self._is_running = True
-        while self._is_running:
-            self.logger.debug("Looking for new modules to load (in: %s).", self._pickup_dir)
-            for entry in os.listdir(self._pickup_dir):
-                # We have already seen this entry. Skip it.
-                if entry in self._seen:
-                    continue
-                self.logger.debug("New module found: '%s'", entry)
-                self._processor.process(entry)
-                self._seen.add(entry)
-            time.sleep(_INTERVAL)
-
-    def stop(self):
-        self._is_running = False
-        self.join()
-
-
-class PickupEventProcessor(ApplicationContextAware):
-    def __init__(self):
-        self.importer = None
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
-
-    def process(self, path):
-        if not path.endswith(".egg"):
-            self.logger.info("Ignoring entry %s (not an .egg file)", path)
-            return
-
-        self.logger.info("Processing '%s'", path)
-        with open(path, "rb") as stream:
-            if validate_egg(stream):
-                singleton_server = self.app_context.get_object("singleton_server")
-                self.importer.import_services(path, singleton_server)
-            else:
-                self.logger.info("Ingoring entry '%s' (stinky egg)", path)
-
-
-class Pickup(object):
+class Pickup(BasePickup):
     def __init__(self, pickup_dir=None, pickup_event_processor=None):
         self.pickup_dir = pickup_dir
-        self.pickup_event_processor = pickup_event_processor
-        self._watcher = None
-
-        self.logger = logging.getLogger("%s.%s" % (__name__, self.__class__.__name__))
+        self.pickup_event_processor = pickup_event_processor or PickupEventProcessor()
+        self.keep_running = True
 
     def watch(self):
-        self._watcher = Watcher(self.pickup_dir, self.pickup_event_processor)
-        self._watcher.start()
+        observer = PollingObserver()
+        observer.schedule(self.pickup_event_processor, path=self.pickup_dir)
+        observer.start()
+        
+        try:
+            while self.keep_running:
+                sleep(0.1)
+        except KeyboardInterrupt:
+            observer.stop()
 
-    def stop(self):
-        assert self._watcher is not None, 'Watcher was not started!'
-        self.logger.debug("Stopping the notifier")
-        self._watcher.stop()
-        self.logger.debug("Successfully stopped the notifier")
-
+        observer.join()

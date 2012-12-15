@@ -21,9 +21,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os
-from time import sleep
 
-# inotifyx
+# gevent
+from gevent import sleep
+
+# gevent_inotifyx
 import gevent_inotifyx as inotifyx
 
 # Spring Python
@@ -31,33 +33,21 @@ from springpython.context import ApplicationContextAware
 
 # Zato
 from zato.common.util import hot_deploy
+from zato.server.pickup import BasePickup, BasePickupEventProcessor
 
 __all__ = ['Pickup', 'PickupEventProcessor']
 
 logger = logging.getLogger(__name__)
 
-class PickupEventProcessor(ApplicationContextAware):
-    def __init__(self, pickup_dir=None, server=None, *args, **kwargs):
-        self.pickup_dir = pickup_dir
-        self.server = server
-        super(PickupEventProcessor, self).__init__(*args, **kwargs)
-        
-    def _should_process(self, event_name):
-        """ Returns True if the file name's is either a Python source code file
-        we can handle or an archive that can be uncompressed.
-        """
-        return is_python_file(event_name) or is_archive_file(event_name)
-
+class PickupEventProcessor(BasePickupEventProcessor):
     def process(self, event):
-        event_info = 'event:[{}], event.name:[{}]'.format(event, event.name)
-        logger.debug('IN_MODIFY {}'.format(event_info))
-        
-        hot_deploy(self.server.parallel_server, event.name, os.path.abspath(os.path.join(self.pickup_dir, event.name)))
+        logger.debug('IN_MODIFY event.name:[{}], event:[{}]'.format(event.name, event))
+        self.hot_deploy(event.name)
 
 class Pickup(object):
     def __init__(self, pickup_dir=None, pickup_event_processor=None):
         self.pickup_dir = pickup_dir
-        self.pickup_event_processor = pickup_event_processor
+        self.pickup_event_processor = pickup_event_processor or PickupEventProcessor()
         self.keep_running = True
 
     def watch(self):
@@ -79,4 +69,4 @@ class Pickup(object):
     def stop(self):
         logger.debug('Stopping the notifier')
         self.keep_running = False
-        logger.debug('Successfully stopped the notifier')
+        logger.info('Successfully stopped the notifier')
