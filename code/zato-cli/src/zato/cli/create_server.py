@@ -105,7 +105,7 @@ db=0
 socket_timeout=
 charset=
 errors=
-"""
+""".encode('utf-8')
 
 default_odb_pool_size = 1
 
