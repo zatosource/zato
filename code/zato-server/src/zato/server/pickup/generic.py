@@ -39,14 +39,12 @@ logger = logging.getLogger(__name__)
 __all__ = ['Pickup', 'PickupEventProcessor']
 
 class PickupEventProcessor(FileSystemEventHandler, BasePickupEventProcessor):
-    def process(self, event):
-        self.hot_deploy(event.name)
+    def process(self, src_path):
+        self.hot_deploy(src_path)
         
     def on_created(self, event):
-        print(33, event)
-        
-    def on_modified(self, event):
-        print(22, event)
+        logger.debug('EVENT_TYPE_CREATED event.src_path:[{}], event:[{}]'.format(event.src_path, event))
+        self.process(event.src_path)
 
 class Pickup(BasePickup):
     def __init__(self, pickup_dir=None, pickup_event_processor=None):

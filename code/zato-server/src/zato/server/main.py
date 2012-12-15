@@ -116,10 +116,6 @@ def run(base_dir):
     parallel_server.stats_jobs = app_context.get_object('stats_jobs')
     parallel_server.app_context = app_context
 
-    pickup_dir = config.hot_deploy.pickup_dir
-    if not os.path.isabs(pickup_dir):
-        pickup_dir = os.path.join(repo_location, pickup_dir)
-
     # Remove all locks possibly left over by previous server instances
     clear_locks(app_context.get_object('kvdb'), config.main.token, config.kvdb, crypto_manager.decrypt)
         

@@ -29,8 +29,11 @@ from tempfile import mkdtemp, NamedTemporaryFile
 # pip
 from pip.download import is_archive_file
 
+# retools
+from retools.lock import Lock
+
 # Zato
-from zato.common import DEPLOYMENT_STATUS
+from zato.common import DEPLOYMENT_STATUS, KVDB
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util import decompress, fs_safe_now, is_python_file, visit_py_source_from_distribution
 from zato.server.service.internal import AdminService
@@ -194,20 +197,35 @@ class Create(AdminService):
         session.add(ds)
         session.commit()
         
-    def deploy_package(self, package_id):
-        with closing(self.odb.session()) as session:
-            dp = session.query(DeploymentPackage).\
-                filter(DeploymentPackage.id==package_id).\
-                one()
-            
-            if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
-                self._deploy_package(session, package_id, dp.payload_name, dp.payload)
-            else:
-                # This shouldn't really happen at all because the pickup notifier is to 
-                # filter such things out but life is full of surprises
-                self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
-                self.logger.warn('Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
+    def deploy_package(self, package_id, session):
+        dp = self.get_package(package_id, session)
+        
+        if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
+            self._deploy_package(session, package_id, dp.payload_name, dp.payload)
+        else:
+            # This shouldn't really happen at all because the pickup notifier is to 
+            # filter such things out but life is full of surprises
+            self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
+            self.logger.warn('Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
+                
+    def get_package(self, package_id, session):
+        return session.query(DeploymentPackage).\
+            join(DeploymentStatus, DeploymentPackage.id==DeploymentStatus.package_id).\
+            filter(DeploymentPackage.id==package_id).\
+            filter(DeploymentStatus.status==DEPLOYMENT_STATUS.AWAITING_DEPLOYMENT).\
+            filter(DeploymentStatus.server_id==self.server.id).\
+            first()
                 
     def handle(self):
-        self.backup_current_work_dir()
-        self.deploy_package(self.request.input.package_id)
+        package_id = self.request.input.package_id
+        server_token = self.server.fs_server_config.main.token
+        lock_name = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_UPLOADING, server_token, package_id)
+
+        with Lock(lock_name, self.server.deployment_lock_expires, self.server.deployment_lock_timeout, self.server.kvdb.conn):
+            with closing(self.odb.session()) as session:
+                if self.get_package(package_id, session):
+                    self.backup_current_work_dir()
+                    self.deploy_package(self.request.input.package_id, session)
+                else:
+                    self.logger.debug('package_id:[{}] has been already handled by another worker on server.id:[{}], token:[{}]'.format(
+                        package_id, self.server.id, server_token))
