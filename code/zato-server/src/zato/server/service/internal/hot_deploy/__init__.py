@@ -26,6 +26,9 @@ from datetime import datetime
 from errno import EEXIST
 from tempfile import mkdtemp, NamedTemporaryFile
 
+# anyjson
+from anyjson import dumps
+
 # pip
 from pip.download import is_archive_file
 
@@ -219,18 +222,22 @@ class Create(AdminService):
         package_id = self.request.input.package_id
         server_token = self.server.fs_server_config.main.token
         lock_name = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_UPLOADING, server_token, package_id)
+        already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_ALREADY_UPLOADED, server_token, package_id)
 
         # TODO: Stuff below - and the methods used - needs to be rectified. 
         # As of now any worker process will always set deployment status
         # to DEPLOYMENT_STATUS.DEPLOYED but what we really want is per-worker
         # reporting of whether the deployment succeeded or not.
-
+        
         with Lock(lock_name, self.server.deployment_lock_expires, self.server.deployment_lock_timeout, self.server.kvdb.conn):
             with closing(self.odb.session()) as session:
                 
                 # Only the first worker will get here ..
-                if self.get_package(package_id, session):
+                if not self.server.kvdb.conn.get(already_deployed_flag):
                     self.backup_current_work_dir()
+                    
+                    self.server.kvdb.conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
+                    self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires) 
                     
                 # .. all workers get here.
                 self.deploy_package(self.request.input.package_id, session)
