@@ -98,7 +98,6 @@ eggs =
     tornado
     urllib3
     watchdog
-    Werkzeug
     zato-admin
     zato-agent
     zato-broker
