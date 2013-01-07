@@ -10,13 +10,13 @@ Getting help
 
 * `Contact the authors`_ directly if you need commercial support
 
-* `Use GitHub`_ to post questions and submit issues
+* `Visit GitHub`_ to post questions and submit issues
 
 * Ask a question in the `#zato IRC channel`_ on Freenode network
 
 
 .. _Contact the authors: ZZZ
-.. _Use GitHub: https://github.com/zatosource/zato
+.. _Visit GitHub: https://github.com/zatosource/zato
 .. _#zato IRC channel: irc://irc.freenode.net/zato
 
 Introduction
@@ -36,17 +36,11 @@ Introduction
 Programming guide
 =================================
 
-    * **Services:**
-      :doc:`Anatomy of a service <progguide/service-anatomy>` | 
-      :doc:`Exposing services to the outside world <progguide/service-exposing>` | 
-      :doc:`Invoking external APIs <progguide/service-invoke-external>` | 
-      :doc:`Invoking other services <progguide/service-invoke-other>` | 
-      :doc:`Using the scheduler <progguide/service-scheduler>` | 
-      :doc:`Using service hooks <progguide/service-hooks>` | 
-      :doc:`Logging <progguide/logging>` | 
-      :doc:`Debugging techniques<progguide/debgging>` | 
-      :doc:`Customizing Zato admin<progguide/customizing-zato-admin>`
-
+    * **Developing services:**
+      :doc:`What is a service <progguide/service-anatomy>` | 
+      :doc:`Connecting to the outside world <progguide/service-exposing>` | 
+      :doc:`Invoking other services <progguide/service-invoke-other>`
+      
     * **Converting documents:**
       :doc:`Understanding SimpleIO (SIO) <progguide/understand-sio>` | 
       :doc:`XML <progguide/convert-xml>` | 
@@ -54,7 +48,20 @@ Programming guide
       :doc:`Other data formats <progguide/convert-other>`
       
     * **Sync and async:**
-      :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>` | 
+      :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>`
+      
+    * **Scheduler:**
+      :doc:`Running services in background <progguide/service-scheduler>`
+      
+    * **Service hooks:**
+      :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
+      
+    * **Logging and debugging techniques:**
+      :doc:`Logging<progguide/logging>` | 
+      :doc:`Debugging<progguide/debgging>`
+      
+    * **Customizing Zato admin:**
+      :doc:`Making sure you deploy on the right environment<progguide/customizing-zato-admin>`
 
 Programming reference
 =================================
@@ -67,7 +74,7 @@ Programming reference
 Administration guide
 ==============================
 
-    * :doc:`Installing Zato components<admin/install>` |
+    * :doc:`Installing and configuring Zato components<admin/install>` |
       :doc:`The Zato admin<admin/zato-admin>` | 
       :doc:`Command line interface (CLI)<admin/cli>` |
       :doc:`High availability<admin/ha>` |

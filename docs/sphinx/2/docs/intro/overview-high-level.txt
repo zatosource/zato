@@ -10,12 +10,14 @@ In the classical three-layer architecture of fronted, middleware and backend
 processes, Zato is best placed at the middle and the far backend of your IT
 infrastructure.
 
-Zato is best suited for business integration - such as implementing an Enterprise
-Service Bus (ESB), or for core services - such as billing, customer management,
+Zato is best suited for business integration - such as implementing an `Enterprise Service Bus (ESB)`_, 
+or for core services - such as billing, customer management,
 purchase processing, supporting marketing campaings, core banking and many
 similar activities that form a backbone of an enterprise.
 
-.. image:: _images/three-layer-arch.png
+.. _Enterprise Service Bus (ESB): https://en.wikipedia.org/wiki/Enterprise_service_bus
+
+.. image:: _images/three-layer-arch2.png
    :alt:
 
 
@@ -29,6 +31,9 @@ of a Zato environment allows for:
 * unifying access methods to independent applications
 * introducing a common security model across different parts of the IT infrastructure
 
+Zato environments are composed of clusters, each of which is a set of servers
+and supporting applications running in a :doc:`HA<admin/ha>` configuration.
+
 Message processing
 ==================
 
@@ -40,14 +45,25 @@ to:
 * orchestrate the services of multiple autonomous systems
 * send and receive messages across many transports available, using either
   synchronous or asynchronous methods
-* log, audit and monitor messages flowing through using an advanced
-  search engine
+* log, audit and monitor messages flowing through the platform
 * validate the messages for accordance with business rules
 * enrich the messages from different sources
 * queue the messages if applications involved in integration scenarios run at
   different processing speeds
-* implement services in less time using Python, a very high-level programming language
-  that promotes the ease of use and development speed
+* implement services in less time using `Python`_, a very high-level programming language
+  that promotes the ease of use and development speed. A Hello World
+  service is shown below. Such a service can be hot-deployed onto a cluster
+  without a need to restart servers.
+  
+  :: 
+  
+      from zato.server.service import Service
+      
+      class HelloWorld(Service):
+          def handle(self):
+              self.response.payload = 'How goes it?'
+  
+.. _Python: http://python.org/
 
 Transports
 ==========
@@ -58,11 +74,9 @@ regardless of its origin and programming language used. The transports include:
 * the ubiquitous HTTP(S) protocol
 * FTP(S)
 * AMQP
-* ActiveMQ
 * WebSphere MQ
 * ZeroMQ
 * JMS
-* Solr
 * REST
 * SOAP
 
@@ -80,8 +94,10 @@ browsing the messages and more.
 Zato, the open-source project
 =============================
 
-Zato is licensed under a commercial-friendly ZZZ license and is not only
-software but also an open-source project promoting open collaboration through
-peer production and unrestricted exchange of ideas between developers
-and users. *Everyone* is strongly encouraged to take part in the project and
-help build better world through nicer, faster, easier and more reliable software!
+Zato is open-source software licensed under a commercial-friendly `LGPL`_ license and is not only
+code but also an open-source project promoting open collaboration through
+peer production and the exchange of ideas between developers
+and users. :doc:`Everyone is strongly encouraged to take part in the project<project/getting-involved>`
+and help build better world through nicer, faster, easier and more reliable software!
+
+.. _LGPL: https://en.wikipedia.org/wiki/LGPL
