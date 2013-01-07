@@ -12,11 +12,11 @@ body { font:12px/1.5 Verdana,sans-serif; background:#16151d; color: white;}
 /*** links ***/
 a {text-decoration: underline;}
 a img {border: none;}
-a:link, a:visited { color:#ffc757; }
-#bd a:link, #bd a:visited { color:#494846; text-decoration:none; }
+a:link, a:visited { color:#88a;}
+#bd a:link, #bd a:visited { color:#225; text-decoration:none; }
 #bd #sidebar a:link, #bd #sidebar a:visited { color:#ffc757; text-decoration:none; }
 a:hover { color:#ffe761; }
-#bd a:hover {text-decoration:underline; background-color:#ffc757}
+#bd a:hover {text-decoration:underline; background-color:#fff757}
 #bd #sidebar a:hover { color:#ffe761; background:none; text-decoration:underline}
 h2 a, h3 a, h4 a { text-decoration:none !important; }
 a.reference em { font-style: normal; }
@@ -32,9 +32,9 @@ a.reference em { font-style: normal; }
 div.nav { margin: 0; font-size: 11px; text-align: right; color: #487858;}
 #hd div.nav { margin-top: -27px; }
 #ft div.nav { margin-bottom: -18px; }
-#hd h1 a { color: #fbb610; }
+#hd h1 a { color: #fff757; }
 #global-nav { position:absolute; top:5px; margin-left: -5px; padding:7px 0; color:#263E2B; }
-#global-nav a:link, #global-nav a:visited {color:#487858;}
+#global-nav a:link, #global-nav a:visited {color:#88a;}
 #global-nav a {padding:0 4px;}
 #global-nav a.about {padding-left:0;}
 #global-nav:hover {color:#fff;}
