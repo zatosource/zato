@@ -32,35 +32,6 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      FromConfig, info as info_mod, run_command, quickstart as quickstart_mod, start as start_mod, stop as stop_mod, \
      zato_admin_auth as zato_admin_auth_mod
 from zato.common import version as zato_version
-    
-"""
-# zato ca create ca .
-# zato ca create lb_agent .
-# zato ca create server .
-# zato ca create zato_admin .
-# zato component-version .
-# zato create load_balancer .
-# zato create odb .
-# zato create cluster
-# zato create server .
-# zato create user .
-# zato create zato_admin .
-# zato decrypt . --secret
-# zato delete odb .
-# zato encrypt . --secret
-# zato from-config ./zato.config.file
-# zato quickstart create .
-# zato info .
-zato services export . token
-zato services import . dump
-# zato start .
-# zato stop .
-# zato update crypto . --priv-key ./path --pub-key ./path --cert ./path
-# zato update password . admin-username
-# zato --store-config
-# zato --store-log
-# zato --version
-"""
 
 def add_opts(parser, opts):
     """ Adds parser-specific options.
@@ -71,7 +42,7 @@ def add_opts(parser, opts):
             try:
                 arguments[name] = opt[name]
             except KeyError:
-                # Almost no commands use the 'action' parameter
+                # Almost no command uses the 'action' parameter
                 pass
             
         parser.add_argument(opt['name'], **arguments)
