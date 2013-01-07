@@ -1,29 +1,23 @@
 
 .. _index:
 
-====================
-Zato library
-====================
 
-.. rubric:: The library contains the documentation for Zato 1.0
+The next generation's ESB and application server. Open-source. In Python.
+------------------------------------------------------------------------------------
 
 Getting help
 ============
 
-Need assistance? We're here to help!
+* `Contact the authors`_ directly if you need commercial support
 
-* `Contact the authors`_ directly if you need commercial support,
+* `Use GitHub`_ to post questions and submit issues
 
-* `Post a question`_ in our mailing list,
+* Ask a question in the `#zato IRC channel`_ on Freenode network
 
-* Ask a question in the `#zato IRC channel`_ on Freenode network,
-
-* Report bugs with Zato in our `ticket tracker`_.
 
 .. _Contact the authors: ZZZ
-.. _Post a question: ZZZ
+.. _Use GitHub: https://github.com/zatosource/zato
 .. _#zato IRC channel: irc://irc.freenode.net/zato
-.. _ticket tracker: ZZZ
 
 Introduction
 ============
@@ -34,23 +28,85 @@ Introduction
 
     * **Tutorial:**
       :doc:`Installing<intro/tutorial01>` |
-      :doc:`Creating the first cluster<intro/tutorial04>` |
+      :doc:`Creating a quickstart cluster<intro/tutorial02>` |
+      :doc:`Introducing the admin panel<intro/tutorial03>` |
       :doc:`Writing a Zato service<intro/tutorial04>` |
-      :doc:`Introducing the admin panel<intro/tutorial04>` |
-      :doc:`Invoking the newly created service<intro/tutorial04>`
+      :doc:`Hot-deploying the service and invoking it<intro/tutorial05>`
 
 Programming guide
-==============================
+=================================
+
+    * **Services:**
+      :doc:`Anatomy of a service <progguide/service-anatomy>` | 
+      :doc:`Exposing services to the outside world <progguide/service-exposing>` | 
+      :doc:`Invoking external APIs <progguide/service-invoke-external>` | 
+      :doc:`Invoking other services <progguide/service-invoke-other>` | 
+      :doc:`Using the scheduler <progguide/service-scheduler>` | 
+      :doc:`Using service hooks <progguide/service-hooks>` | 
+      :doc:`Logging <progguide/logging>` | 
+      :doc:`Debugging techniques<progguide/debgging>` | 
+      :doc:`Customizing Zato admin<progguide/customizing-zato-admin>`
+
+    * **Converting documents:**
+      :doc:`Understanding SimpleIO (SIO) <progguide/understand-sio>` | 
+      :doc:`XML <progguide/convert-xml>` | 
+      :doc:`JSON <progguide/convert-json>` |
+      :doc:`Other data formats <progguide/convert-other>`
+      
+    * **Sync and async:**
+      :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>` | 
 
 Programming reference
 =================================
 
+    * :doc:`Internal service API<progref/internal-api>` |
+      :doc:`SimpleIO (SIO)<progref/internal-api>` |
+      :doc:`Scheduler<progref/scheduler>` |
+      :doc:`Service hooks<progref/service-hooks>`
+
 Administration guide
 ==============================
+
+    * :doc:`Installing Zato components<admin/install>` |
+      :doc:`The Zato admin<admin/zato-admin>` | 
+      :doc:`Command line interface (CLI)<admin/cli>` |
+      :doc:`High availability<admin/ha>` |
+      :doc:`Capacity planning<admin/capacity>` |
+      :doc:`Installing services<admin/periodic>` |
+      :doc:`Periodic tasks<admin/periodic>`
+      
+Statistics
+==============================
+
+    * :doc:`Guide<stats/guide>` |
+      :doc:`Maintenance<stats/maintenance>`
+      
+Architecture
+==============================
+
+    * **Zato components:**
+      :doc:`Overview<architecture/overview>` | 
+      :doc:`Zato admin<architecture/zato-admin>` | 
+      :doc:`Load-balancer<architecture/load-balancer>` | 
+      :doc:`Servers<architecture/servers>` | 
+      :doc:`Databases<architecture/databases>`
 
 Security
 ==============================
 
+    * **Users:**
+      :doc:`Application<security/users-app>` |
+      :doc:`OS-level considerations<security/users-os>` |
+        
+    * **Reference:**
+      :doc:`Attack surface<security/attack-surface>` |
+      :doc:`Default configuration values<security/config-defaults>`
       
-The Zato open-source project
+    * **Other:**
+      :doc:`Reporting security issues<security/reporting-issues>`
+
+      
+Zato, the open-source project
 ==============================
+
+    * :doc:`Getting involved<project/getting-involved>` | :doc:`Diversity statement<project/diversity-statement>`
