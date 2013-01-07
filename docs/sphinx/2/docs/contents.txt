@@ -1,7 +1,7 @@
 .. _contents:
 
 =============================
-Django documentation contents
+Zato documentation contents
 =============================
 
 .. toctree::
@@ -19,15 +19,4 @@ Indices, glossary and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`glossary`
 
-Deprecated/obsolete documentation
-=================================
-
-The following documentation covers features that have been deprecated or that
-have been replaced in newer versions of Django.
-
-.. toctree::
-   :maxdepth: 2
-
-   obsolete/index
