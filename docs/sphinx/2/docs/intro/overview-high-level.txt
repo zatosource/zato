@@ -84,8 +84,8 @@ Web admin
 =========
 
 Zato has a slick and powerful web admin application for administrator to manage
-the environments. Web admin allow one to perform routine, planned as well as
-ad hoc activities, such as deploying services, configuring security, access channels,
+the environments. Web admin allows one to perform routine, planned as well as
+ad-hoc activities, such as deploying services, configuring security, access channels,
 browsing the messages and more.
 
 .. image:: _images/webadmin1.jpg
