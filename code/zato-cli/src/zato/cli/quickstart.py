@@ -348,5 +348,6 @@ class Create(ZatoCommand):
         else:
             self.logger.info('User [admin] already exists in the ODB')
             
-        self.logger.info('Start the cluster by issuing the {}/zato-qs-start.sh command'.format(args.path))
+        start_command = os.path.join(args.path, 'zato-qs-start.sh')
+        self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
         self.logger.info('Visit https://TODO for more information and support options')
