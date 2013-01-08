@@ -90,10 +90,11 @@ Architecture
 
     * **Zato components:**
       :doc:`Overview<architecture/overview>` | 
-      :doc:`Zato admin<architecture/zato-admin>` | 
+      :doc:`Web admin<architecture/web-admin>` | 
       :doc:`Load-balancer<architecture/load-balancer>` | 
       :doc:`Servers<architecture/servers>` | 
-      :doc:`Databases<architecture/databases>`
+      :doc:`SQL ODB<architecture/sql-odb>` |
+      :doc:`Redis<architecture/redis>` |
 
 Security
 ==============================
