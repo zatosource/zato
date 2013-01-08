@@ -193,7 +193,64 @@ Security
     * **Other:**
       :doc:`Reporting security issues<security/reporting-issues>`
 
+Public SOAP and JSON server API
+================================
+
+    * **Overview:**
+      :doc:`Introducing the public API<public-api/intro>`
       
+    * **Channels:**
+      :doc:`zato.channel.amqp.*<public-api/details/zato.channel.amqp>` |
+      :doc:`zato.channel.jms_wmq.*<public-api/details/zato.channel.jms_wmq>` |
+      :doc:`zato.channel.zmq.*<public-api/details/zato.channel.zmq>`
+      
+    * **Definitions:**
+      :doc:`zato.definition.amqp.*<public-api/details/zato.definition.amqp>` |
+      :doc:`zato.definition.jms_wmq.*<public-api/details/zato.definition.jms_wmq>`
+      
+    * **Hot deployment:**
+      :doc:`zato.hot_deploy.*<public-api/details/zato.hot_deploy>`
+      
+    * **HTTP/SOAP:**
+      :doc:`zato.http_soap.*<public-api/details/zato.http_soap>`
+      
+    * **Key/value DB (Redis):**
+      :doc:`zato.kvdb.*<public-api/details/zato.kvdb>`
+      :doc:`zato.kvdb.data_dict.dictionary.*<public-api/details/zato.kvdb.data_dict.dictionary>` |
+      :doc:`zato.kvdb.data_dict.impexp.*<public-api/details/zato.kvdb.data_dict.impexp>` |
+      :doc:`zato.kvdb.data_dict.translation.*<public-api/details/zato.kvdb.data_dict.translation>` |
+      
+    * **Ougoing connections:**
+      :doc:`zato.outgoing.amqp.*<public-api/details/zato.outgoing.amqp>` |
+      :doc:`zato.outgoing.ftp.*<public-api/details/zato.outgoing.ftp>` |
+      :doc:`zato.outgoing.jms_wmq.*<public-api/details/zato.outgoing.jms_wmq>` |
+      :doc:`zato.outgoing.sql.*<public-api/details/zato.outgoing.sql>` |
+      :doc:`zato.outgoing.zmq.*<public-api/details/zato.outgoing.zmq>`
+      
+    * **Ping services:**
+      :doc:`zato.Ping<public-api/details/zato.Ping>` |
+      :doc:`zato.Ping2<public-api/details/zato.Ping2>`
+      
+    * **Scheduler:**
+      :doc:`zato.scheduler.*<public-api/details/zato.scheduler>`
+      
+    * **Security:**
+      :doc:`zato.security.*<public-api/details/zato.security>`
+      :doc:`zato.security.basic_auth.*<public-api/details/zato.security.basic_auth>`
+      :doc:`zato.security.tech_account.*<public-api/details/zato.security.tech_account>`
+      :doc:`zato.security.wss.*<public-api/details/zato.security.wss>`
+      
+    * **Servers:**
+      :doc:`zato.server.*<public-api/details/zato.server>`
+      
+    * **Services:**
+      :doc:`zato.service.*<public-api/details/zato.service>`
+      
+    * **Statistics:**
+      :doc:`zato.stats.*<public-api/details/zato.stats>`
+      :doc:`zato.stats.summary.*<public-api/details/zato.stats.summary>`
+      :doc:`zato.stats.trends.*<public-api/details/zato.stats.summary.trends>`
+
 Zato, the open-source project
 ==============================
 
