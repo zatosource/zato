@@ -26,7 +26,7 @@ Introduction
     * **Tutorial:**
       :doc:`Installing<intro/tutorial01>` |
       :doc:`Creating a quickstart cluster<intro/tutorial02>` |
-      :doc:`Introducing the admin panel<intro/tutorial03>` |
+      :doc:`Introducing the web admin panel<intro/tutorial03>` |
       :doc:`Writing a Zato service<intro/tutorial04>` |
       :doc:`Hot-deploying the service and invoking it<intro/tutorial05>`
 
@@ -35,8 +35,13 @@ Programming guide
 
     * **Developing services:**
       :doc:`What is a service <progguide/service-anatomy>` | 
-      :doc:`Connecting to the outside world <progguide/service-exposing>` | 
-      :doc:`Invoking other services <progguide/service-invoke-other>`
+      :doc:`Connections<progguide/connections>` | 
+      :doc:`Key/value DB (Redis)<progguide/kvdb>` |
+      :doc:`Scheduler<progguide/scheduler>` |
+      :doc:`Accessing the outside world <progguide/access-outside>` | 
+      :doc:`Invoking other services <progguide/service-invoke-other>` |
+      :doc:`Security<progguide/security>` |
+      :doc:`Testing<progguide/testing>` |
       
     * **Converting documents:**
       :doc:`Understanding SimpleIO (SIO) <progguide/understand-sio>` | 
@@ -57,13 +62,13 @@ Programming guide
       :doc:`Logging<progguide/logging>` | 
       :doc:`Debugging<progguide/debgging>`
       
-    * **Customizing Zato admin:**
-      :doc:`Making sure you deploy on the right environment<progguide/customizing-zato-admin>`
+    * **Customizing web admin:**
+      :doc:`Making sure you deploy on the right environment<progguide/customizing-web-admin>`
 
 Programming reference
 =================================
 
-    * :doc:`Internal service API<progref/internal-api>` |
+    * :doc:`Service API<progref/service-api>` |
       :doc:`SimpleIO (SIO)<progref/internal-api>` |
       :doc:`Scheduler<progref/scheduler>` |
       :doc:`Service hooks<progref/service-hooks>`
@@ -72,19 +77,90 @@ Administration guide
 ==============================
 
     * :doc:`Installing and configuring Zato components<admin/install>` |
-      :doc:`The Zato admin<admin/zato-admin>` | 
+      :doc:`Web admin<admin/web-admin>` | 
       :doc:`Command line interface (CLI)<admin/cli>` |
       :doc:`High availability<admin/ha>` |
       :doc:`Capacity planning<admin/capacity>` |
       :doc:`Installing services<admin/periodic>` |
       :doc:`Periodic tasks<admin/periodic>`
       
-Statistics
+Web admin
 ==============================
 
-    * :doc:`Guide<stats/guide>` |
-      :doc:`Maintenance<stats/maintenance>`
+    * **Overview:** 
+      :doc:`Introduction<web-admin/intro>` | 
+      :doc:`Securing the web admin<web-admin/security>`
       
+    * **Clusters:**
+      :doc:`Main view<web-admin/clusters/main>`
+      
+    * **Servers:**
+      :doc:`Main view<web-admin/servers/main>` | 
+      :doc:`Adding and removing servers from a cluster<web-admin/servers/add-remove>` | 
+      :doc:`Editing a server<web-admin/servers/edit>`
+      
+    * **Load balancer:**
+      :doc:`GUI view<web-admin/load-balancer/config-gui>` | 
+      :doc:`Source code view<web-admin/load-balancer/config-source-code>` | 
+      :doc:`Remote commands<web-admin/load-balancer/remote-commands>` | 
+      :doc:`Statistics<web-admin/load-balancer/statistics>`
+      
+    * **Services:**
+      :doc:`Main view<web-admin/services/main>` | 
+      :doc:`Uploading a service<web-admin/services/upload>`
+      
+    * **Service details:**
+      :doc:`Main view<web-admin/service-details/main>` | 
+      :doc:`Invoker<web-admin/service-details/invoker>` | 
+      :doc:`Source code view<web-admin/service-details/source-code>` | 
+      :doc:`WSDL<web-admin/service-details/wsdl>` | 
+      :doc:`Sample requests/responses<web-admin/service-details/sample-req-resp>` | 
+      :doc:`Slow responses<web-admin/service-details/slow-responses>`
+      
+    * **Security:**
+      :doc:`HTTP Basic Auth<web-admin/security/http-basic-auth>` | 
+      :doc:`Technical accounts<web-admin/security/tech-account>` | 
+      :doc:`WS-Security<web-admin/security/ws-security>`
+      
+    * **Connection definitions:**
+      :doc:`AMQP<web-admin/conn-def/amqp>` | 
+      :doc:`JMS WebSphere MQ<web-admin/conn-def/jms-wmq>`
+      
+    * **Channels:**
+      :doc:`AMQP<web-admin/channels/amqp>` | 
+      :doc:`JMS WebSphere MQ<web-admin/channels/jms-wmq>` | 
+      :doc:`Plain HTTP<web-admin/channels/plain-http>` | 
+      :doc:`SOAP<web-admin/channels/soap>` | 
+      :doc:`Zero MQ<web-admin/channels/zeromq>`
+      
+    * **Outgoing connections:**
+      :doc:`AMQP<web-admin/outgoing/amqp>` | 
+      :doc:`FTP<web-admin/outgoing/ftp>` | 
+      :doc:`JMS WebSphere MQ<web-admin/outgoing/jms-wmq>` | 
+      :doc:`Plain HTTP<web-admin/outgoing/plain-http>` | 
+      :doc:`SOAP<web-admin/outgoing/soap>` | 
+      :doc:`SQL<web-admin/outgoing/soap>` | 
+      :doc:`Zero MQ<web-admin/outgoing/zeromq>`
+      
+    * **Key/value DB (Redis):**
+      :doc:`Data dictionaries<web-admin/kvdb/data-dict>` |
+      :doc:`Remote commands<web-admin/kvdb/remote-commands>`
+      
+    * **Scheduler:**
+      :doc:`One-time jobs<web-admin/scheduler/one-time>` |
+      :doc:`Interval-based jobs<web-admin/scheduler/interval-based>` |
+      :doc:`Cron-style jobs<web-admin/scheduler/cron-style>`
+      
+    * **Statistics:**
+      :doc:`Trends<web-admin/stats/trends>` |
+      :doc:`Summaries<web-admin/stats/summary>` |
+      :doc:`Settings<web-admin/stats/settings>` |
+      :doc:`Maintenance<web-admin/stats/maintenance>`
+      
+    * **User settings:**
+      :doc:`Date and time<web-admin/settings/date-time>` |
+      :doc:`Cluster color markers<web-admin/settings/cluster-color-markers>`
+
 Architecture
 ==============================
 
@@ -94,8 +170,15 @@ Architecture
       :doc:`Load-balancer<architecture/load-balancer>` | 
       :doc:`Servers<architecture/servers>` | 
       :doc:`SQL ODB<architecture/sql-odb>` |
-      :doc:`Redis<architecture/redis>` |
+      :doc:`Redis<architecture/redis>`
+      
+Statistics
+==============================
 
+    * :doc:`Guide<stats/guide>` |
+      :doc:`Maintenance<stats/maintenance>` | 
+      :doc:`Load balancer statistics<stats/lb-statistics>`
+      
 Security
 ==============================
 
