@@ -1,7 +1,4 @@
 
-.. _index:
-
-
 The next generation's ESB and application server. Open-source. In Python.
 ------------------------------------------------------------------------------------
 
