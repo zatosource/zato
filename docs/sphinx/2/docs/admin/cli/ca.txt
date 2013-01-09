@@ -195,3 +195,44 @@ server_name                                       Name of the server, e.g. 'serv
 zato ca create web_admin
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
+Creates a certificate and a pair of private and public keys for a :doc:`web admin console<architecture/web-admin>`.
+
+Files will be stored in following locations, where *path* is the path to the CA used for generating the crypto material.
+
+============== ==============================================================
+Name           Location
+============== ==============================================================
+Certificate    path/out-cert/web-admin-cert-*CURRENT_TIMESTAMP*.pem
+Private key    path/out-priv/web-admin-priv-*CURRENT_TIMESTAMP*.pem
+Public key     path/out-pub/web-admin-pub-*CURRENT_TIMESTAMP*.pem
+============== ==============================================================
+
+Usage
+^^^^^
+
+::
+
+    zato ca create web_admin [-h] [--store-log] [--verbose] [--store-config]
+        [--organization ORGANIZATION] [--locality LOCALITY]
+        [--state-or-province STATE_OR_PROVINCE] [--country COUNTRY] [--common-name COMMON_NAME]
+        path
+        
+::
+
+    $ zato ca create web_admin ~/zato1/ca/
+    OK
+    $
+    
+Command-specific parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+================================================= =====================================================
+Name                                              Description
+================================================= =====================================================
+--organization                                    Organization name (O), e.g. 'My Company'
+--locality                                        Locality name (L), e.g. 'Roma'
+--state-or-province                               State or province name, e.g. 'Lazio'
+--country                                         Country name (C), e.g. 'Italia'
+--common-name                                     Common name (CN), e.g. 'localhost'
+path                                              Path to the CA
+================================================= =====================================================
