@@ -49,7 +49,7 @@ dd { margin-left:15px; }
 h1,h2,h3,h4 { margin-top:1em; font-family:"Trebuchet MS",sans-serif; font-weight:normal; }
 h1 { font-size:218%; margin-top:0.6em; margin-bottom:.4em; line-height:1.1em; }
 h2 { font-size:175%; margin-bottom:.6em; line-height:1.2em; color:#1a1722; }
-h3 { font-size:150%; font-weight:bold; margin-bottom:.2em; color:#487858; }
+h3 { font-size:150%; font-weight:bold; margin-bottom:.2em; color:#487858; text-decoration:underline}
 h4 { font-size:125%; font-weight:bold; margin-top:1.5em; margin-bottom:3px; }
 div.figure { text-align: center; }
 div.figure p.caption { font-size:1em; margin-top:0; margin-bottom:1.5em; color: #555;}
