@@ -1,0 +1,42 @@
+zato ca
+============================
+
+Overview
+------------
+
+Manages a basic Certificate Authority (CA). Note that this is mostly used
+to support the :doc:`zato quickstart<./quickstart>` command; it's not a full-blown CA and
+there are no plans to make it a substitute for projects that actually provide
+full CA environments.
+
+Think of the Zato's CA as an aid in the development phase only. While technically possible,
+it shouldn't really be used during tests and in production.
+
+Subcommands
+------------
+
+* :ref:`zato ca create ca<cli_zato_ca_create_ca>`
+* :ref:`zato ca create lb_agent<cli_zato_ca_create_lb_agent>`
+* :ref:`zato ca create server<cli_zato_ca_create_server>`
+* :ref:`zato ca create web_admin<cli_zato_ca_create_web_admin>`
+
+.. _cli_zato_ca_create_ca:
+
+zato ca create ca
+~~~~~~~~~~~~~~~~~
+
+.. _cli_zato_ca_create_lb_agent:
+
+zato ca create lb_agent
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. _cli_zato_ca_create_server:
+
+zato ca create server
+~~~~~~~~~~~~~~~~~~~~~
+
+.. _cli_zato_ca_create_web_admin:
+
+zato ca create web_admin
+~~~~~~~~~~~~~~~~~~~~~~~~
+
