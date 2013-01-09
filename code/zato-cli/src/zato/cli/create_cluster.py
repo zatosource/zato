@@ -43,6 +43,8 @@ class Create(ZatoCommand):
     opts.append({'name':'lb_host', 'help':"Load-balancer host"})
     opts.append({'name':'lb_port', 'help':'Load-balancer port'})
     opts.append({'name':'lb_agent_port', 'help':'Load-balancer agent host'})
+    opts.append({'name':'broker_host', 'help':"Redis host"})
+    opts.append({'name':'broker_port', 'help':'Redis port'})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to create'})
     
     opts += get_tech_account_opts('for Zato admin instances to use')
