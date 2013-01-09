@@ -26,7 +26,7 @@ class Create(CACreateCommand):
     """ Creates crypto material for a Zato load-balancer agent
     """
     opts = [
-        {'name':'organizational-unit', 'help':'Organizational unit name (defaults to ZatoLBAgent)'},
+        {'name':'organizational-unit', 'help':'Organizational unit name'},
     ]
     opts += common_ca_create_opts
 
