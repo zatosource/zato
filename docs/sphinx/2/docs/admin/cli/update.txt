@@ -57,4 +57,29 @@ Usage example::
 zato update password
 ~~~~~~~~~~~~~~~~~~~~
 
+Updates a user's password. The password will not be echoed.
+As of now, the command works with web admin's users only and as such,
+needs an active connection to the ODB.
+
+Usage::
+
+    $ zato update password [-h] [--store-log] [--verbose] [--store-config]
+        path username
+                          
+Command-specific parameters:
+
+================================================= ===========
+Name                                              Description
+================================================= ===========
+path                                              Path to the web admin directory
+username                                          Username to change the password of
+================================================= ===========
+
+Usage example::
+
+    $ zato update password ~/zato1/web-admin/ jane.roe
+    Changing password for user 'jane.roe'
+    Password: 
+    Password (again): 
+    $
 
