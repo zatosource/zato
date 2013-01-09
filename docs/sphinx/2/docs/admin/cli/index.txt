@@ -50,6 +50,8 @@ Name                                                Description
 Common options
 --------------
 
+Each Zato command can make use of the following options:
+
 =============== ===========
 Name            Description
 =============== ===========
@@ -58,7 +60,9 @@ Name            Description
 --verbose       Displays verbose information during the command's execution
 --store-config  Outputs the command's input parameters to a config file in the directory the command has been run in.
                 The file can be later used with the :doc:`from-config<from-config>` command.
-                
-                **Note: all the input parameters are stored in plain text, including passwords and any other secrets**
 =============== ===========
 
+.. warning::                
+
+    All the input parameters stored by the --store-config option are in plain text,
+    including passwords and any other secrets.
