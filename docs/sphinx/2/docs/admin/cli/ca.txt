@@ -28,7 +28,7 @@ Subcommands
 zato ca create ca
 ~~~~~~~~~~~~~~~~~
 
-Creates a CA in the directory pointed to by *path*. On a successful command execution
+Creates a CA in an empty directory pointed to by *path*. On a successful command execution
 the following directory will be created::
 
     path
@@ -58,6 +58,12 @@ out-pub                                           Contains newly generated publi
    The private keys a CA generates are not password-protected. This is yet another
    reason the CA is consider a development-only tool instead of a full-featured framework
    for the management of a company's digital certificates.
+   
+.. note:: Default values
+
+   When generating certificates the CA will use default values provided by the
+   openssl command unless manually overridden on command line. Please refer to `openssl <https://openssl.org/>`_
+   documentation for more information on the default values that will be used.
    
 Usage
 ^^^^^
