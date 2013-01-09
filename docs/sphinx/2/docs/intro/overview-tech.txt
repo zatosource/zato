@@ -19,16 +19,16 @@ servers according to the configured algorithm, with round-robin being the defaul
 one.
 
 
-The load balancer is smart enough to notice, in case of a failure, a server
-to go down, and stops forwarding messages to it. Conversly, when a server goes up,
+The load balancer is smart enough to realize, in case of a failure, whether a server
+has gone down, and stops forwarding messages to it. Conversly, when a server comes up,
 the load balancer automatically recognizes it and starts dispatching requests.
 There is no limit to the number of servers in a cluster and administrators
-may take servers offline and online without disrupting message processing.
+have the ability to take servers offline or online without disrupting message processing.
 
 Zato's HA load balancer is implemented on top of
 `HAProxy <http://haproxy.1wt.eu/>`_. :ref:`(read more) <architecture/load-balancer>`
 
-A :ref:`Zato server <architecture/servers>` is the entity which does the job of exposing
+A :ref:`Zato server <architecture/servers>` is the entity that does the job of exposing
 services to external applications and does the processing of incoming requests.
 Servers are also capable of invoking other external applications through various
 protocols and formats.  
@@ -48,12 +48,12 @@ with a pinch of of `jQuery <http://jquery.com/>`_ added in for frontend features
 :ref:`(read more) <architecture/web-admin>`
 
 :ref:`ODB (Operational database) <architecture/sql-odb>` is an SQL database used for storing static
-configuration common to all members of the cluster. ODB may installed on
+configuration common to all members of the cluster. ODB may be installed on
 `Oracle <http://www.oracle.com/technology/software/products/database/index.html>`_ or
 `PostgreSQL <http://www.postgresql.org/>`_.
 :ref:`(read more) <architecture/sql-odb>`
 
-Redis is used to store the configuration of a more dynamic nature and to provide quick
+Redis is used to store the more dynamic configuration and to provide quick
 access to Zato statistics. :ref:`(read more) <stats/guide>`
 
 .. _implementation_overview:
