@@ -1,0 +1,64 @@
+Command line interface (CLI)
+============================
+
+Introduction
+------------
+
+Zato administrators use both the web admin and the command line interface (CLI)
+to manage Zato environments. These two methods don't overlap, both have their
+distinct responsibilites.
+
+While the web admin has been created with the goal
+of aiding in running an already existing environment, the CLI has been created
+with the goal of preparing Zato environments or otherwise addressing situations that
+need access to an operating system Zato components are installed on.
+
+Commands offered by the CLI always need an actual access to the file system via,
+for instance, ssh. They can't be issued remotely trough the web admin.
+
+All commands are run through a single executable called **zato**.
+
+Some commands are further composed of subcommands, e.g. the :doc:`zato update<./update>` command
+is a wrapper for more specific commands, such as :ref:`zato update crypto<cli_zato_update_crypto>`
+and :ref:`zato update password<cli_zato_update_password>`.
+
+Commands can be run in a batch mode by using the combination of the 
+:ref:`--store-config<cli_index_common_options>` option and the :doc:`from-config<from-config>` command.
+
+A summary of commands
+---------------------
+
+================================================= ===========
+Name                                              Description
+================================================= ===========
+:doc:`zato ca<ca>`                                Certificate Authority (CA) management
+:doc:`zato component-version<component-version>`  Shows a Zato component's version
+:doc:`zato create<create>`                        Creates a Zato component
+:doc:`zato decrypt<decrypt>`                      Decrypts secrets using a Zato component's private key
+:doc:`zato delete<delete>`                        Deletes a Zato component
+:doc:`zato encrypt<encrypt>`                      Encrypts secrets using a Zato component's public key
+:doc:`zato info<info>`                            Shows information on a Zato component
+:doc:`zato from-config<from-config>`              Runs commands from a config file
+:doc:`zato quickstart<quickstart>`                Quickly sets up a working Zato environment
+:doc:`zato start<start>`                          Starts a Zato component
+:doc:`zato stop<stop>`                            Stops a Zato component
+:doc:`zato update<./update>`                      Updates parts of a Zato component
+================================================= ===========
+
+.. _cli_index_common_options:
+
+Common options
+--------------
+
+=============== ===========
+Name            Description
+=============== ===========
+-h, --help      Displays given command's help message
+--store-log     Stores a command execution log in the directory the command has been run in.
+--verbose       Displays verbose information during the command's execution
+--store-config  Outputs the command's input parameters to a config file in the directory the command has been run in.
+                The file can be later used with the :doc:`from-config<from-config>` command.
+                
+                **Note: all the input parameters are stored in plain text, including passwords and any other secrets**
+=============== ===========
+
