@@ -1,5 +1,5 @@
 
-The next generation's ESB and application server. Open-source. In Python.
+The next generation ESB and application server. Open-source. In Python.
 ------------------------------------------------------------------------------------
 
 Getting help
