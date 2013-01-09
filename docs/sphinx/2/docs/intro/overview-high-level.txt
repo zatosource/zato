@@ -7,7 +7,7 @@ The three-layer architecture
 ============================
 
 In the classical three-layer architecture of fronted, middleware and backend
-processes, Zato is best placed at the middle and the far backend of your IT
+processes, Zato is best suited at the middle or far backend of your IT
 infrastructure.
 
 Zato is best suited for business integration - such as implementing an `Enterprise Service Bus (ESB)`_, 
@@ -37,21 +37,21 @@ and supporting applications running in a :doc:`HA<admin/ha>` configuration.
 Message processing
 ==================
 
-Consituting its very core, the Zato's excellect message processing capabilities allow you
+At its very core, the Zato's production ready processing capabilities allow you
 to:
 
 * create reusable services
 * transform messages between different formats
 * orchestrate the services of multiple autonomous systems
-* send and receive messages across many transports available, using either
+* send and receive messages between multiple transport protocols available, using either
   synchronous or asynchronous methods
 * log, audit and monitor messages flowing through the platform
-* validate the messages for accordance with business rules
+* validate the messages according to certain business rules
 * enrich the messages from different sources
-* queue the messages if applications involved in integration scenarios run at
+* queue the messages if the applications involved within the integration scenarios run at
   different processing speeds
 * implement services in less time using `Python`_, a very high-level programming language
-  that promotes the ease of use and development speed. A Hello World
+  that promotes ease of use and development speed. A Hello World
   service is shown below. Such a service can be hot-deployed onto a cluster
   without a need to restart servers.
   
