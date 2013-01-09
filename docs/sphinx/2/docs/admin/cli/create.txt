@@ -1,0 +1,17 @@
+zato create
+===========
+
+Overview
+------------
+
+Creates a Zato object, such as a server or a user.
+
+Subcommands
+------------
+
+* :doc:`zato create cluster<./create-cluster>`
+* :doc:`zato create load_balancer<./create-load-balancer>`
+* :doc:`zato create odb<./create-odb>`
+* :doc:`zato create server<./create-server>`
+* :doc:`zato create user<./create-user>`
+* :doc:`zato create web_admin<./create-web-admin>`

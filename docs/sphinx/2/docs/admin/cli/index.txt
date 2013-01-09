@@ -14,9 +14,9 @@ with the goal of preparing Zato environments or otherwise addressing situations 
 need access to an operating system Zato components are installed on.
 
 Commands offered by the CLI always need an actual access to the file system via,
-for instance, ssh. They can't be issued remotely trough the web admin.
+for instance, ssh. They can't be issued remotely through the web admin.
 
-All commands are run through a single executable called **zato**.
+All commands are run using a single executable called **zato**.
 
 Some commands are further composed of subcommands, e.g. the :doc:`zato update<./update>` command
 is a wrapper for more specific commands, such as :ref:`zato update crypto<cli_zato_update_crypto>`
@@ -33,7 +33,7 @@ Name                                                Description
 =================================================== ===========
 :doc:`zato ca<./ca>`                                Certificate Authority (CA) management
 :doc:`zato component-version<./component-version>`  Shows a Zato component's version
-:doc:`zato create<./create>`                        Creates a Zato component
+:doc:`zato create<./create>`                        Creates a Zato object
 :doc:`zato decrypt<./decrypt>`                      Decrypts secrets using a Zato component's private key
 :doc:`zato delete<./delete>`                        Deletes a Zato component
 :doc:`zato encrypt<./encrypt>`                      Encrypts secrets using a Zato component's public key
