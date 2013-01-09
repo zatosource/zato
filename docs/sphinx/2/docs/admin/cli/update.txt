@@ -28,12 +28,23 @@ new material without a restart.
 Old files will be replaced, however, they will still continue to exist in the
 component's :doc:`configuration repository<config-repo>`.
 
-Usage::
+Usage
+^^^^^
+
+::
 
     $ zato update crypto [-h] [--store-log] [--verbose] [--store-config]
         path priv_key_path pub_key_path ca_certs_path cert_path
+        
+::
+
+    $ zato update crypto ~/zato1/server1/ ~/crypto/zato.server1.priv.pem 
+        ~/crypto/zato.server1.pub.pem ~/crypto/ca-cert.pem 
+        ~/crypto/zato.server1.cert.pem
+    $
                           
-Command-specific parameters:
+Command-specific parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ================================================= ===========
 Name                                              Description
@@ -45,13 +56,6 @@ ca_certs_path                                     Path to a bundle of CA certifi
 cert_path                                         Path to a component's certificate in PEM
 ================================================= ===========
 
-Usage example::
-
-    $ zato update crypto ~/zato1/server1/ ~/crypto/zato.server1.priv.pem 
-        ~/crypto/zato.server1.pub.pem ~/crypto/ca-cert.pem 
-        ~/crypto/zato.server1.cert.pem
-    $
-
 .. _cli_zato_update_password:
 
 zato update password
@@ -61,12 +65,24 @@ Updates a user's password. The password will not be echoed.
 As of now, the command works with web admin's users only and as such,
 needs an active connection to the ODB.
 
-Usage::
+Usage
+^^^^^
+
+::
 
     $ zato update password [-h] [--store-log] [--verbose] [--store-config]
         path username
+        
+::
+
+    $ zato update password ~/zato1/web-admin/ jane.roe
+    Changing password for user 'jane.roe'
+    Password: 
+    Password (again): 
+    $
                           
-Command-specific parameters:
+Command-specific parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ================================================= ===========
 Name                                              Description
@@ -74,12 +90,3 @@ Name                                              Description
 path                                              Path to the web admin directory
 username                                          Username to change the password of
 ================================================= ===========
-
-Usage example::
-
-    $ zato update password ~/zato1/web-admin/ jane.roe
-    Changing password for user 'jane.roe'
-    Password: 
-    Password (again): 
-    $
-
