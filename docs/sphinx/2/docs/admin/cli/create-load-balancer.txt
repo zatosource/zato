@@ -5,6 +5,19 @@ zato create load_balancer
 Creates a :doc:`load-balancer<architecture/load-balancer>`. The directory the load-balancer will be created in
 must already exist and be empty. 
 
+Command-specific parameters
+---------------------------
+
+================================================= ================================================================================= ================
+Name                                              Description                                                                        Example value
+================================================= ================================================================================= ================
+path                                              Path to an empty directory the load-balancer will be installed in                  ~/dev3/load-balancer/
+pub_key_path                                      Path to a PEM-encoded load-balancer agent's public key                            ~/crypto/zato.lbdev3.pub.pem
+priv_key_path                                     Path to a PEM-encoded load-balancer agent's private key                           ~/crypto/zato.lbdev3.cert.pem
+cert_path                                         Path to a PEM-encoded load-balancer agent's certificate                           ~/crypto/zato.lbdev3.cert.pem
+ca_certs_path                                     Path to a PEM-encoded list of CA certificates the load-balancer agent is to trust ~/crypto/ca-cert.pem 
+================================================= ================================================================================= ================
+
 Usage
 -----
 
@@ -22,16 +35,3 @@ Usage
         ~/crypto/ca-cert.pem 
     OK
     $
-                          
-Command-specific parameters
----------------------------
-
-================================================= ================================================================================= ================
-Name                                              Description                                                                        Example value
-================================================= ================================================================================= ================
-path                                              Path to an empty directory the load-balancer will be installed in                  ~/dev3/load-balancer/
-pub_key_path                                      Path to a PEM-encoded load-balancer agent's public key                            ~/crypto/zato.lbdev3.pub.pem
-priv_key_path                                     Path to a PEM-encoded load-balancer agent's private key                           ~/crypto/zato.lbdev3.cert.pem
-cert_path                                         Path to a PEM-encoded load-balancer agent's certificate                           ~/crypto/zato.lbdev3.cert.pem
-ca_certs_path                                     Path to a PEM-encoded list of CA certificates the load-balancer agent is to trust ~/crypto/ca-cert.pem 
-================================================= ================================================================================= ================

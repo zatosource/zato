@@ -14,6 +14,20 @@ Private key    path/out-priv/web-admin-priv-*CURRENT_TIMESTAMP*.pem
 Public key     path/out-pub/web-admin-pub-*CURRENT_TIMESTAMP*.pem
 ============== ==============================================================
 
+Command-specific parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+================================================= =====================================================
+Name                                              Description
+================================================= =====================================================
+--organization                                    Organization name (O), e.g. 'My Company'
+--locality                                        Locality name (L), e.g. 'Roma'
+--state-or-province                               State or province name, e.g. 'Lazio'
+--country                                         Country name (C), e.g. 'Italia'
+--common-name                                     Common name (CN), e.g. 'localhost'
+path                                              Path to the CA
+================================================= =====================================================
+
 Usage
 ^^^^^
 
@@ -29,17 +43,3 @@ Usage
     $ zato ca create web_admin ~/zato1/ca/
     OK
     $
-    
-Command-specific parameters
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-================================================= =====================================================
-Name                                              Description
-================================================= =====================================================
---organization                                    Organization name (O), e.g. 'My Company'
---locality                                        Locality name (L), e.g. 'Roma'
---state-or-province                               State or province name, e.g. 'Lazio'
---country                                         Country name (C), e.g. 'Italia'
---common-name                                     Common name (CN), e.g. 'localhost'
-path                                              Path to the CA
-================================================= =====================================================

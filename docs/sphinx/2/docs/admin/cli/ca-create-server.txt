@@ -15,22 +15,6 @@ Private key    path/out-priv/*CLUSTER_NAME-SERVER_NAME-CURRENT_TIMESTAMP*.pem
 Public key     path/out-pub/*CLUSTER_NAME-SERVER_NAME-CURRENT_TIMESTAMP*.pem
 ============== ==============================================================
 
-Usage
------
-
-::
-
-    $ zato ca create server [-h] [--store-log] [--verbose] [--store-config]
-        [--organization ORGANIZATION] [--locality LOCALITY]
-        [--state-or-province STATE_OR_PROVINCE] [--country COUNTRY] [--common-name COMMON_NAME]
-        path cluster_name server_name
-        
-::
-
-    $ zato ca create server ~/zato1/ca/ dev3 server1
-    OK
-    $
-    
 Command-specific parameters
 ---------------------------
 
@@ -46,3 +30,19 @@ path                                              Path to the CA
 cluster_name                                      Name of a cluster this server belongs to, e.g. 'dev3'
 server_name                                       Name of the server, e.g. 'server1'
 ================================================= =====================================================
+
+Usage
+-----
+
+::
+
+    $ zato ca create server [-h] [--store-log] [--verbose] [--store-config]
+        [--organization ORGANIZATION] [--locality LOCALITY]
+        [--state-or-province STATE_OR_PROVINCE] [--country COUNTRY] [--common-name COMMON_NAME]
+        path cluster_name server_name
+        
+::
+
+    $ zato ca create server ~/zato1/ca/ dev3 server1
+    OK
+    $

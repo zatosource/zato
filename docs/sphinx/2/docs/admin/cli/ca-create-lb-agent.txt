@@ -13,6 +13,21 @@ Private key    path/out-priv/lb-agent-priv-*CURRENT_TIMESTAMP*.pem
 Public key     path/out-pub/lb-agent-pub-*CURRENT_TIMESTAMP*.pem
 ============== =================================================
 
+Command-specific parameters
+---------------------------
+
+================================================= ====================================================
+Name                                              Description
+================================================= ====================================================
+--organization                                    Organization name (O), e.g. 'My Company'
+--locality                                        Locality name (L), e.g. 'Roma'
+--state-or-province                               State or province name, e.g. 'Lazio'
+--country                                         Country name (C), e.g. 'Italia'
+--common-name                                     Common name (CN), e.g. 'localhost'
+path                                              Path to the CA
+organizational-unit                               Organizational unit name (OU), e.g. 'zato_lb_agent1'
+================================================= ====================================================
+
 Usage
 -----
 
@@ -28,18 +43,3 @@ Usage
     $ zato ca create lb_agent ~/zato1/ca/ zato_lb_agent1
     OK
     $
-    
-Command-specific parameters
----------------------------
-
-================================================= ====================================================
-Name                                              Description
-================================================= ====================================================
---organization                                    Organization name (O), e.g. 'My Company'
---locality                                        Locality name (L), e.g. 'Roma'
---state-or-province                               State or province name, e.g. 'Lazio'
---country                                         Country name (C), e.g. 'Italia'
---common-name                                     Common name (CN), e.g. 'localhost'
-path                                              Path to the CA
-organizational-unit                               Organizational unit name (OU), e.g. 'zato_lb_agent1'
-================================================= ====================================================

@@ -11,6 +11,30 @@ The command *does not* make the server start accepting messages immediately.
 An administrator still needs to :doc:`start the server<admin/start/server>` and accept it into a cluster
 by :doc:`confirming the step in the web admin<web-admin/servers/add-remove>`.
 
+Command-specific parameters
+---------------------------
+
+================================================= ================================================================================== ================
+Name                                              Description                                                                        Example value
+================================================= ================================================================================== ================
+--postgresql_schema                               PostgreSQL only: database schema to use                                            zato
+--odb_password                                    ODB password                                                                       kf094z203mck2303
+odb_type                                          ODB type, must be one of: ['oracle', 'postgresql']                                 postgresql
+path                                              An empty directory to install the server to                                        ~/prod3/server7/
+odb_host                                          Host the ODB is running on                                                         localhost
+odb_port                                          Port the ODB is listening at                                                       5432
+odb_user                                          Username to connect to ODB with                                                    zato1
+odb_db_name                                       ODB database name                                                                  zatodb1
+kvdb_host                                         Key/value DB host (Redis)                                                          localhost
+kvdb_port                                         Key/value DB port (Redis)                                                          6379
+pub_key_path                                      Path to a PEM-encoded server's public key                                          ~/crypto/zato.server7.pub.pem
+priv_key_path                                     Path to a PEM-encoded server's private key                                         ~/crypto/zato.server7.priv.pem
+cert_path                                         Path to a PEM-encoded server's certificate                                         ~/crypto/zato.server7.cert.pem
+ca_certs_path                                     Path to a PEM-encoded list of CA certificates the server is to trust               ~/crypto/ca-cert.pem   
+cluster_name                                      Name of the cluster this server will join                                          PROD3
+server_name                                       Server name                                                                        server7
+================================================= ================================================================================== ================
+
 Usage
 -----
 
@@ -40,27 +64,3 @@ Usage
     Enter the kvdb_password again (will not be echoed): 
     OK
     $
-                          
-Command-specific parameters
----------------------------
-
-================================================= ================================================================================== ================
-Name                                              Description                                                                        Example value
-================================================= ================================================================================== ================
---postgresql_schema                               PostgreSQL only: database schema to use                                            zato
---odb_password                                    ODB password                                                                       kf094z203mck2303
-odb_type                                          ODB type, must be one of: ['oracle', 'postgresql']                                 postgresql
-path                                              An empty directory to install the server to                                        ~/prod3/server7/
-odb_host                                          Host the ODB is running on                                                         localhost
-odb_port                                          Port the ODB is listening at                                                       5432
-odb_user                                          Username to connect to ODB with                                                    zato1
-odb_db_name                                       ODB database name                                                                  zatodb1
-kvdb_host                                         Key/value DB host (Redis)                                                          localhost
-kvdb_port                                         Key/value DB port (Redis)                                                          6379
-pub_key_path                                      Path to a PEM-encoded server's public key                                          ~/crypto/zato.server7.pub.pem
-priv_key_path                                     Path to a PEM-encoded server's private key                                         ~/crypto/zato.server7.priv.pem
-cert_path                                         Path to a PEM-encoded server's certificate                                         ~/crypto/zato.server7.cert.pem
-ca_certs_path                                     Path to a PEM-encoded list of CA certificates the server is to trust               ~/crypto/ca-cert.pem   
-cluster_name                                      Name of the cluster this server will join                                          PROD3
-server_name                                       Server name                                                                        server7
-================================================= ================================================================================== ================

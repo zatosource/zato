@@ -39,6 +39,21 @@ out-pub                                           Contains newly generated publi
    openssl command unless manually overridden on command line. Please refer to `openssl <https://openssl.org/>`_
    documentation for more information on the default values that will be used.
    
+Command-specific parameters
+---------------------------
+
+================================================= =======================================================================
+Name                                              Description
+================================================= =======================================================================
+--organization                                    Organization name (O), e.g. 'My Company'
+--organizational-unit                             Organizational unit (OU), e.g. 'My CA'
+--locality                                        Locality name (L), e.g. 'Roma'
+--state-or-province                               State or province name, e.g. 'Lazio'
+--country                                         Country name (C), e.g. 'Italia'
+--common-name                                     Common name (CN), e.g. 'localhost'
+path                                              Path to an empty directory to install the CA in
+================================================= =======================================================================
+
 Usage
 -----
 
@@ -55,18 +70,3 @@ Usage
     $ zato ca create ca ~/zato/dev3/ca
     OK
     $
-                          
-Command-specific parameters
----------------------------
-
-================================================= =======================================================================
-Name                                              Description
-================================================= =======================================================================
---organization                                    Organization name (O), e.g. 'My Company'
---organizational-unit                             Organizational unit (OU), e.g. 'My CA'
---locality                                        Locality name (L), e.g. 'Roma'
---state-or-province                               State or province name, e.g. 'Lazio'
---country                                         Country name (C), e.g. 'Italia'
---common-name                                     Common name (CN), e.g. 'localhost'
-path                                              Path to an empty directory to install the CA in
-================================================= =======================================================================

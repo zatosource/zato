@@ -12,6 +12,19 @@ new material without a restart.
 Old files will be replaced. However, they will still continue to exist in the
 component's :doc:`configuration repository<config-repo>`.
 
+Command-specific parameters
+---------------------------
+
+================================================= ===========
+Name                                              Description
+================================================= ===========
+path                                              Path to a Zato component
+pub_key_path                                      Path to a public key in PEM
+priv_key_path                                     Path to a private key in PEM
+cert_path                                         Path to a component's certificate in PEM
+ca_certs_path                                     Path to a bundle of CA certificates in PEM
+================================================= ===========
+
 Usage
 -----
 
@@ -28,16 +41,3 @@ Usage
         ~/crypto/zato.server1.cert.pem
         ~/crypto/ca-cert.pem 
     $
-                          
-Command-specific parameters
----------------------------
-
-================================================= ===========
-Name                                              Description
-================================================= ===========
-path                                              Path to a Zato component
-pub_key_path                                      Path to a public key in PEM
-priv_key_path                                     Path to a private key in PEM
-cert_path                                         Path to a component's certificate in PEM
-ca_certs_path                                     Path to a bundle of CA certificates in PEM
-================================================= ===========
