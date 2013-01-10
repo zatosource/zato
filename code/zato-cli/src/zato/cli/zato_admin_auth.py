@@ -34,6 +34,11 @@ class _ZatoAdminAuthCommand(ManageCommand):
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+        
+    def _ok(self, args):
+        # Needed because Django took over our logging config
+        self.reset_logger(args, True)
+        self.logger.info('OK')
 
 class UpdatePassword(_ZatoAdminAuthCommand):
     """ Updates a Zato admin user's password
@@ -46,7 +51,9 @@ class UpdatePassword(_ZatoAdminAuthCommand):
         
         from django.contrib.auth.management.commands.changepassword import Command
         Command().handle(args.username)
-
+        
+        self._ok(args)
+        
 class CreateUser(_ZatoAdminAuthCommand):
     """ Creates a new Zato admin user
     """
@@ -66,3 +73,5 @@ class CreateUser(_ZatoAdminAuthCommand):
         from django.contrib.auth.management.commands.createsuperuser import Command
         Command.stdout = CreateUser._FakeStdout(self.logger)
         Command().handle(interactive=True)
+
+        self._ok(args)
