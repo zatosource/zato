@@ -44,14 +44,16 @@ Usage
 
 ::
 
-    $ zato update crypto [-h] [--store-log] [--verbose] [--store-config]
-        path priv_key_path pub_key_path ca_certs_path cert_path
+    $ zato ca create ca [-h] [--store-log] [--verbose] [--store-config]
+        [--organization ORGANIZATION] [--organizational-unit ORGANIZATIONAL_UNIT]
+        [--locality LOCALITY] [--state-or-province STATE_OR_PROVINCE]
+        [--country COUNTRY] [--common-name COMMON_NAME]
+        path
         
 ::
 
-    $ zato update crypto ~/zato1/server1/ ~/crypto/zato.server1.priv.pem 
-        ~/crypto/zato.server1.pub.pem ~/crypto/ca-cert.pem 
-        ~/crypto/zato.server1.cert.pem
+    $ zato ca create ca ~/zato/dev3/ca
+    OK
     $
                           
 Command-specific parameters
@@ -60,9 +62,11 @@ Command-specific parameters
 ================================================= =======================================================================
 Name                                              Description
 ================================================= =======================================================================
-path                                              Path to a Zato component
-priv_key_path                                     Path to the component's private key in PEM
-pub_key_path                                      Path to the component's public key in PEM
-ca_certs_path                                     Path to the bundle of CA certificates the component is to trust, in PEM
-cert_path                                         Path to the component's certificate in PEM
+--organization                                    Organization name (O), e.g. 'My Company'
+--organizational-unit                             Organizational unit (OU), e.g. 'My CA'
+--locality                                        Locality name (L), e.g. 'Roma'
+--state-or-province                               State or province name, e.g. 'Lazio'
+--country                                         Country name (C), e.g. 'Italia'
+--common-name                                     Common name (CN), e.g. 'localhost'
+path                                              Path to an empty directory to install the CA in
 ================================================= =======================================================================
