@@ -161,6 +161,7 @@ class Create(ZatoCommand):
         
         if not cluster:
             msg = "Cluster [{}] doesn't exist in the ODB".format(args.cluster_name)
+            self.logger.error(msg)
             return self.SYS_ERROR.NO_SUCH_CLUSTER
         
         server = Server()
