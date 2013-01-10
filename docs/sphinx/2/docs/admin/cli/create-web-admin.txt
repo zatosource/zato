@@ -1,0 +1,57 @@
+
+zato create web_admin
+=====================
+
+Creates a new web admin instance. Sets up all the directories and config files
+needed to start the instance.
+
+Usage
+-----
+
+::
+
+    $ zato create zato_admin [-h] [--store-log] [--verbose] [--store-config]
+        [--postgresql_schema POSTGRESQL_SCHEMA] [--odb_password ODB_PASSWORD]
+        [--tech_account_password TECH_ACCOUNT_PASSWORD]
+        path odb_type odb_host odb_port odb_user odb_db_name
+        pub_key_path priv_key_path cert_path ca_certs_path
+        tech_account_name
+
+::
+
+    $ zato create zato_admin ~/prod7/web-admin postgresql localhost 5432 zato1 zatodb1 
+      ~/crypto/zato.webadmin7.pub.pem
+      ~/crypto/zato.webadmin7.priv.pem
+      ~/crypto/zato.webadmin7.cert.pem
+      ~/crypto/ca-cert.pem
+      techacc1
+
+    ODB database password (will not be echoed): 
+    Enter the odb_password again (will not be echoed): 
+
+    Technical account password (will not be echoed): 
+    Enter the tech_account_password again (will not be echoed): 
+    OK
+    $
+                          
+Command-specific parameters
+---------------------------
+
+================================================= ================================================================================== ================
+Name                                              Description                                                                        Example value
+================================================= ================================================================================== ================
+--postgresql_schema                               PostgreSQL only: database schema to use                                            zato
+--odb_password                                    ODB password                                                                       kf094z203mck2303
+--tech_account_password                           A password for the web admin's technical account user to connect with              jf90234aAZ9770da
+path                                              Path to an empty directory the web admin will be installed in                      ~/prod7/web-admin
+odb_type                                          ODB type, must be one of: ['oracle', 'postgresql']                                 postgresql
+odb_host                                          Host the ODB is running on                                                         localhost
+odb_port                                          Port the ODB is listening at                                                       5432
+odb_user                                          Username to connect to ODB with                                                    zato1
+odb_db_name                                       ODB database name                                                                  zatodb1
+pub_key_path                                      Path to a PEM-encoded web admin's public key                                       ~/crypto/zato.webadmin7.pub.pem
+priv_key_path                                     Path to a PEM-encoded web admin's private key                                      ~/crypto/zato.webadmin7.priv.pem
+cert_path                                         Path to a PEM-encoded web admin's certificate                                      ~/crypto/zato.webadmin7.cert.pem
+ca_certs_path                                     Path to a PEM-encoded list of CA certificates web admin is to trust                ~/crypto/ca-cert.pem   
+tech_account_name                                 Name of the web admin's technical account to use when connecting to clusters       techacc1
+================================================= ================================================================================== ================
