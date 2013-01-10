@@ -42,17 +42,17 @@ out-pub                                           Contains newly generated publi
 Command-specific parameters
 ---------------------------
 
-================================================= =======================================================================
-Name                                              Description
-================================================= =======================================================================
---organization                                    Organization name (O), e.g. 'My Company'
---organizational-unit                             Organizational unit (OU), e.g. 'My CA'
---locality                                        Locality name (L), e.g. 'Roma'
---state-or-province                               State or province name, e.g. 'Lazio'
---country                                         Country name (C), e.g. 'Italia'
---common-name                                     Common name (CN), e.g. 'localhost'
-path                                              Path to an empty directory to install the CA in
-================================================= =======================================================================
+================================================= =============================================== ==============
+Name                                              Description                                     Example value
+================================================= =============================================== ==============
+--organization                                    Organization name (O)                           My Company
+--organizational-unit                             Organizational unit (OU)                        My CA
+--locality                                        Locality name (L)                               Roma
+--state-or-province                               State or province name                          Lazio
+--country                                         Country name (C)                                Italia
+--common-name                                     Common name (CN)                                localhost
+path                                              Path to an empty directory to install the CA in ~/zato/dev3/ca
+================================================= =============================================== ==============
 
 Usage
 -----
