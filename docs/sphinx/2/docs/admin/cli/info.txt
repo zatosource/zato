@@ -1,0 +1,148 @@
+zato info
+===============
+
+Overview
+------------
+
+Displays information about a Zato component. The component doesn't have to be
+running but it will need to be if detailed information is to be returned. The output
+may be either an ASCII table or JSON.
+
+Regardless of the output format, the command will result a list of key/value pairs
+of the following meaning:
+
+================================================= ==========================================================================================
+Key                                               Description                                                                               
+================================================= ==========================================================================================
+component_details                                 Component details read from *path*/.zato-info                                             
+component_full_path                               Full file system path to the component                                                    
+component_host                                    Host the component is running on                                                          
+component_running                                 Whether the component was running when the command was executed                           
+current_time                                      Time when the command was run in the component operating system's TZ                      
+current_time_utc                                  Time when the command was run in UTC                                                      
+master_proc_connections                           Component's TCP connections                                                              
+master_proc_create_time                           Time when the component's main process was started in the component operating system's TZ
+master_proc_create_time_utc                       Time when the component's main process was started in UTC                                
+master_proc_name                                  Name of the component's master process                                                   
+master_proc_pid                                   PID of the component's master process                                                    
+master_proc_username                              Username (UID) of the component's master process                                         
+master_proc_workers_no                            How many subprocesses that are still running has the component spawned                   
+master_proc_workers_pids                          PIDs of all the subprocesses that are still running and have been spawned by the component
+================================================= ==========================================================================================
+
+In addition to the data above, if a component has started any subprocesses,
+for each child process, its creation time - both in the server's TZ and in UTC -
+and the child's TCP connections will be returned.
+
+Subcommands
+------------
+
+* (None)
+
+Command-specific parameters
+---------------------------
+
+================================================= ================================================== ================
+Name                                              Description                                        Example value
+================================================= ================================================== ================
+--json                                            Whether the data returned should be in JSON        True
+--cols_width                                      The width of both columns in ASCII table output    30,50
+path                                              Path to a Zato component                           ~/dev3/web-admin
+================================================= ================================================== ================
+
+Usage
+-----
+
+::
+
+    $ zato info [-h] [--store-log] [--verbose] [--store-config] [--json]
+        [--cols_width COLS_WIDTH] path
+        
+.. note::
+
+    There are two usage examples below. Note how the first one displays less
+    information because the component hasn't been started. The second one adds
+    additional information - the component was running at the time when
+    the command was executed.
+    
+::
+
+    $ zato info ~/dev3/web-admin
+        
+::
+
+    +--------------------------------+----------------------------------------------------+
+    |              Key               |                       Value                        |
+    +================================+====================================================+
+    | component_details              | {"created_user_host": "zato@prod3", "version":     |
+    |                                | "1.0", "component": "ZATO_ADMIN",                  |
+    |                                | "created_ts": "2013-01-08T22:15:32.528449"}        |
+    +--------------------------------+----------------------------------------------------+
+    | component_full_path            | /home/zato1/prod/zato-admin                        |
+    +--------------------------------+----------------------------------------------------+
+    | component_host                 | 10.151.13.87/prod3                                 |
+    +--------------------------------+----------------------------------------------------+
+    | component_running              | False                                              |
+    +--------------------------------+----------------------------------------------------+
+    | current_time                   | 2013-01-10T21:51:04.638084                         |
+    +--------------------------------+----------------------------------------------------+
+    | current_time_utc               | 2013-01-10T20:51:04.638102                         |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_connections        | None                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_create_time        | None                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_create_time_utc    | None                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_name               | None                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_pid                | None                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_username           | None                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_workers_no         | None                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_workers_pids       | None                                               |
+    +--------------------------------+----------------------------------------------------+
+
+::
+
+    +--------------------------------+----------------------------------------------------+
+    |              Key               |                       Value                        |
+    +================================+====================================================+
+    | component_details              | {"created_user_host": "zato@prod3", "version":     |
+    |                                | "1.0", "component": "ZATO_ADMIN",                  |
+    |                                | "created_ts": "2013-01-08T22:15:32.528449"}        |
+    +--------------------------------+----------------------------------------------------+
+    | component_full_path            | /home/zato1/prod/zato-admin                        |
+    +--------------------------------+----------------------------------------------------+
+    | component_host                 | 10.151.13.87/prod3                                 |
+    +--------------------------------+----------------------------------------------------+
+    | component_running              | True                                               |
+    +--------------------------------+----------------------------------------------------+
+    | current_time                   | 2013-01-10T21:54:41.610407                         |
+    +--------------------------------+----------------------------------------------------+
+    | current_time_utc               | 2013-01-10T20:54:41.610423                         |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_connections        | [connection(fd=5, family=2, type=1,                |
+    |                                | local_address=('0.0.0.0', 8183),                   |
+    |                                | remote_address=(), status='LISTEN'),               |
+    |                                | connection(fd=3, family=2, type=1,                 |
+    |                                | local_address=('127.0.0.1', 47579),                |
+    |                                | remote_address=('127.0.0.1', 5432),                |
+    |                                | status='ESTABLISHED')]                             |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_create_time        | 2013-01-10T21:52:18.730000                         |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_create_time_utc    | 2013-01-10T20:52:18.730000+00:00                   |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_name               | python                                             |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_pid                | 3941                                               |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_username           | zato1                                              |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_workers_no         | 0                                                  |
+    +--------------------------------+----------------------------------------------------+
+    | master_proc_workers_pids       | []                                                 |
+    +--------------------------------+----------------------------------------------------+
