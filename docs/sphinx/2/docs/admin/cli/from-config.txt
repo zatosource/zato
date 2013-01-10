@@ -21,7 +21,7 @@ the methods below result in exactly the same action being performed (:doc:`dropp
     
 ::
 
-    $ cat zato.2013_01_10_21_37_18_387928.config 
+    $ cat ./zato.2013_01_10_21_37_18_387928.config 
     # 2013_01_10_21_37_18_387928 - zato1@dev3
     command=delete_odb
     odb_db_name=zatodb1
@@ -33,7 +33,7 @@ the methods below result in exactly the same action being performed (:doc:`dropp
 
 ::
     
-    $ zato from-config zato.2013_01_10_21_37_18_387928.config 
+    $ zato from-config ./zato.2013_01_10_21_37_18_387928.config 
     OK
     $
     
@@ -49,11 +49,11 @@ Subcommands
 Command-specific parameters
 ---------------------------
 
-================================================= ======================================================================================================
-Name                                              Description
-================================================= ======================================================================================================
-path                                              Path to a Zato config file created using the :ref:`--store-config<cli_index_common_options>` switch
-================================================= ======================================================================================================
+==== =================================================================================================== ========================================
+Name Description                                                                                          Example value
+==== =================================================================================================== ========================================
+path Path to a Zato config file created using the :ref:`--store-config<cli_index_common_options>` switch ./zato. 2013_01_10_21_37_18_387928. config 
+==== =================================================================================================== ========================================
 
 Usage
 -----
@@ -65,6 +65,6 @@ Usage
         
 ::
 
-    $ zato from-config zato.2013_01_10_21_37_18_387928.config 
+    $ zato from-config ./zato.2013_01_10_21_37_18_387928.config 
     OK
     $
