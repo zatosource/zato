@@ -12,6 +12,21 @@ upon the command's successful completion.
 
 Passwords asked for during the command's execution will not be echoed.
 
+Command-specific parameters
+---------------------------
+
+================================================= ================================================================================== ================
+Name                                              Description                                                                        Example value
+================================================= ================================================================================== ================
+--postgresql_schema                               PostgreSQL only: database schema to use                                            zato
+--odb_password                                    ODB password                                                                       kf094z203mck2303
+odb_type                                          ODB type, must be one of: ['oracle', 'postgresql']                                 postgresql
+odb_host                                          Host the ODB is running on                                                         localhost
+odb_port                                          Port the ODB is listening at                                                       5432
+odb_user                                          Username to connect to ODB with                                                    zato1
+odb_db_name                                       ODB database name                                                                  zatodb1
+================================================= ================================================================================== ================
+
 Usage
 -----
 
@@ -29,18 +44,3 @@ Usage
     Enter the odb_password again (will not be echoed): 
     OK
     $
-                          
-Command-specific parameters
----------------------------
-
-================================================= ================================================================================== ================
-Name                                              Description                                                                        Example value
-================================================= ================================================================================== ================
---postgresql_schema                               PostgreSQL only: database schema to use                                            zato
---odb_password                                    ODB password                                                                       kf094z203mck2303
-odb_type                                          ODB type, must be one of: ['oracle', 'postgresql']                                 postgresql
-odb_host                                          Host the ODB is running on                                                         localhost
-odb_port                                          Port the ODB is listening at                                                       5432
-odb_user                                          Username to connect to ODB with                                                    zato1
-odb_db_name                                       ODB database name                                                                  zatodb1
-================================================= ================================================================================== ================

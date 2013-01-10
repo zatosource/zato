@@ -6,6 +6,29 @@ Creates a cluster's configuration in the :doc:`ODB<architecture/sql-odb>`. Doesn
 Zato components. Any passwords asked for won't be echoed. The command requires that
 the ODB be up and running.
 
+Command-specific parameters
+---------------------------
+
+================================================= ================================================================================== ================
+Name                                              Description                                                                        Example value
+================================================= ================================================================================== ================
+--postgresql_schema                               PostgreSQL only: database schema to use                                            zato
+--odb_password                                    ODB password                                                                       kf094z203mck2303
+--tech_account_password                           A password for the web admin's technical account user to connect with              jf90234aAZ9770da
+odb_type                                          ODB type, must be one of: ['oracle', 'postgresql']                                 postgresql
+odb_host                                          Host the ODB is running on                                                         localhost
+odb_port                                          Port the ODB is listening at                                                       5432
+odb_user                                          Username to connect to ODB with                                                    zato1
+odb_db_name                                       ODB database name                                                                  zatodb1
+lb_host                                           Host a load-balancer will be running                                               localhost
+lb_port                                           Port a load-balancer will accept HTTP requests at                                  11223
+lb_agent_port                                     Port a load-balancer's agent will receive XML-RPC requests at                      20151
+cluster_name                                      Cluster name                                                                       PROD3
+broker_host                                       Broker host (Redis)                                                                localhost
+broker_port                                       Broker port (Redis)                                                                6379
+tech_account_name                                 Name of a web admin's technical account that will be allowed to manage the cluster techacc1
+================================================= ================================================================================== ================
+
 Usage
 -----
 
@@ -30,26 +53,3 @@ Usage
     Enter the tech_account_password again (will not be echoed): 
     OK
     $
-                          
-Command-specific parameters
----------------------------
-
-================================================= ================================================================================== ================
-Name                                              Description                                                                        Example value
-================================================= ================================================================================== ================
---postgresql_schema                               PostgreSQL only: database schema to use                                            zato
---odb_password                                    ODB password                                                                       kf094z203mck2303
---tech_account_password                           A password for the web admin's technical account user to connect with              jf90234aAZ9770da
-odb_type                                          ODB type, must be one of: ['oracle', 'postgresql']                                 postgresql
-odb_host                                          Host the ODB is running on                                                         localhost
-odb_port                                          Port the ODB is listening at                                                       5432
-odb_user                                          Username to connect to ODB with                                                    zato1
-odb_db_name                                       ODB database name                                                                  zatodb1
-lb_host                                           Host a load-balancer will be running                                               localhost
-lb_port                                           Port a load-balancer will accept HTTP requests at                                  11223
-lb_agent_port                                     Port a load-balancer's agent will receive XML-RPC requests at                      20151
-cluster_name                                      Cluster name                                                                       PROD3
-broker_host                                       Broker host (Redis)                                                                localhost
-broker_port                                       Broker port (Redis)                                                                6379
-tech_account_name                                 Name of a web admin's technical account that will be allowed to manage the cluster techacc1
-================================================= ================================================================================== ================
