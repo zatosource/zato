@@ -58,10 +58,10 @@ class UpdateCrypto(ManageCommand):
     """ Updates cryptographic material of a given Zato component
     """
     opts = [
-        {'name':'priv_key_path', 'help':'Path to a private key in PEM'},
         {'name':'pub_key_path', 'help':'Path to a public key in PEM'},
-        {'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates in PEM"},
+        {'name':'priv_key_path', 'help':'Path to a private key in PEM'},
         {'name':'cert_path', 'help':"Path to a component's certificate in PEM"},
+        {'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates in PEM"},
     ]
     
     def _update_crypto(self, args, copy_crypto_meth, update_secrets=False, load_secrets_func=None,

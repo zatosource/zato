@@ -253,7 +253,7 @@ class Create(ZatoCommand):
         if show_output:
             if self.verbose:
                 msg = """Successfully created a new server.
-    You can now start it with the 'zato start {}' command.""".format(self.target_dir)
+You can now start it with the 'zato start {}' command.""".format(self.target_dir)
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')

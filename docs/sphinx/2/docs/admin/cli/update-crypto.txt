@@ -18,13 +18,15 @@ Usage
 ::
 
     $ zato update crypto [-h] [--store-log] [--verbose] [--store-config]
-        path priv_key_path pub_key_path ca_certs_path cert_path
+        path pub_key_path priv_key_path cert_path ca_certs_path
         
 ::
 
-    $ zato update crypto ~/zato1/server1/ ~/crypto/zato.server1.priv.pem 
-        ~/crypto/zato.server1.pub.pem ~/crypto/ca-cert.pem 
+    $ zato update crypto ~/zato1/server1/
+        ~/crypto/zato.server1.pub.pem
+        ~/crypto/zato.server1.priv.pem 
         ~/crypto/zato.server1.cert.pem
+        ~/crypto/ca-cert.pem 
     $
                           
 Command-specific parameters
@@ -34,8 +36,8 @@ Command-specific parameters
 Name                                              Description
 ================================================= ===========
 path                                              Path to a Zato component
-priv_key_path                                     Path to a private key in PEM
 pub_key_path                                      Path to a public key in PEM
-ca_certs_path                                     Path to a bundle of CA certificates in PEM
+priv_key_path                                     Path to a private key in PEM
 cert_path                                         Path to a component's certificate in PEM
+ca_certs_path                                     Path to a bundle of CA certificates in PEM
 ================================================= ===========
