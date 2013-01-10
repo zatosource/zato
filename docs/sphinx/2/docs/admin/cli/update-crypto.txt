@@ -15,15 +15,15 @@ component's :doc:`configuration repository<config-repo>`.
 Command-specific parameters
 ---------------------------
 
-================================================= ===========
-Name                                              Description
-================================================= ===========
-path                                              Path to a Zato component
-pub_key_path                                      Path to a public key in PEM
-priv_key_path                                     Path to a private key in PEM
-cert_path                                         Path to a component's certificate in PEM
-ca_certs_path                                     Path to a bundle of CA certificates in PEM
-================================================= ===========
+================================================= ========================================== ==============================
+Name                                              Description                                Example value
+================================================= ========================================== ==============================
+path                                              Path to a Zato component                   ~/zato1/server1/
+pub_key_path                                      Path to a public key in PEM                ~/crypto/zato.server1.pub.pem
+priv_key_path                                     Path to a private key in PEM               ~/crypto/zato.server1.priv.pem
+cert_path                                         Path to a component's certificate in PEM   ~/crypto/zato.server1.cert.pem
+ca_certs_path                                     Path to a bundle of CA certificates in PEM ~/crypto/ca-cert.pem 
+================================================= ========================================== ==============================
 
 Usage
 -----
@@ -37,7 +37,7 @@ Usage
 
     $ zato update crypto ~/zato1/server1/
         ~/crypto/zato.server1.pub.pem
-        ~/crypto/zato.server1.priv.pem 
+        ~/crypto/zato.server1.priv.pem
         ~/crypto/zato.server1.cert.pem
         ~/crypto/ca-cert.pem 
     $

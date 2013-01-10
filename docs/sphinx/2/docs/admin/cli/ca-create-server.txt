@@ -18,18 +18,18 @@ Public key     path/out-pub/*CLUSTER_NAME-SERVER_NAME-CURRENT_TIMESTAMP*.pem
 Command-specific parameters
 ---------------------------
 
-================================================= =====================================================
-Name                                              Description
-================================================= =====================================================
---organization                                    Organization name (O), e.g. 'My Company'
---locality                                        Locality name (L), e.g. 'Roma'
---state-or-province                               State or province name, e.g. 'Lazio'
---country                                         Country name (C), e.g. 'Italia'
---common-name                                     Common name (CN), e.g. 'localhost'
-path                                              Path to the CA
-cluster_name                                      Name of a cluster this server belongs to, e.g. 'dev3'
-server_name                                       Name of the server, e.g. 'server1'
-================================================= =====================================================
+================================================= ======================================== =============
+Name                                              Description                              Example value
+================================================= ======================================== =============
+--organization                                    Organization name (O)                    My Company
+--locality                                        Locality name (L)                        Roma
+--state-or-province                               State or province name                   Lazio
+--country                                         Country name (C)                         Italia
+--common-name                                     Common name (CN)                         localhost
+path                                              Path to the CA                           ~/zato1/ca/
+cluster_name                                      Name of a cluster this server belongs to dev3
+server_name                                       Name of the server                       server1
+================================================= ======================================== =============
 
 Usage
 -----

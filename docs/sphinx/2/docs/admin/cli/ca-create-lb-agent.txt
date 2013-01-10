@@ -16,17 +16,17 @@ Public key     path/out-pub/lb-agent-pub-*CURRENT_TIMESTAMP*.pem
 Command-specific parameters
 ---------------------------
 
-================================================= ====================================================
-Name                                              Description
-================================================= ====================================================
---organization                                    Organization name (O), e.g. 'My Company'
---locality                                        Locality name (L), e.g. 'Roma'
---state-or-province                               State or province name, e.g. 'Lazio'
---country                                         Country name (C), e.g. 'Italia'
---common-name                                     Common name (CN), e.g. 'localhost'
-path                                              Path to the CA
-organizational-unit                               Organizational unit name (OU), e.g. 'zato_lb_agent1'
-================================================= ====================================================
+================================================= ============================= ==============
+Name                                              Description                   Example value
+================================================= ============================= ==============
+--organization                                    Organization name (O)         My Company
+--locality                                        Locality name (L)             Roma
+--state-or-province                               State or province name        Lazio
+--country                                         Country name (C)              Italia
+--common-name                                     Common name (CN)              localhost
+path                                              Path to the CA                ~/zato1/ca/
+organizational-unit                               Organizational unit name (OU) zato_lb_agent1
+================================================= ============================= ==============
 
 Usage
 -----
