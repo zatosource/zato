@@ -28,7 +28,7 @@ Usage
 
 ::
 
-    $ zato decrypt [-h] [--store-log] [--verbose] [--store-config]
+    $ zato encrypt [-h] [--store-log] [--verbose] [--store-config]
         [--secret SECRET] path
         
 ::

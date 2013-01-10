@@ -19,8 +19,8 @@ for instance, ssh. They can't be issued remotely through the web admin.
 All commands are run using a single executable called **zato**.
 
 Some commands are further composed of subcommands, e.g. the :doc:`zato update<./update>` command
-is a wrapper for more specific commands, such as :ref:`zato update crypto<cli_zato_update_crypto>`
-and :ref:`zato update password<cli_zato_update_password>`.
+is a wrapper for more specific commands, such as :doc:`zato update crypto<./update-crypto>`
+and :doc:`zato update password<./update-password>`.
 
 Commands can be run in a batch mode by using the combination of the 
 :ref:`--store-config<cli_index_common_options>` option and the :doc:`from-config<from-config>` command.
