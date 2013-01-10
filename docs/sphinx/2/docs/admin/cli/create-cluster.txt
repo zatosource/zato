@@ -12,15 +12,16 @@ Usage
 ::
 
     $ zato create cluster [-h] [--store-log] [--verbose] [--store-config]
-        [--postgresql_schema POSTGRESQL_SCHEMA]
-        [--odb_password ODB_PASSWORD] [--tech_account_password TECH_ACCOUNT_PASSWORD]
+        [--postgresql_schema POSTGRESQL_SCHEMA] [--odb_password ODB_PASSWORD]
+        [--tech_account_password TECH_ACCOUNT_PASSWORD]
         odb_type odb_host odb_port odb_user odb_db_name
-        lb_host lb_port lb_agent_port cluster_name tech_account_name
+        lb_host lb_port lb_agent_port cluster_name
+        broker_host broker_port tech_account_name
         
 ::
 
     $ zato create cluster postgresql localhost 5432 zato1 zatodb1 
-        localhost 11223 20151 localhost 6379 PROD3 techacc1
+        localhost 11223 20151 PROD3 localhost 6379 techacc1
 
     ODB database password (will not be echoed): 
     Enter the odb_password again (will not be echoed): 
@@ -46,9 +47,9 @@ odb_user                                          Username to connect to ODB wit
 odb_db_name                                       ODB database name                                                                  zatodb1
 lb_host                                           Host a load-balancer will be running                                               localhost
 lb_port                                           Port a load-balancer will accept HTTP requests at                                  11223
-broker_host                                       Redis host                                                                         localhost
-broker_port                                       Redis port                                                                         6379
 lb_agent_port                                     Port a load-balancer's agent will receive XML-RPC requests at                      20151
 cluster_name                                      Cluster name                                                                       PROD3
+broker_host                                       Broker host (Redis)                                                                localhost
+broker_port                                       Broker port (Redis)                                                                6379
 tech_account_name                                 Name of a web admin's technical account that will be allowed to manage the cluster techacc1
 ================================================= ================================================================================== ================
