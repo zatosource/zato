@@ -157,6 +157,9 @@ class Create(ZatoCommand):
         user = User.objects.get(username=user_name)
         user.set_password(password)
         user.save()
+        
+        # Needed because Django took over our logging config
+        self.reset_logger(args, True)
 
         if show_output:
             if self.verbose:
