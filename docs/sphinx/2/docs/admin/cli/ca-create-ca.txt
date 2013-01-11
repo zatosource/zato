@@ -1,0 +1,72 @@
+
+zato ca create ca
+=================
+
+Creates a CA in an empty directory pointed to by *path*. On a successful command execution
+the following directory will be created::
+
+    path
+    ├── ca-material
+    ├── out-cert
+    ├── out-csr
+    ├── out-priv
+    └── out-pub
+    
+================================================= ========================================================================
+Name                                              Description
+================================================= ========================================================================
+ca-material                                       Stores CA's own configuration, in particular:
+
+                                                  * ca-cert.pem - CA's certificate in PEM
+                                                  * ca-certindex - an index of all the certificates issued by this CA
+                                                  * ca-key.pem - CA's password-protected private key 
+                                                  * ca-password - password to decrypt the private key with, in plain text.
+                                                    By default, it's a `UUID4 <https://en.wikipedia.org/wiki/UUID>`_.
+out-cert                                          Contains newly generated certificates
+out-priv                                          Contains newly generated private keys
+out-pub                                           Contains newly generated public keys
+================================================= ========================================================================
+
+.. warning:: Newly generated private keys are not password-protected 
+
+   The private keys a CA generates are not password-protected. This is yet another
+   reason the CA is consider a development-only tool instead of a full-featured framework
+   for the management of a company's digital certificates.
+   
+.. note:: Default values
+
+   When generating certificates the CA will use default values provided by the
+   openssl command unless manually overridden on command line. Please refer to `openssl <https://openssl.org/>`_
+   documentation for more information on the default values that will be used.
+   
+Command-specific parameters
+---------------------------
+
+================================================= =============================================== ==============
+Name                                              Description                                     Example value
+================================================= =============================================== ==============
+--organization                                    Organization name (O)                           My Company
+--organizational-unit                             Organizational unit (OU)                        My CA
+--locality                                        Locality name (L)                               Roma
+--state-or-province                               State or province name                          Lazio
+--country                                         Country name (C)                                Italia
+--common-name                                     Common name (CN)                                localhost
+path                                              Path to an empty directory to install the CA in ~/zato/dev3/ca
+================================================= =============================================== ==============
+
+Usage
+-----
+
+::
+
+    $ zato ca create ca [-h] [--store-log] [--verbose] [--store-config]
+        [--organization ORGANIZATION] [--organizational-unit ORGANIZATIONAL_UNIT]
+        [--locality LOCALITY] [--state-or-province STATE_OR_PROVINCE]
+        [--country COUNTRY] [--common-name COMMON_NAME]
+        path
+        
+::
+
+    $ zato ca create ca ~/zato/dev3/ca
+    OK
+    $

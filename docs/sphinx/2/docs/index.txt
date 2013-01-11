@@ -78,7 +78,7 @@ Administration guide
 
     * :doc:`Installing and configuring Zato components<admin/install>` |
       :doc:`Web admin<admin/web-admin>` | 
-      :doc:`Command line interface (CLI)<admin/cli>` |
+      :doc:`Command line interface (CLI)<admin/cli/index>` |
       :doc:`High availability<admin/ha>` |
       :doc:`Capacity planning<admin/capacity>` |
       :doc:`Installing services<admin/periodic>` |
@@ -170,7 +170,8 @@ Architecture
       :doc:`Load-balancer<architecture/load-balancer>` | 
       :doc:`Servers<architecture/servers>` | 
       :doc:`SQL ODB<architecture/sql-odb>` |
-      :doc:`Redis<architecture/redis>`
+      :doc:`Redis<architecture/redis>` |
+      :doc:`Certificate Authority (CA)<architecture/ca>`
       
 Statistics
 ==============================

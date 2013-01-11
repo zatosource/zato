@@ -1,0 +1,45 @@
+
+zato ca create web_admin
+========================
+
+Creates a certificate and a pair of private and public keys for a :doc:`web admin console<architecture/web-admin>`.
+
+Files will be stored in following locations, where *path* is the path to the CA used for generating the crypto material.
+
+============== ==============================================================
+Name           Location
+============== ==============================================================
+Certificate    path/out-cert/web-admin-cert-*CURRENT_TIMESTAMP*.pem
+Private key    path/out-priv/web-admin-priv-*CURRENT_TIMESTAMP*.pem
+Public key     path/out-pub/web-admin-pub-*CURRENT_TIMESTAMP*.pem
+============== ==============================================================
+
+Command-specific parameters
+---------------------------
+
+================================================= ====================== =============
+Name                                              Description            Example value
+================================================= ====================== =============
+--organization                                    Organization name (O)  My Company
+--locality                                        Locality name (L)      Roma
+--state-or-province                               State or province name Lazio
+--country                                         Country name (C)       Italia
+--common-name                                     Common name (CN)       localhost
+path                                              Path to the CA         ~/zato1/ca/
+================================================= ====================== =============
+
+Usage
+-----
+
+::
+
+    $ zato ca create web_admin [-h] [--store-log] [--verbose] [--store-config]
+        [--organization ORGANIZATION] [--locality LOCALITY]
+        [--state-or-province STATE_OR_PROVINCE] [--country COUNTRY] [--common-name COMMON_NAME]
+        path
+        
+::
+
+    $ zato ca create web_admin ~/zato1/ca/
+    OK
+    $

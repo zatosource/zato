@@ -1,0 +1,46 @@
+zato delete odb
+===============
+
+Overview
+------------
+
+Deletes an ODB. Drops all the SQL objects associates with the ODB. Does not
+attempt to delete the database itself.
+
+Similarly as when :doc:`creating an ODB <./create-odb>`, the database user will need to be
+granted rights required for dropping SQL objects. It is recommended that the
+during the command’s execution the user be the database’s owner. These elevated
+privileges can be curtailed upon the command’s successful completion.
+
+Command-specific parameters
+---------------------------
+
+================================================= ================================================== ================
+Name                                              Description                                        Example value
+================================================= ================================================== ================
+--postgresql_schema                               PostgreSQL only: database schema to use            zato
+--odb_password                                    ODB password                                       kf094z203mck2303
+odb_type                                          ODB type, must be one of: ['oracle', 'postgresql'] postgresql
+odb_host                                          Host the ODB is running on                         localhost
+odb_port                                          Port the ODB is listening at                       5432
+odb_user                                          Username to connect to ODB with                    zato1
+odb_db_name                                       ODB database name                                  zatodb1
+================================================= ================================================== ================
+
+Usage
+-----
+
+::
+
+    $ zato delete odb [-h] [--store-log] [--verbose] [--store-config]
+        [--postgresql_schema POSTGRESQL_SCHEMA] [--odb_password ODB_PASSWORD]
+        odb_type odb_host odb_port odb_user odb_db_name
+        
+::
+
+    $ zato delete odb postgresql localhost 5432 zato1 zatodb1
+
+    ODB database password (will not be echoed): 
+    Enter the odb_password again (will not be echoed): 
+    OK
+    $

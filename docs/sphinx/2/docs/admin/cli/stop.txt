@@ -1,0 +1,43 @@
+zato stop
+==========
+
+Overview
+------------
+
+Stops a Zato component. 
+
+If the component is a server, all the worker subprocesses will be stopped. If the server
+has started any outgoing connectors, they will be stopped too.
+
+Unlike the majority of other commands, *stop* doesn't merely print out OK on stdout
+on a successful completion. Instead, full path to the component stopped is repeated
+so that admins can quickly spot any mistakes and start back components that have
+been erroneously stopped.
+
+Subcommands
+------------
+
+* (None)
+
+Command-specific parameters
+---------------------------
+
+==== ================================= ================================= ================
+Name                                   Description                       Example value
+==== ================================= ================================= ================
+path                                   Path to a Zato component to stop  ~/dev3/web-admin
+==== ================================= ================================= ================
+
+Usage
+-----
+
+::
+
+    $ zato stop [-h] [--store-log] [--verbose] [--store-config]
+        path
+        
+::
+
+    $ zato stop ~/dev3/web-admin
+    Stopped web admin in /home/zato1/dev3/web-admin
+    $

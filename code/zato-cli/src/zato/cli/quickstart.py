@@ -75,7 +75,7 @@ echo [3/4] server2 started
 # .. web admin comes as the last one because it may ask Django-related questions.
 cd $BASE_DIR/zato-admin
 $ZATO_BIN start .
-echo [4/4] Zato admin started
+echo [4/4] Web admin started
 
 cd $BASE_DIR
 echo Zato quickstart environment started
@@ -108,7 +108,7 @@ echo [3/4] server2 stopped
 
 cd $BASE_DIR/zato-admin
 $ZATO_BIN stop .
-echo [4/4] Zato admin stopped
+echo [4/4] Web admin stopped
 
 cd $BASE_DIR
 echo Zato quickstart environment stopped
@@ -183,7 +183,7 @@ class Create(ZatoCommand):
         4) server1 
         5) server2 
         6) load-balancer
-        7) Zato admin
+        7) Web admin
         8) Scripts
         """
         next_step = count(1)
@@ -320,7 +320,7 @@ class Create(ZatoCommand):
         # Need to reset the logger here because executing the create_zato_admin command
         # loads the Zato admin's logger which doesn't like that of ours.
         self.reset_logger(args, True)
-        self.logger.info('[{}/{}] Zato admin created'.format(next_step.next(), total_steps))
+        self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
         
         #
         # 8) Scripts
@@ -344,7 +344,7 @@ class Create(ZatoCommand):
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
         
         if admin_created:
-            self.logger.info('Zato admin user:[admin], password:[{}]'.format(password))
+            self.logger.info('Web admin user:[admin], password:[{}]'.format(password))
         else:
             self.logger.info('User [admin] already exists in the ODB')
             

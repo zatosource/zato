@@ -1,3 +1,7 @@
+
+Zato documentation README
+-------------------------
+
 The documentation in this tree is in plain text files and can be viewed using
 any text file viewer.
 
@@ -7,10 +11,9 @@ easier viewing and browsing.
 
 To create an HTML version of the docs on a Unix machine (Linux or Mac):
 
-* Install Sphinx (using ``easy_install Sphinx`` or some other method)
+* Install Sphinx (``sudo apt-get install python-sphinx`` on Ubuntu)
 
-* In this docs/ directory, type ``make html`` (or ``make.bat html`` on
-  Windows) at a shell prompt.
+* Type ``make html`` (or ``make.bat html`` on Windows) at a shell prompt
 
 The documentation in _build/html/index.html can then be viewed in a web browser.
 
