@@ -1,0 +1,14 @@
+zato update
+============================
+
+Overview
+------------
+
+Updates parts of a Zato component that can't be otherwise updated through
+the web admin.
+
+Subcommands
+------------
+
+* :doc:`zato update crypto<./update-crypto>`
+* :doc:`zato update password<./update-password>`

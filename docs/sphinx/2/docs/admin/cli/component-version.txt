@@ -1,0 +1,35 @@
+zato component-version
+============================
+
+Overview
+------------
+
+Shows a Zato component's version. This is the Zato version this component has been created with.
+
+Subcommands
+------------
+
+* (None)
+
+Command-specific parameters
+---------------------------
+
+================================================= ======================== ================
+Name                                              Description              Example value
+================================================= ======================== ================
+path                                              Path to a Zato component ~/zato1/server1/
+================================================= ======================== ================
+
+Usage
+-----
+
+::
+
+    $ zato component-version [-h] [--store-log] [--verbose] [--store-config]
+        path
+        
+::
+
+    $ zato component-version ~/zato1/server1/
+    1.0
+    $

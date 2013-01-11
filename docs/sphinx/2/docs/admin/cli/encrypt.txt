@@ -1,0 +1,51 @@
+zato encrypt
+============
+
+Overview
+------------
+
+Encrypts secrets using a Zato component's public key. The secret can then be
+used in Zato config files. For instance, a server's main config file will have
+the database password encrypted in such a fashion.
+
+Subcommands
+------------
+
+* (None)
+
+Command-specific parameters
+---------------------------
+
+================================================= =====================================
+Name                                              Description
+================================================= =====================================
+--secret                                          A secret to be encrypted
+path                                              Path to a Zato component's public key
+================================================= =====================================
+
+Usage
+-----
+
+::
+
+    $ zato encrypt [-h] [--store-log] [--verbose] [--store-config]
+        [--secret SECRET] path
+        
+::
+
+    $ zato encrypt ~/prod3/server1/config/repo/zato-server-pub-key.pem 
+        --secret my-odb-password
+    Encrypted value is [E2BfdMsrkMlObl+NoVj83TvFbNLGkG70PUCE4esevV2pk38qg
+    XdT9G16nDJO/YmgMfxBZw3bkPxNNV9ynXlZToZLknYMVM4AfiYSQd0r2OW2GI7TEwOL/H
+    rcj7ieYeQzKmBAcyn0xmbMteoR6wjKdCeNuYUAc+g3soAzHok5s1kS3JF4ZX0uea7vQTU
+    JOtcBp8muS02D8m/xPRUx1df4GGQu7Gb+02ZyqzYoK026Ut17Kcw/9J3gill5V4SKgzVW
+    XWrbD/cxrpSs6U3hnmV+goqWZFthRs0l8usY3dlD1ShFFdFUm1cnxDgg2jEohPcbrvHHm
+    x8iORoNhbLlWvrmFg==]
+    $
+ 
+.. note::
+
+    In the usage example above the encrypted value has been split over several lines.
+    This has been done solely to illustrate the format of a typical Zato secret
+    but during the actual command's execution the secret will be provided on a single
+    line, without any line breaks.

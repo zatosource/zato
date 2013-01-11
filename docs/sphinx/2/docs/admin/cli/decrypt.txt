@@ -1,0 +1,50 @@
+zato decrypt
+============
+
+Overview
+------------
+
+Decrypts secrets using a Zato component's private key. The secret is assumed to
+have been previously encrypted using the component's public key.
+
+Subcommands
+------------
+
+* (None)
+
+Command-specific parameters
+---------------------------
+
+================================================= =======================================================================
+Name                                              Description
+================================================= =======================================================================
+--secret                                          A secret to be decrypted
+path                                              Path to a Zato component's private key
+================================================= =======================================================================
+
+Usage
+-----
+
+::
+
+    $ zato decrypt [-h] [--store-log] [--verbose] [--store-config]
+        [--secret SECRET] path
+        
+::
+
+    $ zato decrypt ~/prod3/server1/config/repo/zato-server-priv-key.pem 
+        --secret mopRmuHdv86wGnGsNbVvUJrAicycu2DAX4adkh54SM4Gm95x+
+        jWxDutKZ56qPnHnH2uZkgMkRm/c7gunLV44jqnkhqii9Qoc9UbzaSP8fJm
+        /2VzA7GMDLV6fi6NYV6M/iprrCf0XwoWCWYN7mX2HMsk98a43+GK1k+CBn
+        oW+6Q6VaoCTLOLi5u4Ankt8A2sQUKC+IxiP0q5E88fAA/5dVLAtzALC30V
+        Z07M7vk49KYZPTfcnN+on9GQEuMAR384JbqjMeIyULASoslXQ7YXuZ6+xr
+        ENM6/qrtMRgev0VFUrah2OMmILCDAeTAt+TSF5ejxIN9ZSW6T5gbV5OLNrBaA==
+    Secret is [zato1]
+    $
+ 
+.. note::
+
+    In the usage example above the secret has been split over several lines.
+    This has been done solely to illustrate the format of a typical Zato secret
+    but during the actual command's execution the secret must be provided on a single line,
+    with no line breaks.

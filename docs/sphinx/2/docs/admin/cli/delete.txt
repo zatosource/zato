@@ -1,0 +1,18 @@
+zato delete
+============
+
+Overview
+------------
+
+Deletes a Zato component.
+
+As of now, the command is capable of deleting an ODB only. Deleting any other
+component is simply a matter of:
+
+* making sure it's stopped
+* deleting it from the file-system using operating system's tools, such as `rm <https://en.wikipedia.org/wiki/Rm_%28Unix%29>`_
+
+Subcommands
+------------
+
+* :doc:`zato delete odb <./delete-odb>`
