@@ -257,14 +257,17 @@ version = 'Zato {}'.format(version_raw)
 
 
 class path(object):
-    def __init__(self, path, raise_on_not_found=False, ns="", text_only=False):
+    def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
         self.path = path
         self.ns = ns
         self.raise_on_not_found = raise_on_not_found
         self.text_only = text_only
 
     def get_from(self, elem):
-        _path = "{%s}%s" % (self.ns, self.path)
+        if self.ns:
+            _path = '{{{}}}{}'.format(self.ns, self.path)
+        else:
+            _path = self.path
         try:
             value = _ObjectPath(_path)(elem)
             if self.text_only:
@@ -278,7 +281,7 @@ class path(object):
 
 class zato_path(path):
     def __init__(self, path, raise_on_not_found=False, text_only=False):
-        super(zato_path, self).__init__("zato_message." + path, raise_on_not_found,
+        super(zato_path, self).__init__(path, raise_on_not_found,
                                         zato_namespace, text_only)
 
 class ZatoException(Exception):
