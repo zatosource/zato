@@ -46,14 +46,17 @@ _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses
 
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato"><soap:Body>{body}</soap:Body></soap:Envelope>"""
 
-zato_message = b"""
-    {data}
+zato_message = b"""<?xml version='1.0' encoding='UTF-8'?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+  <soap:Header>
     <zato_env>
-        <result>{result}</result>
-        <cid>{cid}</cid>
-        <details>{details}</details>
+      <result>{result}</result>
+      <cid>{cid}</cid>
+      <details>{details}</details>
     </zato_env>
-"""
+  </soap:Header>
+  <soap:Body>{data}</soap:Body>
+</soap:Envelope>"""
 
 zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message
 
@@ -274,7 +277,8 @@ class _BaseMessageHandler(object):
                 response.payload = response.payload.getvalue() if response.payload else ''
 
         if transport == URL_TYPE.SOAP:
-            response.payload = soap_doc.format(body=response.payload)
+            if not isinstance(service_instance, AdminService):
+                response.payload = soap_doc.format(body=response.payload)
     
     def set_content_type(self, response, data_format, transport, service_info):
         """ Sets a response's content type if one hasn't been supplied by the user.

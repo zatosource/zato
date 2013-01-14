@@ -54,3 +54,25 @@ class ZatoPathTestCase(TestCase):
             pass
         else:
             raise AssertionError('Expected an ParsingException with path:[{}]'.format(path))
+
+        """
+        POST http://localhost:17010/zato/soap HTTP/1.1
+        Accept-Encoding: gzip,deflate
+        Content-Type: text/xml;charset=UTF-8
+        x-zato-user: techacct-226327
+        x-zato-password: 04fd1704f75546d58765dd13516a1512
+        soapaction: zato:service.get-list
+        Content-Length: 322
+        Host: localhost:17010
+        Connection: Keep-Alive
+        User-Agent: Apache-HttpClient/4.1.1 (java 1.5)
+        
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="http://gefira.pl/zato">
+           <soapenv:Header/>
+           <soapenv:Body>
+              <zato:zato_service_get_list_request>
+                 <zato:cluster_id>1</zato:cluster_id>
+              </zato:zato_service_get_list_request>
+           </soapenv:Body>
+        </soapenv:Envelope>
+        """

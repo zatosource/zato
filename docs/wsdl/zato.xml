@@ -11,9 +11,9 @@ targetNamespace="http://gefira.pl/zato"
 
   <wsdl:types>
     <xsd:schema targetNamespace="http://gefira.pl/zato" elementFormDefault="qualified">
-    
-    
-    
+
+<!-- ####################################################################### -->
+
       <xsd:element name="zato_service_get_list_request">
         <xsd:complexType>
           <xsd:sequence>
@@ -21,67 +21,70 @@ targetNamespace="http://gefira.pl/zato"
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
+      
       <xsd:element name="zato_service_get_list_response">
         <xsd:complexType>
           <xsd:sequence>
-            <xsd:element name="id" type="xsd:int"/>
-            <xsd:element name="name" type="xsd:string"/>
-            <xsd:element name="is_active" type="xsd:boolean"/>
-            <xsd:element name="impl_name" type="xsd:string"/>
-            <xsd:element name="is_internal" type="xsd:boolean"/>
-            <xsd:element name="may_be_deleted" type="xsd:boolean"/>
-            <xsd:element name="usage" type="xsd:int"/>
-            <xsd:element name="slow_threshold" type="xsd:int"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="1" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="impl_name" type="xsd:string"/>
+                        <xsd:element name="is_internal" type="xsd:boolean"/>
+                        <xsd:element name="may_be_deleted" type="xsd:boolean"/>
+                        <xsd:element name="usage" type="xsd:int"/>
+                        <xsd:element name="slow_threshold" type="xsd:int"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element> 
-    
-    
-    
-<!--
-      <xsd:element name="zato_service_get_list_request">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element name="cluster_id" type="xsd:int"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-      <xsd:element name="zato_service_get_list_response">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element name="id" type="xsd:int"/>
-            <xsd:element name="name" type="xsd:string"/>
-            <xsd:element name="is_active" type="xsd:boolean"/>
-            <xsd:element name="impl_name" type="xsd:string"/>
-            <xsd:element name="is_internal" type="xsd:boolean"/>
-            <xsd:element name="may_be_deleted" type="xsd:boolean"/>
-            <xsd:element name="usage" type="xsd:int"/>
-            <xsd:element name="slow_threshold" type="xsd:int"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
--->
       
+<!-- ####################################################################### -->
+    
     </xsd:schema>
   </wsdl:types>
+
+<!-- ####################################################################### -->
   
   <wsdl:message name="zato_service_get_list_request_message">
     <wsdl:part element="zato:zato_service_get_list_request" name="parameters"/>
   </wsdl:message>
-  
   <wsdl:message name="zato_service_get_list_response_message">
     <wsdl:part element="zato:zato_service_get_list_response" name="parameters"/>
   </wsdl:message>
+
+<!-- ####################################################################### --> 
   
   <wsdl:portType name="zato">
+  
+<!-- ####################################################################### -->
+
     <wsdl:operation name="zato:service.get-list">
       <wsdl:input message="zato:zato_service_get_list_request_message"/>
       <wsdl:output message="zato:zato_service_get_list_response_message"/>
     </wsdl:operation>
+    
+<!-- ####################################################################### -->
+    
+    
   </wsdl:portType>
   
   <wsdl:binding name="zato" type="zato:zato">
     <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    
+
+<!-- ####################################################################### -->
+    
     <wsdl:operation name="zato:service.get-list">
       <soap:operation soapAction="zato:service.get-list"/>
       <wsdl:input>
@@ -91,11 +94,14 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
+    
+<!-- ####################################################################### -->
+    
   </wsdl:binding>
   
   <wsdl:service name="zato">
     <wsdl:port binding="zato:zato" name="zato">
-      <soap:address location="http://localhost:11223/zato/soap"/>
+      <soap:address location="http://localhost:17010/zato/soap"/>
     </wsdl:port>
   </wsdl:service>
 </wsdl:definitions>
