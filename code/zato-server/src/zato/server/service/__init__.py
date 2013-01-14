@@ -35,7 +35,7 @@ from bunch import Bunch, bunchify
 
 # lxml
 from lxml import etree
-from lxml.objectify import Element
+from lxml.objectify import deannotate, Element
 
 # Paste
 from paste.util.converters import asbool
@@ -44,7 +44,7 @@ from paste.util.converters import asbool
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common import KVDB, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
 from zato.common.util import new_cid, service_name_from_impl, TRACE1
@@ -200,7 +200,7 @@ class Request(ValueConverter):
     
                 if self.is_xml:
                     try:
-                        elem = zato_path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
+                        elem = path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
                     except ParsingException, e:
                         msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
                             etree.tostring(self.payload), format_exc(e))
@@ -459,6 +459,7 @@ class SimpleIOPayload(ValueConverter):
 
         if serialize:
             if self.zato_is_xml:
+                deannotate(top, cleanup_namespaces=True)
                 return etree.tostring(top)
             else:
                 return dumps(top)

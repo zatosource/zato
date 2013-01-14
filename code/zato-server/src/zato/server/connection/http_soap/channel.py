@@ -44,16 +44,16 @@ logger = logging.getLogger(__name__)
 _status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
 
-soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>{body}</soap:Body></soap:Envelope>"""
+soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato"><soap:Body>{body}</soap:Body></soap:Envelope>"""
 
-zato_message = b"""<zato_message xmlns="http://gefira.pl/zato">
+zato_message = b"""
     {data}
     <zato_env>
         <result>{result}</result>
         <cid>{cid}</cid>
         <details>{details}</details>
     </zato_env>
-</zato_message>"""
+"""
 
 zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message
 
