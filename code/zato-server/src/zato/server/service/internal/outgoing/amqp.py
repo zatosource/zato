@@ -29,7 +29,7 @@ from zato.common.odb.model import ConnDefAMQP, OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
 from zato.server.connection.amqp.outgoing import start_connector
 from zato.server.service import AsIs, Integer
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class _AMQPService(AdminService):
     def delete_outgoing(self, outgoing):
@@ -39,7 +39,9 @@ class _AMQPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_amqp_get_list_request'
+        response_elem = 'zato_outgoing_amqp_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority',
             'content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'),
@@ -55,7 +57,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing AMQP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_amqp_create_request'
+        response_elem = 'zato_outgoing_amqp_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
@@ -113,7 +117,9 @@ class Create(AdminService):
 class Edit(_AMQPService):
     """ Updates an outgoing AMQP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_amqp_edit_request'
+        response_elem = 'zato_outgoing_amqp_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
@@ -175,7 +181,9 @@ class Edit(_AMQPService):
 class Delete(_AMQPService):
     """ Deletes an outgoing AMQP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_amqp_delete_request'
+        response_elem = 'zato_outgoing_amqp_delete_response'
         input_required = ('id',)
 
     def handle(self):

@@ -29,7 +29,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_by_name, job_list
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 PREDEFINED_CRON_DEFINITIONS = {
     '@yearly': '0 0 1 1 *',
@@ -197,7 +197,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 class _CreateEdit(AdminService):
     """ A base class for both creating and editing scheduler jobs.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', 'extra')
         input_optional = ('id', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
         output_optional = ('id', 'cron_definition')
@@ -209,7 +209,7 @@ class _CreateEdit(AdminService):
                     self.logger, session, self.broker_client, self.response)
 
 class _Get(AdminService):
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'service_id', 'service_name')
         output_optional = ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
@@ -220,6 +220,10 @@ class _Get(AdminService):
 class GetList(_Get):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
+    class SimpleIO(_Get.SimpleIO):
+        request_elem = 'zato_scheduler_job_get_list_request'
+        response_elem = 'zato_scheduler_job_get_list_response'
+
     def get_data(self, session):
         return job_list(session, self.request.input.cluster_id, False)
 
@@ -231,6 +235,8 @@ class GetByName(_Get):
     """ Returns a job by its name.
     """
     class SimpleIO(_Get.SimpleIO):
+        request_elem = 'zato_scheduler_job_get_by_name_request'
+        response_elem = 'zato_scheduler_job_get_by_name_response'
         input_required = ('name',)
         
     def get_data(self, session):
@@ -243,15 +249,23 @@ class GetByName(_Get):
 class Create(_CreateEdit):
     """ Creates a new scheduler's job.
     """
+    class SimpleIO(_CreateEdit.SimpleIO):
+        request_elem = 'zato_scheduler_job_create_request'
+        response_elem = 'zato_scheduler_job_create_response'
         
 class Edit(_CreateEdit):
-    """ Updates a new scheduler's job.
+    """ Updates a scheduler's job.
     """
+    class SimpleIO(_CreateEdit.SimpleIO):
+        request_elem = 'zato_scheduler_job_edit_request'
+        response_elem = 'zato_scheduler_job_edit_response'
 
 class Delete(AdminService):
     """ Deletes a scheduler's job.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_scheduler_job_delete_request'
+        response_elem = 'zato_scheduler_job_delete_response'
         input_required = ('id',)
 
     def handle(self):
@@ -277,7 +291,9 @@ class Delete(AdminService):
 class Execute(AdminService):
     """ Executes a scheduler's job.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_scheduler_job_execute_request'
+        response_elem = 'zato_scheduler_job_execute_response'
         input_required = ('id',)
 
     def handle(self):

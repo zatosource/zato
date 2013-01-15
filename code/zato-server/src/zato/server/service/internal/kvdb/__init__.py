@@ -25,12 +25,14 @@ from traceback import format_exc
 # Zato
 from zato.common import ZatoException
 from zato.common.kvdb import redis_grammar
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class ExecuteCommand(AdminService):
     """ Executes a command against the key/value DB.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_remote_command_execute_request'
+        response_elem = 'zato_kvdb_remote_command_execute_response'
         input_required = ('command',)
         output_required = ('result',)
         

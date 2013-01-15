@@ -43,6 +43,7 @@ from scipy import stats as sp_stats
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
 from zato.server.service import UTC
+from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
 
@@ -256,6 +257,10 @@ class GetSummaryBase(StatsReturningService):
             n=self.request.input.n, n_type=self.request.input.n_type, needs_trends=False))
 
 class GetSummaryByDay(GetSummaryBase):
+    class SimpleIO(GetSummaryBase.SimpleIO):
+        request_elem = 'zato_stats_get_summary_by_day_request'
+        response_elem = 'zato_stats_get_summary_by_day_response'
+
     summary_type = 'by-day'
     stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_DAY
     
@@ -266,6 +271,10 @@ class GetSummaryByDay(GetSummaryBase):
             return '{}T23:59:59'.format(start)
 
 class GetSummaryByWeek(GetSummaryBase):
+    class SimpleIO(GetSummaryBase.SimpleIO):
+        request_elem = 'zato_stats_get_summary_by_week_request'
+        response_elem = 'zato_stats_get_summary_by_week_response'
+    
     summary_type = 'by-week'
     stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_WEEK
     
@@ -287,6 +296,10 @@ class GetSummaryByWeek(GetSummaryBase):
             return (start + relativedelta(weekday=SU(+1))).strftime('%Y-%m-%d 23:59:59')
     
 class GetSummaryByMonth(GetSummaryBase):
+    class SimpleIO(GetSummaryBase.SimpleIO):
+        request_elem = 'zato_stats_get_summary_by_month_request'
+        response_elem = 'zato_stats_get_summary_by_month_response'
+
     summary_type = 'by-month'
     stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_MONTH
     
@@ -298,6 +311,10 @@ class GetSummaryByMonth(GetSummaryBase):
             return '{0}-{1:0>2}-{2}T23:59:59'.format(start.year, start.month, monthrange(start.year, start.month)[1])
 
 class GetSummaryByYear(GetSummaryBase):
+    class SimpleIO(GetSummaryBase.SimpleIO):
+        request_elem = 'zato_stats_get_summary_by_year_request'
+        response_elem = 'zato_stats_get_summary_by_year_response'
+    
     summary_type = 'by-year'
     stats_key_prefix = KVDB.SERVICE_SUMMARY_BY_YEAR
 
@@ -310,6 +327,10 @@ class GetSummaryByYear(GetSummaryBase):
 class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
     """ Returns a summary of statistics across a range of UTC start and stop parameters.
     """
+    class SimpleIO(GetSummaryBase.SimpleIO):
+        request_elem = 'zato_stats_get_summary_by_range_request'
+        response_elem = 'zato_stats_get_summary_by_range_response'
+    
     MINIMUM_DIFFERENCE = 3 # In minutes
     SLICE_TYPE_METHOD = {
         KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE: 'minutely',

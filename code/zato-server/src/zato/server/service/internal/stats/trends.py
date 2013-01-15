@@ -28,6 +28,8 @@ class GetTrends(StatsReturningService):
     along with their trends.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
+        request_elem = 'zato_stats_get_trends_request'
+        response_elem = 'zato_stats_get_trends_response'
         input_required = StatsReturningService.SimpleIO.input_required + (Integer('n'), 'n_type')
 
     def handle(self):

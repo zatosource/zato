@@ -25,6 +25,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common import zato_namespace
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.server.service import Service
 
@@ -44,9 +45,12 @@ class AdminService(Service):
     
     def get_data(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
+    
+class AdminSIO(object):
+    namespace = zato_namespace
 
 class Ping(AdminService):
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
         output_required = ('ping',)
         
     def handle(self):
@@ -58,7 +62,7 @@ class Ping2(Ping):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
         input_required = ('id', 'password1', 'password2')
 
     def _handle(self, class_, auth_func, action, name_func=None, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL,

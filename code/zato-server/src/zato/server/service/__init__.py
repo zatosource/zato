@@ -297,7 +297,7 @@ class Response(object):
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
         response_elem = getattr(io, 'response_elem', 'response')
-        namespace = getattr(io, 'namespace', zato_namespace)
+        namespace = getattr(io, 'namespace', '')
         self.outgoing_declared = True if required_list or optional_list else False
         
         if required_list or optional_list:
@@ -455,7 +455,7 @@ class SimpleIOPayload(ValueConverter):
                     value = out_item
                         
         if self.zato_is_xml:
-            em = ElementMaker(annotate=False, namespace=zato_namespace, nsmap={None:zato_namespace})
+            em = ElementMaker(annotate=False, namespace=self.namespace, nsmap={None:self.namespace})
             zato_env = em.zato_env(em.cid(self.zato_cid), em.result(ZATO_OK))
             top = getattr(em, self.response_elem)(zato_env)
             top.append(value)

@@ -25,7 +25,7 @@ from hashlib import sha1, sha256
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import grouper, multikeysort
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
 class _DeletingService(DataDictService):
@@ -40,7 +40,9 @@ class _DeletingService(DataDictService):
 class GetList(DataDictService):
     """ Returns a list of translations.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_translation_get_list_request'
+        response_elem = 'zato_kvdb_data_dict_translation_get_list_response'
         output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2', 'id1', 'id2')
         
     def get_data(self):
@@ -121,7 +123,9 @@ class _CreateEdit(DataDictService):
 class Create(_CreateEdit):
     """ Creates a translation between dictionary entries.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_translation_create_request'
+        response_elem = 'zato_kvdb_data_dict_translation_create_response'
         input_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)
         
@@ -134,7 +138,9 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     """ Updates a translation between dictionary entries.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_translation_edit_request'
+        response_elem = 'zato_kvdb_data_dict_translation_edit_response'
         input_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)
         
@@ -152,14 +158,18 @@ class Edit(_CreateEdit):
 class Delete(_DeletingService):
     """ Deletes a translation between dictionary entries.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_translation_delete_request'
+        response_elem = 'zato_kvdb_data_dict_translation_delete_response'
         input_required = ('id',)
         
     def handle(self):
         self.delete(self.request.input.id)
 
 class Translate(AdminService):
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_translation_translate_request'
+        response_elem = 'zato_kvdb_data_dict_translation_translate_response'
         input_required = ('system1', 'key1', 'value1', 'system2', 'key2')
         output_optional = ('value2', 'repr', 'hex', 'sha1', 'sha256')
         
@@ -178,7 +188,9 @@ class GetLastID(AdminService):
     """ Returns the value of the last dictionary's ID or nothing at all if the key
     for holding its value doesn't exist.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = '_request'
+        response_elem = '_response'
         output_optional = ('value',)
         
     def handle(self):
