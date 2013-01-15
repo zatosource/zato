@@ -35,7 +35,7 @@ from bunch import Bunch, bunchify
 
 # lxml
 from lxml import etree
-from lxml.objectify import deannotate, Element
+from lxml.objectify import deannotate, Element, ElementMaker
 
 # Paste
 from paste.util.converters import asbool
@@ -297,7 +297,7 @@ class Response(object):
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
         response_elem = getattr(io, 'response_elem', 'response')
-        namespace = getattr(io, 'namespace', 'response')
+        namespace = getattr(io, 'namespace', zato_namespace)
         self.outgoing_declared = True if required_list or optional_list else False
         
         if required_list or optional_list:
@@ -310,7 +310,7 @@ class SimpleIOPayload(ValueConverter):
     they don't conflict with user-provided data.
     """
     def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace):
-        self.zato_cid = None
+        self.zato_cid = zato_cid
         self.zato_logger = logger
         self.zato_is_xml = data_format == SIMPLE_IO.FORMAT.XML
         self.zato_output = []
@@ -455,10 +455,12 @@ class SimpleIOPayload(ValueConverter):
                     value = out_item
                         
         if self.zato_is_xml:
-            top = Element('{{{}}}{}'.format(self.namespace, self.response_elem))
+            em = ElementMaker(annotate=False, namespace=zato_namespace, nsmap={None:zato_namespace})
+            zato_env = em.zato_env(em.cid(self.zato_cid), em.result(ZATO_OK))
+            top = getattr(em, self.response_elem)(zato_env)
             top.append(value)
-            print(10101010, self.namespace, self.response_elem)
-            print(10101010, top)
+            
+            #zato_env = 
         else:
             top = {self.response_elem: value}
 
