@@ -14,6 +14,19 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ####################################################################### -->
 
+      <xsd:element name="zato_env">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cid" type="xsd:string"/>
+            <xsd:element name="result" type="xsd:string"/>
+            <xsd:element name="details" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      
+<!-- ####################################################################### -->
+
+
       <xsd:element name="zato_service_get_list_request">
         <xsd:complexType>
           <xsd:sequence>
@@ -25,6 +38,7 @@ targetNamespace="http://gefira.pl/zato"
       <xsd:element name="zato_service_get_list_response">
         <xsd:complexType>
           <xsd:sequence>
+            <xsd:element ref="zato_env"/>
             <xsd:element name="item_list">
               <xsd:complexType>
                 <xsd:sequence>
