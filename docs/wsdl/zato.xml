@@ -28,7 +28,7 @@ targetNamespace="http://gefira.pl/zato"
             <xsd:element name="item_list">
               <xsd:complexType>
                 <xsd:sequence>
-                  <xsd:element name="item" minOccurs="1" maxOccurs="unbounded">
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
                     <xsd:complexType>
                       <xsd:sequence>
                         <xsd:element name="id" type="xsd:int"/>
