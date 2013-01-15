@@ -44,7 +44,7 @@ from paste.util.converters import asbool
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import KVDB, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common import KVDB, ParsingException, path, SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
 from zato.common.util import new_cid, service_name_from_impl, TRACE1
@@ -297,17 +297,19 @@ class Response(object):
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
         response_elem = getattr(io, 'response_elem', 'response')
+        namespace = getattr(io, 'namespace', 'response')
         self.outgoing_declared = True if required_list or optional_list else False
         
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config, response_elem)
+            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config, 
+                                              response_elem, namespace)
             
 class SimpleIOPayload(ValueConverter):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
     they don't conflict with user-provided data.
     """
-    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem):
+    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace):
         self.zato_cid = None
         self.zato_logger = logger
         self.zato_is_xml = data_format == SIMPLE_IO.FORMAT.XML
@@ -320,6 +322,7 @@ class SimpleIOPayload(ValueConverter):
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         self.date_time_format = simple_io_config.get('date_time_format', 'YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM')
         self.response_elem = response_elem
+        self.namespace = namespace
 
         self.zato_all_attrs = set()
         for name in chain(required_list, optional_list):
@@ -452,8 +455,10 @@ class SimpleIOPayload(ValueConverter):
                     value = out_item
                         
         if self.zato_is_xml:
-            top = Element(self.response_elem)
+            top = Element('{{{}}}{}'.format(self.namespace, self.response_elem))
             top.append(value)
+            print(10101010, self.namespace, self.response_elem)
+            print(10101010, top)
         else:
             top = {self.response_elem: value}
 
