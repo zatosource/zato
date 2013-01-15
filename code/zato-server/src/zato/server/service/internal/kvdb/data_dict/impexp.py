@@ -25,6 +25,7 @@ from anyjson import loads
 # Zato
 from zato.common import KVDB
 from zato.common.util import dict_item_name, translation_name
+from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
 class Import(DataDictService):
