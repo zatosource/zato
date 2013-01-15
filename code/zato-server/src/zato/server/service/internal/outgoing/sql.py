@@ -29,7 +29,7 @@ from zato.common import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class _SQLService(object):
     """ A common class for various SQL-related services.
@@ -47,7 +47,9 @@ class _SQLService(object):
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_sql_get_list_request'
+        response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'engine', 'host', 'port',
             'db_name', 'username', 'pool_size', 'extra')
@@ -62,7 +64,9 @@ class GetList(AdminService):
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_sql_create_request'
+        response_elem = 'zato_outgoing_sql_create_response'
         input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
         input_optional = ('extra',)
         output_required = ('id',)
@@ -114,7 +118,9 @@ class Create(AdminService, _SQLService):
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_sql_edit_request'
+        response_elem = 'zato_outgoing_sql_edit_response'
         input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
         input_optional = ('extra',)
         output_required = ('id',)
@@ -168,7 +174,9 @@ class Edit(AdminService, _SQLService):
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_sql_delete_request'
+        response_elem = 'zato_outgoing_sql_delete_response'
         input_required = ('id',)
 
     def handle(self):
@@ -191,25 +199,26 @@ class Delete(AdminService, _SQLService):
 
                 raise
 
-            
-        
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing SQL connection. The underlying implementation
     will actually stop and recreate the connection using the new password.
     """
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_outgoing_sql_change_password_request'
+        response_elem = 'zato_outgoing_sql_change_password_response'
+    
     def handle(self):
-
         with closing(self.odb.session()) as session:
-            
             def _auth(instance, password):
                 instance.password = password
-                
             self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD)
             
 class Ping(AdminService):
     """ Pings an SQL database
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_sql_ping_request'
+        response_elem = 'zato_outgoing_sql_ping_response'
         input_required = ('id',)
         output_required = ('response_time',)
 

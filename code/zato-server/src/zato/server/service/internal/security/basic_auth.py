@@ -28,12 +28,14 @@ from uuid import uuid4
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_basic_auth_get_list_request'
+        response_elem = 'zato_security_basic_auth_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'username', 'realm')
         
@@ -47,7 +49,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new HTTP Basic Auth definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_basic_auth_create_request'
+        response_elem = 'zato_security_basic_auth_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'username', 'realm')
         output_required = ('id', 'name')
 
@@ -91,7 +95,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an HTTP Basic Auth definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_basic_auth_edit_request'
+        response_elem = 'zato_security_basic_auth_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 'realm')
         output_required = ('id', 'name')
 
@@ -137,6 +143,10 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_security_basic_auth_change_password_request'
+        response_elem = 'zato_security_basic_auth_change_password_response'
+    
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -146,7 +156,9 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_basic_auth_delete_request'
+        response_elem = 'zato_security_basic_auth_delete_response'
         input_required = ('id',)
 
     def handle(self):

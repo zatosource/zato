@@ -28,12 +28,14 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_jms_wmq_list
 from zato.server.connection.jms_wmq.channel import start_connector
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ channels.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_jms_wmq_get_list_request'
+        response_elem = 'zato_channel_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'service_name', 'def_name', 'def_id', 'data_format')
         
@@ -47,7 +49,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WebSphere MQ channel.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_jms_wmq_create_request'
+        response_elem = 'zato_channel_jms_wmq_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
         input_optional = ('data_format',)
         output_required = ('id',)
@@ -104,7 +108,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a JMS WebSphere MQ channel.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_jms_wmq_edit_request'
+        response_elem = 'zato_channel_jms_wmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
         input_optional = ('data_format',)
         output_required = ('id',)
@@ -164,7 +170,9 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an JMS WebSphere MQ channel.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_jms_wmq_delete_request'
+        response_elem = 'zato_channel_jms_wmq_delete_response'
         input_required = ('id',)
 
     def handle(self):

@@ -32,7 +32,7 @@ from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
 from zato.common.util import security_def_type
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.
@@ -72,7 +72,9 @@ class _HTTPSOAPService(object):
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_get_list_request'
+        response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id', 'connection', 'transport')
         output_required = ('id', 'name', 'is_active', 'is_internal', 'host', 
             'url_path', 'method', 'soap_action', 'soap_version', 'data_format', 
@@ -90,7 +92,9 @@ class GetList(AdminService):
 class Create(AdminService, _HTTPSOAPService):
     """ Creates a new HTTP/SOAP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_create_request'
+        response_elem = 'zato_http_soap_create_response'
         input_required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
                     'url_path', 'service', 'security_id')
         input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
@@ -179,7 +183,9 @@ class Create(AdminService, _HTTPSOAPService):
 class Edit(AdminService, _HTTPSOAPService):
     """ Updates an HTTP/SOAP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_edit_request'
+        response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
                 'connection', 'service', 'transport', 'security_id')
         input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
@@ -273,7 +279,9 @@ class Edit(AdminService, _HTTPSOAPService):
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_delete_request'
+        response_elem = 'zato_http_soap_delete_response'
         input_required = ('id',)
 
     def handle(self):
@@ -309,7 +317,9 @@ class Delete(AdminService, _HTTPSOAPService):
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_ping_request'
+        response_elem = 'zato_http_soap_ping_response'
         input_required = ('id',)
         output_required = ('info',)
 

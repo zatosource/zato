@@ -24,12 +24,14 @@ from contextlib import closing
 
 # Zato
 from zato.common.odb.query import basic_auth_list, tech_acc_list, wss_list
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_get_list_request'
+        response_elem = 'zato_security_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'sec_type')
         output_optional = ('username', 'realm', 'password_type', 'reject_empty_nonce_creat', 

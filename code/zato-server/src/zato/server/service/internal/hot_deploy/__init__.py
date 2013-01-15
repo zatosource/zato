@@ -39,7 +39,7 @@ from retools.lock import Lock
 from zato.common import DEPLOYMENT_STATUS, KVDB
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
 from zato.common.util import decompress, fs_safe_now, is_python_file, visit_py_source_from_distribution
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 MAX_BACKUPS = 1000
 _first_prefix = '0' * (len(str(MAX_BACKUPS)) - 1) # So it runs from, e.g.,  000 to 999
@@ -49,7 +49,9 @@ class Create(AdminService):
     package stored in the ODB and starts all the services contained within the
     package.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = '_request'
+        response_elem = '_response'
         input_required = ('package_id',)
         
     def _delete(self, items):

@@ -29,12 +29,14 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.odb.query import wss_list
 from zato.server.service import Boolean, Integer
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_wss_get_list_request'
+        response_elem = 'zato_security_wss_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'password_type', 'username', 
             'reject_empty_nonce_creat', 'reject_stale_tokens', 'reject_expiry_limit', 
@@ -50,7 +52,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new WS-Security definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_wss_create_request'
+        response_elem = 'zato_security_wss_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
@@ -98,7 +102,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a WS-S definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_wss_edit_request'
+        response_elem = 'zato_security_wss_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             'reject_expiry_limit', Integer('nonce_freshness_time'))
@@ -149,6 +155,10 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a WS-Security definition.
     """
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_security_wss_change_password_request'
+        response_elem = 'zato_security_wss_change_password_response'
+        
     def handle(self):
         def _auth(instance, password):
             instance.password = password
@@ -158,7 +168,9 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_wss_delete_request'
+        response_elem = 'zato_security_wss_delete_response'
         input_required = ('id',)
 
     def handle(self):

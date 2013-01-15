@@ -41,12 +41,12 @@ from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, 
 from zato.common.odb.query import service, service_list
 from zato.common.util import hot_deploy, payload_from_request
 from zato.server.service import Boolean, Integer
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
     """ Returns a list of services.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
         input_required = ('cluster_id',)
@@ -75,7 +75,9 @@ class GetList(AdminService):
 class GetByName(AdminService):
     """ Returns a particular service.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_get_by_name_request'
+        response_elem = 'zato_service_get_by_name_response'
         input_required = ('cluster_id', 'name')
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage', 
             'time_last', 'time_min_all_time', 'time_max_all_time', 'time_mean_all_time',
@@ -109,7 +111,9 @@ class GetByName(AdminService):
 class Edit(AdminService):
     """ Updates a service.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_edit_request'
+        response_elem = 'zato_service_edit_response'
         input_required = ('id', 'is_active', Integer('slow_threshold'))
         output_required = ('id', 'name', 'impl_name', 'is_internal',)
         output_optional = ('usage',)
@@ -141,7 +145,9 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a service
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_delete_request'
+        response_elem = 'zato_service_delete_response'
         input_required = ('id',)
 
     def handle(self):
@@ -177,7 +183,9 @@ class GetChannelList(AdminService):
     """ Returns a list of channels of a given type through which the service
     is being exposed.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_get_channel_list_request'
+        response_elem = 'zato_service_get_channel_list_response'
         input_required = ('id', 'channel_type')
         output_required = ('id', 'name')
         
@@ -208,7 +216,9 @@ class Invoke(AdminService):
     """ Invokes the service directly, as though it was exposed through some channel
     which doesn't necessarily have to be true.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_invoke_request'
+        response_elem = 'zato_service_invoke_response'
         input_required = ('id', 'payload')
         input_optional = ('data_format', 'transport')
         output_required = ('response',)
@@ -226,7 +236,9 @@ class GetDeploymentInfoList(AdminService):
     """ Returns detailed information regarding the service's deployment status
     on each of the servers it's been deployed to.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_get_deployment_info_list_request'
+        response_elem = 'zato_service_get_deployment_info_list_response'
         input_required = ('id',)
         output_required = ('server_id', 'server_name', 'details')
         
@@ -245,7 +257,9 @@ class GetDeploymentInfoList(AdminService):
 class GetSourceInfo(AdminService):
     """ Returns information on the service's source code.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_get_source_info_request'
+        response_elem = 'zato_service_get_source_info_response'
         input_required = ('cluster_id', 'name')
         output_optional = ('service_id', 'server_name', 'source', 'source_path', 'source_hash', 'source_hash_method')
         
@@ -275,7 +289,9 @@ class GetWSDL(AdminService):
     """ Returns a WSDL for the given service. Either uses a user-uploaded one,
     or, optionally generates one on fly if the service uses SimpleIO.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_get_wsdl_request'
+        response_elem = 'zato_service_get_wsdl_response'
         input_optional = ('service', 'cluster_id')
         output_optional = ('wsdl', 'wsdl_name', 'content_type')
 
@@ -329,7 +345,9 @@ class GetWSDL(AdminService):
 class SetWSDL(AdminService):
     """ Updates the service's WSDL.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_set_wsdl_request'
+        response_elem = 'zato_service_set_wsdl_response'
         input_required = ('cluster_id', 'name', 'wsdl', 'wsdl_name')
         
     def handle(self):
@@ -346,7 +364,9 @@ class SetWSDL(AdminService):
 class HasWSDL(AdminService):
     """ Returns a boolean flag indicating whether the server has a WSDL attached.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_has_wsdl_request'
+        response_elem = 'zato_service_has_wsdl_response'
         input_required = ('name', 'cluster_id')
         output_required = ('service_id', 'has_wsdl',)
         
@@ -362,8 +382,9 @@ class GetRequestResponse(AdminService):
     """ Returns a sample request/response along with information on how often
     the pairs should be stored in the DB.
     """
-    class SimpleIO:
-        input_required = ('name', 'cluster_id')
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_get_request_response_request'
+        response_elem = 'zato_service_request_response_response'
         output_required = ('service_id', 'sample_cid', 'sample_req_ts', 'sample_resp_ts', 
             'sample_req', 'sample_resp', Integer('sample_req_resp_freq'))
         
@@ -392,7 +413,9 @@ class GetRequestResponse(AdminService):
 class ConfigureRequestResponse(AdminService):
     """ Updates the request/response-related configuration.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_configure_request_response_request'
+        response_elem = 'zato_service_configure_request_response_response'
         input_required = ('cluster_id', 'name', Integer('sample_req_resp_freq'))
         
     def handle(self):
@@ -402,7 +425,9 @@ class ConfigureRequestResponse(AdminService):
 class UploadPackage(AdminService):
     """ Returns a boolean flag indicating whether the server has a WSDL attached.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_upload_package_request'
+        response_elem = 'zato_service_upload_package_response'
         input_required = ('cluster_id', 'payload_name', 'payload')
         
     def handle(self):
@@ -439,7 +464,9 @@ class _SlowResponseService(AdminService):
 class GetSlowResponseList(_SlowResponseService):
     """ Returns a list of basic information regarding slow responses of a given service.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_slow_response_get_list_request'
+        response_elem = 'zato_service_slow_response_get_list_response'
         input_required = ('name',)
         output_required = ('cid', 'req_ts', 'resp_ts', 'proc_time')
         
@@ -449,7 +476,9 @@ class GetSlowResponseList(_SlowResponseService):
 class GetSlowResponse(_SlowResponseService):
     """ Returns information regading a particular slow response of a service.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_service_slow_response_get_request'
+        response_elem = 'zato_service_slow_response_get_response'
         input_required = ('cid', 'name')
         output_optional = ('cid', 'req_ts', 'resp_ts', 'proc_time', 'req', 'resp')
     

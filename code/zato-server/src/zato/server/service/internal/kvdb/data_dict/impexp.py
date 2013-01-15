@@ -31,7 +31,9 @@ class Import(DataDictService):
     """ Imports a bz2-compressed JSON document containing data dictionaries replacing
     any other existing ones.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_impexp_import_request'
+        response_elem = 'zato_kvdb_data_dict_impexp_import_response'
         input_required = ('data',)
         
     def handle(self):
