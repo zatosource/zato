@@ -34,7 +34,7 @@ class Index(_Index):
     url_name = 'channel-zmq'
     template = 'zato/channel/zmq.html'
     
-    soap_action = 'zato:channel.zmq.get-list'
+    soap_action = 'zato.channel.zmq.get-list'
     output_class = ChannelZMQ
     
     class SimpleIO(_Index.SimpleIO):
@@ -59,14 +59,14 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'channel-zmq-create'
-    soap_action = 'zato:channel.zmq.create'
+    soap_action = 'zato.channel.zmq.create'
 
 class Edit(_CreateEdit):
     url_name = 'channel-zmq-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:channel.zmq.edit'
+    soap_action = 'zato.channel.zmq.edit'
 
 class Delete(_Delete):
     url_name = 'channel-zmq-delete'
     error_message = 'Could not delete the Zero MQ channel'
-    soap_action = 'zato:channel.zmq.delete'
+    soap_action = 'zato.channel.zmq.delete'

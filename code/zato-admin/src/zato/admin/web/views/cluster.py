@@ -312,7 +312,7 @@ def servers_edit(req):
         else:
             fetch_lb_data = False
 
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.edit', 
+        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato.cluster.server.edit', 
             {'id':server_id, 'name':req.POST['edit-name']})
         
         msg_item = zato_message.item
@@ -350,10 +350,10 @@ def servers_add_remove_lb(req, action, server_id):
 class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
-    soap_action = 'zato:cluster.server.delete'
+    soap_action = 'zato.cluster.server.delete'
     
     def __call__(self, req, *args, **kwargs):
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.get-by-id', {'id':req.zato.id})
+        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato.cluster.server.get-by-id', {'id':req.zato.id})
 
         server = req.zato.odb.query(Server).filter_by(id=req.zato.id).one()
 

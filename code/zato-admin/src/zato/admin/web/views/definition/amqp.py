@@ -36,7 +36,7 @@ class Index(_Index):
     url_name = 'def-amqp'
     template = 'zato/definition/amqp.html'
     
-    soap_action = 'zato:definition.amqp.get-list'
+    soap_action = 'zato.definition.amqp.get-list'
     output_class = ConnDefAMQP
     
     class SimpleIO(_Index.SimpleIO):
@@ -63,18 +63,18 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'def-amqp-create'
-    soap_action = 'zato:definition.amqp.create'
+    soap_action = 'zato.definition.amqp.create'
 
 class Edit(_CreateEdit):
     url_name = 'def-amqp-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:definition.amqp.edit'
+    soap_action = 'zato.definition.amqp.edit'
 
 @meth_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato:definition.amqp.change-password')
+    return _change_password(req, 'zato.definition.amqp.change-password')
 
 class Delete(_Delete):
     url_name = 'def-amqp-delete'
     error_message = 'Could not delete the AMQP definition'
-    soap_action = 'zato:definition.amqp.delete'
+    soap_action = 'zato.definition.amqp.delete'

@@ -34,7 +34,7 @@ class Index(_Index):
     url_name = 'def-jms-wmq'
     template = 'zato/definition/jms_wmq.html'
     
-    soap_action = 'zato:definition.jms_wmq.get-list'
+    soap_action = 'zato.definition.jms_wmq.get-list'
     output_class = ConnDefWMQ
     
     class SimpleIO(_Index.SimpleIO):
@@ -62,14 +62,14 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'def-jms-wmq-create'
-    soap_action = 'zato:definition.jms_wmq.create'
+    soap_action = 'zato.definition.jms_wmq.create'
     
 class Edit(_CreateEdit):
     url_name = 'def-jms-wmq-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:definition.jms_wmq.edit'
+    soap_action = 'zato.definition.jms_wmq.edit'
 
 class Delete(_Delete):
     url_name = 'def-jms-wmq-delete'
     error_message = 'Could not delete the JMS WebSphere MQ definition'
-    soap_action = 'zato:definition.jms_wmq.delete'
+    soap_action = 'zato.definition.jms_wmq.delete'

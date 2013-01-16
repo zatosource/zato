@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 def _get_systems(cluster):
     systems = []
-    zato_message, _  = invoke_admin_service(cluster, 'zato:kvdb.data-dict.dictionary.get-system-list', {})
+    zato_message, _  = invoke_admin_service(cluster, 'zato.kvdb.data-dict.dictionary.get-system-list', {})
     if zato_path('item_list.item').get_from(zato_message) is not None:
         for item in zato_message.item_list.item:
             systems.append([item.name.text] * 2)
@@ -53,7 +53,7 @@ class Index(_Index):
     url_name = 'kvdb-data-dict-translation'
     template = 'zato/kvdb/data_dict/translation/index.html'
     
-    soap_action = 'zato:kvdb.data-dict.translation.get-list'
+    soap_action = 'zato.kvdb.data-dict.translation.get-list'
     output_class = DictItem
     
     class SimpleIO(_Index.SimpleIO):
@@ -80,17 +80,17 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'kvdb-data-dict-translation-create'
-    soap_action = 'zato:kvdb.data-dict.translation.create'
+    soap_action = 'zato.kvdb.data-dict.translation.create'
 
 class Edit(_CreateEdit):
     url_name = 'kvdb-data-dict-translation-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:kvdb.data-dict.translation.edit'
+    soap_action = 'zato.kvdb.data-dict.translation.edit'
 
 class Delete(_Delete):
     url_name = 'kvdb-data-dict-translation-delete'
     error_message = 'Could not delete the data translation'
-    soap_action = 'zato:kvdb.data-dict.translation.delete'
+    soap_action = 'zato.kvdb.data-dict.translation.delete'
 
 def _get_key_value_list(req, service_name, input_dict):
     return_data = []
@@ -103,11 +103,11 @@ def _get_key_value_list(req, service_name, input_dict):
 
 @meth_allowed('GET')
 def get_key_list(req):
-    return _get_key_value_list(req, 'zato:kvdb.data-dict.dictionary.get-key-list', {'system':req.GET['system']})
+    return _get_key_value_list(req, 'zato.kvdb.data-dict.dictionary.get-key-list', {'system':req.GET['system']})
 
 @meth_allowed('GET')
 def get_value_list(req):
-    return _get_key_value_list(req, 'zato:kvdb.data-dict.dictionary.get-value-list', {'system':req.GET['system'], 'key':req.GET['key']})
+    return _get_key_value_list(req, 'zato.kvdb.data-dict.dictionary.get-value-list', {'system':req.GET['system'], 'key':req.GET['key']})
 
 @meth_allowed('GET', 'POST')
 def translate(req):
@@ -120,7 +120,7 @@ def translate(req):
 
     def _translate():
         result = {}
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.translation.translate', post_data)
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato.kvdb.data-dict.translation.translate', post_data)
         
         if zato_path('item').get_from(zato_message) is not None:
             for name in('value2', 'repr', 'hex', 'sha1', 'sha256'):

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 def _get_def_ids(cluster):
     out = {}
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-list', {'cluster_id': cluster.id})
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.amqp.get-list', {'cluster_id': cluster.id})
     
     if zato_path('item_list.item').get_from(zato_message) is not None:
         for definition_elem in zato_message.item_list.item:
@@ -70,7 +70,7 @@ def _get_edit_create_message(params, prefix=''):
     }
 
 def _edit_create_response(cluster, verb, id, name, delivery_mode_text, def_id):
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-by-id', {'id':def_id})
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.amqp.get-by-id', {'id':def_id})
     return_data = {'id': id,
                    'message': 'Successfully {0} the outgoing AMQP connection [{1}]'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
@@ -83,7 +83,7 @@ class Index(_Index):
     url_name = 'out-amqp'
     template = 'zato/outgoing/amqp.html'
     
-    soap_action = 'zato:outgoing.amqp.get-list'
+    soap_action = 'zato.outgoing.amqp.get-list'
     output_class = OutgoingAMQP
     
     class SimpleIO(_Index.SimpleIO):
@@ -111,7 +111,7 @@ class Index(_Index):
 def create(req):
     try:
         zato_message = _get_edit_create_message(req.POST)
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.amqp.create', zato_message)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.amqp.create', zato_message)
         delivery_mode_text = delivery_friendly_name[int(req.POST['delivery_mode'])]
 
         return _edit_create_response(req.zato.cluster, 'created', zato_message.item.id.text, 
@@ -126,7 +126,7 @@ def create(req):
 def edit(req):
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.amqp.edit', zato_message)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.amqp.edit', zato_message)
         delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
 
         return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'],
@@ -139,4 +139,4 @@ def edit(req):
 class Delete(_Delete):
     url_name = 'out-amqp-delete'
     error_message = 'Could not delete the outgoing AMQP connection'
-    soap_action = 'zato:outgoing.amqp.delete'
+    soap_action = 'zato.outgoing.amqp.delete'

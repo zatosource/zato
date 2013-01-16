@@ -81,7 +81,7 @@ def index(req):
     change_password_form = ChangePasswordForm()
 
     if req.zato.cluster_id and req.method == 'GET':
-        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id})
+        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato.outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id})
         if zato_path('item_list.item').get_from(zato_message) is not None:
 
             for msg_item in zato_message.item_list.item:
@@ -129,7 +129,7 @@ def create(req):
     try:
         zato_message = _get_edit_create_message(req.POST)
         engine = zato_message['engine']
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.create', zato_message)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.sql.create', zato_message)
 
         return _edit_create_response('created', zato_message.item.id.text, req.POST['name'], engine, req.zato.cluster.id)
 
@@ -146,7 +146,7 @@ def edit(req):
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
         engine = zato_message['engine']
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.edit', zato_message)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.sql.edit', zato_message)
 
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, req.zato.cluster.id)
 
@@ -158,14 +158,14 @@ def edit(req):
 class Delete(_Delete):
     url_name = 'out-sql-delete'
     error_message = 'Could not delete the SQL connection'
-    soap_action = 'zato:outgoing.sql.delete'
+    soap_action = 'zato.outgoing.sql.delete'
 
 @meth_allowed('POST')
 def ping(req, cluster_id, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.ping', {'id':id})
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.sql.ping', {'id':id})
         response_time = zato_path('item.response_time', True).get_from(zato_message)
     except Exception, e:
         msg = 'Ping failed. e:[{}]'.format(format_exc(e))
@@ -176,4 +176,4 @@ def ping(req, cluster_id, id):
 
 @meth_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato:outgoing.sql.change-password')
+    return _change_password(req, 'zato.outgoing.sql.change-password')
