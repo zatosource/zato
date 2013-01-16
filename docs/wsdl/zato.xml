@@ -313,6 +313,11 @@ targetNamespace="http://gefira.pl/zato"
 <!-- ####################################################################### -->
 
     
+    <wsdl:operation name="zato.cluster.server.delete">
+      <wsdl:input message="zato:zato_cluster_server_delete_request_message"/>
+      <wsdl:output message="zato:zato_cluster_server_delete_response_message"/>
+    </wsdl:operation>
+    
 <!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
     
     <wsdl:operation name="zato.cluster.server.edit">
@@ -368,10 +373,10 @@ targetNamespace="http://gefira.pl/zato"
 
     <wsdl:operation name="zato.cluster.server.delete">
       <soap:operation soapAction="zato.cluster.server.delete"/>
-      <wsdl:input message="zato:zato_cluster_server_delete_request_message">
+      <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
-      <wsdl:output message="zato:zato_cluster_server_delete_response_message">
+      <wsdl:output>
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
