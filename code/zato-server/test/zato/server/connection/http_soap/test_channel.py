@@ -33,7 +33,7 @@ from lxml import etree
 from nose.tools import eq_
 
 # Zato
-from zato.common import SIMPLE_IO, URL_TYPE, ZATO_OK
+from zato.common import SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_OK
 from zato.common.util import new_cid
 from zato.server.connection.http_soap import channel
 from zato.server.service import Service
@@ -43,7 +43,7 @@ from zato.server.service.internal import AdminService, Service
 NON_ASCII_STRING = '東京'
 
 NS_MAP = {
-    'gfr': 'http://gefira.pl/zato',
+    'zato': zato_namespace,
     'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
 }
 
@@ -66,7 +66,9 @@ class DummyService(Service):
         self.cid = cid if cid else new_cid()
 
 class DummyAdminService(DummyService, AdminService):
-    pass
+    class SimpleIO:
+        response_elem = 'zzz'
+        namespace = zato_namespace
 
 class MessageHandlingBase(TestCase):
     """ Base class for tests for functionality common to SOAP and plain HTTP messages.
@@ -81,6 +83,7 @@ class MessageHandlingBase(TestCase):
             'result': uuid4().hex,
             'details': uuid4().hex,
             'cid': new_cid(),
+            'zato':zato_namespace
         }
         
         if needs_payload:
@@ -88,8 +91,13 @@ class MessageHandlingBase(TestCase):
                 if data_format == SIMPLE_IO.FORMAT.JSON:
                     payload_value = {expected['key']: expected['value']}
                 else:
-                    # str.format can't handle Unicode arguments http://bugs.python.org/issue7300
-                    payload_value = '<%(key)s>%(value)s</%(key)s>' % (expected)
+                    # NOTE: str.format can't handle Unicode arguments http://bugs.python.org/issue7300
+                    payload_value = """<%(key)s xmlns="%(zato)s">%(value)s<zato_env>
+                          <cid>%(cid)s</cid>
+                          <result>%(result)s</result>
+                          <details>%(details)s</details>
+                        </zato_env>
+                      </%(key)s>""" % (expected)
                 payload = DummyPayload(payload_value)
         else:
             payload = None
@@ -110,22 +118,34 @@ class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
         parent_path = '/soap:Envelope/soap:Body' if url_type == URL_TYPE.SOAP else ''
         
         if needs_payload:
-            path = parent_path + '/gfr:zato_message/gfr:{}/text()'.format(expected['key'])
+            path = parent_path + '/zato:{}/text()'.format(expected['key'])
             xpath = etree.XPath(path, namespaces=NS_MAP)
             value = xpath(payload)[0]
             eq_(value, expected['value'])
         else:
-            path = parent_path + '/gfr:zato_message/gfr:response'
+            path = parent_path + '//zato:{}'.format(DummyAdminService.SimpleIO.response_elem)
             xpath = etree.XPath(path, namespaces=NS_MAP)
             value = xpath(payload)[0]
-            eq_(value.text, None)
+            eq_(value.text.strip(), '')
+
+        zato_env_path_elem = expected['key'] if needs_payload else DummyAdminService.SimpleIO.response_elem
             
         for name in('cid', 'result', 'details'):
-            path = parent_path + '/gfr:zato_message/gfr:zato_env/gfr:{}/text()'.format(name)
-            xpath = etree.XPath(path, namespaces=NS_MAP)
+            if not needs_payload and name == 'details':
+                continue
             
+            path = parent_path + '/zato:{}/zato:zato_env/zato:{}/text()'.format(zato_env_path_elem, name)
+            xpath = etree.XPath(path, namespaces=NS_MAP)
+
             value = xpath(payload)[0]
-            eq_(value, expected[name])
+
+            if needs_payload:
+                eq_(value, expected[name])
+            else:
+                if name == 'result':
+                    eq_(value, ZATO_OK)
+                elif name == 'cid':
+                    eq_(value, expected['cid'])
 
     def test_payload_provided_json_plain_http(self):
         expected, service = self.get_data(SIMPLE_IO.FORMAT.JSON, URL_TYPE.PLAIN_HTTP)

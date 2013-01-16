@@ -35,7 +35,7 @@ from bunch import Bunch, bunchify
 
 # lxml
 from lxml import etree
-from lxml.objectify import Element
+from lxml.objectify import deannotate, Element, ElementMaker
 
 # Paste
 from paste.util.converters import asbool
@@ -44,7 +44,7 @@ from paste.util.converters import asbool
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import KVDB, ParsingException, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK, zato_path
+from zato.common import KVDB, ParsingException, path, SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
 from zato.common.util import new_cid, service_name_from_impl, TRACE1
@@ -200,7 +200,7 @@ class Request(ValueConverter):
     
                 if self.is_xml:
                     try:
-                        elem = zato_path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
+                        elem = path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
                     except ParsingException, e:
                         msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
                             etree.tostring(self.payload), format_exc(e))
@@ -297,18 +297,20 @@ class Response(object):
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
         response_elem = getattr(io, 'response_elem', 'response')
+        namespace = getattr(io, 'namespace', '')
         self.outgoing_declared = True if required_list or optional_list else False
         
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config, response_elem)
+            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config, 
+                                              response_elem, namespace)
             
 class SimpleIOPayload(ValueConverter):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
     they don't conflict with user-provided data.
     """
-    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem):
-        self.zato_cid = None
+    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace):
+        self.zato_cid = zato_cid
         self.zato_logger = logger
         self.zato_is_xml = data_format == SIMPLE_IO.FORMAT.XML
         self.zato_output = []
@@ -320,6 +322,7 @@ class SimpleIOPayload(ValueConverter):
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         self.date_time_format = simple_io_config.get('date_time_format', 'YYYY-MM-DDTHH:MM:SS.mmmmmm+HH:MM')
         self.response_elem = response_elem
+        self.namespace = namespace
 
         self.zato_all_attrs = set()
         for name in chain(required_list, optional_list):
@@ -452,13 +455,18 @@ class SimpleIOPayload(ValueConverter):
                     value = out_item
                         
         if self.zato_is_xml:
-            top = Element(self.response_elem)
+            em = ElementMaker(annotate=False, namespace=self.namespace, nsmap={None:self.namespace})
+            zato_env = em.zato_env(em.cid(self.zato_cid), em.result(ZATO_OK))
+            top = getattr(em, self.response_elem)(zato_env)
             top.append(value)
+            
+            #zato_env = 
         else:
             top = {self.response_elem: value}
 
         if serialize:
             if self.zato_is_xml:
+                deannotate(top, cleanup_namespaces=True)
                 return etree.tostring(top)
             else:
                 return dumps(top)

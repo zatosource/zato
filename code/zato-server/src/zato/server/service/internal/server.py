@@ -30,7 +30,7 @@ from bunch import Bunch
 # Zato
 from zato.common import ZatoException
 from zato.common.odb.model import Cluster, Server
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class ClusterWideSingletonKeepAlive(AdminService):
     """ Makes all the other servers know that this particular singleton, the one that
@@ -86,7 +86,9 @@ class EnsureClusterWideSingleton(AdminService):
 class Edit(AdminService):
     """ Updates a server.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_cluster_server_edit_request'
+        response_elem = 'zato_cluster_server_edit_response'
         input_required = ('id', 'name')
         output_optional = ('id', 'name', 'host', 'up_status', 'up_mod_date')
 
@@ -123,7 +125,9 @@ class Edit(AdminService):
 class GetByID(AdminService):
     """ Returns a particular server
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_cluster_server_get_by_id_request'
+        response_elem = 'zato_cluster_server_get_by_id_response'
         input_required = ('id',)
         output_required = ('id', 'cluster_id', 'name', 'host')
         output_optional = ('last_join_status', 'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
@@ -140,7 +144,9 @@ class GetByID(AdminService):
 class Delete(AdminService):
     """ Deletes a server.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_cluster_server_delete_request'
+        response_elem = 'zato_cluster_server_delete_response'
         input_required = ('id',)
 
     def handle(self):

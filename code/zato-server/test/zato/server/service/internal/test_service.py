@@ -53,7 +53,7 @@ class GetListTestCase(ServiceTestCase):
             expected.add(item)
             
         instance = self.invoke(GetList, request, expected)
-        response = loads(instance.response.payload.getvalue())['response']
+        response = loads(instance.response.payload.getvalue())[GetList.SimpleIO.response_elem]
         
         for idx, item in enumerate(response):
             expected = expected_data[idx]

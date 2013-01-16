@@ -315,7 +315,7 @@ def servers_edit(req):
         zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato:cluster.server.edit', 
             {'id':server_id, 'name':req.POST['edit-name']})
         
-        msg_item = zato_message.response.item
+        msg_item = zato_message.item
         
         return _common_edit_message(client, 'Server [{}] updated', 
             msg_item.id.text, msg_item.name.text, msg_item.host.text,
@@ -359,6 +359,6 @@ class ServerDelete(_Delete):
 
         client = get_lb_client(req.zato.cluster) # Checks whether the server is known by LB
         if client.get_server_data_dict(server.name):
-            client.add_remove_server('remove', zato_message.response.item.name.text)
+            client.add_remove_server('remove', zato_message.item.name.text)
             
         return super(ServerDelete, self).__call__(req, *args, **kwargs)

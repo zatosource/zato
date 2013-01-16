@@ -27,7 +27,7 @@ from traceback import format_exc
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class _FTPService(AdminService):
     """ A common class for various FTP-related services.
@@ -41,7 +41,9 @@ class _FTPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_ftp_get_list_request'
+        response_elem = 'zato_outgoing_ftp_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'host', 'port', 'user', 
             'acct', 'timeout', 'dircache')
@@ -56,7 +58,9 @@ class GetList(AdminService):
 class Create(_FTPService):
     """ Creates a new outgoing FTP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_ftp_create_request'
+        response_elem = 'zato_outgoing_ftp_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
         input_optional = ('user', 'acct', 'timeout')
         output_required = ('id', 'name')
@@ -103,7 +107,9 @@ class Create(_FTPService):
 class Edit(_FTPService):
     """ Updates an outgoing FTP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_ftp_edit_request'
+        response_elem = 'zato_outgoing_ftp_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
         input_optional = ('user', 'acct', 'timeout')
         output_required = ('id', 'name')
@@ -153,7 +159,9 @@ class Edit(_FTPService):
 class Delete(_FTPService):
     """ Deletes an outgoing FTP connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_ftp_delete_request'
+        response_elem = 'zato_outgoing_ftp_delete_response'
         input_required = ('id',)
 
     def handle(self):
@@ -179,6 +187,10 @@ class Delete(_FTPService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing FTP connection.
     """
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_outgoing_ftp_change_password_request'
+        response_elem = 'zato_outgoing_ftp_change_password_response'
+    
     def handle(self):
         with closing(self.odb.session()) as session:
             def _auth(instance, password):

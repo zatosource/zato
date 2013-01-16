@@ -29,13 +29,15 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common.odb.query import tech_acc_list
 from zato.common.util import tech_account_password
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
     sorted by the 'name' attribute.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_tech_account_get_list_request'
+        response_elem = 'zato_security_tech_account_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active')
         
@@ -49,7 +51,9 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_tech_account_get_by_id_request'
+        response_elem = 'zato_security_tech_account_get_by_id_response'
         input_required = ('tech_account_id',)
         output_required = ('id', 'name', 'is_active')
         
@@ -66,7 +70,9 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new technical account.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_tech_account_create_request'
+        response_elem = 'zato_security_tech_account_create_response'
         input_required = ('cluster_id', 'name', 'is_active')
         output_required = ('id', 'name')
 
@@ -110,7 +116,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an existing technical account.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_tech_account_edit_request'
+        response_elem = 'zato_security_tech_account_edit_response'
         input_required = ('cluster_id', 'id', 'name', 'is_active')
         output_required = ('id', 'name')
 
@@ -156,6 +164,10 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
     """
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_security_tech_account_change_password_request'
+        response_elem = 'zato_security_tech_account_change_password_response'
+    
     def handle(self):
         salt = uuid4().hex
         def _auth(instance, password):
@@ -168,7 +180,9 @@ class ChangePassword(ChangePasswordBase):
 class Delete(AdminService):
     """ Deletes a technical account.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_tech_account_delete_request'
+        response_elem = 'zato_security_tech_account_delete_response'
         input_required = ('id', 'zato_admin_tech_account_name')
 
     def handle(self):
