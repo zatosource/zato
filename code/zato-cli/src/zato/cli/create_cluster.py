@@ -100,12 +100,12 @@ class Create(ZatoCommand):
         """
         soap_services = {
 
-            # Cluster - servers AA
+            # Cluster - servers
             'zato.cluster.server.delete':'zato.server.service.internal.server.Delete',
             'zato.cluster.server.edit':'zato.server.service.internal.server.Edit',
             'zato.cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
 
-            # Scheduler AA
+            # Scheduler
             'zato.scheduler.job.create':'zato.server.service.internal.scheduler.Create',
             'zato.scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
             'zato.scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
@@ -113,7 +113,7 @@ class Create(ZatoCommand):
             'zato.scheduler.job.get-by-name':'zato.server.service.internal.scheduler.GetByName',
             'zato.scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
 
-            # Services AA
+            # Services
             'zato.service.configure-request-response':'zato.server.service.internal.service.ConfigureRequestResponse',
             'zato.service.create':'zato.server.service.internal.service.Create',
             'zato.service.delete':'zato.server.service.internal.service.Delete',
@@ -132,10 +132,10 @@ class Create(ZatoCommand):
             'zato.service.slow-response.get-list':'zato.server.service.internal.service.GetSlowResponseList',
             'zato.service.upload-package':'zato.server.service.internal.service.UploadPackage',
 
-            # Security AA
+            # Security
             'zato.security.get-list':'zato.server.service.internal.security.GetList',
 
-            # Technical accounts AA
+            # Technical accounts
             'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
             'zato.security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
             'zato.security.tech-account.delete':'zato.server.service.internal.security.tech_account.Delete',
@@ -143,14 +143,14 @@ class Create(ZatoCommand):
             'zato.security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
             'zato.security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
 
-            # WS-Security ..
+            # WS-Security
             'zato.security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
             'zato.security.wss.create':'zato.server.service.internal.security.wss.Create',
             'zato.security.wss.delete':'zato.server.service.internal.security.wss.Delete',
             'zato.security.wss.edit':'zato.server.service.internal.security.wss.Edit',
             'zato.security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
 
-            # HTTP Basic Auth AA
+            # HTTP Basic Auth
             'zato.security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
             'zato.security.basic-auth.create':'zato.server.service.internal.security.basic_auth.Create',
             'zato.security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
