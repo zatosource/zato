@@ -74,7 +74,7 @@ def index(req):
 
     if req.zato.cluster_id and req.method == 'GET':
         
-        zato_message, soap_response  = invoke_admin_service(req.zato.cluster,'zato:security.wss.get-list', {'cluster_id':req.zato.cluster_id})
+        zato_message, soap_response  = invoke_admin_service(req.zato.cluster,'zato.security.wss.get-list', {'cluster_id':req.zato.cluster_id})
         
         if zato_path('item_list.item').get_from(zato_message) is not None:
             for definition_elem in zato_message.item_list.item:
@@ -111,7 +111,7 @@ def edit(req):
     """ Updates WS-S definitions's parameters (everything except for the password).
     """
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
         return _edit_create_response(zato_message, 'updated', req.POST['edit-name'], req.POST['edit-password_type'])
     except Exception, e:
         msg = 'Could not update the WS-Security definition, e:[{e}]'.format(e=format_exc(e))
@@ -121,7 +121,7 @@ def edit(req):
 @meth_allowed('POST')
 def create(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:security.wss.create', _get_edit_create_message(req.POST))
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.wss.create', _get_edit_create_message(req.POST))
         return _edit_create_response(zato_message, 'created', req.POST['name'], req.POST['password_type'])
     except Exception, e:
         msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
@@ -131,8 +131,8 @@ def create(req):
 class Delete(_Delete):
     url_name = 'security-wss-delete'
     error_message = 'Could not delete the WS-Security definition'
-    soap_action = 'zato:security.wss.delete'
+    soap_action = 'zato.security.wss.delete'
 
 @meth_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato:security.wss.change-password')
+    return _change_password(req, 'zato.security.wss.change-password')

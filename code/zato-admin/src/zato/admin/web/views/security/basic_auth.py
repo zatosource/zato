@@ -35,7 +35,7 @@ class Index(_Index):
     url_name = 'security-basic-auth'
     template = 'zato/security/basic-auth.html'
     
-    soap_action = 'zato:security.basic-auth.get-list'
+    soap_action = 'zato.security.basic-auth.get-list'
     output_class = HTTPBasicAuth
     
     class SimpleIO(_Index.SimpleIO):
@@ -62,18 +62,18 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'security-basic-auth-create'
-    soap_action = 'zato:security.basic-auth.create'
+    soap_action = 'zato.security.basic-auth.create'
 
 class Edit(_CreateEdit):
     url_name = 'security-basic-auth-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:security.basic-auth.edit'
+    soap_action = 'zato.security.basic-auth.edit'
 
 class Delete(_Delete):
     url_name = 'security-basic-auth-delete'
     error_message = 'Could not delete the HTTP Basic Auth definition'
-    soap_action = 'zato:security.basic-auth.delete'
+    soap_action = 'zato.security.basic-auth.delete'
     
 @meth_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato:security.basic-auth.change-password')
+    return _change_password(req, 'zato.security.basic-auth.change-password')
