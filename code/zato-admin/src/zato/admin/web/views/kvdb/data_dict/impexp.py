@@ -66,8 +66,8 @@ def export(req, cluster_id):
     
     def _get_last_id(service):
         zato_message, _  = invoke_admin_service(req.zato.cluster, service, {})
-        if zato_path('response.item').get_from(zato_message) is not None:
-            return zato_message.response.item.value.text
+        if zato_path('item').get_from(zato_message) is not None:
+            return zato_message.item.value.text
         
     def _get_last_dict_id():
         return _get_last_id('zato:kvdb.data-dict.dictionary.get-last-id')
@@ -77,14 +77,14 @@ def export(req, cluster_id):
 
     def _get_dict_list():
         zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.dictionary.get-list', {})
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            for item in zato_message.response.item_list.item:
+        if zato_path('item_list.item').get_from(zato_message) is not None:
+            for item in zato_message.item_list.item:
                 yield item.id.text, item.system.text, item.key.text, item.value.text
     
     def _get_translation_list():
         zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.translation.get-list', {})
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            for item in zato_message.response.item_list.item:
+        if zato_path('item_list.item').get_from(zato_message) is not None:
+            for item in zato_message.item_list.item:
                 yield item.id.text, item.system1.text, item.key1.text, item.value1.text, item.system2.text, \
                       item.key2.text, item.value2.text, item.id1.text, item.id2.text
     

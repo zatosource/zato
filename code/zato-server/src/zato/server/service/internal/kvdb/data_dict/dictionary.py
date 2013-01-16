@@ -25,16 +25,15 @@ import re
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import dict_item_name
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
 class GetList(DataDictService):
     """ Returns a list of dictionary items.
     """
-    def __init__(self, *args, **kwargs):
-        super(GetList, self).__init__(*args, **kwargs)
-        
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_get_list_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_get_list_response'
         output_required = ('id', 'system', 'key', 'value')
         
     def get_data(self):
@@ -47,7 +46,7 @@ class _CreateEdit(DataDictService):
     NAME_PATTERN = '\w+'
     NAME_RE = re.compile(NAME_PATTERN)
     
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
         input_required = ('system', 'key', 'value')
         input_optional = ('id',)
         output_optional = ('id',)
@@ -95,12 +94,20 @@ class _CreateEdit(DataDictService):
 class Create(_CreateEdit):
     """ Creates a new dictionary entry.
     """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_create_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_create_response'
+    
     def _handle(self, *ignored_args, **ignored_kwargs):
         pass
         
 class Edit(_CreateEdit):
     """ Updates a dictionary entry.
     """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_edit_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_edit_response'
+    
     def _handle(self, id):
         for item in self._get_translations():
             if item['id1'] == id or item['id2'] == id:
@@ -122,7 +129,9 @@ class Edit(_CreateEdit):
 class Delete(DataDictService):
     """ Deletes a dictionary entry by its ID.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_delete_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_delete_response'
         input_required = ('id',)
         output_required = ('id',)
         
@@ -153,7 +162,9 @@ class _DictionaryEntryService(DataDictService):
 class GetSystemList(_DictionaryEntryService):
     """ Returns a list of systems used in dictionaries.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_get_system_list_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_get_system_list_response'
         output_required = ('name',)
         
     def handle(self):
@@ -162,7 +173,9 @@ class GetSystemList(_DictionaryEntryService):
 class GetKeyList(_DictionaryEntryService):
     """ Returns a list of keys used in a system's dictionary.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_get_key_list_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_get_key_list_response'
         input_required = ('system',)
         output_required = ('name',)
         
@@ -172,7 +185,9 @@ class GetKeyList(_DictionaryEntryService):
 class GetValueList(_DictionaryEntryService):
     """ Returns a list of values used in a system dictionary's key.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_get_value_list_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_get_value_list_response'
         input_required = ('system', 'key')
         output_required = ('name',)
         
@@ -183,7 +198,9 @@ class GetLastID(AdminService):
     """ Returns the value of the last dictionary's ID or nothing at all if the key
     for holding its value doesn't exist.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_request'
+        response_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_response'
         output_optional = ('value',)
         
     def handle(self):

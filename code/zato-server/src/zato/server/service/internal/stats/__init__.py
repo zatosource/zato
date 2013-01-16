@@ -44,7 +44,7 @@ from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
 from zato.common.odb.model import Service
 from zato.server.service import Integer, UTC
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 STATS_KEYS = ('usage', 'max', 'rate', 'mean', 'min')
 
@@ -60,7 +60,9 @@ def stop_excluding_rrset(freq, start, stop):
 class Delete(AdminService):
     """ Deletes aggregated statistics from a given interval.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_stats_delete_request'
+        response_elem = 'zato_stats_delete_response'
         input_required = (UTC('start'), UTC('stop'))
 
     def handle(self):
@@ -286,7 +288,7 @@ class AggregateByMonth(BaseAggregatingService):
 class StatsReturningService(AdminService):
     """ A base class for services returning time-oriented statistics.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
         """ Consult StatsElem's docstring for the description of output parameters.
         """
         input_required = (UTC('start'), UTC('stop'))
@@ -445,6 +447,8 @@ class GetByService(StatsReturningService):
     """ Returns statistics regarding a particular service.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
+        request_elem = 'zato_stats_get_by_service_request'
+        response_elem = 'zato_stats_get_by_service_response'
         input_required = StatsReturningService.SimpleIO.input_required + ('service_id',)
 
     def handle(self):

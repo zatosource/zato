@@ -28,12 +28,14 @@ from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
 from zato.server.service import Boolean, Integer
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_jms_wmq_get_list_request'
+        response_elem = 'zato_definition_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 
             Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), 
@@ -50,7 +52,9 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular JMS WebSphere MQ definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_jms_wmq_get_by_id_request'
+        response_elem = 'zato_definition_jms_wmq_get_by_id_response'
         input_required = ('id', 'cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 
             Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'), 
@@ -67,7 +71,9 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new JMS WebSphere MQ definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_jms_wmq_create_request'
+        response_elem = 'zato_definition_jms_wmq_create_response'
         input_required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
@@ -109,7 +115,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates a JMS WMQ definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_jms_wmq_edit_request'
+        response_elem = 'zato_definition_jms_wmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
@@ -169,7 +177,9 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes a JMS WebSphere MQ definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_jms_wmq_delete_request'
+        response_elem = 'zato_definition_jms_wmq_delete_response'
         input_required = ('id',)
 
     def handle(self):

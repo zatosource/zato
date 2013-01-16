@@ -125,8 +125,8 @@ def index(req):
 
     if req.zato.cluster_id:
         security_list = _get_security_list(req.zato.cluster)
-        if zato_path('response.item_list.item').get_from(security_list) is not None:
-            for def_item in security_list.response.item_list.item:
+        if zato_path('item_list.item').get_from(security_list) is not None:
+            for def_item in security_list.item_list.item:
                 
                 # Outgoing plain HTTP connections may use HTTP Basic Auth only,
                 # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
@@ -151,8 +151,8 @@ def index(req):
         }
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.get-list', input_dict)
     
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            for msg_item in zato_message.response.item_list.item:
+        if zato_path('item_list.item').get_from(zato_message) is not None:
+            for msg_item in zato_message.item_list.item:
                 id = msg_item.id.text
                 name = msg_item.name.text
                 is_active = is_boolean(msg_item.is_active.text)
@@ -205,7 +205,7 @@ def index(req):
 def create(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(zato_message.response.item.id.text, 'created',
+        return _edit_create_response(zato_message.item.id.text, 'created',
             req.POST['transport'], req.POST['connection'], req.POST['name'])
     except Exception, e:
         msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
@@ -217,7 +217,7 @@ def create(req):
 def edit(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.edit', _get_edit_create_message(req.POST, 'edit-'))
-        return _edit_create_response(zato_message.response.item.id.text, 'updated',
+        return _edit_create_response(zato_message.item.id.text, 'updated',
             req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
     except Exception, e:
         msg = 'Could not perform the update, e:[{e}]'.format(e=format_exc(e))

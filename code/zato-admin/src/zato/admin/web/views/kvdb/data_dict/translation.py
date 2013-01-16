@@ -40,8 +40,8 @@ logger = logging.getLogger(__name__)
 def _get_systems(cluster):
     systems = []
     zato_message, _  = invoke_admin_service(cluster, 'zato:kvdb.data-dict.dictionary.get-system-list', {})
-    if zato_path('response.item_list.item').get_from(zato_message) is not None:
-        for item in zato_message.response.item_list.item:
+    if zato_path('item_list.item').get_from(zato_message) is not None:
+        for item in zato_message.item_list.item:
             systems.append([item.name.text] * 2)
     return systems
 
@@ -95,8 +95,8 @@ class Delete(_Delete):
 def _get_key_value_list(req, service_name, input_dict):
     return_data = []
     zato_message, _  = invoke_admin_service(req.zato.cluster, service_name, input_dict)
-    if zato_path('response.item_list.item').get_from(zato_message) is not None:
-        for item in zato_message.response.item_list.item:
+    if zato_path('item_list.item').get_from(zato_message) is not None:
+        for item in zato_message.item_list.item:
             return_data.append({'name':item.name.text})
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -122,9 +122,9 @@ def translate(req):
         result = {}
         zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.translation.translate', post_data)
         
-        if zato_path('response.item').get_from(zato_message) is not None:
+        if zato_path('item').get_from(zato_message) is not None:
             for name in('value2', 'repr', 'hex', 'sha1', 'sha256'):
-                value = getattr(zato_message.response.item, name, None)
+                value = getattr(zato_message.item, name, None)
                 if value and value.text != ZATO_NONE:
                     result[name] = value.text
         

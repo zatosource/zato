@@ -33,7 +33,7 @@ from anyjson import dumps
 from bunch import Bunch
 
 # Zato
-from zato.common import SIMPLE_IO, URL_TYPE, ZATO_NONE
+from zato.common import SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request, security_def_type, TRACE1
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
      NotFound, Unauthorized
@@ -44,18 +44,14 @@ logger = logging.getLogger(__name__)
 _status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
 
-soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body>{body}</soap:Body></soap:Envelope>"""
+soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato"><soap:Body>{body}</soap:Body></soap:Envelope>"""
 
-zato_message = b"""<zato_message xmlns="http://gefira.pl/zato">
-    {data}
-    <zato_env>
-        <result>{result}</result>
-        <cid>{cid}</cid>
-        <details>{details}</details>
-    </zato_env>
-</zato_message>"""
+zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+  <soap:Body>{data}</soap:Body>
+</soap:Envelope>"""
 
-zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message
+zato_message_plain = b'{data}'
+zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message_plain
 
 # Returned if there has been any exception caught.
 soap_error = """<?xml version='1.0' encoding='UTF-8'?>
@@ -242,9 +238,24 @@ class _BaseMessageHandler(object):
 
     # ##########################################################################
     
-    def _get_xml_admin_payload(self, service_instance, response, data, zato_message_template):
-        return zato_message_template.format(cid=service_instance.cid, result=response.result, 
-            details=response.result_details, data=data.encode('utf-8'))
+    def _get_xml_admin_payload(self, service_instance, zato_message_template, payload):
+        #return zato_message_template.format(cid=service_instance.cid, result=response.result, 
+        #    details=response.result_details, data=data.encode('utf-8'))
+        
+        if payload:
+            data=payload.getvalue()
+        else:
+            data=b"""<{response_elem} xmlns="{namespace}">
+                <zato_env>
+                  <cid>{cid}</cid>
+                  <result>{result}</result>
+                </zato_env>
+              </{response_elem}>
+            """.format(response_elem=getattr(service_instance.SimpleIO, 'response_elem', 'response'),
+                       namespace=getattr(service_instance.SimpleIO, 'namespace', zato_namespace),
+                         cid=service_instance.cid, result=ZATO_OK)
+
+        return zato_message_template.format(data=data.encode('utf-8'))
     
     def set_payload(self, response, data_format, transport, service_instance):
         """ Sets the actual payload to represent the service's response out of
@@ -258,23 +269,22 @@ class _BaseMessageHandler(object):
                 response.payload = dumps(payload)
             else:
                 if transport == URL_TYPE.SOAP:
-                    zato_message_template = zato_message
+                    zato_message_template = zato_message_soap
                 else:
                     zato_message_template = zato_message_declaration
                     
                 if response.payload:
                     if not isinstance(response.payload, basestring):
-                        response.payload = self._get_xml_admin_payload(service_instance, 
-                            response, response.payload.getvalue(), zato_message_template)
+                        response.payload = self._get_xml_admin_payload(service_instance, zato_message_template, response.payload)
                 else:
-                    response.payload = self._get_xml_admin_payload(service_instance, 
-                            response, '<response/>', zato_message_template)
+                    response.payload = self._get_xml_admin_payload(service_instance, zato_message_template, None)
         else:
             if not isinstance(response.payload, basestring):
                 response.payload = response.payload.getvalue() if response.payload else ''
 
         if transport == URL_TYPE.SOAP:
-            response.payload = soap_doc.format(body=response.payload)
+            if not isinstance(service_instance, AdminService):
+                response.payload = soap_doc.format(body=response.payload)
     
     def set_content_type(self, response, data_format, transport, service_info):
         """ Sets a response's content type if one hasn't been supplied by the user.

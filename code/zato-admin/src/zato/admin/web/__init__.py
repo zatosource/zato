@@ -78,11 +78,10 @@ def invoke_admin_service(cluster, soap_action, input_dict):
     """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
     Django session-related information to the request headers.
     """
-    zato_message = Element('{%s}zato_message' % zato_namespace)
-    zato_message.request = Element('request')
+    zato_message = Element(soap_action.replace(':', '_').replace('.', '_').replace('-', '_') + '_request')
     
     for k, v in input_dict.items():
-        setattr(zato_message.request, k, v)
+        setattr(zato_message, k, v)
 
     headers = {'x-zato-session-type':'zato-admin/tech_acc', 
                'x-zato-user': TECH_ACCOUNT_NAME,

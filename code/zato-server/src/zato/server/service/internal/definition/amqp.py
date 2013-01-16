@@ -28,12 +28,14 @@ from uuid import uuid4
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common.odb.query import def_amqp_list
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_amqp_get_list_request'
+        response_elem = 'zato_definition_amqp_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_repeated = True
@@ -48,7 +50,9 @@ class GetList(AdminService):
 class GetByID(AdminService):
     """ Returns a particular AMQP definition
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_amqp_get_by_id_request'
+        response_elem = 'zato_definition_amqp_get_by_id_response'
         input_required = ('id',)
         output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         
@@ -66,7 +70,9 @@ class GetByID(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_amqp_create_request'
+        response_elem = 'zato_definition_amqp_create_response'
         input_required = ('cluster_id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_required = ('id', 'name')
 
@@ -106,7 +112,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an AMQP definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_amqp_edit_request'
+        response_elem = 'zato_definition_amqp_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_required = ('id', 'name')
 
@@ -158,7 +166,9 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an AMQP definition.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_amqp_delete_request'
+        response_elem = 'zato_definition_amqp_delete_response'
         input_required = ('id',)
 
     def handle(self):
@@ -182,8 +192,12 @@ class Delete(AdminService):
                 raise
             
 class ChangePassword(ChangePasswordBase):
-    """ Changes the password of an HTTP Basic Auth definition.
+    """ Changes the password of an AMQP definition.
     """
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_definition_amqp_change_password_request'
+        response_elem = 'zato_definition_amqp_change_password_response'
+    
     def handle(self):
         
         def _auth(instance, password):

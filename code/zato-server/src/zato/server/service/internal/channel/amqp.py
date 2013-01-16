@@ -28,7 +28,7 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.connection.amqp.channel import start_connector
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class _AMQPService(AdminService):
     def delete_channel(self, channel):
@@ -38,7 +38,9 @@ class _AMQPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of AMQP channels.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_amqp_get_list_request'
+        response_elem = 'zato_channel_amqp_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 
             'def_name', 'def_id', 'service_name', 'data_format')
@@ -53,7 +55,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP channel.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_amqp_create_request'
+        response_elem = 'zato_channel_amqp_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
@@ -110,7 +114,9 @@ class Create(AdminService):
 class Edit(_AMQPService):
     """ Updates an AMQP channel.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_amqp_edit_request'
+        response_elem = 'zato_channel_amqp_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
@@ -170,7 +176,9 @@ class Edit(_AMQPService):
 class Delete(_AMQPService):
     """ Deletes an AMQP channel.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_channel_amqp_delete_request'
+        response_elem = 'zato_channel_amqp_delete_response'
         input_required = ('id',)
 
     def handle(self):

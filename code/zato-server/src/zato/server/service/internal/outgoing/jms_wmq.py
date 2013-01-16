@@ -29,12 +29,14 @@ from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_jms_wmq_list
 from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service import Integer
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
     """ Returns a list of outgoing JMS WebSphere MQ connections.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_jms_wmq_get_list_request'
+        response_elem = 'zato_outgoing_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'delivery_mode', 
             'priority', 'expiration', 'def_name', 'def_id')
@@ -49,7 +51,9 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_jms_wmq_create_request'
+        response_elem = 'zato_outgoing_jms_wmq_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
         input_optional = ('expiration',)
         output_required = ('id',)
@@ -96,7 +100,9 @@ class Create(AdminService):
 class Edit(AdminService):
     """ Updates an outgoing JMS WebSphere MQ connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_jms_wmq_edit_request'
+        response_elem = 'zato_outgoing_jms_wmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
         input_optional = ('expiration',)
         output_required = ('id',)
@@ -147,7 +153,9 @@ class Edit(AdminService):
 class Delete(AdminService):
     """ Deletes an outgoing JMS WebSphere MQ connection.
     """
-    class SimpleIO:
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_jms_wmq_delete_request'
+        response_elem = 'zato_outgoing_jms_wmq_delete_response'
         input_required = ('id',)
 
     def handle(self):

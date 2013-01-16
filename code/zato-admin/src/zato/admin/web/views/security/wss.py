@@ -42,7 +42,7 @@ from zato.common.odb.model import WSSDefinition
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(zato_message, action, name, password_type):
-    return_data = {'id': zato_message.response.item.id.text,
+    return_data = {'id': zato_message.item.id.text,
         'message': 'Successfully {0} the WS-Security definition [{1}]'.format(action, name),
         'password_type_raw':password_type,
         'password_type':ZATO_WSS_PASSWORD_TYPES[password_type]}
@@ -76,8 +76,8 @@ def index(req):
         
         zato_message, soap_response  = invoke_admin_service(req.zato.cluster,'zato:security.wss.get-list', {'cluster_id':req.zato.cluster_id})
         
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
-            for definition_elem in zato_message.response.item_list.item:
+        if zato_path('item_list.item').get_from(zato_message) is not None:
+            for definition_elem in zato_message.item_list.item:
                 id = definition_elem.id.text
                 name = definition_elem.name.text
                 is_active = is_boolean(definition_elem.is_active.text)

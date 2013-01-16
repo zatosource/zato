@@ -82,9 +82,9 @@ def index(req):
 
     if req.zato.cluster_id and req.method == 'GET':
         zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id})
-        if zato_path('response.item_list.item').get_from(zato_message) is not None:
+        if zato_path('item_list.item').get_from(zato_message) is not None:
 
-            for msg_item in zato_message.response.item_list.item:
+            for msg_item in zato_message.item_list.item:
 
                 id = msg_item.id.text
                 name = msg_item.name.text
@@ -131,7 +131,7 @@ def create(req):
         engine = zato_message['engine']
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.create', zato_message)
 
-        return _edit_create_response('created', zato_message.response.item.id.text, req.POST['name'], engine, req.zato.cluster.id)
+        return _edit_create_response('created', zato_message.item.id.text, req.POST['name'], engine, req.zato.cluster.id)
 
     except Exception, e:
         msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
@@ -166,7 +166,7 @@ def ping(req, cluster_id, id):
     """
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:outgoing.sql.ping', {'id':id})
-        response_time = zato_path('response.item.response_time', True).get_from(zato_message)
+        response_time = zato_path('item.response_time', True).get_from(zato_message)
     except Exception, e:
         msg = 'Ping failed. e:[{}]'.format(format_exc(e))
         logger.error(msg)

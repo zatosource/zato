@@ -20,7 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import multikeysort, translation_name
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 class DataDictService(AdminService):
     def __init__(self, *args, **kwargs):
