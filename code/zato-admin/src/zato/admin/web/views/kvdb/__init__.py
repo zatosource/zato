@@ -56,7 +56,7 @@ def remote_command_execute(req):
     """
     try:
         zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.remote-command.execute', {'command': req.POST['command']})
-        return_data = {'message': zato_message.response.item.result.text}
+        return_data = {'message': zato_message.item.result.text}
         
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
     except Exception, e:

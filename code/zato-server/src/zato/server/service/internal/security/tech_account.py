@@ -36,8 +36,8 @@ class GetList(AdminService):
     sorted by the 'name' attribute.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_security_tech_account_request'
-        response_elem = 'zato_security_tech_account_response'
+        request_elem = 'zato_security_tech_account_get_list_request'
+        response_elem = 'zato_security_tech_account_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active')
         

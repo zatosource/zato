@@ -55,7 +55,7 @@ def get_by_id(req, tech_account_id, cluster_id):
         return HttpResponseServerError(msg)
     else:
         tech_account = TechnicalAccount()
-        tech_account_elem = zato_message.response.item
+        tech_account_elem = zato_message.item
         
         tech_account.id = tech_account_elem.id.text
         tech_account.name = tech_account_elem.name.text

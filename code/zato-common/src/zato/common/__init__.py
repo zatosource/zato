@@ -82,10 +82,10 @@ wsu_expires_xpath = etree.XPath(wsu_expires_path, namespaces=wss_namespaces)
 wsse_username_objectify = '{%s}Security' % wsse_namespace
 wsse_username_token_objectify = '{%s}UsernameToken' % wsse_namespace
 
-zato_data_path = '/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:response'
+zato_data_path = '/soapenv:Envelope/soapenv:Body/*[1]'
 zato_data_xpath = etree.XPath(zato_data_path, namespaces={'soapenv':soapenv_namespace, 'zato':zato_namespace})
 
-zato_result_path = '/soapenv:Envelope/soapenv:Body/zato:zato_message/zato:zato_env/zato:result'
+zato_result_path = '//zato:zato_env/zato:result'
 zato_result_path_xpath = etree.XPath(zato_result_path, namespaces={'soapenv':soapenv_namespace, 'zato':zato_namespace})
 
 SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
@@ -262,6 +262,8 @@ class path(object):
         self.ns = ns
         self.raise_on_not_found = raise_on_not_found
         self.text_only = text_only
+        self.children_only = False
+        self.children_only_idx = None
 
     def get_from(self, elem):
         if self.ns:
@@ -269,6 +271,8 @@ class path(object):
         else:
             _path = self.path
         try:
+            if self.children_only:
+                elem = elem.getchildren()[self.children_only_idx]
             value = _ObjectPath(_path)(elem)
             if self.text_only:
                 return value.text
@@ -281,8 +285,9 @@ class path(object):
 
 class zato_path(path):
     def __init__(self, path, raise_on_not_found=False, text_only=False):
-        super(zato_path, self).__init__(path, raise_on_not_found,
-                                        zato_namespace, text_only)
+        super(zato_path, self).__init__(path, raise_on_not_found, zato_namespace, text_only)
+        self.children_only = True
+        self.children_only_idx = 1 # 0 is zato_env
 
 class ZatoException(Exception):
     """ Base class for all Zato custom exceptions.
