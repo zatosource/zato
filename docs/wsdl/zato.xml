@@ -42,7 +42,7 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element> 
       
-<!-- ....................................................................... -->
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
 
       <xsd:element name="zato_cluster_server_edit_request">
         <xsd:complexType>
@@ -64,7 +64,7 @@ targetNamespace="http://gefira.pl/zato"
                   <xsd:element name="name" type="xsd:string" minOccurs="0"/>
                   <xsd:element name="host" type="xsd:string" minOccurs="0"/>
                   <xsd:element name="up_status" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="up_mod_date" type="xsd:datetime" minOccurs="0"/>
+                  <xsd:element name="up_mod_date" type="xsd:dateTime" minOccurs="0"/>
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>
@@ -72,7 +72,7 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element> 
       
-<!-- ....................................................................... -->
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
 
       <xsd:element name="zato_cluster_server_get_by_id_request">
         <xsd:complexType>
@@ -94,10 +94,10 @@ targetNamespace="http://gefira.pl/zato"
                   <xsd:element name="name" type="xsd:string"/>
                   <xsd:element name="host" type="xsd:string"/>
                   <xsd:element name="last_join_status" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="last_join_mod_date" type="xsd:datetime" minOccurs="0"/>
+                  <xsd:element name="last_join_mod_date" type="xsd:dateTime" minOccurs="0"/>
                   <xsd:element name="last_join_mod_by" type="xsd:string" minOccurs="0"/>
                   <xsd:element name="up_status" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="up_mod_date" type="xsd:datetime" minOccurs="0"/>
+                  <xsd:element name="up_mod_date" type="xsd:dateTime" minOccurs="0"/>
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>
@@ -115,7 +115,7 @@ targetNamespace="http://gefira.pl/zato"
             <xsd:element name="is_active" type="xsd:boolean"/>
             <xsd:element name="job_type" type="xsd:string"/>
             <xsd:element name="service" type="xsd:string"/>
-            <xsd:element name="start_date" type="xsd:datetime"/>
+            <xsd:element name="start_date" type="xsd:dateTime"/>
             <xsd:element name="extra" type="xsd:string"/>
             <xsd:element name="id" type="xsd:int" minOccurs="0"/>
             <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
@@ -145,7 +145,7 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element> 
       
-<!-- ....................................................................... -->
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
 
       <xsd:element name="zato_scheduler_job_delete_request">
         <xsd:complexType>
@@ -162,7 +162,7 @@ targetNamespace="http://gefira.pl/zato"
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
-      
+
 <!-- ####################################################################### -->
 
       <xsd:element name="zato_service_get_by_name_request">
@@ -200,7 +200,7 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element> 
       
-<!-- ....................................................................... -->
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
 
       <xsd:element name="zato_service_get_list_request">
         <xsd:complexType>
@@ -244,6 +244,51 @@ targetNamespace="http://gefira.pl/zato"
   </wsdl:types>
 
 <!-- ####################################################################### -->
+
+  <wsdl:message name="zato_cluster_server_delete_request_message">
+    <wsdl:part element="zato:zato_cluster_server_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_cluster_server_delete_response_message">
+    <wsdl:part element="zato:zato_cluster_server_delete_response" name="parameters"/>
+  </wsdl:message>
+
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+  <wsdl:message name="zato_cluster_server_edit_request_message">
+    <wsdl:part element="zato:zato_cluster_server_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_cluster_server_edit_response_message">
+    <wsdl:part element="zato:zato_cluster_server_edit_response" name="parameters"/>
+  </wsdl:message>
+  
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+  <wsdl:message name="zato_cluster_server_get_by_id_request_message">
+    <wsdl:part element="zato:zato_cluster_server_get_by_id_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_cluster_server_get_by_id_response_message">
+    <wsdl:part element="zato:zato_cluster_server_get_by_id_response" name="parameters"/>
+  </wsdl:message>
+
+<!-- ####################################################################### -->
+
+  <wsdl:message name="zato_scheduler_job_create_request_message">
+    <wsdl:part element="zato:zato_scheduler_job_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_create_response_message">
+    <wsdl:part element="zato:zato_scheduler_job_create_response" name="parameters"/>
+  </wsdl:message>
+
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+  <wsdl:message name="zato_scheduler_job_delete_request_message">
+    <wsdl:part element="zato:zato_scheduler_job_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_delete_response_message">
+    <wsdl:part element="zato:zato_scheduler_job_delete_response" name="parameters"/>
+  </wsdl:message>
+
+<!-- ####################################################################### -->
   
   <wsdl:message name="zato_service_get_by_name_request_message">
     <wsdl:part element="zato:zato_service_get_by_name_request" name="parameters"/>
@@ -252,7 +297,7 @@ targetNamespace="http://gefira.pl/zato"
     <wsdl:part element="zato:zato_service_get_by_name_response" name="parameters"/>
   </wsdl:message>
 
-<!-- ....................................................................... -->
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
   
   <wsdl:message name="zato_service_get_list_request_message">
     <wsdl:part element="zato:zato_service_get_list_request" name="parameters"/>
@@ -267,12 +312,43 @@ targetNamespace="http://gefira.pl/zato"
   
 <!-- ####################################################################### -->
 
+    
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+    
+    <wsdl:operation name="zato.cluster.server.edit">
+      <wsdl:input message="zato:zato_cluster_server_edit_request_message"/>
+      <wsdl:output message="zato:zato_cluster_server_edit_response_message"/>
+    </wsdl:operation>
+    
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+    
+    <wsdl:operation name="zato.cluster.server.get-by-id">
+      <wsdl:input message="zato:zato_cluster_server_get_by_id_request_message"/>
+      <wsdl:output message="zato:zato_cluster_server_get_by_id_response_message"/>
+    </wsdl:operation>
+
+<!-- ####################################################################### -->
+
+    <wsdl:operation name="zato.scheduler.job.create">
+      <wsdl:input message="zato:zato_scheduler_job_create_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_create_response_message"/>
+    </wsdl:operation>
+
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+    <wsdl:operation name="zato.scheduler.job.delete">
+      <wsdl:input message="zato:zato_scheduler_job_delete_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_delete_response_message"/>
+    </wsdl:operation>
+
+<!-- ####################################################################### -->
+
     <wsdl:operation name="zato.service.get-by-name">
       <wsdl:input message="zato:zato_service_get_by_name_request_message"/>
       <wsdl:output message="zato:zato_service_get_by_name_response_message"/>
     </wsdl:operation>
     
-<!-- ....................................................................... -->
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
 
     <wsdl:operation name="zato.service.get-list">
       <wsdl:input message="zato:zato_service_get_list_request_message"/>
@@ -290,6 +366,68 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ####################################################################### -->
 
+    <wsdl:operation name="zato.cluster.server.delete">
+      <soap:operation soapAction="zato.cluster.server.delete"/>
+      <wsdl:input message="zato:zato_cluster_server_delete_request_message">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output message="zato:zato_cluster_server_delete_response_message">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+    <wsdl:operation name="zato.cluster.server.edit">
+      <soap:operation soapAction="zato.cluster.server.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+    <wsdl:operation name="zato.cluster.server.get-by-id">
+      <soap:operation soapAction="zato.cluster.server.get-by-id"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+<!-- ####################################################################### -->
+
+    <wsdl:operation name="zato.scheduler.job.create">
+      <soap:operation soapAction="zato.scheduler.job.create"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+    <wsdl:operation name="zato.scheduler.job.delete">
+      <soap:operation soapAction="zato.scheduler.job.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
+
+<!-- ####################################################################### -->
+
     <wsdl:operation name="zato.service.get-by-name">
       <soap:operation soapAction="zato.service.get-by-name"/>
       <wsdl:input>
@@ -300,7 +438,7 @@ targetNamespace="http://gefira.pl/zato"
       </wsdl:output>
     </wsdl:operation>
     
-<!-- ....................................................................... -->
+<!-- ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` ` -->
     
     <wsdl:operation name="zato.service.get-list">
       <soap:operation soapAction="zato.service.get-list"/>
