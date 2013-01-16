@@ -53,7 +53,7 @@ def import_(req, cluster_id):
     try:
         data = req.read()
         data.decode('bz2') # A preliminary check to weed out files obviously incorrect
-        invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.impexp.import', {'data':data.encode('base64')})
+        invoke_admin_service(req.zato.cluster, 'zato.kvdb.data-dict.impexp.import', {'data':data.encode('base64')})
     except Exception, e:
         msg = 'Could not import the data dictionaries, e:[{}]'.format(format_exc(e))
         logger.error(msg)
@@ -70,19 +70,19 @@ def export(req, cluster_id):
             return zato_message.item.value.text
         
     def _get_last_dict_id():
-        return _get_last_id('zato:kvdb.data-dict.dictionary.get-last-id')
+        return _get_last_id('zato.kvdb.data-dict.dictionary.get-last-id')
     
     def _get_last_translation_id():
-        return _get_last_id('zato:kvdb.data-dict.translation.get-last-id')
+        return _get_last_id('zato.kvdb.data-dict.translation.get-last-id')
 
     def _get_dict_list():
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.dictionary.get-list', {})
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato.kvdb.data-dict.dictionary.get-list', {})
         if zato_path('item_list.item').get_from(zato_message) is not None:
             for item in zato_message.item_list.item:
                 yield item.id.text, item.system.text, item.key.text, item.value.text
     
     def _get_translation_list():
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:kvdb.data-dict.translation.get-list', {})
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato.kvdb.data-dict.translation.get-list', {})
         if zato_path('item_list.item').get_from(zato_message) is not None:
             for item in zato_message.item_list.item:
                 yield item.id.text, item.system1.text, item.key1.text, item.value1.text, item.system2.text, \

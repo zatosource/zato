@@ -59,7 +59,7 @@ TRANSPORT = {
     }
 
 def _get_security_list(cluster):
-    zato_message, _  = invoke_admin_service(cluster, 'zato:security.get-list', {'cluster_id': cluster.id})
+    zato_message, _  = invoke_admin_service(cluster, 'zato.security.get-list', {'cluster_id': cluster.id})
     return zato_message
 
 def _get_edit_create_message(params, prefix=''):
@@ -149,7 +149,7 @@ def index(req):
             'connection': connection,
             'transport': transport,
         }
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.get-list', input_dict)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http_soap.get-list', input_dict)
     
         if zato_path('item_list.item').get_from(zato_message) is not None:
             for msg_item in zato_message.item_list.item:
@@ -204,7 +204,7 @@ def index(req):
 @meth_allowed('POST')
 def create(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.create', _get_edit_create_message(req.POST))
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http_soap.create', _get_edit_create_message(req.POST))
         return _edit_create_response(zato_message.item.id.text, 'created',
             req.POST['transport'], req.POST['connection'], req.POST['name'])
     except Exception, e:
@@ -216,7 +216,7 @@ def create(req):
 @meth_allowed('POST')
 def edit(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:http_soap.edit', _get_edit_create_message(req.POST, 'edit-'))
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http_soap.edit', _get_edit_create_message(req.POST, 'edit-'))
         return _edit_create_response(zato_message.item.id.text, 'updated',
             req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
     except Exception, e:
@@ -235,12 +235,12 @@ def _delete_ping(req, id, cluster_id, service, error_template):
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
-    _delete_ping(req, id, cluster_id, 'zato:http_soap.delete', 'Could not delete the object, e:[{e}]')
+    _delete_ping(req, id, cluster_id, 'zato.http_soap.delete', 'Could not delete the object, e:[{e}]')
     return HttpResponse()
 
 @meth_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = _delete_ping(req, id, cluster_id, 'zato:http_soap.ping', 'Could not ping the connection, e:[{e}]')
+    ret = _delete_ping(req, id, cluster_id, 'zato.http_soap.ping', 'Could not ping the connection, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.response.item.info.text)

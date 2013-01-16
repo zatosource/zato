@@ -347,9 +347,9 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
         input_dict['stop'] = stop
         
     if stats_type == 'trends':
-        service_name = 'zato:stats.get-trends'
+        service_name = 'zato.stats.get-trends'
     else:
-        service_name = 'zato:stats.get-summary-by-range'
+        service_name = 'zato.stats.get-summary-by-range'
     
     zato_message, _  = invoke_admin_service(cluster, service_name, input_dict)
     
@@ -571,7 +571,7 @@ def settings(req):
         for mapping in job_mappings:
 
             zato_message, _  = invoke_admin_service(req.zato.
-                cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
+                cluster, 'zato.scheduler.job.get-by-name', {'name': mapping.job_name})
             if zato_path('item').get_from(zato_message) is not None:
                 item = zato_message.item
             
@@ -615,7 +615,7 @@ def settings_save(req):
     for mapping in job_mappings:
 
         zato_message, _  = invoke_admin_service(
-            req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
+            req.zato.cluster, 'zato.scheduler.job.get-by-name', {'name': mapping.job_name})
         if zato_path('item').get_from(zato_message) is not None:
             item = zato_message.item
             
@@ -639,7 +639,7 @@ def settings_save(req):
             params['service'] = item.service_name.text
             params['cluster_id'] = req.zato.cluster.id
                 
-            invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.edit', params)
+            invoke_admin_service(req.zato.cluster, 'zato.scheduler.job.edit', params)
 
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
@@ -666,7 +666,7 @@ def maintenance_delete(req):
     start = from_user_to_utc(req.POST['start'], req.zato.user_profile)
     stop = from_user_to_utc(req.POST['stop'], req.zato.user_profile)
     
-    invoke_admin_service(req.zato.cluster, 'zato:stats.delete', {'start':start, 'stop':stop})
+    invoke_admin_service(req.zato.cluster, 'zato.stats.delete', {'start':start, 'stop':stop})
     
     msg = 'Submitted a request to delete statistics from [{}] to [{}]. Check the server logs for details.'.format(
         from_utc_to_user(start, req.zato.user_profile), 
