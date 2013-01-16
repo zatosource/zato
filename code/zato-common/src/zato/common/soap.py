@@ -102,7 +102,7 @@ def invoke_admin_service(cluster, soap_action, soap_body="", headers={}, needs_c
             logger.error(msg)
             raise ZatoException(msg=msg)
     
-        zato_message = zato_data[0].getparent()
+        zato_message = zato_data[0]
         logger.log(TRACE1, "zato_message:[%s]" % etree.tostring(zato_message))
     
         # We have a payload but hadn't there been any errors at the server's side?

@@ -353,8 +353,8 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
     
     zato_message, _  = invoke_admin_service(cluster, service_name, input_dict)
     
-    if zato_path('response.item_list.item').get_from(zato_message) is not None:
-        for msg_item in zato_message.response.item_list.item:
+    if zato_path('item_list.item').get_from(zato_message) is not None:
+        for msg_item in zato_message.item_list.item:
             out.append(StatsElem.from_xml(msg_item))
             
     return out
@@ -572,8 +572,8 @@ def settings(req):
 
             zato_message, _  = invoke_admin_service(req.zato.
                 cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
-            if zato_path('response.item').get_from(zato_message) is not None:
-                item = zato_message.response.item
+            if zato_path('item').get_from(zato_message) is not None:
+                item = zato_message.item
             
                 for attr in mapping.attrs:
                     try:
@@ -583,7 +583,7 @@ def settings(req):
                         setting_unit_name = 'scheduler_{}_interval_unit'.format(attr.form_name)
                         
                         defaults[setting_unit_name] = attr.job_attr
-                        _settings[setting_base_name] = getattr(zato_message.response.item, attr.job_attr).text
+                        _settings[setting_base_name] = getattr(zato_message.item, attr.job_attr).text
                     else:
                         # A sample item.extra.text is 'max_batch_size=123456'
                         _settings['scheduler_{}'.format(attr.form_name)] = item.extra.text.split('=')[1]
@@ -616,8 +616,8 @@ def settings_save(req):
 
         zato_message, _  = invoke_admin_service(
             req.zato.cluster, 'zato:scheduler.job.get-by-name', {'name': mapping.job_name})
-        if zato_path('response.item').get_from(zato_message) is not None:
-            item = zato_message.response.item
+        if zato_path('item').get_from(zato_message) is not None:
+            item = zato_message.item
             
             # Gotta love dictionary comprehensions!
             params = {attr: getattr(item, attr).text for attr in(

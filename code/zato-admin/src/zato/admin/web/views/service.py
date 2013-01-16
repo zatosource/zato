@@ -114,8 +114,8 @@ def _get_channels(cluster, id, channel_type):
 
     response = []
 
-    if zato_path('response.item_list.item').get_from(zato_message) is not None:
-        for msg_item in zato_message.response.item_list.item:
+    if zato_path('item_list.item').get_from(zato_message) is not None:
+        for msg_item in zato_message.item_list.item:
 
             if channel_type in('plain_http', 'soap'):
                 url = reverse('http-soap')
@@ -143,9 +143,9 @@ def _get_service(req, name):
     }
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
     
-    if zato_path('response.item').get_from(zato_message) is not None:
+    if zato_path('item').get_from(zato_message) is not None:
         for name in('id', 'slow_threshold'):
-            setattr(service, name, getattr(zato_message.response.item, name).text)
+            setattr(service, name, getattr(zato_message.item, name).text)
         
     return service
     
@@ -214,9 +214,9 @@ def overview(req, service_name):
         }
         
         zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
-        if zato_path('response.item').get_from(zato_message) is not None:
+        if zato_path('item').get_from(zato_message) is not None:
             service = Service()
-            msg_item = zato_message.response.item
+            msg_item = zato_message.item
             
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal', 
                 'usage', 'time_last', 'time_min_all_time', 'time_max_all_time', 
@@ -233,8 +233,8 @@ def overview(req, service_name):
                 
             zato_message, _  = invoke_admin_service(req.zato.cluster, 
                 'zato:stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
-            if zato_path('response.item').get_from(zato_message) is not None:
-                msg_item = zato_message.response.item
+            if zato_path('item').get_from(zato_message) is not None:
+                msg_item = zato_message.item
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
                     value = getattr(msg_item, name).text
                     if not value or value == ZATO_NONE:
@@ -249,8 +249,8 @@ def overview(req, service_name):
             zato_message, _ = invoke_admin_service(req.zato.cluster, 
                 'zato:service.get-deployment-info-list', {'id': service.id})
 
-            if zato_path('response.item_list.item').get_from(zato_message) is not None:
-                for msg_item in zato_message.response.item_list.item:
+            if zato_path('item_list.item').get_from(zato_message) is not None:
+                for msg_item in zato_message.item_list.item:
                     server_name = msg_item.server_name.text
                     details = msg_item.details.text
 
@@ -277,8 +277,8 @@ def source_info(req, service_name):
 
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-source-info', input_dict)
 
-    if zato_path('response.item').get_from(zato_message) is not None:
-        msg_item = zato_message.response.item
+    if zato_path('item').get_from(zato_message) is not None:
+        msg_item = zato_message.item
         service.id = msg_item.service_id.text
 
         source = msg_item.source.text.decode('base64') if msg_item.source else ''
@@ -312,9 +312,9 @@ def wsdl(req, service_name):
     }
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.has-wsdl', input_dict)
 
-    if zato_path('response.item').get_from(zato_message) is not None:
-        service.id = zato_message.response.item.service_id.text
-        has_wsdl = is_boolean(zato_message.response.item.has_wsdl.text)
+    if zato_path('item').get_from(zato_message) is not None:
+        service.id = zato_message.item.service_id.text
+        has_wsdl = is_boolean(zato_message.item.has_wsdl.text)
 
     return_data = {
         'cluster_id':req.zato.cluster_id,
@@ -360,8 +360,8 @@ def request_response(req, service_name):
     }
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-request-response', input_dict)
 
-    if zato_path('response.item').get_from(zato_message) is not None:
-        item = zato_message.response.item
+    if zato_path('item').get_from(zato_message) is not None:
+        item = zato_message.item
 
         request = (item.sample_req.text if item.sample_req.text else '').decode('base64')
         request_data_format = known_data_format(request)
@@ -459,8 +459,8 @@ def last_stats(req, service_id, cluster_id):
         zato_message, _ = invoke_admin_service(req.zato.cluster, 
             'zato:stats.get-by-service', {'service_id': service_id, 'start':start, 'stop':stop})
         
-        if zato_path('response.item').get_from(zato_message) is not None:
-            item = zato_message.response.item
+        if zato_path('item').get_from(zato_message) is not None:
+            item = zato_message.item
             for key in return_data:
                 value = getattr(item, key).text or ''
                 
@@ -490,8 +490,8 @@ def slow_response(req, service_name):
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
         'zato:service.slow-response.get-list', input_dict)
     
-    if zato_path('response.item_list.item').get_from(zato_message) is not None:
-        for _item in zato_message.response.item_list.item:
+    if zato_path('item_list.item').get_from(zato_message) is not None:
+        for _item in zato_message.item_list.item:
             item = SlowResponse()
             item.cid = _item.cid.text
             item.req_ts = from_utc_to_user(_item.req_ts.text+'+00:00', req.zato.user_profile)
@@ -523,8 +523,8 @@ def slow_response_details(req, cid, service_name):
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
         'zato:service.slow-response.get', input_dict)
     
-    if zato_path('response.item').get_from(zato_message) is not None:
-        _item = zato_message.response.item
+    if zato_path('item').get_from(zato_message) is not None:
+        _item = zato_message.item
         cid = _item.cid.text
         if cid != ZATO_NONE:
             item = SlowResponse()
@@ -585,6 +585,6 @@ def invoke(req, service_id, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        response = zato_message.response.item.response.text if zato_message.response.item.response else '(No output)'
+        response = zato_message.item.response.text if zato_message.item.response else '(No output)'
         return HttpResponse(response)
 

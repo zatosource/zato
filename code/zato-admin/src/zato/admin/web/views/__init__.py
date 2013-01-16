@@ -212,15 +212,15 @@ class Index(_BaseView):
             return_data = {'cluster_id':self.cluster_id}
             
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
-            zato_path_needed = 'response.item_list.item' if output_repeated else 'response.item'
+            zato_path_needed = 'item_list.item' if output_repeated else 'item'
             
             if self.soap_action and self.cluster_id:
                 zato_message = self.invoke_admin_service()
                 if zato_message is not None and zato_path(zato_path_needed).get_from(zato_message) is not None:
                     if output_repeated:
-                        self._handle_item_list(zato_message.response.item_list)
+                        self._handle_item_list(zato_message.item_list)
                     else:
-                        self._handle_item(zato_message.response.item)
+                        self._handle_item(zato_message.item)
     
             return_data['items'] = self.items
             return_data['item'] = self.item
@@ -267,12 +267,12 @@ class CreateEdit(_BaseView):
             zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
     
             return_data = {
-                'message': self.success_message(zato_message.response.item)
+                'message': self.success_message(zato_message.item)
                 }
             return_data.update(initial_return_data)
 
             for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
-                value = getattr(zato_message.response.item, name, None)
+                value = getattr(zato_message.item, name, None)
                 if value:
                     value = value.text
                     if isinstance(value, basestring):

@@ -260,8 +260,6 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
     """ Returns an SSL XML-RPC client to the load-balancer.
     """
     agent_uri = "https://{host}:{port}/RPC2".format(host=lb_host, port=lb_agent_port)
-    
-    print(3333, agent_uri)
 
     # See the 'Problems with XML-RPC over SSL' thread for details
     # https://lists.springsource.com/archives/springpython-users/2011-June/000480.html
