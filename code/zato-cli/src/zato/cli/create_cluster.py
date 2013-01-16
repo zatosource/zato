@@ -101,12 +101,12 @@ class Create(ZatoCommand):
         soap_services = {
 
             # Cluster - servers
-            '--zato.cluster.server.delete':'zato.server.service.internal.server.Delete',
-            'zato.cluster.server.edit':'zato.server.service.internal.server.Edit',
-            'zato.cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
+            '-- zato.cluster.server.delete':'zato.server.service.internal.server.Delete',
+            '-- zato.cluster.server.edit':'zato.server.service.internal.server.Edit',
+            '-- zato.cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
 
             # Scheduler
-            'zato.scheduler.job.create':'zato.server.service.internal.scheduler.Create',
+            '-- zato.scheduler.job.create':'zato.server.service.internal.scheduler.Create',
             'zato.scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
             'zato.scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
             'zato.scheduler.job.execute':'zato.server.service.internal.scheduler.Execute',
@@ -118,10 +118,10 @@ class Create(ZatoCommand):
             'zato.service.create':'zato.server.service.internal.service.Create',
             'zato.service.delete':'zato.server.service.internal.service.Delete',
             'zato.service.edit':'zato.server.service.internal.service.Edit',
-            '--zato.service.get-by-name':'zato.server.service.internal.service.GetByName',
+            '**-- zato.service.get-by-name':'zato.server.service.internal.service.GetByName',
             'zato.service.get-channel-list':'zato.server.service.internal.service.GetChannelList',
             'zato.service.get-deployment-info-list':'zato.server.service.internal.service.GetDeploymentInfoList',
-            '--zato.service.get-list':'zato.server.service.internal.service.GetList',
+            '**-- zato.service.get-list':'zato.server.service.internal.service.GetList',
             'zato.service.get-request-response':'zato.server.service.internal.service.GetRequestResponse',
             'zato.service.get-source-info':'zato.server.service.internal.service.GetSourceInfo',
             'zato.service.get-wsdl':'zato.server.service.internal.service.GetWSDL',
