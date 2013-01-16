@@ -40,7 +40,7 @@ class ZatoPathTestCase(TestCase):
    </soapenv:Body>
 </soapenv:Envelope>""")
         
-        # zato:service.get-list
+        # zato.service.get-by-name
         # techacct-226327
         # 04fd1704f75546d58765dd13516a1512
         
