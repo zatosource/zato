@@ -42,13 +42,13 @@ logger = logging.getLogger(__name__)
     
 @meth_allowed('POST')
 def change_password(req):
-    return _change_password(req, 'zato:security.tech-account.change-password')
+    return _change_password(req, 'zato.security.tech-account.change-password')
     
     
 @meth_allowed('GET')
 def get_by_id(req, tech_account_id, cluster_id):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:security.tech-account.get-by-id', {'tech_account_id': tech_account_id})
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.get-by-id', {'tech_account_id': tech_account_id})
     except Exception, e:
         msg = 'Could not fetch the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -68,7 +68,7 @@ class Index(_Index):
     url_name = 'security-tech-account'
     template = 'zato/security/tech-account.html'
     
-    soap_action = 'zato:security.tech-account.get-list'
+    soap_action = 'zato.security.tech-account.get-list'
     output_class = TechnicalAccount
     
     class SimpleIO(_Index.SimpleIO):
@@ -95,17 +95,17 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'security-tech-account-create'
-    soap_action = 'zato:security.tech-account.create'
+    soap_action = 'zato.security.tech-account.create'
 
 class Edit(_CreateEdit):
     url_name = 'security-tech-account-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:security.tech-account.edit'
+    soap_action = 'zato.security.tech-account.edit'
 
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
     try:
-        invoke_admin_service(req.zato.cluster, 'zato:security.tech-account.delete', {'id': id, 'zato_admin_tech_account_name':TECH_ACCOUNT_NAME})
+        invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.delete', {'id': id, 'zato_admin_tech_account_name':TECH_ACCOUNT_NAME})
     except Exception, e:
         msg = 'Could not delete the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)

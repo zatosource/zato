@@ -110,7 +110,7 @@ def _get_channels(cluster, id, channel_type):
         'id': id,
         'channel_type': channel_type
     }
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato:service.get-channel-list', input_dict)
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.service.get-channel-list', input_dict)
 
     response = []
 
@@ -141,7 +141,7 @@ def _get_service(req, name):
         'name': name,
         'cluster_id': req.zato.cluster_id
     }
-    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.service.get-by-name', input_dict)
     
     if zato_path('item').get_from(zato_message) is not None:
         for name in('id', 'slow_threshold'):
@@ -165,7 +165,7 @@ class Index(_Index):
     url_name = 'service'
     template = 'zato/service/index.html'
 
-    soap_action = 'zato:service.get-list'
+    soap_action = 'zato.service.get-list'
     output_class = Service
 
     class SimpleIO(_Index.SimpleIO):
@@ -189,7 +189,7 @@ class Edit(CreateEdit):
     url_name = 'service-edit'
     form_prefix = 'edit-'
 
-    soap_action = 'zato:service.edit'
+    soap_action = 'zato.service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('is_active', 'slow_threshold')
@@ -213,7 +213,7 @@ def overview(req, service_name):
             'cluster_id': req.zato.cluster_id
         }
         
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato:service.get-by-name', input_dict)
+        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato.service.get-by-name', input_dict)
         if zato_path('item').get_from(zato_message) is not None:
             service = Service()
             msg_item = zato_message.item
@@ -232,7 +232,7 @@ def overview(req, service_name):
             start = now+relativedelta(minutes=-60)
                 
             zato_message, _  = invoke_admin_service(req.zato.cluster, 
-                'zato:stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
+                'zato.stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
             if zato_path('item').get_from(zato_message) is not None:
                 msg_item = zato_message.item
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
@@ -247,7 +247,7 @@ def overview(req, service_name):
                 getattr(service, channel_type.replace('jms-', '') + '_channels').extend(channels)
 
             zato_message, _ = invoke_admin_service(req.zato.cluster, 
-                'zato:service.get-deployment-info-list', {'id': service.id})
+                'zato.service.get-deployment-info-list', {'id': service.id})
 
             if zato_path('item_list.item').get_from(zato_message) is not None:
                 for msg_item in zato_message.item_list.item:
@@ -275,7 +275,7 @@ def source_info(req, service_name):
         'name': service_name
     }
 
-    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-source-info', input_dict)
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.service.get-source-info', input_dict)
 
     if zato_path('item').get_from(zato_message) is not None:
         msg_item = zato_message.item
@@ -310,7 +310,7 @@ def wsdl(req, service_name):
         'name': service_name,
         'cluster_id': req.zato.cluster_id
     }
-    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.has-wsdl', input_dict)
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.service.has-wsdl', input_dict)
 
     if zato_path('item').get_from(zato_message) is not None:
         service.id = zato_message.item.service_id.text
@@ -336,7 +336,7 @@ def wsdl_upload(req, service_name, cluster_id):
             'wsdl': req.read().encode('base64'),
             'wsdl_name': req.GET['qqfile']
         }
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.set-wsdl', input_dict)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.service.set-wsdl', input_dict)
 
         return HttpResponse(dumps({'success': True}))
 
@@ -358,7 +358,7 @@ def request_response(req, service_name):
         'name': service_name,
         'cluster_id': req.zato.cluster_id
     }
-    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.get-request-response', input_dict)
+    zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.service.get-request-response', input_dict)
 
     if zato_path('item').get_from(zato_message) is not None:
         item = zato_message.item
@@ -412,7 +412,7 @@ def request_response_configure(req, service_name, cluster_id):
             'cluster_id': req.zato.cluster_id,
             'sample_req_resp_freq': req.POST['sample_req_resp_freq']
         }
-        invoke_admin_service(req.zato.cluster, 'zato:service.configure-request-response', input_dict)
+        invoke_admin_service(req.zato.cluster, 'zato.service.configure-request-response', input_dict)
         return HttpResponse('Saved successfully')
 
     except Exception, e:
@@ -423,7 +423,7 @@ def request_response_configure(req, service_name, cluster_id):
 class Delete(_Delete):
     url_name = 'service-delete'
     error_message = 'Could not delete the service'
-    soap_action = 'zato:service.delete'
+    soap_action = 'zato.service.delete'
 
 
 @meth_allowed('POST')
@@ -436,7 +436,7 @@ def package_upload(req, cluster_id):
             'payload': req.read().encode('base64'),
             'payload_name': req.GET['qqfile']
         }
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.upload-package', input_dict)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.service.upload-package', input_dict)
 
         return HttpResponse(dumps({'success': True}))
 
@@ -457,7 +457,7 @@ def last_stats(req, service_id, cluster_id):
     try:
         start, stop = last_hour_start_stop(datetime.utcnow())
         zato_message, _ = invoke_admin_service(req.zato.cluster, 
-            'zato:stats.get-by-service', {'service_id': service_id, 'start':start, 'stop':stop})
+            'zato.stats.get-by-service', {'service_id': service_id, 'start':start, 'stop':stop})
         
         if zato_path('item').get_from(zato_message) is not None:
             item = zato_message.item
@@ -473,7 +473,7 @@ def last_stats(req, service_id, cluster_id):
                 return_data[key] = value if value != ZATO_NONE else '0'
 
     except Exception, e:
-        msg = 'Caught an exception while invoking zato:service.get-last-stats, e:[{}]'.format(format_exc(e))
+        msg = 'Caught an exception while invoking zato.service.get-last-stats, e:[{}]'.format(format_exc(e))
         logger.error(msg)
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -488,7 +488,7 @@ def slow_response(req, service_name):
         'name': service_name,
     }
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
-        'zato:service.slow-response.get-list', input_dict)
+        'zato.service.slow-response.get-list', input_dict)
     
     if zato_path('item_list.item').get_from(zato_message) is not None:
         for _item in zato_message.item_list.item:
@@ -521,7 +521,7 @@ def slow_response_details(req, cid, service_name):
         'name': service_name,
     }
     zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
-        'zato:service.slow-response.get', input_dict)
+        'zato.service.slow-response.get', input_dict)
     
     if zato_path('item').get_from(zato_message) is not None:
         _item = zato_message.item
@@ -577,7 +577,7 @@ def invoke(req, service_id, cluster_id):
             'data_format': req.POST.get('data_format', ''),
             'transport': req.POST.get('transport', ''),
         }
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:service.invoke', input_dict)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.service.invoke', input_dict)
 
     except Exception, e:
         msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e:[{}]'.format(

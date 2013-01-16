@@ -193,7 +193,7 @@ def _create_one_time(user_profile, cluster, params):
     logger.debug('About to create a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
     
     input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, create_one_time_prefix+'-')
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', input_dict)
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato.scheduler.job.create', input_dict)
     
     new_id = zato_message.item.id.text
     logger.debug('Successfully created a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
@@ -206,7 +206,7 @@ def _create_interval_based(user_profile, cluster, params):
     logger.debug('About to create an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
     
     input_dict = _get_create_edit_interval_based_message(user_profile, cluster, params, create_interval_based_prefix+'-')
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', input_dict)
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato.scheduler.job.create', input_dict)
     new_id = zato_message.item.id.text
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
@@ -230,7 +230,7 @@ def _create_cron_style(user_profile, cluster, params):
     logger.debug('About to create a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, create_cron_style_prefix+'-')
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.create', input_dict)
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato.scheduler.job.create', input_dict)
     new_id = zato_message.item.id.text
     cron_definition = zato_message.item.cron_definition.text
     logger.debug('Successfully created a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
@@ -246,7 +246,7 @@ def _edit_one_time(user_profile, cluster, params):
     logger.debug('About to change a one_time job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, edit_one_time_prefix+'-')
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', input_dict)
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     return {'definition_text':_one_time_job_def(user_profile, input_dict['start_date']), 'id':params['edit-one_time-id']}
@@ -257,7 +257,7 @@ def _edit_interval_based(user_profile, cluster, params):
     logger.debug('About to change an interval_based job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_interval_based_message(user_profile, cluster, params, edit_interval_based_prefix+'-')
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', input_dict)
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     start_date = input_dict.get('start_date')
@@ -281,7 +281,7 @@ def _edit_cron_style(user_profile, cluster, params):
     logger.debug('About to change a cron_style job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, edit_cron_style_prefix+'-')
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:scheduler.job.edit', input_dict)
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato.scheduler.job.edit', input_dict)
     cron_definition = zato_message.item.cron_definition.text
     logger.debug('Successfully updated a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
@@ -300,7 +300,7 @@ def index(req):
     
             # We have a server to pick the schedulers from, try to invoke it now.
             zato_message, soap_response = invoke_admin_service(req.zato.cluster, 
-                    'zato:scheduler.job.get-list', {'cluster_id': req.zato.cluster_id})
+                    'zato.scheduler.job.get-list', {'cluster_id': req.zato.cluster_id})
             
             if zato_path('item_list.item').get_from(zato_message) is not None:
                 for job_elem in zato_message.item_list.item:
@@ -428,14 +428,14 @@ def index(req):
 class Delete(_Delete):
     url_name = 'scheduler-job-delete'
     error_message = 'Could not delete the job'
-    soap_action = 'zato:scheduler.job.delete'
+    soap_action = 'zato.scheduler.job.delete'
     
 @meth_allowed('POST')
 def execute(req, job_id, cluster_id):
     """ Executes a scheduler's job.
     """
     try:
-        invoke_admin_service(req.zato.cluster, 'zato:scheduler.job.execute', {'id':job_id})
+        invoke_admin_service(req.zato.cluster, 'zato.scheduler.job.execute', {'id':job_id})
     except Exception, e:
         msg = 'Could not execute the job. job_id:[{0}], cluster_id:[{1}], e:[{2}]'.format(job_id, cluster_id, format_exc(e))
         logger.error(msg)

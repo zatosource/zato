@@ -34,7 +34,7 @@ class Index(_Index):
     url_name = 'out-zmq'
     template = 'zato/outgoing/zmq.html'
     
-    soap_action = 'zato:outgoing.zmq.get-list'
+    soap_action = 'zato.outgoing.zmq.get-list'
     output_class = OutgoingZMQ
     
     class SimpleIO(_Index.SimpleIO):
@@ -60,14 +60,14 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'out-zmq-create'
-    soap_action = 'zato:outgoing.zmq.create'
+    soap_action = 'zato.outgoing.zmq.create'
 
 class Edit(_CreateEdit):
     url_name = 'out-zmq-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato:outgoing.zmq.edit'
+    soap_action = 'zato.outgoing.zmq.edit'
 
 class Delete(_Delete):
     url_name = 'out-zmq-delete'
     error_message = 'Could not delete the outgoing Zero MQ connection'
-    soap_action = 'zato:outgoing.zmq.delete'
+    soap_action = 'zato.outgoing.zmq.delete'

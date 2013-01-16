@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 def _get_def_ids(cluster):
     out = {}
-    zato_message, soap_response = invoke_admin_service(cluster, 'zato:definition.amqp.get-list', {'cluster_id':cluster.id})
+    zato_message, soap_response = invoke_admin_service(cluster, 'zato.definition.amqp.get-list', {'cluster_id':cluster.id})
     
     if zato_path('item_list.item').get_from(zato_message) is not None:
         for definition_elem in zato_message.item_list.item:
@@ -66,7 +66,7 @@ def _get_edit_create_message(params, prefix=''):
     }
 
 def _edit_create_response(cluster, verb, id, name, def_id):
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato:definition.amqp.get-by-id', {'id':def_id})
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.amqp.get-by-id', {'id':def_id})
     return_data = {'id': id,
                    'message': 'Successfully {0} the AMQP channel [{1}]'.format(verb, name),
                    'def_name': zato_message.item.name.text
@@ -78,7 +78,7 @@ class Index(_Index):
     url_name = 'channel-amqp'
     template = 'zato/channel/amqp.html'
     
-    soap_action = 'zato:channel.amqp.get-list'
+    soap_action = 'zato.channel.amqp.get-list'
     output_class = ChannelAMQP
     
     class SimpleIO(_Index.SimpleIO):
@@ -104,7 +104,7 @@ class Index(_Index):
 @meth_allowed('POST')
 def create(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:channel.amqp.create', _get_edit_create_message(req.POST))
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.channel.amqp.create', _get_edit_create_message(req.POST))
         return _edit_create_response(req.zato.cluster, 'created', zato_message.item.id.text, 
             req.POST['name'], req.POST['def_id'])
     except Exception, e:
@@ -116,7 +116,7 @@ def create(req):
 @meth_allowed('POST')
 def edit(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato:channel.amqp.edit', _get_edit_create_message(req.POST, 'edit-'))
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.channel.amqp.edit', _get_edit_create_message(req.POST, 'edit-'))
         return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['edit-def_id'])
         
     except Exception, e:
@@ -127,4 +127,4 @@ def edit(req):
 class Delete(_Delete):
     url_name = 'channel-amqp-delete'
     error_message = 'Could not delete the AMQP channel'
-    soap_action = 'zato:channel.amqp.delete'
+    soap_action = 'zato.channel.amqp.delete'
