@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.definition.amqp.get-by-id">
+      <wsdl:input message="zato:zato_definition_amqp_get-by-id_request_message"/>
+      <wsdl:output message="zato:zato_definition_amqp_get-by-id_response_message"/>
+    </wsdl:operation>
