@@ -118,10 +118,10 @@ class Create(ZatoCommand):
             '** -- zato.channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
 
             # Channels - ZeroMQ
-            'zato.channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
-            'zato.channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
-            'zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
-            'zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
+            '** -- zato.channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
+            '** -- zato.channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
+            '** -- zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
+            '** -- zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
             
             # Definitions - AMQP
             'zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
@@ -138,7 +138,7 @@ class Create(ZatoCommand):
             'zato.definition.jms_wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
             'zato.definition.jms_wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
             
-            # HTTP/SOAP ZZ
+            # HTTP/SOAP
             'zato.http_soap.create':'zato.server.service.internal.http_soap.Create',
             'zato.http_soap.delete':'zato.server.service.internal.http_soap.Delete',
             'zato.http_soap.edit':'zato.server.service.internal.http_soap.Edit',
