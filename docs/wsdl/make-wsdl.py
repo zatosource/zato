@@ -21,13 +21,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
+import logging, os
 
 # lxml
 from lxml import etree
 
 include_prefix = '<!-- include'
 include_suffix = ' -->'
+
+logging.basicConfig()
 
 def main():
     out = []
@@ -36,8 +38,13 @@ def main():
         if line.startswith(include_prefix):
             path = line.replace(include_prefix, '').replace(include_suffix, '').strip()
             path = os.path.abspath(path)
-            include = open(path).read().rstrip() + '\n'
-            out.append(include)
+            
+            try:
+                include = open(path).read().rstrip() + '\n'
+            except IOError, e:
+                logging.error("Can't include file [{}], e:[{}]".format(path, e))
+            else:
+                out.append(include)
         else:
             out.append(line)
         

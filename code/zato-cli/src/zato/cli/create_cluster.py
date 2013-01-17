@@ -106,10 +106,10 @@ class Create(ZatoCommand):
             '** -- zato.cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
             
             # Channels - AMQP
-            'zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
+            '** -- zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
             'zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
             'zato.channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
-            'zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
+            '** -- zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
 
             # Channels - JMS WebSphere MQ
             'zato.channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
