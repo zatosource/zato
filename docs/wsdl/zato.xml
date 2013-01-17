@@ -101,6 +101,103 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
+      <xsd:element name="zato_channel_amqp_create_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="def_id" type="xsd:int"/>
+            <xsd:element name="queue" type="xsd:string"/>
+            <xsd:element name="consumer_tag_prefix" type="xsd:string"/>
+            <xsd:element name="service" type="xsd:string"/>
+            <xsd:element name="data_format" type="xsd:string" minOccurs="0"/>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_channel_amqp_create_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_channel_amqp_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="def_id" type="xsd:int"/>
+            <xsd:element name="queue" type="xsd:string"/>
+            <xsd:element name="consumer_tag_prefix" type="xsd:string"/>
+            <xsd:element name="service" type="xsd:string"/>
+            <xsd:element name="data_format" type="xsd:string" minOccurs="0"/>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_channel_amqp_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_channel_amqp_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_channel_amqp_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="queue" type="xsd:string"/>
+                        <xsd:element name="consumer_tag_prefix" type="xsd:string"/>
+                        <xsd:element name="def_name" type="xsd:string"/>
+                        <xsd:element name="def_id" type="xsd:int"/>
+                        <xsd:element name="service_name" type="xsd:string"/>
+                        <xsd:element name="data_format" type="xsd:string"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+<!-- ----------------------------------------------------------------------- -->
+
       <xsd:element name="zato_scheduler_job_create_request">
         <xsd:complexType>
           <xsd:sequence>
@@ -224,6 +321,12 @@ targetNamespace="http://gefira.pl/zato"
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
+
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- ----------------------------------------------------------------------- -->
+
+
       
 <!-- ####################################################################### -->
     
@@ -249,6 +352,28 @@ targetNamespace="http://gefira.pl/zato"
   </wsdl:message>
   <wsdl:message name="zato_cluster_server_get_by_id_response_message">
     <wsdl:part element="zato:zato_cluster_server_get_by_id_response" name="parameters"/>
+  </wsdl:message>
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+  <wsdl:message name="zato_channel_amqp_create_request_message">
+    <wsdl:part element="zato:zato_channel_amqp_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_channel_amqp_create_response_message">
+    <wsdl:part element="zato:zato_channel_amqp_create_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_channel_amqp_edit_request_message">
+    <wsdl:part element="zato:zato_channel_amqp_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_channel_amqp_edit_response_message">
+    <wsdl:part element="zato:zato_channel_amqp_edit_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_channel_amqp_get_list_request_message">
+    <wsdl:part element="zato:zato_channel_amqp_get_list_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_channel_amqp_get_list_response_message">
+    <wsdl:part element="zato:zato_channel_amqp_get_list_response" name="parameters"/>
   </wsdl:message>
 
 <!-- ----------------------------------------------------------------------- -->
@@ -299,6 +424,25 @@ targetNamespace="http://gefira.pl/zato"
       <wsdl:input message="zato:zato_cluster_server_get_by_id_request_message"/>
       <wsdl:output message="zato:zato_cluster_server_get_by_id_response_message"/>
     </wsdl:operation>
+
+<!-- ----------------------------------------------------------------------- -->
+
+    <wsdl:operation name="zato.channel.amqp.create">
+      <wsdl:input message="zato:zato_channel_amqp_create_request_message"/>
+      <wsdl:output message="zato:zato_channel_amqp_create_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.channel.amqp.edit">
+      <wsdl:input message="zato:zato_channel_amqp_edit_request_message"/>
+      <wsdl:output message="zato:zato_channel_amqp_edit_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.channel.amqp.get-list">
+      <wsdl:input message="zato:zato_channel_amqp_get_list_request_message"/>
+      <wsdl:output message="zato:zato_channel_amqp_get_list_response_message"/>
+    </wsdl:operation>
+
+<!-- ----------------------------------------------------------------------- -->
+
+
 
 <!-- ----------------------------------------------------------------------- -->
 
@@ -360,6 +504,38 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
+
+
+<!-- ----------------------------------------------------------------------- -->
+
+    <wsdl:operation name="zato.channel.amqp.create">
+      <soap:operation soapAction="zato.channel.amqp.create"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.channel.amqp.edit">
+      <soap:operation soapAction="zato.channel.amqp.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.channel.amqp.get-list">
+      <soap:operation soapAction="zato.channel.amqp.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
 
 <!-- ----------------------------------------------------------------------- -->
 
