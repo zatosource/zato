@@ -107,15 +107,15 @@ class Create(ZatoCommand):
             
             # Channels - AMQP
             '** -- zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
-            'zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
-            'zato.channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
+            '** -- zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
+            '** -- zato.channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
             '** -- zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
 
             # Channels - JMS WebSphere MQ
-            'zato.channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
-            'zato.channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
-            'zato.channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
-            'zato.channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
+            '** -- zato.channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
+            '** -- zato.channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
+            '** -- zato.channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
+            '** -- zato.channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
 
             # Channels - ZeroMQ
             'zato.channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
