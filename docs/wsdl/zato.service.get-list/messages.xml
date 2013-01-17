@@ -1,0 +1,35 @@
+      <xsd:element name="zato_service_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_service_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="impl_name" type="xsd:string"/>
+                        <xsd:element name="is_internal" type="xsd:boolean"/>
+                        <xsd:element name="may_be_deleted" type="xsd:boolean"/>
+                        <xsd:element name="usage" type="xsd:int"/>
+                        <xsd:element name="slow_threshold" type="xsd:int"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

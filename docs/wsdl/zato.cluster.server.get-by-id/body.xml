@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.cluster.server.get-by-id">
+      <soap:operation soapAction="zato.cluster.server.get-by-id"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
