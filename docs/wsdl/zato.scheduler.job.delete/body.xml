@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.scheduler.job.delete">
+      <soap:operation soapAction="zato.scheduler.job.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
