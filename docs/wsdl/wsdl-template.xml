@@ -39,8 +39,23 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
+<!-- include ./zato.channel.jms_wmq.create/messages.xml -->
+<!-- include ./zato.channel.jms_wmq.delete/messages.xml -->
+<!-- include ./zato.channel.jms_wmq.edit/messages.xml -->
+<!-- include ./zato.channel.jms_wmq.get-list/messages.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- include ./zato.channel.zmq.create/messages.xml -->
+<!-- include ./zato.channel.zmq.delete/messages.xml -->
+<!-- include ./zato.channel.zmq.edit/messages.xml -->
+<!-- include ./zato.channel.zmq.get-list/messages.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
 <!-- include ./zato.scheduler.job.create/messages.xml -->
 <!-- include ./zato.scheduler.job.delete/messages.xml -->
+
 <!-- ----------------------------------------------------------------------- -->
 
 <!-- include ./zato.service.get-by-name/messages.xml -->
@@ -50,15 +65,7 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
-<!-- include .//messages.xml -->
+
 <!-- include .//messages.xml -->
 <!-- include .//messages.xml -->
 <!-- include .//messages.xml -->
@@ -195,53 +202,28 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./zato.cluster.server.edit/parts.xml -->
 <!-- include ./zato.cluster.server.get-by-id/parts.xml -->
 
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-<!-- include .//parts.xml -->
-
 <!-- ----------------------------------------------------------------------- -->
 
 <!-- include ./zato.channel.amqp.create/parts.xml -->
 <!-- include ./zato.channel.amqp.delete/parts.xml -->
 <!-- include ./zato.channel.amqp.edit/parts.xml -->
 <!-- include ./zato.channel.amqp.get-list/parts.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- include ./zato.channel.jms_wmq.create/parts.xml -->
+<!-- include ./zato.channel.jms_wmq.delete/parts.xml -->
+<!-- include ./zato.channel.jms_wmq.edit/parts.xml -->
+<!-- include ./zato.channel.jms_wmq.get-list/parts.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- include ./zato.channel.zmq.create/parts.xml -->
+<!-- include ./zato.channel.zmq.delete/parts.xml -->
+<!-- include ./zato.channel.zmq.edit/parts.xml -->
+<!-- include ./zato.channel.zmq.get-list/parts.xml -->
 
 <!-- ----------------------------------------------------------------------- -->
 
@@ -252,6 +234,41 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- include ./zato.service.get-by-name/parts.xml -->
 <!-- include ./zato.service.get-list/parts.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
+<!-- include .//parts.xml -->
 
 <!-- ####################################################################### --> 
   
@@ -272,116 +289,17 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
-<!-- include .//io.xml -->
+<!-- include ./zato.channel.jms_wmq.create/io.xml -->
+<!-- include ./zato.channel.jms_wmq.delete/io.xml -->
+<!-- include ./zato.channel.jms_wmq.edit/io.xml -->
+<!-- include ./zato.channel.jms_wmq.get-list/io.xml -->
 
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- include ./zato.channel.zmq.create/io.xml -->
+<!-- include ./zato.channel.zmq.delete/io.xml -->
+<!-- include ./zato.channel.zmq.edit/io.xml -->
+<!-- include ./zato.channel.zmq.get-list/io.xml -->
 
 <!-- ----------------------------------------------------------------------- -->
 
@@ -392,6 +310,108 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- include ./zato.service.get-by-name/io.xml -->
 <!-- include ./zato.service.get-list/io.xml -->
+
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
+<!-- include .//io.xml -->
 
 <!-- ####################################################################### -->
     
@@ -408,67 +428,6 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./zato.cluster.server.edit/body.xml -->
 <!-- include ./zato.cluster.server.get-by-id/body.xml -->
 
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-<!-- include .//body.xml -->
-
 <!-- ----------------------------------------------------------------------- -->
 
 <!-- include ./zato.channel.amqp.create/body.xml -->
@@ -476,9 +435,21 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./zato.channel.amqp.edit/body.xml -->
 <!-- include ./zato.channel.amqp.get-list/body.xml -->
 
+<!-- ----------------------------------------------------------------------- -->
+
+<!-- include ./zato.channel.jms_wmq.create/body.xml -->
+<!-- include ./zato.channel.jms_wmq.delete/body.xml -->
+<!-- include ./zato.channel.jms_wmq.edit/body.xml -->
+<!-- include ./zato.channel.jms_wmq.get-list/body.xml -->
 
 <!-- ----------------------------------------------------------------------- -->
 
+<!-- include ./zato.channel.zmq.create/body.xml -->
+<!-- include ./zato.channel.zmq.delete/body.xml -->
+<!-- include ./zato.channel.zmq.edit/body.xml -->
+<!-- include ./zato.channel.zmq.get-list/body.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
 
 <!-- include ./zato.scheduler.job.create/body.xml -->
 <!-- include ./zato.scheduler.job.delete/body.xml -->
@@ -487,6 +458,59 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- include ./zato.service.get-by-name/body.xml -->
 <!-- include ./zato.service.get-list/body.xml -->
+
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
+<!-- include .//body.xml -->
     
 <!-- ####################################################################### -->
     

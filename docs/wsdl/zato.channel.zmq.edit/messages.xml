@@ -1,19 +1,19 @@
-      <xsd:element name="zato_channel_amqp_edit_request">
+      <xsd:element name="zato_channel_zmq_edit_request">
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
             <xsd:element name="cluster_id" type="xsd:int"/>
             <xsd:element name="name" type="xsd:string"/>
             <xsd:element name="is_active" type="xsd:boolean"/>
-            <xsd:element name="def_id" type="xsd:int"/>
-            <xsd:element name="queue" type="xsd:string"/>
-            <xsd:element name="consumer_tag_prefix" type="xsd:string"/>
+            <xsd:element name="address" type="xsd:string"/>
+            <xsd:element name="socket_type" type="xsd:string"/>
             <xsd:element name="service" type="xsd:string"/>
+            <xsd:element name="sub_key" type="xsd:string" minOccurs="0"/>
             <xsd:element name="data_format" type="xsd:string" minOccurs="0"/>
         </xsd:complexType>
       </xsd:element>
 
-      <xsd:element name="zato_channel_amqp_edit_response">
+      <xsd:element name="zato_channel_zmq_edit_response">
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element ref="zato_env"/>
