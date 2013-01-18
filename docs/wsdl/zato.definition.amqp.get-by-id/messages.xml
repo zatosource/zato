@@ -2,6 +2,7 @@
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
         </xsd:complexType>
       </xsd:element>
 

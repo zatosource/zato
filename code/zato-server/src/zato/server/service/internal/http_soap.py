@@ -76,9 +76,9 @@ class GetList(AdminService):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id', 'connection', 'transport')
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'host', 
-            'url_path', 'method', 'soap_action', 'soap_version', 'data_format', 
-            'service_id', 'service_name', 'security_id', 'security_name', 'sec_type')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 
+            'url_path', 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type')
+        output_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
         output_repeated = True
         
     def get_data(self, session):
@@ -95,8 +95,8 @@ class Create(AdminService, _HTTPSOAPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
-        input_required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
-                    'url_path', 'service', 'security_id')
+        input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport',
+                    'is_internal', 'url_path', 'service', 'security_id')
         input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
         output_required = ('id',)
     

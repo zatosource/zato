@@ -27,7 +27,7 @@ from uuid import uuid4
 # Zato
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefAMQP
-from zato.common.odb.query import def_amqp_list
+from zato.common.odb.query import def_amqp, def_amqp_list
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class GetList(AdminService):
@@ -53,15 +53,11 @@ class GetByID(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_amqp_get_by_id_request'
         response_elem = 'zato_definition_amqp_get_by_id_response'
-        input_required = ('id',)
+        input_required = ('id', 'cluster_id')
         output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
-        
+
     def get_data(self, session):
-        return session.query(ConnDefAMQP.id, ConnDefAMQP.name, ConnDefAMQP.host,
-            ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
-            ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat).\
-            filter(ConnDefAMQP.id==self.request.input.id).\
-            one()
+        return def_amqp(session, self.request.input.cluster_id, self.request.input.id)
 
     def handle(self):
         with closing(self.odb.session()) as session:
