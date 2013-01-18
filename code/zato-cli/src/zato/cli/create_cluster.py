@@ -124,12 +124,12 @@ class Create(ZatoCommand):
             '** -- zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
             
             # Definitions - AMQP
-            'zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
-            'zato.definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
-            'zato.definition.amqp.delete':'zato.server.service.internal.definition.amqp.Delete',
-            'zato.definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
-            'zato.definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
-            'zato.definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
+            '** -- zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
+            '** -- zato.definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
+            '** -- zato.definition.amqp.delete':'zato.server.service.internal.definition.amqp.Delete',
+            '** -- zato.definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
+            '** -- zato.definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
+            '** -- zato.definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
 
             # Definitions - JMS WebSphere MQ
             'zato.definition.jms_wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
