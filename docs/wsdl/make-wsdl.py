@@ -49,7 +49,7 @@ def main():
             out.append(line)
         
     out = ''.join(out)
-    open('./zato.xml', 'w').write(out)
+    open('./zato.wsdl', 'w').write(out)
         
 if __name__ == '__main__':
     main()

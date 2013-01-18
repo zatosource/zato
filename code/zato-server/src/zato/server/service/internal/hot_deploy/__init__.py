@@ -50,8 +50,8 @@ class Create(AdminService):
     package.
     """
     class SimpleIO(AdminSIO):
-        request_elem = '_request'
-        response_elem = '_response'
+        request_elem = 'zato_hot_deploy_create_request'
+        response_elem = 'zato_hot_deploy_create_response'
         input_required = ('package_id',)
         
     def _delete(self, items):

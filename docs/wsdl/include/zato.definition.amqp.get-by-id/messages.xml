@@ -1,0 +1,30 @@
+      <xsd:element name="zato_definition_amqp_get_by_id_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_definition_amqp_get_by_id_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                  <xsd:element name="host" type="xsd:string"/>
+                  <xsd:element name="port" type="xsd:int"/>
+                  <xsd:element name="vhost" type="xsd:string"/>
+                  <xsd:element name="username" type="xsd:string"/>
+                  <xsd:element name="frame_max" type="xsd:int"/>
+                  <xsd:element name="heartbeat" type="xsd:int"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 
