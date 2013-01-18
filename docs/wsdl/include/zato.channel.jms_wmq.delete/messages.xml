@@ -1,0 +1,15 @@
+      <xsd:element name="zato_channel_jms_wmq_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_channel_jms_wmq_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

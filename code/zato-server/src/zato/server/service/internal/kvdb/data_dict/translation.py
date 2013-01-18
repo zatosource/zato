@@ -126,7 +126,7 @@ class Create(_CreateEdit):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_translation_create_request'
         response_elem = 'zato_kvdb_data_dict_translation_create_response'
-        input_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
+        input_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)
         
     def _handle(self, hash_name, item_ids):
@@ -189,8 +189,8 @@ class GetLastID(AdminService):
     for holding its value doesn't exist.
     """
     class SimpleIO(AdminSIO):
-        request_elem = '_request'
-        response_elem = '_response'
+        request_elem = 'zato_kvdb_data_dict_translation_get_last_id_request'
+        response_elem = 'zato_kvdb_data_dict_translation_get_last_id_response'
         output_optional = ('value',)
         
     def handle(self):

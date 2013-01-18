@@ -26,174 +26,156 @@ targetNamespace="http://gefira.pl/zato"
       
 <!-- ####################################################################### -->
 
-<!-- include ./zato.cluster.server.delete/messages.xml -->
-<!-- include ./zato.cluster.server.edit/messages.xml -->
-<!-- include ./zato.cluster.server.get-by-id/messages.xml -->
+<!-- include ./include/zato.cluster.server.delete/messages.xml -->
+<!-- include ./include/zato.cluster.server.edit/messages.xml -->
+<!-- include ./include/zato.cluster.server.get-by-id/messages.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.amqp.create/messages.xml -->
+<!-- include ./include/zato.channel.amqp.delete/messages.xml -->
+<!-- include ./include/zato.channel.amqp.edit/messages.xml -->
+<!-- include ./include/zato.channel.amqp.get-list/messages.xml -->
 
-<!-- include ./zato.channel.amqp.create/messages.xml -->
-<!-- include ./zato.channel.amqp.delete/messages.xml -->
-<!-- include ./zato.channel.amqp.edit/messages.xml -->
-<!-- include ./zato.channel.amqp.get-list/messages.xml -->
+<!-- include ./include/zato.channel.jms_wmq.create/messages.xml -->
+<!-- include ./include/zato.channel.jms_wmq.delete/messages.xml -->
+<!-- include ./include/zato.channel.jms_wmq.edit/messages.xml -->
+<!-- include ./include/zato.channel.jms_wmq.get-list/messages.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.zmq.create/messages.xml -->
+<!-- include ./include/zato.channel.zmq.delete/messages.xml -->
+<!-- include ./include/zato.channel.zmq.edit/messages.xml -->
+<!-- include ./include/zato.channel.zmq.get-list/messages.xml -->
 
-<!-- include ./zato.channel.jms_wmq.create/messages.xml -->
-<!-- include ./zato.channel.jms_wmq.delete/messages.xml -->
-<!-- include ./zato.channel.jms_wmq.edit/messages.xml -->
-<!-- include ./zato.channel.jms_wmq.get-list/messages.xml -->
+<!-- include ./include/zato.definition.amqp.change-password/messages.xml -->
+<!-- include ./include/zato.definition.amqp.create/messages.xml -->
+<!-- include ./include/zato.definition.amqp.delete/messages.xml -->
+<!-- include ./include/zato.definition.amqp.edit/messages.xml -->
+<!-- include ./include/zato.definition.amqp.get-by-id/messages.xml -->
+<!-- include ./include/zato.definition.amqp.get-list/messages.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.create/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.delete/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.edit/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-key-list/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-last-id/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-list/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-system-list/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-value-list/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.impexp.import/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.create/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.delete/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.edit/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-last-id/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-list/messages.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.translate/messages.xml -->
+<!-- include ./include/zato.kvdb.remote-command.execute/messages.xml -->
 
-<!-- include ./zato.channel.zmq.create/messages.xml -->
-<!-- include ./zato.channel.zmq.delete/messages.xml -->
-<!-- include ./zato.channel.zmq.edit/messages.xml -->
-<!-- include ./zato.channel.zmq.get-list/messages.xml -->
+<!-- include ./include/zato.http_soap.create/messages.xml -->
+<!-- include ./include/zato.http_soap.delete/messages.xml -->
+<!-- include ./include/zato.http_soap.edit/messages.xml -->
+<!-- include ./include/zato.http_soap.get-list/messages.xml -->
+<!-- include ./include/zato.http_soap.ping/messages.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.scheduler.job.create/messages.xml -->
+<!-- include ./include/zato.scheduler.job.delete/messages.xml -->
 
-<!-- include ./zato.definition.amqp.change-password/messages.xml -->
-<!-- include ./zato.definition.amqp.create/messages.xml -->
-<!-- include ./zato.definition.amqp.delete/messages.xml -->
-<!-- include ./zato.definition.amqp.edit/messages.xml -->
-<!-- include ./zato.definition.amqp.get-by-id/messages.xml -->
-<!-- include ./zato.definition.amqp.get-list/messages.xml -->
+<!-- include ./include/zato.service.get-by-name/messages.xml -->
+<!-- include ./include/zato.service.get-list/messages.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.http_soap.create/messages.xml -->
-<!-- include ./zato.http_soap.delete/messages.xml -->
-<!-- include ./zato.http_soap.edit/messages.xml -->
-<!-- include ./zato.http_soap.get-list/messages.xml -->
-<!-- include ./zato.http_soap.ping/messages.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.scheduler.job.create/messages.xml -->
-<!-- include ./zato.scheduler.job.delete/messages.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.service.get-by-name/messages.xml -->
-<!-- include ./zato.service.get-list/messages.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
+<!-- include ./include/messages.xml -->
 
       
 <!-- ####################################################################### -->
@@ -203,81 +185,143 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ####################################################################### -->
 
-<!-- include ./zato.cluster.server.delete/parts.xml -->
-<!-- include ./zato.cluster.server.edit/parts.xml -->
-<!-- include ./zato.cluster.server.get-by-id/parts.xml -->
+<!-- include ./include/zato.cluster.server.delete/parts.xml -->
+<!-- include ./include/zato.cluster.server.edit/parts.xml -->
+<!-- include ./include/zato.cluster.server.get-by-id/parts.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.amqp.create/parts.xml -->
+<!-- include ./include/zato.channel.amqp.delete/parts.xml -->
+<!-- include ./include/zato.channel.amqp.edit/parts.xml -->
+<!-- include ./include/zato.channel.amqp.get-list/parts.xml -->
 
-<!-- include ./zato.channel.amqp.create/parts.xml -->
-<!-- include ./zato.channel.amqp.delete/parts.xml -->
-<!-- include ./zato.channel.amqp.edit/parts.xml -->
-<!-- include ./zato.channel.amqp.get-list/parts.xml -->
+<!-- include ./include/zato.channel.jms_wmq.create/parts.xml -->
+<!-- include ./include/zato.channel.jms_wmq.delete/parts.xml -->
+<!-- include ./include/zato.channel.jms_wmq.edit/parts.xml -->
+<!-- include ./include/zato.channel.jms_wmq.get-list/parts.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.zmq.create/parts.xml -->
+<!-- include ./include/zato.channel.zmq.delete/parts.xml -->
+<!-- include ./include/zato.channel.zmq.edit/parts.xml -->
+<!-- include ./include/zato.channel.zmq.get-list/parts.xml -->
 
-<!-- include ./zato.http_soap.create/parts.xml -->
-<!-- include ./zato.http_soap.delete/parts.xml -->
-<!-- include ./zato.http_soap.edit/parts.xml -->
-<!-- include ./zato.http_soap.get-list/parts.xml -->
-<!-- include ./zato.http_soap.ping/parts.xml -->
+<!-- include ./include/zato.definition.amqp.change-password/parts.xml -->
+<!-- include ./include/zato.definition.amqp.create/parts.xml -->
+<!-- include ./include/zato.definition.amqp.delete/parts.xml -->
+<!-- include ./include/zato.definition.amqp.edit/parts.xml -->
+<!-- include ./include/zato.definition.amqp.get-by-id/parts.xml -->
+<!-- include ./include/zato.definition.amqp.get-list/parts.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.http_soap.create/parts.xml -->
+<!-- include ./include/zato.http_soap.delete/parts.xml -->
+<!-- include ./include/zato.http_soap.edit/parts.xml -->
+<!-- include ./include/zato.http_soap.get-list/parts.xml -->
+<!-- include ./include/zato.http_soap.ping/parts.xml -->
 
-<!-- include ./zato.channel.jms_wmq.create/parts.xml -->
-<!-- include ./zato.channel.jms_wmq.delete/parts.xml -->
-<!-- include ./zato.channel.jms_wmq.edit/parts.xml -->
-<!-- include ./zato.channel.jms_wmq.get-list/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.create/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.delete/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.edit/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-key-list/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-last-id/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-list/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-system-list/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-value-list/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.impexp.import/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.create/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.delete/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.edit/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-last-id/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-list/parts.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.translate/parts.xml -->
+<!-- include ./include/zato.kvdb.remote-command.execute/parts.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.scheduler.job.create/parts.xml -->
+<!-- include ./include/zato.scheduler.job.delete/parts.xml -->
 
-<!-- include ./zato.channel.zmq.create/parts.xml -->
-<!-- include ./zato.channel.zmq.delete/parts.xml -->
-<!-- include ./zato.channel.zmq.edit/parts.xml -->
-<!-- include ./zato.channel.zmq.get-list/parts.xml -->
+<!-- include ./include/zato.service.get-by-name/parts.xml -->
+<!-- include ./include/zato.service.get-list/parts.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.definition.amqp.change-password/parts.xml -->
-<!-- include ./zato.definition.amqp.create/parts.xml -->
-<!-- include ./zato.definition.amqp.delete/parts.xml -->
-<!-- include ./zato.definition.amqp.edit/parts.xml -->
-<!-- include ./zato.definition.amqp.get-by-id/parts.xml -->
-<!-- include ./zato.definition.amqp.get-list/parts.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.scheduler.job.create/parts.xml -->
-<!-- include ./zato.scheduler.job.delete/parts.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.service.get-by-name/parts.xml -->
-<!-- include ./zato.service.get-list/parts.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
+<!-- include ./include/parts.xml -->
 
 <!-- ####################################################################### --> 
   
@@ -285,146 +329,132 @@ targetNamespace="http://gefira.pl/zato"
   
 <!-- ####################################################################### -->
 
-<!-- include ./zato.cluster.server.delete/io.xml -->
-<!-- include ./zato.cluster.server.edit/io.xml -->
-<!-- include ./zato.cluster.server.get-by-id/io.xml -->
+<!-- include ./include/zato.cluster.server.delete/io.xml -->
+<!-- include ./include/zato.cluster.server.edit/io.xml -->
+<!-- include ./include/zato.cluster.server.get-by-id/io.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.amqp.create/io.xml -->
+<!-- include ./include/zato.channel.amqp.delete/io.xml -->
+<!-- include ./include/zato.channel.amqp.edit/io.xml -->
+<!-- include ./include/zato.channel.amqp.get-list/io.xml -->
 
-<!-- include ./zato.channel.amqp.create/io.xml -->
-<!-- include ./zato.channel.amqp.delete/io.xml -->
-<!-- include ./zato.channel.amqp.edit/io.xml -->
-<!-- include ./zato.channel.amqp.get-list/io.xml -->
+<!-- include ./include/zato.channel.jms_wmq.create/io.xml -->
+<!-- include ./include/zato.channel.jms_wmq.delete/io.xml -->
+<!-- include ./include/zato.channel.jms_wmq.edit/io.xml -->
+<!-- include ./include/zato.channel.jms_wmq.get-list/io.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.zmq.create/io.xml -->
+<!-- include ./include/zato.channel.zmq.delete/io.xml -->
+<!-- include ./include/zato.channel.zmq.edit/io.xml -->
+<!-- include ./include/zato.channel.zmq.get-list/io.xml -->
 
-<!-- include ./zato.channel.jms_wmq.create/io.xml -->
-<!-- include ./zato.channel.jms_wmq.delete/io.xml -->
-<!-- include ./zato.channel.jms_wmq.edit/io.xml -->
-<!-- include ./zato.channel.jms_wmq.get-list/io.xml -->
+<!-- include ./include/zato.definition.amqp.change-password/io.xml -->
+<!-- include ./include/zato.definition.amqp.create/io.xml -->
+<!-- include ./include/zato.definition.amqp.delete/io.xml -->
+<!-- include ./include/zato.definition.amqp.edit/io.xml -->
+<!-- include ./include/zato.definition.amqp.get-by-id/io.xml -->
+<!-- include ./include/zato.definition.amqp.get-list/io.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.http_soap.create/io.xml -->
+<!-- include ./include/zato.http_soap.delete/io.xml -->
+<!-- include ./include/zato.http_soap.edit/io.xml -->
+<!-- include ./include/zato.http_soap.get-list/io.xml -->
+<!-- include ./include/zato.http_soap.ping/io.xml -->
 
-<!-- include ./zato.channel.zmq.create/io.xml -->
-<!-- include ./zato.channel.zmq.delete/io.xml -->
-<!-- include ./zato.channel.zmq.edit/io.xml -->
-<!-- include ./zato.channel.zmq.get-list/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.create/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.delete/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.edit/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-key-list/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-last-id/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-list/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-system-list/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-value-list/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.impexp.import/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.create/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.delete/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.edit/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-last-id/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-list/io.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.translate/io.xml -->
+<!-- include ./include/zato.kvdb.remote-command.execute/io.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.scheduler.job.create/io.xml -->
+<!-- include ./include/zato.scheduler.job.delete/io.xml -->
 
-<!-- include ./zato.definition.amqp.change-password/io.xml -->
-<!-- include ./zato.definition.amqp.create/io.xml -->
-<!-- include ./zato.definition.amqp.delete/io.xml -->
-<!-- include ./zato.definition.amqp.edit/io.xml -->
-<!-- include ./zato.definition.amqp.get-by-id/io.xml -->
-<!-- include ./zato.definition.amqp.get-list/io.xml -->
+<!-- include ./include/zato.service.get-by-name/io.xml -->
+<!-- include ./include/zato.service.get-list/io.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.http_soap.create/io.xml -->
-<!-- include ./zato.http_soap.delete/io.xml -->
-<!-- include ./zato.http_soap.edit/io.xml -->
-<!-- include ./zato.http_soap.get-list/io.xml -->
-<!-- include ./zato.http_soap.ping/io.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.scheduler.job.create/io.xml -->
-<!-- include ./zato.scheduler.job.delete/io.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.service.get-by-name/io.xml -->
-<!-- include ./zato.service.get-list/io.xml -->
-
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
+<!-- include ./include/io.xml -->
 
 <!-- ####################################################################### -->
     
@@ -437,97 +467,135 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ####################################################################### -->
 
-<!-- include ./zato.cluster.server.delete/body.xml -->
-<!-- include ./zato.cluster.server.edit/body.xml -->
-<!-- include ./zato.cluster.server.get-by-id/body.xml -->
+<!-- include ./include/zato.cluster.server.delete/body.xml -->
+<!-- include ./include/zato.cluster.server.edit/body.xml -->
+<!-- include ./include/zato.cluster.server.get-by-id/body.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.amqp.create/body.xml -->
+<!-- include ./include/zato.channel.amqp.delete/body.xml -->
+<!-- include ./include/zato.channel.amqp.edit/body.xml -->
+<!-- include ./include/zato.channel.amqp.get-list/body.xml -->
 
-<!-- include ./zato.channel.amqp.create/body.xml -->
-<!-- include ./zato.channel.amqp.delete/body.xml -->
-<!-- include ./zato.channel.amqp.edit/body.xml -->
-<!-- include ./zato.channel.amqp.get-list/body.xml -->
+<!-- include ./include/zato.channel.jms_wmq.create/body.xml -->
+<!-- include ./include/zato.channel.jms_wmq.delete/body.xml -->
+<!-- include ./include/zato.channel.jms_wmq.edit/body.xml -->
+<!-- include ./include/zato.channel.jms_wmq.get-list/body.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.channel.zmq.create/body.xml -->
+<!-- include ./include/zato.channel.zmq.delete/body.xml -->
+<!-- include ./include/zato.channel.zmq.edit/body.xml -->
+<!-- include ./include/zato.channel.zmq.get-list/body.xml -->
 
-<!-- include ./zato.channel.jms_wmq.create/body.xml -->
-<!-- include ./zato.channel.jms_wmq.delete/body.xml -->
-<!-- include ./zato.channel.jms_wmq.edit/body.xml -->
-<!-- include ./zato.channel.jms_wmq.get-list/body.xml -->
+<!-- include ./include/zato.definition.amqp.create/body.xml -->
+<!-- include ./include/zato.definition.amqp.delete/body.xml -->
+<!-- include ./include/zato.definition.amqp.edit/body.xml -->
+<!-- include ./include/zato.definition.amqp.get-by-id/body.xml -->
+<!-- include ./include/zato.definition.amqp.get-list/body.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.http_soap.create/body.xml -->
+<!-- include ./include/zato.http_soap.delete/body.xml -->
+<!-- include ./include/zato.http_soap.edit/body.xml -->
+<!-- include ./include/zato.http_soap.get-list/body.xml -->
+<!-- include ./include/zato.http_soap.ping/body.xml -->
 
-<!-- include ./zato.channel.zmq.create/body.xml -->
-<!-- include ./zato.channel.zmq.delete/body.xml -->
-<!-- include ./zato.channel.zmq.edit/body.xml -->
-<!-- include ./zato.channel.zmq.get-list/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.create/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.delete/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.edit/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-key-list/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-last-id/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-list/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-system-list/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.dictionary.get-value-list/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.impexp.import/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.create/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.delete/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.edit/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-last-id/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.get-list/body.xml -->
+<!-- include ./include/zato.kvdb.data-dict.translation.translate/body.xml -->
+<!-- include ./include/zato.kvdb.remote-command.execute/body.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
+<!-- include ./include/zato.scheduler.job.create/body.xml -->
+<!-- include ./include/zato.scheduler.job.delete/body.xml -->
 
-<!-- include ./zato.definition.amqp.create/body.xml -->
-<!-- include ./zato.definition.amqp.delete/body.xml -->
-<!-- include ./zato.definition.amqp.edit/body.xml -->
-<!-- include ./zato.definition.amqp.get-by-id/body.xml -->
-<!-- include ./zato.definition.amqp.get-list/body.xml -->
+<!-- include ./include/zato.service.get-by-name/body.xml -->
+<!-- include ./include/zato.service.get-list/body.xml -->
 
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.http_soap.create/body.xml -->
-<!-- include ./zato.http_soap.delete/body.xml -->
-<!-- include ./zato.http_soap.edit/body.xml -->
-<!-- include ./zato.http_soap.get-list/body.xml -->
-<!-- include ./zato.http_soap.ping/body.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.scheduler.job.create/body.xml -->
-<!-- include ./zato.scheduler.job.delete/body.xml -->
-
-<!-- ----------------------------------------------------------------------- -->
-
-<!-- include ./zato.service.get-by-name/body.xml -->
-<!-- include ./zato.service.get-list/body.xml -->
-
-
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
+<!-- include ./include/body.xml -->
     
 <!-- ####################################################################### -->
     

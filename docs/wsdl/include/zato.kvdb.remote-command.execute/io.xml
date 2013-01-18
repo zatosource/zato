@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.kvdb.remote-command.execute">
+      <wsdl:input message="zato:zato_kvdb_remote_command_execute_request_message"/>
+      <wsdl:output message="zato:zato_kvdb_remote_command_execute_response_message"/>
+    </wsdl:operation>

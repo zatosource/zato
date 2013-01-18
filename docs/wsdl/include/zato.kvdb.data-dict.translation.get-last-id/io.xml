@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.kvdb.data-dict.translation.get-last-id">
+      <wsdl:input message="zato:zato_kvdb_data_dict_translation_get_last_id_request_message"/>
+      <wsdl:output message="zato:zato_kvdb_data_dict_translation_get_last_id_response_message"/>
+    </wsdl:operation>
