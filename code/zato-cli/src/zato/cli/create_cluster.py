@@ -132,18 +132,18 @@ class Create(ZatoCommand):
             '** -- zato.definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
 
             # Definitions - JMS WebSphere MQ
-            'zato.definition.jms_wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
-            'zato.definition.jms_wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
-            'zato.definition.jms_wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
-            'zato.definition.jms_wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
-            'zato.definition.jms_wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
+            '** -- zato.definition.jms_wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
+            '** -- zato.definition.jms_wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
+            '** -- zato.definition.jms_wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
+            '** -- zato.definition.jms_wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
+            '** -- zato.definition.jms_wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
             
             # HTTP/SOAP
-            'zato.http_soap.create':'zato.server.service.internal.http_soap.Create',
-            'zato.http_soap.delete':'zato.server.service.internal.http_soap.Delete',
-            'zato.http_soap.edit':'zato.server.service.internal.http_soap.Edit',
+            '** -- zato.http_soap.create':'zato.server.service.internal.http_soap.Create',
+            '** -- zato.http_soap.delete':'zato.server.service.internal.http_soap.Delete',
+            '** -- zato.http_soap.edit':'zato.server.service.internal.http_soap.Edit',
             'zato.http_soap.get-list':'zato.server.service.internal.http_soap.GetList',
-            'zato.http_soap.ping':'zato.server.service.internal.http_soap.Ping',
+            '** -- zato.http_soap.ping':'zato.server.service.internal.http_soap.Ping',
             
             # Key/value DB
             'zato.kvdb.data-dict.dictionary.create':'zato.server.service.internal.kvdb.data_dict.dictionary.Create',

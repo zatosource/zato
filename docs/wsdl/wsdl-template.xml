@@ -62,6 +62,14 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
+<!-- include ./zato.http_soap.create/messages.xml -->
+<!-- include ./zato.http_soap.delete/messages.xml -->
+<!-- include ./zato.http_soap.edit/messages.xml -->
+<!-- include ./zato.http_soap.get-list/messages.xml -->
+<!-- include ./zato.http_soap.ping/messages.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
 <!-- include ./zato.scheduler.job.create/messages.xml -->
 <!-- include ./zato.scheduler.job.delete/messages.xml -->
 
@@ -75,11 +83,6 @@ targetNamespace="http://gefira.pl/zato"
 <!-- ----------------------------------------------------------------------- -->
 
 
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
-<!-- include ./messages.xml -->
 <!-- include ./messages.xml -->
 <!-- include ./messages.xml -->
 <!-- include ./messages.xml -->
@@ -213,6 +216,14 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
+<!-- include ./zato.http_soap.create/parts.xml -->
+<!-- include ./zato.http_soap.delete/parts.xml -->
+<!-- include ./zato.http_soap.edit/parts.xml -->
+<!-- include ./zato.http_soap.get-list/parts.xml -->
+<!-- include ./zato.http_soap.ping/parts.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
 <!-- include ./zato.channel.jms_wmq.create/parts.xml -->
 <!-- include ./zato.channel.jms_wmq.delete/parts.xml -->
 <!-- include ./zato.channel.jms_wmq.edit/parts.xml -->
@@ -246,11 +257,6 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
-<!-- include ./parts.xml -->
 <!-- include ./parts.xml -->
 <!-- include ./parts.xml -->
 <!-- include ./parts.xml -->
@@ -315,6 +321,14 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
+<!-- include ./zato.http_soap.create/io.xml -->
+<!-- include ./zato.http_soap.delete/io.xml -->
+<!-- include ./zato.http_soap.edit/io.xml -->
+<!-- include ./zato.http_soap.get-list/io.xml -->
+<!-- include ./zato.http_soap.ping/io.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
 <!-- include ./zato.scheduler.job.create/io.xml -->
 <!-- include ./zato.scheduler.job.delete/io.xml -->
 
@@ -323,11 +337,6 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./zato.service.get-by-name/io.xml -->
 <!-- include ./zato.service.get-list/io.xml -->
 
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
-<!-- include ./io.xml -->
 <!-- include ./io.xml -->
 <!-- include ./io.xml -->
 <!-- include ./io.xml -->
@@ -463,6 +472,14 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ----------------------------------------------------------------------- -->
 
+<!-- include ./zato.http_soap.create/body.xml -->
+<!-- include ./zato.http_soap.delete/body.xml -->
+<!-- include ./zato.http_soap.edit/body.xml -->
+<!-- include ./zato.http_soap.get-list/body.xml -->
+<!-- include ./zato.http_soap.ping/body.xml -->
+
+<!-- ----------------------------------------------------------------------- -->
+
 <!-- include ./zato.scheduler.job.create/body.xml -->
 <!-- include ./zato.scheduler.job.delete/body.xml -->
 
@@ -472,11 +489,6 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./zato.service.get-list/body.xml -->
 
 
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
-<!-- include ./body.xml -->
 <!-- include ./body.xml -->
 <!-- include ./body.xml -->
 <!-- include ./body.xml -->

@@ -77,7 +77,7 @@ class Create(AdminService):
         input_required = ('cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
-            'ssl_key_repository', Boolean('needs_mcd'), Integer('max_chars_printed'))
+            'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -121,7 +121,7 @@ class Edit(AdminService):
         input_required = ('id', 'cluster_id', 'name', 'host', 'port', 'queue_manager', 
             'channel', Boolean('cache_open_send_queues'), Boolean('cache_open_receive_queues'),
             Boolean('use_shared_connections'), Boolean('ssl'), 'ssl_cipher_spec', 
-            'ssl_key_repository', Boolean('needs_mcd'), Integer('max_chars_printed'))
+            'ssl_key_repository', 'needs_mcd', Integer('max_chars_printed'))
         output_required = ('id', 'name')
 
     def handle(self):
