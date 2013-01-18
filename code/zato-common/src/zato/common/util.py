@@ -286,7 +286,9 @@ def new_cid():
     """
     
     # The number below (29) needs to be kept in sync with zato.common.log_message.CID_LENGTH
-    # and the Service.sample_cid column
+    # and the Service.sample_cid column. There is nothing special in the 'K' prefix,
+    # it's just so that a CID always begins with a letter and 'K' seems like something
+    # that can't be taken for some other ASCII letter (e.g. is it Z or 2 etc.)
     return 'K{0:0>29}'.format(getrandbits(96))
 
 def get_config(repo_location, config_name, bunchified=True):
@@ -549,7 +551,7 @@ def now(tz=None):
     return _now(tz)
 
 def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
-    """ Clears out any KVDB locks by Zato servers.
+    """ Clears out any KVDB locks held by Zato servers.
     """
     if kvdb_config:
         kvdb.config = kvdb_config
