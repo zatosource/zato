@@ -29,6 +29,7 @@ from zato.common import ZatoException
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
+from zato.server.service import Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class _SQLService(object):
@@ -51,8 +52,8 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_sql_get_list_request'
         response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'engine', 'host', 'port',
-            'db_name', 'username', 'pool_size', 'extra')
+        output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
+        output_optional = ('extra',)
         
     def get_data(self, session):
         return out_sql_list(session, self.request.input.cluster_id, False)
@@ -67,9 +68,9 @@ class Create(AdminService, _SQLService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_create_request'
         response_elem = 'zato_outgoing_sql_create_response'
-        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
         input_optional = ('extra',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -107,6 +108,7 @@ class Create(AdminService, _SQLService):
                 self.notify_worker_threads(input)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
 
             except Exception, e:
                 msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
@@ -121,9 +123,9 @@ class Edit(AdminService, _SQLService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_edit_request'
         response_elem = 'zato_outgoing_sql_edit_response'
-        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size')
+        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
         input_optional = ('extra',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -163,6 +165,7 @@ class Edit(AdminService, _SQLService):
                 self.notify_worker_threads(input)
 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
 
             except Exception, e:
                 msg = 'Could not update the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
