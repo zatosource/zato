@@ -164,17 +164,17 @@ class Create(ZatoCommand):
             '** -- zato.kvdb.remote-command.execute':'zato.server.service.internal.kvdb.ExecuteCommand',
             
             # Outgoing connections - AMQP
-            'zato.outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
-            'zato.outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
-            'zato.outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
-            'zato.outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
+            '** -- zato.outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
+            '** -- zato.outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
+            '** -- zato.outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
+            '** -- zato.outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
             
             # Outgoing connections - FTP
-            'zato.outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
-            'zato.outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
-            'zato.outgoing.ftp.delete':'zato.server.service.internal.outgoing.ftp.Delete',
-            'zato.outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
-            'zato.outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
+            '** -- zato.outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
+            '** -- zato.outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
+            '** -- zato.outgoing.ftp.delete':'zato.server.service.internal.outgoing.ftp.Delete',
+            '** -- zato.outgoing.ftp.edit':'zato.server.service.internal.outgoing.ftp.Edit',
+            '** -- zato.outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
 
             # Outgoing connections - JMS WebSphere MQ
             'zato.outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',

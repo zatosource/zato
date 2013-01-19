@@ -27,6 +27,7 @@ from traceback import format_exc
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
+from zato.server.service import Boolean
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 
 class _FTPService(AdminService):
@@ -45,8 +46,8 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_ftp_get_list_request'
         response_elem = 'zato_outgoing_ftp_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'port', 'user', 
-            'acct', 'timeout', 'dircache')
+        output_required = ('id', 'name', 'is_active', 'host', 'port')
+        output_optional = ('user', 'acct', 'timeout', Boolean('dircache'))
         
     def get_data(self, session):
         return out_ftp_list(session, self.request.input.cluster_id, False)
@@ -61,7 +62,7 @@ class Create(_FTPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_ftp_create_request'
         response_elem = 'zato_outgoing_ftp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
+        input_required = ('cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache'))
         input_optional = ('user', 'acct', 'timeout')
         output_required = ('id', 'name')
 
@@ -110,7 +111,7 @@ class Edit(_FTPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_ftp_edit_request'
         response_elem = 'zato_outgoing_ftp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'port', 'dircache')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'host', 'port', Boolean('dircache'))
         input_optional = ('user', 'acct', 'timeout')
         output_required = ('id', 'name')
 

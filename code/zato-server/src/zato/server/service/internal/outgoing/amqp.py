@@ -43,9 +43,8 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_amqp_get_list_request'
         response_elem = 'zato_outgoing_amqp_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority',
-            'content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'),
-            'def_name', 'def_id')
+        output_required = ('id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'def_name')
+        output_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
         
     def get_data(self, session):
         return out_amqp_list(session, self.request.input.cluster_id, False)
