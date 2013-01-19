@@ -1,4 +1,4 @@
-      <xsd:element name="zato_outgoing_ftp_delete_request">
+      <xsd:element name="zato_outgoing_jms_wmq_delete_request">
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
@@ -6,7 +6,7 @@
         </xsd:complexType>
       </xsd:element>
 
-      <xsd:element name="zato_outgoing_ftp_delete_response">
+      <xsd:element name="zato_outgoing_jms_wmq_delete_response">
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element ref="zato_env"/>

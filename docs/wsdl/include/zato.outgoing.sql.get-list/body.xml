@@ -1,5 +1,5 @@
-    <wsdl:operation name="zato.outgoing.ftp.delete">
-      <soap:operation soapAction="zato.outgoing.ftp.delete"/>
+    <wsdl:operation name="zato.outgoing.sql.get-list">
+      <soap:operation soapAction="zato.outgoing.sql.get-list"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>

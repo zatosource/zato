@@ -177,18 +177,18 @@ class Create(ZatoCommand):
             '** -- zato.outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
 
             # Outgoing connections - JMS WebSphere MQ
-            'zato.outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
-            'zato.outgoing.jms_wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
-            'zato.outgoing.jms_wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
-            'zato.outgoing.jms_wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
+            '** -- zato.outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
+            '** -- zato.outgoing.jms_wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
+            '** -- zato.outgoing.jms_wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
+            '** -- zato.outgoing.jms_wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
             
             # Outgoing connections - SQL
-            'zato.outgoing.sql.change-password':'zato.server.service.internal.outgoing.sql.ChangePassword',
-            'zato.outgoing.sql.create':'zato.server.service.internal.outgoing.sql.Create',
-            'zato.outgoing.sql.delete':'zato.server.service.internal.outgoing.sql.Delete',
-            'zato.outgoing.sql.edit':'zato.server.service.internal.outgoing.sql.Edit',
-            'zato.outgoing.sql.get-list':'zato.server.service.internal.outgoing.sql.GetList',
-            'zato.outgoing.sql.ping':'zato.server.service.internal.outgoing.sql.Ping',
+            '** -- zato.outgoing.sql.change-password':'zato.server.service.internal.outgoing.sql.ChangePassword',
+            '** -- zato.outgoing.sql.create':'zato.server.service.internal.outgoing.sql.Create',
+            '** -- zato.outgoing.sql.delete':'zato.server.service.internal.outgoing.sql.Delete',
+            '** -- zato.outgoing.sql.edit':'zato.server.service.internal.outgoing.sql.Edit',
+            '** -- zato.outgoing.sql.get-list':'zato.server.service.internal.outgoing.sql.GetList',
+            '** -- zato.outgoing.sql.ping':'zato.server.service.internal.outgoing.sql.Ping',
             
             # Outgoing connections - ZeroMQ
             'zato.outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',

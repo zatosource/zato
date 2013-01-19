@@ -38,8 +38,8 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_jms_wmq_get_list_request'
         response_elem = 'zato_outgoing_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'delivery_mode', 
-            'priority', 'expiration', 'def_name', 'def_id')
+        output_required = ('id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'), 'def_name')
+        output_optional = ('expiration',)
         
     def get_data(self, session):
         return out_jms_wmq_list(session, self.request.input.cluster_id, False)
@@ -54,9 +54,9 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_create_request'
         response_elem = 'zato_outgoing_jms_wmq_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'))
         input_optional = ('expiration',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -89,6 +89,7 @@ class Create(AdminService):
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not create an outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
@@ -103,9 +104,9 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_edit_request'
         response_elem = 'zato_outgoing_jms_wmq_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'))
         input_optional = ('expiration',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -142,6 +143,7 @@ class Edit(AdminService):
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
