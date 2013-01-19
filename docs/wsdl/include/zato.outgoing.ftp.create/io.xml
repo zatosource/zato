@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.outgoing.ftp.create">
+      <wsdl:input message="zato:zato_outgoing_ftp_create_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_ftp_create_response_message"/>
+    </wsdl:operation>

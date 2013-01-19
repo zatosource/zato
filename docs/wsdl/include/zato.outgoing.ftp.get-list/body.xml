@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.outgoing.ftp.get-list">
+      <soap:operation soapAction="zato.outgoing.ftp.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
