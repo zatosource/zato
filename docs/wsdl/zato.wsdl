@@ -1221,7 +1221,7 @@ targetNamespace="http://gefira.pl/zato"
                   <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
                     <xsd:complexType>
                       <xsd:sequence>
-                        <xsd:element name="cluster_id" type="xsd:int"/>
+                        <xsd:element name="id" type="xsd:int"/>
                         <xsd:element name="name" type="xsd:string"/>
                         <xsd:element name="is_active" type="xsd:boolean"/>
                         <xsd:element name="def_id" type="xsd:int"/>
@@ -1637,6 +1637,109 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element>
 
+      <xsd:element name="zato_outgoing_zmq_create_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="address" type="xsd:string"/>
+            <xsd:element name="socket_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_outgoing_zmq_create_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_outgoing_zmq_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_outgoing_zmq_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_outgoing_zmq_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="address" type="xsd:string"/>
+            <xsd:element name="socket_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_outgoing_zmq_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_outgoing_zmq_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_outgoing_zmq_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="address" type="xsd:string"/>
+                        <xsd:element name="socket_type" type="xsd:string"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
       <xsd:element name="zato_scheduler_job_create_request">
         <xsd:complexType>
           <xsd:sequence>
@@ -1686,6 +1789,566 @@ targetNamespace="http://gefira.pl/zato"
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_scheduler_job_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="job_type" type="xsd:string"/>
+            <xsd:element name="service" type="xsd:string"/>
+            <xsd:element name="start_date" type="xsd:dateTime"/>
+            <xsd:element name="extra" type="xsd:string"/>
+            <xsd:element name="id" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="days" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="hours" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="minutes" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="seconds" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="repeats" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="cron_definition" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_scheduler_job_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="cron_definition" type="xsd:string" minOccurs="0"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_scheduler_job_execute_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_scheduler_job_execute_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_scheduler_job_get_by_name_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="name" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_scheduler_job_get_by_name_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                  <xsd:element name="is_active" type="xsd:boolean"/>
+                  <xsd:element name="job_type" type="xsd:string"/>
+                  <xsd:element name="start_date" type="xsd:dateTime"/>
+                  <xsd:element name="extra" type="xsd:string"/>
+                  <xsd:element name="service_id" type="xsd:int"/>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="days" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="hours" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="minutes" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="seconds" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="repeats" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="cron_definition" type="xsd:string" minOccurs="0"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_scheduler_job_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_scheduler_job_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="job_type" type="xsd:string"/>
+                        <xsd:element name="start_date" type="xsd:dateTime"/>
+                        <xsd:element name="extra" type="xsd:string"/>
+                        <xsd:element name="service_id" type="xsd:int"/>
+                        <xsd:element name="service_name" type="xsd:string"/>
+                        <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="days" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="hours" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="minutes" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="seconds" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="repeats" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="cron_definition" type="xsd:string" minOccurs="0"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="sec_type" type="xsd:string"/>
+                        <xsd:element name="username" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="realm" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="password_type" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="reject_empty_nonce_creat" type="xsd:boolean" minOccurs="0"/>
+                        <xsd:element name="reject_stale_tokens" type="xsd:boolean" minOccurs="0"/>
+                        <xsd:element name="reject_expiry_limit" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="nonce_freshness_time" type="xsd:int" minOccurs="0"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_basic_auth_change_password_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="password1" type="xsd:string"/>
+            <xsd:element name="password2" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_basic_auth_change_password_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_basic_auth_create_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="username" type="xsd:string"/>
+            <xsd:element name="realm" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_basic_auth_create_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_basic_auth_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_basic_auth_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_basic_auth_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="username" type="xsd:string"/>
+            <xsd:element name="realm" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_basic_auth_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_basic_auth_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_basic_auth_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="username" type="xsd:string"/>
+                        <xsd:element name="realm" type="xsd:string"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_tech_account_change_password_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="password1" type="xsd:string"/>
+            <xsd:element name="password2" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_tech_account_change_password_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_tech_account_create_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_tech_account_create_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_tech_account_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_tech_account_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_tech_account_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_tech_account_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_tech_account_get_by_id_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_tech_account_get_by_id_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                  <xsd:element name="is_active" type="xsd:boolean"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_tech_account_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_tech_account_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_wss_change_password_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="password1" type="xsd:string"/>
+            <xsd:element name="password2" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_wss_change_password_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_wss_create_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="username" type="xsd:string"/>
+            <xsd:element name="password_type" type="xsd:string"/>
+            <xsd:element name="reject_empty_nonce_creat" type="xsd:boolean"/>
+            <xsd:element name="reject_stale_tokens" type="xsd:boolean"/>
+            <xsd:element name="reject_expiry_limit" type="xsd:int"/>
+            <xsd:element name="nonce_freshness_time" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_wss_create_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_wss_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_wss_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_wss_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+            <xsd:element name="is_active" type="xsd:boolean"/>
+            <xsd:element name="username" type="xsd:string"/>
+            <xsd:element name="password_type" type="xsd:string"/>
+            <xsd:element name="reject_empty_nonce_creat" type="xsd:boolean"/>
+            <xsd:element name="reject_stale_tokens" type="xsd:boolean"/>
+            <xsd:element name="reject_expiry_limit" type="xsd:int"/>
+            <xsd:element name="nonce_freshness_time" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_wss_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_security_wss_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_wss_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="password_type" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="username" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="reject_empty_nonce_creat" type="xsd:boolean" minOccurs="0"/>
+                        <xsd:element name="reject_stale_tokens" type="xsd:boolean" minOccurs="0"/>
+                        <xsd:element name="reject_expiry_limit" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="nonce_freshness_time" type="xsd:int" minOccurs="0"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
@@ -1759,6 +2422,7 @@ targetNamespace="http://gefira.pl/zato"
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
+
 
 
       
@@ -2143,6 +2807,31 @@ targetNamespace="http://gefira.pl/zato"
     <wsdl:part element="zato:zato_outgoing_sql_ping_response" name="parameters"/>
   </wsdl:message>
 
+  <wsdl:message name="zato_outgoing_zmq_create_request_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_outgoing_zmq_create_response_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_create_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_outgoing_zmq_delete_request_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_outgoing_zmq_delete_response_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_delete_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_outgoing_zmq_edit_request_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_outgoing_zmq_edit_response_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_edit_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_outgoing_zmq_get_list_request_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_get_list_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_outgoing_zmq_get_list_response_message">
+    <wsdl:part element="zato:zato_outgoing_zmq_get_list_response" name="parameters"/>
+  </wsdl:message>
+
   <wsdl:message name="zato_scheduler_job_create_request_message">
     <wsdl:part element="zato:zato_scheduler_job_create_request" name="parameters"/>
   </wsdl:message>
@@ -2154,6 +2843,136 @@ targetNamespace="http://gefira.pl/zato"
   </wsdl:message>
   <wsdl:message name="zato_scheduler_job_delete_response_message">
     <wsdl:part element="zato:zato_scheduler_job_delete_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_edit_request_message">
+    <wsdl:part element="zato:zato_scheduler_job_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_edit_response_message">
+    <wsdl:part element="zato:zato_scheduler_job_edit_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_execute_request_message">
+    <wsdl:part element="zato:zato_scheduler_job_execute_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_execute_response_message">
+    <wsdl:part element="zato:zato_scheduler_job_execute_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_get_by_name_request_message">
+    <wsdl:part element="zato:zato_scheduler_job_get_by_name_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_get_by_name_response_message">
+    <wsdl:part element="zato:zato_scheduler_job_get_by_name_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_get_list_request_message">
+    <wsdl:part element="zato:zato_scheduler_job_get_list_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_scheduler_job_get_list_response_message">
+    <wsdl:part element="zato:zato_scheduler_job_get_list_response" name="parameters"/>
+  </wsdl:message>
+
+  <wsdl:message name="zato_security_get_list_request_message">
+    <wsdl:part element="zato:zato_security_get_list_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_get_list_response_message">
+    <wsdl:part element="zato:zato_security_get_list_response" name="parameters"/>
+  </wsdl:message>
+
+  <wsdl:message name="zato_security_basic_auth_change_password_request_message">
+    <wsdl:part element="zato:zato_security_basic_auth_change_password_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_change_password_response_message">
+    <wsdl:part element="zato:zato_security_basic_auth_change_password_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_create_request_message">
+    <wsdl:part element="zato:zato_security_basic_auth_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_create_response_message">
+    <wsdl:part element="zato:zato_security_basic_auth_create_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_delete_request_message">
+    <wsdl:part element="zato:zato_security_basic_auth_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_delete_response_message">
+    <wsdl:part element="zato:zato_security_basic_auth_delete_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_edit_request_message">
+    <wsdl:part element="zato:zato_security_basic_auth_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_edit_response_message">
+    <wsdl:part element="zato:zato_security_basic_auth_edit_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_get_list_request_message">
+    <wsdl:part element="zato:zato_security_basic_auth_get_list_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_basic_auth_get_list_response_message">
+    <wsdl:part element="zato:zato_security_basic_auth_get_list_response" name="parameters"/>
+  </wsdl:message>
+
+  <wsdl:message name="zato_security_tech_account_change_password_request_message">
+    <wsdl:part element="zato:zato_security_tech_account_change_password_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_change_password_response_message">
+    <wsdl:part element="zato:zato_security_tech_account_change_password_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_create_request_message">
+    <wsdl:part element="zato:zato_security_tech_account_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_create_response_message">
+    <wsdl:part element="zato:zato_security_tech_account_create_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_delete_request_message">
+    <wsdl:part element="zato:zato_security_tech_account_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_delete_response_message">
+    <wsdl:part element="zato:zato_security_tech_account_delete_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_edit_request_message">
+    <wsdl:part element="zato:zato_security_tech_account_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_edit_response_message">
+    <wsdl:part element="zato:zato_security_tech_account_edit_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_get_by_id_request_message">
+    <wsdl:part element="zato:zato_security_tech_account_get_by_id_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_get_by_id_response_message">
+    <wsdl:part element="zato:zato_security_tech_account_get_by_id_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_get_list_request_message">
+    <wsdl:part element="zato:zato_security_tech_account_get_list_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_get_list_response_message">
+    <wsdl:part element="zato:zato_security_tech_account_get_list_response" name="parameters"/>
+  </wsdl:message>
+
+  <wsdl:message name="zato_security_wss_change_password_request_message">
+    <wsdl:part element="zato:zato_security_wss_change_password_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_change_password_response_message">
+    <wsdl:part element="zato:zato_security_wss_change_password_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_create_request_message">
+    <wsdl:part element="zato:zato_security_wss_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_create_response_message">
+    <wsdl:part element="zato:zato_security_wss_create_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_delete_request_message">
+    <wsdl:part element="zato:zato_security_wss_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_delete_response_message">
+    <wsdl:part element="zato:zato_security_wss_delete_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_edit_request_message">
+    <wsdl:part element="zato:zato_security_wss_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_edit_response_message">
+    <wsdl:part element="zato:zato_security_wss_edit_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_get_list_request_message">
+    <wsdl:part element="zato:zato_security_wss_get_list_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_wss_get_list_response_message">
+    <wsdl:part element="zato:zato_security_wss_get_list_response" name="parameters"/>
   </wsdl:message>
 
   <wsdl:message name="zato_service_get_by_name_request_message">
@@ -2428,6 +3247,23 @@ targetNamespace="http://gefira.pl/zato"
       <wsdl:output message="zato:zato_outgoing_sql_ping_response_message"/>
     </wsdl:operation>
 
+    <wsdl:operation name="zato.outgoing.zmq.create">
+      <wsdl:input message="zato:zato_outgoing_zmq_create_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_zmq_create_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.outgoing.zmq.delete">
+      <wsdl:input message="zato:zato_outgoing_zmq_delete_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_zmq_delete_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.outgoing.zmq.edit">
+      <wsdl:input message="zato:zato_outgoing_zmq_edit_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_zmq_edit_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.outgoing.zmq.get-list">
+      <wsdl:input message="zato:zato_outgoing_zmq_get_list_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_zmq_get_list_response_message"/>
+    </wsdl:operation>
+
     <wsdl:operation name="zato.scheduler.job.create">
       <wsdl:input message="zato:zato_scheduler_job_create_request_message"/>
       <wsdl:output message="zato:zato_scheduler_job_create_response_message"/>
@@ -2435,6 +3271,94 @@ targetNamespace="http://gefira.pl/zato"
     <wsdl:operation name="zato.scheduler.job.delete">
       <wsdl:input message="zato:zato_scheduler_job_delete_request_message"/>
       <wsdl:output message="zato:zato_scheduler_job_delete_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.edit">
+      <wsdl:input message="zato:zato_scheduler_job_edit_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_edit_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.execute">
+      <wsdl:input message="zato:zato_scheduler_job_execute_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_execute_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.get-by-name">
+      <wsdl:input message="zato:zato_scheduler_job_get_by_name_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_get_by_name_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.get-list">
+      <wsdl:input message="zato:zato_scheduler_job_get_list_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_get_list_response_message"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.get-list">
+      <wsdl:input message="zato:zato_security_get_list_request_message"/>
+      <wsdl:output message="zato:zato_security_get_list_response_message"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.basic-auth.change-password">
+      <wsdl:input message="zato:zato_security_basic_auth_change_password_request_message"/>
+      <wsdl:output message="zato:zato_security_basic_auth_change_password_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.create">
+      <wsdl:input message="zato:zato_security_basic_auth_create_request_message"/>
+      <wsdl:output message="zato:zato_security_basic_auth_create_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.delete">
+      <wsdl:input message="zato:zato_security_basic_auth_delete_request_message"/>
+      <wsdl:output message="zato:zato_security_basic_auth_delete_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.edit">
+      <wsdl:input message="zato:zato_security_basic_auth_edit_request_message"/>
+      <wsdl:output message="zato:zato_security_basic_auth_edit_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.get-list">
+      <wsdl:input message="zato:zato_security_basic_auth_get_list_request_message"/>
+      <wsdl:output message="zato:zato_security_basic_auth_get_list_response_message"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.tech-account.change-password">
+      <wsdl:input message="zato:zato_security_tech_account_change_password_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_change_password_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.create">
+      <wsdl:input message="zato:zato_security_tech_account_create_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_create_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.delete">
+      <wsdl:input message="zato:zato_security_tech_account_delete_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_delete_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.edit">
+      <wsdl:input message="zato:zato_security_tech_account_edit_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_edit_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.get-by-id">
+      <wsdl:input message="zato:zato_security_tech_account_get_by_id_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_get_by_id_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.get-list">
+      <wsdl:input message="zato:zato_security_tech_account_get_list_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_get_list_response_message"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.wss.change-password">
+      <wsdl:input message="zato:zato_security_wss_change_password_request_message"/>
+      <wsdl:output message="zato:zato_security_wss_change_password_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.create">
+      <wsdl:input message="zato:zato_security_wss_create_request_message"/>
+      <wsdl:output message="zato:zato_security_wss_create_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.delete">
+      <wsdl:input message="zato:zato_security_wss_delete_request_message"/>
+      <wsdl:output message="zato:zato_security_wss_delete_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.edit">
+      <wsdl:input message="zato:zato_security_wss_edit_request_message"/>
+      <wsdl:output message="zato:zato_security_wss_edit_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.get-list">
+      <wsdl:input message="zato:zato_security_wss_get_list_request_message"/>
+      <wsdl:output message="zato:zato_security_wss_get_list_response_message"/>
     </wsdl:operation>
 
     <wsdl:operation name="zato.service.get-by-name">
@@ -3006,6 +3930,43 @@ targetNamespace="http://gefira.pl/zato"
       </wsdl:output>
     </wsdl:operation>
 
+    <wsdl:operation name="zato.outgoing.zmq.create">
+      <soap:operation soapAction="zato.outgoing.zmq.create"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.outgoing.zmq.delete">
+      <soap:operation soapAction="zato.outgoing.zmq.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.outgoing.zmq.edit">
+      <soap:operation soapAction="zato.outgoing.zmq.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.outgoing.zmq.get-list">
+      <soap:operation soapAction="zato.outgoing.zmq.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
     <wsdl:operation name="zato.scheduler.job.create">
       <soap:operation soapAction="zato.scheduler.job.create"/>
       <wsdl:input>
@@ -3017,6 +3978,199 @@ targetNamespace="http://gefira.pl/zato"
     </wsdl:operation>
     <wsdl:operation name="zato.scheduler.job.delete">
       <soap:operation soapAction="zato.scheduler.job.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.edit">
+      <soap:operation soapAction="zato.scheduler.job.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.execute">
+      <soap:operation soapAction="zato.scheduler.job.execute"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.get-by-name">
+      <soap:operation soapAction="zato.scheduler.job.get-by-name"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.scheduler.job.get-list">
+      <soap:operation soapAction="zato.scheduler.job.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.get-list">
+      <soap:operation soapAction="zato.security.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.basic-auth.change-password">
+      <soap:operation soapAction="zato.security.basic-auth.change-password"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.create">
+      <soap:operation soapAction="zato.security.basic-auth.create"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.delete">
+      <soap:operation soapAction="zato.security.basic-auth.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.edit">
+      <soap:operation soapAction="zato.security.basic-auth.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.basic-auth.get-list">
+      <soap:operation soapAction="zato.security.basic-auth.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.tech-account.change-password">
+      <soap:operation soapAction="zato.security.tech-account.change-password"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.create">
+      <soap:operation soapAction="zato.security.tech-account.create"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.delete">
+      <soap:operation soapAction="zato.security.tech-account.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.edit">
+      <soap:operation soapAction="zato.security.tech-account.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.get-by-id">
+      <soap:operation soapAction="zato.security.tech-account.get-by-id"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.tech-account.get-list">
+      <soap:operation soapAction="zato.security.tech-account.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.security.wss.change-password">
+      <soap:operation soapAction="zato.security.wss.change-password"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.create">
+      <soap:operation soapAction="zato.security.wss.create"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.delete">
+      <soap:operation soapAction="zato.security.wss.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.edit">
+      <soap:operation soapAction="zato.security.wss.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.security.wss.get-list">
+      <soap:operation soapAction="zato.security.wss.get-list"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>

@@ -1,0 +1,36 @@
+      <xsd:element name="zato_scheduler_job_get_by_name_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="name" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_scheduler_job_get_by_name_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                  <xsd:element name="is_active" type="xsd:boolean"/>
+                  <xsd:element name="job_type" type="xsd:string"/>
+                  <xsd:element name="start_date" type="xsd:dateTime"/>
+                  <xsd:element name="extra" type="xsd:string"/>
+                  <xsd:element name="service_id" type="xsd:int"/>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="days" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="hours" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="minutes" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="seconds" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="repeats" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="cron_definition" type="xsd:string" minOccurs="0"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

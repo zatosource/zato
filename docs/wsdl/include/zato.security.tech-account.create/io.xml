@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.security.tech-account.create">
+      <wsdl:input message="zato:zato_security_tech_account_create_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_create_response_message"/>
+    </wsdl:operation>

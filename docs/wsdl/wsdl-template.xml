@@ -95,36 +95,43 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.sql.get-list/messages.xml -->
 <!-- include ./include/zato.outgoing.sql.ping/messages.xml -->
 
+<!-- include ./include/zato.outgoing.zmq.create/messages.xml -->
+<!-- include ./include/zato.outgoing.zmq.delete/messages.xml -->
+<!-- include ./include/zato.outgoing.zmq.edit/messages.xml -->
+<!-- include ./include/zato.outgoing.zmq.get-list/messages.xml -->
+
 <!-- include ./include/zato.scheduler.job.create/messages.xml -->
 <!-- include ./include/zato.scheduler.job.delete/messages.xml -->
+<!-- include ./include/zato.scheduler.job.edit/messages.xml -->
+<!-- include ./include/zato.scheduler.job.execute/messages.xml -->
+<!-- include ./include/zato.scheduler.job.get-by-name/messages.xml -->
+<!-- include ./include/zato.scheduler.job.get-list/messages.xml -->
+
+<!-- include ./include/zato.security.get-list/messages.xml -->
+
+<!-- include ./include/zato.security.basic-auth.change-password/messages.xml -->
+<!-- include ./include/zato.security.basic-auth.create/messages.xml -->
+<!-- include ./include/zato.security.basic-auth.delete/messages.xml -->
+<!-- include ./include/zato.security.basic-auth.edit/messages.xml -->
+<!-- include ./include/zato.security.basic-auth.get-list/messages.xml -->
+
+<!-- include ./include/zato.security.tech-account.change-password/messages.xml -->
+<!-- include ./include/zato.security.tech-account.create/messages.xml -->
+<!-- include ./include/zato.security.tech-account.delete/messages.xml -->
+<!-- include ./include/zato.security.tech-account.edit/messages.xml -->
+<!-- include ./include/zato.security.tech-account.get-by-id/messages.xml -->
+<!-- include ./include/zato.security.tech-account.get-list/messages.xml -->
+
+<!-- include ./include/zato.security.wss.change-password/messages.xml -->
+<!-- include ./include/zato.security.wss.create/messages.xml -->
+<!-- include ./include/zato.security.wss.delete/messages.xml -->
+<!-- include ./include/zato.security.wss.edit/messages.xml -->
+<!-- include ./include/zato.security.wss.get-list/messages.xml -->
 
 <!-- include ./include/zato.service.get-by-name/messages.xml -->
 <!-- include ./include/zato.service.get-list/messages.xml -->
 
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
+
 <!-- include ./include/messages.xml -->
 <!-- include ./include/messages.xml -->
 <!-- include ./include/messages.xml -->
@@ -255,8 +262,38 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.sql.get-list/parts.xml -->
 <!-- include ./include/zato.outgoing.sql.ping/parts.xml -->
 
+<!-- include ./include/zato.outgoing.zmq.create/parts.xml -->
+<!-- include ./include/zato.outgoing.zmq.delete/parts.xml -->
+<!-- include ./include/zato.outgoing.zmq.edit/parts.xml -->
+<!-- include ./include/zato.outgoing.zmq.get-list/parts.xml -->
+
 <!-- include ./include/zato.scheduler.job.create/parts.xml -->
 <!-- include ./include/zato.scheduler.job.delete/parts.xml -->
+<!-- include ./include/zato.scheduler.job.edit/parts.xml -->
+<!-- include ./include/zato.scheduler.job.execute/parts.xml -->
+<!-- include ./include/zato.scheduler.job.get-by-name/parts.xml -->
+<!-- include ./include/zato.scheduler.job.get-list/parts.xml -->
+
+<!-- include ./include/zato.security.get-list/parts.xml -->
+
+<!-- include ./include/zato.security.basic-auth.change-password/parts.xml -->
+<!-- include ./include/zato.security.basic-auth.create/parts.xml -->
+<!-- include ./include/zato.security.basic-auth.delete/parts.xml -->
+<!-- include ./include/zato.security.basic-auth.edit/parts.xml -->
+<!-- include ./include/zato.security.basic-auth.get-list/parts.xml -->
+
+<!-- include ./include/zato.security.tech-account.change-password/parts.xml -->
+<!-- include ./include/zato.security.tech-account.create/parts.xml -->
+<!-- include ./include/zato.security.tech-account.delete/parts.xml -->
+<!-- include ./include/zato.security.tech-account.edit/parts.xml -->
+<!-- include ./include/zato.security.tech-account.get-by-id/parts.xml -->
+<!-- include ./include/zato.security.tech-account.get-list/parts.xml -->
+
+<!-- include ./include/zato.security.wss.change-password/parts.xml -->
+<!-- include ./include/zato.security.wss.create/parts.xml -->
+<!-- include ./include/zato.security.wss.delete/parts.xml -->
+<!-- include ./include/zato.security.wss.edit/parts.xml -->
+<!-- include ./include/zato.security.wss.get-list/parts.xml -->
 
 <!-- include ./include/zato.service.get-by-name/parts.xml -->
 <!-- include ./include/zato.service.get-list/parts.xml -->
@@ -419,8 +456,38 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.sql.get-list/io.xml -->
 <!-- include ./include/zato.outgoing.sql.ping/io.xml -->
 
+<!-- include ./include/zato.outgoing.zmq.create/io.xml -->
+<!-- include ./include/zato.outgoing.zmq.delete/io.xml -->
+<!-- include ./include/zato.outgoing.zmq.edit/io.xml -->
+<!-- include ./include/zato.outgoing.zmq.get-list/io.xml -->
+
 <!-- include ./include/zato.scheduler.job.create/io.xml -->
 <!-- include ./include/zato.scheduler.job.delete/io.xml -->
+<!-- include ./include/zato.scheduler.job.edit/io.xml -->
+<!-- include ./include/zato.scheduler.job.execute/io.xml -->
+<!-- include ./include/zato.scheduler.job.get-by-name/io.xml -->
+<!-- include ./include/zato.scheduler.job.get-list/io.xml -->
+
+<!-- include ./include/zato.security.get-list/io.xml -->
+
+<!-- include ./include/zato.security.basic-auth.change-password/io.xml -->
+<!-- include ./include/zato.security.basic-auth.create/io.xml -->
+<!-- include ./include/zato.security.basic-auth.delete/io.xml -->
+<!-- include ./include/zato.security.basic-auth.edit/io.xml -->
+<!-- include ./include/zato.security.basic-auth.get-list/io.xml -->
+
+<!-- include ./include/zato.security.tech-account.change-password/io.xml -->
+<!-- include ./include/zato.security.tech-account.create/io.xml -->
+<!-- include ./include/zato.security.tech-account.delete/io.xml -->
+<!-- include ./include/zato.security.tech-account.edit/io.xml -->
+<!-- include ./include/zato.security.tech-account.get-by-id/io.xml -->
+<!-- include ./include/zato.security.tech-account.get-list/io.xml -->
+
+<!-- include ./include/zato.security.wss.change-password/io.xml -->
+<!-- include ./include/zato.security.wss.create/io.xml -->
+<!-- include ./include/zato.security.wss.delete/io.xml -->
+<!-- include ./include/zato.security.wss.edit/io.xml -->
+<!-- include ./include/zato.security.wss.get-list/io.xml -->
 
 <!-- include ./include/zato.service.get-by-name/io.xml -->
 <!-- include ./include/zato.service.get-list/io.xml -->
@@ -576,8 +643,38 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.sql.get-list/body.xml -->
 <!-- include ./include/zato.outgoing.sql.ping/body.xml -->
 
+<!-- include ./include/zato.outgoing.zmq.create/body.xml -->
+<!-- include ./include/zato.outgoing.zmq.delete/body.xml -->
+<!-- include ./include/zato.outgoing.zmq.edit/body.xml -->
+<!-- include ./include/zato.outgoing.zmq.get-list/body.xml -->
+
 <!-- include ./include/zato.scheduler.job.create/body.xml -->
 <!-- include ./include/zato.scheduler.job.delete/body.xml -->
+<!-- include ./include/zato.scheduler.job.edit/body.xml -->
+<!-- include ./include/zato.scheduler.job.execute/body.xml -->
+<!-- include ./include/zato.scheduler.job.get-by-name/body.xml -->
+<!-- include ./include/zato.scheduler.job.get-list/body.xml -->
+
+<!-- include ./include/zato.security.get-list/body.xml -->
+
+<!-- include ./include/zato.security.basic-auth.change-password/body.xml -->
+<!-- include ./include/zato.security.basic-auth.create/body.xml -->
+<!-- include ./include/zato.security.basic-auth.delete/body.xml -->
+<!-- include ./include/zato.security.basic-auth.edit/body.xml -->
+<!-- include ./include/zato.security.basic-auth.get-list/body.xml -->
+
+<!-- include ./include/zato.security.tech-account.change-password/body.xml -->
+<!-- include ./include/zato.security.tech-account.create/body.xml -->
+<!-- include ./include/zato.security.tech-account.delete/body.xml -->
+<!-- include ./include/zato.security.tech-account.edit/body.xml -->
+<!-- include ./include/zato.security.tech-account.get-by-id/body.xml -->
+<!-- include ./include/zato.security.tech-account.get-list/body.xml -->
+
+<!-- include ./include/zato.security.wss.change-password/body.xml -->
+<!-- include ./include/zato.security.wss.create/body.xml -->
+<!-- include ./include/zato.security.wss.delete/body.xml -->
+<!-- include ./include/zato.security.wss.edit/body.xml -->
+<!-- include ./include/zato.security.wss.get-list/body.xml -->
 
 <!-- include ./include/zato.service.get-by-name/body.xml -->
 <!-- include ./include/zato.service.get-list/body.xml -->

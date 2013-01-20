@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.security.basic-auth.get-list">
+      <wsdl:input message="zato:zato_security_basic_auth_get_list_request_message"/>
+      <wsdl:output message="zato:zato_security_basic_auth_get_list_response_message"/>
+    </wsdl:operation>
