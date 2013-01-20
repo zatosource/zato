@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.security.basic-auth.delete">
+      <wsdl:input message="zato:zato_security_basic_auth_delete_request_message"/>
+      <wsdl:output message="zato:zato_security_basic_auth_delete_response_message"/>
+    </wsdl:operation>

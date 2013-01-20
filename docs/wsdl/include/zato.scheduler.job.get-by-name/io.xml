@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.scheduler.job.get-by-name">
+      <wsdl:input message="zato:zato_scheduler_job_get_by_name_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_get_by_name_response_message"/>
+    </wsdl:operation>

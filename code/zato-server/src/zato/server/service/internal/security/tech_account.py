@@ -54,7 +54,7 @@ class GetByID(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_tech_account_get_by_id_request'
         response_elem = 'zato_security_tech_account_get_by_id_response'
-        input_required = ('tech_account_id',)
+        input_required = ('id',)
         output_required = ('id', 'name', 'is_active')
         
     def get_data(self, session):
@@ -119,7 +119,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_tech_account_edit_request'
         response_elem = 'zato_security_tech_account_edit_response'
-        input_required = ('cluster_id', 'id', 'name', 'is_active')
+        input_required = ('id', 'cluster_id', 'name', 'is_active')
         output_required = ('id', 'name')
 
     def handle(self):

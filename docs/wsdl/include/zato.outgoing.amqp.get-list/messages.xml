@@ -16,7 +16,7 @@
                   <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
                     <xsd:complexType>
                       <xsd:sequence>
-                        <xsd:element name="cluster_id" type="xsd:int"/>
+                        <xsd:element name="id" type="xsd:int"/>
                         <xsd:element name="name" type="xsd:string"/>
                         <xsd:element name="is_active" type="xsd:boolean"/>
                         <xsd:element name="def_id" type="xsd:int"/>

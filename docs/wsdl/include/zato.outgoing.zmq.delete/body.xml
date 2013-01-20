@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.outgoing.zmq.delete">
+      <soap:operation soapAction="zato.outgoing.zmq.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

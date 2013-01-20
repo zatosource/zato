@@ -39,8 +39,8 @@ class GetList(AdminService):
         response_elem = 'zato_security_wss_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'password_type', 'username', 
-            'reject_empty_nonce_creat', 'reject_stale_tokens', 'reject_expiry_limit', 
-            'nonce_freshness_time')
+            Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'), 
+            Integer('nonce_freshness_time'Integer()
         
     def get_data(self, session):
         return wss_list(session, self.request.input.cluster_id, False)
@@ -57,8 +57,8 @@ class Create(AdminService):
         response_elem = 'zato_security_wss_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
-            'reject_expiry_limit', Integer('nonce_freshness_time'))
-        output_required = ('id',)
+            Integer('reject_expiry_limit'), Integer('nonce_freshness_time'))
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -97,7 +97,8 @@ class Create(AdminService):
                 input.sec_type = 'wss'
                 self.broker_client.publish(self.request.input)
             
-            self.response.payload.id = wss.id
+            self.response.payload.id = input.id
+            self.response.payload.name = input.name
 
 class Edit(AdminService):
     """ Updates a WS-S definition.
@@ -107,8 +108,8 @@ class Edit(AdminService):
         response_elem = 'zato_security_wss_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
-            'reject_expiry_limit', Integer('nonce_freshness_time'))
-        output_required = ('id',)
+            Integer('reject_expiry_limit'), Integer('nonce_freshness_time'))
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -150,7 +151,8 @@ class Edit(AdminService):
                 input.sec_type = 'wss'
                 self.broker_client.publish(self.request.input)
     
-            self.response.payload.id = wss.id
+            self.response.payload.id = input.id
+            self.response.payload.name = input.name
     
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a WS-Security definition.

@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.security.wss.edit">
+      <wsdl:input message="zato:zato_security_wss_edit_request_message"/>
+      <wsdl:output message="zato:zato_security_wss_edit_response_message"/>
+    </wsdl:operation>

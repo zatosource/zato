@@ -100,11 +100,6 @@ class Create(ZatoCommand):
         """
         soap_services = {
 
-            # Cluster - servers
-            '** -- zato.cluster.server.delete':'zato.server.service.internal.server.Delete',
-            '** -- zato.cluster.server.edit':'zato.server.service.internal.server.Edit',
-            '** -- zato.cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
-            
             # Channels - AMQP
             '** -- zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
             '** -- zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
@@ -122,6 +117,11 @@ class Create(ZatoCommand):
             '** -- zato.channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
             '** -- zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
             '** -- zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
+            
+            # Cluster - servers
+            '** -- zato.cluster.server.delete':'zato.server.service.internal.server.Delete',
+            '** -- zato.cluster.server.edit':'zato.server.service.internal.server.Edit',
+            '** -- zato.cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
             
             # Definitions - AMQP
             '** -- zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
@@ -191,19 +191,44 @@ class Create(ZatoCommand):
             '** -- zato.outgoing.sql.ping':'zato.server.service.internal.outgoing.sql.Ping',
             
             # Outgoing connections - ZeroMQ
-            'zato.outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
-            'zato.outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
-            'zato.outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
-            'zato.outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
+            '** -- zato.outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
+            '** -- zato.outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
+            '** -- zato.outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
+            '** -- zato.outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
 
             # Scheduler
             '** -- zato.scheduler.job.create':'zato.server.service.internal.scheduler.Create',
             '** -- zato.scheduler.job.delete':'zato.server.service.internal.scheduler.Delete',
-            'zato.scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
-            'zato.scheduler.job.execute':'zato.server.service.internal.scheduler.Execute',
-            'zato.scheduler.job.get-by-name':'zato.server.service.internal.scheduler.GetByName',
-            'zato.scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
+            '** -- zato.scheduler.job.edit':'zato.server.service.internal.scheduler.Edit',
+            '** -- zato.scheduler.job.execute':'zato.server.service.internal.scheduler.Execute',
+            '** -- zato.scheduler.job.get-by-name':'zato.server.service.internal.scheduler.GetByName',
+            '** -- zato.scheduler.job.get-list':'zato.server.service.internal.scheduler.GetList',
 
+            # Security
+            '** -- zato.security.get-list':'zato.server.service.internal.security.GetList',
+
+            # Security - HTTP Basic Auth
+            '** -- zato.security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
+            '** -- zato.security.basic-auth.create':'zato.server.service.internal.security.basic_auth.Create',
+            '** -- zato.security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
+            '** -- zato.security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
+            '** -- zato.security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
+
+            # Security - Technical accounts
+            '** -- zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
+            '** -- zato.security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
+            '** -- zato.security.tech-account.delete':'zato.server.service.internal.security.tech_account.Delete',
+            '** -- zato.security.tech-account.edit':'zato.server.service.internal.security.tech_account.Edit',
+            '** -- zato.security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
+            '** -- zato.security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
+
+            # Security - WS-Security
+            '** -- zato.security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
+            '** -- zato.security.wss.create':'zato.server.service.internal.security.wss.Create',
+            '** -- zato.security.wss.delete':'zato.server.service.internal.security.wss.Delete',
+            '** -- zato.security.wss.edit':'zato.server.service.internal.security.wss.Edit',
+            '** -- zato.security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
+            
             # Services
             'zato.service.configure-request-response':'zato.server.service.internal.service.ConfigureRequestResponse',
             'zato.service.create':'zato.server.service.internal.service.Create',
@@ -222,31 +247,6 @@ class Create(ZatoCommand):
             'zato.service.slow-response.get':'zato.server.service.internal.service.GetSlowResponse',
             'zato.service.slow-response.get-list':'zato.server.service.internal.service.GetSlowResponseList',
             'zato.service.upload-package':'zato.server.service.internal.service.UploadPackage',
-
-            # Security
-            'zato.security.get-list':'zato.server.service.internal.security.GetList',
-
-            # Technical accounts
-            'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
-            'zato.security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
-            'zato.security.tech-account.delete':'zato.server.service.internal.security.tech_account.Delete',
-            'zato.security.tech-account.edit':'zato.server.service.internal.security.tech_account.Edit',
-            'zato.security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
-            'zato.security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
-
-            # WS-Security
-            'zato.security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
-            'zato.security.wss.create':'zato.server.service.internal.security.wss.Create',
-            'zato.security.wss.delete':'zato.server.service.internal.security.wss.Delete',
-            'zato.security.wss.edit':'zato.server.service.internal.security.wss.Edit',
-            'zato.security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
-
-            # HTTP Basic Auth
-            'zato.security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
-            'zato.security.basic-auth.create':'zato.server.service.internal.security.basic_auth.Create',
-            'zato.security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
-            'zato.security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
-            'zato.security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
 
             # Statistics
             'zato.stats.create-summary-by-day':'zato.server.service.internal.stats.summary.CreateSummaryByDay',
