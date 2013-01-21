@@ -16,7 +16,7 @@
             <xsd:element name="item" minOccurs="0" maxOccurs="1">
               <xsd:complexType>
                 <xsd:sequence>
-                  <xsd:element name="response" type="xsd:any"/>
+                  <xsd:element name="response" type="xsd:anyType"/>
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>

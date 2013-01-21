@@ -2677,7 +2677,7 @@ targetNamespace="http://gefira.pl/zato"
             <xsd:element name="item" minOccurs="0" maxOccurs="1">
               <xsd:complexType>
                 <xsd:sequence>
-                  <xsd:element name="response" type="xsd:any"/>
+                  <xsd:element name="response" type="xsd:anyType"/>
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>
@@ -2779,9 +2779,285 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element>
 
+      <xsd:element name="zato_stats_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="stop" type="xsd:dateTime"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
 
+      <xsd:element name="zato_stats_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_stats_get_by_service_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="stop" type="xsd:dateTime"/>
+            <xsd:element name="service_id" type="xsd:int"/>
+            <xsd:element name="n" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="n_type" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
 
+      <xsd:element name="zato_stats_get_by_service_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="mean" type="xsd:float"/>
+                  <xsd:element name="rate" type="xsd:float"/>
+                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="usage_trend" type="xsd:string"/>
+                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="min_resp_time" type="xsd:int"/>
+                  <xsd:element name="max_resp_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:int"/>
+                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="mean_all_services" type="xsd:float"/>
+                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
+                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_stats_get_summary_by_day_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="n" type="xsd:int"/>
+            <xsd:element name="n_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
 
+      <xsd:element name="zato_stats_get_summary_by_day_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="mean" type="xsd:float"/>
+                  <xsd:element name="rate" type="xsd:float"/>
+                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="usage_trend" type="xsd:string"/>
+                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="min_resp_time" type="xsd:int"/>
+                  <xsd:element name="max_resp_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:int"/>
+                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="mean_all_services" type="xsd:float"/>
+                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
+                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_stats_get_summary_by_month_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="n" type="xsd:int"/>
+            <xsd:element name="n_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_stats_get_summary_by_month_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="mean" type="xsd:float"/>
+                  <xsd:element name="rate" type="xsd:float"/>
+                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="usage_trend" type="xsd:string"/>
+                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="min_resp_time" type="xsd:int"/>
+                  <xsd:element name="max_resp_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:int"/>
+                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="mean_all_services" type="xsd:float"/>
+                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
+                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_stats_get_summary_by_range_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="stop" type="xsd:dateTime"/>
+            <xsd:element name="n" type="xsd:int"/>
+            <xsd:element name="n_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_stats_get_summary_by_range_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="mean" type="xsd:float"/>
+                  <xsd:element name="rate" type="xsd:float"/>
+                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="usage_trend" type="xsd:string"/>
+                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="min_resp_time" type="xsd:int"/>
+                  <xsd:element name="max_resp_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:int"/>
+                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="mean_all_services" type="xsd:float"/>
+                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
+                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_stats_get_summary_by_week_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="n" type="xsd:int"/>
+            <xsd:element name="n_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_stats_get_summary_by_week_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="mean" type="xsd:float"/>
+                  <xsd:element name="rate" type="xsd:float"/>
+                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="usage_trend" type="xsd:string"/>
+                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="min_resp_time" type="xsd:int"/>
+                  <xsd:element name="max_resp_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:int"/>
+                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="mean_all_services" type="xsd:float"/>
+                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
+                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_stats_get_summary_by_year_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="n" type="xsd:int"/>
+            <xsd:element name="n_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_stats_get_summary_by_year_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="mean" type="xsd:float"/>
+                  <xsd:element name="rate" type="xsd:float"/>
+                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="usage_trend" type="xsd:string"/>
+                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="min_resp_time" type="xsd:int"/>
+                  <xsd:element name="max_resp_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:int"/>
+                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="mean_all_services" type="xsd:float"/>
+                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
+                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_stats_get_trends_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="stop" type="xsd:dateTime"/>
+            <xsd:element name="n" type="xsd:int"/>
+            <xsd:element name="n_type" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_stats_get_trends_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="service_name" type="xsd:string"/>
+                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="mean" type="xsd:float"/>
+                  <xsd:element name="rate" type="xsd:float"/>
+                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="usage_trend" type="xsd:string"/>
+                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="min_resp_time" type="xsd:int"/>
+                  <xsd:element name="max_resp_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:int"/>
+                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="mean_all_services" type="xsd:float"/>
+                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
+                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
       
 <!-- ####################################################################### -->
     
@@ -3429,6 +3705,55 @@ targetNamespace="http://gefira.pl/zato"
     <wsdl:part element="zato:zato_service_upload_package_response" name="parameters"/>
   </wsdl:message>
 
+  <wsdl:message name="zato_stats_delete_request_message">
+    <wsdl:part element="zato:zato_stats_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_delete_response_message">
+    <wsdl:part element="zato:zato_stats_delete_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_by_service_request_message">
+    <wsdl:part element="zato:zato_stats_get_by_service_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_by_service_response_message">
+    <wsdl:part element="zato:zato_stats_get_by_service_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_day_request_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_day_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_day_response_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_day_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_month_request_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_month_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_month_response_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_month_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_range_request_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_range_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_range_response_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_range_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_week_request_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_week_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_week_response_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_week_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_year_request_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_year_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_year_response_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_year_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_trends_request_message">
+    <wsdl:part element="zato:zato_stats_get_trends_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_trends_response_message">
+    <wsdl:part element="zato:zato_stats_get_trends_response" name="parameters"/>
+  </wsdl:message>
+
 
 <!-- ####################################################################### --> 
   
@@ -3865,6 +4190,39 @@ targetNamespace="http://gefira.pl/zato"
     <wsdl:operation name="zato.service.upload-package">
       <wsdl:input message="zato:zato_service_upload_package_request_message"/>
       <wsdl:output message="zato:zato_service_upload_package_response_message"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.stats.delete">
+      <wsdl:input message="zato:zato_stats_delete_request_message"/>
+      <wsdl:output message="zato:zato_stats_delete_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-by-service">
+      <wsdl:input message="zato:zato_stats_get_by_service_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_by_service_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-day">
+      <wsdl:input message="zato:zato_stats_get_summary_by_day_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_summary_by_day_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-month">
+      <wsdl:input message="zato:zato_stats_get_summary_by_month_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_summary_by_month_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-range">
+      <wsdl:input message="zato:zato_stats_get_summary_by_range_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_summary_by_range_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-week">
+      <wsdl:input message="zato:zato_stats_get_summary_by_week_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_summary_by_week_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-year">
+      <wsdl:input message="zato:zato_stats_get_summary_by_year_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_summary_by_year_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-trends">
+      <wsdl:input message="zato:zato_stats_get_trends_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_trends_response_message"/>
     </wsdl:operation>
 
 
@@ -4821,6 +5179,78 @@ targetNamespace="http://gefira.pl/zato"
       </wsdl:output>
     </wsdl:operation>
 
+    <wsdl:operation name="zato.stats.delete">
+      <soap:operation soapAction="zato.stats.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-by-service">
+      <soap:operation soapAction="zato.stats.get-by-service"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-day">
+      <soap:operation soapAction="zato.stats.get-summary-by-day"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-month">
+      <soap:operation soapAction="zato.stats.get-summary-by-month"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-range">
+      <soap:operation soapAction="zato.stats.get-summary-by-range"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-week">
+      <soap:operation soapAction="zato.stats.get-summary-by-week"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-summary-by-year">
+      <soap:operation soapAction="zato.stats.get-summary-by-year"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.stats.get-trends">
+      <soap:operation soapAction="zato.stats.get-trends"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
     
 <!-- ####################################################################### -->
     
