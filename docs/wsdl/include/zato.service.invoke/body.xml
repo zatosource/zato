@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.service.invoke">
+      <soap:operation soapAction="zato.service.invoke"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.service.get-wsdl">
+      <soap:operation soapAction="zato.service.get-wsdl"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

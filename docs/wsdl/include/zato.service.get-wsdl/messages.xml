@@ -1,0 +1,25 @@
+      <xsd:element name="zato_service_get_wsdl_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="service" type="xsd:string"/>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_service_get_wsdl_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="wsdl" type="xsd:string"/>
+                  <xsd:element name="wsdl_name" type="xsd:string"/>
+                  <xsd:element name="content_type" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

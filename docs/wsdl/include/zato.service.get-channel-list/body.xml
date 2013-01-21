@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.service.get-channel-list">
+      <soap:operation soapAction="zato.service.get-channel-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
