@@ -330,6 +330,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
     class SimpleIO(GetSummaryBase.SimpleIO):
         request_elem = 'zato_stats_get_summary_by_range_request'
         response_elem = 'zato_stats_get_summary_by_range_response'
+        input_required = GetSummaryBase.SimpleIO.input_required + UTC('stop')
     
     MINIMUM_DIFFERENCE = 3 # In minutes
     SLICE_TYPE_METHOD = {

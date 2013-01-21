@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.stats.get-by-service">
+      <wsdl:input message="zato:zato_stats_get_by_service_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_by_service_response_message"/>
+    </wsdl:operation>

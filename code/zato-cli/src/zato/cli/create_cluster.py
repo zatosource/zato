@@ -245,22 +245,17 @@ class Create(ZatoCommand):
             '** -- zato.service.set-wsdl':'zato.server.service.internal.service.SetWSDL',
             '** -- zato.service.slow-response.get':'zato.server.service.internal.service.GetSlowResponse',
             '** -- zato.service.slow-response.get-list':'zato.server.service.internal.service.GetSlowResponseList',
-            'zato.service.upload-package':'zato.server.service.internal.service.UploadPackage',
+            '** -- zato.service.upload-package':'zato.server.service.internal.service.UploadPackage',
 
             # Statistics
-            'zato.stats.create-summary-by-day':'zato.server.service.internal.stats.summary.CreateSummaryByDay',
-            'zato.stats.create-summary-by-month':'zato.server.service.internal.stats.summary.CreateSummaryByMonth',
-            'zato.stats.create-summary-by-range':'zato.server.service.internal.stats.summary.CreateSummaryByRange',
-            'zato.stats.create-summary-by-week':'zato.server.service.internal.stats.summary.CreateSummaryByWeek',
-            'zato.stats.create-summary-by-year':'zato.server.service.internal.stats.summary.CreateSummaryByYear',
-            'zato.stats.delete':'zato.server.service.internal.stats.Delete',
-            'zato.stats.get-by-service':'zato.server.service.internal.stats.GetByService',
-            'zato.stats.get-summary-by-day':'zato.server.service.internal.stats.summary.GetSummaryByDay',
-            'zato.stats.get-summary-by-month':'zato.server.service.internal.stats.summary.GetSummaryByMonth',
-            'zato.stats.get-summary-by-range':'zato.server.service.internal.stats.summary.GetSummaryByRange',
-            'zato.stats.get-summary-by-week':'zato.server.service.internal.stats.summary.GetSummaryByWeek',
-            'zato.stats.get-summary-by-year':'zato.server.service.internal.stats.summary.GetSummaryByYear',
-            'zato.stats.get-trends':'zato.server.service.internal.stats.trends.GetTrends',
+            '** -- zato.stats.delete':'zato.server.service.internal.stats.Delete',
+            '** -- zato.stats.get-by-service':'zato.server.service.internal.stats.GetByService',
+            '** -- zato.stats.get-summary-by-day':'zato.server.service.internal.stats.summary.GetSummaryByDay',
+            '** -- zato.stats.get-summary-by-month':'zato.server.service.internal.stats.summary.GetSummaryByMonth',
+            '** -- zato.stats.get-summary-by-range':'zato.server.service.internal.stats.summary.GetSummaryByRange',
+            '** -- zato.stats.get-summary-by-week':'zato.server.service.internal.stats.summary.GetSummaryByWeek',
+            '** -- zato.stats.get-summary-by-year':'zato.server.service.internal.stats.summary.GetSummaryByYear',
+            '** -- zato.stats.get-trends':'zato.server.service.internal.stats.trends.GetTrends',
         }
         
         #
