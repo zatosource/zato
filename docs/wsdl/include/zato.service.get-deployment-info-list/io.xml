@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.service.get-deployment-info-list">
+      <wsdl:input message="zato:zato_service_get_deployment_info_list_request_message"/>
+      <wsdl:output message="zato:zato_service_get_deployment_info_list_response_message"/>
+    </wsdl:operation>

@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.service.invoke">
+      <wsdl:input message="zato:zato_service_invoke_request_message"/>
+      <wsdl:output message="zato:zato_service_invoke_response_message"/>
+    </wsdl:operation>

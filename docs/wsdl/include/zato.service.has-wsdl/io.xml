@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.service.has-wsdl">
+      <wsdl:input message="zato:zato_service_has_wsdl_request_message"/>
+      <wsdl:output message="zato:zato_service_has_wsdl_response_message"/>
+    </wsdl:operation>

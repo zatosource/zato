@@ -1,0 +1,28 @@
+      <xsd:element name="zato_service_slow_response_get_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cid" type="xsd:string"/>
+            <xsd:element name="name" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_service_slow_response_get_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="cid" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="req_ts" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="resp_ts" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="proc_time" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="req" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="resp" type="xsd:string" minOccurs="0"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

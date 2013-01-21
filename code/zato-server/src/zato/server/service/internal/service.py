@@ -50,8 +50,8 @@ class GetList(AdminService):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 'usage',
-                           Integer('slow_threshold'))
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 
+                           Integer('usage'), Integer('slow_threshold'))
         output_repeated = True
         
     def get_data(self, session):
@@ -80,7 +80,8 @@ class GetByName(AdminService):
         response_elem = 'zato_service_get_by_name_response'
         input_required = ('cluster_id', 'name')
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'),
-            'usage', Integer('slow_threshold'), 'time_last', 'time_min_all_time', 'time_max_all_time', 'time_mean_all_time',)
+            Integer('usage'), Integer('slow_threshold'), Integer('time_last'), 
+            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time',)
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
@@ -122,7 +123,6 @@ class Edit(AdminService):
         response_elem = 'zato_service_edit_response'
         input_required = ('id', 'is_active', Integer('slow_threshold'))
         output_required = ('id', 'name', 'impl_name', 'is_internal',)
-        output_optional = ('usage',)
 
     def handle(self):
         input = self.request.input
@@ -391,6 +391,7 @@ class GetRequestResponse(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_request_response_request'
         response_elem = 'zato_service_request_response_response'
+        input_required = ('cluster_id', 'name')
         output_required = ('service_id', 'sample_cid', 'sample_req_ts', 'sample_resp_ts', 
             'sample_req', 'sample_resp', Integer('sample_req_resp_freq'))
         
@@ -474,7 +475,7 @@ class GetSlowResponseList(_SlowResponseService):
         request_elem = 'zato_service_slow_response_get_list_request'
         response_elem = 'zato_service_slow_response_get_list_response'
         input_required = ('name',)
-        output_required = ('cid', 'req_ts', 'resp_ts', 'proc_time')
+        output_required = ('cid', 'req_ts', 'resp_ts', Integer('proc_time'))
         
     def handle(self):
         self.response.payload[:] = self.get_data()    
@@ -486,7 +487,7 @@ class GetSlowResponse(_SlowResponseService):
         request_elem = 'zato_service_slow_response_get_request'
         response_elem = 'zato_service_slow_response_get_response'
         input_required = ('cid', 'name')
-        output_optional = ('cid', 'req_ts', 'resp_ts', 'proc_time', 'req', 'resp')
+        output_optional = ('cid', 'req_ts', 'resp_ts', Integer('proc_time'), 'req', 'resp')
     
     def handle(self):
         data = self.get_data()

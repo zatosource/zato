@@ -128,25 +128,26 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.edit/messages.xml -->
 <!-- include ./include/zato.security.wss.get-list/messages.xml -->
 
+<!-- include ./include/zato.service.configure-request-response/messages.xml -->
+<!-- include ./include/zato.service.create/messages.xml -->
+<!-- include ./include/zato.service.delete/messages.xml -->
+<!-- include ./include/zato.service.edit/messages.xml -->
 <!-- include ./include/zato.service.get-by-name/messages.xml -->
+<!-- include ./include/zato.service.get-channel-list/messages.xml -->
+<!-- include ./include/zato.service.get-deployment-info-list/messages.xml -->
 <!-- include ./include/zato.service.get-list/messages.xml -->
+<!-- include ./include/zato.service.get-request-response/messages.xml -->
+<!-- include ./include/zato.service.get-source-info/messages.xml -->
+<!-- include ./include/zato.service.get-wsdl/messages.xml -->
+<!-- include ./include/zato.service.has-wsdl/messages.xml -->
+<!-- include ./include/zato.service.invoke/messages.xml -->
+<!-- include ./include/zato.service.set-wsdl/messages.xml -->
+<!-- include ./include/zato.service.slow-response.get/messages.xml -->
+<!-- include ./include/zato.service.slow-response.get-list/messages.xml -->
+<!-- include ./include/zato.service.upload-package/messages.xml -->
 
 
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
-<!-- include ./include/messages.xml -->
+
 <!-- include ./include/messages.xml -->
 <!-- include ./include/messages.xml -->
 <!-- include ./include/messages.xml -->
@@ -295,8 +296,23 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.edit/parts.xml -->
 <!-- include ./include/zato.security.wss.get-list/parts.xml -->
 
+<!-- include ./include/zato.service.configure-request-response/parts.xml -->
+<!-- include ./include/zato.service.create/parts.xml -->
+<!-- include ./include/zato.service.delete/parts.xml -->
+<!-- include ./include/zato.service.edit/parts.xml -->
 <!-- include ./include/zato.service.get-by-name/parts.xml -->
+<!-- include ./include/zato.service.get-channel-list/parts.xml -->
+<!-- include ./include/zato.service.get-deployment-info-list/parts.xml -->
 <!-- include ./include/zato.service.get-list/parts.xml -->
+<!-- include ./include/zato.service.get-request-response/parts.xml -->
+<!-- include ./include/zato.service.get-source-info/parts.xml -->
+<!-- include ./include/zato.service.get-wsdl/parts.xml -->
+<!-- include ./include/zato.service.has-wsdl/parts.xml -->
+<!-- include ./include/zato.service.invoke/parts.xml -->
+<!-- include ./include/zato.service.set-wsdl/parts.xml -->
+<!-- include ./include/zato.service.slow-response.get/parts.xml -->
+<!-- include ./include/zato.service.slow-response.get-list/parts.xml -->
+<!-- include ./include/zato.service.upload-package/parts.xml -->
 
 <!-- include ./include/parts.xml -->
 <!-- include ./include/parts.xml -->
@@ -489,8 +505,23 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.edit/io.xml -->
 <!-- include ./include/zato.security.wss.get-list/io.xml -->
 
+<!-- include ./include/zato.service.configure-request-response/io.xml -->
+<!-- include ./include/zato.service.create/io.xml -->
+<!-- include ./include/zato.service.delete/io.xml -->
+<!-- include ./include/zato.service.edit/io.xml -->
 <!-- include ./include/zato.service.get-by-name/io.xml -->
+<!-- include ./include/zato.service.get-channel-list/io.xml -->
+<!-- include ./include/zato.service.get-deployment-info-list/io.xml -->
 <!-- include ./include/zato.service.get-list/io.xml -->
+<!-- include ./include/zato.service.get-request-response/io.xml -->
+<!-- include ./include/zato.service.get-source-info/io.xml -->
+<!-- include ./include/zato.service.get-wsdl/io.xml -->
+<!-- include ./include/zato.service.has-wsdl/io.xml -->
+<!-- include ./include/zato.service.invoke/io.xml -->
+<!-- include ./include/zato.service.set-wsdl/io.xml -->
+<!-- include ./include/zato.service.slow-response.get/io.xml -->
+<!-- include ./include/zato.service.slow-response.get-list/io.xml -->
+<!-- include ./include/zato.service.upload-package/io.xml -->
 
 <!-- include ./include/io.xml -->
 <!-- include ./include/io.xml -->
@@ -676,8 +707,23 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.edit/body.xml -->
 <!-- include ./include/zato.security.wss.get-list/body.xml -->
 
+<!-- include ./include/zato.service.configure-request-response/body.xml -->
+<!-- include ./include/zato.service.create/body.xml -->
+<!-- include ./include/zato.service.delete/body.xml -->
+<!-- include ./include/zato.service.edit/body.xml -->
 <!-- include ./include/zato.service.get-by-name/body.xml -->
+<!-- include ./include/zato.service.get-channel-list/body.xml -->
+<!-- include ./include/zato.service.get-deployment-info-list/body.xml -->
 <!-- include ./include/zato.service.get-list/body.xml -->
+<!-- include ./include/zato.service.get-request-response/body.xml -->
+<!-- include ./include/zato.service.get-source-info/body.xml -->
+<!-- include ./include/zato.service.get-wsdl/body.xml -->
+<!-- include ./include/zato.service.has-wsdl/body.xml -->
+<!-- include ./include/zato.service.invoke/body.xml -->
+<!-- include ./include/zato.service.set-wsdl/body.xml -->
+<!-- include ./include/zato.service.slow-response.get/body.xml -->
+<!-- include ./include/zato.service.slow-response.get-list/body.xml -->
+<!-- include ./include/zato.service.upload-package/body.xml -->
 
 <!-- include ./include/body.xml -->
 <!-- include ./include/body.xml -->
