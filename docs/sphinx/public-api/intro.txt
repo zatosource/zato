@@ -1,0 +1,159 @@
+==========================
+Introducing the public API
+==========================
+
+
+Overview
+========
+
+Zato uses 150+ internal services for controlling most aspects of running a cluster,
+such as creating new connection definitions, updating statistics, configuring 
+passwords and so on. 
+
+Most of the services are available
+through Zato's public API in both SOAP and JSON via HTTP. It is possible to use
+the services exposed for creating external applications that assume the roles
+of what is typically performed by the :doc:`web admin</admin/web-admin>`. These
+could be anything ranging from custom iPhone applications through Java clients
+to simply invoking the services from `curl <http://curl.haxx.se/>`_.
+
+Message format
+==============
+
+A service always has request and response documents defined. Being 
+written using :doc:`SimpleIO (SIO) </progguide/understand-sio>`, these can be either SOAP
+or JSON. For each response document, there is always a technical envelope - called :ref:`zato_env` - 
+defined and optionally, the actual business payload users are mostly interested in.
+
+The payload can either a single item or a list of items. For instance, fetching
+an AMQP connection's details will return the former while asking for a list of
+servers a particular service is deployed on will yield the latter.
+
+The general format has been illustrated below, note that the
+:ref:`zato_env` element is always returned at the same position while the actual content
+differs each time. Refer to the documentation of each of the services to learn
+more about particular elements returned.
+
+SOAP
+----
+
+.. highlight:: xml
+
+::
+
+      <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+           xmlns:zato="http://gefira.pl/zato">
+         <soapenv:Header/>
+         <soapenv:Body>
+            <zato:zato_get_foo_request>
+              <zato:req_elem1>...</zato:req_elem1>
+              <zato:req_elem2>...</zato:req_elem2>
+              ...
+              <zato:req_elem_n>...</zato:req_elem_n>
+            </zato:zato_get_foo_request>
+         </soapenv:Body>
+      </soapenv:Envelope>
+      
+      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+           xmlns="http://gefira.pl/zato">
+         <soap:Body>
+            <zato_get_foo_response>
+               <zato_env>
+                  <cid>K21353002988419985838198535608</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+               <item>
+                  <resp_elem1>...</resp_elem1>
+                  <resp_elem2>...</resp_elem2>
+                  ...
+                  <resp_elem_n>...</resp_elem_n>
+               </item>
+            </zato_get_foo_response>
+         </soap:Body>
+      </soap:Envelope>
+      
+::
+
+      <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+           xmlns:zato="http://gefira.pl/zato">
+         <soapenv:Header/>
+         <soapenv:Body>
+            <zato:zato_get_bar_list_request>
+              <zato:req_elem1>...</zato:req_elem1>
+              <zato:req_elem2>...</zato:req_elem2>
+              ...
+              <zato:req_elem_n>...</zato:req_elem_n>
+            </zato:zato_get_bar_list_request>
+         </soapenv:Body>
+      </soapenv:Envelope>
+      
+      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+           xmlns="http://gefira.pl/zato">
+         <soap:Body>
+            <zato_get_bar_list_response>
+               <zato_env>
+                  <cid>K37683756065213515208747449888</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+               <item_list>
+                  <item>
+                     <resp_elem1>...</resp_elem1>
+                     <resp_elem2>...</resp_elem2>
+                     ...
+                     <resp_elem_n>...</resp_elem_n>
+                  </item>
+                  <item>
+                     <resp_elem3>...</resp_elem3>
+                     <resp_elem4>...</resp_elem4>
+                     ...
+                     <resp_elem_j>...</resp_elem_j>
+                  </item>
+               </item_list>
+            </zato_get_bar_list_response>
+         </soap:Body>
+      </soap:Envelope>
+
+JSON
+----
+
+Conventions
+===========
+
+There are only few conventions to understand before making use of the Zato public API
+
+    * All messages always need to be in UTF-8. Zato never uses any other encoding.
+
+    * All date and datetime objects are always in UTC. Internally, Zato servers
+      never use any other time zone thus one always needs to convert the user input
+      from their local TZ to UTC.
+      
+    * All .create and .edit actions always copy over the 'id' and 'name' parameters
+      from request to response.
+      
+    * All passwords are always sent in clear-text.
+
+
+.. _zato_env:
+      
+zato_env
+========
+
+zato_env is a technical evelope carrying useful information in each response.
+It is always available and can be used, for instance, for correlating responses
+received by clients with messages written out to Zato server logs.
+
+zato_env elements
+-----------------
+
+======= ======== ======== ======================================================================================
+Name    Datatype Optional Notes
+======= ======== ======== ======================================================================================
+cid     string   ---      Unique 96-bit correlation ID assigned to this message exchange, always 29 letters long
+result  string   ---      ZATO_OK means a successful invocation
+details string   Yes      ---
+======= ======== ======== ======================================================================================
+
+WSDL
+====
+
+:download:`Click here to download the WSDL <./zato.wsdl>`
