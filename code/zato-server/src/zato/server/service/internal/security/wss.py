@@ -40,7 +40,7 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'password_type', 'username', 
             Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'), 
-            Integer('nonce_freshness_time'Integer()
+            Integer('nonce_freshness_time'))
         
     def get_data(self, session):
         return wss_list(session, self.request.input.cluster_id, False)
