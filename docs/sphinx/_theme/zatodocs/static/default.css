@@ -1,3 +1,7 @@
 @import url(reset-fonts-grids.css);
 @import url(djangodocs.css);
 @import url(homepage.css);
+
+.highlight .s2 {
+    color: #339 !important;
+}

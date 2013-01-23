@@ -17,6 +17,11 @@ of what is typically performed by the :doc:`web admin</admin/web-admin>`. These
 could be anything ranging from custom iPhone applications through Java clients
 to simply invoking the services from `curl <http://curl.haxx.se/>`_.
 
+WSDL
+====
+
+:download:`Click here to download the WSDL <./zato.wsdl>`
+
 Message format
 ==============
 
@@ -31,15 +36,18 @@ servers a particular service is deployed on will yield the latter.
 
 The general format has been illustrated below, note that the
 :ref:`zato_env` element is always returned at the same position while the actual content
-differs each time. Refer to the documentation of each of the services to learn
-more about particular elements returned.
+differs each time. Also note that for JSON, the request element is omitted and
+request parameters can be passed in directly - there is no 'zato_get_foo_request'
+key to wrap all the input parameters with even though the response uses one,
+such as 'zato_get_foo_response' and 'zato_get_bar_list_response' in examples below.
+
+Refer to the documentation of each of the services to learn more about particular
+elements returned.
 
 SOAP
 ----
 
-.. highlight:: xml
-
-::
+.. code-block:: xml
 
       <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
            xmlns:zato="http://gefira.pl/zato">
@@ -72,7 +80,7 @@ SOAP
          </soap:Body>
       </soap:Envelope>
       
-::
+.. code-block:: xml
 
       <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
            xmlns:zato="http://gefira.pl/zato">
@@ -116,6 +124,60 @@ SOAP
 JSON
 ----
 
+.. code-block:: javascript
+
+   {
+     "req_elem1":"...", 
+     "req_elem2":"...", 
+     ...
+     "req_elem_n":"...", 
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K68938864847262437323255781583"
+     },
+     "zato_get_foo_response": {
+       "resp_elem1": "...",
+       "resp_elem2": "...",
+       ...
+       "resp_elem_n": "..."
+     }
+   }
+
+.. code-block:: javascript
+
+   {
+     "req_elem1":"...", 
+     "req_elem2":"...", 
+     ...
+     "req_elem_n":"...", 
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K28185890067723564136752725554"
+     },
+     "zato_get_bar_list_response": [
+       {
+         "resp_elem1": "...",
+         "resp_elem2": "...",
+         ...
+         "resp_elem_n": "..."
+       },
+       {
+         "resp_elem3": "...",
+         "resp_elem4": "...",
+         ...
+         "resp_elem_j": "..."
+       }
+     ]
+   }
+
 Conventions
 ===========
 
@@ -153,7 +215,57 @@ result  string   ---      ZATO_OK means a successful invocation
 details string   Yes      ---
 ======= ======== ======== ======================================================================================
 
-WSDL
-====
-
-:download:`Click here to download the WSDL <./zato.wsdl>`
+The API
+=======
+    * **Channels:**
+      :doc:`zato.channel.amqp.*</public-api/details/zato.channel.amqp>` |
+      :doc:`zato.channel.jms_wmq.*</public-api/details/zato.channel.jms_wmq>` |
+      :doc:`zato.channel.zmq.*</public-api/details/zato.channel.zmq>`
+      
+    * **Definitions:**
+      :doc:`zato.definition.amqp.*</public-api/details/zato.definition.amqp>` |
+      :doc:`zato.definition.jms_wmq.*</public-api/details/zato.definition.jms_wmq>`
+      
+    * **Hot deployment:**
+      :doc:`zato.hot_deploy.*</public-api/details/zato.hot_deploy>`
+      
+    * **HTTP/SOAP:**
+      :doc:`zato.http_soap.*</public-api/details/zato.http_soap>`
+      
+    * **Key/value DB (Redis):**
+      :doc:`zato.kvdb.*</public-api/details/zato.kvdb>` |
+      :doc:`zato.kvdb.data_dict.dictionary.*</public-api/details/zato.kvdb.data_dict.dictionary>` |
+      :doc:`zato.kvdb.data_dict.impexp.*</public-api/details/zato.kvdb.data_dict.impexp>` |
+      :doc:`zato.kvdb.data_dict.translation.*</public-api/details/zato.kvdb.data_dict.translation>` |
+      
+    * **Ougoing connections:**
+      :doc:`zato.outgoing.amqp.*</public-api/details/zato.outgoing.amqp>` |
+      :doc:`zato.outgoing.ftp.*</public-api/details/zato.outgoing.ftp>` |
+      :doc:`zato.outgoing.jms_wmq.*</public-api/details/zato.outgoing.jms_wmq>` |
+      :doc:`zato.outgoing.sql.*</public-api/details/zato.outgoing.sql>` |
+      :doc:`zato.outgoing.zmq.*</public-api/details/zato.outgoing.zmq>`
+      
+    * **Ping services:**
+      :doc:`zato.Ping</public-api/details/zato.Ping>` |
+      :doc:`zato.Ping2</public-api/details/zato.Ping2>`
+      
+    * **Scheduler:**
+      :doc:`zato.scheduler.*</public-api/details/zato.scheduler>`
+      
+    * **Security:**
+      :doc:`zato.security.*</public-api/details/zato.security>` |
+      :doc:`zato.security.basic_auth.*</public-api/details/zato.security.basic_auth>` |
+      :doc:`zato.security.tech_account.*</public-api/details/zato.security.tech_account>` |
+      :doc:`zato.security.wss.*</public-api/details/zato.security.wss>`
+      
+    * **Servers:**
+      :doc:`zato.server.*</public-api/details/zato.server>`
+      
+    * **Services:**
+      :doc:`zato.service.*</public-api/details/zato.service>`
+      
+    * **Statistics:**
+      :doc:`zato.stats.*</public-api/details/zato.stats>` |
+      :doc:`zato.stats.summary.*</public-api/details/zato.stats.summary>` |
+      :doc:`zato.stats.trends.*</public-api/details/zato.stats.summary.trends>`
+      
