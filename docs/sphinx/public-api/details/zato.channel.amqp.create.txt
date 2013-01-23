@@ -5,7 +5,7 @@ Overview
 ------------
 
 Allows one to create an AMQP channel basing on
-:doc:`an already existing AMQP connection definition</public-api/details/zato.definition.amqp.create>`.
+:doc:`an already existing AMQP connection definition</public-api/details/zato.definition.amqp>`.
 
   * List response: No
   * SOAP action: zato.channel.amqp.create
@@ -22,7 +22,7 @@ Name                Datatype Optional Notes
 cluster_id          int      ---      ID of the cluster this channel should be created in
 name                string   ---      Name of the channel to create
 is_active           boolean  ---      Whether the channel should be active upon its creation
-def_id              int      ---      ID of :doc:`an already existing AMQP connection definition</public-api/details/zato.definition.amqp.create>` to use for connecting to an AMQP broker
+def_id              int      ---      ID of :doc:`an already existing AMQP connection definition</public-api/details/zato.definition.amqp>` to use for connecting to an AMQP broker
 queue               string   ---      Name of the queue to read messages off
 consumer_tag_prefix string   ---      AMQP consumer tag prefix, useful for identifying who connects to a given queue
 service             string   ---      Name of an already existing service to invoke upon reading each message from the queue
@@ -45,36 +45,38 @@ SOAP example
 
 .. code-block:: xml
 
-      <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
-           xmlns:zato="http://gefira.pl/zato">
-         <soapenv:Header/>
-         <soapenv:Body>
-            <zato:zato_get_foo_request>
-              <zato:req_elem1>...</zato:req_elem1>
-              <zato:req_elem2>...</zato:req_elem2>
-              ...
-              <zato:req_elem_n>...</zato:req_elem_n>
-            </zato:zato_get_foo_request>
-         </soapenv:Body>
-      </soapenv:Envelope>
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_channel_amqp_create_request>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>crm.account</zato:name>
+            <zato:is_active>true</zato:is_active>
+            <zato:def_id>1</zato:def_id>
+            <zato:queue>ACCT1</zato:queue>
+            <zato:consumer_tag_prefix>zato.account.client</zato:consumer_tag_prefix>
+            <zato:service>myservice</zato:service>
+            <zato:data_format>xml</zato:data_format>
+         </zato:zato_channel_amqp_create_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
       
-      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-           xmlns="http://gefira.pl/zato">
-         <soap:Body>
-            <zato_get_foo_response>
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_channel_amqp_create_response xmlns="http://gefira.pl/zato">
                <zato_env>
-                  <cid>K21353002988419985838198535608</cid>
+                  <cid>K08984532360785332835581231451</cid>
                   <result>ZATO_OK</result>
                </zato_env>
                <item>
-                  <resp_elem1>...</resp_elem1>
-                  <resp_elem2>...</resp_elem2>
-                  ...
-                  <resp_elem_n>...</resp_elem_n>
+                  <id>1</id>
+                  <name>crm.account</name>
                </item>
-            </zato_get_foo_response>
-         </soap:Body>
-      </soap:Envelope>
+            </zato_channel_amqp_create_response>
+      </soap:Body>
+   </soap:Envelope> 
 
 JSON example
 ------------
@@ -82,22 +84,24 @@ JSON example
 .. code-block:: javascript
 
    {
-     "req_elem1":"...", 
-     "req_elem2":"...", 
-     ...
-     "req_elem_n":"...", 
+       "cluster_id": 1,
+       "name": "crm.account2",
+       "is_active": true,
+       "def_id": 1,
+       "queue": "ACCT1",
+       "consumer_tag_prefix": "zato.account.client",
+       "service": "zato.Ping",
+       "data_format": "xml"
    }
 
    {
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K68938864847262437323255781583"
+       "cid": "K60762988479404816888794736685"
      },
-     "zato_get_foo_response": {
-       "resp_elem1": "...",
-       "resp_elem2": "...",
-       ...
-       "resp_elem_n": "..."
+     "zato_channel_amqp_create_response": {
+       "id": 2,
+       "name": "crm.account2"
      }
    }
