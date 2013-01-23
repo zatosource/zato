@@ -1,0 +1,15 @@
+zato.channel.amqp.*
+===================
+
+Overview
+------------
+
+Services related to the management of AMQP channels.
+
+Services
+--------
+
+* :doc:`zato.channel.amqp.create <./zato.channel.amqp.create>`
+* :doc:`zato.channel.amqp.delete <./zato.channel.amqp.delete>`
+* :doc:`zato.channel.amqp.edit <./zato.channel.amqp.edit>`
+* :doc:`zato.channel.amqp.get-list <./zato.channel.amqp.get-list>`
