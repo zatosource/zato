@@ -33,7 +33,7 @@ from anyjson import dumps
 from bunch import Bunch
 
 # Zato
-from zato.common import SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_NONE, ZATO_OK
+from zato.common import SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request, security_def_type, TRACE1
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
      NotFound, Unauthorized
@@ -67,11 +67,27 @@ soap_error = """<?xml version='1.0' encoding='UTF-8'?>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
 
+def client_json_error(cid, faultstring):
+    zato_env = {'zato_env':{'result':ZATO_ERROR, 'cid':cid, 'details':faultstring}} 
+    return dumps(zato_env)
+
 def client_soap_error(cid, faultstring):
     return soap_error.format(**{'faultcode':'Client', 'cid':cid, 'faultstring':faultstring})
 
 def server_soap_error(cid, faultstring):
     return soap_error.format(**{'faultcode':'Server', 'cid':cid, 'faultstring':faultstring})
+
+client_error_wrapper = {
+    'json': client_json_error,
+    'soap': client_soap_error,
+}
+
+def get_client_error_wrapper(transport, data_format):
+    try:
+        return client_error_wrapper[transport]
+    except KeyError:
+        # Any KeyError must be caught by the caller
+        return client_error_wrapper[data_format] 
                 
 # ##############################################################################
 
@@ -149,8 +165,17 @@ class RequestDispatcher(object):
                         cid, _status_internal_server_error, _format_exc)
                     logger.debug(msg)
                     
-                if transport == 'soap':
-                    response = client_soap_error(cid, response)
+                try:
+                    error_wrapper = get_client_error_wrapper(transport, data_format)
+                    print(555, transport, data_format, error_wrapper)
+                except KeyError:
+                    # It's OK. Apparently it's neither 'soap' nor json'
+                    #if logger.isEnabledFor(E):
+                    print(333, transport, data_format)
+                    msg = 'No client error wrapper for transport:[{}], data_format:[{}]'.format(transport, data_format)
+                    logger.error(msg)
+                else:
+                    response = error_wrapper(cid, response)
                     
                 wsgi_environ['zato.http.response.status'] = _status_internal_server_error
                 return response
@@ -264,8 +289,12 @@ class _BaseMessageHandler(object):
         """
         if isinstance(service_instance, AdminService):
             if data_format == SIMPLE_IO.FORMAT.JSON:
-                payload = response.payload.getvalue(False)
-                payload.update({'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}})
+                zato_env = {'zato_env':{'result':response.result, 'cid':service_instance.cid, 'details':response.result_details}}
+                if response.payload:
+                    payload = response.payload.getvalue(False)
+                    payload.update(zato_env)
+                else:
+                    payload = zato_env
                 response.payload = dumps(payload)
             else:
                 if transport == URL_TYPE.SOAP:
