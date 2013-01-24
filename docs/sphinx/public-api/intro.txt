@@ -201,8 +201,9 @@ zato_env
 ========
 
 zato_env is a technical evelope carrying useful information in each response.
-It is always available and can be used, for instance, for correlating responses
-received by clients with messages written out to Zato server logs.
+It is available if the service has been successfuly invoked and can be used,
+for instance, for correlating responses received by clients with messages
+written out to Zato server logs.
 
 zato_env elements
 -----------------
@@ -211,9 +212,64 @@ zato_env elements
 Name    Datatype Optional Notes
 ======= ======== ======== ===============================================================================================================================
 cid     string   ---      Unique 96-bit correlation ID assigned to this message exchange, always 29 characters long and always starts with the letter 'K'
-result  string   ---      ZATO_OK means a successful invocation
+result  string   ---      Can be one of ZATO_OK, ZATO_ERROR or ZATO_WARNING.  ZATO_OK means a successful service invocation.
 details string   Yes      ---
 ======= ======== ======== ===============================================================================================================================
+
+Reporting exceptions
+====================
+
+SOAP channels use SOAP-ENV:Fault elements for reporting unexpected exceptions
+caught during the execution of a service:
+
+.. code-block:: xml
+
+  <?xml version='1.0' encoding='UTF-8'?>
+  <SOAP-ENV:Envelope
+    xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance"
+    xmlns:xsd="http://www.w3.org/1999/XMLSchema">
+     <SOAP-ENV:Body>
+       <SOAP-ENV:Fault>
+       <faultcode>SOAP-ENV:Client</faultcode>
+  <faultstring><![CDATA[cid [K68438211212681798524426103126], faultstring 
+  [Traceback (most recent call last):
+ File 
+ "/opt/zato/code/zato-server/src/zato/server/connection/http_soap/
+ channel.py", line 126, in dispatch
+   service_info, response = handler.handle(cid, wsgi_environ, payload, transport, 
+   worker_store, self.simple_io_config, data_format, path_info)
+ File 
+ "/opt/zato/code/zato-server/src/zato/server/connection/http_soap/
+ channel.py", line 227, in handle
+   service_instance.handle()
+ File 
+ "/opt/zato/code/zato-server/src/zato/server/service/internal/
+ definition/amqp.py", line 174, in handle
+   filter(ConnDefAMQP.id==self.request.input.id).\
+ File 
+ "/opt/zato/code/eggs/SQLAlchemy-0.7.9-py2.7-linux-x86_64.egg/sqlalchemy/
+ orm/query.py", line 2190, in one
+   raise orm_exc.NoResultFound("No row was found for one()")
+ NoResultFound: No row was found for one()
+ ]]]></faultstring>
+        </SOAP-ENV:Fault>
+    </SOAP-ENV:Body>
+  </SOAP-ENV:Envelope>
+  
+JSON responses use zato_env. Note that the 'details' element below still contains
+a traceback, it's only a lack of multiline-strings in JavaScript that forces
+Zato to return it as a single line:
+
+.. code-block:: javascript
+
+  {
+    "zato_env": {
+      "details": "Traceback (most recent call last):\n  File \"\/opt\/zato\/code\/zato-server\/src\/zato\/server\/connection\/http_soap\/channel.py\", line 142, in dispatch\n    service_info, response = handler.handle(cid, wsgi_environ, payload, transport, worker_store, self.simple_io_config, data_format, path_info)\n  File \"\/opt\/zato\/code\/zato-server\/src\/zato\/server\/connection\/http_soap\/channel.py\", line 252, in handle\n    service_instance.handle()\n  File \"\/opt\/zato\/code\/zato-server\/src\/zato\/server\/service\/internal\/definition\/amqp.py\", line 174, in handle\n    filter(ConnDefAMQP.id==self.request.input.id).\\\n  File \"\/opt\/zato\/code\/eggs\/SQLAlchemy-0.7.9-py2.7-linux-x86_64.egg\/sqlalchemy\/orm\/query.py\", line 2190, in one\n    raise orm_exc.NoResultFound(\"No row was found for one()\")\nNoResultFound: No row was found for one()\n",
+      "result": "ZATO_ERROR",
+      "cid": "K47568862487942557263894250839"
+    }
+  }
 
 The API
 =======
