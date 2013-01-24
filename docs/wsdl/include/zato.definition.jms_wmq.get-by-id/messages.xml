@@ -24,10 +24,10 @@
                   <xsd:element name="cache_open_receive_queues" type="xsd:boolean"/>
                   <xsd:element name="use_shared_connections" type="xsd:boolean"/>
                   <xsd:element name="ssl" type="xsd:boolean"/>
-                  <xsd:element name="ssl_cipher_spec" type="xsd:string"/>
-                  <xsd:element name="ssl_key_repository" type="xsd:string"/>
                   <xsd:element name="needs_mcd" type="xsd:boolean"/>
                   <xsd:element name="max_chars_printed" type="xsd:int"/>
+                  <xsd:element name="ssl_cipher_spec" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="ssl_key_repository" type="xsd:string" minOccurs="0"/>
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>
