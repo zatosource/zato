@@ -4,9 +4,9 @@ zato.channel.amqp.Edit
 Overview
 ------------
 
-Updates an already existing AMQP channel. Setting the 'is_active' flag to true
-will start an underlying AMQP consumer while setting it to false will stop the
-consumer.
+Updates an already existing AMQP channel. The channel will be restarted.
+Setting the 'is_active' flag to true will start an underlying AMQP consumer
+while setting it to false will stop the consumer.
 
   * List response: No
   * SOAP action: zato.channel.amqp.edit
