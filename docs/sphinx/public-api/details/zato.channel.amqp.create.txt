@@ -21,7 +21,7 @@ Name                Datatype Optional Notes
 =================== ======== ======== ====================================================================================================================================================
 cluster_id          int      ---      ID of the cluster this channel should be created in
 name                string   ---      Name of the channel to create
-is_active           boolean  ---      Whether the channel should be active upon its creation
+is_active           boolean  ---      Whether the channel should be active upon its creation. If true, the channel will be started immediately after its creation.
 def_id              int      ---      ID of :doc:`an already existing AMQP connection definition</public-api/details/zato.definition.amqp>` to use for connecting to an AMQP broker
 queue               string   ---      Name of the queue to read messages off
 consumer_tag_prefix string   ---      AMQP consumer tag prefix, useful for identifying who connects to a given queue
