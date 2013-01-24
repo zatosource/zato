@@ -4,7 +4,8 @@ zato.definition.amqp.Delete
 Overview
 ------------
 
-Deletes an AMQP connection definition. Any channels using the definition will be stopped.
+Deletes an AMQP connection definition. Any channels using the definition will be stopped
+and deleted.
 
   * List response: No
   * SOAP action: zato.definition.amqp.delete
