@@ -1,4 +1,4 @@
-zato.definition.amqp.edit
+zato.definition.amqp.Edit
 ===========================
 
 Overview

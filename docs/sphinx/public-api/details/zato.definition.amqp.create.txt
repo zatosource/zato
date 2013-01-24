@@ -1,4 +1,4 @@
-zato.definition.amqp.create
+zato.definition.amqp.Create
 ===========================
 
 Overview
