@@ -107,7 +107,7 @@ class RequestDispatcher(object):
         if url_type == URL_TYPE.SOAP:
             return server_soap_error(cid, msg)
         
-        # Let's return the message as-is if we don't have any specific envelope
+        # Let's return the message as-is if we didn't have any specific envelope
         # to use.
         return msg        
     
@@ -167,13 +167,11 @@ class RequestDispatcher(object):
                     
                 try:
                     error_wrapper = get_client_error_wrapper(transport, data_format)
-                    print(555, transport, data_format, error_wrapper)
                 except KeyError:
                     # It's OK. Apparently it's neither 'soap' nor json'
-                    #if logger.isEnabledFor(E):
-                    print(333, transport, data_format)
-                    msg = 'No client error wrapper for transport:[{}], data_format:[{}]'.format(transport, data_format)
-                    logger.error(msg)
+                    if logger.isEnabledFor(TRACE1):
+                        msg = 'No client error wrapper for transport:[{}], data_format:[{}]'.format(transport, data_format)
+                        logger.log(TRACE1, msg)
                 else:
                     response = error_wrapper(cid, response)
                     
