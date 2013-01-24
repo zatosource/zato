@@ -1,0 +1,148 @@
+zato.definition.amqp.GetList
+==============================
+
+Overview
+------------
+
+Returns a list of AMQP connection definitions available on a given cluster.
+
+  * List response: Yes
+  * SOAP action: zato.definition.amqp.get-list
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.definition.amqp.get-list
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+=================== ======== ======== =========================================================================================================================================================================================
+Name                Datatype Optional Notes
+=================== ======== ======== =========================================================================================================================================================================================
+cluster_id          int      ---      ID of the cluster to return the definitions of
+=================== ======== ======== =========================================================================================================================================================================================
+            
+
+Response parameters
+-------------------
+
+=================== ======== ======== =========================================================================================================================================================================================
+Name                Datatype Optional Notes
+=================== ======== ======== =========================================================================================================================================================================================
+id                  int      ---      Connection definition ID
+name                string   ---      Connection definition name
+host                string   ---      AMQP broker host
+port                int      ---      AMQP broker TCP port
+vhost               string   ---      AMQP virtual host
+username            string   ---      Username to connect with
+frame_max           int      ---      Maximum frame size, in bytes
+heartbeat           int      ---      How often heartbeats should be exchanged, in seconds
+=================== ======== ======== =========================================================================================================================================================================================
+
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns:zato="http://gefira.pl/zato">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <zato:zato_definition_amqp_get_list_request>
+             <zato:cluster_id>1</zato:cluster_id>
+          </zato:zato_definition_amqp_get_list_request>
+       </soapenv:Body>
+    </soapenv:Envelope>
+      
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns="http://gefira.pl/zato">
+    <soap:Body>
+        <zato_definition_amqp_get_list_response xmlns="http://gefira.pl/zato">
+        <zato_env>
+            <cid>K48397822304226596596877196492</cid>
+            <result>ZATO_OK</result>
+        </zato_env>
+        <item_list>
+            <item>
+                <id>2</id>
+                <name>CRM4</name>
+                <host>127.0.0.1</host>
+                <port>5672</port>
+                <vhost>/zato1</vhost>
+                <username>zato1</username>
+                <frame_max>131072</frame_max>
+                <heartbeat>10</heartbeat>
+            </item>
+            <item>
+                <id>3</id>
+                <name>CRM5</name>
+                <host>127.0.0.1</host>
+                <port>5672</port>
+                <vhost>/zato1</vhost>
+                <username>zato1</username>
+                <frame_max>131072</frame_max>
+                <heartbeat>10</heartbeat>
+            </item>
+            <item>
+                <id>4</id>
+                <name>CRM6</name>
+                <host>127.0.0.1</host>
+                <port>5672</port>
+                <vhost>/zato1</vhost>
+                <username>zato1</username>
+                <frame_max>131072</frame_max>
+                <heartbeat>10</heartbeat>
+            </item>
+        </item_list>
+    </zato_definition_amqp_get_list_response>
+    </soap:Body>
+    </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+    {
+        "cluster_id": 1
+    }
+
+    {
+      "zato_env": {
+        "details": "",
+        "result": "ZATO_OK",
+        "cid": "K11906096933398962054935316585"
+      },
+      "zato_definition_amqp_get_list_response": [
+        {
+          "username": "zato1",
+          "frame_max": 131072,
+          "name": "CRM4",
+          "id": 2,
+          "vhost": "/zato1",
+          "host": "127.0.0.1",
+          "heartbeat": 10,
+          "port": 5672
+        },
+        {
+          "username": "zato1",
+          "frame_max": 131072,
+          "name": "CRM5",
+          "id": 3,
+          "vhost": "/zato1",
+          "host": "127.0.0.1",
+          "heartbeat": 10,
+          "port": 5672
+        },
+        {
+          "username": "zato1",
+          "frame_max": 131072,
+          "name": "CRM6",
+          "id": 4,
+          "vhost": "/zato1",
+          "host": "127.0.0.1",
+          "heartbeat": 10,
+          "port": 5672
+        }
+      ]
+    }
