@@ -209,17 +209,14 @@ Public SOAP and JSON server API
       :doc:`zato.definition.amqp.*</public-api/details/zato.definition.amqp>` |
       :doc:`zato.definition.jms_wmq.*</public-api/details/zato.definition.jms_wmq>`
       
-    * **Hot deployment:**
-      :doc:`zato.hot_deploy.*</public-api/details/zato.hot_deploy>`
-      
     * **HTTP/SOAP:**
       :doc:`zato.http_soap.*</public-api/details/zato.http_soap>`
       
     * **Key/value DB (Redis):**
-      :doc:`zato.kvdb.*</public-api/details/zato.kvdb>` |
       :doc:`zato.kvdb.data_dict.dictionary.*</public-api/details/zato.kvdb.data_dict.dictionary>` |
       :doc:`zato.kvdb.data_dict.impexp.*</public-api/details/zato.kvdb.data_dict.impexp>` |
       :doc:`zato.kvdb.data_dict.translation.*</public-api/details/zato.kvdb.data_dict.translation>` |
+      :doc:`zato.kvdb.remote-command.*</public-api/details/zato.kvdb.remote-command>`
       
     * **Ougoing connections:**
       :doc:`zato.outgoing.amqp.*</public-api/details/zato.outgoing.amqp>` |
@@ -233,7 +230,7 @@ Public SOAP and JSON server API
       :doc:`zato.Ping2</public-api/details/zato.Ping2>`
       
     * **Scheduler:**
-      :doc:`zato.scheduler.*</public-api/details/zato.scheduler>`
+      :doc:`zato.scheduler.job.*</public-api/details/zato.scheduler.job>`
       
     * **Security:**
       :doc:`zato.security.*</public-api/details/zato.security>` |
@@ -248,9 +245,7 @@ Public SOAP and JSON server API
       :doc:`zato.service.*</public-api/details/zato.service>`
       
     * **Statistics:**
-      :doc:`zato.stats.*</public-api/details/zato.stats>` |
-      :doc:`zato.stats.summary.*</public-api/details/zato.stats.summary>` |
-      :doc:`zato.stats.trends.*</public-api/details/zato.stats.summary.trends>`
+      :doc:`zato.stats.*</public-api/details/zato.stats>`
 
 Zato, the open-source project
 ==============================

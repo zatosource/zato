@@ -3,5 +3,10 @@
 @import url(homepage.css);
 
 .highlight .s2 {
-    color: #339 !important;
+    color:#339 !important;
+}
+
+.highlight .kc {
+    color:#449 !important;
+    font-weight:normal !important;
 }
