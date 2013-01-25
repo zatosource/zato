@@ -8,7 +8,7 @@
             <xsd:element name="transport" type="xsd:string"/>
             <xsd:element name="is_internal" type="xsd:boolean"/>
             <xsd:element name="url_path" type="xsd:string"/>
-            <xsd:element name="service" type="xsd:string"/>
+            <xsd:element name="service" type="xsd:string" minOccurs="0"/>
             <xsd:element name="security_id" type="xsd:int"/>
             <xsd:element name="method" type="xsd:string" minOccurs="0"/>
             <xsd:element name="soap_action" type="xsd:string" minOccurs="0"/>
