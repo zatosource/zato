@@ -37,7 +37,8 @@ class GetList(AdminService):
         request_elem = 'zato_channel_jms_wmq_get_list_request'
         response_elem = 'zato_channel_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'queue', 'service_name', 'def_name', 'def_id', 'data_format')
+        output_required = ('id', 'name', 'is_active', 'queue', 'service_name', 'def_name', 'def_id')
+        output_optional = ('data_format',)
         
     def get_data(self, session):
         return channel_jms_wmq_list(session, self.request.input.cluster_id, False)
@@ -54,7 +55,7 @@ class Create(AdminService):
         response_elem = 'zato_channel_jms_wmq_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
         input_optional = ('data_format',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -78,7 +79,7 @@ class Create(AdminService):
             
             if not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
-                logger.error(msg)
+                self.logger.error(msg)
                 raise Exception(msg)
             
             try:
@@ -97,6 +98,7 @@ class Create(AdminService):
                 start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not create a WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
@@ -113,7 +115,7 @@ class Edit(AdminService):
         response_elem = 'zato_channel_jms_wmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
         input_optional = ('data_format',)
-        output_required = ('id',)
+        output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
@@ -159,6 +161,7 @@ class Edit(AdminService):
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL)
                 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
