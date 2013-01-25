@@ -58,7 +58,7 @@ SOAP example
             <zato:def_id>1</zato:def_id>
             <zato:queue>ACCT9</zato:queue>
             <zato:consumer_tag_prefix>zato.account.client</zato:consumer_tag_prefix>
-            <zato:service>zato.Ping</zato:service>
+            <zato:service>myservice</zato:service>
             <zato:data_format>xml</zato:data_format>
          </zato:zato_channel_amqp_edit_request>
       </soapenv:Body>
@@ -93,7 +93,7 @@ JSON example
        "def_id": 1,
        "queue": "ACCT1",
        "consumer_tag_prefix": "zato.account.client",
-       "service": "zato.Ping",
+       "service": "myservice",
        "data_format": "xml"
    }
 

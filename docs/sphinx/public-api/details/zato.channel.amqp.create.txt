@@ -90,7 +90,7 @@ JSON example
        "def_id": 1,
        "queue": "ACCT1",
        "consumer_tag_prefix": "zato.account.client",
-       "service": "zato.Ping",
+       "service": "myservice",
        "data_format": "xml"
    }
 

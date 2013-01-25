@@ -82,7 +82,7 @@ SOAP example
                 <consumer_tag_prefix>zato.account.client</consumer_tag_prefix>
                 <def_name>CRM4</def_name>
                 <def_id>2</def_id>
-                <service_name>zato.Ping</service_name>
+                <service_name>myservice</service_name>
             </item>
         </item_list>
     </zato_channel_amqp_get_list_response>
