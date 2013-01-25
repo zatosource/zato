@@ -37,7 +37,7 @@ class GetList(AdminService):
         request_elem = 'zato_channel_jms_wmq_get_list_request'
         response_elem = 'zato_channel_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'queue', 'service_name', 'def_name', 'def_id')
+        output_required = ('id', 'name', 'is_active', 'def_id', 'def_name', 'queue', 'service_name')
         output_optional = ('data_format',)
         
     def get_data(self, session):

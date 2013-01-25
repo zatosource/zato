@@ -1,0 +1,72 @@
+zato.channel.jms_wmq.Delete
+===========================
+
+Overview
+------------
+
+Deletes a JMS WebSphere MQ channel. The channel's underlying MQ listener will be first stopped.
+
+  * List response: No
+  * SOAP action: zato.channel.jms_wmq.delete
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.channel.jms_wmq.delete
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+=================== ======== ======== =============================================================================================================================================================
+Name                Datatype Optional Notes
+=================== ======== ======== =============================================================================================================================================================
+id                  int      ---      ID of the channel to delete
+=================== ======== ======== =============================================================================================================================================================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_channel_jms_wmq_delete_request>
+            <zato:id>3</zato:id>
+         </zato:zato_channel_jms_wmq_delete_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_channel_jms_wmq_delete_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K24948211100184640898309859870</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+            </zato_channel_jms_wmq_delete_response>
+      </soap:Body>
+   </soap:Envelope> 
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+       "id": 5
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K16180910463344930286885148195"
+     }
+   }
