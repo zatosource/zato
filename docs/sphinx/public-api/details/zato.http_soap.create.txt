@@ -15,7 +15,7 @@ connection, depending on the value of the 'connection' parameter.
 
 Basing on request parameters, the object created will be used for accepting
 incoming requests or for invoking external services and a variety of combinations
-can be used, such as:
+can be used to achieve different ends, such as:
 
    * Exposing service 'myservice1' via JSON through any HTTP method
    
@@ -150,22 +150,16 @@ SOAP example
 JSON example
 ------------
 
-     * connection: 'outgoing'
-     * transport: 'plain_http'
-     * url_path: '/json'
-     * host: '10.152.11.182:9093'
-     
-
 .. code-block:: javascript
 
    {
-       "cluster_id": 1,
-       "name": "crm.account2",
-       "is_active": true,
-       "connection": "outgoing",
-       "transport": "plain_http",
-       "url_path": "/json",
-       "host": "10.152.11.182:9093"
+     "cluster_id": 1,
+     "name": "crm.account2",
+     "is_active": true,
+     "connection": "outgoing",
+     "transport": "plain_http",
+     "url_path": "/json",
+     "host": "10.152.11.182:9093"
    }
 
    {
