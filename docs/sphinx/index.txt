@@ -251,3 +251,16 @@ Zato, the open-source project
 ==============================
 
     * :doc:`Getting involved<project/getting-involved>` | :doc:`Diversity statement<project/diversity-statement>`
+    
+.. toctree::
+   :hidden:
+   :titlesonly:
+   :glob:
+   
+   admin/cli/*
+   intro/*
+   public-api/*
+   public-api/details/*
+
+
+   
