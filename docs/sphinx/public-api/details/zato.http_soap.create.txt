@@ -91,7 +91,7 @@ method              string   Yes      If it's a channel, an HTTP method that mus
 soap_action         string   Yes      SOAP action to expose the channel under if it's a channel. SOAP action to use when invoking services if it's an outgoing connections.
 soap_version        string   Yes      Must be '1.1' if it's a channel; can be '1.1' or '1.2' if it's an outgoing connection.
 data_format         string   Yes      If given and it's a channel, must be either 'xml' or 'json' - describes the expected data format of incoming requests
-host                string   Yes      If it's an outgoing connection, the host to invoke services on
+host                string   Yes      If it's an outgoing connection, the host to invoke services on. Must include either 'http://' or 'https://' prefix.
 =================== ======== ======== ================================================================================================================================================
             
 
@@ -159,7 +159,7 @@ JSON example
      "connection": "outgoing",
      "transport": "plain_http",
      "url_path": "/json",
-     "host": "10.152.11.182:9093"
+     "host": "http://10.152.11.182:9093"
    }
 
    {
