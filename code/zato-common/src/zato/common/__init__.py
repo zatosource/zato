@@ -165,7 +165,7 @@ class KVDB:
     SEPARATOR = ':::'
     
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
-    DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id'
+    DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id' # ID of the last created dictionary ID, always increasing.
 
     LOCK_PREFIX = 'zato:lock:'    
     
