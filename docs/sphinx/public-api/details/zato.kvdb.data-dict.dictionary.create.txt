@@ -49,9 +49,9 @@ SOAP example
   <soapenv:Header/>
   <soapenv:Body>
       <zato:zato_kvdb_data_dict_dictionary_create_request>
-          <zato:system>CRM</zato:system>
-          <zato:key>CUSTOMER_TYPE</zato:key>
-          <zato:value>SOHO</zato:value>
+          <zato:system>PORTAL</zato:system>
+          <zato:key>customerType</zato:key>
+          <zato:value>292</zato:value>
       </zato:zato_kvdb_data_dict_dictionary_create_request>
   </soapenv:Body>
   </soapenv:Envelope>
@@ -59,7 +59,8 @@ SOAP example
   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
     xmlns="http://gefira.pl/zato">
   <soap:Body>
-      <zato_kvdb_data_dict_dictionary_create_response xmlns="http://gefira.pl/zato">
+      <zato_kvdb_data_dict_dictionary_create_response
+        xmlns="http://gefira.pl/zato">
       <zato_env>
           <cid>K04326851042907993555317707709</cid>
           <result>ZATO_OK</result>

@@ -4,7 +4,8 @@ zato.kvdb.data-dict.dictionary.*
 Overview
 ------------
 
-Services related to the management of KVDB dictionaries.
+Services related to the management of KVDB dictionaries. All of the services
+operate against the KVDB the cluster being invoked is configured to make use of.
 
 Services
 --------
