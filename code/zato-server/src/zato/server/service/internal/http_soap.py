@@ -76,9 +76,9 @@ class GetList(AdminService):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id', 'connection', 'transport')
-        output_required = ('id', 'name', 'is_active', 'is_internal', 
-            'url_path', 'service_id', 'service_name', 'security_id', 'security_name', 'sec_type')
-        output_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
+        output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
+                           'method', 'soap_action', 'soap_version', 'data_format', 'host')
         output_repeated = True
         
     def get_data(self, session):
