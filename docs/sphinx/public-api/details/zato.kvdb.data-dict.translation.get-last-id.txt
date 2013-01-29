@@ -1,0 +1,79 @@
+zato.kvdb.data-dict.translation.GetLastID
+=========================================
+
+Overview
+--------
+
+Returns the value of the most recently assigned KVDB translation ID, that is,
+the value that the last invocation of :doc:`zato.kvdb.data-dict.translation.Create <./zato.kvdb.data-dict.translation.create>`
+returned.
+
+  * List response: No
+  * SOAP action: zato.kvdb.data-dict.translation.get-last-id
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.kvdb.data-dict.translation.get-last-id
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+(None)
+            
+
+Response parameters
+-------------------
+
+===== ======== ======== ==========================
+Name  Datatype Optional Notes
+===== ======== ======== ==========================
+value int      ---      Mostly recently created ID
+===== ======== ======== ==========================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:zato="http://gefira.pl/zato">
+  <soapenv:Header/>
+  <soapenv:Body>
+      <zato:zato_kvdb_data_dict_translation_get_last_id_request>
+      </zato:zato_kvdb_data_dict_translation_get_last_id_request>
+  </soapenv:Body>
+  </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_kvdb_data_dict_translation_get_last_id_response
+        xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K05536180508384167107335701651</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item>
+          <value>3</value>
+      </item>
+  </zato_kvdb_data_dict_translation_get_last_id_response>
+  </soap:Body>
+  </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+  {}
+   
+  {
+    "zato_kvdb_data_dict_translation_get_last_id_response": {
+      "value": "3"
+    },
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K49276876478215482059115589103"
+    }
+  }
