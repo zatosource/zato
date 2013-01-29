@@ -1,0 +1,98 @@
+zato.kvdb.data-dict.translation.Create
+======================================
+
+Overview
+--------
+
+Creates a translation, a mapping, between two dictionary entries in order to express the
+idea that one entry is equal to the other one in another system.
+
+  * List response: No
+  * SOAP action: zato.kvdb.data-dict.translation.create
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.kvdb.data-dict.translation.create
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+======= ======== ======== ======================
+Name    Datatype Optional Notes
+======= ======== ======== ======================
+system1 string   ---      System translated from
+key1    string   ---      Key translated from
+value1  string   ---      Value translated from
+system2 string   ---      System translated to
+key2    string   ---      Key translated to
+value2  string   ---      Value translated to
+======= ======== ======== ======================
+            
+
+Response parameters
+-------------------
+
+==== ======== ======== ============================================
+Name Datatype Optional Notes
+==== ======== ======== ============================================
+id   int      ---      ID assigned to the newly created translation
+==== ======== ======== ============================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:zato="http://gefira.pl/zato">
+  <soapenv:Header/>
+  <soapenv:Body>
+      <zato:zato_kvdb_data_dict_translation_create_request>
+          <zato:system1>CRM</zato:system1>
+          <zato:key1>CUSTOMER_TYPE</zato:key1>
+          <zato:value1>DER</zato:value1>
+          <zato:system2>PORTAL</zato:system2>
+          <zato:key2>customerType</zato:key2>
+          <zato:value2>417</zato:value2>
+      </zato:zato_kvdb_data_dict_translation_create_request>
+  </soapenv:Body>
+  </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_kvdb_data_dict_translation_create_response xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K29561823620960169789030852446</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item>
+          <id>2</id>
+      </item>
+  </zato_kvdb_data_dict_translation_create_response>
+  </soap:Body>
+  </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+     "system1": "CRM",
+     "key1": "CUSTOMER_TYPE",
+     "value1": "QEQ",
+     "system2": "PORTAL",
+     "key2": "customerType",
+     "value2": "292"
+   }
+   
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K00788872813063802066789916297"
+    },
+    "zato_kvdb_data_dict_translation_create_response": {
+      "id": 3
+    }
+  }
