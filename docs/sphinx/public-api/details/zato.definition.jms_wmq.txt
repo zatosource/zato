@@ -2,7 +2,7 @@ zato.definition.jms_wmq.*
 =========================
 
 Overview
-------------
+--------
 
 Services related to the management of JMS WebSphere MQ connection definitions.
 A JMS WebSphere MQ definition encapsulates information regarding particular

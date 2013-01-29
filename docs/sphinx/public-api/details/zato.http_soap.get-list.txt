@@ -1,8 +1,8 @@
 zato.http_soap.GetList
-========================
+======================
 
 Overview
-------------
+--------
 
 Returns a list of plain HTTP or SOAP objects defined on a given cluster. These
 can be either channels or an outgoing connections.
@@ -20,40 +20,40 @@ for a discussion of the service's response parameters.
 Request parameters
 ------------------
 
-=================== ======== ======== ================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== ================================================================================================================================================
+========== ======== ======== ======================================================================
+Name       Datatype Optional Notes
+========== ======== ======== ======================================================================
 id                  int      ---      Cluster ID
 connection          string   ---      Connection type to filter by, must be 'channel' or 'outgoing'
 transport           string   ---      Transport type to filter by, must be 'plain_http' or 'soap'
-=================== ======== ======== ================================================================================================================================================
+========== ======== ======== ======================================================================
             
 
 Response parameters
 -------------------
 
-=================== ======== ======== ================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== ================================================================================================================================================
-id                  int      ---      Object ID
-name                string   ---      Name of the object
-is_active           boolean  ---      Whether the object should be active, if it can be used
-is_internal         boolean  ---      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
-connection          string   ---      〃
-transport           string   ---      〃
-is_internal         boolean  ---      〃
-url_path            string   ---      〃
-service_id          int      Yes      ID of a service to invoke, returned if the object is a channel
-service_name        string   Yes      Name of a service to invoke, returned if the object is a channel
-security_id         int      Yes      ID of a security definition for this object
-security_name       string   Yes      Name of a security definition for this object
-sec_type            string   Yes      Security type, if returned it will be one of 'basic_auth', 'tech_acc' or 'wss'
-method              string   Yes      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
-soap_action         string   Yes      〃
-soap_version        string   Yes      〃
-data_format         string   Yes      〃
-host                string   Yes      〃
-=================== ======== ======== ================================================================================================================================================
+============= ======== ======== ==============================================================================
+Name          Datatype Optional Notes
+============= ======== ======== ==============================================================================
+id            int      ---      Object ID
+name          string   ---      Name of the object
+is_active     boolean  ---      Whether the object should be active, if it can be used
+is_internal   boolean  ---      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
+connection    string   ---      〃
+transport     string   ---      〃
+is_internal   boolean  ---      〃
+url_path      string   ---      〃
+service_id    int      Yes      ID of a service to invoke, returned if the object is a channel
+service_name  string   Yes      Name of a service to invoke, returned if the object is a channel
+security_id   int      Yes      ID of a security definition for this object
+security_name string   Yes      Name of a security definition for this object
+sec_type      string   Yes      Security type, if returned it will be one of 'basic_auth', 'tech_acc' or 'wss'
+method        string   Yes      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
+soap_action   string   Yes      〃
+soap_version  string   Yes      〃
+data_format   string   Yes      〃
+host          string   Yes      〃
+============= ======== ======== ==============================================================================
 
 SOAP example
 ------------

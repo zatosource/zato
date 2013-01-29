@@ -2,7 +2,7 @@ zato.channel.amqp.*
 ===================
 
 Overview
-------------
+--------
 
 Services related to the management of AMQP channels.
 

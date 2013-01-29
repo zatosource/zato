@@ -1,8 +1,8 @@
 zato.definition.amqp.*
-=========================
+======================
 
 Overview
-------------
+--------
 
 Services related to the management of AMQP connection definitions. An AMQP definition
 encapsulates information regarding particular connection details, such as host,

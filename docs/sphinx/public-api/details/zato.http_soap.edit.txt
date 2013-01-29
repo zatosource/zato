@@ -1,8 +1,8 @@
 zato.http_soap.Edit
-========================
+===================
 
 Overview
-------------
+--------
 
 Updates an already existing plain HTTP or SOAP object, which can be either channel or an outgoing
 connection, depending on the value of the 'connection' parameter.
@@ -20,36 +20,36 @@ for a discussion of the service's request parameters.
 Request parameters
 ------------------
 
-=================== ======== ======== ================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== ================================================================================================================================================
-id                  int      ---      Object ID
-cluster_id          int      ---      ID of the cluster this object is defined on
-name                string   ---      Name of the object to update
-is_active           boolean  ---      Whether the object should be active, if it can be used
-connection          string   ---      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
-transport           string   ---      〃
-is_internal         boolean  ---      〃
-url_path            string   ---      〃
-service             string   Yes      〃
-security_id         int      Yes      〃
-method              string   Yes      〃
-soap_action         string   Yes      〃
-soap_version        string   Yes      〃
-data_format         string   Yes      〃
-host                string   Yes      〃
-=================== ======== ======== ================================================================================================================================================
+============ ======== ======== ================================================================
+Name         Datatype Optional Notes
+============ ======== ======== ================================================================
+id           int      ---      Object ID
+cluster_id   int      ---      ID of the cluster this object is defined on
+name         string   ---      Name of the object to update
+is_active    boolean  ---      Whether the object should be active, if it can be used
+connection   string   ---      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
+transport    string   ---      〃
+is_internal  boolean  ---      〃
+url_path     string   ---      〃
+service      string   Yes      〃
+security_id  int      Yes      〃
+method       string   Yes      〃
+soap_action  string   Yes      〃
+soap_version string   Yes      〃
+data_format  string   Yes      〃
+host         string   Yes      〃
+============ ======== ======== ================================================================
             
 
 Response parameters
 -------------------
 
-======= ======== ======== ======================================================================================
-Name    Datatype Optional Notes
-======= ======== ======== ======================================================================================
-id      int      ---      Copied over from request
-name    string   ---      Copied over from request
-======= ======== ======== ======================================================================================
+==== ======== ======== ========================
+Name Datatype Optional Notes
+==== ======== ======== ========================
+id   int      ---      Copied over from request
+name string   ---      Copied over from request
+==== ======== ======== ========================
 
 SOAP example
 ------------

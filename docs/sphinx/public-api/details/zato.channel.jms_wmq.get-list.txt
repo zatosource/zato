@@ -2,7 +2,7 @@ zato.channel.jms_wmq.GetList
 ============================
 
 Overview
-------------
+--------
 
 Returns a list of JMS WebSphere MQ channels defined on a given cluster.
 
@@ -15,28 +15,28 @@ Returns a list of JMS WebSphere MQ channels defined on a given cluster.
 Request parameters
 ------------------
 
-=================== ======== ======== ====================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== ====================================================================================================================================================
-cluster_id          int      ---      ID of the cluster
-=================== ======== ======== ====================================================================================================================================================
+========== ======== ======== =================
+Name       Datatype Optional Notes
+========== ======== ======== =================
+cluster_id int      ---      ID of the cluster
+========== ======== ======== =================
             
 
 Response parameters
 -------------------
 
-=================== ======== ======== ====================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== ====================================================================================================================================================
-id                  int      ---      Channel ID
-name                string   ---      Name of the channel
-is_active           boolean  ---      Whether the channel should be active
-def_id              int      ---      ID of :doc:`a JMS WebSphere MQ connection definition</public-api/details/zato.definition.jms_wmq>` to use for connecting to a queue manager
-def_name            int      ---      Name of the JMS WebSphere MQ connection definition
-queue               string   ---      Name of the queue to read messages off
-service_name        string   ---      Name of a service that will be invoked upon reading each message from the queue
-data_format         string   Yes      Expected data format. If returned, it will be either 'xml' or 'json'.
-=================== ======== ======== ====================================================================================================================================================
+============ ======== ======== ===========================================================================================================================================
+Name         Datatype Optional Notes
+============ ======== ======== ===========================================================================================================================================
+id           int      ---      Channel ID
+name         string   ---      Name of the channel
+is_active    boolean  ---      Whether the channel should be active
+def_id       int      ---      ID of :doc:`a JMS WebSphere MQ connection definition</public-api/details/zato.definition.jms_wmq>` to use for connecting to a queue manager
+def_name     int      ---      Name of the JMS WebSphere MQ connection definition
+queue        string   ---      Name of the queue to read messages off
+service_name string   ---      Name of a service that will be invoked upon reading each message from the queue
+data_format  string   Yes      Expected data format. If returned, it will be either 'xml' or 'json'.
+============ ======== ======== ===========================================================================================================================================
 
 SOAP example
 ------------
