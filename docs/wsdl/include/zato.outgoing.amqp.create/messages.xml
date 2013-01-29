@@ -9,7 +9,7 @@
             <xsd:element name="priority" type="xsd:int"/>
             <xsd:element name="content_type" type="xsd:string" minOccurs="0"/>
             <xsd:element name="content_encoding" type="xsd:string" minOccurs="0"/>
-            <xsd:element name="expiration" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="expiration" type="xsd:int" minOccurs="0"/>
             <xsd:element name="user_id" type="xsd:string" minOccurs="0"/>
             <xsd:element name="app_id" type="xsd:string" minOccurs="0"/>
           </xsd:sequence>
