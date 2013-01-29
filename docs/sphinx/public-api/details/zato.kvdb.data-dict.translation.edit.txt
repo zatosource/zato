@@ -79,7 +79,7 @@ JSON example
 .. code-block:: javascript
 
   {
-    "id": "3",
+    "id": 3,
     "system1": "CRM",
     "key1": "CUSTOMER_TYPE",
     "value1": "QEQ",
