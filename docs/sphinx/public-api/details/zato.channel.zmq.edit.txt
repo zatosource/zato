@@ -4,9 +4,8 @@ zato.channel.zmq.Edit
 Overview
 --------
 
-Updates an already existing ZeroMQ channel. The channel will be restarted.
-Setting the 'is_active' flag to true will start an underlying socket
-while setting it to false will stop it.
+Updates an already existing ZeroMQ channel. The channel will be stopped.
+If 'is_active' flag is 'true', the underlying socket will then be started.
 
   * List response: No
   * SOAP action: zato.channel.zmq.edit

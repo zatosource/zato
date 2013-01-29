@@ -4,9 +4,8 @@ zato.channel.jms_wmq.Edit
 Overview
 --------
 
-Updates an already existing JMS WebSphere MQ channel. The channel will be restarted.
-Setting the 'is_active' flag to true will start an underlying MQ listener
-while setting it to false will stop the listener.
+Updates an already existing JMS WebSphere MQ channel. The channel will be stopped.
+If 'is_active' flag is 'true', the underlying MQ listener will then be started.
 
   * List response: No
   * SOAP action: zato.channel.jms_wmq.edit
