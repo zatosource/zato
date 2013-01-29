@@ -49,8 +49,7 @@ SOAP example
   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns="http://gefira.pl/zato">
   <soap:Body>
-      <zato_kvdb_remote_command_execute_response
-        xmlns="http://gefira.pl/zato">
+      <zato_kvdb_remote_command_execute_response xmlns="http://gefira.pl/zato">
       <zato_env>
           <cid>K30061751554541689680195842359</cid>
           <result>ZATO_OK</result>
