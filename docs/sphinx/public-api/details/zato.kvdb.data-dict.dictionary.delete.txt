@@ -50,8 +50,7 @@ SOAP example
   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
     xmlns="http://gefira.pl/zato">
   <soap:Body>
-      <zato_kvdb_data_dict_dictionary_delete_response
-        xmlns="http://gefira.pl/zato">
+      <zato_kvdb_data_dict_dictionary_delete_response xmlns="http://gefira.pl/zato">
       <zato_env>
           <cid>K38024452450683724426297092034</cid>
           <result>ZATO_OK</result>
