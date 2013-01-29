@@ -1,8 +1,8 @@
 zato.channel.zmq.Create
-========================
+=======================
 
 Overview
-------------
+--------
 
 Allows one to create a ZeroMQ channel for accepting incoming messages.
 
@@ -15,29 +15,29 @@ Allows one to create a ZeroMQ channel for accepting incoming messages.
 Request parameters
 ------------------
 
-=================== ======== ======== ====================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== ====================================================================================================================================================
-cluster_id          int      ---      ID of the cluster this channel should be created in
-name                string   ---      Name of the channel to create
-is_active           boolean  ---      Whether the channel should be active upon its creation. If true, the channel will be started immediately after its creation.
-address             string   ---      TCP address of a socket to connect to
-socket_type         string   ---      Type of the channel's socket. Must be either 'PULL' or 'SUB'.
-service             string   ---      Name of an already existing service to invoke upon reading each message from the socket
-sub_key             string   Yes      Subscription key, applicable only if socket_type is 'SUB'
-data_format         string   Yes      Expected data format. If given, should be either 'xml' or 'json'.
-=================== ======== ======== ====================================================================================================================================================
+=========== ======== ======== ============================================================================================================================
+Name        Datatype Optional Notes
+=========== ======== ======== ============================================================================================================================
+cluster_id  int      ---      ID of the cluster this channel should be created in
+name        string   ---      Name of the channel to create
+is_active   boolean  ---      Whether the channel should be active upon its creation. If true, the channel will be started immediately after its creation.
+address     string   ---      TCP address of a socket to connect to
+socket_type string   ---      Type of the channel's socket. Must be either 'PULL' or 'SUB'.
+service     string   ---      Name of an already existing service to invoke upon reading each message from the socket
+sub_key     string   Yes      Subscription key, applicable only if socket_type is 'SUB'
+data_format string   Yes      Expected data format. If given, should be either 'xml' or 'json'.
+=========== ======== ======== ============================================================================================================================
             
 
 Response parameters
 -------------------
 
-======= ======== ======== ======================================================================================
-Name    Datatype Optional Notes
-======= ======== ======== ======================================================================================
-id      int      ---      ID assigned to the newly created channel
-name    string   ---      Copied over from request
-======= ======== ======== ======================================================================================
+==== ======== ======== ========================================
+Name Datatype Optional Notes
+==== ======== ======== ========================================
+id   int      ---      ID assigned to the newly created channel
+name string   ---      Copied over from request
+==== ======== ======== ========================================
 
 SOAP example
 ------------

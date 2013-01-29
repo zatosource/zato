@@ -2,7 +2,7 @@ zato.kvdb.data-dict.translation.*
 =================================
 
 Overview
-------------
+--------
 
 Services related to the management of KVDB translations.
 

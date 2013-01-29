@@ -1,8 +1,8 @@
 zato.http_soap.Create
-========================
+=====================
 
 Overview
-------------
+--------
 
 Creates a new plain HTTP or SOAP object, this can be either channel or an outgoing
 connection, depending on the value of the 'connection' parameter.
@@ -72,38 +72,38 @@ can be used to achieve different ends, such as:
 Request parameters
 ------------------
 
-=================== ======== ======== ================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== ================================================================================================================================================
-cluster_id          int      ---      ID of the cluster this object should be created in
-name                string   ---      Name of the object to create
-is_active           boolean  ---      Whether the object should be active upon its creation, if it can be used
-connection          string   ---      Must be either 'channel' if the object is a channel or 'outgoing' if it's an outgoing connection
-transport           string   ---      Must be either 'plain_http' for plain HTTP connections and 'soap' for SOAP ones
-is_internal         boolean  ---      'true' if it's one of Zato's own internal objects, 'false' otherwise
-url_path            string   ---      URL path to expose if it's a channel, a URL path to invoke if it's an outgoing connection. Must start with a '/'.
-service             string   Yes      A service to invoke on an incoming request if it's a channel
-security_id         int      Yes      If it's a channel, ID of an already existing security definition, one of 
-                                      :doc:`HTTP Basic Auth.*</public-api/details/zato.security.basic_auth>`, 
-                                      :doc:`technical account</public-api/details/zato.security.tech_account>` or 
-                                      :doc:`WS-Security</public-api/details/zato.security.wss>`. If not given, from Zato's viewpoint, the channel will be open for everyone to invoke.
-method              string   Yes      If it's a channel, an HTTP method that must be used by clients when invoking the channel. If not given, any method will work.
-soap_action         string   Yes      SOAP action to expose the channel under if it's a channel. SOAP action to use when invoking services if it's an outgoing connections.
-soap_version        string   Yes      Must be '1.1' if it's a channel; can be '1.1' or '1.2' if it's an outgoing connection.
-data_format         string   Yes      If given and it's a channel, must be either 'xml' or 'json' - describes the expected data format of incoming requests
-host                string   Yes      If it's an outgoing connection, the host to invoke services on. Must include either 'http://' or 'https://' prefix.
-=================== ======== ======== ================================================================================================================================================
+============ ======== ======== ================================================================================================================================================
+Name         Datatype Optional Notes
+===========  ======== ======== ================================================================================================================================================
+cluster_id   int      ---      ID of the cluster this object should be created in
+name         string   ---      Name of the object to create
+is_active    boolean  ---      Whether the object should be active upon its creation, if it can be used
+connection   string   ---      Must be either 'channel' if the object is a channel or 'outgoing' if it's an outgoing connection
+transport    string   ---      Must be either 'plain_http' for plain HTTP connections and 'soap' for SOAP ones
+is_internal  boolean  ---      'true' if it's one of Zato's own internal objects, 'false' otherwise
+url_path     string   ---      URL path to expose if it's a channel, a URL path to invoke if it's an outgoing connection. Must start with a '/'.
+service      string   Yes      A service to invoke on an incoming request if it's a channel
+security_id  int      Yes      If it's a channel, ID of an already existing security definition, one of 
+                               :doc:`HTTP Basic Auth.*</public-api/details/zato.security.basic_auth>`, 
+                               :doc:`technical account</public-api/details/zato.security.tech_account>` or 
+                               :doc:`WS-Security</public-api/details/zato.security.wss>`. If not given, from Zato's viewpoint, the channel will be open for everyone to invoke.
+method       string   Yes      If it's a channel, an HTTP method that must be used by clients when invoking the channel. If not given, any method will work.
+soap_action  string   Yes      SOAP action to expose the channel under if it's a channel. SOAP action to use when invoking services if it's an outgoing connections.
+soap_version string   Yes      Must be '1.1' if it's a channel; can be '1.1' or '1.2' if it's an outgoing connection.
+data_format  string   Yes      If given and it's a channel, must be either 'xml' or 'json' - describes the expected data format of incoming requests
+host         string   Yes      If it's an outgoing connection, the host to invoke services on. Must include either 'http://' or 'https://' prefix.
+============ ======== ======== ================================================================================================================================================
             
 
 Response parameters
 -------------------
 
-======= ======== ======== ======================================================================================
-Name    Datatype Optional Notes
-======= ======== ======== ======================================================================================
-id      int      ---      ID assigned to the newly created object
-name    string   ---      Copied over from request
-======= ======== ======== ======================================================================================
+==== ======== ======== =======================================
+Name Datatype Optional Notes
+==== ======== ======== =======================================
+id   int      ---      ID assigned to the newly created object
+name string   ---      Copied over from request
+==== ======== ======== =======================================
 
 SOAP example
 ------------

@@ -1,8 +1,8 @@
 zato.http_soap.*
-===================
+================
 
 Overview
-------------
+--------
 
 Services related to the management of plain HTTP and SOAP objects - both
 channels and outgoing connections.

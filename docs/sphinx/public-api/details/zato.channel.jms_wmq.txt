@@ -2,7 +2,7 @@ zato.channel.jms_wmq.*
 ======================
 
 Overview
-------------
+--------
 
 Services related to the management of JMS WebSphere MQ channels.
 

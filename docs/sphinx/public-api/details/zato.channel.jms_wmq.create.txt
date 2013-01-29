@@ -2,7 +2,7 @@ zato.channel.jms_wmq.Create
 ===========================
 
 Overview
-------------
+--------
 
 Allows one to create a JMS WebSphere MQ channel basing on
 :doc:`an already existing JMS WebSphere MQ connection definition</public-api/details/zato.definition.jms_wmq>`.
@@ -16,28 +16,28 @@ Allows one to create a JMS WebSphere MQ channel basing on
 Request parameters
 ------------------
 
-=================== ======== ======== =============================================================================================================================================================
-Name                Datatype Optional Notes
-=================== ======== ======== =============================================================================================================================================================
-cluster_id          int      ---      ID of the cluster this channel should be created in
-name                string   ---      Name of the channel to create
-is_active           boolean  ---      Whether the channel should be active upon its creation. If true, the channel will be started immediately after its creation.
-def_id              int      ---      ID of :doc:`an already existing JMS WebSphere MQ connection definition</public-api/details/zato.definition.jms_wmq>` to use for connecting to a queue manager
-queue               string   ---      Name of the queue to read messages off
-service             string   ---      Name of an already existing service to invoke upon reading each message from the queue
-data_format         string   Yes      Expected data format. If given, should be either 'xml' or 'json'.
-=================== ======== ======== =============================================================================================================================================================
+=========== ======== ======== =============================================================================================================================================================
+Name        Datatype Optional Notes
+=========== ======== ======== =============================================================================================================================================================
+cluster_id  int      ---      ID of the cluster this channel should be created in
+name        string   ---      Name of the channel to create
+is_active   boolean  ---      Whether the channel should be active upon its creation. If true, the channel will be started immediately after its creation.
+def_id      int      ---      ID of :doc:`an already existing JMS WebSphere MQ connection definition</public-api/details/zato.definition.jms_wmq>` to use for connecting to a queue manager
+queue       string   ---      Name of the queue to read messages off
+service     string   ---      Name of an already existing service to invoke upon reading each message from the queue
+data_format string   Yes      Expected data format. If given, should be either 'xml' or 'json'.
+=========== ======== ======== =============================================================================================================================================================
             
 
 Response parameters
 -------------------
 
-======= ======== ======== ======================================================================================
-Name    Datatype Optional Notes
-======= ======== ======== ======================================================================================
-id      int      ---      ID assigned to the newly created channel
-name    string   ---      Copied over from request
-======= ======== ======== ======================================================================================
+==== ======== ======== ========================================
+Name Datatype Optional Notes
+==== ======== ======== ========================================
+id   int      ---      ID assigned to the newly created channel
+name string   ---      Copied over from request
+==== ======== ======== ========================================
 
 SOAP example
 ------------
