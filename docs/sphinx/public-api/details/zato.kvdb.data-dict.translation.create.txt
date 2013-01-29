@@ -77,14 +77,14 @@ JSON example
 
 .. code-block:: javascript
 
-   {
-     "system1": "CRM",
-     "key1": "CUSTOMER_TYPE",
-     "value1": "QEQ",
-     "system2": "PORTAL",
-     "key2": "customerType",
-     "value2": "292"
-   }
+  {
+    "system1": "CRM",
+    "key1": "CUSTOMER_TYPE",
+    "value1": "QEQ",
+    "system2": "PORTAL",
+    "key2": "customerType",
+    "value2": "292"
+  }
    
   {
     "zato_env": {
