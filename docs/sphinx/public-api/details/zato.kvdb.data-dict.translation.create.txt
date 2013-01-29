@@ -16,16 +16,16 @@ idea that one entry is equal to the other one in another system.
 Request parameters
 ------------------
 
-======= ======== ======== ======================
+======= ======== ======== =============
 Name    Datatype Optional Notes
-======= ======== ======== ======================
-system1 string   ---      System translated from
-key1    string   ---      Key translated from
-value1  string   ---      Value translated from
-system2 string   ---      System translated to
-key2    string   ---      Key translated to
-value2  string   ---      Value translated to
-======= ======== ======== ======================
+======= ======== ======== =============
+system1 string   ---      Source system
+key1    string   ---      Source key
+value1  string   ---      Source value
+system2 string   ---      Target system
+key2    string   ---      Target key
+value2  string   ---      Target value
+======= ======== ======== =============
             
 
 Response parameters
