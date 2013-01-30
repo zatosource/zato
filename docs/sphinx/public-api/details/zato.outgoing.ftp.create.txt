@@ -16,19 +16,19 @@ creating connections to both FTP and FTPS (FTP Secure) servers.
 Request parameters
 ------------------
 
-========== ======== ======== =====================================================================================================================================================
+========== ======== ======== ===================================================================================================
 Name       Datatype Optional Notes
-========== ======== ======== =====================================================================================================================================================
+========== ======== ======== ===================================================================================================
 cluster_id int      ---      ID of the cluster this outgoing connection should be created in
 name       string   ---      Name of the outgoing connection to create
-is_active  boolean  ---      Whether the outgoing connection should be active upon its creation. If true, the underlying connector will be started immediately after its creation.
+is_active  boolean  ---      Whether the outgoing connection should be active upon its creation, should it be possible to use it
 host       string   ---      FTP host
 port       int      ---      FTP port
 dircache   boolean  ---      Whether the directory information should be cached
 user       string   Yes      User to connect with
 acct       string   Yes      Accounting information
 timeout    int      Yes      Connection timeout in seconds
-========== ======== ======== =====================================================================================================================================================
+========== ======== ======== ===================================================================================================
             
 
 Response parameters
