@@ -1,0 +1,16 @@
+zato.outgoing.ftp.*
+===================
+
+Overview
+--------
+
+Services related to the management of outgoing FTP connections.
+
+Services
+--------
+
+* :doc:`zato.outgoing.ftp.ChangePassword <./zato.outgoing.ftp.change-password>`
+* :doc:`zato.outgoing.ftp.Create <./zato.outgoing.ftp.create>`
+* :doc:`zato.outgoing.ftp.Delete <./zato.outgoing.ftp.delete>`
+* :doc:`zato.outgoing.ftp.Edit <./zato.outgoing.ftp.edit>`
+* :doc:`zato.outgoing.ftp.GetList <./zato.outgoing.ftp.get-list>`
