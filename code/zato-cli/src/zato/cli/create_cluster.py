@@ -282,12 +282,12 @@ class Create(ZatoCommand):
             
             zato_soap = HTTPSOAP(None, action, True, True, 'channel', 
                 'soap', None, '/zato/soap', None, action, '1.1', 
-                SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=tech_account)
+                SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=None)
             session.add(zato_soap)
             
             json_url_path = '/zato/json/{}'.format(action)            
             json_http = HTTPSOAP(None, '{}.json'.format(service_name), True, True, 'channel', 'plain_http', 
-                None, json_url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=pubapi_sec)
+                None, json_url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=None)
             session.add(json_http)
 
     def add_ping_services(self, session, cluster):
