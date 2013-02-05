@@ -27,6 +27,9 @@ from uuid import uuid4
 # anyjson
 from anyjson import dumps
 
+# Bunch
+from bunch import Bunch
+
 # mock
 from mock import MagicMock
 
@@ -84,6 +87,9 @@ class FakeServer(object):
     def __init__(self):
         self.kvdb = FakeKVDB()
         self.service_store = FakeServiceStore()
+        self.fs_server_config = Bunch()
+        self.fs_server_config.misc = Bunch()
+        self.fs_server_config.misc.internal_services_may_be_deleted = False
         
 class ServiceTestCase(TestCase):
     
