@@ -22,7 +22,7 @@ Name             Datatype Optional Notes
 cluster_id       int      ---      ID of the cluster the connection is defined in
 name             string   ---      Name of the outgoing connection to update
 is_active        boolean  ---      Whether the outgoing connection should be active, if the underlying connector should be started
-def_id           int      ---      Same as for :doc:`zato.outgoing.amqp.Create<./zato.definition.amqp.create>`
+def_id           int      ---      Same as for :doc:`zato.outgoing.amqp.Create<./zato.outgoing.amqp.create>`
 delivery_mode    int      ---      〃
 priority         int      ---      〃
 content_type     string   Yes      〃
