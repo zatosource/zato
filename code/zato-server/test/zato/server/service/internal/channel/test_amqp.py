@@ -66,3 +66,39 @@ class GetListTestCase(ServiceTestCase):
                 given_value = getattr(given, key)
                 expected_value = getattr(expected, key)
                 eq_(given_value, expected_value)
+
+# ##############################################################################
+
+class SIOGetListTestCase(ServiceTestCase):
+    
+    def setUp(self):
+        self.cluster_id = rand_int()
+        
+    def tearDown(self):
+        self.cluster_id = None
+    
+    def get_input(self):
+        return {'cluster_id': self.cluster_id}
+
+    def get_data(self):
+        return Bunch(
+            {'id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'queue':rand_string(), 
+             'consumer_tag_prefix':rand_string(), 'def_name':rand_string(), 'def_id':rand_int(), 
+             'service_name':rand_string(), 'data_format':rand_string()}
+        )
+    
+    def test_sio(self):
+        pass
+    
+'''class SIOCreate(ServiceTestCase):
+    
+    def setUp(self):
+        self.cluster_id = rand_int()
+        self.name = rand_string()
+        
+    def tearDown(self):
+        self.cluster_id = None
+    
+    def get_input(self):
+        return {'cluster_id': self.cluster_id}
+        '''
