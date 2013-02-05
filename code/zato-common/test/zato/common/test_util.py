@@ -31,21 +31,24 @@ from zato.common import ParsingException, soap_body_xpath, zato_path
 
 class ZatoPathTestCase(TestCase):
     def test_zato_path(self):
-        xml = etree.fromstring("""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="http://gefira.pl/zato">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <zato:zato_service_get_list_request>
-         <cluster_id>123</cluster_id>
-      </zato:zato_service_get_list_request>
-   </soapenv:Body>
-</soapenv:Envelope>""")
-        
-        # zato.service.get-by-name
-        # techacct-226327
-        # 04fd1704f75546d58765dd13516a1512
-        
+        xml = etree.fromstring("""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_channel_amqp_edit_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K08984532360785332835581231451</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+               <item>
+                  <id>1</id>
+                  <name>crm.account</name>
+               </item>
+            </zato_channel_amqp_edit_response>
+      </soap:Body>
+   </soap:Envelope>""")
+
         request = soap_body_xpath(xml)[0].getchildren()[0]
-        zato_path('zato_service_get_list_request', True).get_from(request)
+        zato_path('item', True).get_from(request)
         
         path = uuid4().hex
         try:
@@ -54,25 +57,3 @@ class ZatoPathTestCase(TestCase):
             pass
         else:
             raise AssertionError('Expected an ParsingException with path:[{}]'.format(path))
-
-        """
-        POST http://localhost:17010/zato/soap HTTP/1.1
-        Accept-Encoding: gzip,deflate
-        Content-Type: text/xml;charset=UTF-8
-        x-zato-user: techacct-226327
-        x-zato-password: 04fd1704f75546d58765dd13516a1512
-        soapaction: zato:service.get-list
-        Content-Length: 322
-        Host: localhost:17010
-        Connection: Keep-Alive
-        User-Agent: Apache-HttpClient/4.1.1 (java 1.5)
-        
-        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="http://gefira.pl/zato">
-           <soapenv:Header/>
-           <soapenv:Body>
-              <zato:zato_service_get_list_request>
-                 <zato:cluster_id>1</zato:cluster_id>
-              </zato:zato_service_get_list_request>
-           </soapenv:Body>
-        </soapenv:Envelope>
-        """
