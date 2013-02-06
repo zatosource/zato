@@ -154,7 +154,8 @@ class ServiceTestCase(TestCase):
         expected = Expected()
         
         instance = self.invoke(service_class, request_data, expected, mock_data)
-        response = loads(instance.response.payload.getvalue())[response_elem]
+        if not isinstance(instance.response.payload, basestring):
+            loads(instance.response.payload.getvalue())[response_elem] # Raises KeyError if 'response_elem' doesn't match
         
         self._check_sio_request_input(instance, request_data)
     
