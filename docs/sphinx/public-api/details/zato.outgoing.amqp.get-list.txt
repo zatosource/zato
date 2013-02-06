@@ -4,7 +4,7 @@ zato.outgoing.amqp.GetList
 Overview
 --------
 
-Returns a list of AMQP outgoing connections defined on a given cluster.
+Returns a list of outgoing AMQP connections defined on a given cluster.
 
   * List response: Yes
   * SOAP action: zato.outgoing.amqp.get-list
