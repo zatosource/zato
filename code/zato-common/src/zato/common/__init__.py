@@ -149,6 +149,13 @@ class SIMPLE_IO:
         XML = 'xml'
         JSON = 'json'
         
+    class INT_PARAMETERS:
+        VALUES = ['id']
+        SUFFIXES = ['_id', '_size', '_timeout']
+        
+    class BOOL_PARAMETERS:
+        SUFFIXES = ['is_', 'needs_', 'should_']
+        
 class DEPLOYMENT_STATUS:
     DEPLOYED = 'deployed'
     AWAITING_DEPLOYMENT = 'awaiting-deployment'

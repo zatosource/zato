@@ -25,15 +25,19 @@ from unittest import TestCase
 from uuid import uuid4
 
 # anyjson
-from anyjson import dumps
+from anyjson import dumps, loads
 
 # Bunch
 from bunch import Bunch
 
 # mock
-from mock import MagicMock
+from mock import MagicMock, Mock
+
+# nose
+from nose.tools import eq_
 
 # Zato
+from zato.common import SIMPLE_IO
 from zato.common.util import new_cid
 
 def rand_int(start=1, stop=100):
@@ -59,6 +63,10 @@ class Expected(object):
             return self.data
         else:
             return self.data[0]
+        
+class FakeBrokerClient(object):
+    def publish(self, *args, **kwargs):
+        raise NotImplementedError()
 
 class FakeKVDB(object):
     class FakeConn(object):
@@ -90,26 +98,90 @@ class FakeServer(object):
         self.fs_server_config = Bunch()
         self.fs_server_config.misc = Bunch()
         self.fs_server_config.misc.internal_services_may_be_deleted = False
+        self.repo_location = rand_string()
         
 class ServiceTestCase(TestCase):
     
-    def invoke(self, class_, request, expected):
+    def invoke(self, class_, request_data, expected, mock_data={}):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
-        request_string = dumps(request)
         instance = class_()
         worker_store = MagicMock()
         worker_store.worker_config = MagicMock
         worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None))
         
-        class_.update(instance, FakeServer(), None, worker_store, new_cid(), request, request_string, 
-            simple_io_config={})
+        simple_io_config = {
+            'int_parameters': SIMPLE_IO.INT_PARAMETERS.VALUES,
+            'int_parameter_suffixes': SIMPLE_IO.INT_PARAMETERS.SUFFIXES,
+            'bool_parameter_prefixes': SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES,
+        }
+        
+        class_.update(instance, FakeServer(), None, worker_store, new_cid(), request_data, request_data, 
+            simple_io_config=simple_io_config, data_format=SIMPLE_IO.FORMAT.JSON)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
             return expected.get_data()
+        
+        for attr_name, mock_path_data_list in mock_data.iteritems():
+            setattr(instance, attr_name, Mock())
+            attr = getattr(instance, attr_name)
+            
+            for mock_path_data in mock_path_data_list:
+                for path, value in mock_path_data.iteritems():
+                    splitted = path.split('.')
+                    new_path = '.return_value.'.join(elem for elem in splitted) + '.return_value'
+                    attr.configure_mock(**{new_path:value})
+                    
+        broker_client_publish = getattr(self, 'broker_client_publish', None)
+        if broker_client_publish:
+            instance.broker_client = FakeBrokerClient()
+            instance.broker_client.publish = broker_client_publish
 
         instance.get_data = get_data
         instance.handle()
         
         return instance
+    
+    def _check_sio_request_input(self, instance, request_data):
+        for k, v in request_data.iteritems():
+            self.assertEquals(getattr(instance.request.input, k), v)
+    
+    def check_sio(self, service_class, request_data, response_data, response_elem, mock_data={}):
+        
+        expected_keys = response_data.keys()
+        expected_data = tuple(response_data for x in range(rand_int(10)))
+        expected = Expected()
+        
+        instance = self.invoke(service_class, request_data, expected, mock_data)
+        response = loads(instance.response.payload.getvalue())[response_elem]
+        
+        self._check_sio_request_input(instance, request_data)
+    
+    def check_sio_list_response(self, service_class, item_class, request_data, 
+        response_data, request_elem, response_elem, mock_data={}):
+        
+        expected_keys = response_data.keys()
+        expected_data = tuple(response_data for x in range(rand_int(10)))
+        expected = Expected()
+        
+        for datum in expected_data:
+            item = item_class()
+            for key in expected_keys:
+                value = getattr(datum, key)
+                setattr(item, key, value)
+            expected.add(item)
+            
+        instance = self.invoke(service_class, request_data, expected, mock_data)
+        response = loads(instance.response.payload.getvalue())[response_elem]
+        
+        for idx, item in enumerate(response):
+            expected = expected_data[idx]
+            given = Bunch(item)
+            
+            for key in expected_keys:
+                given_value = getattr(given, key)
+                expected_value = getattr(expected, key)
+                eq_(given_value, expected_value)
+                
+        self._check_sio_request_input(instance, request_data)

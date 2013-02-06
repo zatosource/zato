@@ -23,7 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from springpython.config import Object, PythonConfig
 
 # Zato
-from zato.common import DEFAULT_STATS_SETTINGS, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common import DEFAULT_STATS_SETTINGS, SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.server.base.parallel import ParallelServer
@@ -93,15 +93,15 @@ class ZatoContext(PythonConfig):
     
     @Object
     def int_parameters(self):
-        return ['id']
+        return SIMPLE_IO.INT_PARAMETERS.VALUES
     
     @Object
     def int_parameter_suffixes(self):
-        return ['_id', '_size', '_timeout']
+        return SIMPLE_IO.INT_PARAMETERS.SUFFIXES
     
     @Object
     def bool_parameter_prefixes(self):
-        return ['is_', 'needs_', 'should_']
+        return SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES
 
     # #######################################################
     # Security

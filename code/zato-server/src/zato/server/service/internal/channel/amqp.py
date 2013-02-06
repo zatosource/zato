@@ -75,12 +75,13 @@ class Create(AdminService):
                 first()
             
             if existing_one:
-                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(name))
+                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(input.name))
             
             # Is the service's name correct?
             service = session.query(Service).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.name==input.service).first()
+                filter(Service.name==input.service).\
+                first()
             
             if not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
@@ -140,7 +141,8 @@ class Edit(_AMQPService):
             # Is the service's name correct?
             service = session.query(Service).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.name==input.service).first()
+                filter(Service.name==input.service).\
+                first()
             
             if not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
