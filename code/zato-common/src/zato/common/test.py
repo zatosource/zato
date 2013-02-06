@@ -147,7 +147,7 @@ class ServiceTestCase(TestCase):
         for k, v in request_data.iteritems():
             self.assertEquals(getattr(instance.request.input, k), v)
     
-    def check_sio(self, service_class, request_data, response_data, response_elem, mock_data={}):
+    def check_impl(self, service_class, request_data, response_data, response_elem, mock_data={}):
         
         expected_keys = response_data.keys()
         expected_data = tuple(response_data for x in range(rand_int(10)))
@@ -159,7 +159,7 @@ class ServiceTestCase(TestCase):
         
         self._check_sio_request_input(instance, request_data)
     
-    def check_sio_list_response(self, service_class, item_class, request_data, 
+    def check_impl_list(self, service_class, item_class, request_data, 
         response_data, request_elem, response_elem, mock_data={}):
         
         expected_keys = response_data.keys()
