@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.security.tech-account.change-password">
+      <wsdl:input message="zato:zato_security_tech_account_change_password_request_message"/>
+      <wsdl:output message="zato:zato_security_tech_account_change_password_response_message"/>
+    </wsdl:operation>

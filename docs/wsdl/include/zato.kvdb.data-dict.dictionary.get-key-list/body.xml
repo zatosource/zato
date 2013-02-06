@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.kvdb.data-dict.dictionary.get-key-list">
+      <soap:operation soapAction="zato.kvdb.data-dict.dictionary.get-key-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

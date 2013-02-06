@@ -1,0 +1,6 @@
+  <wsdl:message name="zato_stats_get_summary_by_year_request_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_year_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_stats_get_summary_by_year_response_message">
+    <wsdl:part element="zato:zato_stats_get_summary_by_year_response" name="parameters"/>
+  </wsdl:message>

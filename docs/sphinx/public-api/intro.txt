@@ -1,0 +1,325 @@
+==========================
+Introducing the public API
+==========================
+
+
+Overview
+========
+
+Zato uses 150+ internal services for controlling most aspects of running a cluster,
+such as creating new connection definitions, updating statistics, configuring 
+passwords and so on. 
+
+Most of the services are available
+through Zato's public API in both SOAP and JSON via HTTP. It is possible to use
+the services exposed for creating external applications that assume the roles
+of what is typically performed by the :doc:`web admin</admin/web-admin>`. These
+could be anything ranging from custom iPhone applications through Java clients
+to simply invoking the services from `curl <http://curl.haxx.se/>`_.
+
+WSDL
+====
+
+:download:`Click here to download the WSDL <./zato.wsdl>`
+
+Message format
+==============
+
+A service always has request and response documents defined. Being 
+written using :doc:`SimpleIO (SIO) </progguide/understand-sio>`, these can be either SOAP
+or JSON. For each response document, there is always a technical envelope - called :ref:`zato_env` - 
+defined and optionally, the actual business payload users are mostly interested in.
+
+The payload can either a single item or a list of items. For instance, fetching
+an AMQP connection's details will return the former while asking for a list of
+servers a particular service is deployed on will yield the latter.
+
+The general format has been illustrated below, note that the
+:ref:`zato_env` element is always returned at the same position while the actual content
+differs each time. Also note that for JSON, the request element is omitted and
+request parameters can be passed in directly - there is no 'zato_get_foo_request'
+key to wrap all the input parameters with even though the response uses one,
+such as 'zato_get_foo_response' and 'zato_get_bar_list_response' in examples below.
+
+Refer to the documentation of each of the services to learn more about particular
+elements returned.
+
+SOAP
+----
+
+.. code-block:: xml
+
+      <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+           xmlns:zato="http://gefira.pl/zato">
+         <soapenv:Header/>
+         <soapenv:Body>
+            <zato:zato_get_foo_request>
+              <zato:req_elem1>...</zato:req_elem1>
+              <zato:req_elem2>...</zato:req_elem2>
+              ...
+              <zato:req_elem_n>...</zato:req_elem_n>
+            </zato:zato_get_foo_request>
+         </soapenv:Body>
+      </soapenv:Envelope>
+      
+      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+           xmlns="http://gefira.pl/zato">
+         <soap:Body>
+            <zato_get_foo_response>
+               <zato_env>
+                  <cid>K21353002988419985838198535608</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+               <item>
+                  <resp_elem1>...</resp_elem1>
+                  <resp_elem2>...</resp_elem2>
+                  ...
+                  <resp_elem_n>...</resp_elem_n>
+               </item>
+            </zato_get_foo_response>
+         </soap:Body>
+      </soap:Envelope>
+      
+.. code-block:: xml
+
+      <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+           xmlns:zato="http://gefira.pl/zato">
+         <soapenv:Header/>
+         <soapenv:Body>
+            <zato:zato_get_bar_list_request>
+              <zato:req_elem1>...</zato:req_elem1>
+              <zato:req_elem2>...</zato:req_elem2>
+              ...
+              <zato:req_elem_n>...</zato:req_elem_n>
+            </zato:zato_get_bar_list_request>
+         </soapenv:Body>
+      </soapenv:Envelope>
+      
+      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+           xmlns="http://gefira.pl/zato">
+         <soap:Body>
+            <zato_get_bar_list_response>
+               <zato_env>
+                  <cid>K37683756065213515208747449888</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+               <item_list>
+                  <item>
+                     <resp_elem1>...</resp_elem1>
+                     <resp_elem2>...</resp_elem2>
+                     ...
+                     <resp_elem_n>...</resp_elem_n>
+                  </item>
+                  <item>
+                     <resp_elem3>...</resp_elem3>
+                     <resp_elem4>...</resp_elem4>
+                     ...
+                     <resp_elem_j>...</resp_elem_j>
+                  </item>
+               </item_list>
+            </zato_get_bar_list_response>
+         </soap:Body>
+      </soap:Envelope>
+
+JSON
+----
+
+.. code-block:: javascript
+
+   {
+     "req_elem1":"...", 
+     "req_elem2":"...", 
+     ...
+     "req_elem_n":"...", 
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K68938864847262437323255781583"
+     },
+     "zato_get_foo_response": {
+       "resp_elem1": "...",
+       "resp_elem2": "...",
+       ...
+       "resp_elem_n": "..."
+     }
+   }
+
+.. code-block:: javascript
+
+   {
+     "req_elem1":"...", 
+     "req_elem2":"...", 
+     ...
+     "req_elem_n":"...", 
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K28185890067723564136752725554"
+     },
+     "zato_get_bar_list_response": [
+       {
+         "resp_elem1": "...",
+         "resp_elem2": "...",
+         ...
+         "resp_elem_n": "..."
+       },
+       {
+         "resp_elem3": "...",
+         "resp_elem4": "...",
+         ...
+         "resp_elem_j": "..."
+       }
+     ]
+   }
+
+Conventions
+===========
+
+There are only few conventions to understand before making use of the Zato public API
+
+    * All messages always need to be in UTF-8. Zato never uses any other encoding.
+
+    * All date and datetime objects are always in UTC. Internally, Zato servers
+      never use any other time zone thus one always needs to convert the user input
+      from their local TZ to UTC.
+      
+    * All .create and .edit actions always copy over the 'id' and 'name' parameters
+      from request to response.
+      
+    * All passwords are always sent in clear-text.
+
+
+.. _zato_env:
+      
+zato_env
+========
+
+zato_env is a technical evelope carrying useful information in each response.
+It is available if the service has been successfuly invoked and can be used,
+for instance, for correlating responses received by clients with messages
+written out to Zato server logs.
+
+zato_env elements
+-----------------
+
+======= ======== ======== ===============================================================================================================================
+Name    Datatype Optional Notes
+======= ======== ======== ===============================================================================================================================
+cid     string   ---      Unique 96-bit correlation ID assigned to this message exchange, always 29 characters long and always starts with the letter 'K'
+result  string   ---      Can be one of ZATO_OK, ZATO_ERROR or ZATO_WARNING.  ZATO_OK means a successful service invocation.
+details string   Yes      ---
+======= ======== ======== ===============================================================================================================================
+
+Reporting exceptions
+====================
+
+SOAP channels use SOAP-ENV:Fault elements for reporting unexpected exceptions
+caught during the execution of a service:
+
+.. code-block:: xml
+
+  <?xml version='1.0' encoding='UTF-8'?>
+  <SOAP-ENV:Envelope
+    xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance"
+    xmlns:xsd="http://www.w3.org/1999/XMLSchema">
+     <SOAP-ENV:Body>
+       <SOAP-ENV:Fault>
+       <faultcode>SOAP-ENV:Client</faultcode>
+  <faultstring><![CDATA[cid [K68438211212681798524426103126], faultstring 
+  [Traceback (most recent call last):
+ File 
+ "/opt/zato/code/zato-server/src/zato/server/connection/http_soap/
+ channel.py", line 126, in dispatch
+   service_info, response = handler.handle(cid, wsgi_environ, payload, transport, 
+   worker_store, self.simple_io_config, data_format, path_info)
+ File 
+ "/opt/zato/code/zato-server/src/zato/server/connection/http_soap/
+ channel.py", line 227, in handle
+   service_instance.handle()
+ File 
+ "/opt/zato/code/zato-server/src/zato/server/service/internal/
+ definition/amqp.py", line 174, in handle
+   filter(ConnDefAMQP.id==self.request.input.id).\
+ File 
+ "/opt/zato/code/eggs/SQLAlchemy-0.7.9-py2.7-linux-x86_64.egg/sqlalchemy/
+ orm/query.py", line 2190, in one
+   raise orm_exc.NoResultFound("No row was found for one()")
+ NoResultFound: No row was found for one()
+ ]]]></faultstring>
+        </SOAP-ENV:Fault>
+    </SOAP-ENV:Body>
+  </SOAP-ENV:Envelope>
+  
+JSON responses use zato_env. Note that the 'details' element below still contains
+a traceback, it's only a lack of multiline-strings in JavaScript that forces
+Zato to return it as a single line:
+
+.. code-block:: javascript
+
+  {
+    "zato_env": {
+      "details": "Traceback (most recent call last):\n  File \"\/opt\/zato\/code\/zato-server\/src\/zato\/server\/connection\/http_soap\/channel.py\", line 142, in dispatch\n    service_info, response = handler.handle(cid, wsgi_environ, payload, transport, worker_store, self.simple_io_config, data_format, path_info)\n  File \"\/opt\/zato\/code\/zato-server\/src\/zato\/server\/connection\/http_soap\/channel.py\", line 252, in handle\n    service_instance.handle()\n  File \"\/opt\/zato\/code\/zato-server\/src\/zato\/server\/service\/internal\/definition\/amqp.py\", line 174, in handle\n    filter(ConnDefAMQP.id==self.request.input.id).\\\n  File \"\/opt\/zato\/code\/eggs\/SQLAlchemy-0.7.9-py2.7-linux-x86_64.egg\/sqlalchemy\/orm\/query.py\", line 2190, in one\n    raise orm_exc.NoResultFound(\"No row was found for one()\")\nNoResultFound: No row was found for one()\n",
+      "result": "ZATO_ERROR",
+      "cid": "K47568862487942557263894250839"
+    }
+  }
+
+The API
+=======
+    * **Overview:**
+      :doc:`Introducing the public API</public-api/intro>`
+      
+    * **Channels:**
+      :doc:`zato.channel.amqp.*</public-api/details/zato.channel.amqp>` |
+      :doc:`zato.channel.jms_wmq.*</public-api/details/zato.channel.jms_wmq>` |
+      :doc:`zato.channel.zmq.*</public-api/details/zato.channel.zmq>`
+      
+    * **Definitions:**
+      :doc:`zato.definition.amqp.*</public-api/details/zato.definition.amqp>` |
+      :doc:`zato.definition.jms_wmq.*</public-api/details/zato.definition.jms_wmq>`
+      
+    * **HTTP/SOAP:**
+      :doc:`zato.http_soap.*</public-api/details/zato.http_soap>`
+      
+    * **Key/value DB (Redis):**
+      :doc:`zato.kvdb.data-dict.dictionary.*</public-api/details/zato.kvdb.data-dict.dictionary>` |
+      :doc:`zato.kvdb.data-dict.impexp.*</public-api/details/zato.kvdb.data-dict.impexp>` |
+      :doc:`zato.kvdb.data-dict.translation.*</public-api/details/zato.kvdb.data-dict.translation>` |
+      :doc:`zato.kvdb.remote-command.*</public-api/details/zato.kvdb.remote-command>`
+      
+    * **Ougoing connections:**
+      :doc:`zato.outgoing.amqp.*</public-api/details/zato.outgoing.amqp>` |
+      :doc:`zato.outgoing.ftp.*</public-api/details/zato.outgoing.ftp>` |
+      :doc:`zato.outgoing.jms_wmq.*</public-api/details/zato.outgoing.jms_wmq>` |
+      :doc:`zato.outgoing.sql.*</public-api/details/zato.outgoing.sql>` |
+      :doc:`zato.outgoing.zmq.*</public-api/details/zato.outgoing.zmq>`
+      
+    * **Ping services:**
+      :doc:`zato.Ping</public-api/details/zato.Ping>` |
+      :doc:`zato.Ping2</public-api/details/zato.Ping2>`
+      
+    * **Scheduler:**
+      :doc:`zato.scheduler.job.*</public-api/details/zato.scheduler.job>`
+      
+    * **Security:**
+      :doc:`zato.security.*</public-api/details/zato.security>` |
+      :doc:`zato.security.basic_auth.*</public-api/details/zato.security.basic_auth>` |
+      :doc:`zato.security.tech_account.*</public-api/details/zato.security.tech_account>` |
+      :doc:`zato.security.wss.*</public-api/details/zato.security.wss>`
+      
+    * **Servers:**
+      :doc:`zato.server.*</public-api/details/zato.server>`
+      
+    * **Services:**
+      :doc:`zato.service.*</public-api/details/zato.service>`
+      
+    * **Statistics:**
+      :doc:`zato.stats.*</public-api/details/zato.stats>`
+      

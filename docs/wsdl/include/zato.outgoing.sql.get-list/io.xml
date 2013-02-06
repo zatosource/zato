@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.outgoing.sql.get-list">
+      <wsdl:input message="zato:zato_outgoing_sql_get_list_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_sql_get_list_response_message"/>
+    </wsdl:operation>

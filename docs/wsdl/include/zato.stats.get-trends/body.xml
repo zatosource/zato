@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.stats.get-trends">
+      <soap:operation soapAction="zato.stats.get-trends"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

@@ -1,0 +1,34 @@
+      <xsd:element name="zato_service_get_source_info_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      
+      <xsd:element name="zato_service_get_source_info_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="service_id" type="xsd:int"/>
+                        <xsd:element name="server_name" type="xsd:string"/>
+                        <xsd:element name="source" type="xsd:string"/>
+                        <xsd:element name="source_path" type="xsd:string"/>
+                        <xsd:element name="source_hash" type="xsd:string"/>
+                        <xsd:element name="source_hash_method" type="xsd:string"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

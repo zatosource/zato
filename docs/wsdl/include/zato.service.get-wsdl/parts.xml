@@ -1,0 +1,6 @@
+  <wsdl:message name="zato_service_get_wsdl_request_message">
+    <wsdl:part element="zato:zato_service_get_wsdl_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_service_get_wsdl_response_message">
+    <wsdl:part element="zato:zato_service_get_wsdl_response" name="parameters"/>
+  </wsdl:message>

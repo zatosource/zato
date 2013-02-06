@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.scheduler.job.get-by-name">
+      <soap:operation soapAction="zato.scheduler.job.get-by-name"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

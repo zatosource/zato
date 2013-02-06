@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.channel.zmq.get-list">
+      <soap:operation soapAction="zato.channel.zmq.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

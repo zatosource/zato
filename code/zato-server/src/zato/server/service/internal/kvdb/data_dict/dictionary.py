@@ -49,7 +49,7 @@ class _CreateEdit(DataDictService):
     class SimpleIO(AdminSIO):
         input_required = ('system', 'key', 'value')
         input_optional = ('id',)
-        output_optional = ('id',)
+        output_required = ('id',)
         
     def _validate_entry(self, validate_item, id=None):
         for elem in('system', 'key'):
@@ -94,7 +94,7 @@ class _CreateEdit(DataDictService):
 class Create(_CreateEdit):
     """ Creates a new dictionary entry.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_create_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_create_response'
     
@@ -104,7 +104,7 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     """ Updates a dictionary entry.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_edit_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_edit_response'
     

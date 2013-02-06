@@ -1,0 +1,124 @@
+zato.kvdb.remote-command.Execute
+================================
+
+Overview
+--------
+
+Execute a raw command against a cluster's KVDB.
+
+  * List response: No
+  * SOAP action: zato.kvdb.remote-command.execute
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.kvdb.remote-command.execute
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+======= ======== ======== ==================
+Name    Datatype Optional Notes
+======= ======== ======== ==================
+command string   ---      Command to execute
+======= ======== ======== ==================
+            
+
+Response parameters
+-------------------
+
+====== ======== ======== ==============================
+Name   Datatype Optional Notes
+====== ======== ======== ==============================
+result string   ---      Result as returned by the KVDB
+====== ======== ======== ==============================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:zato="http://gefira.pl/zato">
+  <soapenv:Header/>
+  <soapenv:Body>
+      <zato:zato_kvdb_remote_command_execute_request>
+          <zato:command>INFO</zato:command>
+      </zato:zato_kvdb_remote_command_execute_request>
+  </soapenv:Body>
+  </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_kvdb_remote_command_execute_response xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K30061751554541689680195842359</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item>
+          <result>{'pubsub_channels': 3, 
+            'aof_enabled': 0, 
+            'bgrewriteaof_in_progress': 0, 
+            'connected_slaves': 0, 
+            'uptime_in_days': 0, 
+            'multiplexing_api': 'epoll', 
+            'lru_clock': 1724260, 
+            'last_save_time': 1359419806, 
+            'redis_version': '2.2.12', 
+            'redis_git_sha1': 0, 
+            'loading': 0,
+            'connected_clients': 7, 
+            'keyspace_misses': 1861, 
+            'used_memory': 2254872, 
+            'vm_enabled': 0, 
+            'used_cpu_user_children': 0.09, 
+            'role': 'master', 
+            'total_commands_processed': 19358, 
+            'used_memory_rss': 3375104, 
+            'total_connections_received': 16, 
+            'pubsub_patterns': 0, 
+            'used_cpu_sys': 11.66, 
+            'used_memory_human': '2.15M', 
+            'used_cpu_sys_children': 0.28, 
+            'blocked_clients': 0, 
+            'used_cpu_user': 1.36, 
+            'use_tcmalloc': 0, 
+            'client_biggest_input_buf': 0, 
+            'db0': {'keys': 5755, 'expires': 14}, 
+            'arch_bits': 64, 
+            'redis_git_dirty': 0, 
+            'expired_keys': 260, 
+            'hash_max_zipmap_entries': 512, 
+            'evicted_keys': 0, 
+            'bgsave_in_progress': 0, 
+            'client_longest_output_list': 0, 
+            'hash_max_zipmap_value': 64, 
+            'process_id': 952, 
+            'uptime_in_seconds': 6371, 
+            'changes_since_last_save': 44, 
+            'mem_fragmentation_ratio': 1.5, 
+            'keyspace_hits': 13302}
+            </result>
+      </item>
+  </zato_kvdb_remote_command_execute_response>
+  </soap:Body>
+  </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+     "command": "HGETALL zato:stats:service:summary:by-day:zato.Ping:2013:01:16"
+   }
+   
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K78370490583750027068477613425"
+    },
+    "zato_kvdb_remote_command_execute_response": {
+      "result": "{'usage': '77', 'max': '1', 'rate': '0.01', 'min': '0', 'mean': '0.01'}"
+    }
+  }

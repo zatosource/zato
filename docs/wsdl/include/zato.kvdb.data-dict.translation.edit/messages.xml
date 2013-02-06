@@ -1,0 +1,28 @@
+      <xsd:element name="zato_kvdb_data_dict_translation_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="system1" type="xsd:string"/>
+            <xsd:element name="key1" type="xsd:string"/>
+            <xsd:element name="value1" type="xsd:string"/>
+            <xsd:element name="system2" type="xsd:string"/>
+            <xsd:element name="key2" type="xsd:string"/>
+            <xsd:element name="value2" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_kvdb_data_dict_translation_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

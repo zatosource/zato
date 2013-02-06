@@ -1,0 +1,15 @@
+zato.outgoing.amqp.*
+====================
+
+Overview
+--------
+
+Services related to the management of AMQP outgoing connections.
+
+Services
+--------
+
+* :doc:`zato.outgoing.amqp.Create <./zato.outgoing.amqp.create>`
+* :doc:`zato.outgoing.amqp.Delete <./zato.outgoing.amqp.delete>`
+* :doc:`zato.outgoing.amqp.Edit <./zato.outgoing.amqp.edit>`
+* :doc:`zato.outgoing.amqp.GetList <./zato.outgoing.amqp.get-list>`

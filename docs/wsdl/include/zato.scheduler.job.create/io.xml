@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.scheduler.job.create">
+      <wsdl:input message="zato:zato_scheduler_job_create_request_message"/>
+      <wsdl:output message="zato:zato_scheduler_job_create_response_message"/>
+    </wsdl:operation>

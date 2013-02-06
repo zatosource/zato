@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.stats.get-trends">
+      <wsdl:input message="zato:zato_stats_get_trends_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_trends_response_message"/>
+    </wsdl:operation>

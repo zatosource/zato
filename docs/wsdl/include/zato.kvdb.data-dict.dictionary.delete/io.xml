@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.kvdb.data-dict.dictionary.delete">
+      <wsdl:input message="zato:zato_kvdb_data_dict_dictionary_delete_request_message"/>
+      <wsdl:output message="zato:zato_kvdb_data_dict_dictionary_delete_response_message"/>
+    </wsdl:operation>

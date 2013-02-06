@@ -76,9 +76,9 @@ class GetList(AdminService):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id', 'connection', 'transport')
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'host', 
-            'url_path', 'method', 'soap_action', 'soap_version', 'data_format', 
-            'service_id', 'service_name', 'security_id', 'security_name', 'sec_type')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
+        output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
+                           'method', 'soap_action', 'soap_version', 'data_format', 'host')
         output_repeated = True
         
     def get_data(self, session):
@@ -95,10 +95,9 @@ class Create(AdminService, _HTTPSOAPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_create_request'
         response_elem = 'zato_http_soap_create_response'
-        input_required = ('connection', 'transport', 'cluster_id', 'name', 'is_active', 'is_internal', 
-                    'url_path', 'service', 'security_id')
-        input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
-        output_required = ('id',)
+        input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
+        input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host')
+        output_required = ('id', 'name')
     
     def handle(self):
         input = self.request.input
@@ -172,6 +171,7 @@ class Create(AdminService, _HTTPSOAPService):
                 self.notify_worker_threads(input, action)
 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
 
             except Exception, e:
                 msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
@@ -186,10 +186,9 @@ class Edit(AdminService, _HTTPSOAPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'url_path', 
-                'connection', 'service', 'transport', 'security_id')
-        input_optional = ('method', 'soap_action', 'soap_version', 'data_format', 'host')
-        output_required = ('id',)
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
+        input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host')
+        output_required = ('id', 'name')
     
     def handle(self):
         input = self.request.input
@@ -268,6 +267,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 self.notify_worker_threads(input, action)
 
                 self.response.payload.id = item.id
+                self.response.payload.name = item.name
 
             except Exception, e:
                 msg = 'Could not update the object, e:[{e}]'.format(e=format_exc(e))

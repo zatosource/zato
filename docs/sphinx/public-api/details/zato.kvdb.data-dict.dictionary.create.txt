@@ -1,0 +1,94 @@
+zato.kvdb.data-dict.dictionary.Create
+=====================================
+
+Overview
+--------
+
+Allows one to create a new data dictionary entry in a cluster's KVDB. 
+
+Note that both 'system' and 'key' may be composed of digits, letters and underscores only - 
+this is checked by validating input data against the regular expression of '\w+'.
+'value' can be any string.
+
+The triple of 'system', 'key' and 'value' must be unique for a given KVDB.
+
+  * List response: No
+  * SOAP action: zato.kvdb.data-dict.dictionary.create
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.kvdb.data-dict.dictionary.create
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+====== ======== ======== ============
+Name   Datatype Optional Notes
+====== ======== ======== ============
+system string   ---      Entry system
+key    string   ---      Entry key
+value  string   ---      Entry value
+====== ======== ======== ============
+            
+
+Response parameters
+-------------------
+
+==== ======== ======== =========================================
+Name Datatype Optional Notes
+==== ======== ======== =========================================
+id   int      ---      ID assigned to the newly dictionary entry
+==== ======== ======== =========================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:zato="http://gefira.pl/zato">
+  <soapenv:Header/>
+  <soapenv:Body>
+      <zato:zato_kvdb_data_dict_dictionary_create_request>
+          <zato:system>PORTAL</zato:system>
+          <zato:key>customerType</zato:key>
+          <zato:value>292</zato:value>
+      </zato:zato_kvdb_data_dict_dictionary_create_request>
+  </soapenv:Body>
+  </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_kvdb_data_dict_dictionary_create_response xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K04326851042907993555317707709</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item>
+          <id>1</id>
+      </item>
+  </zato_kvdb_data_dict_dictionary_create_response>
+  </soap:Body>
+  </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+     "system": "CRM",
+     "key": "CUSTOMER_TYPE",
+     "value": "MMX"
+   }
+   
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K24519727731007135724243635940"
+    },
+    "zato_kvdb_data_dict_dictionary_create_response": {
+      "id": 3
+    }
+  }

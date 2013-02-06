@@ -1,0 +1,107 @@
+zato.definition.amqp.GetByID
+============================
+
+Overview
+--------
+
+Returns details regarding a particular AMQP connection definition.
+
+  * List response: No
+  * SOAP action: zato.definition.amqp.get-by-id
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.definition.amqp.get-by-id
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ======== ======== ==========================================
+Name       Datatype Optional Notes
+========== ======== ======== ==========================================
+id         int      ---      ID of the definition
+cluster_id int      ---      ID of the cluster this definition lives on
+========== ======== ======== ==========================================
+            
+
+Response parameters
+-------------------
+
+========= ======== ======== ====================================================
+Name      Datatype Optional Notes
+========= ======== ======== ====================================================
+id        int      ---      Copied over from request
+name      string   ---      Copied over from request
+host      string   ---      AMQP broker host
+port      int      ---      AMQP broker TCP port
+vhost     string   ---      AMQP virtual host
+username  string   ---      Username to connect with
+frame_max int      ---      Maximum frame size, in bytes
+heartbeat int      ---      How often heartbeats should be exchanged, in seconds
+========= ======== ======== ====================================================
+
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns:zato="http://gefira.pl/zato">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <zato:zato_definition_amqp_get_by_id_request>
+             <zato:id>2</zato:id>
+             <zato:cluster_id>1</zato:cluster_id>
+          </zato:zato_definition_amqp_get_by_id_request>
+       </soapenv:Body>
+    </soapenv:Envelope>
+      
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns="http://gefira.pl/zato">
+    <soap:Body>
+        <zato_definition_amqp_get_by_id_response xmlns="http://gefira.pl/zato">
+        <zato_env>
+            <cid>K63238918280873502377032263279</cid>
+            <result>ZATO_OK</result>
+        </zato_env>
+        <item>
+            <id>2</id>
+            <name>CRM4</name>
+            <host>127.0.0.1</host>
+            <port>5672</port>
+            <vhost>/zato1</vhost>
+            <username>zato1</username>
+            <frame_max>131072</frame_max>
+            <heartbeat>10</heartbeat>
+        </item>
+    </zato_definition_amqp_get_by_id_response>
+    </soap:Body>
+    </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+    {
+        "id": 2,
+        "cluster_id": 1
+    }
+
+    {
+      "zato_env": {
+        "details": "",
+        "result": "ZATO_OK",
+        "cid": "K43731536403509172889955682624"
+      },
+      "zato_definition_amqp_get_by_id_response": {
+        "username": "zato1",
+        "frame_max": 131072,
+        "name": "CRM4",
+        "id": 2,
+        "vhost": "/zato1",
+        "host": "127.0.0.1",
+        "heartbeat": 10,
+        "port": 5672
+      }
+    }

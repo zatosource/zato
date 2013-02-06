@@ -1,0 +1,6 @@
+  <wsdl:message name="zato_kvdb_data_dict_dictionary_create_request_message">
+    <wsdl:part element="zato:zato_kvdb_data_dict_dictionary_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_kvdb_data_dict_dictionary_create_response_message">
+    <wsdl:part element="zato:zato_kvdb_data_dict_dictionary_create_response" name="parameters"/>
+  </wsdl:message>

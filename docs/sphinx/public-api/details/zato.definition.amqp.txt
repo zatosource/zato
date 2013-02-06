@@ -1,0 +1,19 @@
+zato.definition.amqp.*
+======================
+
+Overview
+--------
+
+Services related to the management of AMQP connection definitions. An AMQP definition
+encapsulates information regarding particular connection details, such as host,
+port and so on.
+
+Services
+--------
+
+* :doc:`zato.definition.amqp.ChangePassword <./zato.definition.amqp.change-password>`
+* :doc:`zato.definition.amqp.Create <./zato.definition.amqp.create>`
+* :doc:`zato.definition.amqp.Delete <./zato.definition.amqp.delete>`
+* :doc:`zato.definition.amqp.Edit <./zato.definition.amqp.edit>`
+* :doc:`zato.definition.amqp.GetByID <./zato.definition.amqp.get-by-id>`
+* :doc:`zato.definition.amqp.GetList <./zato.definition.amqp.get-list>`

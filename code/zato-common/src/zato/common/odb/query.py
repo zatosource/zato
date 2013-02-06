@@ -145,7 +145,6 @@ def def_amqp(session, cluster_id, id):
            filter(ConnDefAMQP.id==id).\
            one()
 
-
 @needs_columns
 def def_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP connection definitions.

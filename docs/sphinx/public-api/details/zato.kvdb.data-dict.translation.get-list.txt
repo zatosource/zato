@@ -1,0 +1,127 @@
+zato.kvdb.data-dict.translation.GetList
+=======================================
+
+Overview
+--------
+
+Returns a list, possibly empty, of all translations defined in a KVDB.
+
+  * List response: Yes
+  * SOAP action: zato.kvdb.data-dict.translation.get-list
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.kvdb.data-dict.translation.get-list
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+(None)
+            
+
+Response parameters
+-------------------
+
+======= ======== ======== =================================
+Name    Datatype Optional Notes
+======= ======== ======== =================================
+id      int      ---      Translation ID
+system1 string   ---      Source system
+key1    string   ---      Source key
+value1  string   ---      Source value
+system2 string   ---      Target system
+key2    string   ---      Target key
+value2  string   ---      Target value
+id1     int      ---      ID of the source dictionary entry
+id2     int      ---      ID of the target dictionary entry
+======= ======== ======== =================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:zato="http://gefira.pl/zato">
+  <soapenv:Header/>
+  <soapenv:Body>
+      <zato:zato_kvdb_data_dict_translation_get_list_request>
+      </zato:zato_kvdb_data_dict_translation_get_list_request>
+  </soapenv:Body>
+  </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_kvdb_data_dict_translation_get_list_response 
+        xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K11149239695934691733810710750</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item_list>
+          <item>
+              <id>1</id>
+              <system1>CRM</system1>
+              <key1>CUSTOMER_TYPE</key1>
+              <value1>OPO</value1>
+              <system2>PORTAL</system2>
+              <key2>customerType</key2>
+              <value2>292</value2>
+              <id1>1</id1>
+              <id2>2</id2>
+          </item>
+          <item>
+              <id>3</id>
+              <system1>CRM</system1>
+              <key1>CUSTOMER_TYPE</key1>
+              <value1>QEQ</value1>
+              <system2>PORTAL</system2>
+              <key2>customerType</key2>
+              <value2>292</value2>
+              <id1>7</id1>
+              <id2>2</id2>
+          </item>
+      </item_list>
+  </zato_kvdb_data_dict_translation_get_list_response>
+  </soap:Body>
+  </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+  {}
+   
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K42206549254365120006876939318"
+    },
+    "zato_kvdb_data_dict_translation_get_list_response": [
+      {
+        "key2": "customerType",
+        "key1": "CUSTOMER_TYPE",
+        "id2": "2",
+        "id1": "1",
+        "system2": "PORTAL",
+        "value2": "292",
+        "value1": "OPO",
+        "system1": "CRM",
+        "id": 1
+      },
+      {
+        "key2": "customerType",
+        "key1": "CUSTOMER_TYPE",
+        "id2": "2",
+        "id1": "7",
+        "system2": "PORTAL",
+        "value2": "292",
+        "value1": "QEQ",
+        "system1": "CRM",
+        "id": 3
+      }
+    ]
+  }

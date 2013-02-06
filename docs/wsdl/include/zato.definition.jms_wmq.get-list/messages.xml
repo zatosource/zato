@@ -1,0 +1,41 @@
+      <xsd:element name="zato_definition_jms_wmq_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_definition_jms_wmq_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="host" type="xsd:string"/>
+                        <xsd:element name="port" type="xsd:int"/>
+                        <xsd:element name="queue_manager" type="xsd:string"/>
+                        <xsd:element name="channel" type="xsd:string"/>
+                        <xsd:element name="cache_open_send_queues" type="xsd:boolean"/>
+                        <xsd:element name="cache_open_receive_queues" type="xsd:boolean"/>
+                        <xsd:element name="use_shared_connections" type="xsd:boolean"/>
+                        <xsd:element name="ssl" type="xsd:boolean"/>
+                        <xsd:element name="needs_mcd" type="xsd:boolean"/>
+                        <xsd:element name="max_chars_printed" type="xsd:int"/>
+                        <xsd:element name="ssl_cipher_spec" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="ssl_key_repository" type="xsd:string" minOccurs="0"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

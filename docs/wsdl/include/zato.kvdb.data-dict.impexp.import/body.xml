@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.kvdb.data-dict.impexp.import">
+      <soap:operation soapAction="zato.kvdb.data-dict.impexp.import"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

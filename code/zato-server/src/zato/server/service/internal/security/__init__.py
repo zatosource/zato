@@ -24,6 +24,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.odb.query import basic_auth_list, tech_acc_list, wss_list
+from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
@@ -34,8 +35,8 @@ class GetList(AdminService):
         response_elem = 'zato_security_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'sec_type')
-        output_optional = ('username', 'realm', 'password_type', 'reject_empty_nonce_creat', 
-            'reject_stale_tokens', 'reject_expiry_limit', 'nonce_freshness_time')
+        output_optional = ('username', 'realm', 'password_type', Boolean('reject_empty_nonce_creat'), 
+            Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'), Integer('nonce_freshness_time'))
 
     def handle(self):
         with closing(self.odb.session()) as session:

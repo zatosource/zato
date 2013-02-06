@@ -1,0 +1,104 @@
+zato.outgoing.jms_wmq.Create
+============================
+
+Overview
+--------
+
+Allows one to create a JMS WebSphere MQ outgoing connection basing on
+:doc:`an already existing connection definition</public-api/details/zato.definition.jms_wmq>`.
+
+  * List response: No
+  * SOAP action: zato.outgoing.jms_wmq.create
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.outgoing.jms_wmq.create
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+================ ======== ======== =======================================================================================================================================================================
+Name             Datatype Optional Notes
+================ ======== ======== =======================================================================================================================================================================
+id               int      ---      ID of the connection to update
+name             string   ---      Name of the outgoing connection to create
+is_active        boolean  ---      Whether the outgoing connection should be active upon its creation. If true, the underlying connector will be started immediately after the connection has been created.
+def_id           int      ---      ID of :doc:`an already existing JMS WebSphere MQ connection definition</public-api/details/zato.definition.jms_wmq>` to use for connecting to a queue manager
+delivery_mode    int      ---      Default delivery mode to use for outgoing messages. Must be either 1 or 2 for, respectively, non-persistent and persistent messages.
+priority         int      ---      Default message priority, must be between 0 and 9
+expiration       int      Yes      Default expiration of outgoing messages in milliseconds
+================ ======== ======== =======================================================================================================================================================================
+            
+
+Response parameters
+-------------------
+
+==== ======== ======== ====================================================
+Name Datatype Optional Notes
+==== ======== ======== ====================================================
+id   int      ---      ID assigned to the newly created outgoing connection
+name string   ---      Copied over from request
+==== ======== ======== ====================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_outgoing_jms_wmq_create_request>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>crm.account</zato:name>
+            <zato:is_active>true</zato:is_active>
+            <zato:def_id>3</zato:def_id>
+            <zato:delivery_mode>1</zato:delivery_mode>
+            <zato:priority>6</zato:priority>
+            <zato:expiration>3000</zato:expiration>
+         </zato:zato_outgoing_jms_wmq_create_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_outgoing_jms_wmq_create_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K31269797809958264714093685173</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>2</id>
+           <name>crm.account</name>
+       </item>
+   </zato_outgoing_jms_wmq_create_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+       "cluster_id": 1,
+       "name": "crm.account3",
+       "is_active": true,
+       "def_id": 4,
+       "delivery_mode": 1,
+       "priority": 6,
+       "expiration": 3000
+   }
+
+   {
+     "zato_outgoing_jms_wmq_create_response": {
+       "id": 3,
+       "name": "crm.account3"
+     },
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K41475618030532945317529770585"
+     }
+   }

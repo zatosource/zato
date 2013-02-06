@@ -1,0 +1,6 @@
+  <wsdl:message name="zato_channel_amqp_create_request_message">
+    <wsdl:part element="zato:zato_channel_amqp_create_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_channel_amqp_create_response_message">
+    <wsdl:part element="zato:zato_channel_amqp_create_response" name="parameters"/>
+  </wsdl:message>

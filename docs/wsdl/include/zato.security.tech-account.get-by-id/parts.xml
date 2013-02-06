@@ -1,0 +1,6 @@
+  <wsdl:message name="zato_security_tech_account_get_by_id_request_message">
+    <wsdl:part element="zato:zato_security_tech_account_get_by_id_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_security_tech_account_get_by_id_response_message">
+    <wsdl:part element="zato:zato_security_tech_account_get_by_id_response" name="parameters"/>
+  </wsdl:message>

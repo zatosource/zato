@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.service.upload-package">
+      <wsdl:input message="zato:zato_service_upload_package_request_message"/>
+      <wsdl:output message="zato:zato_service_upload_package_response_message"/>
+    </wsdl:operation>

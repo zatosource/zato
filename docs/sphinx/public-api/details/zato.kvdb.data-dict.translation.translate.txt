@@ -1,0 +1,111 @@
+zato.kvdb.data-dict.translation.Translate
+=========================================
+
+Overview
+--------
+
+Returns the translation of a value from one system into another.
+
+  * List response: No
+  * SOAP action: zato.kvdb.data-dict.translation.translate
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.kvdb.data-dict.translation.translate
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+======= ======== ======== =============
+Name    Datatype Optional Notes
+======= ======== ======== =============
+system1 string   ---      Source system
+key1    string   ---      Source key
+value1  string   ---      Source value
+system2 string   ---      Target system
+key2    string   ---      Target key
+======= ======== ======== =============
+            
+
+Response parameters
+-------------------
+
+======= ======== ======== ========================================================================================================
+Name    Datatype Optional Notes
+======= ======== ======== ========================================================================================================
+value2  string   ---      Target value, the result of a translation
+repr    string   ---      value2 as returned by Python's `repr function <http://docs.python.org/2.7/library/functions.html#repr>`_
+hex     string   ---      Space-delimited hex representation of value2
+sha1    string   ---      SHA1 sum of value2
+sha256  string   ---      SHA256 sum of value2
+======= ======== ======== ========================================================================================================
+
+
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:zato="http://gefira.pl/zato">
+  <soapenv:Header/>
+  <soapenv:Body>
+      <zato:zato_kvdb_data_dict_translation_translate_request>
+        <zato:system1>CRM</zato:system1>
+        <zato:key1>CUSTOMER_TYPE</zato:key1>
+        <zato:value1>DER</zato:value1>
+        <zato:system2>PORTAL</zato:system2>
+        <zato:key2>customerType</zato:key2>
+      </zato:zato_kvdb_data_dict_translation_translate_request>
+  </soapenv:Body>
+  </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_kvdb_data_dict_translation_translate_response
+        xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K49867791894578312859122739766</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item>
+          <value2>292</value2>
+          <repr>'292'</repr>
+          <hex>32 39 32</hex>
+          <sha1>85f1002bf139bebdb7f0d07b31fa14155aea9dfc</sha1>
+          <sha256>6db6eb4af1e18ab81d3878e44672185d60ca8c988c9e2f7783de220735534c33</sha256>
+      </item>
+  </zato_kvdb_data_dict_translation_translate_response>
+  </soap:Body>
+  </soap:Envelope>
+
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+  {
+    "system1": "CRM",
+    "key1": "CUSTOMER_TYPE",
+    "value1": "QEQ",
+    "system2": "PORTAL",
+    "key2": "customerType"
+  }
+   
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K27562748917685554121365479066"
+    },
+    "zato_kvdb_data_dict_translation_translate_response": {
+      "sha256": "6db6eb4af1e18ab81d3878e44672185d60ca8c988c9e2f7783de220735534c33",
+      "sha1": "85f1002bf139bebdb7f0d07b31fa14155aea9dfc",
+      "hex": "32 39 32",
+      "value2": "292",
+      "repr": "'292'"
+    }
+  }

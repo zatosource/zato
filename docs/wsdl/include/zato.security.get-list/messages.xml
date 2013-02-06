@@ -1,0 +1,38 @@
+      <xsd:element name="zato_security_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_security_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="sec_type" type="xsd:string"/>
+                        <xsd:element name="username" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="realm" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="password_type" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="reject_empty_nonce_creat" type="xsd:boolean" minOccurs="0"/>
+                        <xsd:element name="reject_stale_tokens" type="xsd:boolean" minOccurs="0"/>
+                        <xsd:element name="reject_expiry_limit" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="nonce_freshness_time" type="xsd:int" minOccurs="0"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

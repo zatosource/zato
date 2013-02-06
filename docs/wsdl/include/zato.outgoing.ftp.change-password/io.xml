@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.outgoing.ftp.change-password">
+      <wsdl:input message="zato:zato_outgoing_ftp_change_password_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_ftp_change_password_response_message"/>
+    </wsdl:operation>
