@@ -1,0 +1,72 @@
+zato.outgoing.zmq.Delete
+========================
+
+Overview
+--------
+
+Deletes an outgoing ZeroMQ connection by its ID. The underlying socket will first be stopped.
+
+  * List response: No
+  * SOAP action: zato.outgoing.zmq.delete
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.outgoing.zmq.delete
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ==============================
+Name Datatype Optional Notes
+==== ======== ======== ==============================
+id   int      ---      ID of the connection to delete
+==== ======== ======== ==============================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_outgoing_zmq_delete_request>
+            <zato:id>2</zato:id>
+         </zato:zato_outgoing_zmq_delete_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_outgoing_zmq_delete_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K63997838214215845088567050066</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+   </zato_outgoing_zmq_delete_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+       "id": 5
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K73332586460119274005390527847"
+     }
+   }
