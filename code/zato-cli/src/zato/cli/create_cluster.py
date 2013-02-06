@@ -132,6 +132,10 @@ zato_services = {
     'zato.outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
     'zato.outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
     'zato.outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
+    
+    # Ping
+    'zato.ping':'zato.server.service.internal.Ping',
+    'zato.ping2':'zato.server.service.internal.Ping2',
 
     # Scheduler
     'zato.scheduler.job.create':'zato.server.service.internal.scheduler.Create',

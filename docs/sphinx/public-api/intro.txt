@@ -302,8 +302,8 @@ The API
       :doc:`zato.outgoing.zmq.*</public-api/details/zato.outgoing.zmq>`
       
     * **Ping services:**
-      :doc:`zato.Ping</public-api/details/zato.Ping>` |
-      :doc:`zato.Ping2</public-api/details/zato.Ping2>`
+      :doc:`zato.Ping</public-api/details/zato.ping>` |
+      :doc:`zato.Ping2</public-api/details/zato.ping2>`
       
     * **Scheduler:**
       :doc:`zato.scheduler.job.*</public-api/details/zato.scheduler.job>`

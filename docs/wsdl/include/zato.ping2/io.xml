@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.ping2">
+      <wsdl:input message="zato:zato_ping2_request_message"/>
+      <wsdl:output message="zato:zato_ping2_response_message"/>
+    </wsdl:operation>

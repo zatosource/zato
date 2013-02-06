@@ -1,0 +1,17 @@
+      <xsd:element name="zato_ping2_request">
+      </xsd:element>
+
+      <xsd:element name="zato_ping2_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="pong" type="xsd:string"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

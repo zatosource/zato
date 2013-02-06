@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.ping2">
+      <soap:operation soapAction="zato.ping2"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
