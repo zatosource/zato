@@ -99,38 +99,42 @@ JSON example
 
 .. code-block:: javascript
 
-   {
-      "cluster_id": 1
-   }
+  {
+    "cluster_id": 1
+  }
 
-   {
-     "zato_env": {
-       "details": "",
-       "result": "ZATO_OK",
-       "cid": "K19614607038693379738326500265"
-     },
-     "zato_outgoing_sql_get_list_response": [
-       {
-         "name": "GnuPG DK",
-         "is_active": true,
-         "id": 7,
-         "dircache": true,
-         "host": "sql.gnupg.dk",
-         "user": "anonymous",
-         "timeout": 2000,
-         "acct": null,
-         "port": 21
-       },
-       {
-         "name": "Linux kernel",
-         "is_active": true,
-         "id": 6,
-         "dircache": true,
-         "host": "sql.kernel.org",
-         "user": "anonymous",
-         "timeout": 5000,
-         "acct": null,
-         "port": 21
-       }
-     ]
-   }
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K62355870807887917378922200448"
+    },
+    "zato_outgoing_sql_get_list_response": [
+      {
+        "engine": "oracle",
+        "username": "ZATO1",
+        "name": "oraprod2",
+        "extra": "",
+        "is_active": true,
+        "port": 1438,
+        "host": "10.152.11.27",
+        "db_name": "ORAPROD2",
+        "cluster_id": 1,
+        "pool_size": 3,
+        "id": 1
+      },
+      {
+        "engine": "postgresql",
+        "username": "zato1",
+        "name": "test-7",
+        "extra": "",
+        "is_active": true,
+        "port": 5433,
+        "host": "localhost",
+        "db_name": "zatodb1",
+        "cluster_id": 1,
+        "pool_size": 2,
+        "id": 2
+      }
+    ]
+  }
