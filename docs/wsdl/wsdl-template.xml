@@ -103,6 +103,9 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.zmq.edit/messages.xml -->
 <!-- include ./include/zato.outgoing.zmq.get-list/messages.xml -->
 
+<!-- include ./include/zato.ping/messages.xml -->
+<!-- include ./include/zato.ping2/messages.xml -->
+
 <!-- include ./include/zato.scheduler.job.create/messages.xml -->
 <!-- include ./include/zato.scheduler.job.delete/messages.xml -->
 <!-- include ./include/zato.scheduler.job.edit/messages.xml -->
@@ -238,6 +241,9 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.zmq.edit/parts.xml -->
 <!-- include ./include/zato.outgoing.zmq.get-list/parts.xml -->
 
+<!-- include ./include/zato.ping/parts.xml -->
+<!-- include ./include/zato.ping2/parts.xml -->
+
 <!-- include ./include/zato.scheduler.job.create/parts.xml -->
 <!-- include ./include/zato.scheduler.job.delete/parts.xml -->
 <!-- include ./include/zato.scheduler.job.edit/parts.xml -->
@@ -372,6 +378,9 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.zmq.delete/io.xml -->
 <!-- include ./include/zato.outgoing.zmq.edit/io.xml -->
 <!-- include ./include/zato.outgoing.zmq.get-list/io.xml -->
+
+<!-- include ./include/zato.ping/io.xml -->
+<!-- include ./include/zato.ping2/io.xml -->
 
 <!-- include ./include/zato.scheduler.job.create/io.xml -->
 <!-- include ./include/zato.scheduler.job.delete/io.xml -->
@@ -511,6 +520,9 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.zmq.delete/body.xml -->
 <!-- include ./include/zato.outgoing.zmq.edit/body.xml -->
 <!-- include ./include/zato.outgoing.zmq.get-list/body.xml -->
+
+<!-- include ./include/zato.ping/body.xml -->
+<!-- include ./include/zato.ping2/body.xml -->
 
 <!-- include ./include/zato.scheduler.job.create/body.xml -->
 <!-- include ./include/zato.scheduler.job.delete/body.xml -->

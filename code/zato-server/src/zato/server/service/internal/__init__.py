@@ -51,13 +51,15 @@ class AdminSIO(object):
 
 class Ping(AdminService):
     class SimpleIO(AdminSIO):
-        output_required = ('ping',)
+        output_required = ('pong',)
+        response_elem = 'zato_ping_response'
         
     def handle(self):
-        self.response.payload.ping = 'pong'
+        self.response.payload.pong = 'zato'
     
 class Ping2(Ping):
-    pass
+    class SimpleIO(Ping.SimpleIO):
+        response_elem = 'zato_ping2_response'
 
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
