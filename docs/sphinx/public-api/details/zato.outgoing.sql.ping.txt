@@ -1,0 +1,86 @@
+zato.outgoing.sql.Ping
+======================
+
+Overview
+--------
+
+Pings an outgoing SQL connection by issuing a dummy no-op SQL statement. 
+
+Note that the first ping to a connection that hasn't been used yet may be
+slower due to the connection's pool not being initialized yet.
+
+  * List response: No
+  * SOAP action: zato.outgoing.sql.ping
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.outgoing.sql.ping
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ============================
+Name Datatype Optional Notes
+==== ======== ======== ============================
+id   int      ---      ID of the connection to ping
+==== ======== ======== ============================
+            
+
+Response parameters
+-------------------
+
+============= ======== ======== =============================
+Name          Datatype Optional Notes
+============= ======== ======== =============================
+response_time float    ---      Response time in milliseconds
+============= ======== ======== =============================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_outgoing_sql_ping_request>
+            <zato:id>1</zato:id>
+         </zato:zato_outgoing_sql_ping_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_outgoing_sql_ping_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K22753230848605363179781593545</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <response_time>0.0225248336792</response_time>
+       </item>
+   </zato_outgoing_sql_ping_response>
+   </soap:Body>
+   </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 2
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K73124237232288418181591003201"
+     },
+     "zato_outgoing_sql_ping_response": {
+       "response_time": "0.00177192687988"
+     }
+   }
