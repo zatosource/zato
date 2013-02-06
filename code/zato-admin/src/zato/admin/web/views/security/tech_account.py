@@ -46,9 +46,9 @@ def change_password(req):
     
     
 @meth_allowed('GET')
-def get_by_id(req, tech_account_id, cluster_id):
+def get_by_id(req, id_, cluster_id):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.get-by-id', {'tech_account_id': tech_account_id})
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.get-by-id', {'id':id_})
     except Exception, e:
         msg = 'Could not fetch the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)

@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.outgoing.amqp.delete">
+      <wsdl:input message="zato:zato_outgoing_amqp_delete_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_amqp_delete_response_message"/>
+    </wsdl:operation>

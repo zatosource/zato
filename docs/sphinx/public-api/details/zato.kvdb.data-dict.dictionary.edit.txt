@@ -1,0 +1,97 @@
+zato.kvdb.data-dict.dictionary.Edit
+===================================
+
+Overview
+--------
+
+Updates an existing data dictionary entry in a cluster's KVDB. 
+
+Note that both 'system' and 'key' may be composed of digits, letters and underscores only - 
+this is checked by validating input data against the regular expression of '\w+'.
+'value' can be any string.
+
+The triple of 'system', 'key' and 'value' must be unique for a given KVDB.
+
+  * List response: No
+  * SOAP action: zato.kvdb.data-dict.dictionary.edit
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.kvdb.data-dict.dictionary.edit
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+====== ======== ======== =========================
+Name   Datatype Optional Notes
+====== ======== ======== =========================
+id     int      ---      ID of the entry to update
+system string   ---      New entry system
+key    string   ---      New entry key
+value  string   ---      New entry value
+====== ======== ======== =========================
+            
+
+Response parameters
+-------------------
+
+==== ======== ======== ========================
+Name Datatype Optional Notes
+==== ======== ======== ========================
+id   int      ---      Copied over from request
+==== ======== ======== ========================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:zato="http://gefira.pl/zato">
+  <soapenv:Header/>
+  <soapenv:Body>
+      <zato:zato_kvdb_data_dict_dictionary_edit_request>
+          <zato:id>1</zato:id>
+          <zato:system>CRM</zato:system>
+          <zato:key>CUSTOMER_TYPE</zato:key>
+          <zato:value>AAZ</zato:value>
+      </zato:zato_kvdb_data_dict_dictionary_edit_request>
+  </soapenv:Body>
+  </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_kvdb_data_dict_dictionary_edit_response xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K45757869752105709933423408121</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item>
+          <id>1</id>
+      </item>
+  </zato_kvdb_data_dict_dictionary_edit_response>
+  </soap:Body>
+  </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+     "id": 2,
+     "system": "CRM",
+     "key": "CUSTOMER_TYPE",
+     "value": "OPO"
+   }
+   
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K47347392714285519682286830814"
+    },
+    "zato_kvdb_data_dict_dictionary_edit_response": {
+      "id": 2
+    }
+  }

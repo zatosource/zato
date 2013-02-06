@@ -1,0 +1,72 @@
+zato.channel.zmq.Delete
+=======================
+
+Overview
+--------
+
+Deletes a ZeroMQ channel. The channel's underlying socket will be first stopped.
+
+  * List response: No
+  * SOAP action: zato.channel.zmq.delete
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.channel.zmq.delete
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ===========================
+Name Datatype Optional Notes
+==== ======== ======== ===========================
+id   int      ---      ID of the channel to delete
+==== ======== ======== ===========================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_channel_zmq_delete_request>
+            <zato:id>2</zato:id>
+         </zato:zato_channel_zmq_delete_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_channel_zmq_delete_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K16950853807836198431576629937</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+            </zato_channel_zmq_delete_response>
+      </soap:Body>
+   </soap:Envelope> 
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+     "id": 2
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K16190884272690168165449619297"
+     }
+   }

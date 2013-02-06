@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.security.wss.delete">
+      <wsdl:input message="zato:zato_security_wss_delete_request_message"/>
+      <wsdl:output message="zato:zato_security_wss_delete_response_message"/>
+    </wsdl:operation>

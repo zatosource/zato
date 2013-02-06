@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.stats.get-summary-by-year">
+      <wsdl:input message="zato:zato_stats_get_summary_by_year_request_message"/>
+      <wsdl:output message="zato:zato_stats_get_summary_by_year_response_message"/>
+    </wsdl:operation>

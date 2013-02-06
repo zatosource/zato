@@ -1,0 +1,16 @@
+      <xsd:element name="zato_stats_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="start" type="xsd:dateTime"/>
+            <xsd:element name="stop" type="xsd:dateTime"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_stats_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

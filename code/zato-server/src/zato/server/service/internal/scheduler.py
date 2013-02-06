@@ -238,6 +238,7 @@ class GetByName(_Get):
         request_elem = 'zato_scheduler_job_get_by_name_request'
         response_elem = 'zato_scheduler_job_get_by_name_response'
         input_required = ('name',)
+        output_repeated = False
         
     def get_data(self, session):
         return job_by_name(session, self.server.cluster_id, self.request.input.name)

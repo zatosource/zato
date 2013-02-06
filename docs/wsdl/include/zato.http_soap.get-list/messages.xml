@@ -1,0 +1,44 @@
+      <xsd:element name="zato_http_soap_get_list_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="cluster_id" type="xsd:int"/>
+            <xsd:element name="connection" type="xsd:string"/>
+            <xsd:element name="transport" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_http_soap_get_list_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item_list">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="item" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                        <xsd:element name="is_active" type="xsd:boolean"/>
+                        <xsd:element name="is_internal" type="xsd:boolean"/>
+                        <xsd:element name="url_path" type="xsd:string"/>
+                        <xsd:element name="service_id" type="xsd:int"/>
+                        <xsd:element name="service_name" type="xsd:string"/>
+                        <xsd:element name="security_id" type="xsd:int" minOccurs="0"/>
+                        <xsd:element name="security_name" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="sec_type" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="method" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="soap_action" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="soap_version" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="data_format" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="host" type="xsd:string" minOccurs="0"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

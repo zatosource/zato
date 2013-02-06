@@ -50,8 +50,8 @@ class GetList(AdminService):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 'usage',
-                           Integer('slow_threshold'))
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 
+                           Integer('usage'), Integer('slow_threshold'))
         output_repeated = True
         
     def get_data(self, session):
@@ -79,9 +79,9 @@ class GetByName(AdminService):
         request_elem = 'zato_service_get_by_name_request'
         response_elem = 'zato_service_get_by_name_response'
         input_required = ('cluster_id', 'name')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', 'usage', 
-            'time_last', 'time_min_all_time', 'time_max_all_time', 'time_mean_all_time',
-            Integer('slow_threshold'))
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'),
+            Integer('usage'), Integer('slow_threshold'), Integer('time_last'), 
+            Integer('time_min_all_time'), Integer('time_max_all_time'), 'time_mean_all_time',)
         
     def get_data(self, session):
         return session.query(Service.id, Service.name, Service.is_active,
@@ -94,19 +94,26 @@ class GetByName(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             service = self.get_data(session)
+            internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+            
             self.response.payload.id = service.id
             self.response.payload.name = service.name
             self.response.payload.is_active = service.is_active
             self.response.payload.impl_name = service.impl_name
             self.response.payload.is_internal = service.is_internal
             self.response.payload.slow_threshold = service.slow_threshold
+            self.response.payload.may_be_deleted = internal_del if service.is_internal else True
             self.response.payload.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, service.name)) or 0
 
             time_key = '{}{}'.format(KVDB.SERVICE_TIME_BASIC, service.name)            
             self.response.payload.time_last = self.server.kvdb.conn.hget(time_key, 'last')
             
             for name in('min_all_time', 'max_all_time', 'mean_all_time'):
-                setattr(self.response.payload, 'time_{}'.format(name), self.server.kvdb.conn.hget(time_key, name) or 0)
+                setattr(self.response.payload, 'time_{}'.format(name), float(self.server.kvdb.conn.hget(time_key, name) or 0))
+                
+            self.response.payload.time_min_all_time = int(self.response.payload.time_min_all_time)
+            self.response.payload.time_max_all_time = int(self.response.payload.time_max_all_time)
+            self.response.payload.time_mean_all_time = round(self.response.payload.time_mean_all_time, 1)
 
 class Edit(AdminService):
     """ Updates a service.
@@ -116,7 +123,6 @@ class Edit(AdminService):
         response_elem = 'zato_service_edit_response'
         input_required = ('id', 'is_active', Integer('slow_threshold'))
         output_required = ('id', 'name', 'impl_name', 'is_internal',)
-        output_optional = ('usage',)
 
     def handle(self):
         input = self.request.input
@@ -385,6 +391,7 @@ class GetRequestResponse(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_request_response_request'
         response_elem = 'zato_service_request_response_response'
+        input_required = ('cluster_id', 'name')
         output_required = ('service_id', 'sample_cid', 'sample_req_ts', 'sample_resp_ts', 
             'sample_req', 'sample_resp', Integer('sample_req_resp_freq'))
         
@@ -468,7 +475,7 @@ class GetSlowResponseList(_SlowResponseService):
         request_elem = 'zato_service_slow_response_get_list_request'
         response_elem = 'zato_service_slow_response_get_list_response'
         input_required = ('name',)
-        output_required = ('cid', 'req_ts', 'resp_ts', 'proc_time')
+        output_required = ('cid', 'req_ts', 'resp_ts', Integer('proc_time'))
         
     def handle(self):
         self.response.payload[:] = self.get_data()    
@@ -480,7 +487,7 @@ class GetSlowResponse(_SlowResponseService):
         request_elem = 'zato_service_slow_response_get_request'
         response_elem = 'zato_service_slow_response_get_response'
         input_required = ('cid', 'name')
-        output_optional = ('cid', 'req_ts', 'resp_ts', 'proc_time', 'req', 'resp')
+        output_optional = ('cid', 'req_ts', 'resp_ts', Integer('proc_time'), 'req', 'resp')
     
     def handle(self):
         data = self.get_data()

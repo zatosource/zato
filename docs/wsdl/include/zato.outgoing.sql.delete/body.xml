@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.outgoing.sql.delete">
+      <soap:operation soapAction="zato.outgoing.sql.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.outgoing.amqp.edit">
+      <soap:operation soapAction="zato.outgoing.amqp.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

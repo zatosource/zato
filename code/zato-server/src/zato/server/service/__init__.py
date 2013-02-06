@@ -347,7 +347,7 @@ class SimpleIOPayload(ValueConverter):
         for name in chain(required_list, optional_list):
             if isinstance(name, ForceType):
                 name = name.name
-            setattr(self, name, ZATO_NONE)
+            setattr(self, name, '')
 
     def set_payload_attrs(self, attrs):
         """ Called when the user wants to set the payload to a bunch of attributes.
@@ -459,8 +459,6 @@ class SimpleIOPayload(ValueConverter):
             zato_env = em.zato_env(em.cid(self.zato_cid), em.result(ZATO_OK))
             top = getattr(em, self.response_elem)(zato_env)
             top.append(value)
-            
-            #zato_env = 
         else:
             top = {self.response_elem: value}
 

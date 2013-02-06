@@ -100,13 +100,13 @@ DONT_DEPLOY_ATTR_NAME = 'zato_dont_import'
 
 # A convenient constant used in several places, simplifies passing around
 # arguments which are, well, not given (as opposed to being None, an empty string etc.)
-ZATO_NOT_GIVEN = b"ZATO_NOT_GIVEN"
+ZATO_NOT_GIVEN = b'ZATO_NOT_GIVEN'
 
 # Also used in a couple of places.
-ZATO_OK = "ZATO_OK"
-ZATO_ERROR = "ZATO_ERROR"
-ZATO_WARNING = "ZATO_WARNING"
-ZATO_NONE = b"ZATO_NONE"
+ZATO_OK = 'ZATO_OK'
+ZATO_ERROR = 'ZATO_ERROR'
+ZATO_WARNING = 'ZATO_WARNING'
+ZATO_NONE = b'ZATO_NONE'
 
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
@@ -149,6 +149,13 @@ class SIMPLE_IO:
         XML = 'xml'
         JSON = 'json'
         
+    class INT_PARAMETERS:
+        VALUES = ['id']
+        SUFFIXES = ['_id', '_size', '_timeout']
+        
+    class BOOL_PARAMETERS:
+        SUFFIXES = ['is_', 'needs_', 'should_']
+        
 class DEPLOYMENT_STATUS:
     DEPLOYED = 'deployed'
     AWAITING_DEPLOYMENT = 'awaiting-deployment'
@@ -165,7 +172,7 @@ class KVDB:
     SEPARATOR = ':::'
     
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
-    DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id'
+    DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id' # ID of the last created dictionary ID, always increasing.
 
     LOCK_PREFIX = 'zato:lock:'    
     

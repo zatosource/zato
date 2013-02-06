@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.stats.get-summary-by-year">
+      <soap:operation soapAction="zato.stats.get-summary-by-year"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.outgoing.sql.change-password">
+      <soap:operation soapAction="zato.outgoing.sql.change-password"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.security.wss.get-list">
+      <soap:operation soapAction="zato.security.wss.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

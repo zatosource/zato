@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.kvdb.data-dict.translation.get-last-id">
+      <soap:operation soapAction="zato.kvdb.data-dict.translation.get-last-id"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

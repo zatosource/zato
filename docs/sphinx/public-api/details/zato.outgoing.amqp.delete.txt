@@ -1,0 +1,72 @@
+zato.outgoing.amqp.Delete
+=========================
+
+Overview
+--------
+
+Deletes an outgoing AMQP connection by its ID. The underlying connector will first be stopped.
+
+  * List response: No
+  * SOAP action: zato.outgoing.amqp.delete
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.outgoing.amqp.delete
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ==============================
+Name Datatype Optional Notes
+==== ======== ======== ==============================
+id   int      ---      ID of the connection to delete
+==== ======== ======== ==============================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_outgoing_amqp_delete_request>
+            <zato:id>2</zato:id>
+         </zato:zato_outgoing_amqp_delete_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_outgoing_amqp_delete_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K24163316485503815623683221678</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+   </zato_outgoing_amqp_delete_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+       "id": 5
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K75168366064749822937449407728"
+     }
+   }

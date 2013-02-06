@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.stats.get-summary-by-week">
+      <soap:operation soapAction="zato.stats.get-summary-by-week"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

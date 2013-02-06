@@ -1,0 +1,6 @@
+  <wsdl:message name="zato_kvdb_data_dict_dictionary_get_last_id_request_message">
+    <wsdl:part element="zato:zato_kvdb_data_dict_dictionary_get_last_id_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_kvdb_data_dict_dictionary_get_last_id_response_message">
+    <wsdl:part element="zato:zato_kvdb_data_dict_dictionary_get_last_id_response" name="parameters"/>
+  </wsdl:message>

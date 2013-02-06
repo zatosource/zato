@@ -1,0 +1,15 @@
+zato.outgoing.jms_wmq.*
+=======================
+
+Overview
+--------
+
+Services related to the management of JMS WebSphere MQ outgoing connections.
+
+Services
+--------
+
+* :doc:`zato.outgoing.jms_wmq.Create <./zato.outgoing.jms_wmq.create>`
+* :doc:`zato.outgoing.jms_wmq.Delete <./zato.outgoing.jms_wmq.delete>`
+* :doc:`zato.outgoing.jms_wmq.Edit <./zato.outgoing.jms_wmq.edit>`
+* :doc:`zato.outgoing.jms_wmq.GetList <./zato.outgoing.jms_wmq.get-list>`

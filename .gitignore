@@ -13,8 +13,7 @@ code/parts/*
 code/sec-wall-trunk-src/*
 code/zato-admin/src/zato/admin/static/css/.sass-cache/
 code/zato_extra_paths/*
-docs/sphinx/1/build/*
-docs/sphinx/2/docs/_build/
+docs/sphinx/_build/
 *.pyc
 *.pyo
 *.egg-info*

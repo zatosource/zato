@@ -85,7 +85,7 @@ class GetByNameTestCase(ServiceTestCase):
         expected.add(service)
         
         instance = self.invoke(GetByName, request, expected)
-        response = Bunch(loads(instance.response.payload.getvalue())['response'])
+        response = Bunch(loads(instance.response.payload.getvalue())['zato_service_get_by_name_response'])
         
         eq_(response.id, expected_id)
         eq_(response.name, expected_name)

@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.definition.amqp.edit">
+      <wsdl:input message="zato:zato_definition_amqp_edit_request_message"/>
+      <wsdl:output message="zato:zato_definition_amqp_edit_response_message"/>
+    </wsdl:operation>

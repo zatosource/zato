@@ -1,0 +1,210 @@
+zato.http_soap.GetList
+======================
+
+Overview
+--------
+
+Returns a list of plain HTTP or SOAP objects defined on a given cluster. These
+can be either channels or an outgoing connections.
+
+Visit the :doc:`zato.http_soap.Create <zato.http_soap.create>`'s documentation
+for a discussion of the service's response parameters.
+
+* List response: Yes
+* SOAP action: zato.http_soap.get_list
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.http_soap.get_list
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+
+Request parameters
+------------------
+
+========== ======== ======== ======================================================================
+Name       Datatype Optional Notes
+========== ======== ======== ======================================================================
+id                  int      ---      Cluster ID
+connection          string   ---      Connection type to filter by, must be 'channel' or 'outgoing'
+transport           string   ---      Transport type to filter by, must be 'plain_http' or 'soap'
+========== ======== ======== ======================================================================
+            
+
+Response parameters
+-------------------
+
+============= ======== ======== ==============================================================================
+Name          Datatype Optional Notes
+============= ======== ======== ==============================================================================
+id            int      ---      Object ID
+name          string   ---      Name of the object
+is_active     boolean  ---      Whether the object should be active, if it can be used
+is_internal   boolean  ---      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
+connection    string   ---      〃
+transport     string   ---      〃
+is_internal   boolean  ---      〃
+url_path      string   ---      〃
+service_id    int      Yes      ID of a service to invoke, returned if the object is a channel
+service_name  string   Yes      Name of a service to invoke, returned if the object is a channel
+security_id   int      Yes      ID of a security definition for this object
+security_name string   Yes      Name of a security definition for this object
+sec_type      string   Yes      Security type, if returned it will be one of 'basic_auth', 'tech_acc' or 'wss'
+method        string   Yes      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
+soap_action   string   Yes      〃
+soap_version  string   Yes      〃
+data_format   string   Yes      〃
+host          string   Yes      〃
+============= ======== ======== ==============================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_http_soap_get_list_request>
+            <zato:cluster_id>241</zato:cluster_id>
+            <zato:connection>channel</zato:connection>
+            <zato:transport>plain_http</zato:transport>
+         </zato:zato_http_soap_get_list_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_http_soap_get_list_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K34271488034042789380248634619</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+               <item_list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+               <item>
+                   <id>42</id>
+                   <name>zato.channel.amqp.Create.json</name>
+                   <is_active>true</is_active>
+                   <is_internal>true</is_internal>
+                   <url_path>/zato/json/zato.channel.amqp.create</url_path>
+                   <service_id>21</service_id>
+                   <service_name>zato.channel.amqp.Create</service_name>
+                   <security_id xsi:nil="true"/>
+                   <security_name xsi:nil="true"/>
+                   <sec_type xsi:nil="true"/>
+                   <method xsi:nil="true"/>
+                   <soap_action/>
+                   <soap_version xsi:nil="true"/>
+                   <data_format>json</data_format>
+                   <host xsi:nil="true"/>
+               </item>
+               <item>
+                   <id>157</id>
+                   <name>zato.channel.amqp.Delete.json</name>
+                   <is_active>true</is_active>
+                   <is_internal>true</is_internal>
+                   <url_path>/zato/json/zato.channel.amqp.delete</url_path>
+                   <service_id>78</service_id>
+                   <service_name>zato.channel.amqp.Delete</service_name>
+                   <security_id xsi:nil="true"/>
+                   <security_name xsi:nil="true"/>
+                   <sec_type xsi:nil="true"/>
+                   <method xsi:nil="true"/>
+                   <soap_action/>
+                   <soap_version xsi:nil="true"/>
+                   <data_format>json</data_format>
+                   <host xsi:nil="true"/>
+               </item>
+               <item>
+                   <id>233</id>
+                   <name>zato.channel.amqp.Edit.json</name>
+                   <is_active>true</is_active>
+                   <is_internal>true</is_internal>
+                   <url_path>/zato/json/zato.channel.amqp.edit</url_path>
+                   <service_id>116</service_id>
+                   <service_name>zato.channel.amqp.Edit</service_name>
+                   <security_id xsi:nil="true"/>
+                   <security_name xsi:nil="true"/>
+                   <sec_type xsi:nil="true"/>
+                   <method xsi:nil="true"/>
+                   <soap_action/>
+                   <soap_version xsi:nil="true"/>
+                   <data_format>json</data_format>
+                   <host xsi:nil="true"/>
+               </item>
+               </item_list>
+            </zato_http_soap_get_list_response>
+      </soap:Body>
+   </soap:Envelope> 
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+  {
+    "cluster_id": 1,
+    "connection": "channel",
+    "transport": "soap"
+  }
+
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K11939743073375765386070753933"
+    },
+    "zato_http_soap_get_list_response": [
+      {
+        "data_format": "xml",
+        "name": "crm.channel.1",
+        "soap_version": "1.1",
+        "service_name": "zato.Ping",
+        "is_internal": false,
+        "is_active": true,
+        "security_name": "techacct-733352",
+        "method": null,
+        "soap_action": "myservice2",
+        "sec_type": "tech_acc",
+        "security_id": 1,
+        "host": null,
+        "service_id": 118,
+        "url_path": "/myapp/soap/myservice1",
+        "id": 240
+      },
+      {
+        "data_format": "xml",
+        "name": "crm.channel.2",
+        "soap_version": "1.1",
+        "service_name": "zato.Ping",
+        "is_internal": false,
+        "is_active": true,
+        "security_name": "techacct-733352",
+        "method": null,
+        "soap_action": "myservice2",
+        "sec_type": "tech_acc",
+        "security_id": 1,
+        "host": null,
+        "service_id": 118,
+        "url_path": "/myapp/soap/myservice2",
+        "id": 242
+      },
+      {
+        "data_format": "xml",
+        "name": "zato.channel.amqp.create",
+        "soap_version": "1.1",
+        "service_name": "zato.channel.amqp.Create",
+        "is_internal": true,
+        "is_active": true,
+        "security_name": null,
+        "method": null,
+        "soap_action": "zato.channel.amqp.create",
+        "sec_type": null,
+        "security_id": null,
+        "host": null,
+        "service_id": 21,
+        "url_path": "/zato/soap",
+        "id": 41
+      }
+    ]
+  }

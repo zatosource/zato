@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.outgoing.amqp.create">
+      <wsdl:input message="zato:zato_outgoing_amqp_create_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_amqp_create_response_message"/>
+    </wsdl:operation>

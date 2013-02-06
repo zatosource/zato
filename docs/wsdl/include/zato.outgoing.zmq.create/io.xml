@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.outgoing.zmq.create">
+      <wsdl:input message="zato:zato_outgoing_zmq_create_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_zmq_create_response_message"/>
+    </wsdl:operation>

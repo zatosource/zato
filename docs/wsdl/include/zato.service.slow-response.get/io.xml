@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.service.slow-response.get">
+      <wsdl:input message="zato:zato_service_slow_response_get_request_message"/>
+      <wsdl:output message="zato:zato_service_slow_response_get_response_message"/>
+    </wsdl:operation>
