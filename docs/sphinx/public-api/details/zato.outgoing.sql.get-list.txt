@@ -1,0 +1,136 @@
+zato.outgoing.sql.GetList
+=========================
+
+Overview
+--------
+
+Returns a list of outgoing SQL connections defined on a given cluster.
+
+  * List response: Yes
+  * SOAP action: zato.outgoing.sql.get-list
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.outgoing.sql.get-list
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+=========== ======== ======== ==========
+Name        Datatype Optional Notes
+=========== ======== ======== ==========
+cluster_id  int      ---      Cluster ID
+=========== ======== ======== ==========
+
+
+Response parameters
+-------------------
+
+========== ======== ======== =======================================================================
+Name       Datatype Optional Notes
+========== ======== ======== =======================================================================
+id         int      ---      Connection ID
+name       string   ---      Same as for :doc:`zato.outgoing.sql.Create<./zato.outgoing.sql.create>`
+is_active  boolean  ---      〃
+engine     string   ---      〃
+host       string   ---      〃
+port       int      ---      〃
+db_name    string   ---      〃
+username   string   ---      〃
+pool_size  int      ---      〃
+========== ======== ======== =======================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_outgoing_sql_get_list_request>
+            <zato:cluster_id>1</zato:cluster_id>
+         </zato:zato_outgoing_sql_get_list_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_outgoing_sql_get_list_response xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K61338611980354163849223253876</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item_list>
+          <item>
+              <id>1</id>
+              <name>oraprod2</name>
+              <is_active>true</is_active>
+              <cluster_id>1</cluster_id>
+              <engine>oracle</engine>
+              <host>10.152.11.27</host>
+              <port>1438</port>
+              <db_name>ORAPROD2</db_name>
+              <username>ZATO1</username>
+              <pool_size>3</pool_size>
+              <extra/>
+          </item>
+          <item>
+              <id>2</id>
+              <name>test-7</name>
+              <is_active>true</is_active>
+              <cluster_id>1</cluster_id>
+              <engine>postgresql</engine>
+              <host>localhost</host>
+              <port>5433</port>
+              <db_name>zatodb1</db_name>
+              <username>zato1</username>
+              <pool_size>2</pool_size>
+              <extra/>
+          </item>
+      </item_list>
+  </zato_outgoing_sql_get_list_response>
+  </soap:Body>
+  </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "cluster_id": 1
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K19614607038693379738326500265"
+     },
+     "zato_outgoing_sql_get_list_response": [
+       {
+         "name": "GnuPG DK",
+         "is_active": true,
+         "id": 7,
+         "dircache": true,
+         "host": "sql.gnupg.dk",
+         "user": "anonymous",
+         "timeout": 2000,
+         "acct": null,
+         "port": 21
+       },
+       {
+         "name": "Linux kernel",
+         "is_active": true,
+         "id": 6,
+         "dircache": true,
+         "host": "sql.kernel.org",
+         "user": "anonymous",
+         "timeout": 5000,
+         "acct": null,
+         "port": 21
+       }
+     ]
+   }
