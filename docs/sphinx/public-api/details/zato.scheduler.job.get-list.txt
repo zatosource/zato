@@ -6,7 +6,7 @@ Overview
 
 Returns a list of scheduler's job defined on a given cluster.
 
-* List response: No
+* List response: Yes
 * SOAP action: zato.scheduler.job.get-list
 * SOAP URL path: /zato/soap
 * JSON URL path: /zato/json/zato.scheduler.job.get-list
