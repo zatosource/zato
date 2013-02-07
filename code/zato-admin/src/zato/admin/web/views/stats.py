@@ -571,7 +571,7 @@ def settings(req):
         for mapping in job_mappings:
 
             zato_message, _  = invoke_admin_service(req.zato.
-                cluster, 'zato.scheduler.job.get-by-name', {'name': mapping.job_name})
+                cluster, 'zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
             if zato_path('item').get_from(zato_message) is not None:
                 item = zato_message.item
             
@@ -615,7 +615,7 @@ def settings_save(req):
     for mapping in job_mappings:
 
         zato_message, _  = invoke_admin_service(
-            req.zato.cluster, 'zato.scheduler.job.get-by-name', {'name': mapping.job_name})
+            req.zato.cluster, 'zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
         if zato_path('item').get_from(zato_message) is not None:
             item = zato_message.item
             
