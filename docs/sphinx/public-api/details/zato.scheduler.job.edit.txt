@@ -1,0 +1,121 @@
+zato.scheduler.job.Edit
+=======================
+
+Overview
+--------
+
+Updates an existing scheduler's job. 
+
+.. note::
+   If job_type is 'interval_based', at least one of 'weeks', 'days', 'hours', 
+   'minutes' or 'seconds' must be provided.
+
+* List response: No
+* SOAP action: zato.scheduler.job.edit
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.scheduler.job.edit
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+================ ========= ======== =========================================================================
+Name             Datatype  Optional Notes
+================ ========= ======== =========================================================================
+id               int       ---      ID of the job to update
+cluster_id       int       ---      ID of the cluster this job is defined in
+name             string    ---      Name of the job to update
+is_active        boolean   ---      Whether the job should be active, should it be scheduled
+job_type         string    ---      Same as for :doc:`zato.scheduler.job.Create<./zato.scheduler.job.create>`
+service          string    ---      〃
+start_date       datetime  ---      〃
+extra            string    Yes      〃
+weeks            int       Yes      〃
+days             int       Yes      〃
+hours            int       Yes      〃
+minutes          int       Yes      〃
+seconds          int       Yes      〃
+repeats          int       Yes      〃
+cron_definition  string    Yes      〃
+================ ========= ======== =========================================================================
+            
+
+Response parameters
+-------------------
+
+=============== ======== ======== =========================================================================
+Name            Datatype Optional Notes
+=============== ======== ======== =========================================================================
+id              int      ---      Copied over from request
+name            string   ---      Copied over from request
+cron_definition string   Yes      Same as for :doc:`zato.scheduler.job.Create<./zato.scheduler.job.create>`
+=============== ======== ======== =========================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_scheduler_job_edit_request>
+            <zato:id>922</zato:id>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>Get Outstanding Invoices</zato:name>
+            <zato:is_active>true</zato:is_active>
+            <zato:job_type>interval_based</zato:job_type>
+            <zato:service>my.service.get.outstanding.invoices</zato:service>
+            <zato:start_date>2013-02-21T23:10:11</zato:start_date>
+            <zato:extra>skip-class:2010*;2012-10-*</zato:extra>
+            <zato:hours>12</zato:hours>
+         </zato:zato_scheduler_job_edit_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_scheduler_job_edit_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K04564254033087095923405420841</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>922</id>
+           <name>Get Outstanding Invoices</name>
+           <cron_definition/>
+       </item>
+   </zato_scheduler_job_edit_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 923,
+      "cluster_id": 1,
+      "name": "Process Dunning Letters",
+      "is_active": true,
+      "job_type": "cron_style",
+      "service": "my.service.dunning.letters",
+      "start_date": "2013-02-21T23:10:11",
+      "cron_definition": "@hourly"
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K25233659942391760821183657034"
+     },
+     "zato_scheduler_job_edit_response": {
+       "cron_definition": "0 * * * *",
+       "id": 923,
+       "name": "Process Dunning Letters"
+     }
+   }
