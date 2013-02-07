@@ -8,8 +8,8 @@
             <xsd:element name="job_type" type="xsd:string"/>
             <xsd:element name="service" type="xsd:string"/>
             <xsd:element name="start_date" type="xsd:dateTime"/>
+            <xsd:element name="id" type="xsd:int"/>
             <xsd:element name="extra" type="xsd:string"/>
-            <xsd:element name="id" type="xsd:int" minOccurs="0"/>
             <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
             <xsd:element name="days" type="xsd:int" minOccurs="0"/>
             <xsd:element name="hours" type="xsd:int" minOccurs="0"/>

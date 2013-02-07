@@ -178,7 +178,6 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             msg = {'action': SCHEDULER.DELETE, 'name': name}
             
         broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
-        
             
     except Exception, e:
         session.rollback()
@@ -186,8 +185,8 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         logger.error(msg)
         raise
     else:
-        if action == 'create':
-            response.payload.id = job.id
+        response.payload.id = job.id
+        response.payload.name = input.name
             
         if job_type == 'cron_style':
             # Needs to be returned because we might've been performing
@@ -198,9 +197,10 @@ class _CreateEdit(AdminService):
     """ A base class for both creating and editing scheduler jobs.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date', 'extra')
-        input_optional = ('id', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
-        output_optional = ('id', 'cron_definition')
+        input_required = ('cluster_id', 'name', 'is_active', 'job_type', 'service', 'start_date')
+        input_optional = ('id', 'extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_required = ('id', 'name')
+        output_optional = ('cron_definition',)
         default_value = ''
         
     def handle(self):

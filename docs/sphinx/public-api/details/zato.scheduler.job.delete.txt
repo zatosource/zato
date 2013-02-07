@@ -1,0 +1,72 @@
+zato.scheduler.job.Delete
+=========================
+
+Overview
+--------
+
+Deletes a scheduler's job by ID.
+
+  * List response: No
+  * SOAP action: zato.scheduler.job.delete
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.scheduler.job.delete
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ==============================
+Name Datatype Optional Notes
+==== ======== ======== ==============================
+id   int      ---      ID of the job to delete
+==== ======== ======== ==============================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns:zato="http://gefira.pl/zato">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <zato:zato_scheduler_job_delete_request>
+             <zato:id>924</zato:id>
+          </zato:zato_scheduler_job_delete_request>
+       </soapenv:Body>
+    </soapenv:Envelope>
+      
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+        xmlns="http://gefira.pl/zato">
+      <soap:Body>
+        <zato_scheduler_job_delete_response xmlns="http://gefira.pl/zato">
+          <zato_env>
+            <cid>K64839821826555140877045853626</cid>
+            <result>ZATO_OK</result>
+          </zato_env>
+        </zato_scheduler_job_delete_response>
+      </soap:Body>
+    </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+     "id": 1123
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K70331970397871071942451383095"
+     }
+   }
