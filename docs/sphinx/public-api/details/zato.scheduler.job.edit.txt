@@ -73,7 +73,7 @@ SOAP example
          </zato:zato_scheduler_job_edit_request>
       </soapenv:Body>
    </soapenv:Envelope>
-      
+
    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
       xmlns="http://gefira.pl/zato">
    <soap:Body>
