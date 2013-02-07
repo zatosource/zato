@@ -1,0 +1,168 @@
+zato.security.GetList
+==========================
+
+Overview
+--------
+
+Returns a list of security definitions configured on a given cluster.
+
+* List response: Yes
+* SOAP action: zato.security.get-list
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.security.get-list
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ========= ======== ==================================
+Name       Datatype  Optional Notes
+========== ========= ======== ==================================
+cluster_id int       ---      Cluster to return definitions from
+========== ========= ======== ==================================
+            
+
+Response parameters
+-------------------
+
+======================== ======== ======== ===============================================================================================================================================================
+Name                     Datatype Optional Notes
+======================== ======== ======== ===============================================================================================================================================================
+id                       int      ---      Definition ID
+name                     string   ---      Definition name
+is_active                boolean  ---      Whether the definition is active
+sec_type                 string   ---      Security type. Will be one of 'basic_auth', 'tech_acc' or 'wss'.
+username                 string   Yes      Returned if sec_type is 'basic_auth' or 'wss'
+realm                    string   Yes      Returned if sec_type is 'basic_auth'
+password_type            string   Yes      Returned if sec_type is 'wss' with a constant value of 'clear_text'
+reject_empty_nonce_creat boolean  Yes      Returned if sec_type is 'wss', whether request with an /soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce  element should be rejected
+reject_stale_tokens      boolean  Yes      Returned if sec_type is 'wss', whether request with stale, expired, tokens should be rejected
+reject_expiry_limit      boolean  Yes      Returned if sec_type is 'wss', how long in seconds after the WS-Security token has been created it will be still considered a valid one
+nonce_freshness_time     int      Yes      Returned if sec_type is 'wss', not currently used
+======================== ======== ======== ===============================================================================================================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns:zato="http://gefira.pl/zato">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <zato:zato_security_get_list_request>
+             <zato:cluster_id>1</zato:cluster_id>
+          </zato:zato_security_get_list_request>
+       </soapenv:Body>
+    </soapenv:Envelope>
+      
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+    <soap:Body>
+        <zato_security_get_list_response xmlns="http://gefira.pl/zato">
+        <zato_env>
+            <cid>K70450188467820469223917730055</cid>
+            <result>ZATO_OK</result>
+        </zato_env>
+        <item_list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <item>
+            <id>4</id>
+            <name>zato.ping.soap.basic_auth</name>
+            <is_active>true</is_active>
+            <sec_type>basic_auth</sec_type>
+            <username>zato.ping.soap.basic_auth</username>
+            <realm>Zato</realm>
+            <password_type xsi:nil="true"/>
+            <reject_empty_nonce_creat/>
+            <reject_stale_tokens/>
+            <reject_expiry_limit/>
+            <nonce_freshness_time/>
+        </item>
+        <item>
+            <id>1</id>
+            <name>techacct-733352</name>
+            <is_active>true</is_active>
+            <sec_type>tech_acc</sec_type>
+            <username/>
+            <realm/>
+            <password_type xsi:nil="true"/>
+            <reject_empty_nonce_creat/>
+            <reject_stale_tokens/>
+            <reject_expiry_limit/>
+            <nonce_freshness_time/>
+        </item>
+        <item>
+            <id>5</id>
+            <name>zato.ping.soap.wss.clear_text</name>
+            <is_active>true</is_active>
+            <sec_type>wss</sec_type>
+            <username>zato.ping.soap.wss.clear_text</username>
+            <realm/>
+            <password_type>clear_text</password_type>
+            <reject_empty_nonce_creat>false</reject_empty_nonce_creat>
+            <reject_stale_tokens>true</reject_stale_tokens>
+            <reject_expiry_limit>3600</reject_expiry_limit>
+            <nonce_freshness_time>3600</nonce_freshness_time>
+        </item>
+    </item_list>
+    </zato_security_get_list_response>
+    </soap:Body>
+    </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+    "cluster_id": 1
+   }
+
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K22229574341021523324959559041"
+    },
+    "zato_security_get_list_response": [
+      {
+        "username": "zato.ping.soap.basic_auth",
+        "realm": "Zato",
+        "name": "zato.ping.soap.basic_auth",
+        "nonce_freshness_time": "",
+        "is_active": true,
+        "reject_empty_nonce_creat": "",
+        "sec_type": "basic_auth",
+        "reject_expiry_limit": "",
+        "password_type": null,
+        "id": 4,
+        "reject_stale_tokens": ""
+      },
+      {
+        "username": "",
+        "realm": "",
+        "name": "techacct-733352",
+        "nonce_freshness_time": "",
+        "is_active": true,
+        "reject_empty_nonce_creat": "",
+        "sec_type": "tech_acc",
+        "reject_expiry_limit": "",
+        "password_type": null,
+        "id": 1,
+        "reject_stale_tokens": ""
+      },
+      {
+        "username": "zato.ping.soap.wss.clear_text",
+        "realm": "",
+        "name": "zato.ping.soap.wss.clear_text",
+        "nonce_freshness_time": 3600,
+        "is_active": true,
+        "reject_empty_nonce_creat": false,
+        "sec_type": "wss",
+        "reject_expiry_limit": 3600,
+        "password_type": "clear_text",
+        "id": 5,
+        "reject_stale_tokens": true
+      }
+    ]
+  }
