@@ -4,7 +4,7 @@ zato.scheduler.job.GetList
 Overview
 --------
 
-Returns a list scheduler's job defined on a given cluster.
+Returns a list of scheduler's job defined on a given cluster.
 
 * List response: No
 * SOAP action: zato.scheduler.job.get-list
