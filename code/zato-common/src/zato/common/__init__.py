@@ -206,7 +206,7 @@ class KVDB:
     REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
     RESP_SLOW = 'zato:resp:slow:'
 
-class JOB_TYPE:
+class SCHEDULER_JOB_TYPE:
     ONE_TIME = 'one_time'
     INTERVAL_BASED = 'interval_based'
     CRON_STYLE = 'cron_style'
