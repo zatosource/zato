@@ -23,6 +23,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 
 # Zato
+from zato.common import SCHEDULER_JOB_TYPE
 from zato.common.util import decrypt
 
 SSL_KEY_FILE = './config/repo/zato-admin-priv-key.pem'
@@ -81,9 +82,9 @@ sqlalchemy_django_engine = dict((v,k) for k,v in django_sqlalchemy_engine.items(
 
 # Maps job types as they are used by servers into UI friendly names.
 job_type_friendly_names = {
-    'one_time': 'one-time',
-    'interval_based': 'interval-based',
-    'cron_style': 'cron-style',
+    SCHEDULER_JOB_TYPE.ONE_TIME: 'one-time',
+    SCHEDULER_JOB_TYPE.INTERVAL_BASED: 'interval-based',
+    SCHEDULER_JOB_TYPE.CRON_STYLE: 'cron-style',
 }
 
 
