@@ -13,5 +13,5 @@ Services
 * :doc:`zato.security.tech-account.Create <./zato.security.tech-account.create>`
 * :doc:`zato.security.tech-account.Delete <./zato.security.tech-account.delete>`
 * :doc:`zato.security.tech-account.Edit <./zato.security.tech-account.edit>`
+* :doc:`zato.security.tech-account.GetByID <./zato.security.tech-account.get-by-id>`
 * :doc:`zato.security.tech-account.GetList <./zato.security.tech-account.get-list>`
-

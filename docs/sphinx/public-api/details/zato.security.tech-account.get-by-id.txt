@@ -1,17 +1,15 @@
-zato.security.tech-account.Create
-=================================
+zato.security.tech-account.GetByID
+==================================
 
 Overview
 --------
 
-Allows one to create an HTTP Basic Auth definition. Its default password will
-be a randomly generated UUID4, use :doc:`zato.security.tech-account.ChangePassword<./zato.security.tech-account.change-password>`
-to change it.
+Returns a technical account by its ID.
 
 * List response: No
-* SOAP action: zato.security.tech-account.create
+* SOAP action: zato.security.tech-account.get-by-id
 * SOAP URL path: /zato/soap
-* JSON URL path: /zato/json/zato.security.tech-account.create
+* JSON URL path: /zato/json/zato.security.tech-account.get-by-id
 * WSDL: :download:`Click here</public-api/zato.wsdl>`
 
 Request parameters
@@ -20,21 +18,20 @@ Request parameters
 ========== ========= ======== =========================================================
 Name       Datatype  Optional Notes
 ========== ========= ======== =========================================================
-cluster_id int       ---      ID of the cluster this definition should be created in
-name       string    ---      Name of the definition to create
-is_active  boolean   ---      Whether the definition should be active upon its creation
+id         int       ---      ID of the definition to return
 ========== ========= ======== =========================================================
             
 
 Response parameters
 -------------------
 
-==== ======== ======== ===========================================
-Name Datatype Optional Notes
-==== ======== ======== ===========================================
-id   int      ---      ID assigned to the newly created definition
-name string   ---      Copied over from request
-==== ======== ======== ===========================================
+========= ======== ======== ================================
+Name      Datatype Optional Notes
+========= ======== ======== ================================
+id        string   ---      Copied over from request
+name      string   ---      Definition name
+is_active boolean  ---      Whether the definition is active
+========= ======== ======== ================================
 
 
 SOAP example
@@ -46,27 +43,26 @@ SOAP example
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Header/>
       <soapenv:Body>
-         <zato:zato_security_tech_account_create_request>
-            <zato:cluster_id>1</zato:cluster_id>
-            <zato:name>CRM Client 1</zato:name>
-            <zato:is_active>true</zato:is_active>
-         </zato:zato_security_tech_account_create_request>
+         <zato:zato_security_tech_account_get_by_id_request>
+            <zato:id>1</zato:id>
+         </zato:zato_security_tech_account_get_by_id_request>
       </soapenv:Body>
    </soapenv:Envelope>
       
-   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
       xmlns="http://gefira.pl/zato">
    <soap:Body>
-       <zato_security_tech_account_create_response xmlns="http://gefira.pl/zato">
+       <zato_security_tech_account_get_by_id_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K35208379358174005369427403102</cid>
+           <cid>K14530714706392747148055380537</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
-           <id>6</id>
-           <name>CRM Client 1</name>
+           <id>1</id>
+           <name>CRM Client 20</name>
+           <is_active>true</is_active>
        </item>
-   </zato_security_tech_account_create_response>
+   </zato_security_tech_account_get_by_id_response>
    </soap:Body>
    </soap:Envelope>
 
@@ -76,20 +72,18 @@ JSON example
 .. code-block:: javascript
 
    {
-      "cluster_id": 1,
-      "name": "CRM Client 2",
-      "is_active": true
+      "id": 1
    }
 
    {
+     "zato_security_tech_account_get_by_id_response": {
+       "is_active": true,
+       "id": 1,
+       "name": "CRM Client 20"
+     },
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K57483655063014180045495194626"
-     },
-     "zato_security_tech_account_create_response": {
-       "id": 7,
-       "name": "CRM Client 2"
+       "cid": "K30604901073277030165984380547"
      }
    }
-

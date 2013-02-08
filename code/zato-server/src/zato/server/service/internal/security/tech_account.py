@@ -60,7 +60,7 @@ class GetByID(AdminService):
     def get_data(self, session):
         return session.query(TechnicalAccount.id, 
             TechnicalAccount.name, TechnicalAccount.is_active).\
-            filter(TechnicalAccount.id==self.request.input.tech_account_id).\
+            filter(TechnicalAccount.id==self.request.input.id).\
             one()
 
     def handle(self):
