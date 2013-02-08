@@ -1,0 +1,16 @@
+zato.security.wss.*
+===================
+
+Overview
+--------
+
+Services related to the management of WS-Security definitions.
+
+Services
+--------
+
+* :doc:`zato.security.wss.ChangePassword <./zato.security.wss.change-password>`
+* :doc:`zato.security.wss.Create <./zato.security.wss.create>`
+* :doc:`zato.security.wss.Delete <./zato.security.wss.delete>`
+* :doc:`zato.security.wss.Edit <./zato.security.wss.edit>`
+* :doc:`zato.security.wss.GetList <./zato.security.wss.get-list>`
