@@ -4,7 +4,7 @@ zato.security.*
 Overview
 --------
 
-Services related to the security definitions, regardless of their type.
+Services related to security definitions, regardless of their type.
 
 Services
 --------
