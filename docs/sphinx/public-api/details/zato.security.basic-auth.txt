@@ -14,4 +14,3 @@ Services
 * :doc:`zato.security.basic-auth.Delete <./zato.security.basic-auth.delete>`
 * :doc:`zato.security.basic-auth.Edit <./zato.security.basic-auth.edit>`
 * :doc:`zato.security.basic-auth.GetList <./zato.security.basic-auth.get-list>`
-
