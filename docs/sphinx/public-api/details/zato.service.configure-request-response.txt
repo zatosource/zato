@@ -1,0 +1,86 @@
+zato.service.configure-request-response
+=======================================
+
+Overview
+--------
+
+Configures one in how many request-response pairs should be stored in the KVDB.
+This can be fetched later on using :doc:`zato.service.get-request-response <./zato.service.get-request-response>`
+to serve as an example of how a service is being used in a given environment.
+
+Setting sample_req_resp_freq to 0 will disable collecting of sample requests
+and responses altogether.
+
+.. note::
+  Zato doesn't check whether the service name is correct
+
+* List response: No
+* SOAP action: zato.service.configure-request-response
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.service.configure-request-response
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==================== ======== ======== ==================================================================
+Name                 Datatype Optional Notes
+==================== ======== ======== ==================================================================
+cluster_id           int      ---      Cluster the service is deployed in
+name                 string   ---      Name of the service to configure
+sample_req_resp_freq int      ---      One in that many request-response pairs will be stored in the KVDB
+==================== ======== ======== ==================================================================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_service_configure_request_response_request>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>zato.Ping</zato:name>
+            <zato:sample_req_resp_freq>20</zato:sample_req_resp_freq>
+         </zato:zato_service_configure_request_response_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_service_configure_request_response_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K74470754030084882721466145578</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+            </zato_service_configure_request_response_response>
+      </soap:Body>
+   </soap:Envelope> 
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+       "cluster_id": 1,
+       "name": "zato.Ping",
+       "sample_req_resp_freq": 20
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K18249459748854355403572998341"
+     }
+   }

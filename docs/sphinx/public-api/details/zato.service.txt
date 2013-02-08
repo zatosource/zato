@@ -1,0 +1,27 @@
+zato.service.*
+==============
+
+Overview
+--------
+
+Services related to the management of Zato services.
+
+Services
+--------
+
+* :doc:`zato.service.configure-request-response <./zato.service.configure-request-response>`
+* :doc:`zato.service.delete <./zato.service.delete>`
+* :doc:`zato.service.edit <./zato.service.edit>`
+* :doc:`zato.service.get-by-name <./zato.service.get-by-name>`
+* :doc:`zato.service.get-channel-list <./zato.service.get-channel-list>`
+* :doc:`zato.service.get-deployment-info-list <./zato.service.get-deployment-info-list>`
+* :doc:`zato.service.get-list <./zato.service.get-list>`
+* :doc:`zato.service.get-request-response <./zato.service.get-request-response>`
+* :doc:`zato.service.get-source-info <./zato.service.get-source-info>`
+* :doc:`zato.service.get-wsdl <./zato.service.get-wsdl>`
+* :doc:`zato.service.has-wsdl <./zato.service.has-wsdl>`
+* :doc:`zato.service.invoke <./zato.service.invoke>`
+* :doc:`zato.service.set-wsdl <./zato.service.set-wsdl>`
+* :doc:`zato.service.slow-response.get <./zato.service.slow-response.get>`
+* :doc:`zato.service.slow-response.get-list <./zato.service.slow-response.get-list>`
+* :doc:`zato.service.upload-package <./zato.service.upload-package>`
