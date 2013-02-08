@@ -1,17 +1,17 @@
-zato.security.basic-auth.Create
-===============================
+zato.security.tech-account.Create
+=================================
 
 Overview
 --------
 
 Allows one to create an HTTP Basic Auth definition. Its default password will
-be a randomly generated UUID4, use :doc:`zato.security.basic-auth.ChangePassword<./zato.security.basic-auth.change-password>`
+be a randomly generated UUID4, use :doc:`zato.security.tech-account.ChangePassword<./zato.security.tech-account.change-password>`
 to change it.
 
 * List response: No
-* SOAP action: zato.security.basic-auth.create
+* SOAP action: zato.security.tech-account.create
 * SOAP URL path: /zato/soap
-* JSON URL path: /zato/json/zato.security.basic-auth.create
+* JSON URL path: /zato/json/zato.security.tech-account.create
 * WSDL: :download:`Click here</public-api/zato.wsdl>`
 
 Request parameters
@@ -23,8 +23,6 @@ Name       Datatype  Optional Notes
 cluster_id int       ---      ID of the cluster this definition should be created in
 name       string    ---      Name of the definition to create
 is_active  boolean   ---      Whether the definition should be active upon its creation
-username   string    ---      Username
-realm      string    ---      Security realm
 ========== ========= ======== =========================================================
             
 
@@ -48,29 +46,27 @@ SOAP example
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Header/>
       <soapenv:Body>
-         <zato:zato_security_basic_auth_create_request>
+         <zato:zato_security_tech_account_create_request>
             <zato:cluster_id>1</zato:cluster_id>
             <zato:name>CRM Client 1</zato:name>
             <zato:is_active>true</zato:is_active>
-            <zato:username>crmclient1</zato:username>
-            <zato:realm>ESB</zato:realm>
-         </zato:zato_security_basic_auth_create_request>
+         </zato:zato_security_tech_account_create_request>
       </soapenv:Body>
    </soapenv:Envelope>
       
-   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
       xmlns="http://gefira.pl/zato">
    <soap:Body>
-       <zato_security_basic_auth_create_response xmlns="http://gefira.pl/zato">
+       <zato_security_tech_account_create_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K04273200419810970767625314799</cid>
+           <cid>K35208379358174005369427403102</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
-           <id>9</id>
+           <id>6</id>
            <name>CRM Client 1</name>
        </item>
-   </zato_security_basic_auth_create_response>
+   </zato_security_tech_account_create_response>
    </soap:Body>
    </soap:Envelope>
 
@@ -82,19 +78,17 @@ JSON example
    {
       "cluster_id": 1,
       "name": "CRM Client 2",
-      "is_active": true,
-      "username": "crmclient2",
-      "realm": "ESB"
+      "is_active": true
    }
 
    {
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K05491326776124439711017519247"
+       "cid": "K57483655063014180045495194626"
      },
-     "zato_security_basic_auth_create_response": {
-       "id": 10,
+     "zato_security_tech_account_create_response": {
+       "id": 7,
        "name": "CRM Client 2"
      }
    }
