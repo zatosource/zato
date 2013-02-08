@@ -1,0 +1,113 @@
+zato.security.basic-auth.GetList
+================================
+
+Overview
+--------
+
+Returns a list of HTTP Basic Auth security definitions configured on a given cluster.
+
+* List response: Yes
+* SOAP action: zato.security.basic-auth.get-list
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.security.basic-auth.get-list
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ========= ======== ==================================
+Name       Datatype  Optional Notes
+========== ========= ======== ==================================
+cluster_id int       ---      Cluster to return definitions from
+========== ========= ======== ==================================
+            
+
+Response parameters
+-------------------
+
+========= ======== ======== ================================
+Name      Datatype Optional Notes
+========= ======== ======== ================================
+id        int      ---      Definition ID
+name      string   ---      Definition name
+is_active boolean  ---      Whether the definition is active
+username  string   ---      Username
+realm     string   ---      Security realm
+========= ======== ======== ================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns:zato="http://gefira.pl/zato">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <zato:zato_security_basic_auth_get_list_request>
+             <zato:cluster_id>1</zato:cluster_id>
+          </zato:zato_security_basic_auth_get_list_request>
+       </soapenv:Body>
+    </soapenv:Envelope>
+      
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+        xmlns="http://gefira.pl/zato">
+    <soap:Body>
+        <zato_security_basic_auth_get_list_response xmlns="http://gefira.pl/zato">
+        <zato_env>
+            <cid>K72895712502559727979821245205</cid>
+            <result>ZATO_OK</result>
+        </zato_env>
+        <item_list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <item>
+            <id>4</id>
+            <name>zato.ping.soap.basic_auth</name>
+            <is_active>true</is_active>
+            <username>zato.ping.soap.basic_auth</username>
+            <realm>Zato</realm>
+        </item>
+        <item>
+            <id>5</id>
+            <name>zato.ping.plain_http.basic_auth</name>
+            <is_active>true</is_active>
+            <username>zato.ping.plain_http.basic_auth</username>
+            <realm>Zato</realm>
+        </item>
+    </item_list>
+    </zato_security_basic_auth_get_list_response>
+    </soap:Body>
+    </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+    "cluster_id": 1
+   }
+
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K50783821181336572896202474242"
+    },
+    "zato_security_basic_auth_get_list_response": [
+      {
+        "username": "zato.ping.soap.basic_auth",
+        "realm": "Zato",
+        "name": "zato.ping.soap.basic_auth",
+        "is_active": true
+        "id": 4
+      },
+      {
+        "username": "zato.ping.plain_http.basic_auth",
+        "realm": "Zato",
+        "name": "zato.ping.plain_http.basic_auth",
+        "is_active": true
+        "id": 5
+      }
+    ]
+  }
