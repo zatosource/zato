@@ -183,7 +183,8 @@ class Delete(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_tech_account_delete_request'
         response_elem = 'zato_security_tech_account_delete_response'
-        input_required = ('id', 'zato_admin_tech_account_name')
+        input_required = ('id',)
+        input_optional = ('current_tech_account_name',)
 
     def handle(self):
         input = self.request.input
@@ -192,9 +193,9 @@ class Delete(AdminService):
                 filter(TechnicalAccount.id==input.id).\
                 one()
             
-            if tech_account.name == input.zato_admin_tech_account_name:
+            if tech_account.name == input.current_tech_account_name:
                 msg = "Can't delete account [{0}], at least one client console uses it".\
-                    format(input.zato_admin_tech_account_name)
+                    format(input.current_tech_account_name)
                 raise Exception(msg)
             
             try:

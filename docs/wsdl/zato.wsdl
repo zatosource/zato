@@ -1790,8 +1790,7 @@ targetNamespace="http://gefira.pl/zato"
             <xsd:element name="job_type" type="xsd:string"/>
             <xsd:element name="service" type="xsd:string"/>
             <xsd:element name="start_date" type="xsd:dateTime"/>
-            <xsd:element name="extra" type="xsd:string"/>
-            <xsd:element name="id" type="xsd:int" minOccurs="0"/>
+            <xsd:element name="extra" type="xsd:string" minOccurs="0"/>
             <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
             <xsd:element name="days" type="xsd:int" minOccurs="0"/>
             <xsd:element name="hours" type="xsd:int" minOccurs="0"/>
@@ -1811,6 +1810,7 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="id" type="xsd:int" minOccurs="0"/>
+                  <xsd:element name="name" type="xsd:string" minOccurs="0"/>
                   <xsd:element name="cron_definition" type="xsd:string" minOccurs="0"/>
                 </xsd:sequence>
               </xsd:complexType>
@@ -1843,8 +1843,8 @@ targetNamespace="http://gefira.pl/zato"
             <xsd:element name="job_type" type="xsd:string"/>
             <xsd:element name="service" type="xsd:string"/>
             <xsd:element name="start_date" type="xsd:dateTime"/>
+            <xsd:element name="id" type="xsd:int"/>
             <xsd:element name="extra" type="xsd:string"/>
-            <xsd:element name="id" type="xsd:int" minOccurs="0"/>
             <xsd:element name="weeks" type="xsd:int" minOccurs="0"/>
             <xsd:element name="days" type="xsd:int" minOccurs="0"/>
             <xsd:element name="hours" type="xsd:int" minOccurs="0"/>
@@ -2170,6 +2170,7 @@ targetNamespace="http://gefira.pl/zato"
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="current_tech_account_name" type="xsd:string" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
