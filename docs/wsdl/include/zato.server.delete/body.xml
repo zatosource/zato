@@ -1,5 +1,5 @@
-    <wsdl:operation name="zato.cluster.server.delete">
-      <soap:operation soapAction="zato.cluster.server.delete"/>
+    <wsdl:operation name="zato.server.delete">
+      <soap:operation soapAction="zato.server.delete"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>

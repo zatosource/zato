@@ -125,6 +125,9 @@ class Server(Base):
     id = Column(Integer,  Sequence('server_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     host = Column(String(400), nullable=True)
+    
+    bind_host = Column(String(400), nullable=True)
+    bind_port = Column(Integer(), nullable=True)
 
     # If the server's request to join a cluster has been accepted, and for now
     # it will always be.

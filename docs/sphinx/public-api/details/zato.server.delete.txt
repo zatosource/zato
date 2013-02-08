@@ -1,0 +1,80 @@
+zato.server.Delete
+==================
+
+Overview
+--------
+
+Deletes a server from the ODB. This will cascade and delete any database entries
+dependent on the server's existence. 
+
+Will not delete the server from its cluster load-balancer's configuration nor will it attempt to remove
+the server from the operating system it's installed in. The service won't stop the server either.
+
+.. note::
+  A server cannot delete itself, an error will be returned if a server receiving
+  the request is the one that ought to be deleted.
+
+* List response: No
+* SOAP action: zato.server.delete
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.server.delete
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ==========================
+Name Datatype Optional Notes
+==== ======== ======== ==========================
+id   int      ---      ID of the server to delete
+==== ======== ======== ==========================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Header/>
+      <soapenv:Body>
+         <zato:zato_server_delete_request>
+            <zato:id>5</zato:id>
+         </zato:zato_server_delete_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_server_delete_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K47518278736461852858725998339</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+            </zato_server_delete_response>
+      </soap:Body>
+   </soap:Envelope> 
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+       "id": 6
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K32846275037745872066378463484"
+     }
+   }

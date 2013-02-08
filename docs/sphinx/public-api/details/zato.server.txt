@@ -1,0 +1,14 @@
+zato.server.*
+=============
+
+Overview
+--------
+
+Services related to the management of cluster servers.
+
+Services
+--------
+
+* :doc:`zato.server.Delete <./zato.server.delete>`
+* :doc:`zato.server.Edit <./zato.server.edit>`
+* :doc:`zato.server.GetByID <./zato.server.get-by-id>`

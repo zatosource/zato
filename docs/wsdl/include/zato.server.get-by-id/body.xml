@@ -1,5 +1,5 @@
-    <wsdl:operation name="zato.cluster.server.edit">
-      <soap:operation soapAction="zato.cluster.server.edit"/>
+    <wsdl:operation name="zato.server.get-by-id">
+      <soap:operation soapAction="zato.server.get-by-id"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>

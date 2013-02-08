@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.server.edit">
+      <wsdl:input message="zato:zato_server_edit_request_message"/>
+      <wsdl:output message="zato:zato_server_edit_response_message"/>
+    </wsdl:operation>

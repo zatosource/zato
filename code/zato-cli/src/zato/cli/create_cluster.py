@@ -55,11 +55,6 @@ zato_services = {
     'zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
     'zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
     
-    # Cluster - servers
-    'zato.cluster.server.delete':'zato.server.service.internal.server.Delete',
-    'zato.cluster.server.edit':'zato.server.service.internal.server.Edit',
-    'zato.cluster.server.get-by-id':'zato.server.service.internal.server.GetByID',
-    
     # Definitions - AMQP
     'zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
     'zato.definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
@@ -133,9 +128,7 @@ zato_services = {
     'zato.outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
     'zato.outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
     
-    # Ping
-    'zato.ping':'zato.server.service.internal.Ping',
-    'zato.ping2':'zato.server.service.internal.Ping2',
+    # Ping services are added in Create.add_ping_services
 
     # Scheduler
     'zato.scheduler.job.create':'zato.server.service.internal.scheduler.Create',
@@ -169,6 +162,11 @@ zato_services = {
     'zato.security.wss.delete':'zato.server.service.internal.security.wss.Delete',
     'zato.security.wss.edit':'zato.server.service.internal.security.wss.Edit',
     'zato.security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
+    
+    # Servers
+    'zato.server.delete':'zato.server.service.internal.server.Delete',
+    'zato.server.edit':'zato.server.service.internal.server.Edit',
+    'zato.server.get-by-id':'zato.server.service.internal.server.GetByID',
     
     # Services
     'zato.service.configure-request-response':'zato.server.service.internal.service.ConfigureRequestResponse',

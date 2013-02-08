@@ -1,12 +1,13 @@
-      <xsd:element name="zato_cluster_server_get_by_id_request">
+      <xsd:element name="zato_server_edit_request">
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
 
-      <xsd:element name="zato_cluster_server_get_by_id_response">
+      <xsd:element name="zato_server_edit_response">
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element ref="zato_env"/>
@@ -17,6 +18,8 @@
                   <xsd:element name="cluster_id" type="xsd:int"/>
                   <xsd:element name="name" type="xsd:string"/>
                   <xsd:element name="host" type="xsd:string"/>
+                  <xsd:element name="bind_host" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="bind_port" type="xsd:string" minOccurs="0"/>
                   <xsd:element name="last_join_status" type="xsd:string" minOccurs="0"/>
                   <xsd:element name="last_join_mod_date" type="xsd:dateTime" minOccurs="0"/>
                   <xsd:element name="last_join_mod_by" type="xsd:string" minOccurs="0"/>
