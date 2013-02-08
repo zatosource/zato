@@ -361,79 +361,6 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element>
 
-      <xsd:element name="zato_cluster_server_delete_request">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element name="id" type="xsd:int"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-
-      <xsd:element name="zato_cluster_server_delete_response">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element ref="zato_env"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-      <xsd:element name="zato_cluster_server_edit_request">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element name="id" type="xsd:int"/>
-            <xsd:element name="name" type="xsd:string"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-
-      <xsd:element name="zato_cluster_server_edit_response">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element ref="zato_env"/>
-            <xsd:element name="item" minOccurs="0" maxOccurs="1">
-              <xsd:complexType>
-                <xsd:sequence>
-                  <xsd:element name="id" type="xsd:int"/>
-                  <xsd:element name="name" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="host" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="up_status" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="up_mod_date" type="xsd:dateTime" minOccurs="0"/>
-                </xsd:sequence>
-              </xsd:complexType>
-            </xsd:element>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-      <xsd:element name="zato_cluster_server_get_by_id_request">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element name="id" type="xsd:int"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-
-      <xsd:element name="zato_cluster_server_get_by_id_response">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element ref="zato_env"/>
-            <xsd:element name="item" minOccurs="0" maxOccurs="1">
-              <xsd:complexType>
-                <xsd:sequence>
-                  <xsd:element name="id" type="xsd:int"/>
-                  <xsd:element name="cluster_id" type="xsd:int"/>
-                  <xsd:element name="name" type="xsd:string"/>
-                  <xsd:element name="host" type="xsd:string"/>
-                  <xsd:element name="last_join_status" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="last_join_mod_date" type="xsd:dateTime" minOccurs="0"/>
-                  <xsd:element name="last_join_mod_by" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="up_status" type="xsd:string" minOccurs="0"/>
-                  <xsd:element name="up_mod_date" type="xsd:dateTime" minOccurs="0"/>
-                </xsd:sequence>
-              </xsd:complexType>
-            </xsd:element>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-
       <xsd:element name="zato_definition_amqp_change_password_request">
         <xsd:complexType>
           <xsd:sequence>
@@ -2395,6 +2322,87 @@ targetNamespace="http://gefira.pl/zato"
         </xsd:complexType>
       </xsd:element>
 
+      <xsd:element name="zato_server_delete_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_server_delete_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_server_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_server_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="cluster_id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                  <xsd:element name="host" type="xsd:string"/>
+                  <xsd:element name="bind_host" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="bind_port" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="last_join_status" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="last_join_mod_date" type="xsd:dateTime" minOccurs="0"/>
+                  <xsd:element name="last_join_mod_by" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="up_status" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="up_mod_date" type="xsd:dateTime" minOccurs="0"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="zato_server_get_by_id_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_server_get_by_id_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="cluster_id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                  <xsd:element name="host" type="xsd:string"/>
+                  <xsd:element name="bind_host" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="bind_port" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="last_join_status" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="last_join_mod_date" type="xsd:dateTime" minOccurs="0"/>
+                  <xsd:element name="last_join_mod_by" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="up_status" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="up_mod_date" type="xsd:dateTime" minOccurs="0"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
       <xsd:element name="zato_service_configure_request_response_request">
         <xsd:complexType>
           <xsd:sequence>
@@ -3108,25 +3116,6 @@ targetNamespace="http://gefira.pl/zato"
 
 <!-- ####################################################################### -->
 
-  <wsdl:message name="zato_cluster_server_delete_request_message">
-    <wsdl:part element="zato:zato_cluster_server_delete_request" name="parameters"/>
-  </wsdl:message>
-  <wsdl:message name="zato_cluster_server_delete_response_message">
-    <wsdl:part element="zato:zato_cluster_server_delete_response" name="parameters"/>
-  </wsdl:message>
-  <wsdl:message name="zato_cluster_server_edit_request_message">
-    <wsdl:part element="zato:zato_cluster_server_edit_request" name="parameters"/>
-  </wsdl:message>
-  <wsdl:message name="zato_cluster_server_edit_response_message">
-    <wsdl:part element="zato:zato_cluster_server_edit_response" name="parameters"/>
-  </wsdl:message>
-  <wsdl:message name="zato_cluster_server_get_by_id_request_message">
-    <wsdl:part element="zato:zato_cluster_server_get_by_id_request" name="parameters"/>
-  </wsdl:message>
-  <wsdl:message name="zato_cluster_server_get_by_id_response_message">
-    <wsdl:part element="zato:zato_cluster_server_get_by_id_response" name="parameters"/>
-  </wsdl:message>
-
   <wsdl:message name="zato_channel_amqp_create_request_message">
     <wsdl:part element="zato:zato_channel_amqp_create_request" name="parameters"/>
   </wsdl:message>
@@ -3663,6 +3652,25 @@ targetNamespace="http://gefira.pl/zato"
     <wsdl:part element="zato:zato_security_wss_get_list_response" name="parameters"/>
   </wsdl:message>
 
+  <wsdl:message name="zato_server_delete_request_message">
+    <wsdl:part element="zato:zato_server_delete_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_server_delete_response_message">
+    <wsdl:part element="zato:zato_server_delete_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_server_edit_request_message">
+    <wsdl:part element="zato:zato_server_edit_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_server_edit_response_message">
+    <wsdl:part element="zato:zato_server_edit_response" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_server_get_by_id_request_message">
+    <wsdl:part element="zato:zato_server_get_by_id_request" name="parameters"/>
+  </wsdl:message>
+  <wsdl:message name="zato_server_get_by_id_response_message">
+    <wsdl:part element="zato:zato_server_get_by_id_response" name="parameters"/>
+  </wsdl:message>
+
   <wsdl:message name="zato_service_configure_request_response_request_message">
     <wsdl:part element="zato:zato_service_configure_request_response_request" name="parameters"/>
   </wsdl:message>
@@ -3815,19 +3823,6 @@ targetNamespace="http://gefira.pl/zato"
   <wsdl:portType name="zato">
   
 <!-- ####################################################################### -->
-
-    <wsdl:operation name="zato.cluster.server.delete">
-      <wsdl:input message="zato:zato_cluster_server_delete_request_message"/>
-      <wsdl:output message="zato:zato_cluster_server_delete_response_message"/>
-    </wsdl:operation>
-    <wsdl:operation name="zato.cluster.server.edit">
-      <wsdl:input message="zato:zato_cluster_server_edit_request_message"/>
-      <wsdl:output message="zato:zato_cluster_server_edit_response_message"/>
-    </wsdl:operation>
-    <wsdl:operation name="zato.cluster.server.get-by-id">
-      <wsdl:input message="zato:zato_cluster_server_get_by_id_request_message"/>
-      <wsdl:output message="zato:zato_cluster_server_get_by_id_response_message"/>
-    </wsdl:operation>
 
     <wsdl:operation name="zato.channel.amqp.create">
       <wsdl:input message="zato:zato_channel_amqp_create_request_message"/>
@@ -4191,6 +4186,19 @@ targetNamespace="http://gefira.pl/zato"
       <wsdl:output message="zato:zato_security_wss_get_list_response_message"/>
     </wsdl:operation>
 
+    <wsdl:operation name="zato.server.delete">
+      <wsdl:input message="zato:zato_server_delete_request_message"/>
+      <wsdl:output message="zato:zato_server_delete_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.server.edit">
+      <wsdl:input message="zato:zato_server_edit_request_message"/>
+      <wsdl:output message="zato:zato_server_edit_response_message"/>
+    </wsdl:operation>
+    <wsdl:operation name="zato.server.get-by-id">
+      <wsdl:input message="zato:zato_server_get_by_id_request_message"/>
+      <wsdl:output message="zato:zato_server_get_by_id_response_message"/>
+    </wsdl:operation>
+
     <wsdl:operation name="zato.service.configure-request-response">
       <wsdl:input message="zato:zato_service_configure_request_response_request_message"/>
       <wsdl:output message="zato:zato_service_configure_request_response_response_message"/>
@@ -4300,34 +4308,6 @@ targetNamespace="http://gefira.pl/zato"
     
 
 <!-- ####################################################################### -->
-
-    <wsdl:operation name="zato.cluster.server.delete">
-      <soap:operation soapAction="zato.cluster.server.delete"/>
-      <wsdl:input>
-        <soap:body use="literal"/>
-      </wsdl:input>
-      <wsdl:output>
-        <soap:body use="literal"/>
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="zato.cluster.server.edit">
-      <soap:operation soapAction="zato.cluster.server.edit"/>
-      <wsdl:input>
-        <soap:body use="literal"/>
-      </wsdl:input>
-      <wsdl:output>
-        <soap:body use="literal"/>
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="zato.cluster.server.get-by-id">
-      <soap:operation soapAction="zato.cluster.server.get-by-id"/>
-      <wsdl:input>
-        <soap:body use="literal"/>
-      </wsdl:input>
-      <wsdl:output>
-        <soap:body use="literal"/>
-      </wsdl:output>
-    </wsdl:operation>
 
     <wsdl:operation name="zato.channel.amqp.create">
       <soap:operation soapAction="zato.channel.amqp.create"/>
@@ -5109,6 +5089,34 @@ targetNamespace="http://gefira.pl/zato"
     </wsdl:operation>
     <wsdl:operation name="zato.security.wss.get-list">
       <soap:operation soapAction="zato.security.wss.get-list"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="zato.server.delete">
+      <soap:operation soapAction="zato.server.delete"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.server.edit">
+      <soap:operation soapAction="zato.server.edit"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="zato.server.get-by-id">
+      <soap:operation soapAction="zato.server.get-by-id"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>

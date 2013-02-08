@@ -87,10 +87,12 @@ class Edit(AdminService):
     """ Updates a server.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_cluster_server_edit_request'
-        response_elem = 'zato_cluster_server_edit_response'
+        request_elem = 'zato_server_edit_request'
+        response_elem = 'zato_server_edit_response'
         input_required = ('id', 'name')
-        output_optional = ('id', 'name', 'host', 'up_status', 'up_mod_date')
+        output_required = ('id', 'cluster_id', 'name', 'host')
+        output_optional = ('bind_host', 'bind_port', 'last_join_status', 
+            'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -109,11 +111,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
                 
-                self.response.payload.id = item.id
-                self.response.payload.name = item.name
-                self.response.payload.host = item.host
-                self.response.payload.up_status = item.up_status
-                self.response.payload.up_mod_date = item.up_mod_date
+                self.response.payload = item
                 
             except Exception, e:
                 msg = 'Could not update the server, id:[{}], e:[{}]'.format(self.request.input.id, format_exc(e))
@@ -126,11 +124,12 @@ class GetByID(AdminService):
     """ Returns a particular server
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_cluster_server_get_by_id_request'
-        response_elem = 'zato_cluster_server_get_by_id_response'
+        request_elem = 'zato_server_get_by_id_request'
+        response_elem = 'zato_server_get_by_id_response'
         input_required = ('id',)
         output_required = ('id', 'cluster_id', 'name', 'host')
-        output_optional = ('last_join_status', 'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
+        output_optional = ('bind_host', 'bind_port', 'last_join_status', 
+            'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
         
     def get_data(self, session):
         return session.query(Server).\
@@ -140,13 +139,18 @@ class GetByID(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload = self.get_data(session)
+            
+            for name in('last_join_mod_date', 'up_mod_date'):
+                attr = getattr(self.response.payload, name, None)
+                if attr:
+                    setattr(self.response.payload, name, attr.isoformat())
 
 class Delete(AdminService):
     """ Deletes a server.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_cluster_server_delete_request'
-        response_elem = 'zato_cluster_server_delete_response'
+        request_elem = 'zato_server_delete_request'
+        response_elem = 'zato_server_delete_response'
         input_required = ('id',)
 
     def handle(self):
