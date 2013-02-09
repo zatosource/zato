@@ -3,8 +3,8 @@
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
             <xsd:element name="payload" type="xsd:string"/>
-            <xsd:element name="data_format" type="xsd:string"/>
-            <xsd:element name="transport" type="xsd:string"/>
+            <xsd:element name="data_format" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="transport" type="xsd:string" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>

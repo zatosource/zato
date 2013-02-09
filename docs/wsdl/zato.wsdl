@@ -2611,12 +2611,12 @@ targetNamespace="http://gefira.pl/zato"
                     <xsd:complexType>
                       <xsd:sequence>
                         <xsd:element name="service_id" type="xsd:int"/>
-                        <xsd:element name="sample_cid" type="xsd:string"/>
-                        <xsd:element name="sample_req_ts" type="xsd:string"/>
-                        <xsd:element name="sample_resp_ts" type="xsd:string"/>
-                        <xsd:element name="sample_req" type="xsd:string"/>
-                        <xsd:element name="sample_resp" type="xsd:string"/>
                         <xsd:element name="sample_req_resp_freq" type="xsd:int"/>
+                        <xsd:element name="sample_cid" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="sample_req_ts" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="sample_resp_ts" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="sample_req" type="xsd:string" minOccurs="0"/>
+                        <xsd:element name="sample_resp" type="xsd:string" minOccurs="0"/>
                       </xsd:sequence>
                     </xsd:complexType>
                   </xsd:element>
@@ -2714,8 +2714,8 @@ targetNamespace="http://gefira.pl/zato"
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
             <xsd:element name="payload" type="xsd:string"/>
-            <xsd:element name="data_format" type="xsd:string"/>
-            <xsd:element name="transport" type="xsd:string"/>
+            <xsd:element name="data_format" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="transport" type="xsd:string" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
