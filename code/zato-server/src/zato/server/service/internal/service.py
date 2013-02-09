@@ -230,13 +230,14 @@ class Invoke(AdminService):
         output_required = ('response',)
 
     def handle(self):
-        payload = payload_from_request(self.request.input.payload, 
+        payload = payload_from_request(self.request.input.payload.decode('base64'), 
             self.request.input.data_format, self.request.input.transport)
             
         response = self.invoke_by_id(self.request.input.id, payload, 
             self.request.input.data_format, self.request.input.transport,
             serialize=True)
-        self.response.payload.response = response
+
+        self.response.payload.response = response.encode('base64') if response else ''
 
 class GetDeploymentInfoList(AdminService):
     """ Returns detailed information regarding the service's deployment status
