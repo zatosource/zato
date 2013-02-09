@@ -392,8 +392,8 @@ class GetRequestResponse(AdminService):
         request_elem = 'zato_service_get_request_response_request'
         response_elem = 'zato_service_request_response_response'
         input_required = ('cluster_id', 'name')
-        output_required = ('service_id', 'sample_cid', 'sample_req_ts', 'sample_resp_ts', 
-            'sample_req', 'sample_resp', Integer('sample_req_resp_freq'))
+        output_required = ('service_id', Integer('sample_req_resp_freq'))
+        output_optional = ('sample_cid', 'sample_req_ts', 'sample_resp_ts', 'sample_req', 'sample_resp', )
         
     def get_data(self):
         result = {}
