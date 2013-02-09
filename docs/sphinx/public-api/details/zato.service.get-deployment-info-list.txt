@@ -33,9 +33,7 @@ server_name string   ---      Server name
 details     string   ---      A JSON document describing details of the service's deployment on this particular server.
                               The fields returned are:
                               
-                              * method - how was the service deployed, either 'hot-deploy' if the service was hot-deployed
-                                while the server was running or 'service-store' if the service was deployed automatically
-                                during a server's startup.
+                              * method - how was the service deployed, always 'service-store'
                               * object - name of a Python object representing the service
                               * timestamp - when was the service deployed
                               * fs_location - where in the file system the service is located, where its containing

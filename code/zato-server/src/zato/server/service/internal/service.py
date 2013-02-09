@@ -299,7 +299,8 @@ class GetWSDL(AdminService):
         request_elem = 'zato_service_get_wsdl_request'
         response_elem = 'zato_service_get_wsdl_response'
         input_optional = ('service', 'cluster_id')
-        output_optional = ('wsdl', 'wsdl_name', 'content_type')
+        output_required = ('content_type',)
+        output_optional = ('wsdl', 'wsdl_name',)
 
     def handle(self):
         if self.wsgi_environ['QUERY_STRING']:
@@ -313,9 +314,13 @@ class GetWSDL(AdminService):
             cluster_id = self.request.input.cluster_id
             
         if not(service_name and cluster_id):
-            self.response.status_code = BAD_REQUEST
-            self.response.payload = 'Both [service] and [cluster_id] parameters are required'
-            return
+            msg = 'Both [service] and [cluster_id] parameters are required'
+            if use_sio:
+                raise ValueError(msg)
+            else:
+                self.response.status_code = BAD_REQUEST
+                self.response.payload = msg
+                return
         
         with closing(self.odb.session()) as session:
             service = session.query(Service).\
@@ -327,7 +332,10 @@ class GetWSDL(AdminService):
                 self.response.payload = 'Service [{}] not found'.format(service_name)
                 return
             
-        content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
+        if service.wsdl_name:
+            content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
+        else:
+            content_type = 'text/plain'
             
         if use_sio:
             self.response.payload.wsdl = (service.wsdl or '').encode('base64')
@@ -336,7 +344,6 @@ class GetWSDL(AdminService):
         else:
             if service.wsdl:
                 self.set_attachment(service.wsdl_name, service.wsdl, content_type)
-                
             else:
                 self.response.status_code = NOT_FOUND
                 self.response.payload = 'No WSDL found'
