@@ -2863,19 +2863,14 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="service_name" type="xsd:string"/>
-                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="usage" type="xsd:long"/>
                   <xsd:element name="mean" type="xsd:float"/>
                   <xsd:element name="rate" type="xsd:float"/>
-                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="time" type="xsd:double"/>
                   <xsd:element name="usage_trend" type="xsd:string"/>
                   <xsd:element name="mean_trend" type="xsd:string"/>
                   <xsd:element name="min_resp_time" type="xsd:int"/>
                   <xsd:element name="max_resp_time" type="xsd:int"/>
-                  <xsd:element name="all_services_usage" type="xsd:int"/>
-                  <xsd:element name="all_services_time" type="xsd:int"/>
-                  <xsd:element name="mean_all_services" type="xsd:float"/>
-                  <xsd:element name="usage_perc_all_services" type="xsd:float"/>
-                  <xsd:element name="time_perc_all_services" type="xsd:float"/>
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>
@@ -2900,16 +2895,14 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="service_name" type="xsd:string"/>
-                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="usage" type="xsd:long"/>
                   <xsd:element name="mean" type="xsd:float"/>
                   <xsd:element name="rate" type="xsd:float"/>
-                  <xsd:element name="time" type="xsd:int"/>
-                  <xsd:element name="usage_trend" type="xsd:string"/>
-                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="time" type="xsd:double"/>
                   <xsd:element name="min_resp_time" type="xsd:int"/>
                   <xsd:element name="max_resp_time" type="xsd:int"/>
-                  <xsd:element name="all_services_usage" type="xsd:int"/>
-                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:long"/>
+                  <xsd:element name="all_services_time" type="xsd:double"/>
                   <xsd:element name="mean_all_services" type="xsd:float"/>
                   <xsd:element name="usage_perc_all_services" type="xsd:float"/>
                   <xsd:element name="time_perc_all_services" type="xsd:float"/>
@@ -2937,16 +2930,14 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="service_name" type="xsd:string"/>
-                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="usage" type="xsd:long"/>
                   <xsd:element name="mean" type="xsd:float"/>
                   <xsd:element name="rate" type="xsd:float"/>
-                  <xsd:element name="time" type="xsd:int"/>
-                  <xsd:element name="usage_trend" type="xsd:string"/>
-                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="time" type="xsd:double"/>
                   <xsd:element name="min_resp_time" type="xsd:int"/>
                   <xsd:element name="max_resp_time" type="xsd:int"/>
-                  <xsd:element name="all_services_usage" type="xsd:int"/>
-                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:long"/>
+                  <xsd:element name="all_services_time" type="xsd:double"/>
                   <xsd:element name="mean_all_services" type="xsd:float"/>
                   <xsd:element name="usage_perc_all_services" type="xsd:float"/>
                   <xsd:element name="time_perc_all_services" type="xsd:float"/>
@@ -2975,16 +2966,14 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="service_name" type="xsd:string"/>
-                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="usage" type="xsd:long"/>
                   <xsd:element name="mean" type="xsd:float"/>
                   <xsd:element name="rate" type="xsd:float"/>
-                  <xsd:element name="time" type="xsd:int"/>
-                  <xsd:element name="usage_trend" type="xsd:string"/>
-                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="time" type="xsd:double"/>
                   <xsd:element name="min_resp_time" type="xsd:int"/>
                   <xsd:element name="max_resp_time" type="xsd:int"/>
-                  <xsd:element name="all_services_usage" type="xsd:int"/>
-                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:long"/>
+                  <xsd:element name="all_services_time" type="xsd:double"/>
                   <xsd:element name="mean_all_services" type="xsd:float"/>
                   <xsd:element name="usage_perc_all_services" type="xsd:float"/>
                   <xsd:element name="time_perc_all_services" type="xsd:float"/>
@@ -3012,16 +3001,14 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="service_name" type="xsd:string"/>
-                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="usage" type="xsd:long"/>
                   <xsd:element name="mean" type="xsd:float"/>
                   <xsd:element name="rate" type="xsd:float"/>
-                  <xsd:element name="time" type="xsd:int"/>
-                  <xsd:element name="usage_trend" type="xsd:string"/>
-                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="time" type="xsd:double"/>
                   <xsd:element name="min_resp_time" type="xsd:int"/>
                   <xsd:element name="max_resp_time" type="xsd:int"/>
-                  <xsd:element name="all_services_usage" type="xsd:int"/>
-                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:long"/>
+                  <xsd:element name="all_services_time" type="xsd:double"/>
                   <xsd:element name="mean_all_services" type="xsd:float"/>
                   <xsd:element name="usage_perc_all_services" type="xsd:float"/>
                   <xsd:element name="time_perc_all_services" type="xsd:float"/>
@@ -3049,16 +3036,14 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="service_name" type="xsd:string"/>
-                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="usage" type="xsd:long"/>
                   <xsd:element name="mean" type="xsd:float"/>
                   <xsd:element name="rate" type="xsd:float"/>
-                  <xsd:element name="time" type="xsd:int"/>
-                  <xsd:element name="usage_trend" type="xsd:string"/>
-                  <xsd:element name="mean_trend" type="xsd:string"/>
+                  <xsd:element name="time" type="xsd:double"/>
                   <xsd:element name="min_resp_time" type="xsd:int"/>
                   <xsd:element name="max_resp_time" type="xsd:int"/>
-                  <xsd:element name="all_services_usage" type="xsd:int"/>
-                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:long"/>
+                  <xsd:element name="all_services_time" type="xsd:double"/>
                   <xsd:element name="mean_all_services" type="xsd:float"/>
                   <xsd:element name="usage_perc_all_services" type="xsd:float"/>
                   <xsd:element name="time_perc_all_services" type="xsd:float"/>
@@ -3087,16 +3072,16 @@ targetNamespace="http://gefira.pl/zato"
               <xsd:complexType>
                 <xsd:sequence>
                   <xsd:element name="service_name" type="xsd:string"/>
-                  <xsd:element name="usage" type="xsd:int"/>
+                  <xsd:element name="usage" type="xsd:long"/>
                   <xsd:element name="mean" type="xsd:float"/>
                   <xsd:element name="rate" type="xsd:float"/>
-                  <xsd:element name="time" type="xsd:int"/>
+                  <xsd:element name="time" type="xsd:double"/>
                   <xsd:element name="usage_trend" type="xsd:string"/>
                   <xsd:element name="mean_trend" type="xsd:string"/>
                   <xsd:element name="min_resp_time" type="xsd:int"/>
                   <xsd:element name="max_resp_time" type="xsd:int"/>
-                  <xsd:element name="all_services_usage" type="xsd:int"/>
-                  <xsd:element name="all_services_time" type="xsd:int"/>
+                  <xsd:element name="all_services_usage" type="xsd:long"/>
+                  <xsd:element name="all_services_time" type="xsd:double"/>
                   <xsd:element name="mean_all_services" type="xsd:float"/>
                   <xsd:element name="usage_perc_all_services" type="xsd:float"/>
                   <xsd:element name="time_perc_all_services" type="xsd:float"/>
