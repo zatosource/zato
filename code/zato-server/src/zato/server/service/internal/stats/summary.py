@@ -31,7 +31,7 @@ from bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta, MO
+from dateutil.relativedelta import relativedelta, MO, SU
 from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, YEARLY
 
 # paodate
@@ -42,7 +42,7 @@ from scipy import stats as sp_stats
 
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
-from zato.server.service import UTC
+from zato.server.service import Integer, UTC
 from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
@@ -236,7 +236,7 @@ class GetSummaryBase(StatsReturningService):
     """ A base class for returning the summary of statistics for a given period.
     """
     class SimpleIO(StatsReturningService.SimpleIO):
-        input_required = (UTC('start'), 'n', 'n_type')
+        input_required = (UTC('start'), Integer('n'), 'n_type')
         
     stats_key_prefix = None
     

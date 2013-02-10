@@ -1,39 +1,51 @@
-zato.service.set-wsdl
-=====================
+zato.stats.get-summary-by-day
+=============================
 
 Overview
 --------
 
-Attaches a WSDL document to a service.
+Returns a list of summaries of statistics across all services for a given day.
 
-.. note::
+The list will be sorted by the field n_type has a value of.
 
-  Zato doesn't actually check whether the uploaded data is a proper WSDL,
-  any BASE64-encoded document will be accepted.
 
-* List response: No
-* SOAP action: zato.service.set-wsdl
+* List response: Yes
+* SOAP action: zato.stats.get-summary-by-day
 * SOAP URL path: /zato/soap
-* JSON URL path: /zato/json/zato.service.set-wsdl
+* JSON URL path: /zato/json/zato.stats.get-summary-by-day
 * WSDL: :download:`Click here</public-api/zato.wsdl>`
 
 Request parameters
 ------------------
 
-========== ======== ======== =======================================
-Name       Datatype Optional Notes
-========== ======== ======== =======================================
-cluster_id int      ---      Cluster the service is deployed in
-name       string   ---      Name of the service to upload a WSDL to
-wsdl       string   ---      WSDL contents, BASE64-encoded
-wsdl_name  string   ---      WSDL file name
-========== ======== ======== =======================================
+====== ======== ======== ====================================================================================
+Name   Datatype Optional Notes
+====== ======== ======== ====================================================================================
+start  date     ---      A day to return statistics for
+n      int      ---      Same as for :doc:`zato.stats.get-summary-by-range <zato.stats.get-summary-by-range>`
+n_type int      ---      〃
+====== ======== ======== ====================================================================================
             
 
 Response parameters
 -------------------
 
-(None)
+======================= ======== ======== ====================================================================================
+Name                    Datatype Optional Notes
+======================= ======== ======== ====================================================================================
+service_name            string   ---      Same as for :doc:`zato.stats.get-summary-by-range <zato.stats.get-summary-by-range>`
+usage                   int      ---      〃
+rate                    float    ---      〃
+time                    float    ---      〃
+min_resp_time           float    ---      〃
+max_resp_time           float    ---      〃
+all_services_usage      int      ---      〃
+all_services_time       int      ---      〃
+mean_all_services       float    ---      〃
+usage_perc_all_services float    ---      〃
+time_perc_all_services  float    ---      〃
+======================= ======== ======== ====================================================================================
+
 
 SOAP example
 ------------
@@ -44,61 +56,141 @@ SOAP example
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Header/>
       <soapenv:Body>
-         <zato:zato_service_set_wsdl_request>
-            <zato:cluster_id>1</zato:cluster_id>
-            <zato:name>myservice1.HelloWorld</zato:name>
-            <zato:wsdl>PD94bWwgdmVyc2lvbj0iMS4wIj8+CjxkZWZpbml0aW9ucyBuYW1lPSJTdG9ja1F1b3RlIgoKdGFy
- Z2V0TmFtZXNwYWNlPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90ZS9kZWZpbml0aW9ucyIK
- ICAgICAgICAgIHhtbG5zOnRucz0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2NrcXVvdGUvZGVmaW5p
- dGlvbnMiCiAgICAgICAgICB4bWxuczp4c2QxPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90
- ZS9zY2hlbWFzIgogICAgICAgICAgeG1sbnM6c29hcD0iaHR0cDovL3NjaGVtYXMueG1sc29hcC5v
- cmcvd3NkbC9zb2FwLyIKICAgICAgICAgIHhtbG5zPSJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9y
- Zy93c2RsLyI+CgogICA8aW1wb3J0IG5hbWVzcGFjZT0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2Nr
- cXVvdGUvc2NoZW1hcyIKICAgICAgICAgICBsb2NhdGlvbj0iaHR0cDovL2V4YW1wbGUuY29tL3N0
- b2NrcXVvdGUvc3RvY2txdW90ZS54c2QiLz4KCiAgICA8bWVzc2FnZSBuYW1lPSJHZXRMYXN0VHJh
- ZGVQcmljZUlucHV0Ij4KICAgICAgICA8cGFydCBuYW1lPSJib2R5IiBlbGVtZW50PSJ4c2QxOlRy
- YWRlUHJpY2VSZXF1ZXN0Ii8+CiAgICA8L21lc3NhZ2U+CgogICAgPG1lc3NhZ2UgbmFtZT0iR2V0
- TGFzdFRyYWRlUHJpY2VPdXRwdXQiPgogICAgICAgIDxwYXJ0IG5hbWU9ImJvZHkiIGVsZW1lbnQ9
- InhzZDE6VHJhZGVQcmljZSIvPgogICAgPC9tZXNzYWdlPgoKICAgIDxwb3J0VHlwZSBuYW1lPSJT
- dG9ja1F1b3RlUG9ydFR5cGUiPgogICAgICAgIDxvcGVyYXRpb24gbmFtZT0iR2V0TGFzdFRyYWRl
- UHJpY2UiPgogICAgICAgICAgIDxpbnB1dCBtZXNzYWdlPSJ0bnM6R2V0TGFzdFRyYWRlUHJpY2VJ
- bnB1dCIvPgogICAgICAgICAgIDxvdXRwdXQgbWVzc2FnZT0idG5zOkdldExhc3RUcmFkZVByaWNl
- T3V0cHV0Ii8+CiAgICAgICAgPC9vcGVyYXRpb24+CiAgICA8L3BvcnRUeXBlPgo8L2RlZmluaXRp
- b25zPg==</zato:wsdl>
-        <zato:wsdl_name>helloworld.wsdl</zato:wsdl_name>
-         </zato:zato_service_set_wsdl_request>
+         <zato:zato_stats_get_summary_by_day_request>
+            <zato:start>2013-02-10</zato:start>
+            <zato:n>3</zato:n>
+            <zato:n_type>usage</zato:n_type>
+         </zato:zato_stats_get_summary_by_day_request>
       </soapenv:Body>
    </soapenv:Envelope>
       
-   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-         xmlns="http://gefira.pl/zato">
-      <soap:Body>
-            </zato_service_set_wsdl_response xmlns="http://gefira.pl/zato">
-               <zato_env>
-                  <cid>K10888089663837295444048501529</cid>
-                  <result>ZATO_OK</result>
-               </zato_env>
-            <//zato_service_set_wsdl_response>
-      </soap:Body>
-   </soap:Envelope>  
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns="http://gefira.pl/zato">
+  <soap:Body>
+      <zato_stats_get_summary_by_day_response xmlns="http://gefira.pl/zato">
+      <zato_env>
+          <cid>K22412700051452388839362966517</cid>
+          <result>ZATO_OK</result>
+      </zato_env>
+      <item_list>
+          <item>
+            <service_name>zato.server.ClusterWideSingletonKeepAlive</service_name>
+            <usage>244</usage>
+            <mean>35.0</mean>
+            <rate>0.0</rate>
+            <time>8718.12</time>
+            <usage_trend/>
+            <mean_trend/>
+            <min_resp_time>23.0</min_resp_time>
+            <max_resp_time>111.0</max_resp_time>
+            <all_services_usage>569</all_services_usage>
+            <all_services_time>32349</all_services_time>
+            <mean_all_services>123</mean_all_services>
+            <usage_perc_all_services>42.88</usage_perc_all_services>
+            <time_perc_all_services>26.95</time_perc_all_services>
+          </item>
+          <item>
+            <service_name>zato.stats.AggregateByMinute</service_name>
+            <usage>124</usage>
+            <mean>13.0</mean>
+            <rate>0.0</rate>
+            <time>1681.44</time>
+            <usage_trend/>
+            <mean_trend/>
+            <min_resp_time>3.0</min_resp_time>
+            <max_resp_time>32.0</max_resp_time>
+            <all_services_usage>569</all_services_usage>
+            <all_services_time>32349</all_services_time>
+            <mean_all_services>123</mean_all_services>
+            <usage_perc_all_services>21.79</usage_perc_all_services>
+            <time_perc_all_services>5.2</time_perc_all_services>
+          </item>
+          <item>
+            <service_name>zato.stats.ProcessRawTimes</service_name>
+            <usage>81</usage>
+            <mean>18.0</mean>
+            <rate>0.0</rate>
+            <time>1523.61</time>
+            <usage_trend/>
+            <mean_trend/>
+            <min_resp_time>7.0</min_resp_time>
+            <max_resp_time>463.0</max_resp_time>
+            <all_services_usage>569</all_services_usage>
+            <all_services_time>32349</all_services_time>
+            <mean_all_services>123</mean_all_services>
+            <usage_perc_all_services>14.24</usage_perc_all_services>
+            <time_perc_all_services>4.71</time_perc_all_services>
+          </item>
+      </item_list>
+  </zato_stats_get_summary_by_day_response>
+  </soap:Body>
+  </soap:Envelope>
 
 JSON example
 ------------
 
 .. code-block:: javascript
 
-   {
-      "cluster_id": 1,
-      "name": "myservice1.HelloWorld",
-      "wsdl": "PD94bWwgdmVyc2lvbj0iMS4wIj8+CjxkZWZpbml0aW9ucyBuYW1lPSJTdG9ja1F1b3RlIgoKdGFy\nZ2V0TmFtZXNwYWNlPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90ZS9kZWZpbml0aW9ucyIK\nICAgICAgICAgIHhtbG5zOnRucz0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2NrcXVvdGUvZGVmaW5p\ndGlvbnMiCiAgICAgICAgICB4bWxuczp4c2QxPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90\nZS9zY2hlbWFzIgogICAgICAgICAgeG1sbnM6c29hcD0iaHR0cDovL3NjaGVtYXMueG1sc29hcC5v\ncmcvd3NkbC9zb2FwLyIKICAgICAgICAgIHhtbG5zPSJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9y\nZy93c2RsLyI+CgogICA8aW1wb3J0IG5hbWVzcGFjZT0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2Nr\ncXVvdGUvc2NoZW1hcyIKICAgICAgICAgICBsb2NhdGlvbj0iaHR0cDovL2V4YW1wbGUuY29tL3N0\nb2NrcXVvdGUvc3RvY2txdW90ZS54c2QiLz4KCiAgICA8bWVzc2FnZSBuYW1lPSJHZXRMYXN0VHJh\nZGVQcmljZUlucHV0Ij4KICAgICAgICA8cGFydCBuYW1lPSJib2R5IiBlbGVtZW50PSJ4c2QxOlRy\nYWRlUHJpY2VSZXF1ZXN0Ii8+CiAgICA8L21lc3NhZ2U+CgogICAgPG1lc3NhZ2UgbmFtZT0iR2V0\nTGFzdFRyYWRlUHJpY2VPdXRwdXQiPgogICAgICAgIDxwYXJ0IG5hbWU9ImJvZHkiIGVsZW1lbnQ9\nInhzZDE6VHJhZGVQcmljZSIvPgogICAgPC9tZXNzYWdlPgoKICAgIDxwb3J0VHlwZSBuYW1lPSJT\ndG9ja1F1b3RlUG9ydFR5cGUiPgogICAgICAgIDxvcGVyYXRpb24gbmFtZT0iR2V0TGFzdFRyYWRl\nUHJpY2UiPgogICAgICAgICAgIDxpbnB1dCBtZXNzYWdlPSJ0bnM6R2V0TGFzdFRyYWRlUHJpY2VJ\nbnB1dCIvPgogICAgICAgICAgIDxvdXRwdXQgbWVzc2FnZT0idG5zOkdldExhc3RUcmFkZVByaWNl\nT3V0cHV0Ii8+CiAgICAgICAgPC9vcGVyYXRpb24+CiAgICA8L3BvcnRUeXBlPgo8L2RlZmluaXRp\nb25zPg==",
-      "wsdl_name": "helloworld.wsdl"
-   }
+  {
+     "start": "2013-02-10",
+     "n": 3,
+     "n_type": "usage"
+  }
 
-   {
-     "zato_env": {
-       "details": "",
-       "result": "ZATO_OK",
-       "cid": "K49345675816963024012323928084"
-     }
-   }
-
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K61396611378672214426317313408"
+    },
+    "zato_stats_get_summary_by_day_response": [
+      {
+        "usage_perc_all_services": 43.54,
+        "all_services_time": 37544,
+        "time_perc_all_services": 28.03,
+        "mean_trend": "",
+        "min_resp_time": 20,
+        "service_name": "zato.server.ClusterWideSingletonKeepAlive",
+        "max_resp_time": 340,
+        "rate": 0,
+        "mean_all_services": "117",
+        "all_services_usage": 666,
+        "time": 10524.1,
+        "usage": 290,
+        "usage_trend": "",
+        "mean": 36
+      },
+      {
+        "usage_perc_all_services": 22.22,
+        "all_services_time": 37544,
+        "time_perc_all_services": 5.17,
+        "mean_trend": "",
+        "min_resp_time": 3,
+        "service_name": "zato.stats.AggregateByMinute",
+        "max_resp_time": 32,
+        "rate": 0,
+        "mean_all_services": "117",
+        "all_services_usage": 666,
+        "time": 1940.28,
+        "usage": 148,
+        "usage_trend": "",
+        "mean": 13
+      },
+      {
+        "usage_perc_all_services": 14.71,
+        "all_services_time": 37544,
+        "time_perc_all_services": 4.84,
+        "mean_trend": "",
+        "min_resp_time": 7,
+        "service_name": "zato.stats.ProcessRawTimes",
+        "max_resp_time": 463,
+        "rate": 0,
+        "mean_all_services": "117",
+        "all_services_usage": 666,
+        "time": 1818.88,
+        "usage": 98,
+        "usage_trend": "",
+        "mean": 18
+      }
+    ]
+  }
