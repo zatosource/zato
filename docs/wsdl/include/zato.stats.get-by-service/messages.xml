@@ -4,8 +4,6 @@
             <xsd:element name="start" type="xsd:dateTime"/>
             <xsd:element name="stop" type="xsd:dateTime"/>
             <xsd:element name="service_id" type="xsd:int"/>
-            <xsd:element name="n" type="xsd:int" minOccurs="0"/>
-            <xsd:element name="n_type" type="xsd:string" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
