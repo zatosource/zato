@@ -4,7 +4,9 @@ zato.stats.get-summary-by-range
 Overview
 --------
 
-Returns a list of summaries of statistics across all services for an arbitrary time interval.
+Returns a list of summaries of statistics across all services for an arbitrary time interval
+with the exception that start and stop must be at least 3 minutes apart.
+
 The list will be sorted by the field n_type has a value of.
 
 
@@ -34,15 +36,13 @@ n_type int      ---      Can be either:
 Response parameters
 -------------------
 
-======================= ======== ======== =========================================================================================
+======================= ======== ======== =======================================================================
 Name                    Datatype Optional Notes
-======================= ======== ======== =========================================================================================
+======================= ======== ======== =======================================================================
 service_name            string   ---      Name of the service the statistics are of
 usage                   int      ---      How many times the service was invoked
 rate                    float    ---      How often, in request a second, the service was being invoked
 time                    float    ---      How much time, in milliseconds, all invocations of the service took
-usage_trend             string   ---      CSV data. For each minute between start and stop, how many times the service was invoked.
-mean_trend              string   ---      CSV data. For each minute between start and stop, what the mean response time was.
 min_resp_time           float    ---      Mimimum response time, in milliseconds
 max_resp_time           float    ---      Maximum response time, in milliseconds
 all_services_usage      int      ---      How many times all the services were invoked
@@ -50,7 +50,7 @@ all_services_time       int      ---      Time, in milliseconds, spent in all th
 mean_all_services       float    ---      A mean response time over all the services
 usage_perc_all_services float    ---      Usage of this service as a percentage of usage across all the services
 time_perc_all_services  float    ---      Usage of this service as a percentage of time spent by all the services
-======================= ======== ======== =========================================================================================
+======================= ======== ======== =======================================================================
 
 
 SOAP example
@@ -142,43 +142,11 @@ JSON example
      "start": "2013-02-10T12:10:00",
      "stop": "2013-02-10T12:35:00",
      "n": 3,
-     "n_type": "mean"
+     "n_type": "usage"
   }
 
   {
     "zato_stats_get_summary_by_range_response": [
-      {
-        "usage_perc_all_services": 1.57,
-        "all_services_time": 9313,
-        "time_perc_all_services": 18.25,
-        "mean_trend": "",
-        "min_resp_time": 804,
-        "service_name": "zato.stats.summary.CreateSummaryByWeek",
-        "max_resp_time": 896,
-        "rate": 0,
-        "mean_all_services": 15.945714285714,
-        "all_services_usage": 127,
-        "time": 1700,
-        "usage": 2,
-        "usage_trend": "",
-        "mean": 68
-      },
-      {
-        "usage_perc_all_services": 1.57,
-        "all_services_time": 9313,
-        "time_perc_all_services": 10.48,
-        "mean_trend": "",
-        "min_resp_time": 482,
-        "service_name": "zato.stats.summary.CreateSummaryByDay",
-        "max_resp_time": 494,
-        "rate": 0,
-        "mean_all_services": 15.945714285714,
-        "all_services_usage": 127,
-        "time": 976,
-        "usage": 2,
-        "usage_trend": "",
-        "mean": 39
-      },
       {
         "usage_perc_all_services": 34.65,
         "all_services_time": 9313,
@@ -194,11 +162,43 @@ JSON example
         "usage": 44,
         "usage_trend": "",
         "mean": 34
+      },
+      {
+        "usage_perc_all_services": 16.54,
+        "all_services_time": 9313,
+        "time_perc_all_services": 3.82,
+        "mean_trend": "",
+        "min_resp_time": 7,
+        "service_name": "zato.stats.AggregateByMinute",
+        "max_resp_time": 77,
+        "rate": 0,
+        "mean_all_services": 15.945714285714,
+        "all_services_usage": 127,
+        "time": 356,
+        "usage": 21,
+        "usage_trend": "",
+        "mean": 14
+      },
+      {
+        "usage_perc_all_services": 12.6,
+        "all_services_time": 9313,
+        "time_perc_all_services": 32.43,
+        "mean_trend": "",
+        "min_resp_time": 54,
+        "service_name": "zato.stats.GetByService",
+        "max_resp_time": 252,
+        "rate": 0,
+        "mean_all_services": 15.945714285714,
+        "all_services_usage": 127,
+        "time": 3020,
+        "usage": 16,
+        "usage_trend": "",
+        "mean": 28
       }
     ],
     "zato_env": {
       "details": "",
       "result": "ZATO_OK",
-      "cid": "K20849346314143995228294916644"
+      "cid": "K50143680038903041156802775060"
     }
   }
