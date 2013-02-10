@@ -39,7 +39,7 @@ rate                    float    ---      〃
 time                    double   ---      〃
 min_resp_time           float    ---      〃
 max_resp_time           float    ---      〃
-all_services_usage      long      ---      〃
+all_services_usage      long     ---      〃
 all_services_time       double   ---      〃
 mean_all_services       float    ---      〃
 usage_perc_all_services float    ---      〃
