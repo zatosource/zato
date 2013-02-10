@@ -5,7 +5,7 @@ Overview
 --------
 
 Allows one to create an HTTP Basic Auth definition. Its default password will
-be a randomly generated UUID4, use :doc:`zato.security.tech-account.ChangePassword<./zato.security.tech-account.change-password>`
+be a randomly generated UUID4, use :doc:`zato.security.tech-account.change-password<./zato.security.tech-account.change-password>`
 to change it.
 
 * List response: No

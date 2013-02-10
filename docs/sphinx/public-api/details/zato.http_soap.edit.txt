@@ -7,7 +7,7 @@ Overview
 Updates an already existing plain HTTP or SOAP object, which can be either channel or an outgoing
 connection, depending on the value of the 'connection' parameter.
 
-Visit the :doc:`zato.http_soap.Create <zato.http_soap.create>`'s documentation
+Visit the :doc:`zato.http_soap.create <zato.http_soap.create>`'s documentation
 for a discussion of the service's request parameters.
 
 * List response: No
@@ -27,7 +27,7 @@ id           int      ---      Object ID
 cluster_id   int      ---      ID of the cluster this object is defined on
 name         string   ---      Name of the object to update
 is_active    boolean  ---      Whether the object should be active, if it can be used
-connection   string   ---      Same as for :doc:`zato.http_soap.Create <zato.http_soap.create>`
+connection   string   ---      Same as for :doc:`zato.http_soap.create <zato.http_soap.create>`
 transport    string   ---      〃
 is_internal  boolean  ---      〃
 url_path     string   ---      〃

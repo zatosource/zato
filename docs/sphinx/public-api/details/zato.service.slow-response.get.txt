@@ -54,7 +54,7 @@ SOAP example
       <soapenv:Body>
          <zato:zato_service_slow_response_get_request>
             <zato:cid>K44459917338408357324042445244</zato:cid>
-            <zato:name>zato.Ping</zato:name>
+            <zato:name>zato.ping</zato:name>
          </zato:zato_service_slow_response_get_request>
       </soapenv:Body>
    </soapenv:Envelope>
@@ -90,7 +90,7 @@ JSON example
 
    {
       "cid": "K44459917338408357324042445244",
-      "name": "zato.Ping"
+      "name": "zato.ping"
    }
 
    {

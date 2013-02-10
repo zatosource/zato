@@ -62,9 +62,9 @@ SOAP example
       <item_list>
           <item>
             <id>90</id>
-            <name>zato.channel.zmq.Edit</name>
+            <name>zato.channel.zmq.edit</name>
             <is_active>true</is_active>
-            <impl_name>zato.server.service.internal.channel.zmq.Edit</impl_name>
+            <impl_name>zato.server.service.internal.channel.zmq.edit</impl_name>
             <is_internal>true</is_internal>
             <may_be_deleted>false</may_be_deleted>
             <usage>5</usage>
@@ -72,9 +72,9 @@ SOAP example
           </item>
           <item>
             <id>91</id>
-            <name>zato.channel.zmq.GetList</name>
+            <name>zato.channel.zmq.get-list</name>
             <is_active>true</is_active>
-            <impl_name>zato.server.service.internal.channel.zmq.GetList</impl_name>
+            <impl_name>zato.server.service.internal.channel.zmq.get-list</impl_name>
             <is_internal>true</is_internal>
             <may_be_deleted>false</may_be_deleted>
             <usage>3</usage>
@@ -82,9 +82,9 @@ SOAP example
           </item>
           <item>
             <id>40</id>
-            <name>zato.definition.amqp.ChangePassword</name>
+            <name>zato.definition.amqp.change-password</name>
             <is_active>true</is_active>
-            <impl_name>zato.server.service.internal.definition.amqp.ChangePassword</impl_name>
+            <impl_name>zato.server.service.internal.definition.amqp.change-password</impl_name>
             <is_internal>true</is_internal>
             <may_be_deleted>false</may_be_deleted>
             <usage>4</usage>
@@ -113,8 +113,8 @@ JSON example
     },
     "zato_service_get_list_response": [
       {
-        "impl_name": "zato.server.service.internal.stats.summary.GetSummaryByWeek",
-        "name": "zato.stats.summary.GetSummaryByWeek",
+        "impl_name": "zato.server.service.internal.stats.summary.get-summary-by-week",
+        "name": "zato.stats.summary.get-summary-by-week",
         "may_be_deleted": false,
         "is_internal": true,
         "is_active": true,
@@ -123,8 +123,8 @@ JSON example
         "id": 4
       },
       {
-        "impl_name": "zato.server.service.internal.stats.summary.GetSummaryByYear",
-        "name": "zato.stats.summary.GetSummaryByYear",
+        "impl_name": "zato.server.service.internal.stats.summary.get-summary-by-year",
+        "name": "zato.stats.summary.get-summary-by-year",
         "may_be_deleted": false,
         "is_internal": true,
         "is_active": true,
@@ -133,8 +133,8 @@ JSON example
         "id": 96
       },
       {
-        "impl_name": "zato.server.service.internal.stats.trends.GetTrends",
-        "name": "zato.stats.trends.GetTrends",
+        "impl_name": "zato.server.service.internal.stats.trends.get-trends",
+        "name": "zato.stats.trends.get-trends",
         "may_be_deleted": false,
         "is_internal": true,
         "is_active": true,

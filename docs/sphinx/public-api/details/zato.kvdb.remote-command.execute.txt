@@ -108,7 +108,7 @@ JSON example
 .. code-block:: javascript
 
    {
-     "command": "HGETALL zato:stats:service:summary:by-day:zato.Ping:2013:01:16"
+     "command": "HGETALL zato:stats:service:summary:by-day:zato.ping:2013:01:16"
    }
    
   {

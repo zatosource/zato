@@ -5,7 +5,7 @@ Overview
 --------
 
 Returns the value of the most recently assigned KVDB translation ID, that is,
-the value that the last invocation of :doc:`zato.kvdb.data-dict.translation.Create <./zato.kvdb.data-dict.translation.create>`
+the value that the last invocation of :doc:`zato.kvdb.data-dict.translation.create <./zato.kvdb.data-dict.translation.create>`
 returned.
 
   * List response: No

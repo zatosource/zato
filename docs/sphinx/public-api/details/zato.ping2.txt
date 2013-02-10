@@ -7,7 +7,7 @@ Overview
 A ping service which always returns a constant string. Useful for testing
 clients against Zato clusters. 
 
-This is a companion of the :doc:`zato.Ping <zato.ping>` service.
+This is a companion of the :doc:`zato.ping <zato.ping>` service.
 
   * List response: No
   * SOAP action: zato.ping2

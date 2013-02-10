@@ -80,7 +80,7 @@ SOAP example
       </zato_env>
       <item_list>
           <item>
-            <service_name>zato.server.ClusterWideSingletonKeepAlive</service_name>
+            <service_name>zato.server.cluster-wide-singleton-keep-alive</service_name>
             <usage>44</usage>
             <mean>34.0</mean>
             <rate>0.0</rate>
@@ -96,7 +96,7 @@ SOAP example
             <time_perc_all_services>17.4</time_perc_all_services>
           </item>
           <item>
-            <service_name>zato.stats.AggregateByMinute</service_name>
+            <service_name>zato.stats.aggregate-by-minute</service_name>
             <usage>21</usage>
             <mean>14.0</mean>
             <rate>0.0</rate>
@@ -112,7 +112,7 @@ SOAP example
             <time_perc_all_services>3.82</time_perc_all_services>
           </item>
           <item>
-            <service_name>zato.stats.GetByService</service_name>
+            <service_name>zato.stats.get-by-service</service_name>
             <usage>16</usage>
             <mean>28.0</mean>
             <rate>0.0</rate>
@@ -152,7 +152,7 @@ JSON example
         "time_perc_all_services": 17.4,
         "mean_trend": "",
         "min_resp_time": 27,
-        "service_name": "zato.server.ClusterWideSingletonKeepAlive",
+        "service_name": "zato.server.cluster-wide-singleton-keep-alive",
         "max_resp_time": 155,
         "rate": 0,
         "mean_all_services": 15.945714285714,
@@ -168,7 +168,7 @@ JSON example
         "time_perc_all_services": 3.82,
         "mean_trend": "",
         "min_resp_time": 7,
-        "service_name": "zato.stats.AggregateByMinute",
+        "service_name": "zato.stats.aggregate-by-minute",
         "max_resp_time": 77,
         "rate": 0,
         "mean_all_services": 15.945714285714,
@@ -184,7 +184,7 @@ JSON example
         "time_perc_all_services": 32.43,
         "mean_trend": "",
         "min_resp_time": 54,
-        "service_name": "zato.stats.GetByService",
+        "service_name": "zato.stats.get-by-service",
         "max_resp_time": 252,
         "rate": 0,
         "mean_all_services": 15.945714285714,

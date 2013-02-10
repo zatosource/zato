@@ -50,7 +50,7 @@ SOAP example
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Body>
          <zato:zato_service_slow_response_get_list_request>
-            <zato:name>zato.Ping</zato:name>
+            <zato:name>zato.ping</zato:name>
          </zato:zato_service_slow_response_get_list_request>
       </soapenv:Body>
    </soapenv:Envelope>
@@ -86,7 +86,7 @@ JSON example
 .. code-block:: javascript
 
    {
-      "name": "zato.Ping"
+      "name": "zato.ping"
    }
 
    {
