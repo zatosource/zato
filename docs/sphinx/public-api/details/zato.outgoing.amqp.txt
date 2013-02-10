@@ -9,7 +9,7 @@ Services related to the management of AMQP outgoing connections.
 Services
 --------
 
-* :doc:`zato.outgoing.amqp.Create <./zato.outgoing.amqp.create>`
-* :doc:`zato.outgoing.amqp.Delete <./zato.outgoing.amqp.delete>`
-* :doc:`zato.outgoing.amqp.Edit <./zato.outgoing.amqp.edit>`
-* :doc:`zato.outgoing.amqp.GetList <./zato.outgoing.amqp.get-list>`
+* :doc:`zato.outgoing.amqp.create <./zato.outgoing.amqp.create>`
+* :doc:`zato.outgoing.amqp.delete <./zato.outgoing.amqp.delete>`
+* :doc:`zato.outgoing.amqp.edit <./zato.outgoing.amqp.edit>`
+* :doc:`zato.outgoing.amqp.get-list <./zato.outgoing.amqp.get-list>`

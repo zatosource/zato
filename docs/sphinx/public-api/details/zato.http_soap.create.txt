@@ -1,4 +1,4 @@
-zato.http_soap.Create
+zato.http_soap.create
 =====================
 
 Overview

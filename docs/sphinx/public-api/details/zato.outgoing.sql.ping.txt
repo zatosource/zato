@@ -1,4 +1,4 @@
-zato.outgoing.sql.Ping
+zato.outgoing.sql.ping
 ======================
 
 Overview

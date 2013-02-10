@@ -1,5 +1,5 @@
-zato.security.tech-account.GetList
-==================================
+zato.security.tech-account.get-list
+===================================
 
 Overview
 --------

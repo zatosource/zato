@@ -1,4 +1,4 @@
-zato.scheduler.job.Edit
+zato.scheduler.job.edit
 =======================
 
 Overview

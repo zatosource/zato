@@ -1,4 +1,4 @@
-zato.http_soap.Ping
+zato.http_soap.ping
 ===================
 
 Overview

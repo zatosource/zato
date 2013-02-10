@@ -1,4 +1,4 @@
-zato.kvdb.data-dict.translation.Create
+zato.kvdb.data-dict.translation.create
 ======================================
 
 Overview

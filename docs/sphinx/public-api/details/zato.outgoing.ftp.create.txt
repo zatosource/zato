@@ -1,4 +1,4 @@
-zato.outgoing.ftp.Create
+zato.outgoing.ftp.create
 ========================
 
 Overview

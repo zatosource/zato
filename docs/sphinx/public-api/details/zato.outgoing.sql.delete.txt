@@ -1,4 +1,4 @@
-zato.outgoing.sql.Delete
+zato.outgoing.sql.delete
 ========================
 
 Overview

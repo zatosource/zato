@@ -1,4 +1,4 @@
-zato.http_soap.Edit
+zato.http_soap.edit
 ===================
 
 Overview

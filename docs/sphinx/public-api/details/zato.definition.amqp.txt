@@ -11,9 +11,9 @@ port and so on.
 Services
 --------
 
-* :doc:`zato.definition.amqp.ChangePassword <./zato.definition.amqp.change-password>`
-* :doc:`zato.definition.amqp.Create <./zato.definition.amqp.create>`
-* :doc:`zato.definition.amqp.Delete <./zato.definition.amqp.delete>`
-* :doc:`zato.definition.amqp.Edit <./zato.definition.amqp.edit>`
-* :doc:`zato.definition.amqp.GetByID <./zato.definition.amqp.get-by-id>`
-* :doc:`zato.definition.amqp.GetList <./zato.definition.amqp.get-list>`
+* :doc:`zato.definition.amqp.change-password <./zato.definition.amqp.change-password>`
+* :doc:`zato.definition.amqp.create <./zato.definition.amqp.create>`
+* :doc:`zato.definition.amqp.delete <./zato.definition.amqp.delete>`
+* :doc:`zato.definition.amqp.edit <./zato.definition.amqp.edit>`
+* :doc:`zato.definition.amqp.get-by-id <./zato.definition.amqp.get-by-id>`
+* :doc:`zato.definition.amqp.get-list <./zato.definition.amqp.get-list>`

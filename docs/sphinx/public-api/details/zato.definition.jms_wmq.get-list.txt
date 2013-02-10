@@ -1,5 +1,5 @@
-zato.definition.jms_wmq.GetList
-===============================
+zato.definition.jms_wmq.get-list
+================================
 
 Overview
 --------

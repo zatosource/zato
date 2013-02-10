@@ -1,5 +1,5 @@
-zato.security.wss.Edit
-=============================
+zato.security.wss.edit
+======================
 
 Overview
 --------

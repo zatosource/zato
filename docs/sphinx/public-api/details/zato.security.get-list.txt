@@ -1,5 +1,5 @@
-zato.security.GetList
-==========================
+zato.security.get-list
+======================
 
 Overview
 --------

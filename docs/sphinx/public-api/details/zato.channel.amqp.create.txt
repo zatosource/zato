@@ -1,4 +1,4 @@
-zato.channel.amqp.Create
+zato.channel.amqp.create
 ========================
 
 Overview

@@ -1,4 +1,4 @@
-zato.kvdb.data-dict.dictionary.Delete
+zato.kvdb.data-dict.dictionary.delete
 =====================================
 
 Overview

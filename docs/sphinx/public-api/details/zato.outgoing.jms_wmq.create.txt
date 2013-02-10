@@ -1,4 +1,4 @@
-zato.outgoing.jms_wmq.Create
+zato.outgoing.jms_wmq.create
 ============================
 
 Overview

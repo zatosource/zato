@@ -9,8 +9,8 @@ Services related to the management of HTTP Basic Auth security definitions.
 Services
 --------
 
-* :doc:`zato.security.basic-auth.ChangePassword <./zato.security.basic-auth.change-password>`
-* :doc:`zato.security.basic-auth.Create <./zato.security.basic-auth.create>`
-* :doc:`zato.security.basic-auth.Delete <./zato.security.basic-auth.delete>`
-* :doc:`zato.security.basic-auth.Edit <./zato.security.basic-auth.edit>`
-* :doc:`zato.security.basic-auth.GetList <./zato.security.basic-auth.get-list>`
+* :doc:`zato.security.basic-auth.change-password <./zato.security.basic-auth.change-password>`
+* :doc:`zato.security.basic-auth.create <./zato.security.basic-auth.create>`
+* :doc:`zato.security.basic-auth.delete <./zato.security.basic-auth.delete>`
+* :doc:`zato.security.basic-auth.edit <./zato.security.basic-auth.edit>`
+* :doc:`zato.security.basic-auth.get-list <./zato.security.basic-auth.get-list>`

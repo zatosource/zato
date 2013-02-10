@@ -1,5 +1,5 @@
-zato.scheduler.job.GetByName
-============================
+zato.scheduler.job.get-by-name
+==============================
 
 Overview
 --------

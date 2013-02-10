@@ -1,5 +1,5 @@
-zato.security.wss.Create
-===============================
+zato.security.wss.create
+========================
 
 Overview
 --------

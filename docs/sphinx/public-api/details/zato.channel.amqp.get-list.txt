@@ -1,5 +1,5 @@
-zato.channel.amqp.GetList
-=========================
+zato.channel.amqp.get-list
+==========================
 
 Overview
 --------

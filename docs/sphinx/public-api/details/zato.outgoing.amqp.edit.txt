@@ -1,4 +1,4 @@
-zato.outgoing.amqp.Edit
+zato.outgoing.amqp.edit
 =======================
 
 Overview

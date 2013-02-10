@@ -9,9 +9,9 @@ Services related to the management of outgoing SQL connections.
 Services
 --------
 
-* :doc:`zato.outgoing.sql.ChangePassword <./zato.outgoing.sql.change-password>`
-* :doc:`zato.outgoing.sql.Create <./zato.outgoing.sql.create>`
-* :doc:`zato.outgoing.sql.Delete <./zato.outgoing.sql.delete>`
-* :doc:`zato.outgoing.sql.Edit <./zato.outgoing.sql.edit>`
-* :doc:`zato.outgoing.sql.GetList <./zato.outgoing.sql.get-list>`
-* :doc:`zato.outgoing.sql.Ping <./zato.outgoing.sql.ping>`
+* :doc:`zato.outgoing.sql.change-password <./zato.outgoing.sql.change-password>`
+* :doc:`zato.outgoing.sql.create <./zato.outgoing.sql.create>`
+* :doc:`zato.outgoing.sql.delete <./zato.outgoing.sql.delete>`
+* :doc:`zato.outgoing.sql.edit <./zato.outgoing.sql.edit>`
+* :doc:`zato.outgoing.sql.get-list <./zato.outgoing.sql.get-list>`
+* :doc:`zato.outgoing.sql.ping <./zato.outgoing.sql.ping>`

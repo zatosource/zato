@@ -1,5 +1,5 @@
-zato.kvdb.data-dict.translation.GetLastID
-=========================================
+zato.kvdb.data-dict.translation.get-last-id
+===========================================
 
 Overview
 --------

@@ -9,7 +9,7 @@ Services related to the management of JMS WebSphere MQ channels.
 Services
 --------
 
-* :doc:`zato.channel.jms_wmq.Create <./zato.channel.jms_wmq.create>`
-* :doc:`zato.channel.jms_wmq.Delete <./zato.channel.jms_wmq.delete>`
-* :doc:`zato.channel.jms_wmq.Edit <./zato.channel.jms_wmq.edit>`
-* :doc:`zato.channel.jms_wmq.GetList <./zato.channel.jms_wmq.get-list>`
+* :doc:`zato.channel.jms_wmq.create <./zato.channel.jms_wmq.create>`
+* :doc:`zato.channel.jms_wmq.delete <./zato.channel.jms_wmq.delete>`
+* :doc:`zato.channel.jms_wmq.edit <./zato.channel.jms_wmq.edit>`
+* :doc:`zato.channel.jms_wmq.get-list <./zato.channel.jms_wmq.get-list>`

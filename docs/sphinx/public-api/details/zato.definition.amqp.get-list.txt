@@ -1,5 +1,5 @@
-zato.definition.amqp.GetList
-============================
+zato.definition.amqp.get-list
+=============================
 
 Overview
 --------

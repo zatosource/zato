@@ -1,4 +1,4 @@
-zato.definition.jms_wmq.Edit
+zato.definition.jms_wmq.edit
 ============================
 
 Overview

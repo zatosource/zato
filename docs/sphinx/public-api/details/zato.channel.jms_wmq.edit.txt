@@ -1,4 +1,4 @@
-zato.channel.jms_wmq.Edit
+zato.channel.jms_wmq.edit
 =========================
 
 Overview

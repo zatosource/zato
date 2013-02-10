@@ -1,4 +1,4 @@
-zato.security.tech-account.Delete
+zato.security.tech-account.delete
 =================================
 
 Overview

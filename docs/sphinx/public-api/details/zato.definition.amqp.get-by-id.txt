@@ -1,5 +1,5 @@
-zato.definition.amqp.GetByID
-============================
+zato.definition.amqp.get-by-id
+==============================
 
 Overview
 --------

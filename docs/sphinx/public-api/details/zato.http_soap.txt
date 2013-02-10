@@ -10,8 +10,8 @@ channels and outgoing connections.
 Services
 --------
 
-* :doc:`zato.http_soap.Create <./zato.http_soap.create>`
-* :doc:`zato.http_soap.Delete <./zato.http_soap.delete>`
-* :doc:`zato.http_soap.Edit <./zato.http_soap.edit>`
-* :doc:`zato.http_soap.GetList <./zato.http_soap.get-list>`
-* :doc:`zato.http_soap.Ping <./zato.http_soap.ping>`
+* :doc:`zato.http_soap.create <./zato.http_soap.create>`
+* :doc:`zato.http_soap.delete <./zato.http_soap.delete>`
+* :doc:`zato.http_soap.edit <./zato.http_soap.edit>`
+* :doc:`zato.http_soap.get-list <./zato.http_soap.get-list>`
+* :doc:`zato.http_soap.ping <./zato.http_soap.ping>`

@@ -1,4 +1,4 @@
-zato.scheduler.job.Delete
+zato.scheduler.job.delete
 =========================
 
 Overview

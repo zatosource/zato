@@ -1,4 +1,4 @@
-zato.kvdb.remote-command.Execute
+zato.kvdb.remote-command.execute
 ================================
 
 Overview

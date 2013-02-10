@@ -1,4 +1,4 @@
-zato.outgoing.zmq.Edit
+zato.outgoing.zmq.edit
 ======================
 
 Overview

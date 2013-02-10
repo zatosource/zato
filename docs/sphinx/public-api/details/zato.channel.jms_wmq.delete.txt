@@ -1,4 +1,4 @@
-zato.channel.jms_wmq.Delete
+zato.channel.jms_wmq.delete
 ===========================
 
 Overview

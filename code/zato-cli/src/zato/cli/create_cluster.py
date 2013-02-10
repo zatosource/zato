@@ -269,16 +269,13 @@ class Create(ZatoCommand):
         zato_soap_channels = []
         
         for action, impl_name in zato_services.iteritems():
-
-            # Make the actual name shorter so it better fits the screen's real estate
-            service_name = service_name_from_impl(impl_name)
             
-            service = Service(None, service_name, True, impl_name, True, cluster)
+            service = Service(None, action, True, impl_name, True, cluster)
             session.add(service)
             
             # Add the HTTP channel for WSDLs
             if impl_name == 'zato.server.service.internal.service.GetWSDL':
-                http_soap = HTTPSOAP(None, '{}.soap'.format(service_name), True, True, 'channel', 'plain_http', 
+                http_soap = HTTPSOAP(None, '{}.soap'.format(action), True, True, 'channel', 'plain_http', 
                     None, '/zato/wsdl', None, '', None, None, service=service, cluster=cluster)
                 session.add(http_soap)
             
@@ -288,7 +285,7 @@ class Create(ZatoCommand):
             session.add(zato_soap)
             
             json_url_path = '/zato/json/{}'.format(action)            
-            json_http = HTTPSOAP(None, '{}.json'.format(service_name), True, True, 'channel', 'plain_http', 
+            json_http = HTTPSOAP(None, '{}.json'.format(action), True, True, 'channel', 'plain_http', 
                 None, json_url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=None)
             session.add(json_http)
 
@@ -305,7 +302,7 @@ class Create(ZatoCommand):
             passwords[password] = uuid4().hex
 
         ping_impl_name = 'zato.server.service.internal.Ping'
-        ping_service_name = 'zato.Ping'
+        ping_service_name = 'zato.ping'
         ping_service = Service(None, ping_service_name, True, ping_impl_name, True, cluster)
         session.add(ping_service)
         

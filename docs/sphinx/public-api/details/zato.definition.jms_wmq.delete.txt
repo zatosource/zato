@@ -1,4 +1,4 @@
-zato.definition.jms_wmq.Delete
+zato.definition.jms_wmq.delete
 ==============================
 
 Overview
