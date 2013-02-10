@@ -7,6 +7,11 @@ Overview
 Updates an outgoing FTP connection. The connection can be to either a plain FTP
 or to an FTPS (Secure) server.
 
+.. note::
+
+  Use :doc:`zato.outgoing.ftp.change-password<./zato.outgoing.ftp.change-password>`
+  to change its password.
+
   * List response: No
   * SOAP action: zato.outgoing.ftp.edit
   * SOAP URL path: /zato/soap

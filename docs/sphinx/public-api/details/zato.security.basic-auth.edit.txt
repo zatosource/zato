@@ -8,7 +8,7 @@ Updates an already existing HTTP Basic Auth security definition.
 
 .. note::
 
-  Use :doc:`zato.security.basic-auth.ChangePassword<./zato.security.basic-auth.change-password>`
+  Use :doc:`zato.security.basic-auth.change-password<./zato.security.basic-auth.change-password>`
   to change its password.
 
 * List response: No

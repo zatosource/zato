@@ -8,7 +8,7 @@ Updates an already existing technical account.
 
 .. note::
 
-  Use :doc:`zato.security.tech-account.ChangePassword<./zato.security.tech-account.change-password>`
+  Use :doc:`zato.security.tech-account.change-password<./zato.security.tech-account.change-password>`
   to change its password.
 
 * List response: No

@@ -6,6 +6,11 @@ Overview
 
 Updates an outgoing SQL connection.
 
+.. note::
+
+  Use :doc:`zato.outgoing.sql.change-password<./zato.outgoing.sql.change-password>`
+  to change its password.
+
   * List response: No
   * SOAP action: zato.outgoing.sql.edit
   * SOAP URL path: /zato/soap
