@@ -42,14 +42,14 @@ Response parameters
 ============= ======== ======== =========================================================================================
 Name          Datatype Optional Notes
 ============= ======== ======== =========================================================================================
-service_name  string   ---      Name of the service the statistics are of
-usage         int      ---      How many times the service was invoked
-rate          float    ---      How often, in request a second, the service was being invoked
-time          float    ---      How much time, in milliseconds, all invocations of the service took
+service_name  string   ---      Same as for :doc:`zato.stats.get-summary-by-range <zato.stats.get-summary-by-range>`
+usage         long     ---      〃
+rate          float    ---      〃
+time          double   ---      〃
 usage_trend   string   ---      CSV data. For each minute between start and stop, how many times the service was invoked.
 mean_trend    string   ---      CSV data. For each minute between start and stop, what the mean response time was.
-min_resp_time float    ---      Mimimum response time, in milliseconds
-max_resp_time float    ---      Maximum response time, in milliseconds
+min_resp_time float    ---      Same as for :doc:`zato.stats.get-summary-by-range <zato.stats.get-summary-by-range>`
+max_resp_time float    ---      〃
 ============= ======== ======== =========================================================================================
 
 SOAP example

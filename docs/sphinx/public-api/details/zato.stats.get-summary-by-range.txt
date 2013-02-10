@@ -40,13 +40,13 @@ Response parameters
 Name                    Datatype Optional Notes
 ======================= ======== ======== =======================================================================
 service_name            string   ---      Name of the service the statistics are of
-usage                   int      ---      How many times the service was invoked
+usage                   long     ---      How many times the service was invoked
 rate                    float    ---      How often, in request a second, the service was being invoked
-time                    float    ---      How much time, in milliseconds, all invocations of the service took
+time                    double   ---      How much time, in milliseconds, all invocations of the service took
 min_resp_time           float    ---      Mimimum response time, in milliseconds
 max_resp_time           float    ---      Maximum response time, in milliseconds
-all_services_usage      int      ---      How many times all the services were invoked
-all_services_time       int      ---      Time, in milliseconds, spent in all the services
+all_services_usage      long     ---      How many times all the services were invoked
+all_services_time       double   ---      Time, in milliseconds, spent in all the services
 mean_all_services       float    ---      A mean response time over all the services
 usage_perc_all_services float    ---      Usage of this service as a percentage of usage across all the services
 time_perc_all_services  float    ---      Usage of this service as a percentage of time spent by all the services
