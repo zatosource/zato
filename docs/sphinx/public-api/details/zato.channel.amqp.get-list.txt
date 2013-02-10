@@ -46,7 +46,6 @@ SOAP example
 
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
          xmlns:zato="http://gefira.pl/zato">
-       <soapenv:Header/>
        <soapenv:Body>
           <zato:zato_channel_amqp_get_list_request>
              <zato:cluster_id>1</zato:cluster_id>

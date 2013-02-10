@@ -36,7 +36,6 @@ SOAP example
 
   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
     xmlns:zato="http://gefira.pl/zato">
-  <soapenv:Header/>
   <soapenv:Body>
       <zato:zato_kvdb_data_dict_translation_get_last_id_request>
       </zato:zato_kvdb_data_dict_translation_get_last_id_request>
