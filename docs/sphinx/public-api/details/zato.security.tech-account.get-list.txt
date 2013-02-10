@@ -1,0 +1,102 @@
+zato.security.tech-account.GetList
+==================================
+
+Overview
+--------
+
+Returns a list of technical accounts configured on a given cluster.
+
+* List response: Yes
+* SOAP action: zato.security.tech-account.get-list
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.security.tech-account.get-list
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ========= ======== ==================================
+Name       Datatype  Optional Notes
+========== ========= ======== ==================================
+cluster_id int       ---      Cluster to return definitions from
+========== ========= ======== ==================================
+            
+
+Response parameters
+-------------------
+
+========= ======== ======== ================================
+Name      Datatype Optional Notes
+========= ======== ======== ================================
+id        int      ---      Definition ID
+name      string   ---      Definition name
+is_active boolean  ---      Whether the definition is active
+========= ======== ======== ================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns:zato="http://gefira.pl/zato">
+       <soapenv:Body>
+          <zato:zato_security_tech_account_get_list_request>
+             <zato:cluster_id>1</zato:cluster_id>
+          </zato:zato_security_tech_account_get_list_request>
+       </soapenv:Body>
+    </soapenv:Envelope>
+      
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+        xmlns="http://gefira.pl/zato">
+    <soap:Body>
+        <zato_security_tech_account_get_list_response xmlns="http://gefira.pl/zato">
+        <zato_env>
+            <cid>K72895712502559727979821245205</cid>
+            <result>ZATO_OK</result>
+        </zato_env>
+        <item_list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <item>
+            <id>4</id>
+            <name>techacct-733352</name>
+            <is_active>true</is_active>
+        </item>
+        <item>
+            <id>5</id>
+            <name>techacct-389721</name>
+            <is_active>true</is_active>
+        </item>
+    </item_list>
+    </zato_security_tech_account_get_list_response>
+    </soap:Body>
+    </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+    "cluster_id": 1
+   }
+
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K50783821181336572896202474242"
+    },
+    "zato_security_tech_account_get_list_response": [
+      {
+        "name": "techacct-733352",
+        "is_active": true
+        "id": 4
+      },
+      {
+        "name": "techacct-389721",
+        "is_active": true
+        "id": 5
+      }
+    ]
+  }

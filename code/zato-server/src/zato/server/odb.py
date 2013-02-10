@@ -80,7 +80,7 @@ class ODBManager(SessionWrapper):
             logger.error(msg)
             raise
         
-    def server_up_down(self, token, status, update_host=False):
+    def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None):
         """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
         and what host it's running on.
         """
@@ -94,6 +94,8 @@ class ODBManager(SessionWrapper):
             
             if update_host:
                 server.host = current_host()
+                server.bind_host = bind_host
+                server.bind_port = bind_port
             
             session.add(server)
             session.commit()

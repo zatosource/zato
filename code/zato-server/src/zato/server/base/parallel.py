@@ -480,7 +480,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             
             parallel_server._after_init_non_accepted(server)
             
-        parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True)
+        parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
+            parallel_server.host, parallel_server.port)
         
     @staticmethod
     def on_starting(arbiter):

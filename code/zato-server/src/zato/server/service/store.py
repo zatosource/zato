@@ -220,7 +220,7 @@ class ServiceStore(InitializingObject):
             item = getattr(mod, name)
             if self._should_deploy(name, item):
                 timestamp = datetime.utcnow().isoformat()
-                depl_info = deployment_info('ServiceStore', item, timestamp, fs_location)
+                depl_info = deployment_info('service-store', item, timestamp, fs_location)
     
                 name = item.get_name()
                 impl_name = item.get_impl_name()

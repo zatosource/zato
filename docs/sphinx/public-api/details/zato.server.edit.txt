@@ -1,0 +1,114 @@
+zato.server.Edit
+================
+
+Overview
+--------
+
+Updates server's information in the ODB.
+
+* List response: No
+* SOAP action: zato.server.edit
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.server.edit
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ==========================
+Name Datatype Optional Notes
+==== ======== ======== ==========================
+id   int      ---      ID of the server to update
+name string   ---      Server name
+==== ======== ======== ==========================
+            
+
+Response parameters
+-------------------
+
+================== ======== ======== ==================================================================
+Name               Datatype Optional Notes
+================== ======== ======== ==================================================================
+id                 string   ---      Same as for :doc:`zato.server.get-by-id <./zato.server.get-by-id>`
+cluster_id         string   ---      〃
+name               string   ---      〃
+host               string   ---      〃
+bind_host          string   Yes      〃
+bind_port          string   Yes      〃
+last_join_status   string   Yes      〃
+last_join_mod_date datetime Yes      〃
+last_join_mod_by   string   Yes      〃
+up_status          string   Yes      〃 
+up_mod_date        datetime Yes      〃
+================== ======== ======== ==================================================================
+
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_server_edit_request>
+            <zato:id>1</zato:id>
+            <zato:name>TEST3</zato:name>
+         </zato:zato_server_edit_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_server_get_by_id_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K30506206504716433108535873987</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>1</id>
+           <cluster_id>1</cluster_id>
+           <name>server1</name>
+           <host>prod1/prod1</host>
+           <bind_host>10.152.18.1</bind_host>
+           <bind_port>17010</bind_port>
+           <last_join_status>accepted</last_join_status>
+           <last_join_mod_date>2013-02-08 12:31:24.145047</last_join_mod_date>
+           <last_join_mod_by>zato1@prod1</last_join_mod_by>
+           <up_status>running</up_status>
+           <up_mod_date>2013-02-08 13:21:49.728230</up_mod_date>
+       </item>
+   </zato_server_get_by_id_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 1
+   }
+   
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K08422772728676555483775098661"
+     },
+     "zato_server_get_by_id_response": {
+       "name": "server1",
+       "last_join_status": "accepted",
+       "up_mod_date": "2013-02-08T13:48:02.367346",
+       "up_status": "running",
+       "host": "prod1/prod1",
+       "bind_host": "10.152.18.1",
+       "bind_port": 17010,
+       "cluster_id": 1,
+       "last_join_mod_by": "zato1@prod1",
+       "id": 1,
+       "last_join_mod_date": "2013-02-08T12:31:24.145047"
+     }
+   }

@@ -1,0 +1,71 @@
+zato.security.wss.Delete
+========================
+
+Overview
+--------
+
+Deletes a WS-Security definition.
+
+  * List response: No
+  * SOAP action: zato.security.wss.delete
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.security.wss.delete
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ==============================
+Name Datatype Optional Notes
+==== ======== ======== ==============================
+id   int      ---      ID of the definition to delete
+==== ======== ======== ==============================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_security_wss_delete_request>
+            <zato:id>5</zato:id>
+         </zato:zato_security_wss_delete_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            <zato_security_wss_delete_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K40999356971844012254932278171</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+            </zato_security_wss_delete_response>
+      </soap:Body>
+   </soap:Envelope> 
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+       "id": 6
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K45432472329675192954743094886"
+     }
+   }

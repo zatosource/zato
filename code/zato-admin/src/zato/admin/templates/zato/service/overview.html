@@ -39,7 +39,7 @@
                     <table style="width:100%">
                         <tr>
                         
-                            <td style="width:35%">
+                            <td style="width:25%">
                                 <table>
                                     <tr>
                                         <td class='inline_header' colspan="2">Statistics</td>
@@ -53,7 +53,7 @@
                                         <td>{{ service.usage }}</td>
                                     </tr>
                                     <tr>
-                                        <td>All time min/max/mean of 100% (ms)</td>
+                                        <td>All time min/max/mean (ms)</td>
                                         <td>{{ service.time_min_all_time|floatformat:0 }}/{{ service.time_max_all_time|floatformat:0 }}/{{ service.time_mean_all_time|floatformat:0 }}</td>
                                     </tr>
                                     <tr>
@@ -61,7 +61,7 @@
                                         <td>{{ service.time_usage_1h|default:0 }}</td>
                                     </tr>
                                     <tr>
-                                        <td>1h min/max/mean of 100% (ms)</td>
+                                        <td>1h min/max/mean (ms)</td>
                                         <td>{{ service.time_min_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_max_resp_time_1h|floatformat:0|default:0 }}/{{ service.time_mean_1h|floatformat:0|default:0 }}</td>
                                     </tr>
                                     <tr>

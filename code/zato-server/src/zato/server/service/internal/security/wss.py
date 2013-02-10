@@ -97,7 +97,7 @@ class Create(AdminService):
                 input.sec_type = 'wss'
                 self.broker_client.publish(self.request.input)
             
-            self.response.payload.id = input.id
+            self.response.payload.id = wss.id
             self.response.payload.name = input.name
 
 class Edit(AdminService):

@@ -1,0 +1,122 @@
+zato.stats.get-by-service
+=========================
+
+Overview
+--------
+
+Returns statistics of a service for a given period along with a trends
+data broken down by each minute in that interval.
+
+.. note::
+
+  Depending on the number of services and amount of statistics existing the
+  service may become very slow. It's best to limit the period to a short
+  one, e.g. one hour. This is because the service will compute per-minute
+  trends which is a rather costly operation.
+  
+  If zato.stats.get-by-service is too slow for you, consider using
+  :doc:`zato.stats.get-summary-by-range <zato.stats.get-summary-by-range>`
+  which is always fast across arbitrary intervals because it doesn't return trends.
+
+* List response: No
+* SOAP action: zato.stats.get-by-service
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.stats.get-by-service
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ======== ======== =========================================
+Name       Datatype Optional Notes
+========== ======== ======== =========================================
+start      dateTime ---      Start date and time
+stop       dateTime ---      Stop date and time
+service_id int      ---      ID of the service to return statistics of
+========== ======== ======== =========================================
+            
+
+Response parameters
+-------------------
+
+============= ======== ======== =========================================================================================
+Name          Datatype Optional Notes
+============= ======== ======== =========================================================================================
+service_name  string   ---      Same as for :doc:`zato.stats.get-summary-by-range <zato.stats.get-summary-by-range>`
+usage         long     ---      〃
+rate          float    ---      〃
+time          double   ---      〃
+usage_trend   string   ---      CSV data. For each minute between start and stop, how many times the service was invoked.
+mean_trend    string   ---      CSV data. For each minute between start and stop, what the mean response time was.
+min_resp_time float    ---      Same as for :doc:`zato.stats.get-summary-by-range <zato.stats.get-summary-by-range>`
+max_resp_time float    ---      〃
+============= ======== ======== =========================================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_stats_get_by_service_request>
+            <zato:start>2013-02-10T12:10:00</zato:start>
+            <zato:stop>2013-02-10T12:35:00</zato:stop>
+            <zato:service_id>261</zato:service_id>
+         </zato:zato_stats_get_by_service_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_stats_get_by_service_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K32612201913736955550831318953</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <service_name>zato.Ping</service_name>
+           <usage>16</usage>
+           <mean>27.52</mean>
+           <rate>0.01</rate>
+           <time>3020.0</time>
+           <usage_trend>0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,12,1,0</usage_trend>
+           <mean_trend>0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,63,54,130,212,229,0</mean_trend>
+           <min_resp_time>54.0</min_resp_time>
+           <max_resp_time>252.0</max_resp_time>
+       </item>
+   </zato_stats_get_by_service_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+  {
+     "start": "2013-02-10T12:10:00",
+     "stop": "2013-02-10T12:35:00",
+     "service_id": 261
+  }
+
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K57564118290722066747276004829"
+    },
+    "zato_stats_get_by_service_response": {
+      "mean_trend": "13,0,9,15,0,7,20,0,11,17,0,12,9,0,8,11,0,0,0,0,0,23,0,22,21",
+      "min_resp_time": 7,
+      "service_name": "zato.stats.ProcessRawTimes",
+      "max_resp_time": 23,
+      "rate": 0.01,
+      "time": 198,
+      "usage": 14,
+      "usage_trend": "1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,0,0,0,0,1,0,1,1",
+      "mean": 7.92
+    }
+  }

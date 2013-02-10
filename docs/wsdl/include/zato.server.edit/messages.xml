@@ -1,0 +1,33 @@
+      <xsd:element name="zato_server_edit_request">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="name" type="xsd:string"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="zato_server_edit_response">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element ref="zato_env"/>
+            <xsd:element name="item" minOccurs="0" maxOccurs="1">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="id" type="xsd:int"/>
+                  <xsd:element name="cluster_id" type="xsd:int"/>
+                  <xsd:element name="name" type="xsd:string"/>
+                  <xsd:element name="host" type="xsd:string"/>
+                  <xsd:element name="bind_host" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="bind_port" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="last_join_status" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="last_join_mod_date" type="xsd:dateTime" minOccurs="0"/>
+                  <xsd:element name="last_join_mod_by" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="up_status" type="xsd:string" minOccurs="0"/>
+                  <xsd:element name="up_mod_date" type="xsd:dateTime" minOccurs="0"/>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element> 

@@ -1,0 +1,19 @@
+zato.stats.*
+============
+
+Overview
+--------
+
+Services related to the management of service statistics.
+
+Services
+--------
+
+* :doc:`zato.stats.delete <./zato.stats.delete>`
+* :doc:`zato.stats.get-by-service <./zato.stats.get-by-service>`
+* :doc:`zato.stats.get-summary-by-day <./zato.stats.get-summary-by-day>`
+* :doc:`zato.stats.get-summary-by-month <./zato.stats.get-summary-by-month>`
+* :doc:`zato.stats.get-summary-by-range <./zato.stats.get-summary-by-range>`
+* :doc:`zato.stats.get-summary-by-week <./zato.stats.get-summary-by-week>`
+* :doc:`zato.stats.get-summary-by-year <./zato.stats.get-summary-by-year>`
+* :doc:`zato.stats.get-trends <./zato.stats.get-trends>`

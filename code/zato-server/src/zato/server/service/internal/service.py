@@ -230,13 +230,14 @@ class Invoke(AdminService):
         output_required = ('response',)
 
     def handle(self):
-        payload = payload_from_request(self.request.input.payload, 
+        payload = payload_from_request(self.request.input.payload.decode('base64'), 
             self.request.input.data_format, self.request.input.transport)
             
         response = self.invoke_by_id(self.request.input.id, payload, 
             self.request.input.data_format, self.request.input.transport,
             serialize=True)
-        self.response.payload.response = response
+
+        self.response.payload.response = response.encode('base64') if response else ''
 
 class GetDeploymentInfoList(AdminService):
     """ Returns detailed information regarding the service's deployment status
@@ -299,7 +300,8 @@ class GetWSDL(AdminService):
         request_elem = 'zato_service_get_wsdl_request'
         response_elem = 'zato_service_get_wsdl_response'
         input_optional = ('service', 'cluster_id')
-        output_optional = ('wsdl', 'wsdl_name', 'content_type')
+        output_required = ('content_type',)
+        output_optional = ('wsdl', 'wsdl_name',)
 
     def handle(self):
         if self.wsgi_environ['QUERY_STRING']:
@@ -313,9 +315,13 @@ class GetWSDL(AdminService):
             cluster_id = self.request.input.cluster_id
             
         if not(service_name and cluster_id):
-            self.response.status_code = BAD_REQUEST
-            self.response.payload = 'Both [service] and [cluster_id] parameters are required'
-            return
+            msg = 'Both [service] and [cluster_id] parameters are required'
+            if use_sio:
+                raise ValueError(msg)
+            else:
+                self.response.status_code = BAD_REQUEST
+                self.response.payload = msg
+                return
         
         with closing(self.odb.session()) as session:
             service = session.query(Service).\
@@ -327,7 +333,10 @@ class GetWSDL(AdminService):
                 self.response.payload = 'Service [{}] not found'.format(service_name)
                 return
             
-        content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
+        if service.wsdl_name:
+            content_type = guess_type(service.wsdl_name)[0] or 'application/octet-stream'
+        else:
+            content_type = 'text/plain'
             
         if use_sio:
             self.response.payload.wsdl = (service.wsdl or '').encode('base64')
@@ -336,7 +345,6 @@ class GetWSDL(AdminService):
         else:
             if service.wsdl:
                 self.set_attachment(service.wsdl_name, service.wsdl, content_type)
-                
             else:
                 self.response.status_code = NOT_FOUND
                 self.response.payload = 'No WSDL found'
@@ -392,8 +400,8 @@ class GetRequestResponse(AdminService):
         request_elem = 'zato_service_get_request_response_request'
         response_elem = 'zato_service_request_response_response'
         input_required = ('cluster_id', 'name')
-        output_required = ('service_id', 'sample_cid', 'sample_req_ts', 'sample_resp_ts', 
-            'sample_req', 'sample_resp', Integer('sample_req_resp_freq'))
+        output_required = ('service_id', Integer('sample_req_resp_freq'))
+        output_optional = ('sample_cid', 'sample_req_ts', 'sample_resp_ts', 'sample_req', 'sample_resp', )
         
     def get_data(self):
         result = {}
@@ -435,7 +443,7 @@ class UploadPackage(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_upload_package_request'
         response_elem = 'zato_service_upload_package_response'
-        input_required = ('cluster_id', 'payload_name', 'payload')
+        input_required = ('cluster_id', 'payload', 'payload_name')
         
     def handle(self):
         with NamedTemporaryFile(prefix='zato-hd-', suffix=self.request.input.payload_name) as tf:

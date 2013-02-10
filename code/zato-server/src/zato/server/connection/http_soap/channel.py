@@ -293,7 +293,9 @@ class _BaseMessageHandler(object):
                     payload.update(zato_env)
                 else:
                     payload = zato_env
+                    
                 response.payload = dumps(payload)
+                
             else:
                 if transport == URL_TYPE.SOAP:
                     zato_message_template = zato_message_soap

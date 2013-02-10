@@ -378,11 +378,11 @@ class SimpleIOPayload(ValueConverter):
         as well as the type conversions.
         """
         if is_sa_namedtuple or isinstance(item, Base):
-            elem_value = getattr(item, name, ZATO_NONE)
+            elem_value = getattr(item, name, '')
         else:
-            elem_value = item.get(name, ZATO_NONE)
+            elem_value = item.get(name, '')
 
-        if elem_value == ZATO_NONE:
+        if elem_value == '': # Don't use 'if not elem_value' here
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
                 self.zato_logger.debug(msg)
