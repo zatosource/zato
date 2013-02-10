@@ -1,41 +1,38 @@
-zato.service.get-source-info
-============================
+zato.service.upload-package
+===========================
 
 Overview
 --------
 
-Returns information regarding how a particular service's source code looks like.
+Hot-deploys a Python module with one or more Zato services.
+
+.. note::
+   
+   This is an asynchronous operation. Check the server logs for information whether
+   the upload has actually succeeded.
 
 * List response: No
-* SOAP action: zato.service.get-source-info
+* SOAP action: zato.service.upload-package
 * SOAP URL path: /zato/soap
-* JSON URL path: /zato/json/zato.service.get-source-info
+* JSON URL path: /zato/json/zato.service.upload-package
 * WSDL: :download:`Click here</public-api/zato.wsdl>`
 
 Request parameters
 ------------------
 
-========== ======== ======== =====================================
-Name       Datatype Optional Notes
-========== ======== ======== =====================================
-cluster_id int      ---      Cluster the service is deployed in
-name       string   ---      Name of the service to fetch data for
-========== ======== ======== =====================================
+============ ======== ======== =====================================
+Name         Datatype Optional Notes
+============ ======== ======== =====================================
+cluster_id   int      ---      Cluster the package is deployed in
+payload      string   ---      Module to be uploaded, BASE64-encoded
+payload_name string   ---      Module's file name
+============ ======== ======== =====================================
             
 
 Response parameters
 -------------------
 
-================== ======== ======== =================================================
-Name               Datatype Optional Notes
-================== ======== ======== =================================================
-service_id         int      ---      Cluster the service is deployed in
-server_name        string   ---      Name of the server which returned the information
-source             string   ---      Service's source code, BASE64-encoded
-source_path        string   ---      Path to the service on the server's file system
-source_hash        string   ---      Hash of the source code
-source_hash_method string   ---      Method used to compute the hash, always 'SHA-256'
-================== ======== ======== =================================================
+(None)
 
 SOAP example
 ------------
@@ -46,35 +43,28 @@ SOAP example
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Header/>
       <soapenv:Body>
-         <zato:zato_service_get_source_info_request>
+         <zato:zato_service_upload_package_request>
             <zato:cluster_id>1</zato:cluster_id>
-            <zato:name>myservice1.HelloWorld</zato:name>
-         </zato:zato_service_get_source_info_request>
+            <zato:payload>ZnJvbSB6YXRvLnNlcnZlci5zZXJ2aWNlIGltcG9ydCBTZXJ2aWNlCgpjbGFzcyBIZWxsb1dvcmxk
+  KFNlcnZpY2UpOgogICAgZGVmIGhhbmRsZShzZWxmKToKICAgICAgICBzZWxmLnJlc3BvbnNlLnBh
+  eWxvYWQgPSAnSG93IGdvZXMgaXQ/Jw==</zato:payload>
+            <zato:payload_name>myservice1.py</zato:payload_name>
+         </zato:zato_service_upload_package_request>
       </soapenv:Body>
    </soapenv:Envelope>
-      
+   
    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
       xmlns="http://gefira.pl/zato">
    <soap:Body>
-    <zato_service_get_source_info_response xmlns="http://gefira.pl/zato">
-    <zato_env>
-        <cid>K56777964571505167777956942415</cid>
-        <result>ZATO_OK</result>
-    </zato_env>
-    <item>
-        <service_id>5207</service_id>
-        <server_name>server1</server_name>
-        <source>ZnJvbSB6YXRvLnNlcnZlci5zZXJ2aWNlIGltcG9ydCBTZXJ2aWNlCgpjbGFzcyBIZWxsb1dvcmxk
-        KFNlcnZpY2UpOgogICAgZGVmIGhhbmRsZShzZWxmKToKICAgICAgICBzZWxmLnJlc3BvbnNlLnBh
-        eWxvYWQgPSAnSG93IGdvZXMgaXQ/Jw==
-    </source>
-    <source_path>/opt/zato/myservice1.py</source_path>
-    <source_hash>da9dbc528eae16bc62afc7efe9e601b61834d2e3bf16285a35f2502bc5978bd1</source_hash>
-    <source_hash_method>SHA-256</source_hash_method>
-   </item>
-   </zato_service_get_source_info_response>
+       <zato_service_upload_package_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K19900081330905648525591971688</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+   </zato_service_upload_package_response>
    </soap:Body>
    </soap:Envelope>
+
 
 JSON example
 ------------
@@ -83,21 +73,14 @@ JSON example
 
    {
       "cluster_id": 1,
-      "name": "myservice1.HelloWorld"
+      "payload": "ZnJvbSB6YXRvLnNlcnZlci5zZXJ2aWNlIGltcG9ydCBTZXJ2aWNlCgpjbGFzcyBIZWxsb1dvcmxk\nKFNlcnZpY2UpOgogICAgZGVmIGhhbmRsZShzZWxmKToKICAgICAgICBzZWxmLnJlc3BvbnNlLnBh\neWxvYWQgPSAnSG93IGdvZXMgaXQ/Jw==",
+      "payload_name": "myservice1.py"
    }
 
    {
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K53896097639011411752227868502"
-     },
-     "zato_service_get_source_info_response": {
-       "server_name": "server1",
-       "source_hash_method": "SHA-256",
-       "source_path": "/opt/zato/myservice1.py",
-       "source": "ZnJvbSB6YXRvLnNlcnZlci5zZXJ2aWNlIGltcG9ydCBTZXJ2aWNlCgpjbGFzcyBIZWxsb1dvcmxk\nKFNlcnZpY2UpOgogICAgZGVmIGhhbmRsZShzZWxmKToKICAgICAgICBzZWxmLnJlc3BvbnNlLnBh\neWxvYWQgPSAnSG93IGdvZXMgaXQ\/Jw==\n",
-       "service_id": 5207,
-       "source_hash": "da9dbc528eae16bc62afc7efe9e601b61834d2e3bf16285a35f2502bc5978bd1"
+       "cid": "K48624240358770420195760719627"
      }
    }
