@@ -5,7 +5,7 @@ Overview
 --------
 
 Returns the value of the most recently assigned KVDB dictionary entry ID, that is,
-the value that the last invocation of :doc:`zato.kvdb.data-dict.dictionary.Create <./zato.kvdb.data-dict.dictionary.create>`
+the value that the last invocation of :doc:`zato.kvdb.data-dict.dictionary.create <./zato.kvdb.data-dict.dictionary.create>`
 returned.
 
   * List response: No

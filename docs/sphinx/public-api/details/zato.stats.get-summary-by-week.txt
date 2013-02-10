@@ -75,7 +75,7 @@ SOAP example
       </zato_env>
       <item_list>
           <item>
-            <service_name>zato.server.ClusterWideSingletonKeepAlive</service_name>
+            <service_name>zato.server.cluster-wide-singleton-keep-alive</service_name>
             <usage>244</usage>
             <mean>35.0</mean>
             <rate>0.0</rate>
@@ -91,7 +91,7 @@ SOAP example
             <time_perc_all_services>26.95</time_perc_all_services>
           </item>
           <item>
-            <service_name>zato.stats.AggregateByMinute</service_name>
+            <service_name>zato.stats.aggregate-by-minute</service_name>
             <usage>124</usage>
             <mean>13.0</mean>
             <rate>0.0</rate>
@@ -107,7 +107,7 @@ SOAP example
             <time_perc_all_services>5.2</time_perc_all_services>
           </item>
           <item>
-            <service_name>zato.stats.ProcessRawTimes</service_name>
+            <service_name>zato.stats.process-raw-times</service_name>
             <usage>81</usage>
             <mean>18.0</mean>
             <rate>0.0</rate>
@@ -146,7 +146,7 @@ JSON example
         "time_perc_all_services": 30.83,
         "mean_trend": "",
         "min_resp_time": 21,
-        "service_name": "zato.server.ClusterWideSingletonKeepAlive",
+        "service_name": "zato.server.cluster-wide-singleton-keep-alive",
         "max_resp_time": 282,
         "rate": 0,
         "mean_all_services": "51",
@@ -162,7 +162,7 @@ JSON example
         "time_perc_all_services": 4.43,
         "mean_trend": "",
         "min_resp_time": 0,
-        "service_name": "zato.stats.AggregateByMinute",
+        "service_name": "zato.stats.aggregate-by-minute",
         "max_resp_time": 34,
         "rate": 0,
         "mean_all_services": "51",
@@ -178,7 +178,7 @@ JSON example
         "time_perc_all_services": 3.53,
         "mean_trend": "",
         "min_resp_time": 1,
-        "service_name": "zato.stats.ProcessRawTimes",
+        "service_name": "zato.stats.process-raw-times",
         "max_resp_time": 408,
         "rate": 0,
         "mean_all_services": "51",

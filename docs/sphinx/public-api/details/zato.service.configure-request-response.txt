@@ -47,7 +47,7 @@ SOAP example
       <soapenv:Body>
          <zato:zato_service_configure_request_response_request>
             <zato:cluster_id>1</zato:cluster_id>
-            <zato:name>zato.Ping</zato:name>
+            <zato:name>zato.ping</zato:name>
             <zato:sample_req_resp_freq>20</zato:sample_req_resp_freq>
          </zato:zato_service_configure_request_response_request>
       </soapenv:Body>
@@ -72,7 +72,7 @@ JSON example
 
    {
        "cluster_id": 1,
-       "name": "zato.Ping",
+       "name": "zato.ping",
        "sample_req_resp_freq": 20
    }
 

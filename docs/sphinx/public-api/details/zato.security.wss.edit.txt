@@ -8,7 +8,7 @@ Updates an already existing WS-Security definition.
 
 .. note::
 
-  Use :doc:`zato.security.wss.ChangePassword<./zato.security.wss.change-password>`
+  Use :doc:`zato.security.wss.change-password<./zato.security.wss.change-password>`
   to change its password.
 
 * List response: No
@@ -27,7 +27,7 @@ cluster_id               int      ---      ID of the cluster this definition is 
 name                     string   ---      Definition name
 is_active                boolean  ---      Whether the definition should be active upon its creation
 username                 string   ---      Username
-password_type            string   ---      Same as for :doc:`zato.security.GetList<./zato.security.get-list>`
+password_type            string   ---      Same as for :doc:`zato.security.get-list<./zato.security.get-list>`
 reject_empty_nonce_creat boolean  ---      〃
 reject_stale_tokens      boolean  ---      〃
 reject_expiry_limit      boolean  ---      〃

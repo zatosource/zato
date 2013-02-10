@@ -74,7 +74,7 @@ SOAP example
       </zato_env>
       <item_list>
           <item>
-              <service_name>zato.server.ClusterWideSingletonKeepAlive</service_name>
+              <service_name>zato.server.cluster-wide-singleton-keep-alive</service_name>
               <usage>1823</usage>
               <mean>35.0</mean>
               <rate>0.02</rate>
@@ -90,7 +90,7 @@ SOAP example
               <time_perc_all_services>30.07</time_perc_all_services>
           </item>
           <item>
-              <service_name>zato.stats.AggregateByMinute</service_name>
+              <service_name>zato.stats.aggregate-by-minute</service_name>
               <usage>926</usage>
               <mean>12.0</mean>
               <rate>0.01</rate>
@@ -106,7 +106,7 @@ SOAP example
               <time_perc_all_services>5.48</time_perc_all_services>
           </item>
           <item>
-              <service_name>zato.stats.ProcessRawTimes</service_name>
+              <service_name>zato.stats.process-raw-times</service_name>
               <usage>617</usage>
               <mean>15.0</mean>
               <rate>0.01</rate>
@@ -150,7 +150,7 @@ JSON example
         "time_perc_all_services": 30.07,
         "mean_trend": "",
         "min_resp_time": 19,
-        "service_name": "zato.server.ClusterWideSingletonKeepAlive",
+        "service_name": "zato.server.cluster-wide-singleton-keep-alive",
         "max_resp_time": 481,
         "rate": 0.02,
         "mean_all_services": "58",
@@ -166,7 +166,7 @@ JSON example
         "time_perc_all_services": 5.48,
         "mean_trend": "",
         "min_resp_time": 2,
-        "service_name": "zato.stats.AggregateByMinute",
+        "service_name": "zato.stats.aggregate-by-minute",
         "max_resp_time": 64,
         "rate": 0.01,
         "mean_all_services": "58",
@@ -182,7 +182,7 @@ JSON example
         "time_perc_all_services": 4.58,
         "mean_trend": "",
         "min_resp_time": 6,
-        "service_name": "zato.stats.ProcessRawTimes",
+        "service_name": "zato.stats.process-raw-times",
         "max_resp_time": 463,
         "rate": 0.01,
         "mean_all_services": "58",

@@ -60,7 +60,7 @@ SOAP example
       <soapenv:Body>
          <zato:zato_service_get_by_name_request>
             <zato:cluster_id>1</zato:cluster_id>
-            <zato:name>zato.stats.ProcessRawTimes</zato:name>
+            <zato:name>zato.stats.process-raw-times</zato:name>
          </zato:zato_service_get_by_name_request>
       </soapenv:Body>
    </soapenv:Envelope>
@@ -75,7 +75,7 @@ SOAP example
        </zato_env>
        <item>
            <id>261</id>
-           <name>zato.stats.ProcessRawTimes</name>
+           <name>zato.stats.process-raw-times</name>
            <is_active>true</is_active>
            <impl_name>zato.server.service.internal.stats.ProcessRawTimes</impl_name>
            <is_internal>true</is_internal>
@@ -98,7 +98,7 @@ JSON example
 
    {
       "cluster_id": 1,
-      "name": "zato.stats.ProcessRawTimes"
+      "name": "zato.stats.process-raw-times"
    }
 
    {
@@ -109,7 +109,7 @@ JSON example
      },
      "zato_service_get_by_name_response": {
        "impl_name": "zato.server.service.internal.stats.ProcessRawTimes",
-       "name": "zato.stats.ProcessRawTimes",
+       "name": "zato.stats.process-raw-times",
        "may_be_deleted": false,
        "is_internal": true,
        "is_active": true,

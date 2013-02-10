@@ -20,7 +20,7 @@ Request parameters
 Name          Datatype Optional Notes
 ============= ======== ======== ===============================================================================
 id            int      ---      ID of the connection to update
-cluster_id    string   ---      Same as for :doc:`zato.outgoing.jms_wmq.Create<./zato.outgoing.jms_wmq.create>`
+cluster_id    string   ---      Same as for :doc:`zato.outgoing.jms_wmq.create<./zato.outgoing.jms_wmq.create>`
 name          string   ---      〃
 is_active     boolean  ---      〃
 def_id        int      ---      〃

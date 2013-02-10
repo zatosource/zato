@@ -24,7 +24,7 @@ Request parameters
 Name       Datatype Optional Notes
 ========== ======== ======== =======================================================================
 id         int      ---      ID of the connection to update
-cluster_id int      ---      Same as for :doc:`zato.outgoing.sql.Create<./zato.outgoing.sql.create>`
+cluster_id int      ---      Same as for :doc:`zato.outgoing.sql.create<./zato.outgoing.sql.create>`
 name       string   ---      〃
 is_active  boolean  ---      〃
 engine     string   ---      〃

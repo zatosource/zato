@@ -26,7 +26,7 @@ id               int       ---      ID of the job to update
 cluster_id       int       ---      ID of the cluster this job is defined in
 name             string    ---      Name of the job to update
 is_active        boolean   ---      Whether the job should be active, should it be scheduled
-job_type         string    ---      Same as for :doc:`zato.scheduler.job.Create<./zato.scheduler.job.create>`
+job_type         string    ---      Same as for :doc:`zato.scheduler.job.create<./zato.scheduler.job.create>`
 service          string    ---      〃
 start_date       datetime  ---      〃
 extra            string    Yes      〃
@@ -48,7 +48,7 @@ Name            Datatype Optional Notes
 =============== ======== ======== =========================================================================
 id              int      ---      Copied over from request
 name            string   ---      Copied over from request
-cron_definition string   Yes      Same as for :doc:`zato.scheduler.job.Create<./zato.scheduler.job.create>`
+cron_definition string   Yes      Same as for :doc:`zato.scheduler.job.create<./zato.scheduler.job.create>`
 =============== ======== ======== =========================================================================
 
 SOAP example

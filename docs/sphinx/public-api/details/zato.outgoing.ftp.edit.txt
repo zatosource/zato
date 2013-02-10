@@ -25,7 +25,7 @@ Request parameters
 Name       Datatype Optional Notes
 ========== ======== ======== =======================================================================
 id         int      ---      ID of the connection to update
-cluster_id int      ---      Same as for :doc:`zato.outgoing.ftp.Create<./zato.outgoing.ftp.create>`
+cluster_id int      ---      Same as for :doc:`zato.outgoing.ftp.create<./zato.outgoing.ftp.create>`
 name       string   ---      〃
 is_active  boolean  ---      〃
 host       string   ---      〃

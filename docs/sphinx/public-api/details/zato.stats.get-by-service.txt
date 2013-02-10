@@ -77,7 +77,7 @@ SOAP example
            <result>ZATO_OK</result>
        </zato_env>
        <item>
-           <service_name>zato.Ping</service_name>
+           <service_name>zato.ping</service_name>
            <usage>16</usage>
            <mean>27.52</mean>
            <rate>0.01</rate>
@@ -111,7 +111,7 @@ JSON example
     "zato_stats_get_by_service_response": {
       "mean_trend": "13,0,9,15,0,7,20,0,11,17,0,12,9,0,8,11,0,0,0,0,0,23,0,22,21",
       "min_resp_time": 7,
-      "service_name": "zato.stats.ProcessRawTimes",
+      "service_name": "zato.stats.process-raw-times",
       "max_resp_time": 23,
       "rate": 0.01,
       "time": 198,

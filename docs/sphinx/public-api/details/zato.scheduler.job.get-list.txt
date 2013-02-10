@@ -25,10 +25,10 @@ cluster_id int       ---      Cluster to return jobs of
 Response parameters
 -------------------
 
-=============== ======== ======== =================================================================================
+=============== ======== ======== ===================================================================================
 Name            Datatype Optional Notes
-=============== ======== ======== =================================================================================
-id              int      ---      Same as for :doc:`zato.scheduler.job.GetByName<./zato.scheduler.job.get-by-name>`
+=============== ======== ======== ===================================================================================
+id              int      ---      Same as for :doc:`zato.scheduler.job.get-by-name<./zato.scheduler.job.get-by-name>`
 name            string   ---      〃
 is_active       boolean  ---      〃
 job_type        string   ---      〃
@@ -44,7 +44,7 @@ minutes         int      Yes      〃
 seconds         int      Yes      〃
 repeats         int      Yes      〃
 cron_definition string   Yes      〃
-=============== ======== ======== =================================================================================
+=============== ======== ======== ===================================================================================
 
 SOAP example
 ------------
@@ -75,7 +75,7 @@ SOAP example
             <start_date>2013-02-21T23:10:11</start_date>
             <extra>skip-class:2010*;2012-10-*</extra>
             <service_id>118</service_id>
-            <service_name>zato.Ping</service_name>
+            <service_name>zato.ping</service_name>
             <weeks xsi:nil="true"/>
             <days>2</days>
             <hours xsi:nil="true"/>
@@ -86,13 +86,13 @@ SOAP example
         </item>
         <item>
             <id>9</id>
-            <name>zato.stats.CreateSummaryByYear</name>
+            <name>zato.stats.createSummaryByYear</name>
             <is_active>true</is_active>
             <job_type>interval_based</job_type>
             <start_date>2013-01-23T22:50:15</start_date>
             <extra/>
             <service_id>268</service_id>
-            <service_name>zato.stats.summary.CreateSummaryByYear</service_name>
+            <service_name>zato.stats.summary.createSummaryByYear</service_name>
             <weeks xsi:nil="true"/>
             <days xsi:nil="true"/>
             <hours xsi:nil="true"/>
@@ -103,13 +103,13 @@ SOAP example
         </item>
         <item>
             <id>1</id>
-            <name>zato.stats.ProcessRawTimes</name>
+            <name>zato.stats.process-raw-times</name>
             <is_active>true</is_active>
             <job_type>interval_based</job_type>
             <start_date>2013-01-23T22:50:14</start_date>
             <extra>max_batch_size=99999</extra>
             <service_id>261</service_id>
-            <service_name>zato.stats.ProcessRawTimes</service_name>
+            <service_name>zato.stats.process-raw-times</service_name>
             <weeks xsi:nil="true"/>
             <days xsi:nil="true"/>
             <hours xsi:nil="true"/>
@@ -150,7 +150,7 @@ JSON example
         "days": 2,
         "id": 922,
         "hours": null,
-        "service_name": "zato.Ping",
+        "service_name": "zato.ping",
         "service_id": 118,
         "weeks": null,
         "repeats": null,
@@ -158,7 +158,7 @@ JSON example
         "start_date": "2013-02-21T23:10:11"
       },
       {
-        "name": "zato.stats.CreateSummaryByYear",
+        "name": "zato.stats.createSummaryByYear",
         "extra": "",
         "seconds": null,
         "is_active": true,
@@ -167,7 +167,7 @@ JSON example
         "days": null,
         "id": 9,
         "hours": null,
-        "service_name": "zato.stats.summary.CreateSummaryByYear",
+        "service_name": "zato.stats.summary.createSummaryByYear",
         "service_id": 268,
         "weeks": null,
         "repeats": null,
@@ -175,7 +175,7 @@ JSON example
         "start_date": "2013-01-23T22:50:15"
       },
       {
-        "name": "zato.stats.ProcessRawTimes",
+        "name": "zato.stats.process-raw-times",
         "extra": "max_batch_size=99999",
         "seconds": 90,
         "is_active": true,
@@ -184,7 +184,7 @@ JSON example
         "days": null,
         "id": 1,
         "hours": null,
-        "service_name": "zato.stats.ProcessRawTimes",
+        "service_name": "zato.stats.process-raw-times",
         "service_id": 261,
         "weeks": null,
         "repeats": null,

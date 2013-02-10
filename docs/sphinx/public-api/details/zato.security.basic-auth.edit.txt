@@ -24,7 +24,7 @@ Request parameters
 Name       Datatype  Optional Notes
 ========== ========= ======== ====================================================================================
 id         int       ---      ID of the definition to update
-cluster_id int       ---      Same as for :doc:`zato.security.basic-auth.Create<./zato.security.basic-auth.create>`
+cluster_id int       ---      Same as for :doc:`zato.security.basic-auth.create<./zato.security.basic-auth.create>`
 name       string    ---      〃
 is_active  boolean   ---      〃
 username   string    ---      〃

@@ -66,8 +66,8 @@ SOAP example
        </zato_env>
        <item>
            <id>1</id>
-           <name>zato.security.wss.Create</name>
-           <impl_name>zato.server.service.internal.security.wss.Create</impl_name>
+           <name>zato.security.wss.create</name>
+           <impl_name>zato.server.service.internal.security.wss.create</impl_name>
            <is_internal>true</is_internal>
        </item>
    </zato_service_edit_response>
@@ -92,9 +92,9 @@ JSON example
        "cid": "K18158752906394296340055928189"
      },
      "zato_service_edit_response": {
-       "impl_name": "zato.server.service.internal.security.wss.Create",
+       "impl_name": "zato.server.service.internal.security.wss.create",
        "is_internal": true,
        "id": 1,
-       "name": "zato.security.wss.Create"
+       "name": "zato.security.wss.create"
      }
    }

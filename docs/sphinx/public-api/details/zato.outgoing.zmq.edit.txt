@@ -23,7 +23,7 @@ id               int      ---      ID of the connection to update
 cluster_id       int      ---      ID of the cluster this connection is defined in
 name             string   ---      Connection name
 is_active        boolean  ---      Whether the outgoing connection should be active, if the underlying socket should be started
-address          string   ---      Same as for :doc:`zato.outgoing.zmq.Create<./zato.outgoing.zmq.create>`
+address          string   ---      Same as for :doc:`zato.outgoing.zmq.create<./zato.outgoing.zmq.create>`
 socket_type      string   ---      〃
 ================ ======== ======== ============================================================================================
             
