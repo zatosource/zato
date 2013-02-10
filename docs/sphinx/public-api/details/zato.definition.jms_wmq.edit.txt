@@ -54,7 +54,6 @@ SOAP example
 
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
          xmlns:zato="http://gefira.pl/zato">
-       <soapenv:Header/>
        <soapenv:Body>
           <zato:zato_definition_jms_wmq_edit_request>
              <zato:id>1</zato:id>
