@@ -27,37 +27,30 @@ data broken down by each minute in that interval.
 Request parameters
 ------------------
 
-========== ======== ======== =====================================================================
+========== ======== ======== =========================================
 Name       Datatype Optional Notes
-========== ======== ======== =====================================================================
+========== ======== ======== =========================================
 start      dateTime ---      Start date and time
 stop       dateTime ---      Stop date and time
 service_id int      ---      ID of the service to return statistics of
-n          int      Yes      If given, only top n statistics will be returned
-n_type     int      Yes      Must be given if n is provided. Can be either:
-
-                             * 'mean' - to return top n services whose mean response time was largest,
-                               i.e., top n slowest services
-                             * 'usage' - to return top n most commonly used services
-========== ======== ======== =====================================================================
+========== ======== ======== =========================================
             
 
 Response parameters
 -------------------
 
-service_name
-usage
-rate
-time
-usage_trend
-mean_trend
-min_resp_time
-max_resp_time
-all_services_usage
-all_services_time
-mean_all_services
-usage_perc_all_services
-time_perc_all_services
+============= ======== ======== =========================================================================================
+Name          Datatype Optional Notes
+============= ======== ======== =========================================================================================
+service_name  string   ---      Name of the service the statistics are of
+usage         int      ---      How many times the service was invoked
+rate          float    ---      How often, in request a second, the service was being invoked
+time          float    ---      How much time, in milliseconds, all invocations of the service took
+usage_trend   string   ---      CSV data. For each minute between start and stop, how many times the service was invoked.
+mean_trend    string   ---      CSV data. For each minute between start and stop, what the mean response time was.
+min_resp_time float    ---      Mimimum response time, in milliseconds
+max_resp_time float    ---      Maximum response time, in milliseconds
+============= ======== ======== =========================================================================================
 
 SOAP example
 ------------
@@ -104,15 +97,27 @@ JSON example
 
 .. code-block:: javascript
 
-   {
-      "start": "2013-02-09T23:30:00",
-      "stop": "2013-02-09T23:45:00"
-   }
+  {
+     "start": "2013-02-10T12:10:00",
+     "stop": "2013-02-10T12:35:00",
+     "service_id": 261
+  }
 
-   {
-     "zato_env": {
-       "details": "",
-       "result": "ZATO_OK",
-       "cid": "K72653045522169670137512962812"
-     }
-   }
+  {
+    "zato_env": {
+      "details": "",
+      "result": "ZATO_OK",
+      "cid": "K57564118290722066747276004829"
+    },
+    "zato_stats_get_by_service_response": {
+      "mean_trend": "13,0,9,15,0,7,20,0,11,17,0,12,9,0,8,11,0,0,0,0,0,23,0,22,21",
+      "min_resp_time": 7,
+      "service_name": "zato.stats.ProcessRawTimes",
+      "max_resp_time": 23,
+      "rate": 0.01,
+      "time": 198,
+      "usage": 14,
+      "usage_trend": "1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,0,0,0,0,1,0,1,1",
+      "mean": 7.92
+    }
+  }
