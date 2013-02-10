@@ -1,4 +1,4 @@
-zato.Ping2
+zato.ping2
 ==========
 
 Overview

@@ -1,4 +1,4 @@
-zato.outgoing.amqp.Delete
+zato.outgoing.amqp.delete
 =========================
 
 Overview

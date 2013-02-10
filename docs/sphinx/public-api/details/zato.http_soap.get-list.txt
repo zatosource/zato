@@ -1,5 +1,5 @@
-zato.http_soap.GetList
-======================
+zato.http_soap.get-list
+=======================
 
 Overview
 --------

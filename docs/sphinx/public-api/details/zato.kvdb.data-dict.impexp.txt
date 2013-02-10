@@ -11,4 +11,4 @@ the already existing information.
 Services
 --------
 
-* :doc:`zato.kvdb.data-dict.impexp.Import <./zato.kvdb.data-dict.impexp.import>`
+* :doc:`zato.kvdb.data-dict.impexp.import <./zato.kvdb.data-dict.impexp.import>`

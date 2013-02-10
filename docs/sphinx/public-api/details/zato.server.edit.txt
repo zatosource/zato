@@ -1,4 +1,4 @@
-zato.server.Edit
+zato.server.edit
 ================
 
 Overview

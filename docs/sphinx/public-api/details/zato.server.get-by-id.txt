@@ -1,5 +1,5 @@
-zato.server.GetByID
-===================
+zato.server.get-by-id
+=====================
 
 Overview
 --------

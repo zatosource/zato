@@ -1,5 +1,5 @@
-zato.kvdb.data-dict.translation.GetList
-=======================================
+zato.kvdb.data-dict.translation.get-list
+========================================
 
 Overview
 --------

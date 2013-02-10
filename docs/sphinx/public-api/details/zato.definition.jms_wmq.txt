@@ -18,8 +18,8 @@ to WebSphere MQ's JMS format.
 Services
 --------
 
-* :doc:`zato.definition.jms_wmq.Create <./zato.definition.jms_wmq.create>`
-* :doc:`zato.definition.jms_wmq.Delete <./zato.definition.jms_wmq.delete>`
-* :doc:`zato.definition.jms_wmq.Edit <./zato.definition.jms_wmq.edit>`
-* :doc:`zato.definition.jms_wmq.GetByID <./zato.definition.jms_wmq.get-by-id>`
-* :doc:`zato.definition.jms_wmq.GetList <./zato.definition.jms_wmq.get-list>`
+* :doc:`zato.definition.jms_wmq.create <./zato.definition.jms_wmq.create>`
+* :doc:`zato.definition.jms_wmq.delete <./zato.definition.jms_wmq.delete>`
+* :doc:`zato.definition.jms_wmq.edit <./zato.definition.jms_wmq.edit>`
+* :doc:`zato.definition.jms_wmq.get-by-id <./zato.definition.jms_wmq.get-by-id>`
+* :doc:`zato.definition.jms_wmq.get-list <./zato.definition.jms_wmq.get-list>`

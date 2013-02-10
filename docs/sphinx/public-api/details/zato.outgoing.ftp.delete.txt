@@ -1,4 +1,4 @@
-zato.outgoing.ftp.Delete
+zato.outgoing.ftp.delete
 ========================
 
 Overview

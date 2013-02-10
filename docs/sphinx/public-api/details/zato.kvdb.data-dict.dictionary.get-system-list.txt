@@ -1,5 +1,5 @@
-zato.kvdb.data-dict.dictionary.GetSystemList
-============================================
+zato.kvdb.data-dict.dictionary.get-system-list
+==============================================
 
 Overview
 --------

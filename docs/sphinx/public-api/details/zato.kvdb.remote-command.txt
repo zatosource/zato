@@ -9,4 +9,4 @@ Anything which is to do with executing raw commands against a cluster's KVDB.
 Services
 --------
 
-* :doc:`zato.kvdb.remote-command.Execute <./zato.kvdb.remote-command.execute>`
+* :doc:`zato.kvdb.remote-command.execute <./zato.kvdb.remote-command.execute>`

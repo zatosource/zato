@@ -1,5 +1,5 @@
-zato.outgoing.sql.Edit
-=======================
+zato.outgoing.sql.edit
+======================
 
 Overview
 --------

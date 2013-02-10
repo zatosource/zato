@@ -1,4 +1,4 @@
-zato.kvdb.data-dict.dictionary.Edit
+zato.kvdb.data-dict.dictionary.edit
 ===================================
 
 Overview

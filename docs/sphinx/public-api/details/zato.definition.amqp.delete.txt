@@ -1,4 +1,4 @@
-zato.definition.amqp.Delete
+zato.definition.amqp.delete
 ===========================
 
 Overview

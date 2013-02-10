@@ -1,5 +1,5 @@
-zato.outgoing.jms_wmq.GetList
-=============================
+zato.outgoing.jms_wmq.get-list
+==============================
 
 Overview
 --------

@@ -1,4 +1,4 @@
-zato.channel.zmq.Edit
+zato.channel.zmq.edit
 =====================
 
 Overview

@@ -1,5 +1,5 @@
-zato.definition.jms_wmq.GetByID
-===============================
+zato.definition.jms_wmq.get-by-id
+=================================
 
 Overview
 --------

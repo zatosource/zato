@@ -1,4 +1,4 @@
-zato.outgoing.jms_wmq.Delete
+zato.outgoing.jms_wmq.delete
 ============================
 
 Overview

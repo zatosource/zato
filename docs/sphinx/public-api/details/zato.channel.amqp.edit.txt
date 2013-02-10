@@ -1,4 +1,4 @@
-zato.channel.amqp.Edit
+zato.channel.amqp.edit
 ======================
 
 Overview

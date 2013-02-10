@@ -1,5 +1,5 @@
-zato.scheduler.job.GetList
-==========================
+zato.scheduler.job.get-list
+===========================
 
 Overview
 --------

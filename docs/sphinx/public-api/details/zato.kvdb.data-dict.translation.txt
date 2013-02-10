@@ -9,10 +9,10 @@ Services related to the management of KVDB translations.
 Services
 --------
 
-* :doc:`zato.kvdb.data-dict.translation.Create <./zato.kvdb.data-dict.translation.create>`
-* :doc:`zato.kvdb.data-dict.translation.Delete <./zato.kvdb.data-dict.translation.delete>`
-* :doc:`zato.kvdb.data-dict.translation.Edit <./zato.kvdb.data-dict.translation.edit>`
-* :doc:`zato.kvdb.data-dict.translation.GetLastID <./zato.kvdb.data-dict.translation.get-last-id>`
-* :doc:`zato.kvdb.data-dict.translation.GetList <./zato.kvdb.data-dict.translation.get-list>`
-* :doc:`zato.kvdb.data-dict.translation.Translate <./zato.kvdb.data-dict.translation.translate>`
+* :doc:`zato.kvdb.data-dict.translation.create <./zato.kvdb.data-dict.translation.create>`
+* :doc:`zato.kvdb.data-dict.translation.delete <./zato.kvdb.data-dict.translation.delete>`
+* :doc:`zato.kvdb.data-dict.translation.edit <./zato.kvdb.data-dict.translation.edit>`
+* :doc:`zato.kvdb.data-dict.translation.get-last-id <./zato.kvdb.data-dict.translation.get-last-id>`
+* :doc:`zato.kvdb.data-dict.translation.get-list <./zato.kvdb.data-dict.translation.get-list>`
+* :doc:`zato.kvdb.data-dict.translation.translate <./zato.kvdb.data-dict.translation.translate>`
 

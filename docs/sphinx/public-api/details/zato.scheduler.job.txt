@@ -9,9 +9,9 @@ Services related to the management of a scheduler's jobs.
 Services
 --------
 
-* :doc:`zato.scheduler.job.Create <./zato.scheduler.job.create>`
-* :doc:`zato.scheduler.job.Delete <./zato.scheduler.job.delete>`
-* :doc:`zato.scheduler.job.Edit <./zato.scheduler.job.edit>`
-* :doc:`zato.scheduler.job.Execute <./zato.scheduler.job.execute>`
-* :doc:`zato.scheduler.job.GetByName <./zato.scheduler.job.get-by-name>`
-* :doc:`zato.scheduler.job.GetList <./zato.scheduler.job.get-list>`
+* :doc:`zato.scheduler.job.create <./zato.scheduler.job.create>`
+* :doc:`zato.scheduler.job.delete <./zato.scheduler.job.delete>`
+* :doc:`zato.scheduler.job.edit <./zato.scheduler.job.edit>`
+* :doc:`zato.scheduler.job.execute <./zato.scheduler.job.execute>`
+* :doc:`zato.scheduler.job.get-by-name <./zato.scheduler.job.get-by-name>`
+* :doc:`zato.scheduler.job.get-list <./zato.scheduler.job.get-list>`

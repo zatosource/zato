@@ -1,4 +1,4 @@
-zato.security.basic-auth.Edit
+zato.security.basic-auth.edit
 =============================
 
 Overview

@@ -1,5 +1,5 @@
-zato.security.tech-account.GetByID
-==================================
+zato.security.tech-account.get-by-id
+====================================
 
 Overview
 --------

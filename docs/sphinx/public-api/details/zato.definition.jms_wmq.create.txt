@@ -1,4 +1,4 @@
-zato.definition.jms_wmq.Create
+zato.definition.jms_wmq.create
 ==============================
 
 Overview

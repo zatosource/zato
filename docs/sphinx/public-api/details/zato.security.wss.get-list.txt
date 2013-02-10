@@ -1,5 +1,5 @@
-zato.security.wss.GetList
-================================
+zato.security.wss.get-list
+==========================
 
 Overview
 --------

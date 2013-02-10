@@ -1,5 +1,5 @@
-zato.channel.jms_wmq.GetList
-============================
+zato.channel.jms_wmq.get-list
+=============================
 
 Overview
 --------

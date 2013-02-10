@@ -1,4 +1,4 @@
-zato.kvdb.data-dict.translation.Translate
+zato.kvdb.data-dict.translation.translate
 =========================================
 
 Overview

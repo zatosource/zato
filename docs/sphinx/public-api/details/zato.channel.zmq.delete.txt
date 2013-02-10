@@ -1,4 +1,4 @@
-zato.channel.zmq.Delete
+zato.channel.zmq.delete
 =======================
 
 Overview

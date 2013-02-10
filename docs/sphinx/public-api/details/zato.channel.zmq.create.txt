@@ -1,4 +1,4 @@
-zato.channel.zmq.Create
+zato.channel.zmq.create
 =======================
 
 Overview

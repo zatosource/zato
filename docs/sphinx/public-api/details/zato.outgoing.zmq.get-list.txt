@@ -1,5 +1,5 @@
-zato.outgoing.zmq.GetList
-=========================
+zato.outgoing.zmq.get-list
+==========================
 
 Overview
 --------

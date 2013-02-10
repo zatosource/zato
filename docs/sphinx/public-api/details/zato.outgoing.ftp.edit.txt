@@ -1,5 +1,5 @@
-zato.outgoing.ftp.Edit
-=======================
+zato.outgoing.ftp.edit
+======================
 
 Overview
 --------

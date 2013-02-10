@@ -1,4 +1,4 @@
-zato.kvdb.data-dict.impexp.Import
+zato.kvdb.data-dict.impexp.import
 =================================
 
 Overview

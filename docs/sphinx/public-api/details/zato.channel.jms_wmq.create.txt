@@ -1,4 +1,4 @@
-zato.channel.jms_wmq.Create
+zato.channel.jms_wmq.create
 ===========================
 
 Overview

@@ -9,6 +9,6 @@ Services related to the management of cluster servers.
 Services
 --------
 
-* :doc:`zato.server.Delete <./zato.server.delete>`
-* :doc:`zato.server.Edit <./zato.server.edit>`
-* :doc:`zato.server.GetByID <./zato.server.get-by-id>`
+* :doc:`zato.server.delete <./zato.server.delete>`
+* :doc:`zato.server.edit <./zato.server.edit>`
+* :doc:`zato.server.get-by-id <./zato.server.get-by-id>`

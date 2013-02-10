@@ -1,4 +1,4 @@
-zato.http_soap.Delete
+zato.http_soap.delete
 =====================
 
 Overview

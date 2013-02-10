@@ -1,4 +1,4 @@
-zato.scheduler.job.Create
+zato.scheduler.job.create
 =========================
 
 Overview

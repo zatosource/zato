@@ -1,4 +1,4 @@
-zato.security.tech-account.Edit
+zato.security.tech-account.edit
 ===============================
 
 Overview

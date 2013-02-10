@@ -1,4 +1,4 @@
-zato.channel.amqp.Delete
+zato.channel.amqp.delete
 ========================
 
 Overview

@@ -10,11 +10,11 @@ operate against the KVDB the cluster being invoked is configured to make use of.
 Services
 --------
 
-* :doc:`zato.kvdb.data-dict.dictionary.Create <./zato.kvdb.data-dict.dictionary.create>`
-* :doc:`zato.kvdb.data-dict.dictionary.Delete <./zato.kvdb.data-dict.dictionary.delete>`
-* :doc:`zato.kvdb.data-dict.dictionary.Edit <./zato.kvdb.data-dict.dictionary.edit>`
-* :doc:`zato.kvdb.data-dict.dictionary.GetKeyList <./zato.kvdb.data-dict.dictionary.get-key-list>`
-* :doc:`zato.kvdb.data-dict.dictionary.GetLastID <./zato.kvdb.data-dict.dictionary.get-last-id>`
-* :doc:`zato.kvdb.data-dict.dictionary.GetList <./zato.kvdb.data-dict.dictionary.get-list>`
-* :doc:`zato.kvdb.data-dict.dictionary.GetSystemList <./zato.kvdb.data-dict.dictionary.get-system-list>`
-* :doc:`zato.kvdb.data-dict.dictionary.GetValueList <./zato.kvdb.data-dict.dictionary.get-value-list>`
+* :doc:`zato.kvdb.data-dict.dictionary.create <./zato.kvdb.data-dict.dictionary.create>`
+* :doc:`zato.kvdb.data-dict.dictionary.delete <./zato.kvdb.data-dict.dictionary.delete>`
+* :doc:`zato.kvdb.data-dict.dictionary.edit <./zato.kvdb.data-dict.dictionary.edit>`
+* :doc:`zato.kvdb.data-dict.dictionary.get-key-list <./zato.kvdb.data-dict.dictionary.get-key-list>`
+* :doc:`zato.kvdb.data-dict.dictionary.get-last-id <./zato.kvdb.data-dict.dictionary.get-last-id>`
+* :doc:`zato.kvdb.data-dict.dictionary.get-list <./zato.kvdb.data-dict.dictionary.get-list>`
+* :doc:`zato.kvdb.data-dict.dictionary.get-system-list <./zato.kvdb.data-dict.dictionary.get-system-list>`
+* :doc:`zato.kvdb.data-dict.dictionary.get-value-list <./zato.kvdb.data-dict.dictionary.get-value-list>`
