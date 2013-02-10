@@ -7,20 +7,20 @@ Overview
 Deletes statistics for all services from a given period.
 
 * List response: No
-* SOAP action: zato.stats_delete
+* SOAP action: zato.stats.delete
 * SOAP URL path: /zato/soap
-* JSON URL path: /zato/json/zato.stats_delete
+* JSON URL path: /zato/json/zato.stats.delete
 * WSDL: :download:`Click here</public-api/zato.wsdl>`
 
 Request parameters
 ------------------
 
-===== ======== ======== ==========
+===== ======== ======== ===================
 Name  Datatype Optional Notes
-===== ======== ======== ==========
-start dateTime ---      Start date
-stop  dateTime ---      Stop date
-===== ======== ======== ==========
+===== ======== ======== ===================
+start dateTime ---      Start date and time
+stop  dateTime ---      Stop date and time
+===== ======== ======== ===================
             
 
 Response parameters
