@@ -84,8 +84,8 @@ is_internal  boolean  ---      'true' if it's one of Zato's own internal objects
 url_path     string   ---      URL path to expose if it's a channel, a URL path to invoke if it's an outgoing connection. Must start with a '/'.
 service      string   Yes      A service to invoke on an incoming request if it's a channel
 security_id  int      Yes      If it's a channel, ID of an already existing security definition, one of 
-                               :doc:`HTTP Basic Auth.*</public-api/details/zato.security.basic_auth>`, 
-                               :doc:`technical account</public-api/details/zato.security.tech_account>` or 
+                               :doc:`HTTP Basic Auth.*<./zato.security.basic-auth>`, 
+                               :doc:`technical account<./zato.security.tech-account>` or 
                                :doc:`WS-Security</public-api/details/zato.security.wss>`. If not given, from Zato's viewpoint, the channel will be open for everyone to invoke.
 method       string   Yes      If it's a channel, an HTTP method that must be used by clients when invoking the channel. If not given, any method will work.
 soap_action  string   Yes      SOAP action to expose the channel under if it's a channel. SOAP action to use when invoking services if it's an outgoing connections.
@@ -112,7 +112,6 @@ SOAP example
 
    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
         xmlns:zato="http://gefira.pl/zato">
-      <soapenv:Header/>
       <soapenv:Body>
          <zato:zato_http_soap_create_request>
             <zato:cluster_id>1</zato:cluster_id>

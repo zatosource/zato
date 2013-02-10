@@ -1,0 +1,103 @@
+zato.service.set-wsdl
+=====================
+
+Overview
+--------
+
+Attaches a WSDL document to a service.
+
+.. note::
+
+  Zato doesn't actually check whether the uploaded data is a proper WSDL,
+  any BASE64-encoded document will be accepted.
+
+* List response: No
+* SOAP action: zato.service.set-wsdl
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.service.set-wsdl
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ======== ======== =======================================
+Name       Datatype Optional Notes
+========== ======== ======== =======================================
+cluster_id int      ---      Cluster the service is deployed in
+name       string   ---      Name of the service to upload a WSDL to
+wsdl       string   ---      WSDL contents, BASE64-encoded
+wsdl_name  string   ---      WSDL file name
+========== ======== ======== =======================================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_service_set_wsdl_request>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>myservice1.HelloWorld</zato:name>
+            <zato:wsdl>PD94bWwgdmVyc2lvbj0iMS4wIj8+CjxkZWZpbml0aW9ucyBuYW1lPSJTdG9ja1F1b3RlIgoKdGFy
+ Z2V0TmFtZXNwYWNlPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90ZS9kZWZpbml0aW9ucyIK
+ ICAgICAgICAgIHhtbG5zOnRucz0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2NrcXVvdGUvZGVmaW5p
+ dGlvbnMiCiAgICAgICAgICB4bWxuczp4c2QxPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90
+ ZS9zY2hlbWFzIgogICAgICAgICAgeG1sbnM6c29hcD0iaHR0cDovL3NjaGVtYXMueG1sc29hcC5v
+ cmcvd3NkbC9zb2FwLyIKICAgICAgICAgIHhtbG5zPSJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9y
+ Zy93c2RsLyI+CgogICA8aW1wb3J0IG5hbWVzcGFjZT0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2Nr
+ cXVvdGUvc2NoZW1hcyIKICAgICAgICAgICBsb2NhdGlvbj0iaHR0cDovL2V4YW1wbGUuY29tL3N0
+ b2NrcXVvdGUvc3RvY2txdW90ZS54c2QiLz4KCiAgICA8bWVzc2FnZSBuYW1lPSJHZXRMYXN0VHJh
+ ZGVQcmljZUlucHV0Ij4KICAgICAgICA8cGFydCBuYW1lPSJib2R5IiBlbGVtZW50PSJ4c2QxOlRy
+ YWRlUHJpY2VSZXF1ZXN0Ii8+CiAgICA8L21lc3NhZ2U+CgogICAgPG1lc3NhZ2UgbmFtZT0iR2V0
+ TGFzdFRyYWRlUHJpY2VPdXRwdXQiPgogICAgICAgIDxwYXJ0IG5hbWU9ImJvZHkiIGVsZW1lbnQ9
+ InhzZDE6VHJhZGVQcmljZSIvPgogICAgPC9tZXNzYWdlPgoKICAgIDxwb3J0VHlwZSBuYW1lPSJT
+ dG9ja1F1b3RlUG9ydFR5cGUiPgogICAgICAgIDxvcGVyYXRpb24gbmFtZT0iR2V0TGFzdFRyYWRl
+ UHJpY2UiPgogICAgICAgICAgIDxpbnB1dCBtZXNzYWdlPSJ0bnM6R2V0TGFzdFRyYWRlUHJpY2VJ
+ bnB1dCIvPgogICAgICAgICAgIDxvdXRwdXQgbWVzc2FnZT0idG5zOkdldExhc3RUcmFkZVByaWNl
+ T3V0cHV0Ii8+CiAgICAgICAgPC9vcGVyYXRpb24+CiAgICA8L3BvcnRUeXBlPgo8L2RlZmluaXRp
+ b25zPg==</zato:wsdl>
+        <zato:wsdl_name>helloworld.wsdl</zato:wsdl_name>
+         </zato:zato_service_set_wsdl_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns="http://gefira.pl/zato">
+      <soap:Body>
+            </zato_service_set_wsdl_response xmlns="http://gefira.pl/zato">
+               <zato_env>
+                  <cid>K10888089663837295444048501529</cid>
+                  <result>ZATO_OK</result>
+               </zato_env>
+            <//zato_service_set_wsdl_response>
+      </soap:Body>
+   </soap:Envelope>  
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "cluster_id": 1,
+      "name": "myservice1.HelloWorld",
+      "wsdl": "PD94bWwgdmVyc2lvbj0iMS4wIj8+CjxkZWZpbml0aW9ucyBuYW1lPSJTdG9ja1F1b3RlIgoKdGFy\nZ2V0TmFtZXNwYWNlPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90ZS9kZWZpbml0aW9ucyIK\nICAgICAgICAgIHhtbG5zOnRucz0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2NrcXVvdGUvZGVmaW5p\ndGlvbnMiCiAgICAgICAgICB4bWxuczp4c2QxPSJodHRwOi8vZXhhbXBsZS5jb20vc3RvY2txdW90\nZS9zY2hlbWFzIgogICAgICAgICAgeG1sbnM6c29hcD0iaHR0cDovL3NjaGVtYXMueG1sc29hcC5v\ncmcvd3NkbC9zb2FwLyIKICAgICAgICAgIHhtbG5zPSJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9y\nZy93c2RsLyI+CgogICA8aW1wb3J0IG5hbWVzcGFjZT0iaHR0cDovL2V4YW1wbGUuY29tL3N0b2Nr\ncXVvdGUvc2NoZW1hcyIKICAgICAgICAgICBsb2NhdGlvbj0iaHR0cDovL2V4YW1wbGUuY29tL3N0\nb2NrcXVvdGUvc3RvY2txdW90ZS54c2QiLz4KCiAgICA8bWVzc2FnZSBuYW1lPSJHZXRMYXN0VHJh\nZGVQcmljZUlucHV0Ij4KICAgICAgICA8cGFydCBuYW1lPSJib2R5IiBlbGVtZW50PSJ4c2QxOlRy\nYWRlUHJpY2VSZXF1ZXN0Ii8+CiAgICA8L21lc3NhZ2U+CgogICAgPG1lc3NhZ2UgbmFtZT0iR2V0\nTGFzdFRyYWRlUHJpY2VPdXRwdXQiPgogICAgICAgIDxwYXJ0IG5hbWU9ImJvZHkiIGVsZW1lbnQ9\nInhzZDE6VHJhZGVQcmljZSIvPgogICAgPC9tZXNzYWdlPgoKICAgIDxwb3J0VHlwZSBuYW1lPSJT\ndG9ja1F1b3RlUG9ydFR5cGUiPgogICAgICAgIDxvcGVyYXRpb24gbmFtZT0iR2V0TGFzdFRyYWRl\nUHJpY2UiPgogICAgICAgICAgIDxpbnB1dCBtZXNzYWdlPSJ0bnM6R2V0TGFzdFRyYWRlUHJpY2VJ\nbnB1dCIvPgogICAgICAgICAgIDxvdXRwdXQgbWVzc2FnZT0idG5zOkdldExhc3RUcmFkZVByaWNl\nT3V0cHV0Ii8+CiAgICAgICAgPC9vcGVyYXRpb24+CiAgICA8L3BvcnRUeXBlPgo8L2RlZmluaXRp\nb25zPg==",
+      "wsdl_name": "helloworld.wsdl"
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K49345675816963024012323928084"
+     }
+   }
+

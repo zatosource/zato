@@ -1,0 +1,124 @@
+zato.service.get-by-name
+========================
+
+Overview
+--------
+
+Returns a service by its name. 
+
+.. note::
+
+   'time_last', 'time_min_all_time', 'time_max_all_time' and 'time_mean_all_time'
+   may return 0 even if a service has been invoked at least once. This will be
+   an effect of rounding the result to a nearest integer, which is 0 in this case.
+
+
+* List response: No
+* SOAP action: zato.service.get-by-name
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.service.get-by-name
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ======== ======== ===========================================
+Name       Datatype Optional Notes
+========== ======== ======== ===========================================
+cluster_id int      ---      ID of the cluster the service is defined in
+name       string   ---      Name of the service to return
+========== ======== ======== ===========================================
+            
+
+Response parameters
+-------------------
+
+================== ======== ======== =================================================================================
+Name               Datatype Optional Notes
+================== ======== ======== =================================================================================
+id                 int      ---      Service ID
+name               string   ---      Copied over from request
+impl_name          int      ---      The service's actual implementation, e.g. a Python class implementing the service
+is_internal        boolean  ---      Whether the service is one of Zato's internal services
+may_be_deleted     boolean  ---      Will be true only if a server that receives the request has its
+                                     config's internal_services_may_be_deleted flag set to True
+usage              int      ---      How many times the service has been invoked
+slow_threshold     int      ---      Same as for :doc:`zato.service.edit <./zato.service.edit>`
+time_last          int      ---      Response time, in milliseconds, of the last invocation
+time_min_all_time  int      ---      Minimum response time, in milliseconds, across all the invocations
+time_max_all_time  int      ---      Maximum response time, in milliseconds, across all the invocations
+time_mean_all_time decimal  ---      Mean response time, in milliseconds, across all the invocations
+================== ======== ======== =================================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_service_get_by_name_request>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>zato.stats.ProcessRawTimes</zato:name>
+         </zato:zato_service_get_by_name_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_service_get_by_name_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K37575404341545240989613867858</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>261</id>
+           <name>zato.stats.ProcessRawTimes</name>
+           <is_active>true</is_active>
+           <impl_name>zato.server.service.internal.stats.ProcessRawTimes</impl_name>
+           <is_internal>true</is_internal>
+           <may_be_deleted>false</may_be_deleted>
+           <usage>1753</usage>
+           <slow_threshold>99999</slow_threshold>
+           <time_last>13</time_last>
+           <time_min_all_time>0</time_min_all_time>
+           <time_max_all_time>408</time_max_all_time>
+           <time_mean_all_time>11.7</time_mean_all_time>
+       </item>
+   </zato_service_get_by_name_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "cluster_id": 1,
+      "name": "zato.stats.ProcessRawTimes"
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K26447909997304465505343599271"
+     },
+     "zato_service_get_by_name_response": {
+       "impl_name": "zato.server.service.internal.stats.ProcessRawTimes",
+       "name": "zato.stats.ProcessRawTimes",
+       "may_be_deleted": false,
+       "is_internal": true,
+       "is_active": true,
+       "slow_threshold": 99999,
+       "time_min_all_time": 0,
+       "time_mean_all_time": 10.9,
+       "usage": "1757",
+       "time_max_all_time": 408,
+       "time_last": "19",
+       "id": 261
+     }
+   }

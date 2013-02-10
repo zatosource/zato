@@ -1,0 +1,88 @@
+zato.security.tech-account.GetByID
+==================================
+
+Overview
+--------
+
+Returns a technical account by its ID.
+
+* List response: No
+* SOAP action: zato.security.tech-account.get-by-id
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.security.tech-account.get-by-id
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ========= ======== =========================================================
+Name       Datatype  Optional Notes
+========== ========= ======== =========================================================
+id         int       ---      ID of the definition to return
+========== ========= ======== =========================================================
+            
+
+Response parameters
+-------------------
+
+========= ======== ======== ================================
+Name      Datatype Optional Notes
+========= ======== ======== ================================
+id        string   ---      Copied over from request
+name      string   ---      Definition name
+is_active boolean  ---      Whether the definition is active
+========= ======== ======== ================================
+
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_security_tech_account_get_by_id_request>
+            <zato:id>1</zato:id>
+         </zato:zato_security_tech_account_get_by_id_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_security_tech_account_get_by_id_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K14530714706392747148055380537</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>1</id>
+           <name>CRM Client 20</name>
+           <is_active>true</is_active>
+       </item>
+   </zato_security_tech_account_get_by_id_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 1
+   }
+
+   {
+     "zato_security_tech_account_get_by_id_response": {
+       "is_active": true,
+       "id": 1,
+       "name": "CRM Client 20"
+     },
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K30604901073277030165984380547"
+     }
+   }

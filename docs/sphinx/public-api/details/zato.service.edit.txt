@@ -1,0 +1,100 @@
+zato.service.edit
+=================
+
+Overview
+--------
+
+Updates an already existing service. 
+
+
+* List response: No
+* SOAP action: zato.service.edit
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.service.edit
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+============== ======== ======== ===================================================================================================
+Name           Datatype Optional Notes
+============== ======== ======== ===================================================================================================
+id             int      ---      ID of the service to be updated
+is_active      boolean  ---      Whether the service is active, can it be invoked at all
+slow_threshold int      ---      Threshold, in milliseconds, after which a response will be considered a slow one.
+                                 Last 100 of such responses, along with their requests, will be stored for a later
+                                 examination by users. Setting slow_threshold to a large value - such as 4294967296 which is roughly
+                                 50 days - will effectively disable the feature.
+============== ======== ======== ===================================================================================================
+            
+
+Response parameters
+-------------------
+
+=========== ======== ======== =================================================================================
+Name        Datatype Optional Notes
+=========== ======== ======== =================================================================================
+id          int      ---      Copied over from request
+name        string   ---      Service name
+impl_name   int      ---      The service's actual implementation, e.g. a Python class implementing the service
+is_internal boolean  ---      Whether the service is one of Zato's internal services
+=========== ======== ======== =================================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_service_edit_request>
+            <zato:id>1</zato:id>
+            <zato:is_active>true</zato:is_active>
+            <zato:slow_threshold>500</zato:slow_threshold>
+         </zato:zato_service_edit_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_service_edit_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K21761612282345442216600348704</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>1</id>
+           <name>zato.security.wss.Create</name>
+           <impl_name>zato.server.service.internal.security.wss.Create</impl_name>
+           <is_internal>true</is_internal>
+       </item>
+   </zato_service_edit_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 1,
+      "is_active": true,
+      "slow_threshold": 500
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K18158752906394296340055928189"
+     },
+     "zato_service_edit_response": {
+       "impl_name": "zato.server.service.internal.security.wss.Create",
+       "is_internal": true,
+       "id": 1,
+       "name": "zato.security.wss.Create"
+     }
+   }

@@ -1,0 +1,127 @@
+zato.scheduler.job.GetByName
+============================
+
+Overview
+--------
+
+Returns a scheduler's job by its name.
+
+* List response: No
+* SOAP action: zato.scheduler.job.get-by-name
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.scheduler.job.get-by-name
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ========= ======== =====================================
+Name       Datatype  Optional Notes
+========== ========= ======== =====================================
+cluster_id int       ---      ID of the cluster this job is defined
+name       string    ---      Name of the job to return
+========== ========= ======== =====================================
+            
+
+Response parameters
+-------------------
+
+=============== ======== ======== =========================================================================
+Name            Datatype Optional Notes
+=============== ======== ======== =========================================================================
+id              int      ---      Job ID
+name            string   ---      Same as for :doc:`zato.scheduler.job.Create<./zato.scheduler.job.create>`
+is_active       boolean  ---      〃
+job_type        string   ---      〃
+service         string   ---      〃
+start_date      datetime ---      〃
+service_id      int      ---      ID of the service to execute each time the job is run
+service_name    string   ---      Name of the service
+extra           string   Yes      Same as for :doc:`zato.scheduler.job.Create<./zato.scheduler.job.create>`
+weeks           int      Yes      〃
+days            int      Yes      〃
+hours           int      Yes      〃
+minutes         int      Yes      〃
+seconds         int      Yes      〃
+repeats         int      Yes      〃
+cron_definition string   Yes      〃
+=============== ======== ======== =========================================================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_scheduler_job_get_by_name_request>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>Get Yesterday's Invoices</zato:name>
+         </zato:zato_scheduler_job_get_by_name_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+      <zato_scheduler_job_get_by_name_response xmlns="http://gefira.pl/zato">
+         <zato_env>
+            <cid>K53273825172013113047625680249</cid>
+            <result>ZATO_OK</result>
+         </zato_env>
+         <item xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <id>922</id>
+            <name>Get Outstanding Invoices</name>
+            <is_active>true</is_active>
+            <job_type>interval_based</job_type>
+            <start_date>2013-02-21 23:10:11</start_date>
+            <extra>skip-class:2010*;2012-10-*</extra>
+            <service_id>118</service_id>
+            <service_name>my.service.get.outstanding.invoices</service_name>
+            <weeks xsi:nil="true"/>
+            <hours>12</hours>
+            <minutes xsi:nil="true"/>
+            <seconds xsi:nil="true"/>
+            <repeats xsi:nil="true"/>
+            <cron_definition xsi:nil="true"/>
+         </item>
+      </zato_scheduler_job_get_by_name_response>
+   </soap:Body>
+   </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "cluster_id": 1,
+      "name": "Process Dunning Letters"
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K14454139924755454804066076436"
+     },
+     "zato_scheduler_job_get_by_name_response": {
+       "name": "Process Dunning Letters",
+       "extra": "",
+       "seconds": null,
+       "is_active": true,
+       "cron_definition": "0 * * * *",
+       "job_type": "cron_style",
+       "days": null,
+       "id": 923,
+       "hours": null,
+       "service_name": "my.service.dunning.letters",
+       "service_id": 118,
+       "weeks": null,
+       "repeats": null,
+       "minutes": null,
+       "start_date": "2013-02-21T23:10:11"
+     }
+   }

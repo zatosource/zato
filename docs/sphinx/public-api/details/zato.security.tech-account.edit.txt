@@ -1,0 +1,100 @@
+zato.security.tech-account.Edit
+===============================
+
+Overview
+--------
+
+Updates an already existing technical account.
+
+.. note::
+
+  Use :doc:`zato.security.tech-account.ChangePassword<./zato.security.tech-account.change-password>`
+  to change its password.
+
+* List response: No
+* SOAP action: zato.security.tech-account.create
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.security.tech-account.create
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ========= ======== =========================================================
+Name       Datatype  Optional Notes
+========== ========= ======== =========================================================
+id         int       ---      ID of the definition to update
+cluster_id int       ---      ID of the cluster this definition is configured in
+name       string    ---      Name of the definition to create
+is_active  boolean   ---      Whether the definition should be active upon its creation
+========== ========= ======== =========================================================
+            
+
+Response parameters
+-------------------
+
+==== ======== ======== ========================
+Name Datatype Optional Notes
+==== ======== ======== ========================
+id   int      ---      Copied over from request
+name string   ---      Copied over from request
+==== ======== ======== ========================
+
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_security_tech_account_edit_request>
+            <zato:id>6</zato:id>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>CRM Client 10</zato:name>
+            <zato:is_active>true</zato:is_active>
+         </zato:zato_security_tech_account_edit_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_security_tech_account_edit_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K18363939544222932228798150378</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>6</id>
+           <name>CRM Client 1</name>
+       </item>
+   </zato_security_tech_account_edit_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 1,
+      "cluster_id": 1,
+      "name": "CRM Client 20",
+      "is_active": true
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K28189705737148330503938465757"
+     },
+     "zato_security_tech_account_edit_response": {
+       "id": 7,
+       "name": "CRM Client 2"
+     }
+   }
+

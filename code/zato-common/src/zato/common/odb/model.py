@@ -30,6 +30,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
+from zato.common import SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -124,6 +125,9 @@ class Server(Base):
     id = Column(Integer,  Sequence('server_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     host = Column(String(400), nullable=True)
+    
+    bind_host = Column(String(400), nullable=True)
+    bind_port = Column(Integer(), nullable=True)
 
     # If the server's request to join a cluster has been accepted, and for now
     # it will always be.
@@ -453,8 +457,8 @@ class Job(Base):
     id = Column(Integer,  Sequence('job_id_seq'), primary_key=True)
     name = Column(String(200), nullable=False, unique=True)
     is_active = Column(Boolean(), nullable=False)
-    job_type = Column(Enum('one_time', 'interval_based', 'cron_style',
-                           name='job_type'), nullable=False)
+    job_type = Column(Enum(SCHEDULER_JOB_TYPE.ONE_TIME, SCHEDULER_JOB_TYPE.INTERVAL_BASED,
+                           SCHEDULER_JOB_TYPE.CRON_STYLE, name='job_type'), nullable=False)
     start_date = Column(DateTime(), nullable=False)
     extra = Column(LargeBinary(400000), nullable=True)
 

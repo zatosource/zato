@@ -2,6 +2,7 @@
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="id" type="xsd:int"/>
+            <xsd:element name="current_tech_account_name" type="xsd:string" minOccurs="0"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>

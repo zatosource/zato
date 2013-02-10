@@ -41,10 +41,6 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.channel.zmq.edit/messages.xml -->
 <!-- include ./include/zato.channel.zmq.get-list/messages.xml -->
 
-<!-- include ./include/zato.cluster.server.delete/messages.xml -->
-<!-- include ./include/zato.cluster.server.edit/messages.xml -->
-<!-- include ./include/zato.cluster.server.get-by-id/messages.xml -->
-
 <!-- include ./include/zato.definition.amqp.change-password/messages.xml -->
 <!-- include ./include/zato.definition.amqp.create/messages.xml -->
 <!-- include ./include/zato.definition.amqp.delete/messages.xml -->
@@ -134,6 +130,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.edit/messages.xml -->
 <!-- include ./include/zato.security.wss.get-list/messages.xml -->
 
+<!-- include ./include/zato.server.delete/messages.xml -->
+<!-- include ./include/zato.server.edit/messages.xml -->
+<!-- include ./include/zato.server.get-by-id/messages.xml -->
+
 <!-- include ./include/zato.service.configure-request-response/messages.xml -->
 <!-- include ./include/zato.service.delete/messages.xml -->
 <!-- include ./include/zato.service.edit/messages.xml -->
@@ -166,10 +166,6 @@ targetNamespace="http://gefira.pl/zato"
   </wsdl:types>
 
 <!-- ####################################################################### -->
-
-<!-- include ./include/zato.cluster.server.delete/parts.xml -->
-<!-- include ./include/zato.cluster.server.edit/parts.xml -->
-<!-- include ./include/zato.cluster.server.get-by-id/parts.xml -->
 
 <!-- include ./include/zato.channel.amqp.create/parts.xml -->
 <!-- include ./include/zato.channel.amqp.delete/parts.xml -->
@@ -272,6 +268,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.edit/parts.xml -->
 <!-- include ./include/zato.security.wss.get-list/parts.xml -->
 
+<!-- include ./include/zato.server.delete/parts.xml -->
+<!-- include ./include/zato.server.edit/parts.xml -->
+<!-- include ./include/zato.server.get-by-id/parts.xml -->
+
 <!-- include ./include/zato.service.configure-request-response/parts.xml -->
 <!-- include ./include/zato.service.delete/parts.xml -->
 <!-- include ./include/zato.service.edit/parts.xml -->
@@ -304,10 +304,6 @@ targetNamespace="http://gefira.pl/zato"
   <wsdl:portType name="zato">
   
 <!-- ####################################################################### -->
-
-<!-- include ./include/zato.cluster.server.delete/io.xml -->
-<!-- include ./include/zato.cluster.server.edit/io.xml -->
-<!-- include ./include/zato.cluster.server.get-by-id/io.xml -->
 
 <!-- include ./include/zato.channel.amqp.create/io.xml -->
 <!-- include ./include/zato.channel.amqp.delete/io.xml -->
@@ -410,6 +406,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.edit/io.xml -->
 <!-- include ./include/zato.security.wss.get-list/io.xml -->
 
+<!-- include ./include/zato.server.delete/io.xml -->
+<!-- include ./include/zato.server.edit/io.xml -->
+<!-- include ./include/zato.server.get-by-id/io.xml -->
+
 <!-- include ./include/zato.service.configure-request-response/io.xml -->
 <!-- include ./include/zato.service.delete/io.xml -->
 <!-- include ./include/zato.service.edit/io.xml -->
@@ -447,10 +447,6 @@ targetNamespace="http://gefira.pl/zato"
     
 
 <!-- ####################################################################### -->
-
-<!-- include ./include/zato.cluster.server.delete/body.xml -->
-<!-- include ./include/zato.cluster.server.edit/body.xml -->
-<!-- include ./include/zato.cluster.server.get-by-id/body.xml -->
 
 <!-- include ./include/zato.channel.amqp.create/body.xml -->
 <!-- include ./include/zato.channel.amqp.delete/body.xml -->
@@ -551,6 +547,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.security.wss.delete/body.xml -->
 <!-- include ./include/zato.security.wss.edit/body.xml -->
 <!-- include ./include/zato.security.wss.get-list/body.xml -->
+
+<!-- include ./include/zato.server.delete/body.xml -->
+<!-- include ./include/zato.server.edit/body.xml -->
+<!-- include ./include/zato.server.get-by-id/body.xml -->
 
 <!-- include ./include/zato.service.configure-request-response/body.xml -->
 <!-- include ./include/zato.service.delete/body.xml -->

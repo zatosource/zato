@@ -34,7 +34,6 @@ SOAP example
 
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
          xmlns:zato="http://gefira.pl/zato">
-       <soapenv:Header/>
        <soapenv:Body>
           <zato:zato_scheduler_job_delete_request>
              <zato:id>924</zato:id>

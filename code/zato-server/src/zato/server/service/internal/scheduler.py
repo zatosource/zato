@@ -24,7 +24,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common import scheduler_date_time_format, ZatoException
+from zato.common import scheduler_date_time_format, SCHEDULER_JOB_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
@@ -52,7 +52,8 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     name = input.name
     service_name = input.service
     
-    if job_type not in ('one_time', 'interval_based', 'cron_style'):
+    if job_type not in(SCHEDULER_JOB_TYPE.ONE_TIME, SCHEDULER_JOB_TYPE.INTERVAL_BASED, 
+                           SCHEDULER_JOB_TYPE.CRON_STYLE):
         msg = 'Unrecognized job type [{0}]'.format(job_type)
         logger.error(msg)
         raise ZatoException(cid, msg)
@@ -104,7 +105,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         # Add but don't commit yet.
         session.add(job)
 
-        if job_type == 'interval_based':
+        if job_type == SCHEDULER_JOB_TYPE.INTERVAL_BASED:
             ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
             if not any(input[key] for key in ib_params):
                 msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given"
@@ -117,13 +118,13 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 ib_job = session.query(IntervalBasedJob).filter_by(id=job.interval_based.id).one()
 
             for param in ib_params:
-                value = input[param]
-                if value:
+                value = input[param] or None
+                if value != ZATO_NONE:
                     setattr(ib_job, param, value)
             
             session.add(ib_job)
             
-        elif job_type == 'cron_style':
+        elif job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
             cron_definition = input.cron_definition.strip()
             
             if cron_definition.startswith('@'):
@@ -168,11 +169,11 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             if action == 'edit':
                 msg['old_name'] = old_name
 
-            if job_type == 'interval_based':
+            if job_type == SCHEDULER_JOB_TYPE.INTERVAL_BASED:
                 for param in ib_params:
                     value = input[param]
                     msg[param] = int(value) if value else 0
-            elif job_type == 'cron_style':
+            elif job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
                 msg['cron_definition'] = cron_definition
         else:
             msg = {'action': SCHEDULER.DELETE, 'name': name}
@@ -188,7 +189,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         response.payload.id = job.id
         response.payload.name = input.name
             
-        if job_type == 'cron_style':
+        if job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
             # Needs to be returned because we might've been performing
             # a substitution like changing '@hourly' into '0 * * * *'.
             response.payload.cron_definition = cs_job.cron_definition
@@ -231,13 +232,16 @@ class GetList(_Get):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
             
+        for item in self.response.payload.zato_output:
+            item.start_date = item.start_date.isoformat()
+            
 class GetByName(_Get):
     """ Returns a job by its name.
     """
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_by_name_request'
         response_elem = 'zato_scheduler_job_get_by_name_response'
-        input_required = ('name',)
+        input_required = _Get.SimpleIO.input_required + ('name',)
         output_repeated = False
         
     def get_data(self, session):
@@ -246,6 +250,7 @@ class GetByName(_Get):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload = self.get_data(session)
+            self.response.payload.start_date = self.response.payload.start_date.isoformat()
 
 class Create(_CreateEdit):
     """ Creates a new scheduler's job.

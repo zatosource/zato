@@ -1,0 +1,95 @@
+zato.service.invoke
+===================
+
+Overview
+--------
+
+Invokes a service by its ID. From the service's viewpoint, there is no difference
+between being invoked directly, through a channel or if using zato.service.invoke.
+
+* List response: No
+* SOAP action: zato.service.invoke
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.service.invoke
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+=========== ======== ======== =======================================================
+Name        Datatype Optional Notes
+=========== ======== ======== =======================================================
+id          int      ---      Service ID
+payload     string   ---      BASE64-encoded payload that will be decoded on a server
+                              and used as the service input
+data_format string   Yes      Payload data format, may be either 'xml' or 'json'
+transport   string   Yes      Transport the service should believe it's being invoked
+                              with, may be either 'plain_http' or 'soap'
+=========== ======== ======== =======================================================
+            
+
+Response parameters
+-------------------
+
+======== ======== ======== ================================
+Name     Datatype Optional Notes
+======== ======== ======== ================================
+response string   ---      Service response, BASE64-encoded
+======== ======== ======== ================================
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_service_invoke_request>
+            <zato:id>19</zato:id>
+            <zato:payload>ICAgewogICAgICAiY2x1c3Rlcl9pZCI6IDEsCiAgICAgICJuYW1lIjogIm15c2VydmljZTEuSGVs
+  bG9Xb3JsZCIKICAgfQ==</zato:payload>
+            <zato:data_format>json</zato:data_format>
+         </zato:zato_service_invoke_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_service_invoke_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K03391593762483117376607346870</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <response>eyJ6YXRvX3NlcnZpY2VfaGFzX3dzZGxfcmVzcG9uc2UiOiB7InNlcnZpY2VfaWQiOiA1MjA3LCAi
+           aGFzX3dzZGwiOiB0cnVlfX0=
+       </response>
+   </item>
+   </zato_service_invoke_response>
+   </soap:Body>
+   </soap:Envelope>
+
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 19,
+      "data_format": "json",
+      "payload": "ICAgewogICAgICAiY2x1c3Rlcl9pZCI6IDEsCiAgICAgICJuYW1lIjogIm15c2VydmljZTEuSGVs\nbG9Xb3JsZCIKICAgfQ=="
+   }
+   
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K38951228202956936413819055195"
+     },
+     "zato_service_invoke_response": {
+       "response": "eyJ6YXRvX3NlcnZpY2VfaGFzX3dzZGxfcmVzcG9uc2UiOiB7InNlcnZpY2VfaWQiOiA1MjA3LCAi\naGFzX3dzZGwiOiB0cnVlfX0=\n"
+     }
+   }

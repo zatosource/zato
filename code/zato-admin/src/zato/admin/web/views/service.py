@@ -573,7 +573,7 @@ def invoke(req, service_id, cluster_id):
     try:
         input_dict = {
             'id': service_id,
-            'payload': req.POST.get('payload', ''),
+            'payload': req.POST.get('payload', '').encode('base64'),
             'data_format': req.POST.get('data_format', ''),
             'transport': req.POST.get('transport', ''),
         }
@@ -585,6 +585,6 @@ def invoke(req, service_id, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        response = zato_message.item.response.text if zato_message.item.response else '(No output)'
+        response = zato_message.item.response.text.decode('base64') if zato_message.item.response else '(No output)'
         return HttpResponse(response)
 

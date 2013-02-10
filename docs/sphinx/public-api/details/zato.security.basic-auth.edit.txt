@@ -1,0 +1,106 @@
+zato.security.basic-auth.Edit
+=============================
+
+Overview
+--------
+
+Updates an already existing HTTP Basic Auth security definition.
+
+.. note::
+
+  Use :doc:`zato.security.basic-auth.ChangePassword<./zato.security.basic-auth.change-password>`
+  to change its password.
+
+* List response: No
+* SOAP action: zato.security.basic-auth.edit
+* SOAP URL path: /zato/soap
+* JSON URL path: /zato/json/zato.security.basic-auth.edit
+* WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+========== ========= ======== ====================================================================================
+Name       Datatype  Optional Notes
+========== ========= ======== ====================================================================================
+id         int       ---      ID of the definition to update
+cluster_id int       ---      Same as for :doc:`zato.security.basic-auth.Create<./zato.security.basic-auth.create>`
+name       string    ---      〃
+is_active  boolean   ---      〃
+username   string    ---      〃
+realm      string    ---      〃
+========== ========= ======== ====================================================================================
+            
+
+Response parameters
+-------------------
+
+==== ======== ======== ========================
+Name Datatype Optional Notes
+==== ======== ======== ========================
+id   int      ---      Copied over from request
+name string   ---      Copied over from request
+==== ======== ======== ========================
+
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+         <zato:zato_security_basic_auth_edit_request>
+            <zato:id>9</zato:id>
+            <zato:cluster_id>1</zato:cluster_id>
+            <zato:name>CRM Client 10</zato:name>
+            <zato:is_active>true</zato:is_active>
+            <zato:username>crmclient10</zato:username>
+            <zato:realm>ESB</zato:realm>
+         </zato:zato_security_basic_auth_edit_request>
+      </soapenv:Body>
+   </soapenv:Envelope>
+      
+   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+      xmlns="http://gefira.pl/zato">
+   <soap:Body>
+       <zato_security_basic_auth_edit_response xmlns="http://gefira.pl/zato">
+       <zato_env>
+           <cid>K51822625713586198804765875160</cid>
+           <result>ZATO_OK</result>
+       </zato_env>
+       <item>
+           <id>9</id>
+           <name>CRM Client 10</name>
+       </item>
+   </zato_security_basic_auth_edit_response>
+   </soap:Body>
+   </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+   {
+      "id": 10,
+      "cluster_id": 1,
+      "name": "CRM Client 20",
+      "is_active": true,
+      "username": "crmclient20",
+      "realm": "ESB"
+   }
+
+   {
+     "zato_env": {
+       "details": "",
+       "result": "ZATO_OK",
+       "cid": "K02573839821605163040999817310"
+     },
+     "zato_security_basic_auth_edit_response": {
+       "id": 10,
+       "name": "CRM Client 20"
+     }
+   }
+

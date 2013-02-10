@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.server.get-by-id">
+      <wsdl:input message="zato:zato_server_get_by_id_request_message"/>
+      <wsdl:output message="zato:zato_server_get_by_id_response_message"/>
+    </wsdl:operation>

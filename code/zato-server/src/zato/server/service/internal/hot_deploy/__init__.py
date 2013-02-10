@@ -149,7 +149,7 @@ class Create(AdminService):
             tf.flush()
             
             tmp_dir = mkdtemp(prefix='zato-hd-')
-            decompress(tf.name, tmp_dir)
+            decompress(tf.name, None)
 
             for tmp_py_path in visit_py_source_from_distribution(tmp_dir):
                 

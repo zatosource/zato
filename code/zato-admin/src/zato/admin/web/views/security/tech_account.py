@@ -105,7 +105,7 @@ class Edit(_CreateEdit):
 @meth_allowed('POST')
 def delete(req, id, cluster_id):
     try:
-        invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.delete', {'id': id, 'zato_admin_tech_account_name':TECH_ACCOUNT_NAME})
+        invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.delete', {'id': id, 'current_tech_account_name':TECH_ACCOUNT_NAME})
     except Exception, e:
         msg = 'Could not delete the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
