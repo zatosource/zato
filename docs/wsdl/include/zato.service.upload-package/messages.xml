@@ -2,8 +2,8 @@
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="cluster_id" type="xsd:int"/>
-            <xsd:element name="payload_name" type="xsd:string"/>
             <xsd:element name="payload" type="xsd:string"/>
+            <xsd:element name="payload_name" type="xsd:string"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>

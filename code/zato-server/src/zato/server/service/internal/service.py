@@ -443,7 +443,7 @@ class UploadPackage(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_upload_package_request'
         response_elem = 'zato_service_upload_package_response'
-        input_required = ('cluster_id', 'payload_name', 'payload')
+        input_required = ('cluster_id', 'payload', 'payload_name')
         
     def handle(self):
         with NamedTemporaryFile(prefix='zato-hd-', suffix=self.request.input.payload_name) as tf:

@@ -2727,7 +2727,7 @@ targetNamespace="http://gefira.pl/zato"
             <xsd:element name="item" minOccurs="0" maxOccurs="1">
               <xsd:complexType>
                 <xsd:sequence>
-                  <xsd:element name="response" type="xsd:anyType"/>
+                  <xsd:element name="response" type="xsd:string"/>
                 </xsd:sequence>
               </xsd:complexType>
             </xsd:element>
@@ -2815,8 +2815,8 @@ targetNamespace="http://gefira.pl/zato"
         <xsd:complexType>
           <xsd:sequence>
             <xsd:element name="cluster_id" type="xsd:int"/>
-            <xsd:element name="payload_name" type="xsd:string"/>
             <xsd:element name="payload" type="xsd:string"/>
+            <xsd:element name="payload_name" type="xsd:string"/>
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
