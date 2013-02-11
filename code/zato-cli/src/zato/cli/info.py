@@ -116,4 +116,4 @@ class Info(ManageCommand):
             self.logger.info(table.draw())
         
 
-    _on_lb = _on_zato_admin = _on_server
+    _on_lb = _on_web_admin = _on_server

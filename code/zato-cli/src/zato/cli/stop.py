@@ -70,5 +70,5 @@ class Stop(ManageCommand):
             
         self._try_stop('Zato load-balancer and agent in {} are not running', 'Stopped load-balancer and agent in {}', stop_haproxy)
 
-    def _on_zato_admin(self, *ignored):
+    def _on_web_admin(self, *ignored):
         self._try_stop('No web admin running in {}', 'Stopped web admin in {}')

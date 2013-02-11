@@ -15,12 +15,12 @@ parts =
     patch_apscheduler
 
 develop =
-    zato-admin
     zato-agent
     zato-broker
     zato-cli
     zato-common
     zato-server
+    zato-web-admin
 
 [config]
 cython_version = 0.14

@@ -25,12 +25,12 @@ import argparse, time
 
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
-     ca_create_server as ca_create_server_mod, ca_create_zato_admin as ca_create_zato_admin_mod, \
+     ca_create_server as ca_create_server_mod, ca_create_web_admin as ca_create_web_admin_mod, \
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
-     create_zato_admin as create_zato_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
+     create_web_admin as create_web_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
      FromConfig, info as info_mod, run_command, quickstart as quickstart_mod, start as start_mod, stop as stop_mod, \
-     zato_admin_auth as zato_admin_auth_mod
+     web_admin_auth as web_admin_auth_mod
 from zato.common import version as zato_version
 
 def add_opts(parser, opts):
@@ -82,10 +82,10 @@ def get_parser():
     ca_create_server.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_server, ca_create_server_mod.Create.opts)
 
-    ca_create_zato_admin = ca_create_subs.add_parser('zato_admin', description=ca_create_zato_admin_mod.Create.__doc__, parents=[base_parser])
-    ca_create_zato_admin.set_defaults(command='ca_create_zato_admin')
-    ca_create_zato_admin.add_argument('path', help='Path to a CA directory')
-    add_opts(ca_create_zato_admin, ca_create_zato_admin_mod.Create.opts)
+    ca_create_web_admin = ca_create_subs.add_parser('web_admin', description=ca_create_web_admin_mod.Create.__doc__, parents=[base_parser])
+    ca_create_web_admin.set_defaults(command='ca_create_web_admin')
+    ca_create_web_admin.add_argument('path', help='Path to a CA directory')
+    add_opts(ca_create_web_admin, ca_create_web_admin_mod.Create.opts)
 
     # 
     # component-version
@@ -121,15 +121,15 @@ def get_parser():
     create_server.set_defaults(command='create_server')
     add_opts(create_server, create_server_mod.Create.opts)
     
-    create_user = create_subs.add_parser('user', description=zato_admin_auth_mod.CreateUser.__doc__, parents=[base_parser])
-    create_user.add_argument('path', help='Path to a Zato admin')
+    create_user = create_subs.add_parser('user', description=web_admin_auth_mod.CreateUser.__doc__, parents=[base_parser])
+    create_user.add_argument('path', help='Path to a web admin')
     create_user.set_defaults(command='create_user')
-    add_opts(create_user, zato_admin_auth_mod.CreateUser.opts)
+    add_opts(create_user, web_admin_auth_mod.CreateUser.opts)
     
-    create_zato_admin = create_subs.add_parser('zato_admin', description=create_zato_admin_mod.Create.__doc__, parents=[base_parser])
-    create_zato_admin.add_argument('path', help='Path to an empty directory to install a new Zato Admin web console in')
-    create_zato_admin.set_defaults(command='create_zato_admin')
-    add_opts(create_zato_admin, create_zato_admin_mod.Create.opts)
+    create_web_admin = create_subs.add_parser('web_admin', description=create_web_admin_mod.Create.__doc__, parents=[base_parser])
+    create_web_admin.add_argument('path', help='Path to an empty directory to install a new web admin in')
+    create_web_admin.set_defaults(command='create_web_admin')
+    add_opts(create_web_admin, create_web_admin_mod.Create.opts)
 
     #
     # decrypt
@@ -207,10 +207,10 @@ def get_parser():
     update_crypto.set_defaults(command='update_crypto')
     add_opts(update_crypto, crypto_mod.UpdateCrypto.opts)
     
-    update_password = update_subs.add_parser('password', description=zato_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
-    update_password.add_argument('path', help='Path to a Zato admin directory')
+    update_password = update_subs.add_parser('password', description=web_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
+    update_password.add_argument('path', help='Path to a web admin directory')
     update_password.set_defaults(command='update_password')
-    add_opts(update_password, zato_admin_auth_mod.UpdatePassword.opts)
+    add_opts(update_password, web_admin_auth_mod.UpdatePassword.opts)
     
     return parser
 
