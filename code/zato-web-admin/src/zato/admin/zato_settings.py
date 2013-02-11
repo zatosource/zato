@@ -26,9 +26,9 @@ import os
 from zato.common import SCHEDULER_JOB_TYPE
 from zato.common.util import decrypt
 
-SSL_KEY_FILE = './config/repo/zato-admin-priv-key.pem'
-SSL_CERT_FILE = './config/repo/zato-admin-cert.pem'
-SSL_CA_CERTS = './config/repo/zato-admin-ca-certs.pem'
+SSL_KEY_FILE = './config/repo/web-admin-priv-key.pem'
+SSL_CERT_FILE = './config/repo/web-admin-cert.pem'
+SSL_CA_CERTS = './config/repo/web-admin-ca-certs.pem'
 
 LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
 

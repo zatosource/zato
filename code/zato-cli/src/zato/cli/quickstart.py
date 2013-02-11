@@ -30,7 +30,7 @@ from bunch import Bunch
 
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_zato_admin, create_cluster, create_lb, create_odb, create_server, create_zato_admin, ZatoCommand
+     ca_create_web_admin, create_cluster, create_lb, create_odb, create_server, create_web_admin, ZatoCommand
 from zato.common.defaults import http_plain_server_port
 from zato.common.markov_passwords import generate_password
 from zato.common.util import get_zato_command, make_repr
@@ -73,7 +73,7 @@ $ZATO_BIN start .
 echo [3/4] server2 started
 
 # .. web admin comes as the last one because it may ask Django-related questions.
-cd $BASE_DIR/zato-admin
+cd $BASE_DIR/web-admin
 $ZATO_BIN start .
 echo [4/4] Web admin started
 
@@ -106,7 +106,7 @@ cd $BASE_DIR/server2
 $ZATO_BIN stop .
 echo [3/4] server2 stopped
 
-cd $BASE_DIR/zato-admin
+cd $BASE_DIR/web-admin
 $ZATO_BIN stop .
 echo [4/4] Web admin stopped
 
@@ -225,14 +225,14 @@ class Create(ZatoCommand):
         ca_create_server.Create(ca_args_server1).execute(ca_args_server1, False)
         ca_create_server.Create(ca_args_server2).execute(ca_args_server2, False)
         
-        ca_create_zato_admin.Create(ca_args).execute(ca_args, False)
+        ca_create_web_admin.Create(ca_args).execute(ca_args, False)
 
         server_crypto_loc = {}
         for key in server_names:
             server_crypto_loc[key] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[key]))
         
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
-        zato_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'zato-admin')
+        web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
         
         self.logger.info('[{}/{}] Certificate authority created'.format(next_step.next(), total_steps))
         
@@ -300,25 +300,25 @@ class Create(ZatoCommand):
         self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
         
         #
-        # 7) Zato admin
+        # 7) Web admin
         #
-        zato_admin_path = os.path.join(args.path, 'zato-admin')
-        os.mkdir(zato_admin_path)
+        web_admin_path = os.path.join(args.path, 'web-admin')
+        os.mkdir(web_admin_path)
         
-        create_zato_admin_args = self._bunch_from_args(args, cluster_name)
-        create_zato_admin_args.path = zato_admin_path
-        create_zato_admin_args.cert_path = zato_admin_crypto_loc.cert_path
-        create_zato_admin_args.pub_key_path = zato_admin_crypto_loc.pub_path
-        create_zato_admin_args.priv_key_path = zato_admin_crypto_loc.priv_path
-        create_zato_admin_args.ca_certs_path = zato_admin_crypto_loc.ca_certs_path
-        create_zato_admin_args.tech_account_name = tech_account_name
-        create_zato_admin_args.tech_account_password = tech_account_password
+        create_web_admin_args = self._bunch_from_args(args, cluster_name)
+        create_web_admin_args.path = web_admin_path
+        create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path
+        create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path
+        create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
+        create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
+        create_web_admin_args.tech_account_name = tech_account_name
+        create_web_admin_args.tech_account_password = tech_account_password
         
         password = generate_password()
-        admin_created = create_zato_admin.Create(create_zato_admin_args).execute(create_zato_admin_args, False, password)
+        admin_created = create_web_admin.Create(create_web_admin_args).execute(create_web_admin_args, False, password)
         
-        # Need to reset the logger here because executing the create_zato_admin command
-        # loads the Zato admin's logger which doesn't like that of ours.
+        # Need to reset the logger here because executing the create_web_admin command
+        # loads the web admin's logger which doesn't like that of ours.
         self.reset_logger(args, True)
         self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
         

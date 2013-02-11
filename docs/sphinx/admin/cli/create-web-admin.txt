@@ -32,7 +32,7 @@ Usage
 
 ::
 
-    $ zato create zato_admin [-h] [--store-log] [--verbose] [--store-config]
+    $ zato create web_admin [-h] [--store-log] [--verbose] [--store-config]
         [--postgresql_schema POSTGRESQL_SCHEMA] [--odb_password ODB_PASSWORD]
         [--tech_account_password TECH_ACCOUNT_PASSWORD]
         path odb_type odb_host odb_port odb_user odb_db_name
@@ -41,7 +41,7 @@ Usage
 
 ::
 
-    $ zato create zato_admin ~/prod7/web-admin postgresql localhost 5432 zato1 zatodb1 
+    $ zato create web_admin ~/prod7/web-admin postgresql localhost 5432 zato1 zatodb1 
       ~/crypto/zato.webadmin7.pub.pem
       ~/crypto/zato.webadmin7.priv.pem
       ~/crypto/zato.webadmin7.cert.pem

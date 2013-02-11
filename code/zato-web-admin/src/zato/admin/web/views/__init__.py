@@ -65,7 +65,7 @@ def get_js_dt_format(user_profile):
 
 def get_lb_client(cluster):
     """ A convenience wrapper over the function for creating a load-balancer client
-    which may use ZatoAdmin's SSL material (the client from zato.common can't use
+    which may use web admin's SSL material (the client from zato.common can't use
     it because it would make it dependent on the zato.admin package).
     """
     return _get_lb_client(cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,

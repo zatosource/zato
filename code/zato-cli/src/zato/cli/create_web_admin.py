@@ -26,12 +26,14 @@ from random import getrandbits
 from traceback import format_exc
 
 # Django
-from django.core.management import call_command# Zato
-# TODO: There really shouldn't be any direct dependency between zato-cli and zato-admin
+from django.core.management import call_command
+
+# Zato
+# TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
 from zato.admin.zato_settings import update_globals 
 
 from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZatoCommand
-from zato.common.defaults import zato_admin_host, zato_admin_port
+from zato.common.defaults import web_admin_host, web_admin_port
 from zato.common.markov_passwords import generate_password
 from zato.common.util import encrypt
 
@@ -64,23 +66,23 @@ initial_data_json = """[{{
 "pk": {SITE_ID},
 "model": "sites.site",
 "fields": {{
-    "name": "Zato admin",
-    "domain":"zatoadmin.example.com"
+    "name": "web admin",
+    "domain":"webadmin.example.com"
     }}
 }}]
 """
 
 class Create(ZatoCommand):
-    """ Creates a new Zato Admin web console
+    """ Creates a new web admin web console
     """
     needs_empty_dir = True
     allow_empty_secrets = True
     
     opts = deepcopy(common_odb_opts)
     
-    opts.append({'name':'pub_key_path', 'help':"Path to the Zato Admin's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the Zato Admin's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the Zato Admin's certificate in PEM"})
+    opts.append({'name':'pub_key_path', 'help':"Path to the web admin's public key in PEM"})
+    opts.append({'name':'priv_key_path', 'help':"Path to the web admin's private key in PEM"})
+    opts.append({'name':'cert_path', 'help':"Path to the web admin's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
     
     opts += get_tech_account_opts()
@@ -93,7 +95,7 @@ class Create(ZatoCommand):
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
-        zato_admin_conf_path = os.path.join(repo_dir, 'zato-admin.conf')
+        web_admin_conf_path = os.path.join(repo_dir, 'web-admin.conf')
         initial_data_json_path = os.path.join(repo_dir, 'initial-data.json')
 
         os.mkdir(os.path.join(self.target_dir, 'logs'))
@@ -104,12 +106,12 @@ class Create(ZatoCommand):
         user_name = 'admin'
         password = password if password else generate_password()
         
-        self.copy_zato_admin_crypto(repo_dir, args)
-        pub_key = open(os.path.join(repo_dir, 'zato-admin-pub-key.pem')).read()
+        self.copy_web_admin_crypto(repo_dir, args)
+        pub_key = open(os.path.join(repo_dir, 'web-admin-pub-key.pem')).read()
         
         config = {
-            'host': zato_admin_host,
-            'port': zato_admin_port,
+            'host': web_admin_host,
+            'port': web_admin_port,
             'db_type': args.odb_type,
             'log_config': 'logging.conf',
             'DATABASE_NAME': args.odb_db_name,
@@ -123,14 +125,14 @@ class Create(ZatoCommand):
             'TECH_ACCOUNT_PASSWORD':encrypt(args.tech_account_password, pub_key),
         }
         
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/zato-admin.log'))
-        open(zato_admin_conf_path, 'w').write(config_template.format(**config))
+        open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/web-admin.log'))
+        open(web_admin_conf_path, 'w').write(config_template.format(**config))
         open(initial_data_json_path, 'w').write(initial_data_json.format(**config))
         
         # Initial info
-        self.store_initial_info(self.target_dir, self.COMPONENTS.ZATO_ADMIN.code)
+        self.store_initial_info(self.target_dir, self.COMPONENTS.WEB_ADMIN.code)
         
-        config = json.loads(open(os.path.join(repo_dir, 'zato-admin.conf')).read())
+        config = json.loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
         config['config_dir'] = self.target_dir
         update_globals(config, self.target_dir)
         
@@ -163,7 +165,7 @@ class Create(ZatoCommand):
 
         if show_output:
             if self.verbose:
-                msg = """Successfully created a Zato Admin instance.
+                msg = """Successfully created a web admin instance.
     You can start it with the 'zato start {path}' command.""".format(path=os.path.abspath(os.path.join(os.getcwd(), self.target_dir)))
                 self.logger.debug(msg)
             else:
