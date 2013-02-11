@@ -83,7 +83,7 @@ def invoke_admin_service(cluster, soap_action, input_dict):
     for k, v in input_dict.items():
         setattr(zato_message, k, v)
 
-    headers = {'x-zato-session-type':'zato-admin/tech_acc', 
+    headers = {'x-zato-session-type':'web-admin/tech_acc', 
                'x-zato-user': TECH_ACCOUNT_NAME,
                'x-zato-password': TECH_ACCOUNT_PASSWORD
                }

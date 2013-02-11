@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # A place for storing all the defaults values.
 
-zato_admin_host = '0.0.0.0'
-zato_admin_port = 8183
+web_admin_host = '0.0.0.0'
+web_admin_port = 8183
 
 http_plain_server_port = 17010

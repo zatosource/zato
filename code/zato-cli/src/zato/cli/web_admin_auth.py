@@ -26,11 +26,11 @@ import json, os
 from zato.admin.zato_settings import update_globals
 from zato.cli import ManageCommand
 
-class _ZatoAdminAuthCommand(ManageCommand):
+class _WebAdminAuthCommand(ManageCommand):
     def _prepare(self, args):
         os.chdir(args.path)
         base_dir = os.path.join(self.original_dir, args.path)
-        config = json.loads(open(os.path.join(base_dir, './config/repo/zato-admin.conf')).read())
+        config = json.loads(open(os.path.join(base_dir, './config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
@@ -40,8 +40,8 @@ class _ZatoAdminAuthCommand(ManageCommand):
         self.reset_logger(args, True)
         self.logger.info('OK')
 
-class UpdatePassword(_ZatoAdminAuthCommand):
-    """ Updates a Zato admin user's password
+class UpdatePassword(_WebAdminAuthCommand):
+    """ Updates a web admin user's password
     """
     opts = [
         {'name': 'username', 'help': 'Username to change the password of'},
@@ -54,8 +54,8 @@ class UpdatePassword(_ZatoAdminAuthCommand):
         
         self._ok(args)
         
-class CreateUser(_ZatoAdminAuthCommand):
-    """ Creates a new Zato admin user
+class CreateUser(_WebAdminAuthCommand):
+    """ Creates a new web admin user
     """
     class _FakeStdout(object):
         """ django.contrib.auth.management.commands.createsuperuser.Command needs a self.stdout
