@@ -148,14 +148,14 @@ def run_command(args):
         ('ca_create_ca', 'zato.cli.ca_create_ca.Create'),
         ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
-        ('ca_create_zato_admin', 'zato.cli.ca_create_zato_admin.Create'),
+        ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
         ('component_version', 'zato.cli.component_version.ComponentVersion'),
         ('create_cluster', 'zato.cli.create_cluster.Create'),
         ('create_lb', 'zato.cli.create_lb.Create'),
         ('create_odb', 'zato.cli.create_odb.Create'),
         ('create_server', 'zato.cli.create_server.Create'),
-        ('create_user', 'zato.cli.zato_admin_auth.CreateUser'),
-        ('create_zato_admin', 'zato.cli.create_zato_admin.Create'),
+        ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
+        ('create_web_admin', 'zato.cli.create_web_admin.Create'),
         ('delete_odb', 'zato.cli.delete_odb.Delete'),
         ('decrypt', 'zato.cli.crypto.Decrypt'),
         ('encrypt', 'zato.cli.crypto.Encrypt'),
@@ -165,7 +165,7 @@ def run_command(args):
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
         ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
-        ('update_password', 'zato.cli.zato_admin_auth.UpdatePassword'),
+        ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
     )
     for k, v in command_imports:
         command_class[k] = importString(v)
@@ -211,7 +211,7 @@ class ZatoCommand(object):
         CA = _ComponentName('CA', 'Certificate authority')
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SERVER = _ComponentName('SERVER', 'Server')
-        ZATO_ADMIN = _ComponentName('ZATO_ADMIN', 'Zato admin')
+        WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Web admin')
 
     def __init__(self, args):
         self.original_dir = os.getcwd()
@@ -378,9 +378,9 @@ class ZatoCommand(object):
     def copy_server_crypto(self, repo_dir, args):
         self._copy_lb_server_crypto(repo_dir, args, 'server')
             
-    def copy_zato_admin_crypto(self, repo_dir, args):
+    def copy_web_admin_crypto(self, repo_dir, args):
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
-            file_name = os.path.join(repo_dir, 'zato-admin-{}.pem'.format(name))
+            file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
             shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
             
 class FromConfig(ZatoCommand):
@@ -530,7 +530,7 @@ class ManageCommand(ZatoCommand):
         return {
             self.COMPONENTS.LOAD_BALANCER.code: self._on_lb,
             self.COMPONENTS.SERVER.code: self._on_server,
-            self.COMPONENTS.ZATO_ADMIN.code: self._on_zato_admin,
+            self.COMPONENTS.WEB_ADMIN.code: self._on_web_admin,
         }
 
     command_files = set([ZATO_INFO_FILE])
@@ -538,7 +538,7 @@ class ManageCommand(ZatoCommand):
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Should be implemented by subclasses')
     
-    _on_zato_admin = _on_server = _on_lb
+    _on_web_admin = _on_server = _on_lb
 
     def _zdaemon_start(self, contents_template,  zdaemon_conf_name,
                        socket_prefix, logfile_path_prefix, program):

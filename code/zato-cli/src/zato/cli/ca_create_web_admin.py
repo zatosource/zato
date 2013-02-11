@@ -17,22 +17,24 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from setuptools import setup, find_packages
+from __future__ import absolute_import, division, print_function, unicode_literals
 
-version = "1.0.0"
+# Zato
+from zato.cli import CACreateCommand, common_ca_create_opts
 
-setup(
-      name = "zato-admin",
-      version = version,
+class Create(CACreateCommand):
+    """ Creates crypto material for a Zato web console
+    """
+    opts = [
+        {'name':'--organizational-unit', 'help':'Organizational unit name'},
+    ]
+    opts += common_ca_create_opts
 
-      author = "Zato",
-      author_email = "Zato",
-      url = "Zato",
+    def get_file_prefix(self, file_args):
+        return 'web-admin'
 
-      package_dir = {"":"src"},
-      packages = find_packages("src"),
+    def get_organizational_unit(self, args):
+        return 'web-admin'
 
-      namespace_packages = ["zato"],
-
-      zip_safe = False,
-)
+    def execute(self, args, show_output=True):
+        return self._execute(args, 'v3_client_server', show_output)

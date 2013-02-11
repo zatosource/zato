@@ -30,7 +30,7 @@ from zato.common.util import decrypt, TRACE1
 from zato_settings import *
 
 if 'DEBUG' not in globals():
-    DEBUG = os.environ.get('ZATO_ADMIN_DEBUG', False)
+    DEBUG = os.environ.get('ZATO_WEB_ADMIN_DEBUG', False)
 
 if DEBUG:
     try:
@@ -109,7 +109,7 @@ DONT_REQUIRE_LOGIN = [
 
 # Some values below, e.g. db_type, DATABASE_USER and others are magically injected
 # here by the 'zato start /path/to/zato/admin' command. The command in turn
-# fetches values from the 'zato-admin.conf' file.
+# fetches values from the 'web-admin.conf' file.
 
 if 'DATABASES' in globals():
     db_data = DATABASES['default']

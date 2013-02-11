@@ -41,7 +41,7 @@ zdaemon_conf_name_contents = """<runner>
 """
 
 class Start(ManageCommand):
-    """ Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer agents and Zato Admin instances.
+    """ Starts a Zato component installed in the 'path'. The same command is used for starting servers, load-balancer agents and web admin instances.
 'path' must point to an existing directory into which the given component has been installed.
 
 Examples:
@@ -98,17 +98,17 @@ Examples:
             else:
                 self.logger.info('OK')
 
-    def _on_zato_admin(self, *ignored):
+    def _on_web_admin(self, *ignored):
 
-        zdaemon_conf_name = 'zdaemon-zato-admin.conf'
-        socket_prefix = 'zato-admin'
+        zdaemon_conf_name = 'zdaemon-web-admin.conf'
+        socket_prefix = 'web-admin'
         program = '{} -m zato.admin.main'.format(get_executable())
-        logfile_path_prefix = 'zdaemon-zato-admin'
+        logfile_path_prefix = 'zdaemon-web-admin'
         
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
 
         if self.show_output:
             if self.verbose:
-                self.logger.debug('Zato admin started in {0}'.format(self.component_dir))
+                self.logger.debug('Zato web admin started in {0}'.format(self.component_dir))
             else:
                 self.logger.info('OK')

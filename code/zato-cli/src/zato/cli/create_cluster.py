@@ -212,7 +212,7 @@ class Create(ZatoCommand):
     opts.append({'name':'broker_host', 'help':"Broker host (Redis)"})
     opts.append({'name':'broker_port', 'help':'Broker port (Redis)'})
     
-    opts += get_tech_account_opts('for Zato admin instances to use')
+    opts += get_tech_account_opts('for web admin instances to use')
     
     def execute(self, args, show_output=True):
         
