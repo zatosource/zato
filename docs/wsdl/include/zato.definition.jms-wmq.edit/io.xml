@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.definition.jms-wmq.edit">
+      <wsdl:input message="zato:zato_definition_jms_wmq_edit_request_message"/>
+      <wsdl:output message="zato:zato_definition_jms_wmq_edit_response_message"/>
+    </wsdl:operation>

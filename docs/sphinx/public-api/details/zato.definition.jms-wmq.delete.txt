@@ -1,0 +1,72 @@
+zato.definition.jms-wmq.delete
+==============================
+
+Overview
+--------
+
+Deletes a JMS WebSphere MQ connection definition. Any channels using the definition will be stopped
+and deleted.
+
+  * List response: No
+  * SOAP action: zato.definition.jms-wmq.delete
+  * SOAP URL path: /zato/soap
+  * JSON URL path: /zato/json/zato.definition.jms-wmq.delete
+  * WSDL: :download:`Click here</public-api/zato.wsdl>`
+
+Request parameters
+------------------
+
+==== ======== ======== ==============================
+Name Datatype Optional Notes
+==== ======== ======== ==============================
+id   int      ---      ID of the definition to delete
+==== ======== ======== ==============================
+            
+
+Response parameters
+-------------------
+
+(None)
+
+SOAP example
+------------
+
+.. code-block:: xml
+
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+         xmlns:zato="http://gefira.pl/zato">
+       <soapenv:Body>
+          <zato:zato_definition_jms_wmq_delete_request>
+             <zato:id>1</zato:id>
+          </zato:zato_definition_jms_wmq_delete_request>
+       </soapenv:Body>
+    </soapenv:Envelope>
+      
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+        xmlns="http://gefira.pl/zato">
+      <soap:Body>
+        <zato_definition_jms_wmq_delete_response xmlns="http://gefira.pl/zato">
+          <zato_env>
+            <cid>K36765694054100433809736928439</cid>
+            <result>ZATO_OK</result>
+          </zato_env>
+        </zato_definition_jms_wmq_delete_response>
+      </soap:Body>
+    </soap:Envelope>
+
+JSON example
+------------
+
+.. code-block:: javascript
+
+    {
+      "id": 2
+    }
+
+    {
+      "zato_env": {
+        "details": "",
+        "result": "ZATO_OK",
+        "cid": "K59390344845329292116393267830"
+      }
+    }

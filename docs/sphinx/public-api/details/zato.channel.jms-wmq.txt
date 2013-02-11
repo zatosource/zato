@@ -1,0 +1,15 @@
+zato.channel.jms-wmq.*
+======================
+
+Overview
+--------
+
+Services related to the management of JMS WebSphere MQ channels.
+
+Services
+--------
+
+* :doc:`zato.channel.jms-wmq.create <./zato.channel.jms-wmq.create>`
+* :doc:`zato.channel.jms-wmq.delete <./zato.channel.jms-wmq.delete>`
+* :doc:`zato.channel.jms-wmq.edit <./zato.channel.jms-wmq.edit>`
+* :doc:`zato.channel.jms-wmq.get-list <./zato.channel.jms-wmq.get-list>`

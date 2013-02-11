@@ -1,0 +1,17 @@
+zato.http-soap.*
+================
+
+Overview
+--------
+
+Services related to the management of plain HTTP and SOAP objects - both
+channels and outgoing connections.
+
+Services
+--------
+
+* :doc:`zato.http-soap.create <./zato.http-soap.create>`
+* :doc:`zato.http-soap.delete <./zato.http-soap.delete>`
+* :doc:`zato.http-soap.edit <./zato.http-soap.edit>`
+* :doc:`zato.http-soap.get-list <./zato.http-soap.get-list>`
+* :doc:`zato.http-soap.ping <./zato.http-soap.ping>`

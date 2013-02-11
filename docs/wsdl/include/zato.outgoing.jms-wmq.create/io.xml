@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.outgoing.jms-wmq.create">
+      <wsdl:input message="zato:zato_outgoing_jms_wmq_create_request_message"/>
+      <wsdl:output message="zato:zato_outgoing_jms_wmq_create_response_message"/>
+    </wsdl:operation>

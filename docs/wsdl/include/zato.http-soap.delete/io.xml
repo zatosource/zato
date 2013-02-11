@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.http-soap.delete">
+      <wsdl:input message="zato:zato_http_soap_delete_request_message"/>
+      <wsdl:output message="zato:zato_http_soap_delete_response_message"/>
+    </wsdl:operation>

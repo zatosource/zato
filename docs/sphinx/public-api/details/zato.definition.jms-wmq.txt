@@ -1,0 +1,25 @@
+zato.definition.jms-wmq.*
+=========================
+
+Overview
+--------
+
+Services related to the management of JMS WebSphere MQ connection definitions.
+A JMS WebSphere MQ definition encapsulates information regarding particular
+connection details, such as a queue manager's host, port and so on.
+
+Note that Zato will accept only messages produced either by 
+`Java JMS clients <http://pic.dhe.ibm.com/infocenter/wmqv7/v7r5/topic/com.ibm.mq.doc/zd00070_.htm>`_
+or by Python clients using 
+`Spring Python <http://static.springsource.org/spring-python/1.2.x/sphinx/html/jms.html>`_,
+or, to be precise, by these MQ clients that can understand messages conforming
+to WebSphere MQ's JMS format.
+
+Services
+--------
+
+* :doc:`zato.definition.jms-wmq.create <./zato.definition.jms-wmq.create>`
+* :doc:`zato.definition.jms-wmq.delete <./zato.definition.jms-wmq.delete>`
+* :doc:`zato.definition.jms-wmq.edit <./zato.definition.jms-wmq.edit>`
+* :doc:`zato.definition.jms-wmq.get-by-id <./zato.definition.jms-wmq.get-by-id>`
+* :doc:`zato.definition.jms-wmq.get-list <./zato.definition.jms-wmq.get-list>`

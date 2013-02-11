@@ -1,0 +1,9 @@
+    <wsdl:operation name="zato.definition.jms-wmq.get-by-id">
+      <soap:operation soapAction="zato.definition.jms-wmq.get-by-id"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>

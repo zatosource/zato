@@ -32,7 +32,7 @@ id                       int      ---      Definition ID
 name                     string   ---      Definition name
 is_active                boolean  ---      Whether the definition is active
 sec_type                 string   ---      Security type. Will be 
-                                           'basic_auth' for :doc:`HTTP Basic Auth<./zato.security.basic_auth>`, 
+                                           'basic_auth' for :doc:`HTTP Basic Auth<./zato.security.basic-auth>`, 
                                            'tech_acc' for :doc:`technical accounts<./zato.security.tech-account>`
                                            or 
                                            'wss' if it's :doc:`WS-Security<./zato.security.wss>`.
