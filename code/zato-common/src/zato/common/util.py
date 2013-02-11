@@ -86,6 +86,8 @@ logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
 
+_uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
+
 random.seed()
 
 ################################################################################
@@ -568,3 +570,12 @@ def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
         
     kvdb.close()
     
+    
+# Inspired by http://stackoverflow.com/a/9283563
+def uncamelify(s, separator='-', elem_func=unicode.lower):
+    """ Converts a CamelCaseName into a more readable one, e.g. 
+    will turn ILikeToReadWSDLDocsNotReallyNOPENotMeQ into
+    i-like-to-read-wsdl-docs-not-really-nope-not-me-q or a similar one,
+    depending on the value of separator and elem_func.
+    """
+    return separator.join(elem_func(elem) for elem in re.sub(_uncamelify_re, r' \1', s).split())
