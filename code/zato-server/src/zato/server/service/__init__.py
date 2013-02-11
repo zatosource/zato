@@ -47,7 +47,7 @@ from sqlalchemy.util import NamedTuple
 from zato.common import KVDB, ParsingException, path, SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
-from zato.common.util import new_cid, service_name_from_impl, TRACE1
+from zato.common.util import uncamelify, new_cid, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -504,7 +504,14 @@ class Service(object):
         be called once while the service is being deployed.
         """
         if not hasattr(class_, '__name'):
-            class_.__name = service_name_from_impl(class_.get_impl_name())
+            name = getattr(class_, 'name', None)
+            if not name:
+                name = service_name_from_impl(class_.get_impl_name())
+                if not hasattr(class_, 'dont_convert_name'):
+                    name = class_.convert_impl_name(name)
+                    
+            class_.__name = name
+            
         return class_.__name
 
     @classmethod
@@ -512,6 +519,19 @@ class Service(object):
         if not hasattr(class_, '__impl_name'):
             class_.__impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
         return class_.__impl_name
+    
+    @staticmethod
+    def convert_impl_name(name):
+        # TODO: Move the replace functionality over to uncamelify, possibly modifying its regexp
+        split = uncamelify(name).split('.')
+        
+        path, class_name = split[:-1], split[-1]
+        path = [elem.replace('_', '-') for elem in path]
+        
+        class_name = class_name[1:] if class_name.startswith('-') else class_name
+        class_name = class_name.replace('.-', '.').replace('_-', '_')
+        
+        return '{}.{}'.format('.'.join(path), class_name)
         
     def _init(self):
         """ Actually initializes the service.

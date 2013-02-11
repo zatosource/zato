@@ -202,15 +202,15 @@ Public SOAP and JSON server API
       
     * **Channels:**
       :doc:`zato.channel.amqp.*</public-api/details/zato.channel.amqp>` |
-      :doc:`zato.channel.jms_wmq.*</public-api/details/zato.channel.jms_wmq>` |
+      :doc:`zato.channel.jms-wmq.*</public-api/details/zato.channel.jms-wmq>` |
       :doc:`zato.channel.zmq.*</public-api/details/zato.channel.zmq>`
       
     * **Definitions:**
       :doc:`zato.definition.amqp.*</public-api/details/zato.definition.amqp>` |
-      :doc:`zato.definition.jms_wmq.*</public-api/details/zato.definition.jms_wmq>`
+      :doc:`zato.definition.jms-wmq.*</public-api/details/zato.definition.jms-wmq>`
       
     * **HTTP/SOAP:**
-      :doc:`zato.http_soap.*</public-api/details/zato.http_soap>`
+      :doc:`zato.http-soap.*</public-api/details/zato.http-soap>`
       
     * **Key/value DB (Redis):**
       :doc:`zato.kvdb.data-dict.dictionary.*</public-api/details/zato.kvdb.data-dict.dictionary>` |
@@ -221,13 +221,13 @@ Public SOAP and JSON server API
     * **Ougoing connections:**
       :doc:`zato.outgoing.amqp.*</public-api/details/zato.outgoing.amqp>` |
       :doc:`zato.outgoing.ftp.*</public-api/details/zato.outgoing.ftp>` |
-      :doc:`zato.outgoing.jms_wmq.*</public-api/details/zato.outgoing.jms_wmq>` |
+      :doc:`zato.outgoing.jms-wmq.*</public-api/details/zato.outgoing.jms-wmq>` |
       :doc:`zato.outgoing.sql.*</public-api/details/zato.outgoing.sql>` |
       :doc:`zato.outgoing.zmq.*</public-api/details/zato.outgoing.zmq>`
       
     * **Ping services:**
-      :doc:`zato.Ping</public-api/details/zato.ping>` |
-      :doc:`zato.Ping2</public-api/details/zato.ping2>`
+      :doc:`zato.ping</public-api/details/zato.ping>` |
+      :doc:`zato.ping2</public-api/details/zato.ping2>`
       
     * **Scheduler:**
       :doc:`zato.scheduler.job.*</public-api/details/zato.scheduler.job>`

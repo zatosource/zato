@@ -31,10 +31,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.channel.amqp.edit/messages.xml -->
 <!-- include ./include/zato.channel.amqp.get-list/messages.xml -->
 
-<!-- include ./include/zato.channel.jms_wmq.create/messages.xml -->
-<!-- include ./include/zato.channel.jms_wmq.delete/messages.xml -->
-<!-- include ./include/zato.channel.jms_wmq.edit/messages.xml -->
-<!-- include ./include/zato.channel.jms_wmq.get-list/messages.xml -->
+<!-- include ./include/zato.channel.jms-wmq.create/messages.xml -->
+<!-- include ./include/zato.channel.jms-wmq.delete/messages.xml -->
+<!-- include ./include/zato.channel.jms-wmq.edit/messages.xml -->
+<!-- include ./include/zato.channel.jms-wmq.get-list/messages.xml -->
 
 <!-- include ./include/zato.channel.zmq.create/messages.xml -->
 <!-- include ./include/zato.channel.zmq.delete/messages.xml -->
@@ -48,11 +48,11 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.definition.amqp.get-by-id/messages.xml -->
 <!-- include ./include/zato.definition.amqp.get-list/messages.xml -->
 
-<!-- include ./include/zato.http_soap.create/messages.xml -->
-<!-- include ./include/zato.http_soap.delete/messages.xml -->
-<!-- include ./include/zato.http_soap.edit/messages.xml -->
-<!-- include ./include/zato.http_soap.get-list/messages.xml -->
-<!-- include ./include/zato.http_soap.ping/messages.xml -->
+<!-- include ./include/zato.http-soap.create/messages.xml -->
+<!-- include ./include/zato.http-soap.delete/messages.xml -->
+<!-- include ./include/zato.http-soap.edit/messages.xml -->
+<!-- include ./include/zato.http-soap.get-list/messages.xml -->
+<!-- include ./include/zato.http-soap.ping/messages.xml -->
 
 <!-- include ./include/zato.kvdb.data-dict.dictionary.create/messages.xml -->
 <!-- include ./include/zato.kvdb.data-dict.dictionary.delete/messages.xml -->
@@ -82,10 +82,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.ftp.edit/messages.xml -->
 <!-- include ./include/zato.outgoing.ftp.get-list/messages.xml -->
 
-<!-- include ./include/zato.outgoing.jms_wmq.create/messages.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.delete/messages.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.edit/messages.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.get-list/messages.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.create/messages.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.delete/messages.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.edit/messages.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.get-list/messages.xml -->
 
 <!-- include ./include/zato.outgoing.sql.change-password/messages.xml -->
 <!-- include ./include/zato.outgoing.sql.create/messages.xml -->
@@ -172,10 +172,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.channel.amqp.edit/parts.xml -->
 <!-- include ./include/zato.channel.amqp.get-list/parts.xml -->
 
-<!-- include ./include/zato.channel.jms_wmq.create/parts.xml -->
-<!-- include ./include/zato.channel.jms_wmq.delete/parts.xml -->
-<!-- include ./include/zato.channel.jms_wmq.edit/parts.xml -->
-<!-- include ./include/zato.channel.jms_wmq.get-list/parts.xml -->
+<!-- include ./include/zato.channel.jms-wmq.create/parts.xml -->
+<!-- include ./include/zato.channel.jms-wmq.delete/parts.xml -->
+<!-- include ./include/zato.channel.jms-wmq.edit/parts.xml -->
+<!-- include ./include/zato.channel.jms-wmq.get-list/parts.xml -->
 
 <!-- include ./include/zato.channel.zmq.create/parts.xml -->
 <!-- include ./include/zato.channel.zmq.delete/parts.xml -->
@@ -189,11 +189,11 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.definition.amqp.get-by-id/parts.xml -->
 <!-- include ./include/zato.definition.amqp.get-list/parts.xml -->
 
-<!-- include ./include/zato.http_soap.create/parts.xml -->
-<!-- include ./include/zato.http_soap.delete/parts.xml -->
-<!-- include ./include/zato.http_soap.edit/parts.xml -->
-<!-- include ./include/zato.http_soap.get-list/parts.xml -->
-<!-- include ./include/zato.http_soap.ping/parts.xml -->
+<!-- include ./include/zato.http-soap.create/parts.xml -->
+<!-- include ./include/zato.http-soap.delete/parts.xml -->
+<!-- include ./include/zato.http-soap.edit/parts.xml -->
+<!-- include ./include/zato.http-soap.get-list/parts.xml -->
+<!-- include ./include/zato.http-soap.ping/parts.xml -->
 
 <!-- include ./include/zato.kvdb.data-dict.dictionary.create/parts.xml -->
 <!-- include ./include/zato.kvdb.data-dict.dictionary.delete/parts.xml -->
@@ -221,10 +221,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.ftp.delete/parts.xml -->
 <!-- include ./include/zato.outgoing.ftp.edit/parts.xml -->
 <!-- include ./include/zato.outgoing.ftp.get-list/parts.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.create/parts.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.delete/parts.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.edit/parts.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.get-list/parts.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.create/parts.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.delete/parts.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.edit/parts.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.get-list/parts.xml -->
 <!-- include ./include/zato.outgoing.sql.change-password/parts.xml -->
 <!-- include ./include/zato.outgoing.sql.create/parts.xml -->
 <!-- include ./include/zato.outgoing.sql.delete/parts.xml -->
@@ -310,10 +310,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.channel.amqp.edit/io.xml -->
 <!-- include ./include/zato.channel.amqp.get-list/io.xml -->
 
-<!-- include ./include/zato.channel.jms_wmq.create/io.xml -->
-<!-- include ./include/zato.channel.jms_wmq.delete/io.xml -->
-<!-- include ./include/zato.channel.jms_wmq.edit/io.xml -->
-<!-- include ./include/zato.channel.jms_wmq.get-list/io.xml -->
+<!-- include ./include/zato.channel.jms-wmq.create/io.xml -->
+<!-- include ./include/zato.channel.jms-wmq.delete/io.xml -->
+<!-- include ./include/zato.channel.jms-wmq.edit/io.xml -->
+<!-- include ./include/zato.channel.jms-wmq.get-list/io.xml -->
 
 <!-- include ./include/zato.channel.zmq.create/io.xml -->
 <!-- include ./include/zato.channel.zmq.delete/io.xml -->
@@ -327,11 +327,11 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.definition.amqp.get-by-id/io.xml -->
 <!-- include ./include/zato.definition.amqp.get-list/io.xml -->
 
-<!-- include ./include/zato.http_soap.create/io.xml -->
-<!-- include ./include/zato.http_soap.delete/io.xml -->
-<!-- include ./include/zato.http_soap.edit/io.xml -->
-<!-- include ./include/zato.http_soap.get-list/io.xml -->
-<!-- include ./include/zato.http_soap.ping/io.xml -->
+<!-- include ./include/zato.http-soap.create/io.xml -->
+<!-- include ./include/zato.http-soap.delete/io.xml -->
+<!-- include ./include/zato.http-soap.edit/io.xml -->
+<!-- include ./include/zato.http-soap.get-list/io.xml -->
+<!-- include ./include/zato.http-soap.ping/io.xml -->
 
 <!-- include ./include/zato.kvdb.data-dict.dictionary.create/io.xml -->
 <!-- include ./include/zato.kvdb.data-dict.dictionary.delete/io.xml -->
@@ -359,10 +359,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.ftp.delete/io.xml -->
 <!-- include ./include/zato.outgoing.ftp.edit/io.xml -->
 <!-- include ./include/zato.outgoing.ftp.get-list/io.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.create/io.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.delete/io.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.edit/io.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.get-list/io.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.create/io.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.delete/io.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.edit/io.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.get-list/io.xml -->
 <!-- include ./include/zato.outgoing.sql.change-password/io.xml -->
 <!-- include ./include/zato.outgoing.sql.create/io.xml -->
 <!-- include ./include/zato.outgoing.sql.delete/io.xml -->
@@ -453,10 +453,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.channel.amqp.edit/body.xml -->
 <!-- include ./include/zato.channel.amqp.get-list/body.xml -->
 
-<!-- include ./include/zato.channel.jms_wmq.create/body.xml -->
-<!-- include ./include/zato.channel.jms_wmq.delete/body.xml -->
-<!-- include ./include/zato.channel.jms_wmq.edit/body.xml -->
-<!-- include ./include/zato.channel.jms_wmq.get-list/body.xml -->
+<!-- include ./include/zato.channel.jms-wmq.create/body.xml -->
+<!-- include ./include/zato.channel.jms-wmq.delete/body.xml -->
+<!-- include ./include/zato.channel.jms-wmq.edit/body.xml -->
+<!-- include ./include/zato.channel.jms-wmq.get-list/body.xml -->
 
 <!-- include ./include/zato.channel.zmq.create/body.xml -->
 <!-- include ./include/zato.channel.zmq.delete/body.xml -->
@@ -469,11 +469,11 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.definition.amqp.get-by-id/body.xml -->
 <!-- include ./include/zato.definition.amqp.get-list/body.xml -->
 
-<!-- include ./include/zato.http_soap.create/body.xml -->
-<!-- include ./include/zato.http_soap.delete/body.xml -->
-<!-- include ./include/zato.http_soap.edit/body.xml -->
-<!-- include ./include/zato.http_soap.get-list/body.xml -->
-<!-- include ./include/zato.http_soap.ping/body.xml -->
+<!-- include ./include/zato.http-soap.create/body.xml -->
+<!-- include ./include/zato.http-soap.delete/body.xml -->
+<!-- include ./include/zato.http-soap.edit/body.xml -->
+<!-- include ./include/zato.http-soap.get-list/body.xml -->
+<!-- include ./include/zato.http-soap.ping/body.xml -->
 
 <!-- include ./include/zato.kvdb.data-dict.dictionary.create/body.xml -->
 <!-- include ./include/zato.kvdb.data-dict.dictionary.delete/body.xml -->
@@ -501,10 +501,10 @@ targetNamespace="http://gefira.pl/zato"
 <!-- include ./include/zato.outgoing.ftp.delete/body.xml -->
 <!-- include ./include/zato.outgoing.ftp.edit/body.xml -->
 <!-- include ./include/zato.outgoing.ftp.get-list/body.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.create/body.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.delete/body.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.edit/body.xml -->
-<!-- include ./include/zato.outgoing.jms_wmq.get-list/body.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.create/body.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.delete/body.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.edit/body.xml -->
+<!-- include ./include/zato.outgoing.jms-wmq.get-list/body.xml -->
 <!-- include ./include/zato.outgoing.sql.change-password/body.xml -->
 <!-- include ./include/zato.outgoing.sql.create/body.xml -->
 <!-- include ./include/zato.outgoing.sql.delete/body.xml -->

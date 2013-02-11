@@ -44,10 +44,10 @@ zato_services = {
     'zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
 
     # Channels - JMS WebSphere MQ
-    'zato.channel.jms_wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
-    'zato.channel.jms_wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
-    'zato.channel.jms_wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
-    'zato.channel.jms_wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
+    'zato.channel.jms-wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
+    'zato.channel.jms-wmq.delete':'zato.server.service.internal.channel.jms_wmq.Delete',
+    'zato.channel.jms-wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
+    'zato.channel.jms-wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
 
     # Channels - ZeroMQ
     'zato.channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
@@ -64,18 +64,18 @@ zato_services = {
     'zato.definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
 
     # Definitions - JMS WebSphere MQ
-    'zato.definition.jms_wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
-    'zato.definition.jms_wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
-    'zato.definition.jms_wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
-    'zato.definition.jms_wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
-    'zato.definition.jms_wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
+    'zato.definition.jms-wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
+    'zato.definition.jms-wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',
+    'zato.definition.jms-wmq.edit':'zato.server.service.internal.definition.jms_wmq.Edit',
+    'zato.definition.jms-wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
+    'zato.definition.jms-wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
     
     # HTTP/SOAP
-    'zato.http_soap.create':'zato.server.service.internal.http_soap.Create',
-    'zato.http_soap.delete':'zato.server.service.internal.http_soap.Delete',
-    'zato.http_soap.edit':'zato.server.service.internal.http_soap.Edit',
-    'zato.http_soap.get-list':'zato.server.service.internal.http_soap.GetList',
-    'zato.http_soap.ping':'zato.server.service.internal.http_soap.Ping',
+    'zato.http-soap.create':'zato.server.service.internal.http_soap.Create',
+    'zato.http-soap.delete':'zato.server.service.internal.http_soap.Delete',
+    'zato.http-soap.edit':'zato.server.service.internal.http_soap.Edit',
+    'zato.http-soap.get-list':'zato.server.service.internal.http_soap.GetList',
+    'zato.http-soap.ping':'zato.server.service.internal.http_soap.Ping',
     
     # Key/value DB
     'zato.kvdb.data-dict.dictionary.create':'zato.server.service.internal.kvdb.data_dict.dictionary.Create',
@@ -109,10 +109,10 @@ zato_services = {
     'zato.outgoing.ftp.get-list':'zato.server.service.internal.outgoing.ftp.GetList',
 
     # Outgoing connections - JMS WebSphere MQ
-    'zato.outgoing.jms_wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
-    'zato.outgoing.jms_wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
-    'zato.outgoing.jms_wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
-    'zato.outgoing.jms_wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
+    'zato.outgoing.jms-wmq.create':'zato.server.service.internal.outgoing.jms_wmq.Create',
+    'zato.outgoing.jms-wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
+    'zato.outgoing.jms-wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
+    'zato.outgoing.jms-wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
     
     # Outgoing connections - SQL
     'zato.outgoing.sql.change-password':'zato.server.service.internal.outgoing.sql.ChangePassword',

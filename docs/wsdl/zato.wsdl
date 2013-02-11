@@ -3824,19 +3824,19 @@ targetNamespace="http://gefira.pl/zato"
       <wsdl:output message="zato:zato_channel_amqp_get_list_response_message"/>
     </wsdl:operation>
 
-    <wsdl:operation name="zato.channel.jms_wmq.create">
+    <wsdl:operation name="zato.channel.jms-wmq.create">
       <wsdl:input message="zato:zato_channel_jms_wmq_create_request_message"/>
       <wsdl:output message="zato:zato_channel_jms_wmq_create_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.channel.jms_wmq.delete">
+    <wsdl:operation name="zato.channel.jms-wmq.delete">
       <wsdl:input message="zato:zato_channel_jms_wmq_delete_request_message"/>
       <wsdl:output message="zato:zato_channel_jms_wmq_delete_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.channel.jms_wmq.edit">
+    <wsdl:operation name="zato.channel.jms-wmq.edit">
       <wsdl:input message="zato:zato_channel_jms_wmq_edit_request_message"/>
       <wsdl:output message="zato:zato_channel_jms_wmq_edit_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.channel.jms_wmq.get-list">
+    <wsdl:operation name="zato.channel.jms-wmq.get-list">
       <wsdl:input message="zato:zato_channel_jms_wmq_get_list_request_message"/>
       <wsdl:output message="zato:zato_channel_jms_wmq_get_list_response_message"/>
     </wsdl:operation>
@@ -3883,23 +3883,23 @@ targetNamespace="http://gefira.pl/zato"
       <wsdl:output message="zato:zato_definition_amqp_get_list_response_message"/>
     </wsdl:operation>
 
-    <wsdl:operation name="zato.http_soap.create">
+    <wsdl:operation name="zato.http-soap.create">
       <wsdl:input message="zato:zato_http_soap_create_request_message"/>
       <wsdl:output message="zato:zato_http_soap_create_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.delete">
+    <wsdl:operation name="zato.http-soap.delete">
       <wsdl:input message="zato:zato_http_soap_delete_request_message"/>
       <wsdl:output message="zato:zato_http_soap_delete_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.edit">
+    <wsdl:operation name="zato.http-soap.edit">
       <wsdl:input message="zato:zato_http_soap_edit_request_message"/>
       <wsdl:output message="zato:zato_http_soap_edit_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.get-list">
+    <wsdl:operation name="zato.http-soap.get-list">
       <wsdl:input message="zato:zato_http_soap_get_list_request_message"/>
       <wsdl:output message="zato:zato_http_soap_get_list_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.ping">
+    <wsdl:operation name="zato.http-soap.ping">
       <wsdl:input message="zato:zato_http_soap_ping_request_message"/>
       <wsdl:output message="zato:zato_http_soap_ping_response_message"/>
     </wsdl:operation>
@@ -4005,19 +4005,19 @@ targetNamespace="http://gefira.pl/zato"
       <wsdl:input message="zato:zato_outgoing_ftp_get_list_request_message"/>
       <wsdl:output message="zato:zato_outgoing_ftp_get_list_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.create">
+    <wsdl:operation name="zato.outgoing.jms-wmq.create">
       <wsdl:input message="zato:zato_outgoing_jms_wmq_create_request_message"/>
       <wsdl:output message="zato:zato_outgoing_jms_wmq_create_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.delete">
+    <wsdl:operation name="zato.outgoing.jms-wmq.delete">
       <wsdl:input message="zato:zato_outgoing_jms_wmq_delete_request_message"/>
       <wsdl:output message="zato:zato_outgoing_jms_wmq_delete_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.edit">
+    <wsdl:operation name="zato.outgoing.jms-wmq.edit">
       <wsdl:input message="zato:zato_outgoing_jms_wmq_edit_request_message"/>
       <wsdl:output message="zato:zato_outgoing_jms_wmq_edit_response_message"/>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.get-list">
+    <wsdl:operation name="zato.outgoing.jms-wmq.get-list">
       <wsdl:input message="zato:zato_outgoing_jms_wmq_get_list_request_message"/>
       <wsdl:output message="zato:zato_outgoing_jms_wmq_get_list_response_message"/>
     </wsdl:operation>
@@ -4329,8 +4329,8 @@ targetNamespace="http://gefira.pl/zato"
       </wsdl:output>
     </wsdl:operation>
 
-    <wsdl:operation name="zato.channel.jms_wmq.create">
-      <soap:operation soapAction="zato.channel.jms_wmq.create"/>
+    <wsdl:operation name="zato.channel.jms-wmq.create">
+      <soap:operation soapAction="zato.channel.jms-wmq.create"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4338,8 +4338,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.channel.jms_wmq.delete">
-      <soap:operation soapAction="zato.channel.jms_wmq.delete"/>
+    <wsdl:operation name="zato.channel.jms-wmq.delete">
+      <soap:operation soapAction="zato.channel.jms-wmq.delete"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4347,8 +4347,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.channel.jms_wmq.edit">
-      <soap:operation soapAction="zato.channel.jms_wmq.edit"/>
+    <wsdl:operation name="zato.channel.jms-wmq.edit">
+      <soap:operation soapAction="zato.channel.jms-wmq.edit"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4356,8 +4356,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-      <wsdl:operation name="zato.channel.jms_wmq.get-list">
-      <soap:operation soapAction="zato.channel.jms_wmq.get-list"/>
+      <wsdl:operation name="zato.channel.jms-wmq.get-list">
+      <soap:operation soapAction="zato.channel.jms-wmq.get-list"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4449,8 +4449,8 @@ targetNamespace="http://gefira.pl/zato"
       </wsdl:output>
     </wsdl:operation>
 
-    <wsdl:operation name="zato.http_soap.create">
-      <soap:operation soapAction="zato.http_soap.create"/>
+    <wsdl:operation name="zato.http-soap.create">
+      <soap:operation soapAction="zato.http-soap.create"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4458,8 +4458,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.delete">
-      <soap:operation soapAction="zato.http_soap.delete"/>
+    <wsdl:operation name="zato.http-soap.delete">
+      <soap:operation soapAction="zato.http-soap.delete"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4467,8 +4467,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.edit">
-      <soap:operation soapAction="zato.http_soap.edit"/>
+    <wsdl:operation name="zato.http-soap.edit">
+      <soap:operation soapAction="zato.http-soap.edit"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4476,8 +4476,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.get-list">
-      <soap:operation soapAction="zato.http_soap.get-list"/>
+    <wsdl:operation name="zato.http-soap.get-list">
+      <soap:operation soapAction="zato.http-soap.get-list"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4485,8 +4485,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.http_soap.ping">
-      <soap:operation soapAction="zato.http_soap.ping"/>
+    <wsdl:operation name="zato.http-soap.ping">
+      <soap:operation soapAction="zato.http-soap.ping"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4721,8 +4721,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.create">
-      <soap:operation soapAction="zato.outgoing.jms_wmq.create"/>
+    <wsdl:operation name="zato.outgoing.jms-wmq.create">
+      <soap:operation soapAction="zato.outgoing.jms-wmq.create"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4730,8 +4730,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.delete">
-      <soap:operation soapAction="zato.outgoing.jms_wmq.delete"/>
+    <wsdl:operation name="zato.outgoing.jms-wmq.delete">
+      <soap:operation soapAction="zato.outgoing.jms-wmq.delete"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4739,8 +4739,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.edit">
-      <soap:operation soapAction="zato.outgoing.jms_wmq.edit"/>
+    <wsdl:operation name="zato.outgoing.jms-wmq.edit">
+      <soap:operation soapAction="zato.outgoing.jms-wmq.edit"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>
@@ -4748,8 +4748,8 @@ targetNamespace="http://gefira.pl/zato"
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="zato.outgoing.jms_wmq.get-list">
-      <soap:operation soapAction="zato.outgoing.jms_wmq.get-list"/>
+    <wsdl:operation name="zato.outgoing.jms-wmq.get-list">
+      <soap:operation soapAction="zato.outgoing.jms-wmq.get-list"/>
       <wsdl:input>
         <soap:body use="literal"/>
       </wsdl:input>

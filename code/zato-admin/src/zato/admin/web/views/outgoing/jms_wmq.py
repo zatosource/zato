@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 def _get_def_ids(cluster):
     out = {}
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.jms_wmq.get-list', {'cluster_id':cluster.id})
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.jms-wmq.get-list', {'cluster_id':cluster.id})
     
     if zato_path('item_list.item').get_from(zato_message) is not None:
         for definition_elem in zato_message.item_list.item:
@@ -70,7 +70,7 @@ def _get_edit_create_message(params, prefix=''):
     }
 
 def _edit_create_response(cluster, verb, id, name, delivery_mode_text, cluster_id, def_id):
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.jms_wmq.get-by-id', {'id':def_id, 'cluster_id':cluster_id})    
+    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id':cluster_id})    
     return_data = {'id': id,
                    'message': 'Successfully {0} the outgoing JMS WebSphere MQ connection [{1}]'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
@@ -90,7 +90,7 @@ def index(req):
         create_form.set_def_id(def_ids)
         edit_form.set_def_id(def_ids)
 
-        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato.outgoing.jms_wmq.get-list', {'cluster_id': req.zato.cluster_id})
+        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato.outgoing.jms-wmq.get-list', {'cluster_id': req.zato.cluster_id})
         
         if zato_path('item_list.item').get_from(zato_message) is not None:
             for msg_item in zato_message.item_list.item:
@@ -120,7 +120,7 @@ def index(req):
 @meth_allowed('POST')
 def create(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.jms_wmq.create', _get_edit_create_message(req.POST))
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.jms-wmq.create', _get_edit_create_message(req.POST))
         delivery_mode_text = delivery_friendly_name[int(req.POST['delivery_mode'])]
 
         return _edit_create_response(req.zato.cluster, 'created', zato_message.item.id.text, 
@@ -135,7 +135,7 @@ def create(req):
 def edit(req):
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.jms_wmq.edit', zato_message)
+        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.jms-wmq.edit', zato_message)
         delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
 
         return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'],
@@ -150,4 +150,4 @@ def edit(req):
 class Delete(_Delete):
     url_name = 'out-jms-wmq-delete'
     error_message = 'Could not delete the outgoing JMS WebSphere MQ connection'
-    soap_action = 'zato.outgoing.jms_wmq.delete'
+    soap_action = 'zato.outgoing.jms-wmq.delete'

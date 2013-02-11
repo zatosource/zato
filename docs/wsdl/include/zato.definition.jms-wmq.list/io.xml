@@ -1,0 +1,4 @@
+    <wsdl:operation name="zato.definition.jms-wmq.get-list">
+      <wsdl:input message="zato:zato_definition_jms_wmq_get_list_request_message"/>
+      <wsdl:output message="zato:zato_definition_jms_wmq_get_list_response_message"/>
+    </wsdl:operation>
