@@ -65,10 +65,11 @@ class ValueConverter(object):
     a service's SimpleIO config.
     """
     def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
+        
+        if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
+            value = asbool(value)
+            
         if value is not None: # Can be a 0
-            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
-                value = asbool(value)
-                
             if isinstance(param, Boolean):
                 value = asbool(value)
             elif isinstance(param, Integer):
@@ -85,8 +86,8 @@ class ValueConverter(object):
                 
             if date_time_format and isinstance(value, datetime):
                 value = value.strftime(date_time_format)
-                
-            return value
+            
+        return value
     
 class ForceType(object):
     """ Forces a SimpleIO element to use a specific data type.
