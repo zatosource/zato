@@ -1,0 +1,78 @@
+Attack surface
+==============
+
+Overview
+--------
+
+This chapter defines Zato's attack surface, these parts of a cluster's 
+resources that can be used by an attacker to attack Zato. 
+
+For each component, its entry and exit points are discussed in order to give
+an understanding of how an attacker could gain access to a cluster.
+
+
+Web admin
+---------
+
+Entry points
+~~~~~~~~~~~~
+
+Web console
+^^^^^^^^^^^
+
+Web admin is primarily a web console, accessed through a browser. 
+
+The web console is listening on a TCP socket. Depending on how it's been configured,
+traffic to the console will be either plain HTTP or HTTPS.
+
+Access to the console is controlled by a username and password. All users are
+considered equal, there are no roles nor ACLs for each action that can performed
+using the console.
+
+Command-line interface
+^^^^^^^^^^^^^^^^^^^^^^
+
+Load-balancer
+-------------
+
+Entry points
+~~~~~~~~~~~~
+
+Command-line interface
+^^^^^^^^^^^^^^^^^^^^^^
+
+Servers
+-------
+
+Entry points
+~~~~~~~~~~~~
+
+Command-line interface
+^^^^^^^^^^^^^^^^^^^^^^
+
+SQL ODB
+-------
+
+Entry points
+~~~~~~~~~~~~
+
+Command-line interface
+^^^^^^^^^^^^^^^^^^^^^^
+
+Redis KVDB
+----------
+
+Entry points
+~~~~~~~~~~~~
+
+Command-line interface
+^^^^^^^^^^^^^^^^^^^^^^
+
+Certificate Authority (CA)
+--------------------------
+
+Entry points
+~~~~~~~~~~~~
+
+Command-line interface
+^^^^^^^^^^^^^^^^^^^^^^
