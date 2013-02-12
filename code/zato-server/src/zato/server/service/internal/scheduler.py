@@ -212,8 +212,8 @@ class _CreateEdit(AdminService):
 class _Get(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'extra', 'service_id', 'service_name')
-        output_optional = ('weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
+        output_required = ('id', 'name', 'is_active', 'job_type', 'start_date', 'service_id', 'service_name')
+        output_optional = ('extra', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'repeats', 'cron_definition')
         output_repeated = True
         default_value = ''
         date_time_format = scheduler_date_time_format
