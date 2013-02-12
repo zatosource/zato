@@ -2,6 +2,23 @@
 @import url(djangodocs.css);
 @import url(homepage.css);
 
+h1, h2 {
+    text-decoration: underline !important;
+}
+
+#s-the-next-generation-esb-and-application-server-open-source-in-python h1 {
+    text-decoration: none !important;
+}
+
+h3, h4, h5 {
+    text-decoration: none !important;
+    color:#1a1722 !important;
+}
+
+#sidebar h3 {
+    color:white !important;
+}
+
 .highlight .s2 {
     color:#339 !important;
 }

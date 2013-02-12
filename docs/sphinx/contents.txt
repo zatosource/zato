@@ -6,13 +6,10 @@ Zato documentation contents
 
 .. toctree::
     :hidden:
+    :glob:
 
-    index
-
-.. toctree::
-    :maxdepth: 3
-
-    intro/index
+    *
+    security/*
 
 Indices, glossary and tables
 ============================
