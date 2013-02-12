@@ -210,6 +210,13 @@ class SCHEDULER_JOB_TYPE:
     ONE_TIME = 'one_time'
     INTERVAL_BASED = 'interval_based'
     CRON_STYLE = 'cron_style'
+    
+class CHANNEL:
+    AMQP = 'amqp'
+    HTTP_SOAP = 'http-soap'
+    JMS_WMQ = 'jms-wmq'
+    SCHEDULER = 'scheduler'
+    ZMQ = 'zmq'
 
 #
 # Version
