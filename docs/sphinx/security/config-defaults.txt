@@ -1,0 +1,72 @@
+Default configuration values
+============================
+
+Overview
+--------
+
+This chapter lists security-related default configuration values for each of the Zato
+components. 
+
+.. note::
+
+  In short, **there are no default passwords in Zato** although the crypto
+  material isn't password-protected by default.
+
+
+Certificate Authority (CA)
+--------------------------
+
+* Default password of a CA is stored in ./ca-material/ca-password and is a randomly
+  generated UUID4. The file is not encrypted.
+
+Load-balancer
+-------------
+
+* A load-balancer agent's doesn't by default validate client certificates,
+  the value of ./config/repo/lb-agent.conf's verify_fields is {}
+  
+* A load-balancer allows for users to access its statistics at /zato-lb-stats,
+  the default user is admin1 and its default password, stored in ./config/repo/zato.config,
+  is a randomly generated UUID4
+
+Redis KVDB
+----------
+
+Visit `Redis documentation <http://redis.io/>`_ for more information regarding its default configuration.
+
+Servers
+-------
+
+* For AMQP definitions and outgoing SQL connections as well as for
+  HTTP Basic Auth, WS-Security and technical account security definitions,
+  right after they have been created their password is a randomly generated UUID4
+  stored in clear text in the SQL ODB.
+  
+* Each server stores a part of its configuration in an INI-style file located in ./config/repo/server.conf
+
+  * odb:username is zato1 by default
+  * odb:password and kvdb:password are randomly generated UUID4s encrypted with a mechanism
+    used by the :doc:`zato encrypt </admin/cli/encrypt>` command
+  * misc:internal_services_may_be_deleted is False - meaning this server won't
+    allow for internal services to be deleted through its :doc:`API </public-api/intro>`.
+
+SQL ODB
+-------
+
+Visit your SQL database's home page for more information regarding its default configuration.
+
+* `Oracle <http://www.oracle.com/us/products/database/overview/index.html>`_
+* `PostgreSQL <http://www.postgresql.org>`_
+
+Web admin
+---------
+
+* For AMQP definitions and outgoing SQL connections as well as for
+  HTTP Basic Auth, WS-Security and technical account security definitions,
+  right after they have been created their password is a randomly generated UUID4
+  stored in clear text in the SQL ODB.
+  
+* Right after a web admin's user has been created, its password is a randomly
+  generated UUID4 stored in clear text in the SQL ODB. It can be changed using
+  the :doc:`zato update password </admin/cli/update-crypto>` command.
+  
