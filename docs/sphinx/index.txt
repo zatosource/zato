@@ -184,8 +184,7 @@ Security
 ==============================
 
     * **Users:**
-      :doc:`Application<security/users-app>` |
-      :doc:`OS-level considerations<security/users-os>`
+      :doc:`OS-level and application users<security/users>`
         
     * **Reference:**
       :doc:`Attack surface<security/attack-surface>` |
