@@ -219,27 +219,34 @@ class ServiceStore(InitializingObject):
         for name in dir(mod):
             item = getattr(mod, name)
             if self._should_deploy(name, item):
-                timestamp = datetime.utcnow().isoformat()
-                depl_info = deployment_info('service-store', item, timestamp, fs_location)
-    
-                name = item.get_name()
-                impl_name = item.get_impl_name()
                 
-                self.services[impl_name] = {}
-                self.services[impl_name]['deployment_info'] = depl_info
-                self.services[impl_name]['service_class'] = item
-                
-                si = self._get_source_code_info(mod)
-                
-                last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                service_id, is_active, slow_threshold = self.odb.add_service(
-                    name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
-                
-                self.services[impl_name]['is_active'] = is_active
-                self.services[impl_name]['slow_threshold'] = slow_threshold
-                
-                self.id_to_impl_name[service_id] = impl_name
-                self.name_to_impl_name[name] = impl_name
+                should_add = item.before_add_to_store()
+                if should_add:
+                    
+                    timestamp = datetime.utcnow().isoformat()
+                    depl_info = deployment_info('service-store', item, timestamp, fs_location)
+                    name = item.get_name()
+                    impl_name = item.get_impl_name()
+                    
+                    self.services[impl_name] = {}
+                    self.services[impl_name]['deployment_info'] = depl_info
+                    self.services[impl_name]['service_class'] = item
+                    
+                    si = self._get_source_code_info(mod)
+                    
+                    last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
+                    service_id, is_active, slow_threshold = self.odb.add_service(
+                        name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
+                    
+                    self.services[impl_name]['is_active'] = is_active
+                    self.services[impl_name]['slow_threshold'] = slow_threshold
+                    
+                    self.id_to_impl_name[service_id] = impl_name
+                    self.name_to_impl_name[name] = impl_name
+                else:
+                    msg = 'Skipping [{}] from [{}], should_add:[{}] is not True'.format(
+                        item, fs_location, should_add)
+                    logger.info(msg)
                 
 if __name__ == '__main__':
     store = ServiceStore()

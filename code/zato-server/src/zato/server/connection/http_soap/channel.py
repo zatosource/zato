@@ -33,7 +33,7 @@ from anyjson import dumps
 from bunch import Bunch
 
 # Zato
-from zato.common import SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common import CHANNEL, SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request, security_def_type, TRACE1
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
      NotFound, Unauthorized
@@ -243,11 +243,14 @@ class _BaseMessageHandler(object):
         payload, service_info, service_data = self.init(cid, path_info, raw_request, wsgi_environ, transport, data_format)
 
         service_instance = self.server.service_store.new_instance(service_info.impl_name)
-        service_instance.update(service_instance, self.server, worker_store.broker_client, worker_store, 
-                cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ)
+        service_instance.update(service_instance, CHANNEL.HTTP_SOAP, self.server, worker_store.broker_client,
+            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ)
 
         service_instance.pre_handle()
+        
+        service_instance.call_hooks('before')
         service_instance.handle()
+        service_instance.call_hooks('after')
         
         response = service_instance.response
         
