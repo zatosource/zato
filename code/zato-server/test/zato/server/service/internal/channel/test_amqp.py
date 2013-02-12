@@ -86,7 +86,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         
     def test_impl(self):
-        
+        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.get-list')
         self.check_impl_list(self.service_class, ChannelAMQP, 
             self.get_request_data(), self.get_response_data(), 
             self.sio.request_elem, self.sio.response_elem)
@@ -126,8 +126,9 @@ class CreateTestCase(_Base):
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
         
     def test_impl(self):
+        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.create')
+        
         request_data = self.get_request_data()
-
         with patch('zato.server.service.internal.channel.amqp.start_connector', self.get_fake_start_connector(request_data)):
             with patch('zato.server.service.internal.channel.amqp.ChannelAMQP', self.get_fake_channel_amqp()):
                 self.check_impl(self.service_class, request_data, self.get_response_data(), 
@@ -173,8 +174,9 @@ class EditTestCase(_Base):
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
         
     def test_impl(self):
-        request_data = self.get_request_data()
+        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.edit')
         
+        request_data = self.get_request_data()
         with patch('zato.server.service.internal.channel.amqp.start_connector', self.get_fake_start_connector(request_data)):
             with patch('zato.server.service.internal.channel.amqp.ChannelAMQP', self.get_fake_channel_amqp()):
                 self.check_impl(self.service_class, request_data, self.get_response_data(), 
@@ -217,5 +219,6 @@ class DeleteTestCase(_Base):
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
         
     def test_impl(self):
+        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.delete')
         self.check_impl(self.service_class, self.get_request_data(), self.get_response_data(), 
                             self.sio.response_elem, self.mock_data)
