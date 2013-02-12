@@ -455,7 +455,7 @@ class Job(Base):
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
     id = Column(Integer,  Sequence('job_id_seq'), primary_key=True)
-    name = Column(String(200), nullable=False, unique=True)
+    name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     job_type = Column(Enum(SCHEDULER_JOB_TYPE.ONE_TIME, SCHEDULER_JOB_TYPE.INTERVAL_BASED,
                            SCHEDULER_JOB_TYPE.CRON_STYLE, name='job_type'), nullable=False)

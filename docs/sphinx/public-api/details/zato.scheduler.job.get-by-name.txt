@@ -76,9 +76,9 @@ SOAP example
             <is_active>true</is_active>
             <job_type>interval_based</job_type>
             <start_date>2013-02-21 23:10:11</start_date>
-            <extra>skip-class:2010*;2012-10-*</extra>
             <service_id>118</service_id>
             <service_name>my.service.get.outstanding.invoices</service_name>
+            <extra>skip-class:2010*;2012-10-*</extra>
             <weeks xsi:nil="true"/>
             <hours>12</hours>
             <minutes xsi:nil="true"/>
