@@ -148,18 +148,19 @@ class Create(ZatoCommand):
         
         try:
             call_command('createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
-                                     last_name='admin-last-name', email='admin@invalid.example.com')
+                last_name='admin-last-name', email='admin@invalid.example.com')
             admin_created = True
+
+            user = User.objects.get(username=user_name)
+            user.set_password(password)
+            user.save()
+            
         except IntegrityError, e:
             admin_created = False
             connection._rollback()
             msg = 'Ignoring IntegrityError e:[{}]'.format(format_exc(e))
             self.logger.info(msg)
             
-        user = User.objects.get(username=user_name)
-        user.set_password(password)
-        user.save()
-        
         # Needed because Django took over our logging config
         self.reset_logger(args, True)
 
