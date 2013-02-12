@@ -37,7 +37,7 @@ from mock import MagicMock, Mock
 from nose.tools import eq_
 
 # Zato
-from zato.common import SIMPLE_IO
+from zato.common import CHANNEL, SIMPLE_IO
 from zato.common.util import new_cid
 
 def rand_int(start=1, stop=100):
@@ -102,7 +102,7 @@ class FakeServer(object):
         
 class ServiceTestCase(TestCase):
     
-    def invoke(self, class_, request_data, expected, mock_data={}):
+    def invoke(self, class_, request_data, expected, mock_data={}, channel=CHANNEL.HTTP_SOAP, job_type=None):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
@@ -117,8 +117,8 @@ class ServiceTestCase(TestCase):
             'bool_parameter_prefixes': SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES,
         }
         
-        class_.update(instance, FakeServer(), None, worker_store, new_cid(), request_data, request_data, 
-            simple_io_config=simple_io_config, data_format=SIMPLE_IO.FORMAT.JSON)
+        class_.update(instance, channel, FakeServer(), None, worker_store, new_cid(), request_data, request_data, 
+            simple_io_config=simple_io_config, data_format=SIMPLE_IO.FORMAT.JSON, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
             return expected.get_data()
@@ -138,7 +138,10 @@ class ServiceTestCase(TestCase):
             instance.broker_client = FakeBrokerClient()
             instance.broker_client.publish = broker_client_publish
 
-        instance.get_data = get_data
+        instance.call_hooks('before')
+        instance.handle()
+        instance.call_hooks('after')
+
         instance.handle()
         
         return instance

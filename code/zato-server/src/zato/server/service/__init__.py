@@ -44,7 +44,8 @@ from paste.util.converters import asbool
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import KVDB, ParsingException, path, SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
+from zato.common import CHANNEL, KVDB, ParsingException, path, SCHEDULER_JOB_TYPE, \
+     SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
 from zato.common.util import uncamelify, new_cid, service_name_from_impl, TRACE1
@@ -489,6 +490,8 @@ class Service(object):
         self.odb = None
         self.data_format = None
         self.wsgi_environ = None
+        self.job_type = None
+        self.environ = {}
         self.request = Request(self.logger)
         self.response = Response(self.logger)
         self.invocation_time = None # When was the service invoked
@@ -564,7 +567,10 @@ class Service(object):
             transport, {}, data_format, payload)
 
         service_instance.pre_handle()
+        
+        service_instance.call_hooks('before')
         service_instance.handle()
+        service_instance.call_hooks('after')
         
         response = service_instance.response.payload
         if not isinstance(response, basestring):
@@ -670,73 +676,103 @@ class Service(object):
         incoming requests.
         """
         raise NotImplementedError('Should be overridden by subclasses')
+    
+################################################################################
+
+    def call_hooks(self, prefix):
+        if self.channel == CHANNEL.SCHEDULER:
+            try:
+                getattr(self, '{}_job'.format(prefix))()
+            except Exception, e:
+                self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
+            else:
+                try:
+                    meth_name = '{}_{}_job'.format(prefix, self.job_type)
+                    meth = getattr(self, meth_name)
+                    meth()
+                except Exception, e:
+                    self.logger.error("Can't run {}, e:[{}]".format(meth_name, format_exc(e)))
+            
+        try:
+            getattr(self, '{}_handle'.format(prefix))()
+        except Exception, e:
+            self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
 
     def before_handle(self, *args, **kwargs):
         """ Invoked just before the actual service receives the request data.
         """
 
-    def before_job(self, *args, **kwargs):
-        """ Invoked by the scheduler, before calling 'handle', if the service
-        has been defined as a job's invocation target, regardless of a job's type.
+    def before_job(self):
+        """ Invoked  if the service has been defined as a job's invocation target,
+        regardless of the job's type.
         """
 
-    def before_one_time_job(self, *args, **kwargs):
-        """ Invoked by the scheduler, before calling 'handle', if the service
-        has been defined as a one-time job's invocation target.
+    def before_one_time_job(self):
+        """ Invoked if the service has been defined as a one-time job's
+        invocation target.
         """
 
-    def before_interval_based_job(self, *args, **kwargs):
-        """ Invoked by the scheduler, before calling 'handle', if the service
-        has been defined as an interval-based job's invocation target.
+    def before_interval_based_job(self):
+        """ Invoked if the service has been defined as an interval-based job's
+        invocation target.
+        """
+        
+    def before_cron_style_job(self):
+        """ Invoked if the service has been defined as a cron-style job's
+        invocation target.
         """
 
     @staticmethod
     def before_add_to_store(*args, **kwargs):
-        """ XXX: Docs
+        """ Invoked right before the class is added to the service store.
         """
+        return True
 
-    @staticmethod
-    def before_remove_from_store(*args, **kwargs):
-        """ XXX: Docs
-        """
-
-    def after_handle(self, *args, **kwargs):
+    def after_handle(self):
         """ Invoked right after the actual service has been invoked, regardless
         of whether the service raised an exception or not.
         """
 
-    def after_job(self, *args, **kwargs):
-        """ Invoked by the scheduler, after calling 'handle', if the service
-        has been defined as a job's invocation target, regardless of a job's type.
+    def after_job(self):
+        """ Invoked  if the service has been defined as a job's invocation target,
+        regardless of the job's type.
         """
 
-    def after_one_time_job(self, *args, **kwargs):
-        """ Invoked by the scheduler, after calling 'handle', if the service
-        has been defined as a one-time job's invocation target.
+    def after_one_time_job(self):
+        """ Invoked if the service has been defined as a one-time job's
+        invocation target.
         """
 
-    def after_interval_based_job(self, *args, **kwargs):
-        """ Invoked by the scheduler, after calling 'handle', if the service
-        has been defined as an interval-based job's invocation target.
+    def after_interval_based_job(self):
+        """ Invoked if the service has been defined as an interval-based job's
+        invocation target.
+        """
+        
+    def after_cron_style_job(self):
+        """ Invoked if the service has been defined as a cron-style job's
+        invocation target.
         """
 
     @staticmethod
     def after_add_to_store(*args, **kwargs):
-        """ XXX: Docs
+        """ TODO: Docs
         """
 
     @staticmethod
     def after_remove_from_store(*args, **kwargs):
-        """ XXX: Docs
+        """ TODO: Docs
         """
         
+################################################################################
+        
     @staticmethod
-    def update(service, server, broker_client, worker_store, cid, payload,
+    def update(service, channel, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
-               wsgi_environ=None, init=True):
+               wsgi_environ=None, job_type=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
+        service.channel = channel
         service.server = server
         service.broker_client = broker_client
         service.worker_store = worker_store
@@ -747,6 +783,7 @@ class Service(object):
         service.response.simple_io_config = simple_io_config
         service.data_format = data_format
         service.wsgi_environ = wsgi_environ
+        service.job_type = job_type
         service.translate = server.kvdb.translate
         
         if init:

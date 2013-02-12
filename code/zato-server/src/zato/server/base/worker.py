@@ -45,7 +45,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 from paste.util.multidict import MultiDict
 
 # Zato
-from zato.common import SIMPLE_IO, ZATO_ODB_POOL_NAME
+from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
@@ -348,12 +348,16 @@ class WorkerStore(BrokerMessageReceiver):
         creates a new service instance and invokes it.
         """
         service_instance = self.server.service_store.new_instance(msg.service)
-        service_instance.update(service_instance, self.server, self.broker_client,
+        service_instance.update(service_instance, channel, self.server, self.broker_client,
             self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
-            msg.data_format if hasattr(msg, 'data_format') else None)
+            msg.get('data_format'), job_type=msg.get('job_type'))
         
         service_instance.pre_handle()
+        
+        service_instance.call_hooks('before')
         service_instance.handle()
+        service_instance.call_hooks('after')
+        
         if not isinstance(service_instance.response.payload, basestring):
             service_instance.response.payload = service_instance.response.payload.getvalue()
             
@@ -367,16 +371,16 @@ class WorkerStore(BrokerMessageReceiver):
 # ##############################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, 'scheduler', 'SCHEDULER_JOB_EXECUTED', args)
+        return self._on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
     def on_broker_msg_CHANNEL_AMQP_MESSAGE_RECEIVED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, 'amqp', 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
+        return self._on_message_invoke_service(msg, CHANNEL.AMQP, 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
     
     def on_broker_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, 'jms-wmq', 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
+        return self._on_message_invoke_service(msg, CHANNEL.JMS_WMQ, 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
     
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, 'zmq', 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
+        return self._on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
     
 # ##############################################################################
 
