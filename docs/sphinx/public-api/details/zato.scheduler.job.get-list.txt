@@ -73,9 +73,9 @@ SOAP example
             <is_active>true</is_active>
             <job_type>interval_based</job_type>
             <start_date>2013-02-21T23:10:11</start_date>
-            <extra>skip-class:2010*;2012-10-*</extra>
             <service_id>118</service_id>
             <service_name>zato.ping</service_name>
+            <extra>skip-class:2010*;2012-10-*</extra>
             <weeks xsi:nil="true"/>
             <days>2</days>
             <hours xsi:nil="true"/>
@@ -107,9 +107,9 @@ SOAP example
             <is_active>true</is_active>
             <job_type>interval_based</job_type>
             <start_date>2013-01-23T22:50:14</start_date>
-            <extra>max_batch_size=99999</extra>
             <service_id>261</service_id>
             <service_name>zato.stats.process-raw-times</service_name>
+            <extra>max_batch_size=99999</extra>
             <weeks xsi:nil="true"/>
             <days xsi:nil="true"/>
             <hours xsi:nil="true"/>
