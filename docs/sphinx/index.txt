@@ -41,7 +41,7 @@ Programming guide
       :doc:`Accessing the outside world <progguide/access-outside>` | 
       :doc:`Invoking other services <progguide/service-invoke-other>` |
       :doc:`Security<progguide/security>` |
-      :doc:`Testing<progguide/testing>` |
+      :doc:`Testing<progguide/testing>`
       
     * **Converting documents:**
       :doc:`Understanding SimpleIO (SIO) <progguide/understand-sio>` | 
@@ -185,7 +185,7 @@ Security
 
     * **Users:**
       :doc:`Application<security/users-app>` |
-      :doc:`OS-level considerations<security/users-os>` |
+      :doc:`OS-level considerations<security/users-os>`
         
     * **Reference:**
       :doc:`Attack surface<security/attack-surface>` |

@@ -1,0 +1,156 @@
+Attack surface
+==============
+
+Overview
+--------
+
+This chapter defines Zato's attack surface, these parts of a cluster's 
+resources that can be used by an attacker to attack Zato. 
+
+The attack surface is discussed in terms of entry and exit points in order to give
+an understanding of how an attacker could gain access to a cluster. Some notes
+apply to more than one Zato component whereas certain aspects are specific to
+a particular component.
+
+When entry points are concerned, it should be noted that all Zato components
+are installed as a set of files and directories in a file system.
+Anyone with direct access to the file system will be able to update any
+configuration files, including ports they're running on, if any,
+and any crypto resources that are in use, such as keys and certificates.
+
+Crypto material used by Zato components is not protected by passwords.
+    
+Web admin, load-balancer and servers, all of them Python's own
+`logging package <docs.python.org/2.7/library/logging.html>`_.
+Depending on their configuration, the logs will written out either to local files
+or to remote systems, for instance, when using syslogd. Note that when running
+in DEBUG or TRACE1 level, raw messages passed between Zato components
+will be logged, including any secrets they may contain.
+
+Zato's :doc:`CLI </admin/cli/index>` can be used to start, stop
+and manage other aspects of web admin, load-balancer and servers.
+
+Exactly one of servers in a cluster is considered a connector server. This is the
+server that will start AMQP, JMS WebSphere MQ and Zero MQ connectors in order
+to accept or send messages coming through these protocols. Note that when a connector
+server goes down, another server will assume its role.
+
+Certificate Authority (CA)
+--------------------------
+
+Entry points
+~~~~~~~~~~~~
+
+A CA is driven entirely by its :doc:`CLI </admin/cli/index>`. It doesn't open
+any ports and can be acceseed solely through the command line.
+
+Load-balancer
+-------------
+
+Entry points
+~~~~~~~~~~~~
+
+A load-balancer uses an agent, a daemon exposing a set of XML-RPC functions
+through SSL. The agent is used by web admin to administer various aspects
+of a running load-balancer. Connection between web admin and the agent can optionally
+use client certificates.
+
+The agent writes to and reads from a load-balancer's UNIX socket.
+
+A load-balancer is the entry point to Zato servers. Clients never invoked servers
+directly, all communication is always performed through the load-balancer,
+which is a `HAProxy <http://haproxy.1wt.eu/>`_ instance.
+
+Exit points
+~~~~~~~~~~~
+
+The main purpose of running a load-balancer is to guarantee access to Zato servers
+hence it's the latter that form a load-balancer's exit points.
+
+Redis KVDB
+----------
+
+Entry points
+~~~~~~~~~~~~
+
+Redis is accessed by Zato servers and it's always the latter that initiate the
+connection. Note that depending on how Redis has been configured, the connection
+from a server to the KVDB may not use any credentials.
+
+Visit `Redis documentation <http://redis.io/>`_ for more information regarding its security.
+
+Servers
+-------
+
+Entry points
+~~~~~~~~~~~~
+
+Servers accept traffic flowing in from a load-balancer over HTTP through a TCP
+socket. Depending on the interface a server will bind to, it will also be possible
+to invoke a server directly using the said socket.
+
+Access to services exposed by Zato servers can be guarded a security definition,
+either HTTP Basic Auth, WS-Security or technical accounts.
+
+Servers accept traffic from a cluster's key/value database (Redis). Each connection
+to KVDB requires a set of credentials although these can also be empty, depending
+on how Redis has been configured.
+
+Exit points
+~~~~~~~~~~~
+
+Servers access other services, either Zato's own or belonging to external systems,
+through AMQP, FTP, JMS WebSphere MQ, Plain HTTP, SOAP, SQL or Zero MQ.
+
+Servers need to access Redis and SQL ODB, both read and write, for a proper functioning.
+It's not required for servers to have any sort of a DDL authority 
+in the SQL ODB.
+
+SQL ODB
+-------
+
+Entry points
+~~~~~~~~~~~~
+
+SQL ODB is accessed by the web admin and servers, for both read and writes. Once 
+the SQL ODB has been created, no Zato component will attempt to issue any
+DDL statements against it.
+
+Visit your SQL database's home page for more information regarding its security.
+
+* `Oracle <http://www.oracle.com/us/products/database/overview/index.html>`_
+* `PostgreSQL <http://www.postgresql.org>`_
+
+Web admin
+---------
+
+Entry points
+~~~~~~~~~~~~
+
+Web admin is primarily a web console implemented in Django, accessed through a browser. 
+
+The web console is listening on a TCP socket. Depending on how it's been configured,
+traffic to the console will be either plain HTTP or HTTPS.
+
+Access to the console is controlled by a username and password. All users are
+considered equal, there are no roles nor ACLs for each action that can be performed
+using the console.
+
+Exit points
+~~~~~~~~~~~
+
+Web admin manages the load-balancer using the latter's XML-RPC API over SSL,
+optionally using client certificates.
+
+The load-balancer is also used as an entry point for web admin to invoke a
+cluster's services, that is, the console never invokes any server directly,
+the access is always mediated through the load-balancer. Note, however,
+that the communication isn't encrypted.
+
+Web admin also allows one to update the load-balancer's config file, including
+the password needed to browse the latter's statistics, addresses of servers
+running in a cluster and every other bit of configuration.
+
+A few features of web admin require direct access, for both read and write,
+to the SQL ODB using either Django's SQL API or SQLAlchemy. Web admin won't 
+issue DDL queries in the SQL ODB.
