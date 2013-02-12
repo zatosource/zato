@@ -57,7 +57,8 @@ def internal_channel_list(session, cluster_id):
         filter(HTTPSOAP.cluster_id==Cluster.id).\
         filter(HTTPSOAP.service_id==Service.id).\
         filter(Service.is_internal==True).\
-        filter(Cluster.id==cluster_id)
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==HTTPSOAP.cluster_id)
 
 # ##############################################################################
 
@@ -72,8 +73,9 @@ def _job(session, cluster_id):
         CronStyleJob.cron_definition).\
             outerjoin(IntervalBasedJob, Job.id==IntervalBasedJob.job_id).\
             outerjoin(CronStyleJob, Job.id==CronStyleJob.job_id).\
-            filter(Cluster.id==cluster_id).\
+            filter(Job.cluster_id==Cluster.id).\
             filter(Job.service_id==Service.id).\
+            filter(Cluster.id==cluster_id).\
             order_by('job.name')
 
 @needs_columns
@@ -101,6 +103,7 @@ def basic_auth_list(session, cluster_id, needs_columns=False):
                          HTTPBasicAuth.password, HTTPBasicAuth.sec_type,
                          HTTPBasicAuth.password_type).\
         filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==HTTPBasicAuth.cluster_id).\
         order_by('sec_basic_auth.name')
 
 @needs_columns
@@ -113,6 +116,7 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
                          TechnicalAccount.sec_type, TechnicalAccount.password_type).\
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==TechnicalAccount.cluster_id).\
         order_by('sec_tech_acc.name')
 
 @needs_columns
@@ -125,6 +129,7 @@ def wss_list(session, cluster_id, needs_columns=False):
                          WSSDefinition.reject_expiry_limit, WSSDefinition.nonce_freshness_time, \
                          WSSDefinition.sec_type).\
         filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==WSSDefinition.cluster_id).\
         order_by('sec_wss_def.name')
 
 # ##############################################################################
@@ -133,8 +138,8 @@ def _def_amqp(session, cluster_id):
     return session.query(ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
             ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
             ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat, ConnDefAMQP.password).\
-        filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(ConnDefAMQP.def_type=='amqp').\
+        filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefAMQP.name)
 
@@ -309,8 +314,8 @@ def _channel_zmq(session, cluster_id):
     return session.query(ChannelZMQ.id, ChannelZMQ.name, ChannelZMQ.is_active,
             ChannelZMQ.address, ChannelZMQ.socket_type, ChannelZMQ.sub_key, ChannelZMQ.data_format, 
             Service.name.label('service_name'), Service.impl_name.label('service_impl_name')).\
-        filter(Cluster.id==ChannelZMQ.cluster_id).\
         filter(Service.id==ChannelZMQ.service_id).\
+        filter(Cluster.id==ChannelZMQ.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ChannelZMQ.name)
 
@@ -346,6 +351,8 @@ def _http_soap(session, cluster_id):
             ).\
            outerjoin(Service, Service.id==HTTPSOAP.service_id).\
            outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
+           filter(Cluster.id==HTTPSOAP.cluster_id).\
+           filter(Cluster.id==cluster_id).\
            order_by(HTTPSOAP.name)
 
 # No point in creating a new function if we can alias an already existing one.
