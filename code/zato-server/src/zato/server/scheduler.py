@@ -30,6 +30,7 @@ from apscheduler.scheduler import Scheduler as APScheduler
 from dateutil.parser import parse
 
 # Zato 
+from zato.common import SCHEDULER_JOB_TYPE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import new_cid
 
@@ -68,12 +69,13 @@ class Scheduler(object):
         minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
         return minute, hour, day_of_month, month, day_of_week
         
-    def _on_job_execution(self, name, service, extra, broker_msg_type):
+    def _on_job_execution(self, name, service, extra, broker_msg_type, job_type):
         """ Invoked by the underlying APScheduler when a job is executed. Sends
         the actual execution request to the broker so it can be picked up by
         one of the parallel server's broker clients.
         """
-        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 'payload':extra, 'cid':new_cid()}
+        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 
+                   'payload':extra, 'cid':new_cid(), 'job_type': job_type}
         self.singleton.broker_client.send(msg)
         
         if logger.isEnabledFor(logging.DEBUG):
@@ -106,7 +108,8 @@ class Scheduler(object):
         """
         start_date = _start_date(job_data)
         self._sched.add_date_job(self._on_job_execution, start_date, 
-            [job_data.name, job_data.service, job_data.extra, broker_msg_type], name=job_data.name)
+            [job_data.name, job_data.service, job_data.extra, broker_msg_type,
+               SCHEDULER_JOB_TYPE.ONE_TIME], name=job_data.name)
         
         logger.info('One-time job [{0}] scheduled'.format(job_data.name))
         
@@ -123,8 +126,8 @@ class Scheduler(object):
         
         self._sched.add_interval_job(self._on_job_execution, 
             weeks, days, hours, minutes,  seconds, start_date, 
-            [job_data.name, job_data.service, job_data.extra, broker_msg_type], 
-            name=job_data.name, max_runs=max_runs)
+            [job_data.name, job_data.service, job_data.extra, broker_msg_type,
+               SCHEDULER_JOB_TYPE.INTERVAL_BASED], name=job_data.name, max_runs=max_runs)
         
         logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))
         
@@ -136,8 +139,8 @@ class Scheduler(object):
         self._sched.add_cron_job(self._on_job_execution, 
             year=None, month=month, day=day_of_month, hour=hour,
             minute=minute, second=None, start_date=start_date, 
-            args=[job_data.name, job_data.service, job_data.extra, broker_msg_type], 
-            name=job_data.name)
+            args=[job_data.name, job_data.service, job_data.extra, broker_msg_type,
+                    SCHEDULER_JOB_TYPE.CRON_STYLE], name=job_data.name)
         
         logger.info('Cron-style job [{0}] scheduled'.format(job_data.name))
 
