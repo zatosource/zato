@@ -1,0 +1,38 @@
+Architecture overview
+=====================
+
+Zato is composed of several components that cooperate with the aim of exposing
+:doc:`services <TODO>` and :doc:`applications <TODO>` to external clients.
+
+.. image:: /_images/arch-tech-overview.png
+   :align: center
+
+======================================== =====================================================================================
+
+======================================== =====================================================================================
+:doc:`Web admin<./web-admin>`            Main GUI for the management of servers running in clusters
+:doc:`HA load-balancer<./load-balancer>` Sits in front of servers and distributes the incoming traffic in a fair manner
+:doc:`Servers<./servers>`                The central piece where services are located. A server is always a part of a cluster.
+                                         One of the servers of a cluster assumes the role of initiating the
+                                         execution of scheduler jobs.
+:doc:`SQL ODB<./sql-odb>`                Operational Database for storing configuration that is usually static and can take
+                                         advantage of SQL's relational model
+:doc:`Redis<./redis>`                    The key/value DB used for highly dynamic and rapidly changing data
+:doc:`Certificate Authority (CA)<./ca>`  An additional component, an SSL CA used during the development,
+                                         mainly with the goal of supporting 
+                                         :doc:`zato quickstart </admin/cli/quickstart-create>` clusters
+======================================== =====================================================================================
+
+Zato is mostly written in Python with certain crucial parts, such as libraries
+used for parsing XML and JSON, being actually wrappers around lower-level C ones.
+
+Zato's asynchronous HTTP server is written on top of `gunicorn <http://gunicorn.org>`_. It's 
+a modern server which lets one handle large numbers of incoming connections.
+
+External connectors - used for AMQP, WebSphere MQ and ZeroMQ messaging - use
+custom-written main loops written using
+`Pika <https://pika.readthedocs.org/>`_, 
+`Spring Python <http://static.springsource.org/spring-python/1.2.x/sphinx/html/jms.html>`_, 
+and 
+`ZeroMQ <http://www.zeromq.org/>`_
+itself, respectively.
