@@ -1,0 +1,28 @@
+SQL ODB
+=======
+
+.. image:: /gfx/arch-sql-odb.png
+   :align: center
+
+The SQL Operational Database (ODB) is a database used for storing data that
+is of less dynamic character than what is used by :doc:`Redis <./redis>`. This
+includes configuration that is common to all servers in a cluster and 
+data the web admin needs for proper operation. 
+
+Administrators use :doc:`CLI </admin/cli/create-odb>` to create all the SQL
+objects an ODB requires. Note that once it's been done, no Zato component will need
+`DDL <https://en.wikipedia.org/wiki/Data_Definition_Language>`_ permissions to be granted.
+
+Multiple clusters can use a single ODB without any interference, note however that
+if multiple web admin instances use the same ODB, they will all share users.
+This is so that for a given class of environments, e.g. the development, there shouldn't
+be a need for creating new users for each cluster if the same people will be developing
+services on all the clusters sharing the same ODB.
+
+The ODB can be created using one the following SQL databases:
+
+* `Oracle <http://www.oracle.com/us/products/database/overview/index.html>`_
+* `PostgreSQL <http://www.postgresql.org>`_
+
+Note that any passwords stored in the ODB are always in clear text, they aren't
+encrypted in any way.
