@@ -10,7 +10,7 @@ Zato clusters
 Each Zato environment is comprised of one or more Zato clusters that allow for
 the messages passing through to be handled in a secure and reliable way.
 
-.. image:: /_images/arch-tech-overview.png
+.. image:: /gfx/arch-tech-overview.png
    :align: center
 
 A cluster has :ref:`a high-availability load balancer <architecture/load-balancer>` in front of the message processing servers.

@@ -17,7 +17,7 @@ similar activities that form a backbone of an enterprise.
 
 .. _Enterprise Service Bus (ESB): https://en.wikipedia.org/wiki/Enterprise_service_bus
 
-.. image:: /_images/three-layer-arch2.png
+.. image:: /gfx/three-layer-arch2.png
    :alt:
 
 
@@ -88,7 +88,7 @@ the environments. Web admin allows one to perform routine, planned as well as
 ad-hoc activities, such as deploying services, configuring security, access channels,
 browsing the messages and more.
 
-.. image:: /_images/webadmin1.jpg
+.. image:: /gfx/webadmin1.jpg
    :alt:
 
 Zato, the open-source project
