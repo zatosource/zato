@@ -1,6 +1,9 @@
 Certificate Authority (CA)
 ==========================
 
+.. image:: /gfx/arch-ca.png
+   :align: center
+
 Zato CA's main purpose is to support the creation of :doc:`quickstart </admin/cli/quickstart-create>`
 clusters. Even though it's technically possible to use the CA as a standard
 solution in an organization, it's not really recommended and there are no plans
