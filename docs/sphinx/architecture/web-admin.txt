@@ -1,0 +1,8 @@
+Servers
+=======
+
+.. image:: /gfx/arch-servers.png
+   :align: center
+
+Overview
+--------
