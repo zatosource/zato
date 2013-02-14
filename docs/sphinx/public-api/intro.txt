@@ -6,7 +6,7 @@ Introducing the public API
 Overview
 ========
 
-Zato uses 150+ internal services for controlling most aspects of running a cluster,
+Zato uses 160+ internal services for controlling most aspects of running a cluster,
 such as creating new connection definitions, updating statistics, configuring 
 passwords and so on. 
 
