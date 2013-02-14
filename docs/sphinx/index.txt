@@ -257,9 +257,8 @@ Zato, the open-source project
    :glob:
    
    admin/cli/*
+   architecture/*
    intro/*
    public-api/*
    public-api/details/*
-
-
-   
+   security/*

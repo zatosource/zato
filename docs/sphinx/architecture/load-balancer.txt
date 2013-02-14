@@ -1,0 +1,38 @@
+Load-balancer
+=============
+
+.. image:: /gfx/arch-load-balancer.png
+   :align: center
+
+Each Zato cluster has exactly one high-availability load-balancer in front of it
+to fairly distribute incoming HTTP traffic across all the servers forming
+a cluster. A load-balancer is a cluster-specific entity, each cluster needs to 
+have its own load-balancer.
+
+Zato's load-balancer is implemented using `HAProxy <http://haproxy.1wt.eu/>`_
+running in a subprocess and can handle large number of incoming connections.
+
+The web admin can be used to graphically update most commonly used aspects 
+of the load-balancer and it's always possible to edit the HAProxy's configuration
+directly through web admin, meaning that Zato's load-balancer can offer every
+feature supported by HAProxy.
+
+A companion of each load-balancer, its agent, written using 
+`Spring Python <http://static.springsource.org/spring-python/1.2.x/sphinx/html/remoting.html#secure-xml-rpc>`_,
+is accessed by administrators through the web admin console. The console
+communicates with agents through XML-RPC over SSL, optionally using client
+certificates. The agent exchanges messages with the load-balancer through
+the latter's UNIX admin socket and can be used to update and reload a load-balancer's
+configuration as well as to query the load-balancer for its status and run-time
+data, such as the number of connected HTTP clients. It is always the agent
+that initiates the connection, never the load-balancer.
+
+Each web console offers a link to load-balancer statistics provided by HAProxy
+itself. The statistics offer a view into how many requests the load-balancer has
+processed, the transfer rate, how long the servers messages are relayed to have
+been up and similar information.
+
+Administrators use :doc:`the command-line interface </admin/cli/index>` to create,
+start and stop load-balancers along with their agents. Note that it's not possible
+to create a load-balancer without an agent nor vice-versa.
+
