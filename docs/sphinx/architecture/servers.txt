@@ -85,7 +85,7 @@ Scheduler jobs can be:
 
 - one-time - for quick one-off jobs
 - interval-based - for recurring tasks
-- cron-style - similar to interval-based yet using `cron syntax <https://en.wikipedia.org/wiki/Cron>`,
+- cron-style - similar to interval-based yet using `cron syntax <https://en.wikipedia.org/wiki/Cron>`_,
   this is meant to aid in migrating already existing tasks from cron to Zato
 
 .. _arch-servers-connectors:
