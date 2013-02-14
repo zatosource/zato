@@ -1,0 +1,27 @@
+Certificate Authority (CA)
+==========================
+
+.. image:: /gfx/arch-ca.png
+   :align: center
+
+Zato CA's main purpose is to support the creation of :doc:`quickstart </admin/cli/quickstart-create>`
+clusters. Even though it's technically possible to use the CA as a standard
+solution in an organization, it's not really recommended and there are no plans
+to develop the CA into a more feature-rich solution.
+
+The CA is used through :doc:`the command line </admin/cli/ca>` and works by executing
+`openssl <https://openssl.org/>`_ commans in subprocesses.
+
+While purposefully limited in its extent, the CA still allows one to customize
+the output of running the commands by updating the ./ca-material/openssl-template.conf
+configuration file. 
+
+It's perfectly fine to add, modify or remove some fields from this INI-style
+config file - after substituting several basic fields, such as organization
+or organizational_unit, Zato simply passed the file contents directly to openssl.
+
+Note that unlike :doc:`web admin <./web-admin>`, :doc:`servers <./servers>`
+and the :doc:`load-balancer <./load-balancer>`, the CA won't keep a history of updates
+to the configuration file in a local repository, that is, there won't be any way
+to automatically revert to a previous version of ./ca-material/openssl-template.conf
+should things go awry.
