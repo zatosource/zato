@@ -43,11 +43,11 @@ Programming guide
       :doc:`Security<progguide/security>` |
       :doc:`Testing<progguide/testing>`
       
-    * **Converting documents:**
-      :doc:`Understanding SimpleIO (SIO) <progguide/understand-sio>` | 
-      :doc:`XML <progguide/convert-xml>` | 
-      :doc:`JSON <progguide/convert-json>` |
-      :doc:`Other data formats <progguide/convert-other>`
+    * **Request/response documents:**
+      :doc:`SimpleIO (SIO) <progguide/sio>` | 
+      :doc:`XML <progguide/xml>` | 
+      :doc:`JSON <progguide/json>` |
+      :doc:`Other data formats <progguide/other-formats>`
       
     * **Sync and async:**
       :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>`
@@ -259,6 +259,7 @@ Zato, the open-source project
    admin/cli/*
    architecture/*
    intro/*
+   progguide/*
    public-api/*
    public-api/details/*
    security/*

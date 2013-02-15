@@ -1,0 +1,199 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+SimpleIO (SIO)
+==============
+
+SIO is a feature unique to Zato that allows one to develop services in a way
+that is reusable across multiple data formats and transports.
+
+That is, a service can be written once but it's still possible to expose it,
+for instance, via XML through AMQP, and via JSON over HTTPS.
+
+Once a service has been deployed, no code changes nor restarts are needed to make it
+available over various access methods.
+
+
+Sample usage
+------------
+
+A SIO service is one which has an inner class named SimpleIO which conforms to a certain
+API, for example:
+
+::
+
+    # -*- coding: utf-8 -*-
+    
+    from __future__ import absolute_import, division, print_function, unicode_literals
+    
+    # Zato
+    from zato.server.service import Service
+    
+    class MyService(Service):
+        class SimpleIO:
+            input_required = ('name', 'cust_type')
+            output_required = ('is_allowed',)
+    
+        def get_data(self):
+            if self.request.input.name == 'wendy' and self.request.input.cust_type == 'AXC':
+                return True
+    
+        def handle(self):
+            self.response.payload.is_allowed = self.get_data()
+            
+Save it in a sio_example.py file, :doc:`hot-deploy<TODO>` it and add new channels the service
+will be exposed over. For this exercise, let's use 
+:doc:`JSON <TODO>`
+and
+:doc:`SOAP <TODO>`.
+
+JSON channel example
+~~~~~~~~~~~~~~~~~~~~
+
+First, let's add a JSON channel:
+
+.. image:: /gfx/progguide/sio-example1.png
+   :align: center
+   
+We can now invoke the service from command-line via curl, notice different output
+depending on whether conditions get_data looks for are fullfilled or not.
+
+.. code-block:: javascript
+
+  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"wendy", "cust_type":"AXC"}'
+  {"response": {"is_allowed": true}}
+
+.. code-block:: javascript
+  
+  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"janet", "cust_type":"AXC"}'
+  {"response": {"is_allowed": false}}
+  
+SOAP channel example
+~~~~~~~~~~~~~~~~~~~~
+
+Now, add a SOAP channel - note that the service is the same, you're only using
+web admin's features here, no code changes are needed, no restarts either.
+
+.. image:: /gfx/progguide/sio-example2.png
+   :align: center
+   
+Here we can use curl too though now we're using SOAP, both requests and responses
+are more verbose than previously and have been manually spread across several lines to
+improve clarity.
+
+.. code-block:: xml
+
+  $ curl localhost:17010/soap/sio-example.my-service -H "SOAPAction:sio-example.my-service" -d '
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+        <zato:request>
+          <zato:name>wendy</zato:name>
+          <zato:cust_type>AXC</zato:cust_type>
+        </zato:request>
+      </soapenv:Body>
+    </soapenv:Envelope>'
+    
+  <?xml version='1.0' encoding='UTF-8'?>
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+      <soap:Body>
+        <response>
+          <zato_env>
+            <cid>K41256683804713584730770196331</cid>
+            <result>ZATO_OK</result>
+          </zato_env>
+          <item>
+            <is_allowed>true</is_allowed>
+          </item>
+        </response>
+      </soap:Body>
+    </soap:Envelope>
+  
+.. code-block:: xml
+
+  $ curl localhost:17010/soap/sio-example.my-service -H "SOAPAction:sio-example.my-service" -d '
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:zato="http://gefira.pl/zato">
+      <soapenv:Body>
+        <zato:request>
+          <zato:name>janet</zato:name>
+          <zato:cust_type>AXC</zato:cust_type>
+        </zato:request>
+      </soapenv:Body>
+    </soapenv:Envelope>'
+    
+  <?xml version='1.0' encoding='UTF-8'?>
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+      <soap:Body>
+        <response>
+          <zato_env>
+            <cid>K14860259454465054570695329428</cid>
+            <result>ZATO_OK</result>
+          </zato_env>
+          <item>
+            <is_allowed>true</is_allowed>
+          </item>
+        </response>
+      </soap:Body>
+    </soap:Envelope>
+    
+Anatomy of a SIO service
+========================
+
+SimpleIO attributes
+-------------------
+
+As mentioned above, to use SIO, a service needs to have an inner class called
+SimpleIO. The class can define a number of attributes. Each attribute is optional.
+
+The example shows a service using all of the attributes SIO allows for:
+
+::
+
+  # -*- coding: utf-8 -*-
+  
+  from __future__ import absolute_import, division, print_function, unicode_literals
+  
+  # Zato
+  from zato.server.service import Service
+  
+  class MyService2(Service):
+      class SimpleIO:
+          request_elem = 'service2_request'
+          response_elem = 'service2_response'
+          input_required = ('name', 'cust_type')
+          input_optional = ('cust_category', 'is_well_known')
+          output_required = ('is_allowed',)
+          output_optional = ('session_timeout', 'should_refresh_creds')
+          output_repeated = False
+  
+      def get_data(self):
+          # Imagine a datasource is consulted here
+          pass
+  
+      def handle(self):
+          self.response.payload.is_allowed = False
+          self.response.payload.should_refresh_creds = True
+
+.. code-block:: javascript
+          
+  $ curl localhost:17010/json/sio-example2.my-service2 -d '{"name":"wendy", "cust_type":"AXC"}'
+  {"service2_response": {"session_timeout": "", "is_allowed": false, "should_refresh_creds": true}}
+
+================ =============================================================================================================
+Attribute        Notes
+================ =============================================================================================================
+request_elem     Used with XML only - name of the root element that contains business elements. Default: 'request'.
+response_elem    Name of the response element to wrap payload's elements with. Default: 'response'.
+input_required   A tuple of names, each name will have to exist in the request. An exception will be raised if any is missing.
+                 Default: an empty tuple.
+input_optional   A tuple of names, they can be optionally passed in. No exception will be raised on a missing one.
+                 Default: an empty tuple.
+output_required  A tuple of names, the service guarantees that each element will exist in the response. Zato will
+                 raise an exception if you declare that a service should return an element and the element isn't returned.
+                 Default: an empty tuple.
+output_optional  A tuple of names, they can be returned optionally. Note that when you omit any, Zato will still return
+                 that element with an empty value.
+                 Default: an empty tuple.
+output_repeated  Whether the response is a single element or a list of elements.
+================ =============================================================================================================

@@ -1,0 +1,125 @@
+Overview
+========
+
+You develop 
+:ref:`services <progguide-what-is-a-service>`
+and 
+:ref:`applications <progguide-what-is-an-application>`
+using Python, a very-high level,
+full featured and highly productive, programming language, that allows you to
+implement any solution of any scale and size, from tiny ones to the very
+largest.
+
+Code you develop is 
+:doc:`hot-deployed <TODO>`
+or
+:doc:`installed statically <TODO>`
+on servers running
+in high-availability clusters.
+
+You have access to a browser-based 
+:doc:`web admin <TODO>` which aids you with development and maintenance.
+
+Your code can both invoke or accept connections through the most commonly used
+protocols and transports - 
+:doc:`Plain HTTP(S) <TODO>`,
+:doc:`SOAP <TODO>`,
+:doc:`JSON <TODO>`,
+:doc:`AMQP <TODO>`,
+:doc:`JMS WebSphere MQ <TODO>`,
+:doc:`ZeroMQ <TODO>`,
+:doc:`SQL <TODO>`,
+and
+:doc:`FTP(S) <TODO>`.
+
+At your disposal are also 
+:doc:`Redis key/value database`
+and a built-in
+:doc:`scheduler`
+which is used for executing recurring tasks.
+
+Servers know how to secure and to make use of resources secured with 
+:doc:`HTTP Basic Auth <TODO>`,
+:doc:`WS-Security <TODO>`
+and
+:doc:`technical accounts <TODO>`.
+
+Zato's unique 
+:doc:`SimpleIO (SIO) <TODO>`
+mechanism allows you to write code once while still being able to expose
+it through multiple protocols and interfaces without any code change nor restarts.
+
+You are supported in writing code that is easy to 
+:doc:`test <TODO>`
+and
+:doc:`document <TODO>`.
+
+.. _progguide-what-is-a-service:
+
+What is a service
+=================
+
+A service is a piece of reusable code which does something interesting and useful for its users.
+Think of it as an atomic building block of the Zato-based solution you want to develop.
+
+For instance, if you are writing a `CRM system <https://en.wikipedia.org/wiki/Customer_relationship_management>`_ 
+you will need services that are to do with customer details - returning
+a customer's addresses, fetching their products, getting their details,
+these are all typical services you'll have to develop.
+
+Likewise, when integrating multiple applications in a
+`SOA <https://en.wikipedia.org/wiki/Service-oriented_architecture>`_, you may want
+want to create a composite service that will invoke lower-level services of applications
+being integrated, aggregate their output and present a unified view to applications
+that invoke your service.
+
+From another point of view, a service is like a function or method in your programming
+language, only catapulted to a much higher level - instead of exposing API to other
+classes or modules, you operate with services and data-sources dispersed across
+many applications and systems.
+
+.. _progguide-what-is-an-application:
+
+What is an application
+======================
+
+An application is simply a set of :ref:`services <progguide-what-is-a-service>`
+you, as a human being, attach a special meaning to.
+
+There is no special application packaging format nor does Zato know that what
+you call an application is more than just one or more services that are logically
+grouped together.
+
+Read next
+=========
+
+    * **Developing services and applications:**
+      :doc:`Connections<progguide/connections>` | 
+      :doc:`Key/value DB (Redis)<progguide/kvdb>` |
+      :doc:`Scheduler<progguide/scheduler>` |
+      :doc:`Accessing the outside world <progguide/access-outside>` | 
+      :doc:`Invoking other services <progguide/service-invoke-other>` |
+      :doc:`Security<progguide/security>` |
+      :doc:`Testing<progguide/testing>`
+      
+    * **Request/response documents:**
+      :doc:`SimpleIO (SIO) <./sio>` | 
+      :doc:`XML <./xml>` | 
+      :doc:`JSON <./json>` |
+      :doc:`Other data formats <./other-formats>`
+      
+    * **Sync and async:**
+      :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>`
+      
+    * **Scheduler:**
+      :doc:`Running services in background <progguide/service-scheduler>`
+      
+    * **Service hooks:**
+      :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
+      
+    * **Logging and debugging techniques:**
+      :doc:`Logging<progguide/logging>` | 
+      :doc:`Debugging<progguide/debgging>`
+      
+    * **Customizing web admin:**
+      :doc:`Making sure you deploy on the right environment<progguide/customizing-web-admin>`
