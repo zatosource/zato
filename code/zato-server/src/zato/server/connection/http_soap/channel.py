@@ -234,7 +234,7 @@ class _BaseMessageHandler(object):
             
         service_data = self.server.service_store.service_data(service_info.impl_name)
         
-        return payload_from_request(request, data_format, transport), service_info, service_data
+        return payload_from_request(cid, request, data_format, transport), service_info, service_data
     
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')

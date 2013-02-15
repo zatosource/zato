@@ -76,7 +76,7 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import KVDB, SIMPLE_IO, soap_body_xpath, ZatoException
+from zato.common import KVDB, SIMPLE_IO, soap_body_path, soap_body_xpath, ZatoException
 from zato.common.crypto import CryptoManager
 
 logger = logging.getLogger(__name__)
@@ -382,7 +382,7 @@ def get_body_payload(body):
 
     return body_payload
 
-def payload_from_request(request, data_format, transport):
+def payload_from_request(cid, request, data_format, transport):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
     if request:
@@ -391,7 +391,7 @@ def payload_from_request(request, data_format, transport):
                 soap = objectify.fromstring(request)
                 body = soap_body_xpath(soap)
                 if not body:
-                    raise ZatoException(cid, 'Client did not send the [{1}] element'.format(body_path))
+                    raise ZatoException(cid, 'Client did not send the [{}] element'.format(soap_body_path))
                 payload = get_body_payload(body)
             else:
                 payload = objectify.fromstring(request)
