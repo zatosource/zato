@@ -5,13 +5,17 @@ SimpleIO (SIO)
 ==============
 
 SIO is a feature unique to Zato that allows one to develop services in a way
-that is reusable across multiple data formats and transports.
-
-That is, a service can be written once but it's still possible to expose it,
-for instance, via XML through AMQP, and via JSON over HTTPS.
+that is reusable across multiple data formats and transports. That is, a service
+can be written once but it's still possible to expose it, for instance, via XML
+through AMQP, and via JSON over HTTPS.
 
 Once a service has been deployed, no code changes nor restarts are needed to make it
 available over various access methods.
+
+.. note ::
+
+  :doc:`Zato's own public API </public-api/intro>` - 160+ services - is exposed
+  through SIO and serves as a good usage example of what SIO is capable of.
 
 
 Sample usage
@@ -56,7 +60,7 @@ First, let's add a JSON channel:
    :align: center
    
 We can now invoke the service from command-line via curl, notice different output
-depending on whether conditions get_data looks for are fullfilled or not.
+depending on whether conditions get_data looks for are met or not.
 
 .. code-block:: javascript
 
@@ -144,7 +148,7 @@ SimpleIO attributes
 -------------------
 
 As mentioned above, to use SIO, a service needs to have an inner class called
-SimpleIO. The class can define a number of attributes. Each attribute is optional.
+SimpleIO. The class can define a number of attributes.
 
 The example shows a service using all of the attributes SIO allows for:
 
@@ -157,15 +161,16 @@ The example shows a service using all of the attributes SIO allows for:
   # Zato
   from zato.server.service import Service
   
-  class MyService2(Service):
+  class MyService(Service):
       class SimpleIO:
-          request_elem = 'service2_request'
-          response_elem = 'service2_response'
+          request_elem = 'service_request'
+          response_elem = 'service_response'
           input_required = ('name', 'cust_type')
-          input_optional = ('cust_category', 'is_well_known')
+          input_optional = ('cust_category', 'priority')
           output_required = ('is_allowed',)
-          output_optional = ('session_timeout', 'should_refresh_creds')
+          output_optional = ('session_timeout', 'should_refresh_creds', 'priority')
           output_repeated = False
+          default_value = 'UNKNOWN'
   
       def get_data(self):
           # Imagine a datasource is consulted here
@@ -174,26 +179,178 @@ The example shows a service using all of the attributes SIO allows for:
       def handle(self):
           self.response.payload.is_allowed = False
           self.response.payload.should_refresh_creds = True
+          self.response.payload.priority = self.request.input.priority
 
 .. code-block:: javascript
           
-  $ curl localhost:17010/json/sio-example2.my-service2 -d '{"name":"wendy", "cust_type":"AXC"}'
-  {"service2_response": {"session_timeout": "", "is_allowed": false, "should_refresh_creds": true}}
+  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"wendy", "cust_type":"AXC"}'
+  {"service_response": {"session_timeout": "", "priority": "UNKNOWN", 
+      "is_allowed": false, "should_refresh_creds": true}}
 
-================ =============================================================================================================
-Attribute        Notes
-================ =============================================================================================================
-request_elem     Used with XML only - name of the root element that contains business elements. Default: 'request'.
-response_elem    Name of the response element to wrap payload's elements with. Default: 'response'.
-input_required   A tuple of names, each name will have to exist in the request. An exception will be raised if any is missing.
-                 Default: an empty tuple.
-input_optional   A tuple of names, they can be optionally passed in. No exception will be raised on a missing one.
-                 Default: an empty tuple.
-output_required  A tuple of names, the service guarantees that each element will exist in the response. Zato will
+================ ============================================================================================================= ===============
+Attribute        Notes                                                                                                         Default
+================ ============================================================================================================= ===============
+request_elem     Used with XML only - name of the root element that contains business elements.                                'request'
+response_elem    Name of the response element to wrap payload's elements with.                                                 'response'
+input_required   A tuple of names, each name will have to exist in the request. An exception will be raised if any is missing. An empty tuple
+input_optional   A tuple of names, they can be optionally passed in. No exception will be raised on a missing one.             An empty tuple 
+output_required  A tuple of names, the service guarantees that each element will exist in the response. Zato will              An empty tuple
                  raise an exception if you declare that a service should return an element and the element isn't returned.
-                 Default: an empty tuple.
-output_optional  A tuple of names, they can be returned optionally. Note that when you omit any, Zato will still return
+                 If it's XML, the elements will be returned in the ordered they are listed.
+                 
+                 Either output_required or output_optional must not be empty. 
+                 
+output_optional  A tuple of names, they can be returned optionally. Note that when you omit any, Zato will still return        An empty tuple
                  that element with an empty value.
-                 Default: an empty tuple.
-output_repeated  Whether the response is a single element or a list of elements.
-================ =============================================================================================================
+                 If it's XML, the elements will be returned in the ordered they are listed.
+                 
+                 Either output_required or output_optional must not be empty. 
+                 
+output_repeated  Whether the response is a single element or a list of elements.                                               False
+default_value    A value to use when an optional element wasn't in the request.                                                None
+================ ============================================================================================================= ===============
+
+.. note ::
+
+  SIO is not meant to be used when arbitrarily complex requests and responses
+  are needed. You can either return flat objects, such as a bunch of attributes
+  or a list of objects, such a list of groups of attributes. In practice,
+  this covers 90% of use-cases. 
+  
+  Naturally, when not using SIO, Zato does allow for accepting and returning 
+  any documents in 
+  :doc:`JSON <TODO>`, 
+  :doc:`XML <TODO>`
+  or indeed, in any 
+  :doc:`data format <TODO>`.
+
+Returning a list of elements
+----------------------------
+
+By default, Zato assumes a SIO service returns a flat list of elements,
+say, details of a customer's product. You need to use the slice notation
+on the payload object if you wish to return a list.
+
+Consider this example:
+
+::
+
+  # -*- coding: utf-8 -*-
+  
+  from __future__ import absolute_import, division, print_function, unicode_literals
+  
+  # Zato
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      class SimpleIO:
+          input_required = ('id',)
+          output_required = ('name', 'type')
+  
+      def get_data(self):
+          # Imagine a datasource is consulted here
+          output = []
+          for idx in range(5):
+              item = {'name': 'myname-{}'.format(idx), 'type': 'mytype-{}'.format(idx)}
+              output.append(item)
+              
+          return output
+  
+      def handle(self):
+          self.response.payload[:] = self.get_data()
+
+.. code-block:: javascript
+
+  $ curl localhost:17010/json/sio-example.my-service -d '{"id":1}'
+    {"response": [
+       {"type": "mytype-0", "name": "myname-0"}, 
+       {"type": "mytype-1", "name": "myname-1"},
+       {"type": "mytype-2", "name": "myname-2"},
+       {"type": "mytype-3", "name": "myname-3"},
+       {"type": "mytype-4", "name": "myname-4"}
+    ]}
+    
+How to produce the payload
+--------------------------
+
+Zato allows for a range objects to be assigned to the payload and will be able
+to figure out what they are without any need for additional hints from your end.
+Note that this works equally well whether output is repeated or not.
+
+Dictionaries
+~~~~~~~~~~~~
+
+Just assign a dictionary object.
+
+::
+
+  # -*- coding: utf-8 -*-
+  
+  from __future__ import absolute_import, division, print_function, unicode_literals
+  
+  # Zato
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      class SimpleIO:
+          input_required = ('id',)
+          output_required = ('name', 'name')
+  
+      def get_data(self):
+          return {'name': 'Mark', 'last_name': 'Twain'}
+  
+      def handle(self):
+          self.response.payload = self.get_data()
+
+.. code-block:: javascript
+          
+  $ curl localhost:17010/json/sio-example.my-service -d '{"id":1}'
+  {"response": {"last_name": "Twain", "name": "Mark"}}
+  
+This also works with dictionary-like objects, such as
+`Bunch <http://pypi.python.org/pypi/bunch>`_
+is.
+  
+::
+
+  # -*- coding: utf-8 -*-
+  
+  from __future__ import absolute_import, division, print_function, unicode_literals
+
+  # Bunch
+  from bunch import Bunch
+  
+  # Zato
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      class SimpleIO:
+          input_required = ('id',)
+          output_required = ('name', 'last_name')
+  
+      def get_data(self):
+      
+          data = Bunch()
+          data.name = 'Robin'
+          data.last_name = 'Hood'
+          
+          return data
+  
+      def handle(self):
+          self.response.payload = self.get_data()
+
+.. code-block:: javascript
+          
+  $ curl localhost:17010/json/sio-example.my-service -d '{"id":1}'
+  {"response": {"last_name": "Hood", "name": "Robin"}}
+  
+In fact, this will work with a lot of data sources as long as they are able
+to produce a dictionary-like output.
+  
+SQLAlchemy objects
+~~~~~~~~~~~~~~~~~~
+
+You can directly use SQLAlchemy query results, Zato will convert it itself.
+This is great if you want to use
+:doc:`SQL connections <TODO>` as it simply means you only have to write SQLAlchemy
+queries without a need for converting their results into the payload format.
