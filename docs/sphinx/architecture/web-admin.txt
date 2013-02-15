@@ -1,3 +1,12 @@
+Servers
+=======
+
+.. image:: /gfx/arch-servers.png
+   :align: center
+
+Overview
+--------
+=======
 Web admin
 =========
 
@@ -28,4 +37,3 @@ with its own users, should be created.
 
 Admins use the :doc:`CLI </admin/cli/index>` to create, start, stop and
 retrieve detailed information regarding web admin instances.
-
