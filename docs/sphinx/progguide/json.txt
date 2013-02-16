@@ -7,7 +7,7 @@ JSON
 Overview
 --------
 
-As with :doc:`XML <./xml>`, it's most comfortable to use :doc:`Simple IO (SIO) <./sio>`
+As with :doc:`XML <./xml>`, it's most convenient to use :doc:`Simple IO (SIO) <./sio>`
 to accept or return JSON in your services but if that's not an option using
 JSON directly is still a piece of cake.
 
@@ -82,7 +82,7 @@ Accessing request elements
       
 *
    The original JSON document, before it was parsed by Zato, is still available
-   as self.raw_request. 
+   as self.request.raw_request. 
    
    Note that if you want to parse it yourself you will most
    likely want to make sure the channel a service is available through doesn't
