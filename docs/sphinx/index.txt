@@ -47,8 +47,8 @@ Programming guide
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <progguide/sio>` | 
-      :doc:`XML <progguide/xml>` | 
       :doc:`JSON <progguide/json>` |
+      :doc:`XML <progguide/xml>` | 
       :doc:`Other data formats <progguide/other-formats>`
       
     * **Sync and async:**

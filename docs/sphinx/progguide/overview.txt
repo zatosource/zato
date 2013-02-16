@@ -110,8 +110,8 @@ Read next
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <./sio>` | 
-      :doc:`XML <./xml>` | 
       :doc:`JSON <./json>` |
+      :doc:`XML <./xml>` | 
       :doc:`Other data formats <./other-formats>`
       
     * **Sync and async:**
