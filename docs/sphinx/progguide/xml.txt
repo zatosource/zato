@@ -49,7 +49,7 @@ Accessing request elements
               if self.request.payload.cust_info.cust.cust_id == 1:
                   self.logger.info('Got it!')
    
-   .. code-block:: javascript
+   .. code-block:: xml
    
       $ curl localhost:17010/xml-example.my-service -d '
         <root><cust_info><cust><cust_id>1</cust_id></cust></cust_info></root>'
@@ -86,7 +86,7 @@ Accessing request elements
               for elem in self.request.payload.cust_info.address_list.getchildren():
                   self.logger.info(elem)
                
-   .. code-block:: javascript
+   .. code-block:: xml
    
       $ curl localhost:17010/xml-example.my-service -d '<root><cust_info>
             <address_list>
@@ -139,7 +139,7 @@ Accessing request elements
               if relation_type == 'AAA':
                   self.logger.info('Got it!')
                   
-   .. code-block:: javascript
+   .. code-block:: xml
    
       $ curl localhost:17010/xml-example.my-service -d '
       <root xmlns="example.com/1"><cust_info>
@@ -164,7 +164,7 @@ Accessing request elements
           def handle(self):
               self.logger.info('XML:[{}]'.format(self.request.raw_request))
               
-   .. code-block:: javascript
+   .. code-block:: xml
    
       $ curl localhost:17010/xml-example.my-service -d '<root><cust_id>1</cust_id></root>'
       
@@ -199,7 +199,7 @@ Producing response
               
               self.response.payload = etree.tostring(cust_data)
               
-   .. code-block:: javascript
+   .. code-block:: xml
    
       $ curl localhost:17010/xml-example.my-service -d ''
       <cust_data><phone_number>(123) 456-789</phone_number></cust_data>
@@ -217,7 +217,7 @@ Producing response
           def handle(self):
               self.response.payload = '<customer><id>1</id></customer>'
               
-   .. code-block:: javascript
+   .. code-block:: xml
    
       $ curl localhost:17010/xml-example.my-service -d ''
       <customer><id>1</id></customer>
@@ -255,7 +255,7 @@ will be automatically wrapped in a SOAP envelope for you.
            self.logger.info('cust_id:[{}]'.format(cust_id))
            self.response.payload = '<customer xmlns="example.com/1"><name>楊朱</name></customer>'
            
-.. code-block:: javascript
+.. code-block:: xml
 
    $ curl localhost:17010/soap-example.my-service -H 'SOAPAction:soap-example.my-service' -d '
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="example.com/1">
