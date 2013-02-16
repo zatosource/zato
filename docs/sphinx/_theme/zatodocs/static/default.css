@@ -27,3 +27,11 @@ h3, h4, h5 {
     color:#449 !important;
     font-weight:normal !important;
 }
+
+.highlight .bp, .highlight .nb {
+    color: #337 !important;
+}
+
+.highlight .s, .highlight .s1 {
+    color: #337744 !important;
+}

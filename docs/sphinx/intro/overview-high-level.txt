@@ -69,7 +69,7 @@ Interfaces
 ==========
 
 Various interfaces that Zato can access allow one for reaching out to any application,
-regardless of its origin and programming language used. The interfacesin clude:
+regardless of its origin and programming language used. The interfaces include:
 
 * the ubiquitous HTTP(S) protocol
 * FTP(S)

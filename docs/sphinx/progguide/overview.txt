@@ -45,7 +45,7 @@ and
 :doc:`technical accounts <TODO>`.
 
 Zato's unique 
-:doc:`SimpleIO (SIO) <TODO>`
+:doc:`SimpleIO (SIO) <./sio>`
 mechanism allows you to write code once while still being able to expose
 it through multiple protocols and interfaces without any code change nor restarts.
 
@@ -53,6 +53,10 @@ You are supported in writing code that is easy to
 :doc:`test <TODO>`
 and
 :doc:`document <TODO>`.
+
+While technically possible, you'll rarely, if ever, use HTML or CSS. Zato is a
+:doc:`middleware and backend server </intro/overview-high-level>`. Consider using 
+`Django <https://djangoproject.com>`_ or a similar technology for frontend programming.
 
 .. _progguide-what-is-a-service:
 
@@ -94,13 +98,15 @@ Read next
 =========
 
     * **Developing services and applications:**
+      :doc:`Writing a service <progguide/write-service>` | 
       :doc:`Connections<progguide/connections>` | 
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
       :doc:`Accessing the outside world <progguide/access-outside>` | 
       :doc:`Invoking other services <progguide/service-invoke-other>` |
       :doc:`Security<progguide/security>` |
-      :doc:`Testing<progguide/testing>`
+      :doc:`Testing<progguide/testing>` |
+      :doc:`Documenting<progguide/documenting>`
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <./sio>` | 

@@ -35,13 +35,15 @@ Programming guide
 
     * **Developing services and applications:**
       :doc:`Overview <progguide/overview>` | 
+      :doc:`Writing a service <progguide/write-service>` | 
       :doc:`Connections<progguide/connections>` | 
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
       :doc:`Accessing the outside world <progguide/access-outside>` | 
       :doc:`Invoking other services <progguide/service-invoke-other>` |
       :doc:`Security<progguide/security>` |
-      :doc:`Testing<progguide/testing>`
+      :doc:`Testing<progguide/testing>` |
+      :doc:`Documenting<progguide/documenting>`
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <progguide/sio>` | 
@@ -69,7 +71,6 @@ Programming reference
 =================================
 
     * :doc:`Service API<progref/service-api>` |
-      :doc:`SimpleIO (SIO)<progref/internal-api>` |
       :doc:`Scheduler<progref/scheduler>` |
       :doc:`Service hooks<progref/service-hooks>`
 
