@@ -71,7 +71,7 @@ you will need services that are to do with customer details - returning
 a customer's addresses, fetching their products, getting their details,
 these are all typical services you'll have to develop.
 
-Likewise, when integrating multiple applications in a
+In another scenario, when integrating multiple applications in a
 `SOA <https://en.wikipedia.org/wiki/Service-oriented_architecture>`_, you may want
 want to create a composite service that will invoke lower-level services of applications
 being integrated, aggregate their output and present a unified view to applications
@@ -90,7 +90,7 @@ What is an application
 An application is simply a set of :ref:`services <progguide-what-is-a-service>`
 you, as a human being, attach a special meaning to.
 
-There is no special application packaging format nor does Zato know that what
+There is no custom application packaging format nor does Zato know that what
 you call an application is more than just one or more services that are logically
 grouped together.
 
