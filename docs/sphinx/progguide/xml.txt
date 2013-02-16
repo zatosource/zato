@@ -7,7 +7,7 @@ XML
 Overview
 --------
 
-As with :doc:`JSON <./json>`, it's most comfortable to use :doc:`Simple IO (SIO) <./sio>` to accept or return XML
+As with :doc:`JSON <./json>`, it's most convenient to use :doc:`Simple IO (SIO) <./sio>` to accept or return XML
 in your services but if that's not an option it's still very easy to use XML
 directly. In fact, if you choose to use `lxml <http://lxml.de>`_, you won't even
 have to manipulate XML as such at all - everything will be generated for you.
@@ -151,7 +151,7 @@ Accessing request elements
      INFO - Got it!
 
 *
-   The raw, unparsed, XML document is available under self.raw_request. This comes
+   The raw, unparsed, XML document is available under self.request.raw_request. This comes
    in handy if you want to parse it using your own tools of choice. Note however that in this
    case you shouldn't set the channel's data format to XML so that Zato doesn't
    parse it unnecessarily.
