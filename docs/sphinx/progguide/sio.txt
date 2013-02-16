@@ -135,7 +135,7 @@ improve clarity.
             <result>ZATO_OK</result>
           </zato_env>
           <item>
-            <is_allowed>true</is_allowed>
+            <is_allowed>false</is_allowed>
           </item>
         </response>
       </soap:Body>

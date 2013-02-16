@@ -1,0 +1,33 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+XML
+===
+
+Overview
+--------
+
+It's easiest to use :doc:`Simple IO (SIO) <./sio>` to accept or return XML
+in your services but if that's not an option it's still very easy to use XML
+directly. In fact, if you choose to use `lxml <http://lxml.de>`_, you won't even
+have to manipulate XML as such at all - everything will be generated for you.
+
+First, let's define a bare-bones service and an HTTP channel that will be used
+throught the chapter. Save the following code in an xml_example.py file
+and :doc:`hot-deploy <TODO>` it.
+
+::
+
+   # -*- coding: utf-8 -*-
+   
+   from __future__ import absolute_import, division, print_function, unicode_literals
+   
+   # Zato
+   from zato.server.service import Service
+   
+   class MyService(Service):
+       def handle(self):
+           self.response.payload = '' # Return nothing for now
+           
+.. image:: /gfx/progguide/xml-channel1.png
+   :align: center
