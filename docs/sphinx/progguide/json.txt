@@ -155,9 +155,10 @@ Producing response
       {"customer_name":"Max Derkov"}
       
 
-
 Simple IO (SIO)
 ---------------
 
-Consider using :doc:`SIO <./sio>` if you're developing a new application or its
-existing data model allows to, SIO is even more easier to work with.
+.. note ::
+
+   Consider using :doc:`SIO <./sio>` if you're developing a new application or its
+   existing data model allows you to, SIO is even more easier to work with.

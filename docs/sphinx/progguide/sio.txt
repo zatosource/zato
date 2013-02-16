@@ -21,7 +21,7 @@ available over various access methods.
 Sample usage
 ------------
 
-An SIO service is one which has an inner class named SimpleIO which conforms to a certain
+An SIO service is one which has an inner class named SimpleIO that conforms to a certain
 API, for example:
 
 ::
@@ -160,10 +160,6 @@ The example shows a service using all of the attributes SIO allows for:
           output_required = ('is_allowed',)
           output_optional = ('session_timeout', 'should_refresh_creds', 'priority')
           default_value = 'UNKNOWN'
-  
-      def get_data(self):
-          # Imagine a datasource is consulted here
-          pass
   
       def handle(self):
           self.response.payload.is_allowed = False
@@ -468,7 +464,6 @@ type conversions:
       def handle(self):
           for name, value in self.request.input.items():
               self.logger.info('name:{}, value:{}, type:{}'.format(name, repr(value), type(value)))
-
 
 ::
 
