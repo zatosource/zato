@@ -25,12 +25,7 @@ An SIO service is one which has an inner class named SimpleIO which conforms to 
 API, for example:
 
 ::
-
-    # -*- coding: utf-8 -*-
     
-    from __future__ import absolute_import, division, print_function, unicode_literals
-    
-    # Zato
     from zato.server.service import Service
     
     class MyService(Service):
@@ -153,12 +148,7 @@ SimpleIO. The class can define a number of attributes.
 The example shows a service using all of the attributes SIO allows for:
 
 ::
-
-  # -*- coding: utf-8 -*-
   
-  from __future__ import absolute_import, division, print_function, unicode_literals
-  
-  # Zato
   from zato.server.service import Service
   
   class MyService(Service):
@@ -233,12 +223,7 @@ on the payload object or its .append method if you wish to return a list.
 Consider the examples below, they produce the same output:
 
 ::
-
-  # -*- coding: utf-8 -*-
   
-  from __future__ import absolute_import, division, print_function, unicode_literals
-  
-  # Zato
   from zato.server.service import Service
   
   class MyService(Service):
@@ -259,11 +244,6 @@ Consider the examples below, they produce the same output:
 
 ::
           
-  # -*- coding: utf-8 -*-
-  
-  from __future__ import absolute_import, division, print_function, unicode_literals
-  
-  # Zato
   from zato.server.service import Service
   
   class MyService(Service):
@@ -299,12 +279,7 @@ Assign values directly
 Just assign values to the payload:
 
 ::
-
-  # -*- coding: utf-8 -*-
   
-  from __future__ import absolute_import, division, print_function, unicode_literals
-  
-  # Zato
   from zato.server.service import Service
   
   class MyService(Service):
@@ -327,12 +302,7 @@ Dictionaries
 Use a dictionary:
 
 ::
-
-  # -*- coding: utf-8 -*-
   
-  from __future__ import absolute_import, division, print_function, unicode_literals
-  
-  # Zato
   from zato.server.service import Service
   
   class MyService(Service):
@@ -352,10 +322,6 @@ This also works with dictionary-like objects, such as
 is:
   
 ::
-
-  # -*- coding: utf-8 -*-
-  
-  from __future__ import absolute_import, division, print_function, unicode_literals
 
   # Bunch
   from bunch import Bunch
@@ -397,10 +363,6 @@ queries without a need for converting their results into the payload format.
 Let's say you've defined your database table as follows:
 
 ::
-
-  # -*- coding: utf-8 -*-
-  
-  from __future__ import absolute_import, division, print_function, unicode_literals
   
   # SQLAlchemy
   from sqlalchemy import Column, Integer, String
@@ -423,10 +385,6 @@ resides in. You can simply assign the object returned by SQLAlchemy to the paylo
 and Zato will extract all the attributes out of it:
 
 ::
-
-  # -*- coding: utf-8 -*-
-  
-  from __future__ import absolute_import, division, print_function, unicode_literals
   
   # stdlib
   from contextlib import closing
@@ -466,12 +424,7 @@ JSON and XML but doubly so for the latter.
 * If a parameter begins with 'is\_', 'needs\_', 'should\_' it will be converted to a bool
 
 ::
-
-  # -*- coding: utf-8 -*-
   
-  from __future__ import absolute_import, division, print_function, unicode_literals
-  
-  # Zato
   from zato.server.service import Service
   
   class MyService(Service):
@@ -504,12 +457,7 @@ Doing so will will signal to Zato that it shouldn't attempt to perform the defau
 type conversions:
 
 :: 
-
-  # -*- coding: utf-8 -*-
   
-  from __future__ import absolute_import, division, print_function, unicode_literals
-  
-  # Zato
   from zato.server.service import AsIs, Boolean, Integer, Unicode, Service
   
   class MyService(Service):
@@ -524,7 +472,7 @@ type conversions:
 
 ::
 
-  curl localhost:17010/json/sio-example.my-service -d '{"id":"1",
+  $ curl localhost:17010/json/sio-example.my-service -d '{"id":"1",
     "reset_required":"true", "cust_type":"30", "cust_id":1}'
 
 ::
