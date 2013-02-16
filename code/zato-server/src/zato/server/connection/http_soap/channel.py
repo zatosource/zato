@@ -191,7 +191,8 @@ class _BaseMessageHandler(object):
         self.server = server # A ParallelServer instance
     
     def init(self, cid, path_info, request, headers, transport, data_format):
-        logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(cid, request, headers))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(cid, request.decode('utf-8'), headers))
 
         if transport == 'soap':
             # HTTP headers are all uppercased at this point.
@@ -259,7 +260,9 @@ class _BaseMessageHandler(object):
         
         service_instance.post_handle()
 
-        logger.debug('[{}] Returning response.content_type:[{}], response.payload:[{}]'.format(cid, response.content_type, response.payload))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug('[{}] Returning response.content_type:[{}], response.payload:[{}]'.format(
+                cid, response.content_type, response.payload.decode('utf-8')))
         return service_info, response
 
     # ##########################################################################
