@@ -1,0 +1,17 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Writing a service
+=================
+
+From a programmer's point of view, a service is a Python class that subclasses
+zato.server.Service and implements a handle(self) method.
+
+Below is the simplest possible Zato service meant to illustrate the point of how
+little coding is needed to write services. Granted, it doesn't do much useful,
+but still can be :doc:`hot-deployed <TODO>` and while it's not possible to
+:doc:`invoke <TODO>`
+it
+:doc:`through <TODO>`
+:doc:`channels <TODO>`
+it's still a proper service.
