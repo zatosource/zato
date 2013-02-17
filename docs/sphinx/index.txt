@@ -36,6 +36,7 @@ Programming guide
     * **Developing services and applications:**
       :doc:`Overview <progguide/overview>` | 
       :doc:`Writing a service <progguide/write-service>` | 
+      :doc:`Service API<progguide/service-api>` |
       :doc:`Connections<progguide/connections>` | 
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
@@ -66,13 +67,6 @@ Programming guide
       
     * **Customizing web admin:**
       :doc:`Making sure you deploy on the right environment<progguide/customizing-web-admin>`
-
-Programming reference
-=================================
-
-    * :doc:`Service API<progref/service-api>` |
-      :doc:`Scheduler<progref/scheduler>` |
-      :doc:`Service hooks<progref/service-hooks>`
 
 Administration guide
 ==============================
