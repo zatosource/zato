@@ -282,16 +282,16 @@ def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
 
 def new_cid():
-    """ Returns a new 64-bit correlation identifier. It's *not* safe to use the ID
+    """ Returns a new 128-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
     
-    # The number below (29) needs to be kept in sync with zato.common.log_message.CID_LENGTH
-    # and the Service.sample_cid column. There is nothing special in the 'K' prefix,
-    # it's just so that a CID always begins with a letter and 'K' seems like something
+    # The number below (39) needs to be kept in sync with zato.common.log_message.CID_LENGTH.
+    # There is nothing special in the 'K' prefix, it's just so that a CID always
+    # begins with a letter and 'K' seems like something
     # that can't be taken for some other ASCII letter (e.g. is it Z or 2 etc.)
-    return 'K{0:0>29}'.format(getrandbits(96))
+    return 'K{0:0>39}'.format(getrandbits(128))
 
 def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object.

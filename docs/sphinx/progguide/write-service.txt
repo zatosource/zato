@@ -28,8 +28,8 @@ it's still a valid service.
 Programming conventions
 -----------------------
 
-* Services are developed in Python 2.7. No other Python versions can be used
-  although adding support for Python 3.x is planned.
+* Services are developed in `Python 2.7.x <http://docs.python.org/2.7/>`_. No
+  other Python versions can be used although adding support for Python 3.x is planned.
 
 * You can't use the name 'zato', case-insensitively, anywhere. Any such names
   are reserved and can't be used, for instance 'zato.sample', 'my:zato:data' and
@@ -59,10 +59,13 @@ Programming conventions
   
     from __future__ import absolute_import, division, print_function, unicode_literals
     
+* Each service invocation creates a new instance of the class the service is 
+  represented as.
+    
 * Don't keep any state around if you want to use the :doc:`hot-deployment` feature.
   Don't assign any values to classes the services are implemented in. Don't modify
   any module-global data. Use :doc:`Redis <TODO>` if you need to store data between
-  invocations of a service. Otherwise it will still be able to deploy a service
+  invocations of a service. Otherwise it will still be possible to deploy a service
   but not without restarting a server.
     
 What a service can do
@@ -71,7 +74,7 @@ What a service can do
 Typically, a service will receive some input and produce an output. Both steps
 are optional but usually at least one of them will be performed.
 
-Although this chapter will use JSON only, you can use 
+You can use 
 :doc:`Simple IO (SIO)<./sio>`,
 :doc:`JSON <./json>`,
 :doc:`XML <./xml>`
@@ -80,17 +83,462 @@ or
 in your services.
 
 Depending on the choices you make, it will be usually possible to make the very
-same service, with no changes to the code, available across multiple channels,
-such as HTTP, AMQP and others.
+same service, with no changes to the code, available across multiple channels
+- 
+:doc:`AMQP <TODO>`
+:doc:`JMS WebSphere MQ <TODO>`
+:doc:`Plain HTTP <TODO>`
+:doc:`SOAP <TODO>`
+and 
+:doc:`Zero MQ <TODO>`
 
-You can store data in Redis, SQL databases and specify your services be
+
+You can store data in 
+Redis,
+SQL databases
+and specify your services be
 periodically invoked through the scheduler.
 
-A service can invoke other services as well as access resources outside a Zato environment.
+A service can
+:doc:`invoke other services <./invoking-services>`
+as well as access resources outside a Zato environment.
 The latter ones include
-AMQP
-JMS WebSphere MQ
-Plain HTTP
-SOAP
-Zero MQ
-FTP
+:doc:`AMQP <TODO>`,
+:doc:`JMS WebSphere MQ <TODO>`,
+:doc:`Plain HTTP <TODO>`,
+:doc:`SOAP <TODO>`,
+:doc:`Zero MQ <TODO>`
+and 
+:doc:`FTP <TODO>`.
+
+
+Service API
+-----------
+
+This chapter will introduce the service API - a set of attributes and methods
+a service can make use of during processing of the messages.
+
+First, save the following code in service_api.py, :doc:`hot-deploy <TODO>` it - this will be
+the servce that will be modified throughout the rest of the text. A new plain HTTP channel
+should also be created so that the service can be easily accessed through `curl <http://curl.haxx.se>`_.
+
+::
+
+   from zato.server.service import Service
+   
+   class MyService(Service):
+       def handle(self):
+           pass
+
+.. image:: /gfx/progguide/service-api-channel1.png
+   :align: center
+
+Attributes
+~~~~~~~~~~
+
+channel
+```````
+
+Type of the channel (not its name) a service has been invoked through. 
+Can be one of:
+
+* 'amqp'
+* 'http-soap'
+* 'jms-wmq'
+* 'scheduler'
+* 'zmq'
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('channel:[{}]'.format(self.channel))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - channel:[http-soap]
+  
+
+cid
+```
+
+A correlation ID (CID) of this request. Each request is assigned a CID
+which is :doc:`(TODO update public API) <TODO>` 128 bits of random data, encoded as a string.
+The string is prefixed with the letter 'K' to ensure that it always start with a character. There
+is nothing special about the letter 'K', it just seemed a character that shouldn't
+be easy to confuse with any other in the ASCII range.
+
+CID has always 40 characters.
+
+.. warning ::
+
+  You must not use CIDs for any cryptographical purposes. There is no guarantee
+  that a CID will be suitable for any particular crypto operation. CIDs should
+  only be used to tell one request from another. Use
+  `UUID4 <http://docs.python.org/2.7/library/uuid.html>`_ or a similar data
+  type if you need truly random data.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('cid:[{}]'.format(self.cid))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - cid:[K280592090634247650299684980809341216327]
+  
+  
+data_format
+```````````
+
+Each channel can optionally define that the data flowing in will be in
+a particular data format. It can be one of:
+
+* None
+* 'json'
+* 'xml'
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('data_format:[{}]'.format(self.data_format))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - data_format:[None]
+  
+environ
+```````
+
+A dictionary of user-specific data that can be used for passing information
+between :doc:`service hooks <TODO>`. The service can store information in a
+hook method and consult it in another one using the environ dictionary.
+
+Zato will never use environ for its own purposes.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def before_handle(self):
+          self.environ['seen_before_invoke'] = True
+      
+      def handle(self):
+          self.environ['seen_handle'] = True
+          
+      def after_handle(self):
+          for name in('seen_before_invoke', 'seen_handle'):
+              self.logger.info('{}:[{}]'.format(name, self.environ[name]))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - seen_before_invoke:[True]
+  INFO - seen_handle:[True]
+
+
+impl_name
+`````````
+
+Name of the module and class actually implementing a given service. Contrast
+with :ref:`name <TODO>`.
+
+Visit :ref:`get_impl_name <TODO>` for a way to override it.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('impl_name:[{}]'.format(self.impl_name))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - impl_name:[service_api.MyService]
+
+invocation_time
+```````````````
+
+A `datetime.datetime <http://docs.python.org/2.7/library/datetime.html#datetime-objects>`_
+object representing the time a service has been invoked. Always in UTC.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('invocation_time:[{}]'.format(self.invocation_time))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - invocation_time:[2013-02-17 17:47:01.045913]
+
+
+job_type
+````````
+
+If a service has been :doc:`invoked through a scheduler's job <TODO>`, type of the job
+it was. None if the scheduler wasn't used. Can be one of:
+
+* None
+* 'one_time'
+* 'interval_based'
+* 'cron_style'
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('job_type:[{}]'.format(self.job_type))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - job_type:[None]
+  
+kvdb
+````
+
+An object which lets one use :doc:`Redis, Zato's key/value database (KVDB) <TODO>`.
+The underlying `redis-py connection <https://github.com/andymccurdy/redis-py>`_
+is available as self.kvdb.conn.
+
+::
+
+  from zato.common import KVDB
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          key = '{}{}'.format(KVDB.SERVICE_USAGE, self.name)
+          usage = self.kvdb.conn.get(key)
+          self.logger.info('{} was invoked {} time(s)'.format(self.name, usage))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - service-api.my-service was invoked 16 time(s)
+
+logger
+``````
+
+A logger, instance of zato.server.log.ZatoLogger, used for writing messages out to server logs.
+This is a thin wrapper around `Python's logging.Logger <http://docs.python.org/2.7/library/logging.html>`_
+which lets one use a 'cid' argument in addition to what is ordinarily available
+when using a standard logger. This allows to use a 'cid' parameter in server logs.
+
+Observe how log output changes depending on the format used:
+
+::
+
+  %(asctime)s - %(cid)s - %(message)s
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('Hello!', cid=self.cid)
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  2013-02-17 19:48:33,585 - K300817487686039172650072756834592513215 - Hello!
+  
+  
+name
+````
+
+Name of the service under which it will be possible to invoke it and point to it
+in the web admin. Contrast with :ref:`impl_name <TODO>`.
+
+Visit :ref:`get_name <TODO>` for a way to override it.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('name:[{}]'.format(self.name))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - name:[service-api.my-service]
+  
+odb
+```
+
+An object through which one can access 
+:doc:`Zato's Operational Database (ODB) </architecture/sql-odb>`.
+An `SQLAlchemy <http://sqlalchemy.org>`_ session object,
+used to issue queries, is available as .session() - note that it always needs to be 
+closed manually hence the use of the
+`closing <http://docs.python.org/2.7/library/contextlib.html#contextlib.closing>`_
+context manager in the example below.
+
+::
+
+  # stdlib
+  from contextlib import closing
+  
+  # Zato 
+  from zato.common.odb.model import Cluster
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          with closing(self.odb.session()) as session:
+              for item in session.query(Cluster).all():
+                  self.logger.info(item.name)
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+  INFO - quickstart-351218
+  INFO - quickstart-807391
+  INFO - quickstart-984115
+  INFO - quickstart-136892
+  INFO - quickstart-758758
+  
+outgoing
+````````
+
+Lets one invoke external
+:doc:`FTP <TODO>`,
+:doc:`AMQP <TODO>`,
+:doc:`ZeroMQ <TODO>`,
+:doc:`JMS WebSphere MQ <TODO>`,
+:doc:`SQL <TODO>`,
+:doc:`Plain HTTP <TODO>`
+and 
+:doc:`SOAP <TODO>`
+resources. Consult the documentation of each one for more information.
+
+processing_time
+```````````````
+
+Time it took for the service to complete its operation, in milliseconds. Compare with 
+:ref:`processing_time_raw <TODO>`.
+
+Note that it will be available as a non-None value only in the 
+:doc:`finalize_handle service hook <TODO>`.
+
+processing_time will be equal to 0 if it took less than 1 ms.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          pass
+      
+      def finalize_handle(self):
+          self.logger.info('Processing took {} ms'.format(self.processing_time))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+  INFO - Processing took 0 ms
+  
+  
+processing_time_raw
+```````````````````
+A datetime.timedelta objects representing the time spent in a service,
+with microseconds precision. Compare with :ref:`processing_time <TODO>`.
+
+Note that it will be available as a non-None value only in the 
+:doc:`finalize_handle service hook <TODO>`.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          pass
+      
+      def finalize_handle(self):
+          self.logger.info('Processing took {}'.format(self.processing_time_raw))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+  INFO - Processing took 0:00:00.000077
+  
+request
+```````
+:ref:`request <TODO>` and :ref:`response <TODO>` attributes are discussed in their
+own sections.
+
+response
+````````
+:ref:`request <TODO>` and :ref:`response <TODO>` attributes are discussed in their
+own sections.
+
+
+Request object
+--------------
+
+Response object
+---------------

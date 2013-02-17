@@ -259,6 +259,7 @@ class _BaseMessageHandler(object):
         self.set_content_type(response, data_format, transport, service_info)
         
         service_instance.post_handle()
+        service_instance.call_hooks('finalize')
 
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug('[{}] Returning response.content_type:[{}], response.payload:[{}]'.format(

@@ -28,7 +28,7 @@ from zato.common.log_message import NULL_LMC, NULL_CID
 def wrapper(name):
     def _log(self, msg, *args, **kwargs):
         def _invoke(name, self, msg):
-            extra={'cid':kwargs.get('cid', NULL_CID), 'lmc':kwargs.get('lmc', NULL_LMC)}
+            extra={'cid':kwargs.pop('cid', NULL_CID), 'lmc':kwargs.pop('lmc', NULL_LMC)}
             extra.update(kwargs.pop('extra', {}))
             return Logger.__dict__[name](self, msg, *args, extra=extra, **kwargs)
         return _invoke(name, self, msg)

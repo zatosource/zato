@@ -362,6 +362,7 @@ class WorkerStore(BrokerMessageReceiver):
             service_instance.response.payload = service_instance.response.payload.getvalue()
             
         service_instance.post_handle()
+        service_instance.call_hooks('finalize')
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(
