@@ -13,5 +13,84 @@ but still can be :doc:`hot-deployed <TODO>` and while it's not possible to
 :doc:`invoke <TODO>`
 it
 :doc:`through <TODO>`
-:doc:`channels <TODO>`
-it's still a proper service.
+:doc:`channels <TODO>`,
+it's still a valid service.
+
+
+::
+
+   from zato.server.service import Service
+   
+   class MyService(Service):
+       def handle(self):
+           pass
+           
+Programming conventions
+-----------------------
+
+* Services are developed in Python 2.7. No other Python versions can be used
+  although adding support for Python 3.x is planned.
+
+* You can't use the name 'zato', case-insensitively, anywhere. Any such names
+  are reserved and can't be used, for instance 'zato.sample', 'my:zato:data' and
+  'ZatoReceiver' are all invalid.
+  
+  This applies to any Zato object you will use - services, connection names,
+  channel names, any other.
+  
+* All input and output is always in UTF-8. Zato doesn't use nor support any other 
+  encoding. Each request and response must always be in UTF-8.
+
+* You are strongly encouraged to use the following header in each source code
+  file you will keep services in. In fact, if you stumble upon any issues you
+  and need support you will be first asked that this header be added before any
+  other advice can be given. Don't forget to set your code editor to write out
+  files in UTF-8 too.
+  
+  This serves a couple of purposes:
+  
+  * Makes sure you actually use UTF-8 in your code
+  * Lets you get prepared for Python 3.x
+  * Ensures you use the same Python features :doc:`Zato's own services </public-api/intro>` use
+
+  ::  
+  
+    # -*- coding: utf-8 -*-
+  
+    from __future__ import absolute_import, division, print_function, unicode_literals
+    
+* Don't keep any state around if you want to use the :doc:`hot-deployment` feature.
+  Don't assign any values to classes the services are implemented in. Don't modify
+  any module-global data. Use :doc:`Redis <TODO>` if you need to store data between
+  invocations of a service. Otherwise it will still be able to deploy a service
+  but not without restarting a server.
+    
+What a service can do
+---------------------
+
+Typically, a service will receive some input and produce an output. Both steps
+are optional but usually at least one of them will be performed.
+
+Although this chapter will use JSON only, you can use 
+:doc:`Simple IO (SIO)<./sio>`,
+:doc:`JSON <./json>`,
+:doc:`XML <./xml>`
+or 
+:doc:`any other data type <./other-formats>`
+in your services.
+
+Depending on the choices you make, it will be usually possible to make the very
+same service, with no changes to the code, available across multiple channels,
+such as HTTP, AMQP and others.
+
+You can store data in Redis, SQL databases and specify your services be
+periodically invoked through the scheduler.
+
+A service can invoke other services as well as access resources outside a Zato environment.
+The latter ones include
+AMQP
+JMS WebSphere MQ
+Plain HTTP
+SOAP
+Zero MQ
+FTP
