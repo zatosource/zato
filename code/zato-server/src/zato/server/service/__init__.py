@@ -580,6 +580,7 @@ class Service(object):
             service_instance.response.payload = response
             
         service_instance.post_handle()
+        service_instance.call_hooks('finalize')
         
         return response
         
@@ -680,7 +681,7 @@ class Service(object):
 ################################################################################
 
     def call_hooks(self, prefix):
-        if self.channel == CHANNEL.SCHEDULER:
+        if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
             try:
                 getattr(self, '{}_job'.format(prefix))()
             except Exception, e:
@@ -696,7 +697,7 @@ class Service(object):
         try:
             getattr(self, '{}_handle'.format(prefix))()
         except Exception, e:
-            self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
+            self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
 
     def before_handle(self, *args, **kwargs):
         """ Invoked just before the actual service receives the request data.
@@ -751,6 +752,10 @@ class Service(object):
     def after_cron_style_job(self):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
+        """
+        
+    def finalize_handle(self):
+        """ Offers the last chance to influence the service's operations.
         """
 
     @staticmethod
