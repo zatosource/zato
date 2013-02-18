@@ -1216,4 +1216,4 @@ instead of a single one.
 .. note ::
 
   Don't forget about the :ref:`invoke_async <progguide-write-service-invoke_async>`
-  method, 95% of the times you will find it more convenient to use.
+  method, 95% of the time you will find it more convenient to use.
