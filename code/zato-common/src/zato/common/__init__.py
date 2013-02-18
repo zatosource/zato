@@ -144,10 +144,15 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
+class DATA_FORMAT:
+    XML = 'xml'
+    JSON = 'json'
+
+# TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
     class FORMAT:
-        XML = 'xml'
-        JSON = 'json'
+        XML = DATA_FORMAT.XML
+        JSON = DATA_FORMAT.JSON
         
     class INT_PARAMETERS:
         VALUES = ['id']
