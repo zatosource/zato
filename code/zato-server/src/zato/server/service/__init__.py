@@ -557,13 +557,18 @@ class Service(object):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
-    def invoke_by_impl_name(self, impl_name, payload, data_format=None, transport=None,
-            serialize=False, as_bunch=False):
+    def invoke_by_impl_name(self, impl_name, payload='', channel=None, data_format=None,
+            transport=None, serialize=False, as_bunch=False):
+            
+        if self.impl_name == impl_name:
+            msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
+            self.logger.error(msg)
+            raise ZatoException(self.cid, msg)
+            
         service_instance = self.server.service_store.new_instance(impl_name)
         
-        service_instance.update(service_instance, self.server, self.broker_client, 
-            self.worker_store, self.cid, payload, payload, 
-            transport, {}, data_format, payload)
+        service_instance.update(service_instance, channel, self.server, self.broker_client, 
+            self.worker_store, self.cid, payload, payload, transport, {}, data_format, payload)
 
         service_instance.pre_handle()
         
@@ -589,8 +594,8 @@ class Service(object):
     def invoke_by_id(self, service_id, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
-    def publish(self, name, payload, to_string=True):
-        if to_string:
+    def publish(self, name, payload='', to_json_string=True):
+        if to_json_string:
             payload = dumps(payload)
             
         cid = new_cid()

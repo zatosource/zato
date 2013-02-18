@@ -122,7 +122,7 @@ Service API
 This chapter will introduce the service API - a set of attributes and methods
 a service can make use of during processing of the messages.
 
-First, save the following code in service_api.py, :doc:`hot-deploy <TODO>` it - this will be
+First, save the following code in service_api.py and :doc:`hot-deploy <TODO>` it - this will be
 the servce that will be modified throughout the rest of the text. A new plain HTTP channel
 should also be created so that the service can be easily accessed through `curl <http://curl.haxx.se>`_.
 
@@ -146,6 +146,8 @@ broker_client
 Services can publish messages on a :doc:`Redis </architecture/redis>` broker. 
 How to use a broker client is explained in a :ref:`separate chapter <progguide-write-service-broker-client>`.
 
+.. _progguide-write-service-channel:
+
 channel
 ```````
 
@@ -157,6 +159,10 @@ Can be one of:
 * 'jms-wmq'
 * 'scheduler'
 * 'zmq'
+
+The constants are defined in the 
+`zato.common.CHANNEL <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+class.
 
 ::
 
@@ -174,6 +180,8 @@ Can be one of:
 
   INFO - channel:[http-soap]
   
+
+.. _progguide-write-service-cid:
 
 cid
 ```
@@ -209,7 +217,8 @@ CID has always 40 characters.
 ::
 
   INFO - cid:[K280592090634247650299684980809341216327]
-  
+
+.. _progguide-write-service-data_format:  
   
 data_format
 ```````````
@@ -220,6 +229,10 @@ a particular data format. It can be one of:
 * None
 * 'json'
 * 'xml'
+
+The constants are defined in the 
+`zato.common.DATA_FORMAT <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+class.
 
 ::
 
@@ -277,10 +290,11 @@ handle_return_time
 ``````````````````
 
 A `datetime.datetime <http://docs.python.org/2.7/library/datetime.html#datetime-objects>`_
-objects representing the time a service's :ref:`handle <TODO>` method returned.
+objects representing the time a service's :ref:`handle <TODO>` method returned at.
 Always in UTC.
 
-Note that it will be available as a non-None value only in the finalize_handle service hook.
+Note that it will be available as a non-None value only in the 
+:ref:`finalize_handle <progguide-write-service-finalize_handle>` service hook.
 
 :ref:`invocation_time <progguide-write-service-invocation_time>` and
 handle_return_time are used to compute the values of 
@@ -293,7 +307,7 @@ and
 impl_name
 `````````
 
-Name of the module and class actually implementing a given service. Contrast
+Name of the module and class implementing a given service. Contrast
 with :ref:`name <progguide-write-service-name>`.
 
 ::
@@ -318,7 +332,7 @@ invocation_time
 ```````````````
 
 A `datetime.datetime <http://docs.python.org/2.7/library/datetime.html#datetime-objects>`_
-object representing the time a service has been invoked. Always in UTC.
+object representing the time a service has been invoked at. Always in UTC.
 
 invocation_time and
 :ref:`handle_return_time <progguide-write-service-handle_return_time>` are used to compute the values of 
@@ -353,6 +367,9 @@ it was. None if the scheduler wasn't used. Can be one of:
 * 'one_time'
 * 'interval_based'
 * 'cron_style'
+
+The constants are defined in the 
+`zato.common.SCHEDULER_JOB_TYPE class <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_.
 
 ::
 
@@ -404,7 +421,7 @@ This is a thin wrapper around `Python's logging.Logger <http://docs.python.org/2
 which lets one use a 'cid' argument in addition to what is ordinarily available
 when using a standard logger. This allows to use a 'cid' parameter in server logs.
 
-Observe how log output changes depending on the format used:
+Observe how the log output contains the CID now:
 
 ::
 
@@ -435,7 +452,7 @@ name
 Name of the service under which it will be possible to :ref:`invoke it <progguide-write-service-invoke>` and point to it
 in the web admin. Contrast with :ref:`impl_name <progguide-write-service-impl_name>`.
 
-Visit :ref:`get_name <progguide-write-service-request-get_name>` for a way to override it.
+Visit :ref:`get_name <progguide-write-service-get_name>` for a way to override it.
 
 ::
 
@@ -514,7 +531,7 @@ Time it took for the service to complete its operation, in milliseconds. Compare
 :ref:`processing_time_raw <progguide-write-service-processing_time_raw>`.
 
 Note that it will be available as a non-None value only in the 
-:doc:`finalize_handle service hook <TODO>`.
+:ref:`finalize_handle <progguide-write-service-finalize_handle>` service hook.
 
 processing_time will be equal to 0 if it took less than 1 ms.
 
@@ -541,12 +558,13 @@ processing_time will be equal to 0 if it took less than 1 ms.
   
 processing_time_raw
 ```````````````````
-A datetime.timedelta objects representing the time spent in a service,
+A `datetime.datetime <http://docs.python.org/2.7/library/datetime.html#datetime-objects>`_
+object representing the time spent in a service,
 with microseconds precision. 
 Compare with :ref:`processing_time <progguide-write-service-processing_time>`.
 
 Note that it will be available as a non-None value only in the 
-:doc:`finalize_handle service hook <TODO>`.
+:ref:`finalize_handle <progguide-write-service-finalize_handle>` service hook.
 
 ::
 
@@ -809,6 +827,8 @@ before_one_time_job
 Method executed right before a service is invoked through a one-time job.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
 
+.. _progguide-write-service-finalize_handle:
+
 finalize_handle
 ```````````````
 
@@ -817,7 +837,7 @@ finalize_handle
 Method executed after :ref:`handle progguide-write-service-handle>` and other service
 hooks have completed. Explained further in the :doc:`chapter on service hooks <TODO>`.
 
-.. _progguide-write-service-request-get_name:
+.. _progguide-write-service-get_name:
 
 get_name
 ````````
@@ -858,6 +878,8 @@ message processing will take place. Each time a channel accepts a message,
 a new instance of the service class will be created and its handle method will
 be called. 
 
+A service is fully initialized at the time handle is being invoked.
+
 There is a :doc:`chapter with usage examples <TODO>` to give you an idea what a service's
 handle method can do.
 
@@ -865,9 +887,9 @@ handle method can do.
 
 invoke
 ``````
-.. py:method:: invoke(name, payload[, data_format=None, transport=None, serialize=False, as_bunch=False])
+.. py:method:: invoke(name[, payload='', channel=None, data_format=None, transport=None, serialize=False, as_bunch=False])
 
-  Invokes a service by its :ref:`name <progguide-write-service-name>`. The service
+  Synchronously invokes a service by its :ref:`name <progguide-write-service-name>`. The service
   is invoked in the same operating system's process and thread the current service
   is in. This is simply a standard invocation of another method so any exceptions
   raised in the service being invoked will propagate to the calling one.
@@ -876,12 +898,148 @@ invoke
   discern that it's not being invoked through a regular channel created in the
   :doc:`web admin <TODO>` or via :doc:`Zato's public API </public-api/intro>`.
   
-  :param name: name of the service to invoke
+  A `ZatoException <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_ will be raised if a service attempts to invoke itself.
+  
+  Visit :ref:`this chapter <TODO>` for more information on how to invoke
+  other services depending on the data format they expect.
+  
+  :param name: Name of the service to invoke
   :type name: string
   
-  :param payload: request data to invoke a service with
+  :param payload: Request data to invoke a service with. This can be a regular
+                  Python dictionary if the service which is invoked uses 
+                  :doc:`SIO<./sio>`.
   
-  :rtype: payload the service being invoked produced
+  :param channel: :ref:`Channel type <progguide-write-service-channel>` a service will think it's invoked over
+  :type channel: `zato.common.CHANNEL <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+  
+  :param data_format: :ref:`Data format <progguide-write-service-data_format>` a service expects, if any.
+                      Can be skipped if the service uses :doc:`SIO<./sio>` and payload is a dictionary.
+  :type data_format: `zato.common.DATA_FORMAT <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+  
+  :param transport: :ref:`Transport <TODO progguide-write-service-transport>` a service will think it's invoked with
+  :type transport: `zato.common.TRANSPORT <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+  
+  :param serialize: If the service which is invoked uses :doc:`SIO <./sio>`, 
+                    whether its response should be serialized to data_format.
+                    If False, a Python dictionary will be returned, unless as_bunch is True.
+  :type name: bool
+  
+  :param as_bunch: If the service which is invoked uses :doc:`SIO <./sio>`, 
+                    whether to return its response as a 
+                    `Bunch <http://pypi.python.org/pypi/bunch>`_ object.
+  :type name: bool
+  
+  :rtype: Response the service being invoked produced
+  
+::
+
+    from zato.server.service import Service
+
+    class MyService(Service):
+        def handle(self):
+            payload = {'cluster_id': 1}
+            response = self.invoke('zato.security.get-list', payload, as_bunch=True)
+            for item in response.zato_security_get_list_response:
+                self.logger.info(item.name)
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+    INFO - techacct-98014
+    INFO - pubapi
+    INFO - zato.ping.plain_http.basic_auth
+    INFO - zato.ping.soap.basic_auth
+    INFO - zato.ping.soap.wss.clear_text
+    
+invoke_by_impl_name
+```````````````````
+.. py:method:: invoke(impl_name[, payload='', channel=None, data_format=None, transport=None, serialize=False, as_bunch=False])
+
+Same as :ref:`invoke <progguide-write-service-invoke>` but using
+a service's
+:ref:`impl_name <progguide-write-service-impl_name>`
+instead of its
+:ref:`name <progguide-write-service-name>`.
+
+publish
+```````
+.. py:method:: publish(name[, payload='', to_json_string=True])
+
+  Uses a service's :ref:`broker client <progguide-write-service-broker-client>`
+  to execute another service asynchronously.
+  
+  A service should not publish messages to itself, this would create an infinite loop.
+
+  :param name: Name of the service to invoke
+  :type name: string
+  
+  :param payload: Request data to invoke a service with. This can be a regular
+                  Python dictionary if the service which is invoked uses 
+                  :doc:`SIO<./sio>`.
+                  
+  :param to_string: If payload should be serialized to a JSON string. Should be
+                    kept at True if payload is a dictionary.
+  :type to_string: bool
+  
+  :rtype: :ref:`CID <progguide-write-service-cid>` the other service will be
+          invoked with
+
+::
+
+    from zato.server.service import Service
+
+    class MyService(Service):
+        def handle(self):
+            cid = self.publish('zato.ping')
+            self.logger.info('Invoked service with CID:[{}]'.format(cid))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+    INFO - Invoked service with CID:[K225927821296124952694828110301207904227]
+
+translate
+`````````
+.. py:method:: translate(system1, key1, value1, system2, key2[, default=''])
+          
+   Uses :doc:`Redis </architecture/redis>` to returns a new :doc:`translation <TODO>`
+   from system1, key1 and value1 to system2 and key2.
+   
+   If there are two or more systems using different data dictionaries, it is desirable
+   to be able to translate the dictionary values. 
+   
+   For instance, 
+   if a CRM stores country codes as three-letter
+   `ISO 3166-1 <https://en.wikipedia.org/wiki/ISO_3166-1>`_ codes whereas 
+   a billing system a service connects to uses numeric codes, it can be said that,
+   for Australia, there is a translation from CRM/COUNTRY_CODE/AUS
+   to BILLING/COUNTRY_CODE with the result of 036. 
+   
+   The method can be used to translate values between such dictionaries.
+   
+::
+
+    from zato.server.service import Service
+
+    class MyService(Service):
+        def handle(self):
+            result = self.translate('CRM', 'COUNTRY_CODE', 'AUS', 'BILLING', 'COUNTRY_CODE')
+            self.logger.info('Result is {}'.format(result))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+    INFO - Result is 036
 
 .. _progguide-write-service-broker-client:
 
