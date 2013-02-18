@@ -222,6 +222,9 @@ class CHANNEL:
     JMS_WMQ = 'jms-wmq'
     SCHEDULER = 'scheduler'
     ZMQ = 'zmq'
+    
+class BROKER:
+    DEFAULT_EXPIRATION = 15 # In seconds
 
 #
 # Version

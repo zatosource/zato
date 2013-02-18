@@ -210,7 +210,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 for attr in MESSAGE_ATTRS:
                     params[attr] = getattr(msg, attr, None)
                 
-                self.broker_client.send(params)
+                self.broker_client.async_invoke(params)
                 
     def on_broker_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
