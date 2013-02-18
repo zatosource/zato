@@ -512,8 +512,7 @@ class Service(object):
             name = getattr(class_, 'name', None)
             if not name:
                 name = service_name_from_impl(class_.get_impl_name())
-                if not hasattr(class_, 'dont_convert_name'):
-                    name = class_.convert_impl_name(name)
+                name = class_.convert_impl_name(name)
                     
             class_.__name = name
             
@@ -590,8 +589,8 @@ class Service(object):
     def invoke_by_id(self, service_id, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
-    def publish(self, name, payload, to_json=True):
-        if to_json:
+    def publish(self, name, payload, to_string=True):
+        if to_string:
             payload = dumps(payload)
             
         cid = new_cid()
@@ -672,7 +671,7 @@ class Service(object):
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
         
-    def handle(self, *args, **kwargs):
+    def handle(self):
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
@@ -724,7 +723,7 @@ class Service(object):
         """
 
     @staticmethod
-    def before_add_to_store(*args, **kwargs):
+    def before_add_to_store():
         """ Invoked right before the class is added to the service store.
         """
         return True
@@ -759,13 +758,8 @@ class Service(object):
         """
 
     @staticmethod
-    def after_add_to_store(*args, **kwargs):
-        """ TODO: Docs
-        """
-
-    @staticmethod
-    def after_remove_from_store(*args, **kwargs):
-        """ TODO: Docs
+    def after_add_to_store():
+        """ Invoked right after the class has been added to the service store.
         """
         
 ################################################################################
