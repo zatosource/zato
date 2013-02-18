@@ -1,0 +1,55 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Request and response objects
+============================
+
+Overview
+--------
+
+
+
+:ref:`Request <progguide-req-resp-req>`
+and
+:ref:`response <progguide-req-resp-resp>`
+objects encapsulate information regarding the data a service
+receives and produces. Both objects will always exist for each service invocation
+but their payload can be empty, it's perfectly fine for a service not to accept
+any input data nor to create output either.
+
+Note that there are other
+:ref:`attributes <progguide-write-service-attributes>`
+and
+:ref:`methods <progguide-write-service-methods>`
+a service has access to that complement the 
+:ref:`request <progguide-req-resp-req>`
+and
+:ref:`response <progguide-req-resp-resp>`
+objects.
+
+Save the following code in req_resp.py and :doc:`hot-deploy <TODO>` it - this will be
+the servce that will be modified throughout the rest of the text. 
+
+You'll also need to create a new plain HTTP channel so that the service can be easily accessed
+through `curl <http://curl.haxx.se>`_.
+
+::
+
+   from zato.server.service import Service
+   
+   class MyService(Service):
+       def handle(self):
+           pass
+
+.. image:: /gfx/progguide/req-resp-channel1.png
+   :align: center
+
+.. _progguide-req-resp-req:
+
+Request
+-------
+
+.. _progguide-req-resp-resp:
+
+Response
+--------

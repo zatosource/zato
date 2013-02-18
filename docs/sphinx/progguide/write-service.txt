@@ -137,6 +137,8 @@ should also be created so that the service can be easily accessed through `curl 
 .. image:: /gfx/progguide/service-api-channel1.png
    :align: center
 
+.. _progguide-write-service-attributes:
+
 Attributes
 ~~~~~~~~~~
 
@@ -596,17 +598,19 @@ Note that it will be available as a non-None value only in the
 request
 ```````
 
-:ref:`request <progguide-write-service-request-object>`
+:ref:`request <progguide-req-resp-req>`
 and
-:ref:`response <progguide-write-service-response-object>`
-attributes are discussed in a separate chapter.
+:ref:`response <progguide-req-resp-resp>`
+attributes are discussed in 
+:doc:`a separate chapter <./request-response>`.
 
 response
 ````````
-:ref:`request <progguide-write-service-request-object>`
+:ref:`request <progguide-req-resp-req>`
 and
-:ref:`response <progguide-write-service-response-object>`
-attributes are discussed in a separate chapter.
+:ref:`response <progguide-req-resp-resp>`
+attributes are discussed in 
+:doc:`a separate chapter <./request-response>`.
 
 slow_threshold
 ``````````````
@@ -730,6 +734,8 @@ parts of an HTTP response.
   * Connection #0 to host localhost left intact
   * Closing connection #0
   $
+
+.. _progguide-write-service-methods:
 
 Methods
 ~~~~~~~
