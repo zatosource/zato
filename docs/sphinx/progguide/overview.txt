@@ -100,11 +100,10 @@ Read next
 
     * **Developing services and applications:**
       :doc:`Writing a service <./write-service>` | 
-      :doc:`Service API<progref/service-api>` |
-      :doc:`Connections<progguide/connections>` | 
+      :doc:`Request and response objects<progguide/request-response>` |
+      :doc:`Outgoing connections<progguide/out-conn>` |
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
-      :doc:`Accessing the outside world <progguide/access-outside>` | 
       :doc:`Invoking other services <./invoking-services>` |
       :doc:`Security<progguide/security>` |
       :doc:`Testing<progguide/testing>` |

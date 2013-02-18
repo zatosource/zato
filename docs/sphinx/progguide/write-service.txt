@@ -144,7 +144,8 @@ broker_client
 `````````````
 
 Services can publish messages on a :doc:`Redis </architecture/redis>` broker. 
-How to use a broker client is explained in a :ref:`separate chapter <progguide-write-service-broker-client>`.
+How to use a broker client is explained in a 
+:ref:`separate section <progguide-write-service-broker-client>`.
 
 .. _progguide-write-service-channel:
 
@@ -591,16 +592,14 @@ request
 :ref:`request <progguide-write-service-request-object>`
 and
 :ref:`response <progguide-write-service-response-object>`
-attributes are discussed in their
-own sections.
+attributes are discussed in a separate chapter.
 
 response
 ````````
 :ref:`request <progguide-write-service-request-object>`
 and
 :ref:`response <progguide-write-service-response-object>`
-attributes are discussed in their
-own sections.
+attributes are discussed in a separate chapter.
 
 slow_threshold
 ``````````````
@@ -1046,12 +1045,25 @@ translate
 Broker client
 -------------
 
-.. _progguide-write-service-request-object:
+Each service can asynchronously publish messages to one or more services on
+other servers running in the same cluster the publishing service is in.
 
-Request object
---------------
+Broker clients can be used in one of three ways:
 
-.. _progguide-write-service-response-object:
+Publishing a message to all servers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Response object
----------------
+.. image:: /gfx/progguide/broker-client-publish.png
+   :align: center
+
+Sending a message to one of servers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: /gfx/progguide/broker-client-send.png
+   :align: center
+
+Sending a message to the :doc:`singleton server </architecture/servers>`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: /gfx/progguide/broker-client-send-singleton.png
+   :align: center
