@@ -21,12 +21,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from traceback import format_exc
 
 # Zato
 from zato.broker.client import BrokerClient
 from zato.common import ZATO_NONE
 from zato.common.broker_message import code_to_name, TOPICS
 from zato.common.util import new_cid
+
+logger = logging.getLogger(__name__)
 
 class BrokerMessageReceiver(object):
     """ A class that knows how to handle messages received from the broker.
@@ -46,17 +49,20 @@ class BrokerMessageReceiver(object):
         a new scheduler's job, see zato.common.broker_message for the list
         of all actions).
         """
-        
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug('Got message [{0}]'.format(msg))
-
-        if self.filter(msg):
-            action = code_to_name[msg['action']]
-            handler = 'on_broker_msg_{0}'.format(action)
-            getattr(self, handler)(msg)
-        else:
+        try:
             if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug('Rejecting broker message [{0}]'.format(msg))
+                self.logger.debug('Got message [{0}]'.format(msg))
+    
+            if self.filter(msg):
+                action = code_to_name[msg['action']]
+                handler = 'on_broker_msg_{0}'.format(action)
+                getattr(self, handler)(msg)
+            else:
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug('Rejecting broker message [{0}]'.format(msg))
+        except Exception, e:
+            msg = 'Could not handle broker msg:[{}], e:[{}]'.format(msg, format_exc(e))
+            logger.error(msg)
             
     def filter(self, msg):
         """ Subclasses may override the method in order to filter the messages

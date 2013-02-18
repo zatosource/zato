@@ -35,3 +35,7 @@ h3, h4, h5 {
 .highlight .s, .highlight .s1 {
     color: #337744 !important;
 }
+
+.highlight .hll {
+    background-color:#ff3 !important;
+}

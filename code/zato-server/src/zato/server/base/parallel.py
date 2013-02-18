@@ -259,13 +259,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def _after_init_accepted(self, server, deployment_key):
         
         if self.singleton_server:
-            for(_, name, is_active, job_type, start_date, extra, service_name, service_impl_name,
+            for(_, name, is_active, job_type, start_date, extra, service_name, _,
                 _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
                     in self.odb.get_job_list(server.cluster.id):
                 if is_active:
                     job_data = Bunch({'name':name, 'is_active':is_active, 
                         'job_type':job_type, 'start_date':start_date, 
-                        'extra':extra, 'service':service_impl_name, 'weeks':weeks, 
+                        'extra':extra, 'service':service_name, 'weeks':weeks, 
                         'days':days, 'hours':hours, 'minutes':minutes, 
                         'seconds':seconds,  'repeats':repeats, 
                         'cron_definition':cron_definition})

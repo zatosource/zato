@@ -347,7 +347,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
-        service_instance = self.server.service_store.new_instance(msg.service)
+        service_instance = self.server.service_store.new_instance_by_name(msg.service)
         service_instance.update(service_instance, channel, self.server, self.broker_client,
             self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
             msg.get('data_format'), job_type=msg.get('job_type'))
@@ -512,7 +512,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_HOT_DEPLOY_CREATE(self, msg, *args):
         msg.cid = new_cid()
-        msg.service = 'zato.server.service.internal.hot_deploy.Create'
+        msg.service = 'zato.hot-deploy.create'
         msg.payload = {'package_id': msg.package_id}
         msg.data_format = SIMPLE_IO.FORMAT.JSON
         return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)

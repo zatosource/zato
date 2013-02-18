@@ -568,7 +568,7 @@ class Service(object):
         service_instance = self.server.service_store.new_instance(impl_name)
         
         service_instance.update(service_instance, channel, self.server, self.broker_client, 
-            self.worker_store, self.cid, payload, payload, transport, {}, data_format, payload)
+            self.worker_store, self.cid, payload, payload, transport, {}, data_format, {})
 
         service_instance.pre_handle()
         
@@ -594,7 +594,7 @@ class Service(object):
     def invoke_by_id(self, service_id, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
-    def publish(self, name, payload='', to_json_string=True):
+    def invoke_async(self, name, payload='', to_json_string=True):
         if to_json_string:
             payload = dumps(payload)
             
@@ -602,7 +602,7 @@ class Service(object):
             
         msg = dict()
         msg['action'] = SERVICE.PUBLISH
-        msg['service'] = self.server.service_store.name_to_impl_name[name]
+        msg['service'] = name
         msg['payload'] = payload
         msg['cid'] = cid
         

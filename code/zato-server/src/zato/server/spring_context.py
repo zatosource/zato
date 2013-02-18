@@ -62,6 +62,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.channel.amqp',
             'zato.server.service.internal.channel.jms_wmq',
             'zato.server.service.internal.channel.zmq',
+            'zato.server.service.internal.helpers',
             'zato.server.service.internal.http_soap',
             'zato.server.service.internal.hot_deploy',
             'zato.server.service.internal.kvdb',
@@ -187,33 +188,33 @@ class ZatoContext(PythonConfig):
     @Object
     def stats_jobs(self):
         return [
-            {'name': 'zato.stats.ProcessRawTimes', 'seconds':90, 
-             'service':'zato.server.service.internal.stats.ProcessRawTimes', 
+            {'name': 'zato.stats.process-raw-times', 'seconds':90, 
+             'service':'zato.stats.process-raw-times', 
              'extra':'max_batch_size={}'.format(DEFAULT_STATS_SETTINGS['scheduler_raw_times_batch'])},
             
-            {'name': 'zato.stats.AggregateByMinute', 'seconds':60, 
-             'service':'zato.server.service.internal.stats.AggregateByMinute'},
+            {'name': 'zato.stats.aggregate-by-minute', 'seconds':60, 
+             'service':'zato.stats.aggregate-by-minute'},
             
-            {'name': 'zato.stats.AggregateByHour', 'minutes':10,
-             'service':'zato.server.service.internal.stats.AggregateByHour'},
+            {'name': 'zato.stats.aggregate-by-hour', 'minutes':10,
+             'service':'zato.stats.aggregate-by-hour'},
             
-            {'name': 'zato.stats.AggregateByDay', 'minutes':60,
-             'service':'zato.server.service.internal.stats.AggregateByDay'},
+            {'name': 'zato.stats.aggregate-by-day', 'minutes':60,
+             'service':'zato.stats.aggregate-by-day'},
             
-            {'name': 'zato.stats.AggregateByMonth', 'minutes':60,
-             'service':'zato.server.service.internal.stats.AggregateByMonth'},
+            {'name': 'zato.stats.aggregate-by-month', 'minutes':60,
+             'service':'zato.stats.aggregate-by-month'},
             
-            {'name': 'zato.stats.CreateSummaryByDay', 'minutes':10,
-             'service':'zato.server.service.internal.stats.summary.CreateSummaryByDay'},
+            {'name': 'zato.stats.summary.create-summary-by-day', 'minutes':10,
+             'service':'zato.stats.summary.create-summary-by-day'},
             
-            {'name': 'zato.stats.CreateSummaryByWeek', 'minutes':10,
-             'service':'zato.server.service.internal.stats.summary.CreateSummaryByWeek'},
+            {'name': 'zato.stats.summary.create-summary-by-week', 'minutes':10,
+             'service':'zato.stats.summary.create-summary-by-week'},
             
-            {'name': 'zato.stats.CreateSummaryByMonth', 'minutes':60,
-             'service':'zato.server.service.internal.stats.summary.CreateSummaryByMonth'},
+            {'name': 'zato.stats.summary.create-summary-by-month', 'minutes':60,
+             'service':'zato.stats.summary.create-summary-by-month'},
             
-            {'name': 'zato.stats.CreateSummaryByYear', 'minutes':60,
-             'service':'zato.server.service.internal.stats.summary.CreateSummaryByYear'},
+            {'name': 'zato.stats.summary.create-summary-by-year', 'minutes':60,
+             'service':'zato.stats.summary.create-summary-by-year'},
 
         ]
 
