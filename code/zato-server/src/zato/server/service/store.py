@@ -243,6 +243,8 @@ class ServiceStore(InitializingObject):
                     
                     self.id_to_impl_name[service_id] = impl_name
                     self.name_to_impl_name[name] = impl_name
+                    
+                    item.after_add_to_store()
                 else:
                     msg = 'Skipping [{}] from [{}], should_add:[{}] is not True'.format(
                         item, fs_location, should_add)

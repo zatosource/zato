@@ -32,8 +32,8 @@ Programming conventions
   other Python versions can be used although adding support for Python 3.x is planned.
 
 * You can't use the name 'zato', case-insensitively, anywhere. Any such names
-  are reserved and can't be used, for instance 'zato.sample', 'my:zato:data' and
-  'ZatoReceiver' are all invalid.
+  are reserved and can't be used, for instance 'zato.sample', 'my:zato:data',
+  'X-ZATO-SERVER' and 'ZatoReceiver' are all invalid.
   
   This applies to any Zato object you will use - services, connection names,
   channel names, any other.
@@ -67,6 +67,10 @@ Programming conventions
   any module-global data. Use :doc:`Redis <TODO>` if you need to store data between
   invocations of a service. Otherwise it will still be possible to deploy a service
   but not without restarting a server.
+  
+* Don't start your own threads. Given Zato's architecture, there shouldn't really
+  be any need for threads but if your use-case calls for it, please let the
+  project know about it and explain why you need threads.
     
 What a service can do
 ---------------------
@@ -135,6 +139,12 @@ should also be created so that the service can be easily accessed through `curl 
 
 Attributes
 ~~~~~~~~~~
+
+broker_client
+`````````````
+
+Services can publish messages on a :doc:`Redis </architecture/redis>` broker. 
+How to use a broker client is explained in a :ref:`separate chapter <progguide-write-service-broker-client>`.
 
 channel
 ```````
@@ -261,13 +271,30 @@ Zato will never use environ for its own purposes.
   INFO - seen_handle:[True]
 
 
+.. _progguide-write-service-handle_return_time:
+
+handle_return_time
+``````````````````
+
+A `datetime.datetime <http://docs.python.org/2.7/library/datetime.html#datetime-objects>`_
+objects representing the time a service's :ref:`handle <TODO>` method returned.
+Always in UTC.
+
+Note that it will be available as a non-None value only in the finalize_handle service hook.
+
+:ref:`invocation_time <progguide-write-service-invocation_time>` and
+handle_return_time are used to compute the values of 
+:ref:`processing_time <progguide-write-service-processing_time>`
+and
+:ref:`processing_time_raw <progguide-write-service-processing_time_raw>`.
+
+.. _progguide-write-service-impl_name:
+
 impl_name
 `````````
 
 Name of the module and class actually implementing a given service. Contrast
-with :ref:`name <TODO>`.
-
-Visit :ref:`get_impl_name <TODO>` for a way to override it.
+with :ref:`name <progguide-write-service-name>`.
 
 ::
 
@@ -285,11 +312,19 @@ Visit :ref:`get_impl_name <TODO>` for a way to override it.
 
   INFO - impl_name:[service_api.MyService]
 
+.. _progguide-write-service-invocation_time:
+
 invocation_time
 ```````````````
 
 A `datetime.datetime <http://docs.python.org/2.7/library/datetime.html#datetime-objects>`_
 object representing the time a service has been invoked. Always in UTC.
+
+invocation_time and
+:ref:`handle_return_time <progguide-write-service-handle_return_time>` are used to compute the values of 
+:ref:`processing_time <progguide-write-service-processing_time>`
+and
+:ref:`processing_time_raw <progguide-write-service-processing_time_raw>`.
 
 ::
 
@@ -391,14 +426,16 @@ Observe how log output changes depending on the format used:
 
   2013-02-17 19:48:33,585 - K300817487686039172650072756834592513215 - Hello!
   
+
+.. _progguide-write-service-name:
   
 name
 ````
 
-Name of the service under which it will be possible to invoke it and point to it
-in the web admin. Contrast with :ref:`impl_name <TODO>`.
+Name of the service under which it will be possible to :ref:`invoke it <progguide-write-service-invoke>` and point to it
+in the web admin. Contrast with :ref:`impl_name <progguide-write-service-impl_name>`.
 
-Visit :ref:`get_name <TODO>` for a way to override it.
+Visit :ref:`get_name <progguide-write-service-request-get_name>` for a way to override it.
 
 ::
 
@@ -468,11 +505,13 @@ and
 :doc:`SOAP <TODO>`
 resources. Consult the documentation of each one for more information.
 
+.. _progguide-write-service-processing_time:
+
 processing_time
 ```````````````
 
 Time it took for the service to complete its operation, in milliseconds. Compare with 
-:ref:`processing_time_raw <TODO>`.
+:ref:`processing_time_raw <progguide-write-service-processing_time_raw>`.
 
 Note that it will be available as a non-None value only in the 
 :doc:`finalize_handle service hook <TODO>`.
@@ -498,11 +537,13 @@ processing_time will be equal to 0 if it took less than 1 ms.
 
   INFO - Processing took 0 ms
   
+.. _progguide-write-service-processing_time_raw:
   
 processing_time_raw
 ```````````````````
 A datetime.timedelta objects representing the time spent in a service,
-with microseconds precision. Compare with :ref:`processing_time <TODO>`.
+with microseconds precision. 
+Compare with :ref:`processing_time <progguide-write-service-processing_time>`.
 
 Note that it will be available as a non-None value only in the 
 :doc:`finalize_handle service hook <TODO>`.
@@ -528,17 +569,331 @@ Note that it will be available as a non-None value only in the
   
 request
 ```````
-:ref:`request <TODO>` and :ref:`response <TODO>` attributes are discussed in their
+
+:ref:`request <progguide-write-service-request-object>`
+and
+:ref:`response <progguide-write-service-response-object>`
+attributes are discussed in their
 own sections.
 
 response
 ````````
-:ref:`request <TODO>` and :ref:`response <TODO>` attributes are discussed in their
+:ref:`request <progguide-write-service-request-object>`
+and
+:ref:`response <progguide-write-service-response-object>`
+attributes are discussed in their
 own sections.
 
+slow_threshold
+``````````````
+Response time threshold, in milliseconds, after exceeding of which a service
+invocation will be considered :doc:`a slow one <TODO>`. Top 100 slow invocations
+of a service are stored for a later inspection.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('My threshold is {} ms'.format(self.slow_threshold))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+  INFO - My threshold is 99999 ms
+  
+usage
+`````
+How many times the service has run, including the current invocation.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('My usage is {}'.format(self.usage))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+  INFO - My usage is 38
+  
+wsgi_environ
+````````````
+Zato's HTTP server is a 
+`WSGI <https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface>`_
+one. If a service has been invoked through HTTP, wsgi_environ will be a dictionary of WSGI data.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          for key, name in sorted(self.wsgi_environ.items()):
+              self.logger.info('{}:{}'.format(key, name))
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+.. code-block:: text
+
+  INFO - HTTP_ACCEPT:*/*
+  INFO - HTTP_HOST:localhost:17010
+  INFO - HTTP_USER_AGENT:curl/7.22.0 (x86_64-pc-linux-gnu)
+  INFO - PATH_INFO:/service-api.my-service
+  INFO - QUERY_STRING:
+  INFO - RAW_URI:/service-api.my-service
+  INFO - REMOTE_ADDR:127.0.0.1
+  INFO - REMOTE_PORT:34707
+  INFO - REQUEST_METHOD:GET
+  INFO - SCRIPT_NAME:
+  INFO - SERVER_NAME:localhost
+  INFO - SERVER_PORT:17010
+  INFO - SERVER_PROTOCOL:HTTP/1.1
+  INFO - SERVER_SOFTWARE:gunicorn/0.16.1
+  INFO - gunicorn.socket:<socket fileno=12 sock=127.0.0.1:17010 peer=127.0.0.1:34707>
+  INFO - wsgi.errors:<open file '<stderr>', mode 'w' at 0x7f6bd98b6270>
+  INFO - wsgi.file_wrapper:gunicorn.http.wsgi.FileWrapper
+  INFO - wsgi.input:<gunicorn.http.body.Body object at 0x5711910>
+  INFO - wsgi.multiprocess:True
+  INFO - wsgi.multithread:False
+  INFO - wsgi.run_once:False
+  INFO - wsgi.url_scheme:http
+  INFO - wsgi.version:(1, 0)
+  INFO - zato.http.response.headers:{}
+  
+You can use the dictionary under zato.http.response.headers to return custom HTTP headers
+to the calling application. Visit :doc:`here <TODO>` for information how to influence other
+parts of an HTTP response.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.wsgi_environ['zato.http.response.headers']['X-My-Header'] = 'foobar'
+
+.. code-block:: text
+  :emphasize-lines: 15
+
+  $ curl -v localhost:17010/service-api.my-service
+  * About to connect() to localhost port 17010 (#0)
+  *   Trying 127.0.0.1... connected
+  > GET /service-api.my-service HTTP/1.1
+  > User-Agent: curl/7.22.0 (x86_64-pc-linux-gnu)
+  > Host: localhost:17010
+  > Accept: */*
+  > 
+  < HTTP/1.1 200 OK
+  < Server: gunicorn/0.16.1
+  < Date: Sun, 17 Feb 2013 22:48:40 GMT
+  < Connection: keep-alive
+  < Transfer-Encoding: chunked
+  < Content-Type: text/plain
+  < X-My-Header: foobar
+  < 
+  * Connection #0 to host localhost left intact
+  * Closing connection #0
+  $
+
+Methods
+~~~~~~~
+
+after_add_to_store
+``````````````````
+
+.. py:staticmethod:: after_add_to_store()
+
+Static method executed right after a service class has been added to the
+service store. Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+after_cron_style_job
+````````````````````
+
+.. py:method:: after_cron_style_job()
+
+Method executed right after a service has been invoked through a cron-style job.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+after_handle
+````````````
+
+.. py:method:: after_handle()
+
+Method executed right after a service's :ref:`handle progguide-write-service-handle>`
+method has returned. Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+after_interval_based_job
+````````````````````````
+
+.. py:method:: after_interval_based_job()
+
+Method executed right after a service has been invoked through an interval-based job.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+after_job
+`````````
+
+.. py:method:: after_job()
+
+Method executed right after a service has been invoked through a scheduler's
+job, regardless of the latter's type.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+after_one_time_job
+``````````````````
+
+.. py:method:: after_one_time_job()
+
+Method executed right after a service has been invoked through a one-time job.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+before_add_to_store
+```````````````````
+
+.. py:staticmethod:: before_add_to_store()
+
+Static method executed right after a service class is added to the service store.
+The service won't be deployed unless the method returns True.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+before_cron_style_job
+`````````````````````
+
+.. py:method:: before_cron_style_job()
+
+Method executed right before a service is invoked through a cron-style job.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+before_handle
+`````````````
+
+.. py:method:: before_handle()
+
+Method executed right before a service's :ref:`handle progguide-write-service-handle>`
+is run. Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+before_interval_based_job
+`````````````````````````
+
+.. py:method:: before_interval_based_job()
+
+Method executed right before a service is invoked through an interval-based job.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+before_job
+``````````
+
+.. py:method:: before_job()
+
+Method executed right before a service is invoked through a scheduler's job,
+regardless of the job's type.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+before_one_time_job
+```````````````````
+
+.. py:method:: before_one_time_job()
+
+Method executed right before a service is invoked through a one-time job.
+Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+finalize_handle
+```````````````
+
+.. py:method:: finalize_handle()
+
+Method executed after :ref:`handle progguide-write-service-handle>` and other service
+hooks have completed. Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+.. _progguide-write-service-request-get_name:
+
+get_name
+````````
+
+.. py:staticmethod:: get_name()
+
+A static method that should be implemented to return
+:ref:`service names <progguide-write-service-name>` other than what Zato
+automatically generates.
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.logger.info('My name is {}'.format(self.name))
+          
+      @staticmethod
+      def get_name():
+          return 'Something Else'
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  INFO - My name is Something Else
+  
+handle
+``````
+
+.. py:method:: handle()
+
+The only method a service must implement. The central place where most of the
+message processing will take place. Each time a channel accepts a message,
+a new instance of the service class will be created and its handle method will
+be called. 
+
+There is a :doc:`chapter with usage examples <TODO>` to give you an idea what a service's
+handle method can do.
+
+.. _progguide-write-service-invoke:
+
+invoke
+``````
+.. py:method:: invoke(name, payload[, data_format=None, transport=None, serialize=False, as_bunch=False])
+
+  Invokes a service by its :ref:`name <progguide-write-service-name>`. The service
+  is invoked in the same operating system's process and thread the current service
+  is in. This is simply a standard invocation of another method so any exceptions
+  raised in the service being invoked will propagate to the calling one.
+  
+  From the point of view of the service which is invoked, there is no way to
+  discern that it's not being invoked through a regular channel created in the
+  :doc:`web admin <TODO>` or via :doc:`Zato's public API </public-api/intro>`.
+  
+  :param name: name of the service to invoke
+  :type name: string
+  
+  :param payload: request data to invoke a service with
+  
+  :rtype: payload the service being invoked produced
+
+.. _progguide-write-service-broker-client:
+
+Broker client
+-------------
+
+.. _progguide-write-service-request-object:
 
 Request object
 --------------
+
+.. _progguide-write-service-response-object:
 
 Response object
 ---------------
