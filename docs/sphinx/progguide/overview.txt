@@ -100,14 +100,14 @@ Read next
 
     * **Developing services and applications:**
       :doc:`Writing a service <./write-service>` | 
-      :doc:`Request and response objects<progguide/request-response>` |
-      :doc:`Outgoing connections<progguide/out-conn>` |
-      :doc:`Key/value DB (Redis)<progguide/kvdb>` |
-      :doc:`Scheduler<progguide/scheduler>` |
+      :doc:`Request and response objects<./request-response>` |
+      :doc:`Outgoing connections<./out-conn>` |
+      :doc:`Key/value DB (Redis)<./kvdb>` |
+      :doc:`Scheduler<./scheduler>` |
       :doc:`Invoking other services <./invoking-services>` |
-      :doc:`Security<progguide/security>` |
-      :doc:`Testing<progguide/testing>` |
-      :doc:`Documenting<progguide/documenting>`
+      :doc:`Security<./security>` |
+      :doc:`Testing<./testing>` |
+      :doc:`Documenting<./documenting>`
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <./sio>` | 

@@ -954,24 +954,19 @@ invoke
     INFO - zato.ping.soap.basic_auth
     INFO - zato.ping.soap.wss.clear_text
     
-invoke_by_impl_name
-```````````````````
-.. py:method:: invoke(impl_name[, payload='', channel=None, data_format=None, transport=None, serialize=False, as_bunch=False])
+.. _progguide-write-service-invoke_async:
 
-Same as :ref:`invoke <progguide-write-service-invoke>` but using
-a service's
-:ref:`impl_name <progguide-write-service-impl_name>`
-instead of its
-:ref:`name <progguide-write-service-name>`.
-
-publish
-```````
-.. py:method:: publish(name[, payload='', to_json_string=True])
+invoke_async
+````````````
+.. py:method:: invoke_async(name[, payload='', to_json_string=True])
 
   Uses a service's :ref:`broker client <progguide-write-service-broker-client>`
-  to execute another service asynchronously.
+  to execute another service asynchronously. It's not defined which server
+  the service will be invoked on and its response is not available to the invoking
+  service. Use the CID returned to correlate an asynchronous invocation with its
+  response.
   
-  A service should not publish messages to itself, this would create an infinite loop.
+  A service should not send messages to itself, this would create an infinite loop.
 
   :param name: Name of the service to invoke
   :type name: string
@@ -989,12 +984,11 @@ publish
 
 ::
 
-    from zato.server.service import Service
-
-    class MyService(Service):
-        def handle(self):
-            cid = self.publish('zato.ping')
-            self.logger.info('Invoked service with CID:[{}]'.format(cid))
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          self.invoke_async('zato.helpers.input-logger', 'My payload')
 
 ::
 
@@ -1002,7 +996,26 @@ publish
   
 .. code-block:: text
 
-    INFO - Invoked service with CID:[K225927821296124952694828110301207904227]
+  INFO - {u'impl_name': u'zato.server.service.internal.helpers.InputLogger', 
+    u'handle_return_time': datetime.datetime(2013, 2, 18, 20, 17, 1, 162872), 
+    u'name': u'zato.helpers.input-logger', 
+    u'cid': u'K241057352164304005274904154334359360347', 
+    u'processing_time': 0, 
+    u'invocation_time': datetime.datetime(2013, 2, 18, 20, 17, 1, 162850), 
+    u'processing_time_raw': datetime.timedelta(0, 0, 22), 
+    u'job_type': None, u'data_format': None, u'slow_threshold': 99999, 
+    u'request.payload': u'"My payload"', u'wsgi_environ': None, 
+    u'environ': {}, u'usage': 9, u'channel': u'publish'}
+    
+invoke_by_impl_name
+```````````````````
+.. py:method:: invoke(impl_name[, payload='', channel=None, data_format=None, transport=None, serialize=False, as_bunch=False])
+
+Same as :ref:`invoke <progguide-write-service-invoke>` but using
+a service's
+:ref:`impl_name <progguide-write-service-impl_name>`
+instead of its
+:ref:`name <progguide-write-service-name>`.
 
 translate
 `````````
@@ -1046,12 +1059,78 @@ Broker client
 -------------
 
 Each service can asynchronously publish messages to one or more services on
-other servers running in the same cluster the publishing service is in.
+servers running in the same cluster the publishing service is in.
 
-Broker clients can be used in one of three ways:
+A message must be a dictionary of metadata whose only required key is 'action'
+which must point to a Zato service you want to invoke using constants
+from the 
+`zato.common.broker_message <https://github.com/zatosource/zato/blob/feature/service-tests/code/zato-common/src/zato/common/broker_message.py>`_
+module.
+
+If you want to publish or send messages to your own services, the action must be 
+SERVICE.PUBLISH, which will in turn publish the message to Zato's 
+:doc:`zato.service.invoke </public-api/details/zato.service.invoke>` service 
+which will next invoke the service of your choice by its 
+:ref:`name <progguide-write-service-name>`,
+such as in this example.
+
+::
+
+  from zato.common.broker_message import SERVICE
+  from zato.common.util import new_cid
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          msg = {
+              'action': SERVICE.PUBLISH,
+              'service': 'zato.helpers.input-logger',
+              'payload': 'My payload',
+              'cid': new_cid()
+          }
+          self.broker_client.publish(msg)
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+
+Note the data has written out to logs twice because in this particular case
+the cluster consistened of two servers each running one worker.
+  
+.. code-block:: text
+
+  INFO - {u'impl_name': u'zato.server.service.internal.helpers.InputLogger', 
+    u'handle_return_time': datetime.datetime(2013, 2, 18, 20, 27, 17, 111426), 
+    u'name': u'zato.helpers.input-logger', 
+    u'cid': u'K243384249163255697882446959015306592567', u'processing_time': 0, 
+    u'invocation_time': datetime.datetime(2013, 2, 18, 20, 27, 17, 111401), 
+    u'processing_time_raw': datetime.timedelta(0, 0, 25), u'job_type': None, 
+    u'data_format': None, u'slow_threshold': 99999, 
+    u'request.payload': u'My payload', u'wsgi_environ': None, u'environ': {}, 
+    u'usage': 14, u'channel': u'publish'}
+    
+  INFO - {u'impl_name': u'zato.server.service.internal.helpers.InputLogger', 
+    u'handle_return_time': datetime.datetime(2013, 2, 18, 20, 27, 17, 111497), 
+    u'name': u'zato.helpers.input-logger', 
+    u'cid': u'K243384249163255697882446959015306592567', u'processing_time': 0, 
+    u'invocation_time': datetime.datetime(2013, 2, 18, 20, 27, 17, 111478), 
+    u'processing_time_raw': datetime.timedelta(0, 0, 19), u'job_type': None,
+    u'data_format': None, u'slow_threshold': 99999, 
+    u'request.payload': u'My payload', u'wsgi_environ': None, u'environ': {}, 
+    u'usage': 13, u'channel': u'publish'}
+
 
 Publishing a message to all servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All workers of all servers in a cluster will receive a message, including the one which
+is publishing the message. 
+
+It's possible that no subscriber will receive the message at all in a highly unlike
+case when there's only one server with one worker in a cluster.
+If the worker publishes a message - without the knowledge that it should be its
+own sole recipient - and next goes down for any reason before the message
+could be delivered - the message will be lost.
 
 .. image:: /gfx/progguide/broker-client-publish.png
    :align: center
@@ -1059,11 +1138,27 @@ Publishing a message to all servers
 Sending a message to one of servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Exactly one worker among all servers in a cluster will receive a message, possibly 
+this will be the one which is publishing the message.
+
+Redis will store the message for a configurable amount of time under a key
+starting with 'zato:broker:to-parallel:any:' and then, if no worker picks it up,
+it will expire. By default, expiration time is 15 seconds and can be specified when
+sending the message.
+
+Note that each service offers an :ref:`invoke_async <progguide-write-service-invoke_async>`
+convenience wrapper to what is shown below.
+
 .. image:: /gfx/progguide/broker-client-send.png
    :align: center
 
 Sending a message to the :doc:`singleton server </architecture/servers>`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Only the singleton server's thread will receive the message. This is the thread
+which starts :doc:`connectors <TODO>` and the :doc:`scheduler <./scheduler>`.
+
+Same expiration rules apply as when sending a message to a regular server.
 
 .. image:: /gfx/progguide/broker-client-send-singleton.png
    :align: center

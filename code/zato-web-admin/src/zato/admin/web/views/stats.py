@@ -96,9 +96,9 @@ class DateInfo(object):
 
 # A mapping a job type, its name and the execution interval unit
 job_mappings = {
-    JobAttrFormMapping('zato.stats.ProcessRawTimes', 
+    JobAttrFormMapping('zato.stats.process-raw-times', 
         [JobAttrForm('raw_times', 'seconds'),  JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
-    JobAttrFormMapping('zato.stats.AggregateByMinute', [JobAttrForm('per_minute_aggr', 'seconds')]),
+    JobAttrFormMapping('zato.stats.aggregate-by-minute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
 
 compare_to = {

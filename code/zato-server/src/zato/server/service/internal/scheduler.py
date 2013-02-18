@@ -163,7 +163,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             msg_action = SCHEDULER.CREATE if action == 'create' else SCHEDULER.EDIT
             msg = {'action': msg_action, 'job_type': job_type,
                    'is_active':is_active, 'start_date':start_date,
-                   'extra':extra, 'service': service.impl_name,
+                   'extra':extra, 'service': service.name,
                    'name': name
                    }
             if action == 'edit':
