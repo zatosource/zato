@@ -34,13 +34,12 @@ Programming guide
 =================================
 
     * **Developing services and applications:**
-      :doc:`Overview <progguide/overview>` | 
-      :doc:`Writing a service <progguide/write-service>` | 
-      :doc:`Service API<progguide/service-api>` |
-      :doc:`Connections<progguide/connections>` | 
+      :doc:`Overview <progguide/overview>` |
+      :doc:`Writing a service <progguide/write-service>` |
+      :doc:`Request and response objects<progguide/request-response>` |
+      :doc:`Outgoing connections<progguide/out-conn>` |
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
-      :doc:`Accessing the outside world <progguide/access-outside>` | 
       :doc:`Invoking other services <progguide/invoking-services>` |
       :doc:`Security<progguide/security>` |
       :doc:`Testing<progguide/testing>` |
