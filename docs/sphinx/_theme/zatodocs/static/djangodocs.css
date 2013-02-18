@@ -4,7 +4,7 @@ html { background:#16151d;
      overflow: scroll;
 }
 body { font:12px/1.5 Verdana,sans-serif; background:#16151d; color: white;}
-#custom-doc { width:92.54em;*width:92.69em;min-width:995px; max-width:100em; margin:auto; text-align:left; padding-top:16px; margin-top:0;} 
+#custom-doc { width:80.54em;*width:80.69em;min-width:995px; max-width:100em; margin:auto; text-align:left; padding-top:16px; margin-top:0;} 
 #hd { padding: 4px 0 12px 0; }
 #bd { background:#36353d; }
 #ft { color:#487858; font-size:90%; padding-bottom: 2em; }
