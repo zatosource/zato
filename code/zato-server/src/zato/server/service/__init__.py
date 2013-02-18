@@ -44,7 +44,7 @@ from paste.util.converters import asbool
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import CHANNEL, KVDB, ParsingException, path, SCHEDULER_JOB_TYPE, \
+from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SCHEDULER_JOB_TYPE, \
      SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
@@ -480,7 +480,7 @@ class Service(object):
     regardless whether they're built-in or user-defined ones.
     """
     def __init__(self, *ignored_args, **ignored_kwargs):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.get_name())
         self.server = None
         self.broker_client = None
         self.channel = None
@@ -594,7 +594,7 @@ class Service(object):
     def invoke_by_id(self, service_id, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
-    def invoke_async(self, name, payload='', to_json_string=True):
+    def invoke_async(self, name, payload='', expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=True):
         if to_json_string:
             payload = dumps(payload)
             
@@ -606,7 +606,7 @@ class Service(object):
         msg['payload'] = payload
         msg['cid'] = cid
         
-        self.broker_client.send(msg)
+        self.broker_client.invoke_async(msg, expiration)
         
         return cid
             

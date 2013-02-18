@@ -193,6 +193,13 @@ The string is prefixed with the letter 'K' to ensure that it always start with a
 is nothing special about the letter 'K', it just seemed a character that shouldn't
 be easy to confuse with any other in the ASCII range.
 
+When 
+:ref:`publishing <progguide-write-service-broker-client-publish>`
+a 
+`SERVICE.PUBLISH <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/broker_message.py>`_
+message to more than one server, each server worker will receive a request
+with the same CID.
+
 CID has always 40 characters.
 
 .. warning ::
@@ -882,6 +889,9 @@ A service is fully initialized at the time handle is being invoked.
 There is a :doc:`chapter with usage examples <TODO>` to give you an idea what a service's
 handle method can do.
 
+Request and response objects are documented in 
+:doc:`their own chapter <./request-response>`.
+
 .. _progguide-write-service-invoke:
 
 invoke
@@ -1067,12 +1077,17 @@ from the
 `zato.common.broker_message <https://github.com/zatosource/zato/blob/feature/service-tests/code/zato-common/src/zato/common/broker_message.py>`_
 module.
 
-If you want to publish or send messages to your own services, the action must be 
-SERVICE.PUBLISH, which will in turn publish the message to Zato's 
+If you want to publish or send messages to all workers that contain your own services,
+the action must be SERVICE.PUBLISH, this which will in turn publish the message to Zato's 
 :doc:`zato.service.invoke </public-api/details/zato.service.invoke>` service 
 which will next invoke the service of your choice by its 
 :ref:`name <progguide-write-service-name>`,
-such as in this example.
+such as in the service below.
+
+.. _progguide-write-service-broker-client-publish-code:
+
+The code shown serves as an example of 
+:ref:`publishing a message to all servers <progguide-write-service-broker-client-publish>`.
 
 ::
 
@@ -1094,8 +1109,11 @@ such as in this example.
 
   $ curl localhost:17010/service-api.my-service
 
-Note the data has written out to logs twice because in this particular case
-the cluster consistened of two servers each running one worker.
+Note the data has been written out to logs twice because in this particular case
+the cluster consisted of two servers, each running one worker.
+
+Visit the :ref:`section on how to invoke only a single instance of a service <progguide-write-service-broker-client-async_invoke>`
+if you don't want all of your services to receive the message.
   
 .. code-block:: text
 
@@ -1119,6 +1137,7 @@ the cluster consistened of two servers each running one worker.
     u'request.payload': u'My payload', u'wsgi_environ': None, u'environ': {}, 
     u'usage': 13, u'channel': u'publish'}
 
+.. _progguide-write-service-broker-client-publish:
 
 Publishing a message to all servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1134,6 +1153,10 @@ could be delivered - the message will be lost.
 
 .. image:: /gfx/progguide/broker-client-publish.png
    :align: center
+   
+:ref:`Sample code of how to publish a message to all servers is shown in the previous section <progguide-write-service-broker-client-publish-code>`
+
+.. _progguide-write-service-broker-client-async_invoke:
 
 Sending a message to one of servers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1146,19 +1169,51 @@ starting with 'zato:broker:to-parallel:any:' and then, if no worker picks it up,
 it will expire. By default, expiration time is 15 seconds and can be specified when
 sending the message.
 
-Note that each service offers an :ref:`invoke_async <progguide-write-service-invoke_async>`
-convenience wrapper to what is shown below.
+Each service offers an :ref:`invoke_async <progguide-write-service-invoke_async>`
+convenience wrapper to send a message to a single worker only.
 
 .. image:: /gfx/progguide/broker-client-send.png
    :align: center
+   
+::
 
-Sending a message to the :doc:`singleton server </architecture/servers>`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  from zato.common.broker_message import SERVICE
+  from zato.common.util import new_cid
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          msg = {
+              'action': SERVICE.PUBLISH,
+              'service': 'zato.helpers.input-logger',
+              'payload': 'My payload',
+              'cid': new_cid()
+          }
+          self.broker_client.async_invoke(msg)
 
-Only the singleton server's thread will receive the message. This is the thread
-which starts :doc:`connectors <TODO>` and the :doc:`scheduler <./scheduler>`.
+::
 
-Same expiration rules apply as when sending a message to a regular server.
+  $ curl localhost:17010/service-api.my-service
 
-.. image:: /gfx/progguide/broker-client-send-singleton.png
-   :align: center
+Note the data has been written out to logs once only even though the cluster
+consisted of two servers, each running one worker.
+
+You may also be interested in the :ref:`section on how to invoke all instances of a service <progguide-write-service-broker-client-publish>`
+instead of a single one.
+  
+.. code-block:: text
+
+  INFO - {u'impl_name': u'zato.server.service.internal.helpers.InputLogger', 
+    u'handle_return_time': datetime.datetime(2013, 2, 18, 21, 42, 0, 783786), 
+    u'name': u'zato.helpers.input-logger', 
+    u'cid': u'K110292925198847762451855196826718257593', u'processing_time': 0,
+    u'invocation_time': datetime.datetime(2013, 2, 18, 21, 42, 0, 783764), 
+    u'processing_time_raw': datetime.timedelta(0, 0, 22), u'job_type': None, 
+    u'data_format': None, u'slow_threshold': 99999, 
+    u'request.payload': u'My payload', u'wsgi_environ': None, u'environ': {}, 
+    u'usage': 20, u'channel': u'publish'}
+
+.. note ::
+
+  Don't forget about the :ref:`invoke_async <progguide-write-service-invoke_async>`
+  method, 95% of the times you will find it more convenient to use.
