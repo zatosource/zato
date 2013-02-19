@@ -768,6 +768,45 @@ class Service(object):
         """
         
 ################################################################################
+
+    def _log_input_output(self, user_msg, level, suppress_keys, is_response):
+    
+        suppress_keys = suppress_keys or []
+        suppressed_msg = '(suppressed)'
+        container = 'response' if is_response else 'request'
+        payload_key = '{}.payload'.format(container)
+        
+        msg = {}
+        msg['user_msg'] = user_msg
+        if payload_key not in suppress_keys:
+            msg[payload_key] = getattr(self, container).payload
+        else:
+            msg[payload_key] = suppressed_msg
+        
+        attrs = ('channel', 'cid', 'data_format', 'environ', 'impl_name', 
+             'invocation_time', 'job_type', 'name', 'slow_threshold', 'usage', 'wsgi_environ')
+             
+        if is_response:
+            attrs += ('handle_return_time', 'processing_time', 'processing_time_raw',
+                'zato.http.response.headers')
+            
+        for attr in attrs:
+            if attr not in suppress_keys:
+                msg[attr] = getattr(self, attr, '(None)')
+            else:
+                msg[attr] = suppressed_msg
+
+        self.logger.log(level, msg)
+        
+        return msg
+        
+    def log_input(self, user_msg='', level=logging.INFO, suppress_keys=None):
+        return self._log_input_output(user_msg, level, suppress_keys, False)
+        
+    def log_output(self, user_msg='', level=logging.INFO, suppress_keys=('wsgi_environ',)):
+        return self._log_input_output(user_msg, level, suppress_keys, True)
+        
+################################################################################
         
     @staticmethod
     def update(service, channel, server, broker_client, worker_store, cid, payload,

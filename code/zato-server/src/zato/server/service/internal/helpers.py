@@ -19,6 +19,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import INFO
+
 # Zato
 from zato.server.service.internal import AdminService
 
@@ -35,13 +38,5 @@ class InputLogger(AdminService):
         pass
     
     def finalize_handle(self):
-        msg = {}
-        msg['request.payload'] = self.request.payload
-        
-        attrs = ('channel', 'cid', 'data_format', 'environ', 'handle_return_time',
-            'impl_name', 'invocation_time', 'job_type', 'name', 'processing_time', 
-            'processing_time_raw', 'slow_threshold', 'usage', 'wsgi_environ')
-        for attr in attrs:
-            msg[attr] = getattr(self, attr, '(None)')
+        self.log_input()
 
-        self.logger.info(msg)
