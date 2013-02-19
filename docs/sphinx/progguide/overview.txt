@@ -119,9 +119,6 @@ Read next
     * **Sync and async:**
       :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>`
       
-    * **Scheduler:**
-      :doc:`Running services in background <progguide/service-scheduler>`
-      
     * **Service hooks:**
       :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
       

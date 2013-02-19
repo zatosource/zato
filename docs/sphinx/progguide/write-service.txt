@@ -1101,11 +1101,13 @@ log_output
       u'environ': {}, u'user_msg': 'What was the output?', 
       u'usage': 8}
 
+.. _progguide-write-service-translate:
+
 translate
 `````````
 .. py:method:: translate(system1, key1, value1, system2, key2[, default=''])
           
-   Uses :doc:`Redis </architecture/redis>` to returns a new :doc:`translation <TODO>`
+   Uses :doc:`Redis </architecture/redis>` to return a new :doc:`translation <TODO>`
    from system1, key1 and value1 to system2 and key2.
    
    If there are two or more systems using different data dictionaries, it is desirable
@@ -1139,8 +1141,8 @@ translate
 
 .. _progguide-write-service-broker-client:
 
-Broker client
--------------
+Publish/subscribe broker client
+-------------------------------
 
 Each service can asynchronously publish messages to one or more services on
 servers running in the same cluster the publishing service is in.
@@ -1159,8 +1161,8 @@ which will next invoke the service of your choice by its
 
 .. _progguide-write-service-broker-client-publish:
 
-Publishing a message to all servers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Publishing a message to all servers (1:N)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All workers of all servers in a cluster will receive a message, including the one which
 is publishing the message. 
@@ -1224,8 +1226,8 @@ if you don't want all of your services to receive the message.
 
 .. _progguide-write-service-broker-client-async_invoke:
 
-Sending a message to one of servers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Sending a message to one of servers (1:1)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Exactly one worker among all servers in a cluster will receive a message, possibly 
 this will be the one which is publishing the message.
