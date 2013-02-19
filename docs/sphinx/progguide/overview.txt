@@ -130,4 +130,4 @@ Read next
       :doc:`Debugging<progguide/debgging>`
       
     * **Customizing web admin:**
-      :doc:`Making sure you deploy on the right environment<progguide/customizing-web-admin>`
+      :doc:`Making sure you work on the right environment<progguide/web-admin-settings>`
