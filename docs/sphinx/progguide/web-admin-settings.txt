@@ -1,0 +1,218 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Request and response objects
+============================
+
+Overview
+--------
+
+
+
+:ref:`Request <progguide-req-resp-req>`
+and
+:ref:`response <progguide-req-resp-resp>`
+objects encapsulate information regarding the data a service
+receives and produces. Both objects will always exist for each service invocation
+but their payload can be empty, it's perfectly fine for a service not to accept
+any input data nor to create output either.
+
+There are other complementing
+:ref:`attributes <progguide-write-service-attributes>`
+and
+:ref:`methods <progguide-write-service-methods>`
+a service has access to.
+
+Save the following code in req_resp.py and :doc:`hot-deploy <TODO>` it - this will be
+the servce that will be modified later in the chapter. 
+
+You'll also need to create a new plain HTTP channel so that the service can be easily accessed
+through `curl <http://curl.haxx.se>`_.
+
+::
+
+   from zato.server.service import Service
+   
+   class MyService(Service):
+       def handle(self):
+           pass
+
+.. image:: /gfx/progguide/req-resp-channel1.png
+   :align: center
+
+.. _progguide-req-resp-req:
+
+Request
+-------
+
+An instance of 
+`zato.server.service.Request <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/service/__init__.py>`_
+class, each service's self.request provides access to several interesting
+attributes regarding the input data.
+
+.. note ::
+
+    As an aid during development and debugging, a service can log its input
+    using the
+    :ref:`log_input <progguide-write-service-log_input>`
+    method.
+    
+
+============ ================== =========================================================
+Attribute    Datatype           Notes
+============ ================== =========================================================
+input        :doc:`SIO <./sio>` A :doc:`Simple IO <./sio>` payload object which allows
+                                to directly address request elements regardless
+                                of the data format. Will be behave like an empty
+                                dictionary if the service doesn't use SIO.
+                                
+raw_request  string             Represents the request message exactly as it was received
+                                by Zato, prior to having been parsed, if at all. 
+                                
+                                Always available regardless of the data format
+                                and whether :doc:`SIO <./sio>` was used or not.
+                                
+                                raw_request will be an empty string if there was
+                                no input data at all.
+                                
+payload      (depends)          If data_format is JSON and channel is a plain HTTP one,
+                                the incoming JSON document as a Python dictionary.
+
+                                If data_format is XML and channel is a plain HTTP one,
+                                the root element of the document, an instance of 
+                                `lxml.objectify.ObjectifiedElement <http://lxml.de/objectify.html>`_
+                               
+                                If data_format is XML and channel is a SOAP one,
+                                first child of /soapenv:Envelope/soapenv:Body returned 
+                                as an instance of 
+                                `lxml.objectify.ObjectifiedElement <http://lxml.de/objectify.html>`_
+                                
+                                In all other cases, in particular - when using
+                                :doc:`other data formats <./other-formats>` - 
+                                this will be equal to raw_request.
+============ ================== =========================================================
+
+.. note ::
+
+    Looking for HTTP request headers? They're part of the 
+    :ref:`WSGI environment <progguide-write-service-wsgi_environ>` a service receives.
+
+.. _progguide-req-resp-resp:
+
+Response
+--------
+
+An instance of 
+`zato.server.service.Response <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/service/__init__.py>`_
+class, self.response attribute of each service instance influences what the application
+invoking a service will receive.
+
+============== = ==============================================================================================
+Attribute        Notes
+============== = ==============================================================================================
+payload          A service can assign output parameters directly to payload
+                 if :doc:`SIO <./sio>` is used.
+               
+                 In any other case, payload must be assigned a string containing
+                 the response.
+               
+result           Defaults to ZATO_OK and must be either ZATO_OK or ZATO_ERROR from 
+                 `zato.common <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_.
+                 If the latter, an exception will be raised and signalled to the 
+                 calling invocation in a transport-specific way, e.g. using
+                 a Fault message for SOAP channels. A proper status_code will
+                 be returned too.
+result_details   If result is ZATO_ERROR, any details the client application should receive.
+content_type     HTTP only. Value of the Content-Type header to return. Sane
+                 defaults are used:
+               
+                 * 'application/json' for JSON channels
+                 * 'application/xml' for Plain HTTP channels with XML data format
+                 * 'application/xml' for SOAP 1.1
+                 * 'application/soap+xml; charset=utf-8' for SOAP 1.2
+               
+headers          HTTP only. A dictionary of headers you'd like for the service to return.
+status_code      HTTP only. Status code a service returns. Must be one of the responses
+                 `httplib <http://docs.python.org/2/library/httplib.html>`_
+                 defines. Defaults to httplib.OK
+============== = ==============================================================================================
+
+.. note ::
+
+    As an aid during development and debugging, a service can log its output
+    using the
+    :ref:`log_output <progguide-write-service-log_output>`
+    method.
+    
+Setting HTTP response headers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Below is an example of how one can affect the exact HTTP headers a service
+will return.
+
+You can also visit http://localhost:17010/req-resp.my-service in your browser.	
+
+::
+
+    # stdlib
+    import httplib
+
+    # Zato
+    from zato.server.service import Service
+
+    class MyService(Service):
+
+        def handle(self):
+            self.log_input()
+            self.response.status_code = httplib.OK # Same as default
+            self.response.payload = 'welcome,to,Zato'
+            self.response.content_type = 'text/csv'
+            self.response.headers['X-Welcome'] = 'Happy coding! :-)'
+            self.response.headers['Content-Disposition'] = 'attachment; filename=info.csv'
+
+::
+
+  $ curl localhost:17010/req-resp.my-service
+  
+.. code-block:: text
+    :emphasize-lines: 9,14,15,16,20
+
+    $ curl -v localhost:17010/req-resp.my-service
+    * About to connect() to localhost port 17010 (#0)
+    *   Trying 127.0.0.1... connected
+    > GET /req-resp.my-service HTTP/1.1
+    > User-Agent: curl/7.22.0
+    > Host: localhost:17010
+    > Accept: */*
+    > 
+    < HTTP/1.1 200 OK
+    < Server: gunicorn/0.16.1
+    < Date: Tue, 19 Feb 2013 10:39:57 GMT
+    < Connection: keep-alive
+    < Transfer-Encoding: chunked
+    < Content-Type: text/csv
+    < X-Welcome: Happy coding! :-)
+    < Content-Disposition: attachment; filename=info.csv
+    < 
+    * Connection #0 to host localhost left intact
+    * Closing connection #0
+    welcome,to,Zato
+
+More information
+~~~~~~~~~~~~~~~~
+
+* :ref:`log_input <progguide-write-service-log_input>`
+  and 
+  :ref:`log_output <progguide-write-service-log_output>`
+  help you with understanding what a service receives
+  and produces
+  
+* Other service
+  :ref:`attributes <progguide-write-service-attributes>`
+  and 
+  :ref:`methods <progguide-write-service-methods>`
+  will contain more information regarding
+  the execution context
+  
+* There's a :doc:`chapter dedicated to usage examples <./usage-examples>` to
+  show you how to accept and return responses in various data formats
