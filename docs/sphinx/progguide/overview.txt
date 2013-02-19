@@ -107,7 +107,8 @@ Read next
       :doc:`Invoking other services <./invoking-services>` |
       :doc:`Security<./security>` |
       :doc:`Testing<./testing>` |
-      :doc:`Documenting<./documenting>`
+      :doc:`Documenting<./documenting>` |
+      :doc:`Usage examples<./usage-examples>`
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <./sio>` | 

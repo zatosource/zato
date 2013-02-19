@@ -653,12 +653,18 @@ How many times the service has run, including the current invocation.
 .. code-block:: text
 
   INFO - My usage is 38
+
+.. _progguide-write-service-wsgi_environ:
   
 wsgi_environ
 ````````````
 Zato's HTTP server is a 
 `WSGI <https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface>`_
 one. If a service has been invoked through HTTP, wsgi_environ will be a dictionary of WSGI data.
+
+The dictionary under zato.http.response.headers must not be used directly to define
+what HTTP response headers a service will return. Use 
+:ref:`response.headers <progguide-req-resp-resp>` instead.
 
 ::
 
@@ -699,41 +705,6 @@ one. If a service has been invoked through HTTP, wsgi_environ will be a dictiona
   INFO - wsgi.url_scheme:http
   INFO - wsgi.version:(1, 0)
   INFO - zato.http.response.headers:{}
-  
-You can use the dictionary under zato.http.response.headers to return custom HTTP headers
-to the calling application. Visit :doc:`here <TODO>` for information how to influence other
-parts of an HTTP response.
-
-::
-
-  from zato.server.service import Service
-  
-  class MyService(Service):
-      def handle(self):
-          self.wsgi_environ['zato.http.response.headers']['X-My-Header'] = 'foobar'
-
-.. code-block:: text
-  :emphasize-lines: 15
-
-  $ curl -v localhost:17010/service-api.my-service
-  * About to connect() to localhost port 17010 (#0)
-  *   Trying 127.0.0.1... connected
-  > GET /service-api.my-service HTTP/1.1
-  > User-Agent: curl/7.22.0 (x86_64-pc-linux-gnu)
-  > Host: localhost:17010
-  > Accept: */*
-  > 
-  < HTTP/1.1 200 OK
-  < Server: gunicorn/0.16.1
-  < Date: Sun, 17 Feb 2013 22:48:40 GMT
-  < Connection: keep-alive
-  < Transfer-Encoding: chunked
-  < Content-Type: text/plain
-  < X-My-Header: foobar
-  < 
-  * Connection #0 to host localhost left intact
-  * Closing connection #0
-  $
 
 .. _progguide-write-service-methods:
 
@@ -1033,6 +1004,103 @@ a service's
 instead of its
 :ref:`name <progguide-write-service-name>`.
 
+.. _progguide-write-service-log_input:
+
+log_input
+`````````
+
+.. py:method:: log_input([user_msg='', level=logging.INFO, suppress_keys=None])
+
+  A helper method to write all the input data to server logs using a specified
+  logging level which defaults to INFO. A user message of arbitrary data type
+  can be provided and will be logged as well. It's best to run log_input and allow
+  it to output all the keys and then to pick these which shouldn't be logged,
+  if any, for instance, due to security concerns.
+  
+  :param user_msg: An additional user-provided message
+  :param level: Logging level to use
+  :param suppress_keys: A list of keys which shouldn't be logged
+  :rtype: A dictionary of information which was logged
+  
+::
+
+    from zato.server.service import Service
+
+    class MyService(Service):
+        def handle(self):
+            self.log_input("Let's find out what the input was")
+
+::
+
+  $ curl localhost:17010/service-api.my-service -d 'Hello'
+  
+::
+
+  INFO - {u'impl_name': u'req_resp.MyService', u'name': u'req-resp.my-service', 
+      u'cid': u'K003047659946670542740630609961875870964', 
+      u'invocation_time': datetime.datetime(2013, 2, 19, 8, 16, 56, 253101), 
+      u'job_type': None, u'data_format': None, 
+      u'slow_threshold': 99999, u'request.payload': 'Hello', 
+      u'wsgi_environ': {'SERVER_PROTOCOL': 'HTTP/1.1', 
+        'SERVER_SOFTWARE': 'gunicorn/0.16.1', 'SCRIPT_NAME': '', 
+        'wsgi.input': <gunicorn.http.body.Body object at 0x5489e50>, 
+        'REQUEST_METHOD': 'GET', 'HTTP_HOST': 'localhost:17010', 
+        'PATH_INFO': '/service-api.my-service', 'wsgi.multithread': False, 
+        'QUERY_STRING': '', 'HTTP_ACCEPT': '*/*', 'HTTP_USER_AGENT': 
+        'curl/7.22.0', 'wsgi.version': (1, 0), 'REMOTE_PORT': '38617', 
+        'RAW_URI': '/service-api.my-service', 'REMOTE_ADDR': '127.0.0.1', 
+        'wsgi.run_once': False, u'user_msg': "Let's find out what the input was",
+        'wsgi.errors': <open file '<stderr>', mode 'w' at 0x7f3c8f65d270>, 
+        'wsgi.multiprocess': True, 'wsgi.url_scheme': 'http', 
+        'gunicorn.socket': <socket at 0x525cb10 fileno=13 sock=127.0.0.1:17010 peer=127.0.0.1:38617>, 
+        'SERVER_NAME': 'localhost', 'SERVER_PORT': '17010', 
+      'wsgi.file_wrapper': <class gunicorn.http.wsgi.FileWrapper at 0x30a70b8>}, 
+      u'environ': {}, u'usage': 4, u'channel': u'http-soap'}
+
+.. _progguide-write-service-log_output:
+      
+log_output
+``````````
+
+.. py:method:: log_output([user_msg='', level=logging.INFO, suppress_keys=('wsgi_environ',)])
+
+  Akin to :ref:`log_input <progguide-write-service-log_output>` but deals
+  with the output data instead. Note that suppress_keys isn't None by default.
+  
+::
+
+  # stdlib
+  import logging
+
+  # Zato
+  from zato.server.service import Service
+
+  class MyService(Service):
+
+      def handle(self):
+          self.response.payload = 'Greetings!'
+
+      def finalize_handle(self):
+          self.log_output('What was the output?', logging.DEBUG, 
+              ['wsgi_environ', 'name', 'impl_name'])
+
+::
+
+  $ curl localhost:17010/service-api.my-service
+  
+::
+
+  DEBUG - {u'response.payload': 'Greetings!', 
+      u'handle_return_time': datetime.datetime(2013, 2, 19, 8, 37, 36, 469453), 
+      u'impl_name': u'(suppressed)', u'channel': u'http-soap',
+      u'cid': u'K190324097308368662541391425956165369564', 
+      u'processing_time': 0, u'name': u'(suppressed)',
+      u'invocation_time': datetime.datetime(2013, 2, 19, 8, 37, 36, 469320), 
+      u'processing_time_raw': datetime.timedelta(0, 0, 133), 
+      u'job_type': None, u'data_format': None, u'slow_threshold': 99999, 
+      u'environ': {}, u'user_msg': 'What was the output?', 
+      u'usage': 8}
+
 translate
 `````````
 .. py:method:: translate(system1, key1, value1, system2, key2[, default=''])
@@ -1087,14 +1155,25 @@ If you want to publish or send messages to all workers that contain your own ser
 the action must be SERVICE.PUBLISH, this which will in turn publish the message to Zato's 
 :doc:`zato.service.invoke </public-api/details/zato.service.invoke>` service 
 which will next invoke the service of your choice by its 
-:ref:`name <progguide-write-service-name>`,
-such as in the service below.
+:ref:`name <progguide-write-service-name>`.
 
-.. _progguide-write-service-broker-client-publish-code:
+.. _progguide-write-service-broker-client-publish:
 
-The code shown serves as an example of 
-:ref:`publishing a message to all servers <progguide-write-service-broker-client-publish>`.
+Publishing a message to all servers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+All workers of all servers in a cluster will receive a message, including the one which
+is publishing the message. 
+
+It's possible that no subscriber will receive the message at all in a highly unlike
+case when there's only one server with one worker in a cluster.
+If the worker publishes a message - without the knowledge that it should be its
+own sole recipient - and next goes down for any reason before the message
+could be delivered - the message will be lost.
+
+.. image:: /gfx/progguide/broker-client-publish.png
+   :align: center
+   
 ::
 
   from zato.common.broker_message import SERVICE
@@ -1142,25 +1221,6 @@ if you don't want all of your services to receive the message.
     u'data_format': None, u'slow_threshold': 99999, 
     u'request.payload': u'My payload', u'wsgi_environ': None, u'environ': {}, 
     u'usage': 13, u'channel': u'publish'}
-
-.. _progguide-write-service-broker-client-publish:
-
-Publishing a message to all servers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-All workers of all servers in a cluster will receive a message, including the one which
-is publishing the message. 
-
-It's possible that no subscriber will receive the message at all in a highly unlike
-case when there's only one server with one worker in a cluster.
-If the worker publishes a message - without the knowledge that it should be its
-own sole recipient - and next goes down for any reason before the message
-could be delivered - the message will be lost.
-
-.. image:: /gfx/progguide/broker-client-publish.png
-   :align: center
-   
-:ref:`Sample code of how to publish a message to all servers is shown in the previous section <progguide-write-service-broker-client-publish-code>`
 
 .. _progguide-write-service-broker-client-async_invoke:
 

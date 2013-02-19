@@ -43,7 +43,8 @@ Programming guide
       :doc:`Invoking other services <progguide/invoking-services>` |
       :doc:`Security<progguide/security>` |
       :doc:`Testing<progguide/testing>` |
-      :doc:`Documenting<progguide/documenting>`
+      :doc:`Documenting<progguide/documenting>` |
+      :doc:`Usage examples<progguide/usage-examples>`
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <progguide/sio>` | 
