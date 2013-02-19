@@ -139,8 +139,8 @@ should also be created so that the service can be easily accessed through `curl 
 
 .. _progguide-write-service-attributes:
 
-Attributes
-~~~~~~~~~~
+Service attributes
+~~~~~~~~~~~~~~~~~~
 
 broker_client
 `````````````
@@ -708,8 +708,8 @@ what HTTP response headers a service will return. Use
 
 .. _progguide-write-service-methods:
 
-Methods
-~~~~~~~
+Service methods
+~~~~~~~~~~~~~~~
 
 after_add_to_store
 ``````````````````

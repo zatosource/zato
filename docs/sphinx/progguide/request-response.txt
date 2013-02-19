@@ -207,12 +207,8 @@ More information
   help you with understanding what a service receives
   and produces
   
-* Other service
-  :ref:`attributes <progguide-write-service-attributes>`
-  and 
-  :ref:`methods <progguide-write-service-methods>`
-  will contain more information regarding
-  the execution context
+* Other :ref:`service attributes <progguide-write-service-attributes>`
+  will contain more information regarding the execution context
   
 * There's a :doc:`chapter dedicated to usage examples <./usage-examples>` to
   show you how to accept and return responses in various data formats
