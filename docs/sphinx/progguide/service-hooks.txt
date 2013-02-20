@@ -1,0 +1,94 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Hooking into a service’s lifecycle
+==================================
+
+While :ref:`handle <progguide-write-service-handle>` is the main method each
+service needs to implement, hooks are methods of a service that can be optionally
+overridden in order to  execute additional parts of code before or after several
+defined points in a service's lifecycle.
+ 
+Which methods can be implemented depends on how a service is invoked - some
+methods are common to all access mechanisms while the rest of them is specific
+only to jobs executed through the scheduler.
+
+By default, before_add_to_store always returns True while all other hooks
+are pass-through.
+
+Any exceptions raised in before_add_to_store will disallow for a service to be deployed.
+For all other hooks, if an exception is raised, it will be caught by Zato, logged,
+and the next method will be called as though there was no exception in the previous one.
+
+You can use the :ref:`environ <progguide-write-service-environ>` dictionary to pass
+data down from a hook to another.
+
+.. _progguide-service-hooks-common-methods:
+
+Common methods
+--------------
+
+These methods can be overridden regardless of the means a service will be executed
+with, no matter its channel, if any, or if it's invoked through the :doc:`scheduler <TODO>`
+or not.
+
+======================================================================== ===================================================================================
+Method                                                                   Notes
+======================================================================== ===================================================================================
+:ref:`before_add_to_store <progguide-write-service-before_add_to_store>` Class method that will be executed by each worker when a 
+                                                                         server starts up. A service will be deployed by that worker 
+                                                                         only if the method returns True.
+:ref:`after_add_to_store <progguide-write-service-after_add_to_store>`   Class method that will be executed by each worker right after a
+                                                                         service has been successfully deployed.
+
+:ref:`before_handle <progguide-write-service-before_handle>`             Executed right before a service's :ref:`handle <progguide-write-service-handle>`
+                                                                         will be called
+:ref:`after_handle <progguide-write-service-after_handle>`               Executed right after a service's :ref:`handle <progguide-write-service-handle>`
+                                                                         has been called
+:ref:`finalize_handle <progguide-write-service-finalize_handle>`         Executed after Zato has finished additional bookkeeping such as storing service
+                                                                         statistics in :doc:`Redis </architecture/redis>` so that
+                                                                         :ref:`further <progguide-write-service-processing_time>`
+                                                                         :ref:`attributes <progguide-write-service-processing_time_raw>`
+                                                                         are available in finalize_handle - they can't be accessed in handle or after_handle
+======================================================================== ===================================================================================
+
+
+.. image:: /gfx/progguide/service-hooks-common.png
+   :align: center
+
+Common and additional scheduler-specific methods
+------------------------------------------------
+
+A scheduler-initiated service can access all the common methods and 
+a set supplementary methods, and even then, some will depend on the job's type.
+
+==================================================================================== ==========================================================================================
+Method                                                                               Notes
+==================================================================================== ==========================================================================================
+:ref:`before_add_to_store <progguide-write-service-before_add_to_store>`             Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
+:ref:`after_add_to_store <progguide-write-service-after_add_to_store>`               Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
+:ref:`before_job <progguide-write-service-before_job>`                               Executed before a service's :ref:`handle <progguide-write-service-handle>`
+                                                                                     will be called but only if the service has been triggered by the 
+                                                                                     :doc:`scheduler <TODO>`, regardless of the job type
+:ref:`before_one_time_job <progguide-write-service-before_one_time_job>`             Executed before a service's :ref:`handle <progguide-write-service-handle>`
+                                                                                     will be called but only if the service has been triggered by the 
+                                                                                     :doc:`scheduler <TODO>` and its 
+                                                                                     :ref:`job_type <progguide-write-service-job_type>` is 'one_time'
+:ref:`before_interval_based_job <progguide-write-service-before_interval_based_job>` 〃 when :ref:`job_type <progguide-write-service-job_type>` is 'interval_based'
+:ref:`before_cron_style_job <progguide-write-service-before_cron_style_job>`         〃 when :ref:`job_type <progguide-write-service-job_type>` is 'cron_style'
+:ref:`before_handle <progguide-write-service-before_handle>`                         Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
+:ref:`after_handle <progguide-write-service-after_handle>`                           Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
+:ref:`after_job <progguide-write-service-after_job>`                                 Executed after a service's :ref:`handle <progguide-write-service-handle>`
+                                                                                     has been called but only if the service has been triggered by the 
+                                                                                     :doc:`scheduler <TODO>`, regardless of the job type
+:ref:`after_one_time_job <progguide-write-service-after_one_time_job>`               Executed after a service's :ref:`handle <progguide-write-service-handle>`
+                                                                                     has been called but only if the service has been triggered by the 
+                                                                                     :doc:`scheduler <TODO>` and its 
+                                                                                     :ref:`job_type <progguide-write-service-job_type>` is 'one_time'
+:ref:`after_interval_based_job <progguide-write-service-after_interval_based_job>`   〃 when :ref:`job_type <progguide-write-service-job_type>` is 'interval_based'
+:ref:`after_cron_style_job <progguide-write-service-after_cron_style_job>`           〃 when :ref:`job_type <progguide-write-service-job_type>` is 'cron_style'  
+:ref:`finalize_handle <progguide-write-service-finalize_handle>`                     Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
+==================================================================================== ==========================================================================================
+
+.. image:: /gfx/progguide/service-hooks-common-scheduler.png
+   :align: center

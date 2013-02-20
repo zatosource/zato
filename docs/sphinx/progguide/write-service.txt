@@ -228,7 +228,7 @@ CID has always 40 characters.
 
   INFO - cid:[K280592090634247650299684980809341216327]
 
-.. _progguide-write-service-data_format:  
+.. _progguide-write-service-data_format:
   
 data_format
 ```````````
@@ -259,6 +259,8 @@ class.
 ::
 
   INFO - data_format:[None]
+
+.. _progguide-write-service-environ:
   
 environ
 ```````
@@ -366,6 +368,7 @@ and
 
   INFO - invocation_time:[2013-02-17 17:47:01.045913]
 
+.. _progguide-write-service-job_type:
 
 job_type
 ````````
@@ -711,6 +714,8 @@ what HTTP response headers a service will return. Use
 Service methods
 ~~~~~~~~~~~~~~~
 
+.. _progguide-write-service-after_add_to_store:
+
 after_add_to_store
 ``````````````````
 
@@ -718,6 +723,8 @@ after_add_to_store
 
 Static method executed right after a service class has been added to the
 service store. Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+.. _progguide-write-service-after_cron_style_job:
 
 after_cron_style_job
 ````````````````````
@@ -727,6 +734,8 @@ after_cron_style_job
 Method executed right after a service has been invoked through a cron-style job.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
 
+.. _progguide-write-service-after_handle:
+
 after_handle
 ````````````
 
@@ -735,6 +744,8 @@ after_handle
 Method executed right after a service's :ref:`handle progguide-write-service-handle>`
 method has returned. Explained further in the :doc:`chapter on service hooks <TODO>`.
 
+.. _progguide-write-service-after_interval_based_job:
+
 after_interval_based_job
 ````````````````````````
 
@@ -742,6 +753,8 @@ after_interval_based_job
 
 Method executed right after a service has been invoked through an interval-based job.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+.. _progguide-write-service-after_job:
 
 after_job
 `````````
@@ -752,6 +765,8 @@ Method executed right after a service has been invoked through a scheduler's
 job, regardless of the latter's type.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
 
+.. _progguide-write-service-after_one_time_job:
+
 after_one_time_job
 ``````````````````
 
@@ -760,14 +775,18 @@ after_one_time_job
 Method executed right after a service has been invoked through a one-time job.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
 
+.. _progguide-write-service-before_add_to_store:
+
 before_add_to_store
 ```````````````````
 
 .. py:staticmethod:: before_add_to_store()
 
-Static method executed right after a service class is added to the service store.
+Static method executed right before a service class is added to the service store.
 The service won't be deployed unless the method returns True.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+.. _progguide-write-service-before_cron_style_job:
 
 before_cron_style_job
 `````````````````````
@@ -777,6 +796,8 @@ before_cron_style_job
 Method executed right before a service is invoked through a cron-style job.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
 
+.. _progguide-write-service-before_handle:
+
 before_handle
 `````````````
 
@@ -784,6 +805,8 @@ before_handle
 
 Method executed right before a service's :ref:`handle progguide-write-service-handle>`
 is run. Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+.. _progguide-write-service-before_interval_based_job:
 
 before_interval_based_job
 `````````````````````````
@@ -793,6 +816,8 @@ before_interval_based_job
 Method executed right before a service is invoked through an interval-based job.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
 
+.. _progguide-write-service-before_job:
+
 before_job
 ``````````
 
@@ -801,6 +826,8 @@ before_job
 Method executed right before a service is invoked through a scheduler's job,
 regardless of the job's type.
 Explained further in the :doc:`chapter on service hooks <TODO>`.
+
+.. _progguide-write-service-before_one_time_job:
 
 before_one_time_job
 ```````````````````
@@ -850,6 +877,8 @@ automatically generates.
 ::
 
   INFO - My name is Something Else
+
+.. _progguide-write-service-handle:
   
 handle
 ``````
