@@ -702,10 +702,12 @@ class Service(object):
             getattr(self, '{}_handle'.format(prefix))()
         except Exception, e:
             self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
-
-    def before_handle(self, *args, **kwargs):
-        """ Invoked just before the actual service receives the request data.
+            
+    @staticmethod
+    def before_add_to_store():
+        """ Invoked right before the class is added to the service store.
         """
+        return True
 
     def before_job(self):
         """ Invoked  if the service has been defined as a job's invocation target,
@@ -726,16 +728,9 @@ class Service(object):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
-
-    @staticmethod
-    def before_add_to_store():
-        """ Invoked right before the class is added to the service store.
-        """
-        return True
-
-    def after_handle(self):
-        """ Invoked right after the actual service has been invoked, regardless
-        of whether the service raised an exception or not.
+        
+    def before_handle(self, *args, **kwargs):
+        """ Invoked just before the actual service receives the request data.
         """
 
     def after_job(self):
@@ -756,6 +751,11 @@ class Service(object):
     def after_cron_style_job(self):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
+        """
+        
+    def after_handle(self):
+        """ Invoked right after the actual service has been invoked, regardless
+        of whether the service raised an exception or not.
         """
         
     def finalize_handle(self):
