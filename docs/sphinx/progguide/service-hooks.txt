@@ -6,19 +6,20 @@ Hooking into a service’s lifecycle
 
 While :ref:`handle <progguide-write-service-handle>` is the main method each
 service needs to implement, hooks are methods of a service that can be optionally
-overridden in order to  execute additional parts of code before or after several
+overridden in order to  execute additional code before or after several
 defined points in a service's lifecycle.
  
 Which methods can be implemented depends on how a service is invoked - some
 methods are common to all access mechanisms while the rest of them is specific
 only to jobs executed through the scheduler.
 
-By default, before_add_to_store always returns True while all other hooks
-are pass-through.
+By default, :ref:`before_add_to_store <progguide-write-service-before_add_to_store>`
+always returns True while all other hooks are pass-through.
 
-Any exceptions raised in before_add_to_store will disallow for a service to be deployed.
-For all other hooks, if an exception is raised, it will be caught by Zato, logged,
-and the next method will be called as though there was no exception in the previous one.
+Any exceptions raised in :ref:`before_add_to_store <progguide-write-service-before_add_to_store>`
+will mean a service won't be deployed. For all other hooks, if an exception is raised,
+it will be caught by Zato, logged, and the next method will be called as though there was
+no exception in the previous one.
 
 You can use the :ref:`environ <progguide-write-service-environ>` dictionary to pass
 data down from a hook to another.
@@ -52,24 +53,66 @@ Method                                                                   Notes
                                                                          are available in finalize_handle - they can't be accessed in handle or after_handle
 ======================================================================== ===================================================================================
 
-
 .. image:: /gfx/progguide/service-hooks-common.png
    :align: center
+   
+::
+
+    from zato.server.service import Service
+    
+    class MyService(Service):
+    
+        @staticmethod
+        def before_add_to_store(logger):
+            logger.info('Adding to store {}'.format(MyService.get_name()))
+            
+            # Don't forget to return True, otherwise the service won't be deployed
+            return True
+        
+        @staticmethod
+        def after_add_to_store(logger):
+            logger.info('Added to store {}'.format(MyService.get_name()))
+    
+        def before_handle(self):
+            self.logger.info('before_handle called')
+        
+        def handle(self):
+            self.logger.info('handle called')
+        
+        def after_handle(self):
+            self.logger.info('after_handle called')
+            
+        def finalize_handle(self):
+            self.logger.info('finalize_handle called')
+            self.logger.info('processing_time {} ms'.format(self.processing_time))
+            self.logger.info('processing_time_raw {}'.format(self.processing_time_raw))
+            
+::
+
+    INFO - before_add_to_store called
+    INFO - after_add_to_store called
+    INFO - before_handle called
+    INFO - handle called
+    INFO - after_handle called
+    INFO - finalize_handle called
+    INFO - processing_time 0 ms
+    INFO - processing_time_raw 0:00:00.000537
 
 Common and additional scheduler-specific methods
 ------------------------------------------------
 
-A scheduler-initiated service can access all the common methods and 
-a set supplementary methods, and even then, some will depend on the job's type.
+A scheduler-initiated service can access all the 
+:ref:`common methods <progguide-service-hooks-common-methods>`
+and a set of supplementary ones, and even then, some will depend on the job's type.
 
-==================================================================================== ==========================================================================================
+==================================================================================== ==============================================================================================
 Method                                                                               Notes
-==================================================================================== ==========================================================================================
+==================================================================================== ==============================================================================================
 :ref:`before_add_to_store <progguide-write-service-before_add_to_store>`             Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
 :ref:`after_add_to_store <progguide-write-service-after_add_to_store>`               Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
 :ref:`before_job <progguide-write-service-before_job>`                               Executed before a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      will be called but only if the service has been triggered by the 
-                                                                                     :doc:`scheduler <TODO>`, regardless of the job type
+                                                                                     :doc:`scheduler <TODO>`, regardless of the :ref:`job type <progguide-write-service-job_type>`
 :ref:`before_one_time_job <progguide-write-service-before_one_time_job>`             Executed before a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      will be called but only if the service has been triggered by the 
                                                                                      :doc:`scheduler <TODO>` and its 
@@ -80,7 +123,7 @@ Method                                                                          
 :ref:`after_handle <progguide-write-service-after_handle>`                           Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
 :ref:`after_job <progguide-write-service-after_job>`                                 Executed after a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      has been called but only if the service has been triggered by the 
-                                                                                     :doc:`scheduler <TODO>`, regardless of the job type
+                                                                                     :doc:`scheduler <TODO>`, regardless of the :ref:`job type <progguide-write-service-job_type>`
 :ref:`after_one_time_job <progguide-write-service-after_one_time_job>`               Executed after a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      has been called but only if the service has been triggered by the 
                                                                                      :doc:`scheduler <TODO>` and its 
@@ -88,7 +131,76 @@ Method                                                                          
 :ref:`after_interval_based_job <progguide-write-service-after_interval_based_job>`   〃 when :ref:`job_type <progguide-write-service-job_type>` is 'interval_based'
 :ref:`after_cron_style_job <progguide-write-service-after_cron_style_job>`           〃 when :ref:`job_type <progguide-write-service-job_type>` is 'cron_style'  
 :ref:`finalize_handle <progguide-write-service-finalize_handle>`                     Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
-==================================================================================== ==========================================================================================
+==================================================================================== ==============================================================================================
 
 .. image:: /gfx/progguide/service-hooks-common-scheduler.png
    :align: center
+   
+   
+::
+
+    from zato.server.service import Service
+    
+    class MyService(Service):
+    
+        @staticmethod
+        def before_add_to_store(logger):
+            logger.info('before_add_to_store called')
+            
+            # Don't forget to return True, otherwise the service won't be deployed
+            return True
+        
+        @staticmethod
+        def after_add_to_store(logger):
+            logger.info('after_add_to_store called')
+            
+        def before_job(self):
+            self.logger.info('before_job called')
+            
+        def before_one_time_job(self):
+            raise NotImplementedError()
+        
+        def before_interval_based_job(self):
+            self.logger.info('before_interval_based_job called')
+        
+        def before_cron_style_job(self):
+            raise NotImplementedError()
+        
+        def before_handle(self):
+            self.logger.info('before_handle called')
+            
+        def handle(self):
+            self.logger.info('handle called')
+        
+        def after_handle(self):
+            self.logger.info('after_handle called')
+    
+        def after_job(self):
+            self.logger.info('after_job called')
+            
+        def after_one_time_job(self):
+            raise NotImplementedError()
+        
+        def after_interval_based_job(self):
+            self.logger.info('after_interval_based_job called')
+        
+        def after_cron_style_job(self):
+            raise NotImplementedError()
+        
+        def finalize_handle(self):
+            self.logger.info('finalize_handle called')
+            self.logger.info('processing_time {} ms'.format(self.processing_time))
+            self.logger.info('processing_time_raw {}'.format(self.processing_time_raw))
+            
+::
+
+    INFO - before_job called
+    INFO - before_interval_based_job called
+    INFO - before_handle called
+    INFO - handle called
+    INFO - after_handle called
+    INFO - after_job called
+    INFO - after_interval_based_job called
+    INFO - finalize_handle called
+    INFO - processing_time 1 ms
+    INFO - processing_time_raw 0:00:00.001397
