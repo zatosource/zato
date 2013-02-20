@@ -719,7 +719,7 @@ Service methods
 after_add_to_store
 ``````````````````
 
-.. py:staticmethod:: after_add_to_store()
+.. py:staticmethod:: after_add_to_store(logger)
 
 Static method executed right after a service class has been added to the
 service store. Explained further in the :doc:`chapter on service hooks <TODO>`.
@@ -780,7 +780,7 @@ Explained further in the :doc:`chapter on service hooks <TODO>`.
 before_add_to_store
 ```````````````````
 
-.. py:staticmethod:: before_add_to_store()
+.. py:staticmethod:: before_add_to_store(logger)
 
 Static method executed right before a service class is added to the service store.
 The service won't be deployed unless the method returns True.

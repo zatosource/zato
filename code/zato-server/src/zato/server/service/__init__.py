@@ -629,7 +629,11 @@ class Service(object):
         
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
-        self.processing_time = int(round(self.processing_time_raw.microseconds / 1000.0))
+        
+        proc_time = self.processing_time_raw.microseconds / 1000.0
+        proc_time = proc_time if proc_time > 1 else 0
+        
+        self.processing_time = int(round(proc_time))
 
         self.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
         self.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
@@ -685,26 +689,34 @@ class Service(object):
 ################################################################################
 
     def call_hooks(self, prefix):
-        if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
-            try:
-                getattr(self, '{}_job'.format(prefix))()
-            except Exception, e:
-                self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
-            else:
+        def call_job_hooks():
+            if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
                 try:
-                    meth_name = '{}_{}_job'.format(prefix, self.job_type)
-                    meth = getattr(self, meth_name)
-                    meth()
+                    getattr(self, '{}_job'.format(prefix))()
                 except Exception, e:
-                    self.logger.error("Can't run {}, e:[{}]".format(meth_name, format_exc(e)))
-            
-        try:
-            getattr(self, '{}_handle'.format(prefix))()
-        except Exception, e:
-            self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
+                    self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
+                else:
+                    try:
+                        meth_name = '{}_{}_job'.format(prefix, self.job_type)
+                        meth = getattr(self, meth_name)
+                        meth()
+                    except Exception, e:
+                        self.logger.error("Can't run {}, e:[{}]".format(meth_name, format_exc(e)))
+        def call_handle():
+            try:
+                getattr(self, '{}_handle'.format(prefix))()
+            except Exception, e:
+                self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
+                
+        if prefix == 'before':
+            call_job_hooks()
+            call_handle()
+        else:
+            call_handle()
+            call_job_hooks()
             
     @staticmethod
-    def before_add_to_store():
+    def before_add_to_store(logger):
         """ Invoked right before the class is added to the service store.
         """
         return True
@@ -763,7 +775,7 @@ class Service(object):
         """
 
     @staticmethod
-    def after_add_to_store():
+    def after_add_to_store(logger):
         """ Invoked right after the class has been added to the service store.
         """
         
