@@ -131,7 +131,7 @@ class BrokerClient(Thread):
         topic = TOPICS[msg_type]
         self.pub_client.publish(topic, dumps(msg))
         
-    def async_invoke(self, msg, expiration=BROKER.DEFAULT_EXPIRATION):
+    def invoke_async(self, msg, expiration=BROKER.DEFAULT_EXPIRATION):
         msg['msg_type'] = MESSAGE_TYPE.TO_PARALLEL_ANY
         msg = dumps(msg)
         

@@ -159,6 +159,8 @@ Can be one of:
 
 * 'amqp'
 * 'http-soap'
+* 'invoke'
+* 'invoke-async'
 * 'jms-wmq'
 * 'scheduler'
 * 'zmq'
@@ -982,7 +984,7 @@ invoke_async
   service. Use the CID returned to correlate an asynchronous invocation with its
   response.
   
-  A service should not send messages to itself, this would create an infinite loop.
+  A service should not invoke asynchronously itself, this would create an infinite loop.
 
   :param name: Name of the service to invoke
   :type name: string

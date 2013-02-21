@@ -563,6 +563,6 @@ class WorkerStore(BrokerMessageReceiver):
 # ##############################################################################
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
-        return self._on_message_invoke_service(msg, 'publish', 'SERVICE_PUBLISH', args)
+        return self._on_message_invoke_service(msg, 'invoke_async', 'SERVICE_PUBLISH', args)
         
 # ##############################################################################
