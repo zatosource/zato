@@ -133,11 +133,11 @@ class ServiceStore(InitializingObject):
             # .. a regular directory or a Distutils2 one ..
             elif os.path.isdir(item_name):
                 try:
-                    self.import_services_from_directory(item_name, True)
+                    self.import_services_from_directory(item_name, base_dir, True)
                 except NoDistributionFound, e:
                     msg = 'Caught an exception e=[{}]'.format(format_exc(e))
                     logger.log(TRACE1, msg)
-                    self.import_services_from_directory(item_name, False)
+                    self.import_services_from_directory(item_name, base_dir, False)
             
             # .. a .py/.pyw
             elif is_python_file(item_name):
@@ -169,7 +169,7 @@ class ServiceStore(InitializingObject):
         mod = imp.load_source(mod_name, file_name)
         self._visit_module(mod, is_internal, file_name)
         
-    def import_services_from_directory(self, dir_name, dist2):
+    def import_services_from_directory(self, dir_name, base_dir, dist2):
         """ dir_name points to a directory. 
         
         If dist2 is True, the directory is assumed to be a Distutils2 one and its
@@ -182,7 +182,7 @@ class ServiceStore(InitializingObject):
         """
         func = visit_py_source_from_distribution if dist2 else visit_py_source
         for py_path in func(dir_name):
-            self.import_services_from_file(py_path, False, None)
+            self.import_services_from_file(py_path, False, base_dir)
         
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
@@ -255,6 +255,8 @@ class ServiceStore(InitializingObject):
                         
                         self.id_to_impl_name[service_id] = impl_name
                         self.name_to_impl_name[name] = impl_name
+                        
+                        logger.debug('Imported service, name:[{}]'.format(name))
                         
                         item.after_add_to_store(logger)
                     else:
