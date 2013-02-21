@@ -63,50 +63,41 @@ from zato.server.stats import add_stats_jobs
 logger = logging.getLogger(__name__)
 
 class ParallelServer(DisposableObject, BrokerMessageReceiver):
-    def __init__(self, host=None, port=None, crypto_manager=None,
-                 odb=None, odb_data=None, singleton_server=None, worker_config=None, 
-                 repo_location=None, sql_pool_store=None, int_parameters=None, 
-                 int_parameter_suffixes=None, bool_parameter_prefixes=None,
-                 soap11_content_type=None, soap12_content_type=None, 
-                 plain_xml_content_type=None, json_content_type=None,
-                 internal_service_modules=None, service_modules=None, base_dir=None,
-                 hot_deploy_config=None, pickup=None, fs_server_config=None, connector_server_grace_time=None,
-                 id=None, name=None, cluster_id=None, kvdb=None, stats_jobs=None, worker_store=None,
-                 deployment_lock_expires=None, deployment_lock_timeout=None, app_context=None,
-                 has_gevent=None):
-        self.host = host
-        self.port = port
-        self.crypto_manager = crypto_manager
-        self.odb = odb
-        self.odb_data = odb_data
-        self.singleton_server = singleton_server
-        self.config = worker_config
-        self.repo_location = repo_location
-        self.sql_pool_store = sql_pool_store
-        self.int_parameters = int_parameters
-        self.int_parameter_suffixes = int_parameter_suffixes
-        self.bool_parameter_prefixes = bool_parameter_prefixes
-        self.soap11_content_type = soap11_content_type
-        self.soap12_content_type = soap12_content_type
-        self.plain_xml_content_type = plain_xml_content_type
-        self.json_content_type = json_content_type
-        self.internal_service_modules = internal_service_modules
-        self.service_modules = service_modules
-        self.base_dir = base_dir
-        self.hot_deploy_config = hot_deploy_config
-        self.pickup = pickup
-        self.fs_server_config = fs_server_config
-        self.connector_server_grace_time = connector_server_grace_time
-        self.id = id
-        self.name = name
-        self.cluster_id = cluster_id
-        self.kvdb = kvdb
-        self.stats_jobs = stats_jobs
-        self.worker_store = worker_store
-        self.deployment_lock_expires = deployment_lock_expires
-        self.deployment_lock_timeout = deployment_lock_timeout
-        self.app_context = app_context
-        self.has_gevent = has_gevent
+    def __init__(self):
+        self.host = None
+        self.port = None
+        self.crypto_manager = None
+        self.odb = None
+        self.odb_data = None
+        self.singleton_server = None
+        self.config = None
+        self.repo_location = None
+        self.sql_pool_store = None
+        self.int_parameters = None
+        self.int_parameter_suffixes = None
+        self.bool_parameter_prefixes = None
+        self.soap11_content_type = None
+        self.soap12_content_type = None
+        self.plain_xml_content_type = None
+        self.json_content_type = None
+        self.internal_service_modules = None # Zato's own internal services
+        self.service_modules = None # Set programmatically in Spring
+        self.service_sources = None # Set in a config file
+        self.base_dir = None
+        self.hot_deploy_config = None
+        self.pickup = None
+        self.fs_server_config = None
+        self.connector_server_grace_time = None
+        self.id = None
+        self.name = None
+        self.cluster_id = None
+        self.kvdb = None
+        self.stats_jobs = None
+        self.worker_store = None
+        self.deployment_lock_expires = None
+        self.deployment_lock_timeout = None
+        self.app_context = None
+        self.has_gevent = None
         
         # The main config store
         self.config = ConfigStore()
@@ -146,13 +137,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         outside this method but basing on whether the method returns True or not.
         """
         def import_initial_services_jobs():
-            logger.error(self.internal_service_modules)
-            logger.error(self.service_modules)
-            logger.error(self.base_dir)
             # (re-)deploy the services from a clear state
             self.service_store.import_services_from_anywhere(
                 self.internal_service_modules + self.service_modules + 
-                [self.hot_deploy_config.current_work_dir], self.base_dir)
+                self.service_sources, self.base_dir)
             
             # Add the statistics-related scheduler jobs to the ODB
             add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
@@ -209,6 +197,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.kvdb.server = self
         self.kvdb.decrypt_func = self.crypto_manager.decrypt
         self.kvdb.init()
+
+        # Service sources
+        self.service_sources = []
+        for name in open(os.path.join(self.repo_location, self.fs_server_config.main.service_sources)):
+            name = name.strip()
+            if name and not name.startswith('#'):
+                self.service_sources.append(name)
         
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()

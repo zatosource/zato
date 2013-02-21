@@ -240,7 +240,7 @@ class Create(ZatoCommand):
         # 2) ODB
         #
         if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.info('[{}/{}] ODB schema already exists, not creating it'.format(next_step.next(), total_steps))
+            self.logger.info('[{}/{}] ODB schema already exists'.format(next_step.next(), total_steps))
         else:
             self.logger.info('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
             
