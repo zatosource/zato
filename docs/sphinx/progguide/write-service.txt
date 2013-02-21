@@ -373,7 +373,7 @@ and
 job_type
 ````````
 
-If a service has been :doc:`invoked through a scheduler's job <TODO>`, type of the job
+If a service has been :doc:`invoked through a scheduler's job <./scheduler>`, type of the job
 it was. None if the scheduler wasn't used. Can be one of:
 
 * None
