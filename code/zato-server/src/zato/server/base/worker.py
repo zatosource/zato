@@ -142,8 +142,8 @@ class WorkerStore(BrokerMessageReceiver):
         else:
             if security_name:
                 sec_type = config.sec_type
-                meth = getattr(self.request_dispatcher.security, sec_type + '_get')
-                _sec_config = meth(security_name).config
+                func = getattr(self.request_dispatcher.security, sec_type + '_get')
+                _sec_config = func(security_name).config
                 
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'has_sec_config:[{}], security_name:[{}], _sec_config:[{}]'.format(
@@ -430,7 +430,7 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def _delete_outgoing_http_soap(self, name, transport, log_meth):
+    def _delete_outgoing_http_soap(self, name, transport, log_func):
         """ Actually deletes an outgoing HTTP/SOAP connection.
         """
         # Are we dealing with plain HTTP or SOAP?
@@ -440,7 +440,7 @@ class WorkerStore(BrokerMessageReceiver):
         try:
             del config_dict[name]
         except(KeyError, AttributeError), e:
-            log_meth('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
+            log_func('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
         
     def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an outgoing HTTP/SOAP connection.

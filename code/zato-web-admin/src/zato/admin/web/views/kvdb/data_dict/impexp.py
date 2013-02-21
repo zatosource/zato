@@ -31,14 +31,14 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import invoke_admin_service
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import method_allowed
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import zato_path
 from zato.common.util import current_host, translation_name
 
 logger = logging.getLogger(__name__)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
     return_data = {
         'zato_clusters':req.zato.clusters,
@@ -48,7 +48,7 @@ def index(req):
     
     return TemplateResponse(req, 'zato/kvdb/data_dict/impexp.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def import_(req, cluster_id):
     try:
         data = req.read()
@@ -61,7 +61,7 @@ def import_(req, cluster_id):
     else:
         return HttpResponse(dumps({'success': True}))
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def export(req, cluster_id):
     
     def _get_last_id(service):

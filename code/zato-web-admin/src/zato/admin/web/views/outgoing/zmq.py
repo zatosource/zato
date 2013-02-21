@@ -30,7 +30,7 @@ from zato.common.odb.model import OutgoingZMQ
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'out-zmq'
     template = 'zato/outgoing/zmq.html'
     
@@ -49,7 +49,7 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'address', 'socket_type')

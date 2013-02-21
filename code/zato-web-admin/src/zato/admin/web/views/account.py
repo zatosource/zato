@@ -31,13 +31,13 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.account import BasicSettingsForm
 from zato.admin.web.models import ClusterColorMarker
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import method_allowed
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_PROMPT = 'Click to pick a color'
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def settings_basic(req):
     initial = {}
     for attr in('timezone', 'date_format', 'time_format'):
@@ -50,7 +50,7 @@ def settings_basic(req):
 
     return TemplateResponse(req, 'zato/account/settings.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def settings_basic_save(req):
     
     for attr in('timezone', 'date_format', 'time_format'):

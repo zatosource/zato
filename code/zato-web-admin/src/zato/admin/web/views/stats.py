@@ -53,7 +53,7 @@ from pytz import timezone, utc
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
-from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed
+from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
 from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
 from zato.common.util import from_local_to_utc, make_repr, now, utcnow
 
@@ -503,11 +503,11 @@ def stats_data(req, stats_type):
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
         req_input, req.zato.cluster, stats_type, is_custom)
 
-@meth_allowed('GET', 'POST')
+@method_allowed('GET', 'POST')
 def stats_trends_data(req):
     return stats_data(req, 'trends')
 
-@meth_allowed('GET', 'POST')
+@method_allowed('GET', 'POST')
 def stats_summary_data(req):
     return stats_data(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
 
@@ -550,17 +550,17 @@ def trends_summary(req, choice, stats_title, is_summary):
     return_data.update(get_js_dt_format(req.zato.user_profile))
     return TemplateResponse(req, 'zato/stats/trends_summary.html', return_data)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def trends(req, choice):
     return trends_summary(req, choice, 'Trends', False)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def summary(req, choice):
     return trends_summary(req, choice, 'Summary', True)
 
 # ##############################################################################
     
-@meth_allowed('GET')
+@method_allowed('GET')
 def settings(req):
     
     if req.zato.get('cluster'):
@@ -604,7 +604,7 @@ def settings(req):
 
     return TemplateResponse(req, 'zato/stats/settings.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def settings_save(req):
     
     for name in DEFAULT_STATS_SETTINGS:
@@ -648,7 +648,7 @@ def settings_save(req):
 
 # ##############################################################################
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def maintenance(req):
     return_data = {
         'zato_clusters': req.zato.clusters,
@@ -661,7 +661,7 @@ def maintenance(req):
     
     return TemplateResponse(req, 'zato/stats/maintenance.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def maintenance_delete(req):
     start = from_user_to_utc(req.POST['start'], req.zato.user_profile)
     stop = from_user_to_utc(req.POST['stop'], req.zato.user_profile)

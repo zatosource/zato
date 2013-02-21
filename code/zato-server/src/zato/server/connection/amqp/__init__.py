@@ -165,8 +165,8 @@ class BaseAMQPConnector(BaseConnector):
     def _recreate(self):
         with self.out_amqp_lock:
             with self.channel_amqp_lock:
-                recreate_meth = '_recreate_sender' if hasattr(self, '_recreate_sender') else '_recreate_consumer'
-                getattr(self, recreate_meth)()
+                recreate_func = '_recreate_sender' if hasattr(self, '_recreate_sender') else '_recreate_consumer'
+                getattr(self, recreate_func)()
                 if self.logger.isEnabledFor(TRACE1):
                     log_msg = 'self.def_amqp [{0}]'.format(self.def_amqp)
                     self.logger.log(TRACE1, log_msg)

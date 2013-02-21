@@ -37,7 +37,7 @@ from anyjson import dumps
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.outgoing.jms_wmq import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, meth_allowed
+from zato.admin.web.views import Delete as _Delete, method_allowed
 from zato.common.odb.model import OutgoingWMQ
 from zato.common import zato_path
 
@@ -79,7 +79,7 @@ def _edit_create_response(cluster, verb, id, name, delivery_mode_text, cluster_i
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
     items = []
     create_form = CreateForm()
@@ -117,7 +117,7 @@ def index(req):
 
     return TemplateResponse(req, 'zato/outgoing/jms_wmq.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.outgoing.jms-wmq.create', _get_edit_create_message(req.POST))
@@ -131,7 +131,7 @@ def create(req):
         return HttpResponseServerError(msg)
 
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')

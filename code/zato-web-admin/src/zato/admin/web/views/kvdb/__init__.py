@@ -34,11 +34,11 @@ from anyjson import dumps
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import method_allowed
 
 logger = logging.getLogger(__name__)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def remote_command(req):
     
     return_data = {'form':RemoteCommandForm(), 
@@ -50,7 +50,7 @@ def remote_command(req):
     
     return TemplateResponse(req, 'zato/kvdb/remote-command.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def remote_command_execute(req):
     """ Executes a command against the key/value DB.
     """

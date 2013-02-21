@@ -33,7 +33,7 @@ from anyjson import dumps
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.outgoing.amqp import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import OutgoingAMQP
 from zato.common import zato_path
 
@@ -79,7 +79,7 @@ def _edit_create_response(cluster, verb, id, name, delivery_mode_text, def_id):
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'out-amqp'
     template = 'zato/outgoing/amqp.html'
     
@@ -107,7 +107,7 @@ class Index(_Index):
         }
 
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     try:
         zato_message = _get_edit_create_message(req.POST)
@@ -122,7 +122,7 @@ def create(req):
         return HttpResponseServerError(msg)
 
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     try:
         zato_message = _get_edit_create_message(req.POST, 'edit-')

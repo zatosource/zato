@@ -37,7 +37,7 @@ from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import SQLConnectionPool
 from zato.common import zato_path
 
@@ -71,7 +71,7 @@ def _edit_create_response(verb, id, name, engine, cluster_id):
 
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
     """ Lists all the SQL connections.
     """
@@ -122,7 +122,7 @@ def index(req):
 
     return TemplateResponse(req, 'zato/outgoing/sql.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     """ Creates a new SQL connection.
     """
@@ -139,7 +139,7 @@ def create(req):
         return HttpResponseServerError(msg)
 
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     """ Updates an SQL connection.
     """
@@ -160,7 +160,7 @@ class Delete(_Delete):
     error_message = 'Could not delete the SQL connection'
     soap_action = 'zato.outgoing.sql.delete'
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def ping(req, cluster_id, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
@@ -174,6 +174,6 @@ def ping(req, cluster_id, id):
     else:
         return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html', {'response_time':'%.3f' % float(response_time)})
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.outgoing.sql.change-password')

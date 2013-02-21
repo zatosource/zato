@@ -30,7 +30,7 @@ from zato.common.odb.model import ConnDefWMQ
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'def-jms-wmq'
     template = 'zato/definition/jms_wmq.html'
     
@@ -50,7 +50,7 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues', 'cache_open_receive_queues', 

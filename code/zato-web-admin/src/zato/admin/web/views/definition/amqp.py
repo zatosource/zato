@@ -26,13 +26,13 @@ import logging
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import ConnDefAMQP
 
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'def-amqp'
     template = 'zato/definition/amqp.html'
     
@@ -52,7 +52,7 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
@@ -70,7 +70,7 @@ class Edit(_CreateEdit):
     form_prefix = 'edit-'
     soap_action = 'zato.definition.amqp.edit'
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.definition.amqp.change-password')
 

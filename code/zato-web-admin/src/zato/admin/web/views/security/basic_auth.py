@@ -25,13 +25,13 @@ import logging
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.basic_auth import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import HTTPBasicAuth
 
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'security-basic-auth'
     template = 'zato/security/basic-auth.html'
     
@@ -51,7 +51,7 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'username', 'realm')
@@ -74,6 +74,6 @@ class Delete(_Delete):
     error_message = 'Could not delete the HTTP Basic Auth definition'
     soap_action = 'zato.security.basic-auth.delete'
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.security.basic-auth.change-password')

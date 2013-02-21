@@ -71,7 +71,7 @@ def get_lb_client(cluster):
     return _get_lb_client(cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,
                           ssl_key_file, ssl_cert_file, LB_AGENT_CONNECT_TIMEOUT)
 
-def meth_allowed(*meths):
+def method_allowed(*meths):
     """ Accepts a list (possibly one-element long) of HTTP methods allowed
     for a given view. An exception will be raised if a request has been made
     with a method outside of those allowed, otherwise the view executes
@@ -79,7 +79,7 @@ def meth_allowed(*meths):
     TODO: Make it return a custom Exception so that whoever called us can
     catch it and return a correct HTTP status (405 Method not allowed).
     """
-    def inner_meth_allowed(view):
+    def inner_method_allowed(view):
         def inner_view(*args, **kwargs):
             req = args[1] if len(args) > 1 else args[0]
             if req.method not in meths:
@@ -89,7 +89,7 @@ def meth_allowed(*meths):
                 raise Exception(msg)
             return view(*args, **kwargs)
         return inner_view
-    return inner_meth_allowed
+    return inner_method_allowed
 
 def set_servers_state(cluster, client):
     """ Assignes 3 flags to the cluster indicating whether load-balancer
@@ -138,7 +138,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         return HttpResponse(dumps({'message':success_msg}))
     
 class _BaseView(object):
-    meth_allowed = 'meth_allowed-must-be-defined-in-a-subclass'
+    method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     soap_action = None
     
     class SimpleIO:
@@ -298,7 +298,7 @@ class CreateEdit(_BaseView):
 class Delete(_BaseView):
     """ Our subclasses will delete objects such as connections and others.
     """
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
     
     def __call__(self, req, initial_input_dict={}, *args, **kwargs):
