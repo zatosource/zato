@@ -2,24 +2,24 @@
 
 from setuptools import setup, find_packages
 
-version = "1.0.0"
+version = '1.0.0'
 
 setup(
-      name = "zato-cli",
+      name = 'zato-cli',
       version = version,
 
-      author = "Zato",
-      author_email = "Zato",
-      url = "Zato",
+      author = 'Zato',
+      author_email = 'Zato',
+      url = 'Zato',
 
-      package_dir = {"":"src"},
-      packages = find_packages("src"),
+      package_dir = {'':'src'},
+      packages = find_packages('src'),
 
-      namespace_packages = ["zato"],
+      namespace_packages = ['zato'],
 
       zip_safe = False,
-      entry_points = """
+      entry_points = '''
       [console_scripts]
       zato = zato.cli.zato_command:main
-      """
+      '''
 )

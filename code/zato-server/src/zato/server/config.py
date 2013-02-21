@@ -184,8 +184,8 @@ class ConfigStore(object):
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if isinstance(attr, ConfigDict):
-                copy_meth = getattr(attr, 'copy')
-                setattr(config_store, attr_name, copy_meth())
+                copy_func = getattr(attr, 'copy')
+                setattr(config_store, attr_name, copy_func())
             elif attr is ZATO_NONE:
                 setattr(config_store, attr_name, ZATO_NONE)
                 

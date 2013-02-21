@@ -34,7 +34,7 @@ from validate import is_boolean
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.wss import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, Delete as _Delete, meth_allowed
+from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed
 from zato.common import zato_path, ZATO_WSS_PASSWORD_TYPES
 from zato.admin.web import invoke_admin_service
 from zato.common.odb.model import WSSDefinition
@@ -65,7 +65,7 @@ def _get_edit_create_message(params, prefix=''):
         'nonce_freshness_time': params[prefix + 'nonce_freshness_time'],
     }
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
     items = []
     create_form = CreateForm()
@@ -106,7 +106,7 @@ def index(req):
 
     return TemplateResponse(req, 'zato/security/wss.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     """ Updates WS-S definitions's parameters (everything except for the password).
     """
@@ -118,7 +118,7 @@ def edit(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.wss.create', _get_edit_create_message(req.POST))
@@ -133,6 +133,6 @@ class Delete(_Delete):
     error_message = 'Could not delete the WS-Security definition'
     soap_action = 'zato.security.wss.delete'
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.security.wss.change-password')

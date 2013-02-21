@@ -385,7 +385,7 @@ class SimpleIOPayload(ValueConverter):
         else:
             elem_value = item.get(name, '')
 
-        if elem_value == '': # Don't use 'if not elem_value' here
+        if elem_value == u'': # Don't use 'if not elem_value' here
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
                 self.zato_logger.debug(msg)
@@ -699,11 +699,11 @@ class Service(object):
                     self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
                 else:
                     try:
-                        meth_name = '{}_{}_job'.format(prefix, self.job_type)
-                        meth = getattr(self, meth_name)
-                        meth()
+                        func_name = '{}_{}_job'.format(prefix, self.job_type)
+                        func = getattr(self, func_name)
+                        func()
                     except Exception, e:
-                        self.logger.error("Can't run {}, e:[{}]".format(meth_name, format_exc(e)))
+                        self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
         def call_handle():
             try:
                 getattr(self, '{}_handle'.format(prefix))()

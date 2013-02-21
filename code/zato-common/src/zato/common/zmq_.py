@@ -142,14 +142,14 @@ class ZMQPullSub(object):
                     elif e.errno == errno.ENOTSOCK:
                         caught = 'errno.ENOTSOCK'
                     msg = '[{0}] Caught [{1}] [{2}], quitting'.format(self.name, caught, format_exc(e))
-                    log_meth = logger.debug
+                    log_func = logger.debug
                 else:
                     e_errno = getattr(e, 'errno', None)
                     msg = '[{0}] Caught an exception [{1}], errno [{2}], quitting.'.format(
                         self.name, e_errno, format_exc(e))
-                    log_meth = logger.error
+                    log_func = logger.error
                     
-                log_meth(msg)
+                log_func(msg)
                 self.close()
                     
 class ZMQPush(object):

@@ -25,13 +25,13 @@ import logging
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.ftp import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import OutgoingFTP
 
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'out-ftp'
     template = 'zato/outgoing/ftp.html'
     
@@ -51,7 +51,7 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
         output_required = ('id', 'name')
@@ -73,6 +73,6 @@ class Delete(_Delete):
     error_message = 'Could not delete the outgoing FTP connection'
     soap_action = 'zato.outgoing.ftp.delete'
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.outgoing.ftp.change-password')

@@ -32,7 +32,7 @@ class DictItem(object):
     pass
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'kvdb-data-dict-dictionary'
     template = 'zato/kvdb/data_dict/dictionary.html'
     
@@ -50,7 +50,7 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('system', 'key', 'value')
         output_required = ('id',)

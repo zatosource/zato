@@ -32,7 +32,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.channel.amqp import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import ChannelAMQP
 from zato.common import zato_path
 
@@ -74,7 +74,7 @@ def _edit_create_response(cluster, verb, id, name, def_id):
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'channel-amqp'
     template = 'zato/channel/amqp.html'
     
@@ -101,7 +101,7 @@ class Index(_Index):
             'edit_form': edit_form,
         }
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.channel.amqp.create', _get_edit_create_message(req.POST))
@@ -113,7 +113,7 @@ def create(req):
         return HttpResponseServerError(msg)
 
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.channel.amqp.edit', _get_edit_create_message(req.POST, 'edit-'))

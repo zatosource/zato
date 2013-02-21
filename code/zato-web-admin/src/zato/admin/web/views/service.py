@@ -55,7 +55,7 @@ from validate import is_boolean
 # Zato
 from zato.admin.web import from_utc_to_user, invoke_admin_service, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import SourceInfo, ZATO_NONE, zato_path
 from zato.common.odb.model import Service
 
@@ -161,7 +161,7 @@ def get_pretty_print(value, data_format):
 class Index(_Index):
     """ A view for listing the services along with their basic statistics.
     """
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'service'
     template = 'zato/service/index.html'
 
@@ -180,12 +180,12 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit')
         }
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     pass
 
 class Edit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
     url_name = 'service-edit'
     form_prefix = 'edit-'
 
@@ -198,7 +198,7 @@ class Edit(CreateEdit):
     def success_message(self, item):
         return 'Successfully {0} the service [{1}]'.format(self.verb, item.name.text)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def overview(req, service_name):
     cluster_id = req.GET.get('cluster')
     service = None
@@ -266,7 +266,7 @@ def overview(req, service_name):
 
     return TemplateResponse(req, 'zato/service/overview.html', return_data)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def source_info(req, service_name):
 
     service = Service(name=service_name)
@@ -300,7 +300,7 @@ def source_info(req, service_name):
 
     return TemplateResponse(req, 'zato/service/source-info.html', return_data)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def wsdl(req, service_name):
     service = Service(name=service_name)
     has_wsdl = False
@@ -325,7 +325,7 @@ def wsdl(req, service_name):
 
     return TemplateResponse(req, 'zato/service/wsdl.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def wsdl_upload(req, service_name, cluster_id):
     """ Handles a WSDL file upload.
     """
@@ -345,11 +345,11 @@ def wsdl_upload(req, service_name, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def wsdl_download(req, service_name, cluster_id):
     return HttpResponseRedirect(get_public_wsdl_url(req.zato.cluster, service_name))
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def request_response(req, service_name):
     service = Service(name=service_name)
     pretty_print = asbool(req.GET.get('pretty_print'))
@@ -404,7 +404,7 @@ def request_response(req, service_name):
 
     return TemplateResponse(req, 'zato/service/request-response.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def request_response_configure(req, service_name, cluster_id):
     try:
         input_dict = {
@@ -426,7 +426,7 @@ class Delete(_Delete):
     soap_action = 'zato.service.delete'
 
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def package_upload(req, cluster_id):
     """ Handles a service package file upload.
     """
@@ -445,7 +445,7 @@ def package_upload(req, cluster_id):
         logger.error(msg)
         return HttpResponseServerError(msg)
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def last_stats(req, service_id, cluster_id):
     
     return_data = {
@@ -479,7 +479,7 @@ def last_stats(req, service_id, cluster_id):
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def slow_response(req, service_name):
 
     items = []
@@ -509,7 +509,7 @@ def slow_response(req, service_name):
         
     return TemplateResponse(req, 'zato/service/slow-response.html', return_data)
     
-@meth_allowed('GET')
+@method_allowed('GET')
 def slow_response_details(req, cid, service_name):
 
     item = None
@@ -556,7 +556,7 @@ def slow_response_details(req, cid, service_name):
         
     return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def invoker(req, service_name):
 
     return_data = {
@@ -566,7 +566,7 @@ def invoker(req, service_name):
 
     return TemplateResponse(req, 'zato/service/invoker.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def invoke(req, service_id, cluster_id):
     """ Executes a service directly, even if it isn't exposed through any channel.
     """

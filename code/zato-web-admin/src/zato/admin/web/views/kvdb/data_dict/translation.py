@@ -32,7 +32,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm, TranslateForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import ZATO_NONE, zato_path
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class DictItem(object):
     pass
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'kvdb-data-dict-translation'
     template = 'zato/kvdb/data_dict/translation/index.html'
     
@@ -68,7 +68,7 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)
@@ -101,15 +101,15 @@ def _get_key_value_list(req, service_name, input_dict):
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def get_key_list(req):
     return _get_key_value_list(req, 'zato.kvdb.data-dict.dictionary.get-key-list', {'system':req.GET['system']})
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def get_value_list(req):
     return _get_key_value_list(req, 'zato.kvdb.data-dict.dictionary.get-value-list', {'system':req.GET['system'], 'key':req.GET['key']})
 
-@meth_allowed('GET', 'POST')
+@method_allowed('GET', 'POST')
 def translate(req):
     
     result_names = ('system1', 'key1', 'value1', 'system2', 'key2')

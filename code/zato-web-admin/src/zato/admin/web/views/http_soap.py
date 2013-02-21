@@ -36,7 +36,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import method_allowed
 from zato.common import SECURITY_TYPES, URL_TYPE, ZATO_NONE, zato_path
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
@@ -103,7 +103,7 @@ def _edit_create_response(id, verb, transport, connection, name):
 
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
     connection = req.GET.get('connection')
     transport = req.GET.get('transport')
@@ -201,7 +201,7 @@ def index(req):
 
     return TemplateResponse(req, 'zato/http_soap.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http-soap.create', _get_edit_create_message(req.POST))
@@ -213,7 +213,7 @@ def create(req):
         return HttpResponseServerError(msg)
 
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     try:
         zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
@@ -233,12 +233,12 @@ def _delete_ping(req, id, cluster_id, service, error_template):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def delete(req, id, cluster_id):
     _delete_ping(req, id, cluster_id, 'zato.http-soap.delete', 'Could not delete the object, e:[{e}]')
     return HttpResponse()
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def ping(req, id, cluster_id):
     ret = _delete_ping(req, id, cluster_id, 'zato.http-soap.ping', 'Could not ping the connection, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):

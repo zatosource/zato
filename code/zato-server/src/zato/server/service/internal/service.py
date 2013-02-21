@@ -225,17 +225,26 @@ class Invoke(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_required = ('id', 'payload')
-        input_optional = ('data_format', 'transport')
+        input_required = ('payload')
+        input_optional = ('id', 'name', 'channel', 'data_format', 'transport')
         output_required = ('response',)
 
     def handle(self):
         payload = payload_from_request(self.request.input.payload.decode('base64'), 
             self.request.input.data_format, self.request.input.transport)
+
+        id = request.input.get('id')
+        name = request.input.get('name')
+        
+        if id and name:
+            raise ZatoException('Cannot accept both id:[{}] and name:[{}]'.format(id, name))
+        
+        if id:
+            func = self.invoke_by_id if id else self.invoke
             
         response = self.invoke_by_id(self.request.input.id, payload, 
-            self.request.input.data_format, self.request.input.transport,
-            serialize=True)
+            self.request.input.channel, self.request.input.data_format,
+            self.request.input.transport, serialize=True)
 
         self.response.payload.response = response.encode('base64') if response else ''
 

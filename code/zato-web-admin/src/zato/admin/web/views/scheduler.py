@@ -47,7 +47,7 @@ from validate import is_boolean
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
-from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed, Delete as _Delete
+from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
@@ -290,7 +290,7 @@ def _edit_cron_style(user_profile, cluster, params):
 
     return {'definition_text':definition, 'cron_definition': cron_definition, 'id':params['edit-cron_style-id']}
 
-@meth_allowed('GET', 'POST')
+@method_allowed('GET', 'POST')
 def index(req):
     try:
         jobs = []
@@ -430,7 +430,7 @@ class Delete(_Delete):
     error_message = 'Could not delete the job'
     soap_action = 'zato.scheduler.job.delete'
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def execute(req, job_id, cluster_id):
     """ Executes a scheduler's job.
     """
@@ -444,7 +444,7 @@ def execute(req, job_id, cluster_id):
         # 200 OK
         return HttpResponse()
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def get_definition(req, start_date, repeats, weeks, days, hours, minutes, seconds):
     start_date = _get_start_date(start_date)
 
