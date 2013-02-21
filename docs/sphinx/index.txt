@@ -41,6 +41,7 @@ Programming guide
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
       :doc:`Invoking other services <progguide/invoking-services>` |
+      :doc:`Python client<progguide/clients/python>` |
       :doc:`Security<progguide/security>` |
       :doc:`Testing<progguide/testing>` |
       :doc:`Documenting<progguide/documenting>` |
