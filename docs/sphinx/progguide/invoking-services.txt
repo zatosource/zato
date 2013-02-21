@@ -1,0 +1,53 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Invoking other services
+=======================
+
+.. note ::
+    This chapter documents how other services running in a Zato cluster can be invoked.
+    Visit :doc:`here <TODO>` for information how to establish connections to external
+    services and resources.
+    
+Choosing a mode of invocation
+=============================
+
+Services can be invoked 
+:ref:`synchronously <progguide-write-service-invoke>`
+or in an 
+:ref:`asynchronous manner <progguide-write-service-invoke_async>`
+so that you
+can choose whether the invoking service is blocked waiting for the response
+or if the other service should be run in background. 
+
+Note that for the latter,
+you won't receive a response directly, instead, when invoking another service asynchronously
+you are given a 
+:ref:`CID <progguide-write-service-cid>` the service being invoked will also receive so that
+its response, if any, can be correlated later on, using other Zato mechanisms, specific to your
+application.
+
+Regardless of the invocation method, there is no difference in how requests are passed
+in.
+
+If a service is being run programtically its 
+:ref:`channel attribute <progguide-write-service-channel>` 
+will be 'invoke' or 'invoke-async' depending on the invocation style.
+
+A service cannot invoke itself synchronously. It's possible for a service to
+invoke itself asynchronously but doing so will create an infinite loop.
+
+How to pass a request to another service
+========================================
+
+* 
+
+    Passing a request is most convenient if another service uses :doc:`Simple IO (SIO) <./sio>`,
+    in such cases it's possible to use a plain Python dictionary.
+
+    .. note ::
+
+      Zato uses SIO in its own services and this is how you can invoke them if need be.
+  
+
+

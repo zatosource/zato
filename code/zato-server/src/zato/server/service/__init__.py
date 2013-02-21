@@ -559,7 +559,7 @@ class Service(object):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
-    def invoke_by_impl_name(self, impl_name, payload='', channel=None, data_format=None,
+    def invoke_by_impl_name(self, impl_name, payload='', channel='invoke', data_format=None,
             transport=None, serialize=False, as_bunch=False):
             
         if self.impl_name == impl_name:
