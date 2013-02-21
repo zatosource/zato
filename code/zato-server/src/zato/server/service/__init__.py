@@ -446,11 +446,13 @@ class SimpleIOPayload(ValueConverter):
                         name = name.name
 
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
+                    if isinstance(elem_value, basestring):
+                        elem_value = elem_value.decode('utf-8')
                     
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
                     else:
-                        out_item[name] = elem_value                    
+                        out_item[name] = elem_value
     
                 if self.zato_is_repeated:
                     value.append(out_item)
