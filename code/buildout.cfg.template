@@ -18,6 +18,7 @@ develop =
     zato-agent
     zato-broker
     zato-cli
+    zato-client
     zato-common
     zato-server
     zato-web-admin
@@ -98,12 +99,13 @@ eggs =
     tornado
     urllib3
     watchdog
-    zato-admin
     zato-agent
     zato-broker
     zato-cli
+    zato-client
     zato-common
     zato-server
+    zato-web-admin
     zc.buildout
     zc.recipe.egg
     ZConfig

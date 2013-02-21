@@ -57,8 +57,8 @@ config_template = """{{
   "SITE_ID": {SITE_ID},
   "SECRET_KEY": "{SECRET_KEY}",
   
-  "TECH_ACCOUNT_NAME": "{TECH_ACCOUNT_NAME}",
-  "TECH_ACCOUNT_PASSWORD": "{TECH_ACCOUNT_PASSWORD}"
+  "ADMIN_INVOKE_NAME": "{ADMIN_INVOKE_NAME}",
+  "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}"
 }}
 """
 
@@ -121,8 +121,8 @@ class Create(ZatoCommand):
             'DATABASE_PORT': args.odb_port,
             'SITE_ID': getrandbits(20),
             'SECRET_KEY': encrypt(uuid.uuid4().hex, pub_key),
-            'TECH_ACCOUNT_NAME':args.tech_account_name,
-            'TECH_ACCOUNT_PASSWORD':encrypt(args.tech_account_password, pub_key),
+            'ADMIN_INVOKE_NAME':'admin.invoke',
+            'ADMIN_INVOKE_PASSWORD':encrypt(args.admin_invoke_password, pub_key),
         }
         
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/web-admin.log'))

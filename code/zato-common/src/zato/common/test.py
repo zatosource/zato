@@ -40,14 +40,17 @@ from nose.tools import eq_
 from zato.common import CHANNEL, SIMPLE_IO
 from zato.common.util import new_cid
 
+def rand_bool():
+    return choice((True, False))
+
 def rand_int(start=1, stop=100):
     return randint(start, stop)
 
 def rand_string():
-    return uuid4().hex
+    return 'a' + uuid4().hex
 
-def rand_bool():
-    return choice((True, False))
+def rand_object():
+    return object()
 
 class Expected(object):
     """ A container for the data a test expects the service to return.

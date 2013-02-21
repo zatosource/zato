@@ -33,7 +33,7 @@ from lxml import etree
 from lxml.objectify import Element
 
 # Zato
-from zato.admin.settings import TECH_ACCOUNT_NAME, TECH_ACCOUNT_PASSWORD
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD
 from zato.common import zato_namespace
 from zato.common.soap import invoke_admin_service as _invoke_admin_service
 from zato.common.util import from_local_to_utc as _from_local_to_utc, from_utc_to_local as _from_utc_to_local
@@ -84,8 +84,8 @@ def invoke_admin_service(cluster, soap_action, input_dict):
         setattr(zato_message, k, v)
 
     headers = {'x-zato-session-type':'web-admin/tech_acc', 
-               'x-zato-user': TECH_ACCOUNT_NAME,
-               'x-zato-password': TECH_ACCOUNT_PASSWORD
+               'x-zato-user': ADMIN_INVOKE_NAME,
+               'x-zato-password': ADMIN_INVOKE_PASSWORD
                }
 
     request = etree.tostring(zato_message)

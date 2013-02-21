@@ -131,8 +131,8 @@ if 'DATABASES' in globals():
     
     TEMPLATE_DEBUG = True
 else:
-    TECH_ACCOUNT_NAME = 'dummy'
-    TECH_ACCOUNT_PASSWORD = 'dummy'
+    ADMIN_INVOKE_NAME = 'dummy'
+    ADMIN_INVOKE_PASSWORD = 'dummy'
     DATABASES = {}
     DATABASES['default'] = {}
     DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
