@@ -30,7 +30,6 @@ from django.http import HttpResponse, HttpResponseServerError
 from validate import is_boolean
 
 # Zato
-from zato.admin.settings import TECH_ACCOUNT_NAME
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
@@ -105,7 +104,7 @@ class Edit(_CreateEdit):
 @method_allowed('POST')
 def delete(req, id, cluster_id):
     try:
-        invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.delete', {'id': id, 'current_tech_account_name':TECH_ACCOUNT_NAME})
+        invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.delete', {'id': id})
     except Exception, e:
         msg = 'Could not delete the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)

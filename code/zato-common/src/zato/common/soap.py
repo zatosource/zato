@@ -33,7 +33,7 @@ import urllib3
 # Zato
 from zato.common.util import TRACE1
 from zato.common import soap_doc, soap_fault_xpath, ZATO_OK
-from zato.common import ZatoException, zato_data_path, zato_data_xpath, zato_result_path_xpath
+from zato.common import ZatoException, zato_data_path, zato_data_xpath, zato_result_xpath
 
 logger = logging.getLogger(__name__)
 
