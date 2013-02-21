@@ -43,7 +43,7 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
     def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
     internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
     out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, wss_list
-from zato.common.util import current_host, security_def_type
+from zato.common.util import current_host, security_def_type, TRACE1
 from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
@@ -172,7 +172,7 @@ class ODBManager(SessionWrapper):
             try:
                 self._session.commit()
             except IntegrityError, e:
-                logger.debug('IntegrityError (Service), e:[{e}]'.format(e=format_exc(e)))
+                logger.log(TRACE1, 'IntegrityError (Service), e:[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
                 
                 service = self._session.query(Service).\
@@ -186,7 +186,7 @@ class ODBManager(SessionWrapper):
             return service.id, service.is_active, service.slow_threshold
 
         except Exception, e:
-            msg = 'Could not add the Service, name:[{}], e:[{}]'.format(name, format_exc(e))
+            msg = 'Could not add service, name:[{}], e:[{}]'.format(name, format_exc(e))
             logger.error(msg)
             self._session.rollback()
 
@@ -209,7 +209,7 @@ class ODBManager(SessionWrapper):
                 self._session.commit()
             except IntegrityError, e:
                 
-                logger.debug('IntegrityError (DeployedService), e:[{e}]'.format(e=format_exc(e)))
+                logger.log(TRACE1, 'IntegrityError (DeployedService), e:[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
 
                 ds = self._session.query(DeployedService).\

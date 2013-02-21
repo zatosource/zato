@@ -142,20 +142,24 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         the services have been already deployed. Later workers will check that
         the flag exists and will skip the deployment altogether. 
         
-        The first worker to be started will also start a singleton thread later on so it will now
-        create a lock file so that other processes won't be able to start the singleton
-        thread again until the server is fully restarted.
+        The first worker to be started will also start a singleton thread later on,
+        outside this method but basing on whether the method returns True or not.
         """
         def import_initial_services_jobs():
+            logger.error(self.internal_service_modules)
+            logger.error(self.service_modules)
+            logger.error(self.base_dir)
             # (re-)deploy the services from a clear state
             self.service_store.import_services_from_anywhere(
-                self.internal_service_modules + self.service_modules, self.base_dir)
+                self.internal_service_modules + self.service_modules + 
+                [self.hot_deploy_config.current_work_dir], self.base_dir)
             
             # Add the statistics-related scheduler jobs to the ODB
             add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
             
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, deployment_key)
-        already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED, self.fs_server_config.main.token, deployment_key)
+        already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED, 
+            self.fs_server_config.main.token, deployment_key)
         
         logger.debug('Will use the lock_name: [{}]'.format(lock_name))
         
