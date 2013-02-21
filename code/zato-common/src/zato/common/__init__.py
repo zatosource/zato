@@ -312,6 +312,14 @@ class ParsingException(ZatoException):
     XML document.
     """
     
+class NoDistributionFound(ZatoException):
+    """ Raised when an attempt is made to import services from a Distutils2 archive
+    or directory but they don't contain a proper Distutils2 distribution.
+    """
+    def __init__(self, path):
+        super(NoDistributionFound, self).__init__(None, 
+            'No Disutils distribution in path:[{}]'.format(path))
+    
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.
     """
