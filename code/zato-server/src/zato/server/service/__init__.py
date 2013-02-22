@@ -66,7 +66,7 @@ class ValueConverter(object):
     a service's SimpleIO config.
     """
     def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
-        
+    
         if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
             value = asbool(value)
             
@@ -380,10 +380,12 @@ class SimpleIOPayload(ValueConverter):
         into account the differences between dictionaries and other formats
         as well as the type conversions.
         """
+        lookup_name = name.name if isinstance(name, ForceType) else name
+            
         if is_sa_namedtuple or isinstance(item, Base):
-            elem_value = getattr(item, name, '')
+            elem_value = getattr(item, lookup_name, '')
         else:
-            elem_value = item.get(name, '')
+            elem_value = item.get(lookup_name, '')
 
         if elem_value == u'': # Don't use 'if not elem_value' here
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
@@ -397,7 +399,7 @@ class SimpleIOPayload(ValueConverter):
         if leave_as_is:
             return elem_value
         else:
-            return self.convert(item, name, elem_value, True)
+            return self.convert(name, lookup_name, elem_value, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -442,10 +444,11 @@ class SimpleIOPayload(ValueConverter):
                     out_item = {}
                 for is_required, name in chain(self.zato_required, self.zato_optional):
                     leave_as_is = isinstance(name, AsIs)
+                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
+                    
                     if isinstance(name, ForceType):
                         name = name.name
-
-                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
+                        
                     if isinstance(elem_value, basestring):
                         elem_value = elem_value.decode('utf-8')
                     
