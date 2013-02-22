@@ -50,8 +50,6 @@
 
 {% include "zato/choose-cluster.html" with page_prompt="Show accounts"%}
 
-    {% if items %}
-
         <div class='page_prompt'>
             <a href="javascript:$.fn.zato.security.tech_account.create()">Create a new technical account</a>
         </div>
@@ -175,8 +173,6 @@
                 </tbody>
             </table>
         </div>
-
-    {% endif %} {% comment %}items{% endcomment %}
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 
