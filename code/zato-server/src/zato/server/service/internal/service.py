@@ -109,7 +109,8 @@ class GetByName(AdminService):
             self.response.payload.time_last = self.server.kvdb.conn.hget(time_key, 'last')
             
             for name in('min_all_time', 'max_all_time', 'mean_all_time'):
-                setattr(self.response.payload, 'time_{}'.format(name), float(self.server.kvdb.conn.hget(time_key, name) or 0))
+                setattr(self.response.payload, 'time_{}'.format(name), float(
+                    self.server.kvdb.conn.hget(time_key, name) or 0))
                 
             self.response.payload.time_min_all_time = int(self.response.payload.time_min_all_time)
             self.response.payload.time_max_all_time = int(self.response.payload.time_max_all_time)
@@ -225,16 +226,16 @@ class Invoke(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_required = ('payload')
+        input_required = ('payload',)
         input_optional = ('id', 'name', 'channel', 'data_format', 'transport')
-        output_required = ('response',)
+        output_optional = ('response',)
 
     def handle(self):
-        payload = payload_from_request(self.request.input.payload.decode('base64'), 
+        payload = payload_from_request(self.cid, self.request.input.payload.decode('base64'), 
             self.request.input.data_format, self.request.input.transport)
 
-        id = request.input.get('id')
-        name = request.input.get('name')
+        id = self.request.input.get('id')
+        name = self.request.input.get('name')
         
         if name and id:
             raise ZatoException('Cannot accept both id:[{}] and name:[{}]'.format(id, name))
