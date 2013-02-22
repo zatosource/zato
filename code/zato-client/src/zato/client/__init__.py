@@ -45,41 +45,39 @@ class Client(object):
         self.address = '{}{}'.format(url, path)
         self.session = session or requests.session(auth=auth)
         self.to_bunch = to_bunch
+        
+    def inner_invoke(self, request, response_class):
+        response = self.session.post(self.address, request)
+        return response_class(response, self.to_bunch)
     
-    def invoke(self, *args, **kwargs):
+    def invoke(self, request):
         """ Input parameters are like when invoking a service directly.
         """
-        return self._invoke(*args, async=True, **kwargs)
+        return self.inner_invoke(request)
     
     def invoke_async(self, *args, **kwargs):
         """ Input parameters are like when invoking a service directly.
         """
-        return self._invoke(*args, async=True, **kwargs)
+        return self.inner_invoke(*args, async=True, **kwargs)
         
-class InvokeServiceClient(Client):
+class AnyServiceInvoker(Client):
     def __init__(self, url=None, auth=None, path='/zato/admin/invoke', session=None, to_bunch=True):
-        super(InvokeServiceClient, self).__init__(url, auth, path, session, to_bunch)
+        super(AnyServiceInvoker, self).__init__(url, auth, path, session, to_bunch)
         
-    def _invoke(self, name, payload='', channel='invoke', data_format='json', transport=None, async=False, id=None):
-        if name and id:
-            msg = 'Cannot use both name:[{}] and id:[{}]'.format(name, id)
-            raise ZatoException(msg)
-        
-        if name:
-            id_, value = 'name', name
-        else:
-            id_, value = 'id', id
-        
-        request = {
-            id_: value,
-            'payload': dumps(payload).encode('base64'),
-            'channel': channel,
-            'data_format': data_format,
-            'transport': transport,
+    def invoke(self, name, payload='', channel='invoke', data_format='json', transport=None, async=False, id=None):
+        id_, value = ('name', name) if name else ('id', id)
+        request = { id_: value, 'payload': dumps(payload).encode('base64'),
+            'channel': channel, 'data_format': data_format, 'transport': transport,
             }
         
-        response = self.session.post(self.address, dumps(request))
-        return Response(response, self.to_bunch)
+        return super(AnyServiceInvoker, self).inner_invoke(dumps(request), ServiceInvokeResponse)
+        
+class SIOClient(Client):
+    def __init__(self, url=None, auth=None, path=None, session=None, to_bunch=True):
+        super(SIOClient, self).__init__(url, auth, path, session, to_bunch)
+        
+    def invoke(self, payload=None, channel='invoke', data_format='json', transport=None, async=False, id=None):
+        return super(SIOClient, self).inner_invoke(dumps(payload), SIOResponse)
         
 class Response(object):
     def __init__(self, inner, to_bunch):
@@ -92,6 +90,11 @@ class Response(object):
         self.cid = None
         self.details = None
         self.init()
+    
+    def init(self):
+        raise NotImplementedError('Must be defined by subclasses')
+        
+class SIOResponse(Response):
         
     def init(self):
         json = loads(self.inner.text)
@@ -103,15 +106,34 @@ class Response(object):
             # There will be two keys, zato_env and the actual payload
             for key, value in json.items():
                 if key != 'zato_env':
-                    if value['response']:
-                        data = loads(value['response'].decode('base64'))
-                        data_key = data.keys()[0]
-                        self.data = bunchify(data[data_key]) if self.to_bunch else data[data_key]
+                    if self.set_data(value):
                         self.has_data = True
+                        if self.to_bunch:
+                            self.data = bunchify(self.data)
+                    
+    def set_data(self, payload):  
+        self.data = payload
+        return True
+                        
+class ServiceInvokeResponse(SIOResponse):
+                    
+    def set_data(self, payload):
+        if payload.get('response'):
+            data = loads(payload['response'].decode('base64'))
+            data_key = data.keys()[0]
+            self.data = data[data_key]
+            
+            return True 
 
 if __name__ == '__main__':
-    client = InvokeServiceClient('http://localhost:17010', ('admin.invoke', 'cdaa6ca6ae944f4bae70d5697162435e'))
-    response = client.invoke('zato.service.get-by-name', {'cluster_id':1, 'name':'zato.service.get-by-name'})
-    #print(response.inner.text)
+    address = 'http://localhost:17010'
+    auth = ('admin.invoke', 'cdaa6ca6ae944f4bae70d5697162435e')
+    path = '/zato/json/zato.security.wss.get-list'
+    service = 'zato.helpers.input-logger'
+    
+    #client = AnyServiceInvoker(address, auth)#, path)
+    client = SIOClient(address, auth, path)
+    response = client.invoke({'cluster_id':1})
+    print(response.inner.text)
     print(response.data)
     
