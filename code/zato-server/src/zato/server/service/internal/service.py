@@ -236,13 +236,17 @@ class Invoke(AdminService):
         id = request.input.get('id')
         name = request.input.get('name')
         
-        if id and name:
+        if name and id:
             raise ZatoException('Cannot accept both id:[{}] and name:[{}]'.format(id, name))
         
-        if id:
-            func = self.invoke_by_id if id else self.invoke
+        if name:
+            func = self.invoke
+            id_ = name
+        else:
+            func = self.invoke_by_id
+            id_ = id
             
-        response = self.invoke_by_id(self.request.input.id, payload, 
+        response = func(id_, payload, 
             self.request.input.channel, self.request.input.data_format,
             self.request.input.transport, serialize=True)
 
