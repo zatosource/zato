@@ -24,13 +24,16 @@ import logging
 from logging import getLogger
 
 # anyjson
-from anyjson import dumps
+from anyjson import dumps, loads
+
+# Bunch
+from bunch import bunchify
 
 # requests
 import requests
 
 # Zato
-from zato.common import ZatoException
+from zato.common import ZatoException, ZATO_OK
 
 logging.basicConfig(level=logging.INFO)
 logger = getLogger(__name__)
@@ -38,9 +41,10 @@ logger = getLogger(__name__)
 class Client(object):
     """ A convenience client for invoking Zato services from other Python applications.
     """
-    def __init__(self, url=None, auth=None, path='/zato/admin/invoke', session=None):
+    def __init__(self, url=None, auth=None, path='/zato/admin/invoke', session=None, to_bunch=0):
         self.address = '{}{}'.format(url, path)
         self.session = session or self._get_session(auth)
+        self.to_bunch = to_bunch
         
     def _get_session(self, auth):
         session = requests.session()
@@ -48,7 +52,7 @@ class Client(object):
         
         return session
     
-    def _invoke(self, name, payload='', channel=None, data_format=None, transport=None, async=False, id=None):
+    def _invoke(self, name, payload='', channel='invoke', data_format='json', transport=None, async=False, id=None):
         if name and id:
             msg = 'Cannot use both name:[{}] and id:[{}]'.format(name, id)
             raise ZatoException(msg)
@@ -60,26 +64,56 @@ class Client(object):
         
         request = {
             id_: value,
-            'payload': payload.encode('base64'),
+            'payload': dumps(payload).encode('base64'),
             'channel': channel,
             'data_format': data_format,
             'transport': transport,
             }
         
-        self.session.post(self.address, dumps(request))
-        
-        logger.info(request)
+        response = self.session.post(self.address, dumps(request))
+        return Response(response, self.to_bunch)
         
     def invoke(self, *args, **kwargs):
-        """ Works exactly like any service's .invoke method.
+        """ Input parameters are like when invoking a service directly.
         """
         return self._invoke(*args, async=True, **kwargs)
     
     def invoke_async(self, *args, **kwargs):
-        """ Works exactly like any service's .invoke_async method.
+        """ Input parameters are like when invoking a service directly.
         """
         return self._invoke(*args, async=True, **kwargs)
-    
+        
+class Response(object):
+    def __init__(self, inner, to_bunch):
+        self.inner = inner # Acutal response from the requests module
+        self.to_bunch = to_bunch
+        self.result = None
+        self.ok = None
+        self.has_data = None
+        self.data = None
+        self.cid = None
+        self.details = None
+        self.init()
+        
+    def init(self):
+        json = loads(self.inner.text)
+        for name in('cid', 'details', 'result'):
+            setattr(self, name, json['zato_env'][name])
+        self.ok = self.result == ZATO_OK
+        
+        if self.ok:
+            # There will be two keys, zato_env and the actual payload
+            for key, value in json.items():
+                if key != 'zato_env':
+                    if value['response']:
+                        data = loads(value['response'].decode('base64'))
+                        data_key = data.keys()[0]
+                        self.data = bunchify(data[data_key]) if self.to_bunch else data[data_key]
+                        self.has_data = True
+
 if __name__ == '__main__':
-    client = Client('http://localhost:17010', ('admin.invoke', '4bfad87229044cdd97407984ce00482fx'))
-    client.invoke('zato.helpers.input-logger', 'zzz')
+    client = Client('http://localhost:17010', ('admin.invoke', 'cdaa6ca6ae944f4bae70d5697162435e'))
+    response = client.invoke('zato.service.get-by-name', {'cluster_id':1, 'name':'zato.service.get-by-name'})
+    #print(response.inner.text)
+    print(response.data)
+    
