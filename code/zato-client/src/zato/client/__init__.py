@@ -41,17 +41,25 @@ logger = getLogger(__name__)
 class Client(object):
     """ A convenience client for invoking Zato services from other Python applications.
     """
-    def __init__(self, url=None, auth=None, path='/zato/admin/invoke', session=None, to_bunch=0):
+    def __init__(self, url=None, auth=None, path=None, session=None, to_bunch=False):
         self.address = '{}{}'.format(url, path)
-        self.session = session or self._get_session(auth)
+        self.session = session or requests.session(auth=auth)
         self.to_bunch = to_bunch
-        
-    def _get_session(self, auth):
-        session = requests.session()
-        session.auth = auth
-        
-        return session
     
+    def invoke(self, *args, **kwargs):
+        """ Input parameters are like when invoking a service directly.
+        """
+        return self._invoke(*args, async=True, **kwargs)
+    
+    def invoke_async(self, *args, **kwargs):
+        """ Input parameters are like when invoking a service directly.
+        """
+        return self._invoke(*args, async=True, **kwargs)
+        
+class InvokeServiceClient(Client):
+    def __init__(self, url=None, auth=None, path='/zato/admin/invoke', session=None, to_bunch=True):
+        super(InvokeServiceClient, self).__init__(url, auth, path, session, to_bunch)
+        
     def _invoke(self, name, payload='', channel='invoke', data_format='json', transport=None, async=False, id=None):
         if name and id:
             msg = 'Cannot use both name:[{}] and id:[{}]'.format(name, id)
@@ -72,16 +80,6 @@ class Client(object):
         
         response = self.session.post(self.address, dumps(request))
         return Response(response, self.to_bunch)
-        
-    def invoke(self, *args, **kwargs):
-        """ Input parameters are like when invoking a service directly.
-        """
-        return self._invoke(*args, async=True, **kwargs)
-    
-    def invoke_async(self, *args, **kwargs):
-        """ Input parameters are like when invoking a service directly.
-        """
-        return self._invoke(*args, async=True, **kwargs)
         
 class Response(object):
     def __init__(self, inner, to_bunch):
@@ -112,7 +110,7 @@ class Response(object):
                         self.has_data = True
 
 if __name__ == '__main__':
-    client = Client('http://localhost:17010', ('admin.invoke', 'cdaa6ca6ae944f4bae70d5697162435e'))
+    client = InvokeServiceClient('http://localhost:17010', ('admin.invoke', 'cdaa6ca6ae944f4bae70d5697162435e'))
     response = client.invoke('zato.service.get-by-name', {'cluster_id':1, 'name':'zato.service.get-by-name'})
     #print(response.inner.text)
     print(response.data)
