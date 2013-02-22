@@ -46,21 +46,27 @@ class Client(object):
         self.session = session or requests.session(auth=auth)
         self.to_bunch = to_bunch
         
-    def inner_invoke(self, request, response_class):
+    def inner_invoke(self, request, response_class, is_async):
+        """ Actually invokes a service and returns its response.
+        """
         response = self.session.post(self.address, request)
         return response_class(response, self.to_bunch)
     
-    def invoke(self, request):
+    def invoke(self, request, response_class):
         """ Input parameters are like when invoking a service directly.
         """
-        return self.inner_invoke(request)
+        return self.inner_invoke(request, response_class, False)
     
-    def invoke_async(self, *args, **kwargs):
+    def invoke_async(self, request, response_class):
         """ Input parameters are like when invoking a service directly.
         """
-        return self.inner_invoke(*args, async=True, **kwargs)
+        return self.inner_invoke(request, response_class, True)
         
 class AnyServiceInvoker(Client):
+    """ Uses zato.service.invoke to invoke other services. The services being invoked
+    don't have to be available through any channels, it suffices for zato.service.invoke
+    to be exposed over HTTP.
+    """
     def __init__(self, url=None, auth=None, path='/zato/admin/invoke', session=None, to_bunch=True):
         super(AnyServiceInvoker, self).__init__(url, auth, path, session, to_bunch)
         
@@ -69,17 +75,18 @@ class AnyServiceInvoker(Client):
         request = { id_: value, 'payload': dumps(payload).encode('base64'),
             'channel': channel, 'data_format': data_format, 'transport': transport,
             }
-        
-        return super(AnyServiceInvoker, self).inner_invoke(dumps(request), ServiceInvokeResponse)
-        
+
+        return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse)
+
 class SIOClient(Client):
-    def __init__(self, url=None, auth=None, path=None, session=None, to_bunch=True):
-        super(SIOClient, self).__init__(url, auth, path, session, to_bunch)
-        
-    def invoke(self, payload=None, channel='invoke', data_format='json', transport=None, async=False, id=None):
-        return super(SIOClient, self).inner_invoke(dumps(payload), SIOResponse)
+    """ Client for services that accept Simple IO (SIO).
+    """
+    def invoke(self, payload=None):
+        return super(SIOClient, self).invoke(dumps(payload), SIOResponse)
         
 class Response(object):
+    """ A base class for all specific response types client may return.
+    """
     def __init__(self, inner, to_bunch):
         self.inner = inner # Acutal response from the requests module
         self.to_bunch = to_bunch
@@ -95,7 +102,8 @@ class Response(object):
         raise NotImplementedError('Must be defined by subclasses')
         
 class SIOResponse(Response):
-        
+    """ Stores responses from SIO services.
+    """
     def init(self):
         json = loads(self.inner.text)
         for name in('cid', 'details', 'result'):
@@ -116,7 +124,8 @@ class SIOResponse(Response):
         return True
                         
 class ServiceInvokeResponse(SIOResponse):
-                    
+    """ Stores responses from SIO services invoked through the zato.service.invoke service.
+    """
     def set_data(self, payload):
         if payload.get('response'):
             data = loads(payload['response'].decode('base64'))
@@ -134,6 +143,6 @@ if __name__ == '__main__':
     #client = AnyServiceInvoker(address, auth)#, path)
     client = SIOClient(address, auth, path)
     response = client.invoke({'cluster_id':1})
-    print(response.inner.text)
+    #print(response.inner.text)
     print(response.data)
     
