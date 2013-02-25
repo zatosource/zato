@@ -395,7 +395,7 @@ class SimpleIOPayload(ValueConverter):
         else:
             elem_value = item.get(lookup_name, '')
 
-        if elem_value == u'': # Don't use 'if not elem_value' here
+        if isinstance(elem_value, basestring) and not elem_value:
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
                 self.zato_logger.debug(msg)
