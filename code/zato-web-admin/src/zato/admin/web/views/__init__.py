@@ -36,7 +36,7 @@ from django.template.response import TemplateResponse
 from pytz import UTC
 
 # Zato
-from zato.admin.web import from_utc_to_user, invoke_admin_service
+from zato.admin.web import from_utc_to_user
 from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
             'password1': req.POST.get(field1, ''),
             'password2': req.POST.get(field2, ''),
         }
-        invoke_admin_service(req.zato.cluster, service_name, input_dict)
+        req.zato.client.invoke(service_name, input_dict)
 
     except Exception, e:
         msg = 'Could not change the password, e:[{e}]'.format(e=format_exc(e))
@@ -139,7 +139,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
     
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
-    soap_action = None
+    service_name = None
     
     class SimpleIO:
         input_required = []
@@ -179,8 +179,7 @@ class Index(_BaseView):
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
-            zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, {'cluster_id':self.cluster_id})
-            return zato_message
+            return self.req.zato.invoke(self.service_name, {'cluster_id':self.cluster_id})
     
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
@@ -214,13 +213,13 @@ class Index(_BaseView):
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
             zato_path_needed = 'item_list.item' if output_repeated else 'item'
             
-            if self.soap_action and self.cluster_id:
-                zato_message = self.invoke_admin_service()
-                if zato_message is not None and zato_path(zato_path_needed).get_from(zato_message) is not None:
+            if self.service_name and self.cluster_id:
+                response = self.invoke_admin_service()
+                if response.ok
                     if output_repeated:
-                        self._handle_item_list(zato_message.item_list)
+                        self._handle_item_list(response.data)
                     else:
-                        self._handle_item(zato_message.item)
+                        self._handle_item(response.data)
     
             return_data['items'] = self.items
             return_data['item'] = self.item
@@ -264,15 +263,15 @@ class CreateEdit(_BaseView):
                 
             self.input_dict.update(input_dict)
 
-            zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+            response = self.req.zato.client.invoke(self.service_name, input_dict)
     
             return_data = {
-                'message': self.success_message(zato_message.item)
+                'message': self.success_message(response.data)
                 }
             return_data.update(initial_return_data)
 
             for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
-                value = getattr(zato_message.item, name, None)
+                value = getattr(response.data, name, None)
                 if value:
                     value = value.text
                     if isinstance(value, basestring):
@@ -309,7 +308,7 @@ class Delete(_BaseView):
                 'cluster_id': self.cluster_id
             }
             input_dict.update(initial_input_dict)
-            invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+            req.zato.client.invoke(self.service_name, input_dict)
             return HttpResponse()
         except Exception, e:
             msg = '{}, e:[{}]'.format(self.error_message, format_exc(e))

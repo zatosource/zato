@@ -44,16 +44,19 @@ from zato.common.log_message import CID_LENGTH
 # in a response's __repr__ method.
 CID_NO_CLIP = int(CID_LENGTH / 2)
 
+mod_logger = logging.getLogger(__name__)
+
 # ##############################################################################
 
 class _Response(object):
     """ A base class for all specific response types client may return.
     """
-    def __init__(self, inner, to_bunch, max_response_repr, max_cid_repr):
+    def __init__(self, inner, to_bunch, max_response_repr, max_cid_repr, logger):
         self.inner = inner # Acutal response from the requests module
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr
+        self.logger = logger
         self.sio_result = None
         self.ok = False
         self.has_data = False
@@ -225,14 +228,22 @@ class _Client(object):
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr
-        self.logger = logger
+        self.logger = logger or mod_logger
         
     def inner_invoke(self, request, response_class, is_async, headers):
         """ Actually invokes a service through HTTP and returns its response.
         """
-        response = self.session.post(self.address, request, headers=headers)
-        return response_class(response, self.to_bunch, self.max_response_repr,
-            self.max_cid_repr)
+        raw_response = self.session.post(self.address, request, headers=headers)
+        response = response_class(raw_response, self.to_bunch, self.max_response_repr,
+            self.max_cid_repr, self.logger)
+            
+        if self.logger.isEnabledFor(logging.DEBUG):
+            msg = ('request:[{}]\nresponse_class:[{}]\nis_async:[{}]\nheaders:[{}]\n'
+                  'text:[{}]\ndata:[{}]').format(request,
+                response_class, is_async, headers, raw_response.text, response.data)
+            self.logger.debug(msg)
+            
+        return response
     
     def invoke(self, request, response_class, headers=None):
         """ Input parameters are like when invoking a service directly.
