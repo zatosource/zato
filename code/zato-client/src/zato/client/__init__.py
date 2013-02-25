@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 """
 Copyright (C) 2013 Dariusz Suchojad <dsuch at gefira.pl>
