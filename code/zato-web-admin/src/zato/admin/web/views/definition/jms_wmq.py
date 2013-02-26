@@ -33,8 +33,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'def-jms-wmq'
     template = 'zato/definition/jms_wmq.html'
-    
-    soap_action = 'zato.definition.jms-wmq.get-list'
+    service_name = 'zato.definition.jms-wmq.get-list'
     output_class = ConnDefWMQ
     
     class SimpleIO(_Index.SimpleIO):
@@ -58,18 +57,18 @@ class _CreateEdit(CreateEdit):
         output_required = ('id',)
         
     def success_message(self, item):
-        return 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'def-jms-wmq-create'
-    soap_action = 'zato.definition.jms-wmq.create'
+    service_name = 'zato.definition.jms-wmq.create'
     
 class Edit(_CreateEdit):
     url_name = 'def-jms-wmq-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.definition.jms-wmq.edit'
+    service_name = 'zato.definition.jms-wmq.edit'
 
 class Delete(_Delete):
     url_name = 'def-jms-wmq-delete'
     error_message = 'Could not delete the JMS WebSphere MQ definition'
-    soap_action = 'zato.definition.jms-wmq.delete'
+    service_name = 'zato.definition.jms-wmq.delete'

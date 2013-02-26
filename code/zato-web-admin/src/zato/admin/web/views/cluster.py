@@ -312,14 +312,11 @@ def servers_edit(req):
         else:
             fetch_lb_data = False
 
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato.cluster.server.edit', 
-            {'id':server_id, 'name':req.POST['edit-name']})
-        
-        msg_item = zato_message.item
+        response = req.zato.client.invoke('zato.cluster.server.edit', {'id':server_id, 'name':req.POST['edit-name']})
         
         return _common_edit_message(client, 'Server [{}] updated', 
-            msg_item.id.text, msg_item.name.text, msg_item.host.text,
-            msg_item.up_status.text, msg_item.up_mod_date.text,
+            response.data.id, response.data.name, response.data.host,
+            response.data.up_status, response.data.up_mod_date,
             req.zato.cluster_id, req.zato.user_profile, fetch_lb_data)
     
     except Exception, e:
@@ -350,15 +347,15 @@ def servers_add_remove_lb(req, action, server_id):
 class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
-    soap_action = 'zato.cluster.server.delete'
+    service_name = 'zato.cluster.server.delete'
     
     def __call__(self, req, *args, **kwargs):
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato.cluster.server.get-by-id', {'id':req.zato.id})
+        response = req.zato.client.invoke('zato.cluster.server.get-by-id', {'id':req.zato.id})
 
         server = req.zato.odb.query(Server).filter_by(id=req.zato.id).one()
 
         client = get_lb_client(req.zato.cluster) # Checks whether the server is known by LB
         if client.get_server_data_dict(server.name):
-            client.add_remove_server('remove', zato_message.item.name.text)
+            client.add_remove_server('remove', response.data.name)
             
         return super(ServerDelete, self).__call__(req, *args, **kwargs)

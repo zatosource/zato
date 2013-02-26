@@ -33,8 +33,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-zmq'
     template = 'zato/channel/zmq.html'
-    
-    soap_action = 'zato.channel.zmq.get-list'
+    service_name = 'zato.channel.zmq.get-list'
     output_class = ChannelZMQ
     
     class SimpleIO(_Index.SimpleIO):
@@ -55,18 +54,18 @@ class _CreateEdit(CreateEdit):
         output_required = ('id', 'name')
 
     def success_message(self, item):
-        return 'Successfully {0} the Zero MQ channel [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the Zero MQ channel [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'channel-zmq-create'
-    soap_action = 'zato.channel.zmq.create'
+    service_name = 'zato.channel.zmq.create'
 
 class Edit(_CreateEdit):
     url_name = 'channel-zmq-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.channel.zmq.edit'
+    service_name = 'zato.channel.zmq.edit'
 
 class Delete(_Delete):
     url_name = 'channel-zmq-delete'
     error_message = 'Could not delete the Zero MQ channel'
-    soap_action = 'zato.channel.zmq.delete'
+    service_name = 'zato.channel.zmq.delete'
