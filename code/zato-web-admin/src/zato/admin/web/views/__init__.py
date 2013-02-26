@@ -48,6 +48,15 @@ from zato.common.util import get_lb_client as _get_lb_client
 
 logger = logging.getLogger(__name__)
 
+def get_definition_list(client, cluster, def_type):
+    """ Returns all definitions of a given type existing on a given cluster.
+    """
+    out = {}
+    for item in client.invoke('zato.definition.{}.get-list'.format(def_type), {'cluster_id':cluster.id}):
+        out[item.id] = item.name
+        
+    return out
+
 def get_sample_dt(user_profile):
     """ A sample date and time an hour in the future serving as a hint as to what 
     format to use when entering date and time manually in the user-provided format.
@@ -215,7 +224,7 @@ class Index(_BaseView):
             
             if self.service_name and self.cluster_id:
                 response = self.invoke_admin_service()
-                if response.ok
+                if response.ok:
                     if output_repeated:
                         self._handle_item_list(response.data)
                     else:
@@ -273,7 +282,6 @@ class CreateEdit(_BaseView):
             for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
                 value = getattr(response.data, name, None)
                 if value:
-                    value = value.text
                     if isinstance(value, basestring):
                         value = value.encode('utf-8')
                     else:

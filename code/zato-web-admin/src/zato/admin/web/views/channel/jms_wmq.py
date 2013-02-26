@@ -32,23 +32,12 @@ from anyjson import dumps
 # Zato
 from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.channel.jms_wmq import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import Delete as _Delete, get_definition_list, \
+     Index as _Index, method_allowed
 from zato.common.odb.model import ChannelWMQ
 from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
-
-def _get_def_ids(cluster):
-    out = {}
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.jms-wmq.get-list', {'cluster_id':cluster.id})
-    
-    if zato_path('item_list.item').get_from(zato_message) is not None:
-        for definition_elem in zato_message.item_list.item:
-            id = definition_elem.id.text
-            name = definition_elem.name.text
-            out[id] = name
-        
-    return out
         
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
@@ -64,11 +53,11 @@ def _get_edit_create_message(params, prefix=''):
         'data_format': params.get(prefix + 'data_format'),
     }
 
-def _edit_create_response(cluster, verb, id, name, cluster_id, def_id):
-    zato_message, soap_response  = invoke_admin_service(cluster, 'zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
+def _edit_create_response(client, verb, id, name, cluster_id, def_id):
+    response = req.zato.client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
     return_data = {'id': id,
                    'message': 'Successfully {0} the JMS WebSphere MQ channel [{1}]'.format(verb, name),
-                   'def_name': zato_message.item.name.text
+                   'def_name': response.data.name
                 }
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
@@ -77,8 +66,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'channel-jms-wmq'
     template = 'zato/channel/jms_wmq.html'
-    
-    soap_action = 'zato.channel.jms-wmq.get-list'
+    service_name = 'zato.channel.jms-wmq.get-list'
     output_class = ChannelWMQ
     
     class SimpleIO(_Index.SimpleIO):
@@ -91,7 +79,7 @@ class Index(_Index):
         edit_form = EditForm(prefix='edit')
         
         if self.req.zato.cluster_id:
-            def_ids = _get_def_ids(self.req.zato.cluster)
+            def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'jms-wmq')
             create_form.set_def_id(def_ids)
             edit_form.set_def_id(def_ids)
         
@@ -103,8 +91,8 @@ class Index(_Index):
 @method_allowed('POST')
 def create(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.channel.jms-wmq.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(req.zato.cluster, 'created', zato_message.item.id.text, req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
+        response = req.zato.client.invoke('zato.channel.jms-wmq.create', _get_edit_create_message(req.POST))
+        return _edit_create_response(req.zato.client, 'created', response.data.id, req.POST['name'], req.POST['cluster_id'], req.POST['def_id'])
     except Exception, e:
         msg = 'Could not create a JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -114,8 +102,8 @@ def create(req):
 @method_allowed('POST')
 def edit(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.channel.jms-wmq.edit', _get_edit_create_message(req.POST, 'edit-'))
-        return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
+        response = req.zato.client.invoke('zato.channel.jms-wmq.edit', _get_edit_create_message(req.POST, 'edit-'))
+        return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
     except Exception, e:
         msg = 'Could not update the JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -124,4 +112,4 @@ def edit(req):
 class Delete(_Delete):
     url_name = 'channel-jms-wmq-delete'
     error_message = 'Could not delete the JMS WebSphere MQ channel'
-    soap_action = 'zato.channel.jms-wmq.delete'
+    service_name = 'zato.channel.jms-wmq.delete'

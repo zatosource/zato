@@ -34,8 +34,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'out-ftp'
     template = 'zato/outgoing/ftp.html'
-    
-    soap_action = 'zato.outgoing.ftp.get-list'
+    service_name = 'zato.outgoing.ftp.get-list'
     output_class = OutgoingFTP
     
     class SimpleIO(_Index.SimpleIO):
@@ -57,21 +56,21 @@ class _CreateEdit(CreateEdit):
         output_required = ('id', 'name')
         
     def success_message(self, item):
-        return 'Successfully {0} the outgoing FTP connection [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the outgoing FTP connection [{1}]'.format(self.verb, item.name)
     
 class Create(_CreateEdit):
     url_name = 'out-ftp-create'
-    soap_action = 'zato.outgoing.ftp.create'
+    service_name = 'zato.outgoing.ftp.create'
 
 class Edit(_CreateEdit):
     url_name = 'out-ftp-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.outgoing.ftp.edit'
+    service_name = 'zato.outgoing.ftp.edit'
 
 class Delete(_Delete):
     url_name = 'out-ftp-delete'
     error_message = 'Could not delete the outgoing FTP connection'
-    soap_action = 'zato.outgoing.ftp.delete'
+    service_name = 'zato.outgoing.ftp.delete'
 
 @method_allowed('POST')
 def change_password(req):

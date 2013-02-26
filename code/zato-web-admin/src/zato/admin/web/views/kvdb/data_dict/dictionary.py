@@ -26,8 +26,6 @@ import logging
 from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 
-logger = logging.getLogger(__name__)
-
 class DictItem(object):
     pass
 
@@ -35,8 +33,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'kvdb-data-dict-dictionary'
     template = 'zato/kvdb/data_dict/dictionary.html'
-    
-    soap_action = 'zato.kvdb.data-dict.dictionary.get-list'
+    service_name = 'zato.kvdb.data-dict.dictionary.get-list'
     output_class = DictItem
     
     class SimpleIO(_Index.SimpleIO):
@@ -61,14 +58,14 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'kvdb-data-dict-dictionary-create'
-    soap_action = 'zato.kvdb.data-dict.dictionary.create'
+    service_name = 'zato.kvdb.data-dict.dictionary.create'
 
 class Edit(_CreateEdit):
     url_name = 'kvdb-data-dict-dictionary-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.kvdb.data-dict.dictionary.edit'
+    service_name = 'zato.kvdb.data-dict.dictionary.edit'
 
 class Delete(_Delete):
     url_name = 'kvdb-data-dict-dictionary-delete'
     error_message = 'Could not delete the data dictionary'
-    soap_action = 'zato.kvdb.data-dict.dictionary.delete'
+    service_name = 'zato.kvdb.data-dict.dictionary.delete'

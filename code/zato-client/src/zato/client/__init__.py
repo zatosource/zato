@@ -51,7 +51,7 @@ mod_logger = logging.getLogger(__name__)
 class _Response(object):
     """ A base class for all specific response types client may return.
     """
-    def __init__(self, inner, to_bunch, max_response_repr, max_cid_repr, logger):
+    def __init__(self, inner, to_bunch, max_response_repr, max_cid_repr, logger, output_repeated=False):
         self.inner = inner # Acutal response from the requests module
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
@@ -60,7 +60,7 @@ class _Response(object):
         self.sio_result = None
         self.ok = False
         self.has_data = False
-        self.data = None
+        self.data = [] if output_repeated else None
         self.cid = self.inner.headers.get('x-zato-cid', '(None)')
         self.details = None
         self.init()
@@ -74,6 +74,9 @@ class _Response(object):
         return '<{} at {} ok:[{}] inner.status_code:[{}] cid:{}, inner.text:[{}]>'.format(
             self.__class__.__name__, hex(id(self)), self.ok, self.inner.status_code,
             cid, self.inner.text[:self.max_response_repr])
+    
+    def __iter__(self):
+        return iter(self.data)
     
     def init(self):
         raise NotImplementedError('Must be defined by subclasses')
@@ -230,12 +233,12 @@ class _Client(object):
         self.max_cid_repr = max_cid_repr
         self.logger = logger or mod_logger
         
-    def inner_invoke(self, request, response_class, is_async, headers):
+    def inner_invoke(self, request, response_class, is_async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
         """
         raw_response = self.session.post(self.address, request, headers=headers)
         response = response_class(raw_response, self.to_bunch, self.max_response_repr,
-            self.max_cid_repr, self.logger)
+            self.max_cid_repr, self.logger, output_repeated)
             
         if self.logger.isEnabledFor(logging.DEBUG):
             msg = ('request:[{}]\nresponse_class:[{}]\nis_async:[{}]\nheaders:[{}]\n'
@@ -286,12 +289,15 @@ class AnyServiceInvoker(_Client):
     to be exposed over HTTP.
     """
     def invoke(self, name, payload='', headers=None, channel='invoke', data_format='json', transport=None, async=False, id=None):
+        _name = name.lower()
+        output_repeated = _name.startswith('get') and _name.endswith('list')
+        
         id_, value = ('name', name) if name else ('id', id)
         request = { id_: value, 'payload': dumps(payload).encode('base64'),
             'channel': channel, 'data_format': data_format, 'transport': transport,
             }
 
-        return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, headers)
+        return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, headers, output_repeated)
     
 # ##############################################################################
     

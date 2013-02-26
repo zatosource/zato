@@ -296,7 +296,7 @@ def index(req):
             # We have a server to pick the schedulers from, try to invoke it now.
             response = req.zato.client.invoke('zato.scheduler.get-list', {'cluster_id': req.zato.cluster_id})
             
-            if response.ok:
+            if response.has_data:
                 for job_elem in response.data:
                     
                     id = job_elem.id

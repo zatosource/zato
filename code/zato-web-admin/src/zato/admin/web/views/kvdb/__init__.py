@@ -31,12 +31,9 @@ from django.template.response import TemplateResponse
 from anyjson import dumps
 
 # Zato
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
-
-logger = logging.getLogger(__name__)
 
 @method_allowed('GET')
 def remote_command(req):
@@ -55,8 +52,8 @@ def remote_command_execute(req):
     """ Executes a command against the key/value DB.
     """
     try:
-        zato_message, soap_response  = invoke_admin_service(req.zato.cluster, 'zato.kvdb.remote-command.execute', {'command': req.POST['command']})
-        return_data = {'message': zato_message.item.result.text}
+        response = req.zato.client.invoke('zato.kvdb.remote-command.execute', {'command': req.POST['command']})
+        return_data = {'message': response.result}
         
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
     except Exception, e:

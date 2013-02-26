@@ -30,19 +30,16 @@ from django.http import HttpResponse
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm, TranslateForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import ZATO_NONE, zato_path
 
 logger = logging.getLogger(__name__)
 
-def _get_systems(cluster):
+def _get_systems(client):
     systems = []
-    zato_message, _  = invoke_admin_service(cluster, 'zato.kvdb.data-dict.dictionary.get-system-list', {})
-    if zato_path('item_list.item').get_from(zato_message) is not None:
-        for item in zato_message.item_list.item:
-            systems.append([item.name.text] * 2)
+    for item in client.invoke('zato.kvdb.data-dict.dictionary.get-system-list', {}):
+        systems.append([item.name] * 2)
     return systems
 
 class DictItem(object):
@@ -52,8 +49,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'kvdb-data-dict-translation'
     template = 'zato/kvdb/data_dict/translation/index.html'
-    
-    soap_action = 'zato.kvdb.data-dict.translation.get-list'
+    service_name = 'zato.kvdb.data-dict.translation.get-list'
     output_class = DictItem
     
     class SimpleIO(_Index.SimpleIO):
@@ -80,24 +76,22 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'kvdb-data-dict-translation-create'
-    soap_action = 'zato.kvdb.data-dict.translation.create'
+    service_name = 'zato.kvdb.data-dict.translation.create'
 
 class Edit(_CreateEdit):
     url_name = 'kvdb-data-dict-translation-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.kvdb.data-dict.translation.edit'
+    service_name = 'zato.kvdb.data-dict.translation.edit'
 
 class Delete(_Delete):
     url_name = 'kvdb-data-dict-translation-delete'
     error_message = 'Could not delete the data translation'
-    soap_action = 'zato.kvdb.data-dict.translation.delete'
+    service_name = 'zato.kvdb.data-dict.translation.delete'
 
 def _get_key_value_list(req, service_name, input_dict):
     return_data = []
-    zato_message, _  = invoke_admin_service(req.zato.cluster, service_name, input_dict)
-    if zato_path('item_list.item').get_from(zato_message) is not None:
-        for item in zato_message.item_list.item:
-            return_data.append({'name':item.name.text})
+    for item in req.zato.client.invoke(service_name, input_dict):
+        return_data.append({'name':item.name})
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
@@ -120,18 +114,18 @@ def translate(req):
 
     def _translate():
         result = {}
-        zato_message, _  = invoke_admin_service(req.zato.cluster, 'zato.kvdb.data-dict.translation.translate', post_data)
+        response = req.zato.client.invoke('zato.kvdb.data-dict.translation.translate', post_data)
         
-        if zato_path('item').get_from(zato_message) is not None:
+        if response.has_data:
             for name in('value2', 'repr', 'hex', 'sha1', 'sha256'):
-                value = getattr(zato_message.item, name, None)
-                if value and value.text != ZATO_NONE:
-                    result[name] = value.text
+                value = getattr(zato_message.data, name, None)
+                if value and value != ZATO_NONE:
+                    result[name] = value
         
         return result
 
     if req.zato.get('cluster'):
-        translate_form = TranslateForm(_get_systems(req.zato.cluster), req.POST)
+        translate_form = TranslateForm(_get_systems(req.zato.client), req.POST)
     else:
         translate_form = None
         

@@ -74,28 +74,6 @@ TIME_FORMATS = {
     '24': 'H:i:s',
 }
 
-def invoke_admin_service(cluster, soap_action, input_dict):
-    """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
-    Django session-related information to the request headers.
-    """
-    zato_message = Element(soap_action.replace(':', '_').replace('.', '_').replace('-', '_') + '_request')
-    
-    for k, v in input_dict.items():
-        setattr(zato_message, k, v)
-
-    headers = {'x-zato-session-type':'web-admin/tech_acc', 
-               'x-zato-user': ADMIN_INVOKE_NAME,
-               'x-zato-password': ADMIN_INVOKE_PASSWORD
-               }
-
-    request = etree.tostring(zato_message)
-    zato_message, soap_response = _invoke_admin_service(cluster, soap_action, request, headers)
-    
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug('Request:[{}], response:[{}]'.format(request, soap_response))
-        
-    return zato_message, soap_response
-
 def last_hour_start_stop(now):
     """ Returns a ISO-8601 formatted pair of start/stop timestamps representing
     now-1 hour and now.
