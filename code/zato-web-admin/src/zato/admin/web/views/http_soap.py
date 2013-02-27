@@ -119,7 +119,7 @@ def index(req):
         colspan += 2
 
     if req.zato.cluster_id:
-        for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': cluster.id}):
+        for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
             if connection == 'outgoing':

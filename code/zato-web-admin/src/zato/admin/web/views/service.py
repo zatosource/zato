@@ -56,7 +56,7 @@ from validate import is_boolean
 from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import SourceInfo, ZATO_NONE, zato_path
+from zato.common import SIMPLE_IO, SourceInfo, ZATO_NONE, zato_path
 from zato.common.odb.model import Service
 
 logger = logging.getLogger(__name__)
@@ -166,6 +166,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
+        input_optional = ('name_filter',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 
             'may_be_deleted', 'usage', 'slow_threshold')
         output_repeated = True
@@ -187,8 +188,8 @@ class Edit(CreateEdit):
     service_name = 'zato.service.edit'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('is_active', 'slow_threshold')
-        output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage')
+        input_required = ('id', 'is_active', 'slow_threshold')
+        output_required = ('id', 'name', 'impl_name', 'is_internal', 'usage', 'may_be_deleted')
 
     def success_message(self, item):
         return 'Successfully {0} the service [{1}]'.format(self.verb, item.name)
@@ -540,23 +541,28 @@ def invoker(req, service_name):
     return TemplateResponse(req, 'zato/service/invoker.html', return_data)
 
 @method_allowed('POST')
-def invoke(req, service_id, cluster_id):
+def invoke(req, name, cluster_id):
     """ Executes a service directly, even if it isn't exposed through any channel.
     """
     try:
-        input_dict = {
-            'id': service_id,
-            'payload': req.POST.get('payload', '').encode('base64'),
-            'data_format': req.POST.get('data_format', ''),
-            'transport': req.POST.get('transport', ''),
-        }
-        response = req.zato.client.invoke('zato.service.invoke', input_dict)
+        input_dict = {'needs_dumps': False}
+        for attr in('payload', 'data_format', 'transport'):
+            input_dict[attr] = req.POST.get(attr, '')
+        
+        response = req.zato.client.invoke(name, **input_dict)
 
     except Exception, e:
-        msg = 'Could not invoke the service. id:[{}], cluster_id:[{}], e:[{}]'.format(
-            service_id, cluster_id, format_exc(e))
+        msg = 'Could not invoke the service. name:[{}], cluster_id:[{}], e:[{}]'.format(
+            name, cluster_id, format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
-        service_response = response.data.response.decode('base64') if response.data.response else '(No output)'
-        return HttpResponse(service_response)
+        try:
+            if response.has_data:
+                out = response.inner_service_response
+                print(3333, type(response.inner_service_response), response.inner_service_response)
+                return HttpResponse(str(out))
+            else:
+                return HttpResponseServerError(response.details)
+        except Exception, e:
+            return HttpResponseServerError(format_exc(e))

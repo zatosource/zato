@@ -398,11 +398,19 @@ class StatsElem(object):
         if not ignore:
             ignore = ['expected_time_elems', 'mean_trend_int', 'usage_trend_int']
         return {attr: getattr(self, attr) for attr in self.get_attrs(ignore)}
+
+    @staticmethod
+    def from_json(item):
+        stats_elem = StatsElem()
+        for k, v in item.items():
+            setattr(stats_elem, k, v)
+            
+        return stats_elem
     
     @staticmethod
-    def from_xml(xml_item):
+    def from_xml(item):
         stats_elem = StatsElem()
-        for child in xml_item.getchildren():
+        for child in item.getchildren():
             setattr(stats_elem, child.xpath('local-name()'), child.pyval)
             
         return stats_elem
@@ -427,3 +435,6 @@ class StatsElem(object):
         self.usage += other.usage
         
         return self
+    
+    def __bool__(self):
+        return bool(self.service_name) # Empty stats_elems won't have a service name set

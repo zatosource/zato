@@ -36,13 +36,12 @@ from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed
 from zato.common import zato_path, ZATO_WSS_PASSWORD_TYPES
-from zato.admin.web import invoke_admin_service
 from zato.common.odb.model import WSSDefinition
 
 logger = logging.getLogger(__name__)
 
 def _edit_create_response(zato_message, action, name, password_type):
-    return_data = {'id': zato_message.item.id.text,
+    return_data = {'id': zato_message.item.id,
         'message': 'Successfully {0} the WS-Security definition [{1}]'.format(action, name),
         'password_type_raw':password_type,
         'password_type':ZATO_WSS_PASSWORD_TYPES[password_type]}
@@ -73,27 +72,14 @@ def index(req):
     change_password_form = ChangePasswordForm()
 
     if req.zato.cluster_id and req.method == 'GET':
-        
-        zato_message, soap_response  = invoke_admin_service(req.zato.cluster,'zato.security.wss.get-list', {'cluster_id':req.zato.cluster_id})
-        
-        if zato_path('item_list.item').get_from(zato_message) is not None:
-            for definition_elem in zato_message.item_list.item:
-                id = definition_elem.id.text
-                name = definition_elem.name.text
-                is_active = is_boolean(definition_elem.is_active.text)
-                username = definition_elem.username.text
-                password_type = ZATO_WSS_PASSWORD_TYPES[definition_elem.password_type.text]
-                password_type_raw = definition_elem.password_type.text
-                reject_empty_nonce_creat = definition_elem.reject_empty_nonce_creat
-                reject_stale_tokens = definition_elem.reject_stale_tokens
-                reject_expiry_limit = definition_elem.reject_expiry_limit
-                nonce_freshness_time = definition_elem.nonce_freshness_time
 
-                wss = WSSDefinition(id, name, is_active, username, None,
-                        password_type, reject_empty_nonce_creat, reject_stale_tokens,
-                        reject_expiry_limit, nonce_freshness_time, password_type_raw=password_type_raw)
+        for item in req.zato.client.invoke('zato.security.wss.get-list', {'cluster_id':req.zato.cluster_id}):
+            wss = WSSDefinition(item.id, item.name, item.is_active, item.username, None,
+                    ZATO_WSS_PASSWORD_TYPES[item.password_type], item.reject_empty_nonce_creat, 
+                    item.reject_stale_tokens, item.reject_expiry_limit, item.nonce_freshness_time, 
+                    password_type_raw=item.password_type)
 
-                items.append(wss)
+            items.append(wss)
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
@@ -111,7 +97,7 @@ def edit(req):
     """ Updates WS-S definitions's parameters (everything except for the password).
     """
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
+        req.zato.client.invoke('zato.security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
         return _edit_create_response(zato_message, 'updated', req.POST['edit-name'], req.POST['edit-password_type'])
     except Exception, e:
         msg = 'Could not update the WS-Security definition, e:[{e}]'.format(e=format_exc(e))
@@ -121,7 +107,7 @@ def edit(req):
 @method_allowed('POST')
 def create(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.wss.create', _get_edit_create_message(req.POST))
+        req.zato.client.invoke('zato.security.wss.create', _get_edit_create_message(req.POST))
         return _edit_create_response(zato_message, 'created', req.POST['name'], req.POST['password_type'])
     except Exception, e:
         msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
@@ -131,7 +117,7 @@ def create(req):
 class Delete(_Delete):
     url_name = 'security-wss-delete'
     error_message = 'Could not delete the WS-Security definition'
-    soap_action = 'zato.security.wss.delete'
+    service_name = 'zato.security.wss.delete'
 
 @method_allowed('POST')
 def change_password(req):

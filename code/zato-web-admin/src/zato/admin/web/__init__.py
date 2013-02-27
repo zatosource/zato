@@ -35,7 +35,6 @@ from lxml.objectify import Element
 # Zato
 from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD
 from zato.common import zato_namespace
-from zato.common.soap import invoke_admin_service as _invoke_admin_service
 from zato.common.util import from_local_to_utc as _from_local_to_utc, from_utc_to_local as _from_utc_to_local
 
 logger = logging.getLogger(__name__)

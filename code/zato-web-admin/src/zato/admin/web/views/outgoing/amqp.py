@@ -31,7 +31,6 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.settings import delivery_friendly_name
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.outgoing.amqp import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, \
      Index as _Index, method_allowed
