@@ -347,15 +347,15 @@ def _get_stats(client, start, stop, n, n_type, stats_type=None):
         input_dict['stop'] = stop
         
     if stats_type == 'trends':
-        service_name = 'zato.stats.get-trends'
+        service_name = 'zato.stats.trends.get-trends'
     else:
-        service_name = 'zato.stats.get-summary-by-range'
+        service_name = 'zato.stats.summary.get-summary-by-range'
     
     response = client.invoke(service_name, input_dict)
     
     if response.has_data:
         for item in response.data:
-            out.append(StatsElem.from_xml(item)) # TODO: This should be from_json now that we use the new Python client
+            out.append(StatsElem.from_json(item))
             
     return out
 

@@ -30,7 +30,6 @@ from django.http import HttpResponse, HttpResponseServerError
 from anyjson import dumps
 
 # Zato
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.channel.jms_wmq import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, \
      Index as _Index, method_allowed

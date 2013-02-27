@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime
 from traceback import format_exc
 
 # anyjson
@@ -37,7 +38,7 @@ import requests
 
 # Zato
 from zato.common import soap_doc, soap_body_path, soap_data_path, soap_data_xpath, soap_fault_xpath, \
-     ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, ZATO_OK, zato_result_xpath
+     ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
 from zato.common.log_message import CID_LENGTH
 
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
@@ -60,7 +61,8 @@ class _Response(object):
         self.sio_result = None
         self.ok = False
         self.has_data = False
-        self.data = [] if output_repeated else None
+        self.output_repeated = output_repeated
+        self.data = [] if self.output_repeated else None
         self.cid = self.inner.headers.get('x-zato-cid', '(None)')
         self.details = None
         self.init()
@@ -196,14 +198,24 @@ class SOAPSIOResponse(_Response):
 class ServiceInvokeResponse(JSONSIOResponse):
     """ Stores responses from SIO services invoked through the zato.service.invoke service.
     """
+    def __init__(self, *args, **kwargs):
+        self.inner_service_response = None
+        super(ServiceInvokeResponse, self).__init__(*args, **kwargs)
+
     def set_data(self, payload):
         if payload.get('response'):
-            data = loads(payload['response'].decode('base64'))
-            data_key = data.keys()[0]
-            self.data = data[data_key]
-            
+            self.inner_service_response = payload['response'].decode('base64')
+            try:
+                data = loads(self.inner_service_response)
+            except ValueError, e:
+                # Not a JSON response
+                self.data = self.inner_service_response
+            else:
+                data_key = data.keys()[0]
+                self.data = data[data_key]
+
             return True 
-    
+
 # ##############################################################################
                         
 class RawDataResponse(_Response):
@@ -248,7 +260,7 @@ class _Client(object):
             
         return response
     
-    def invoke(self, request, response_class, headers=None):
+    def invoke(self, request, response_class, is_async=False, headers=None, output_repeated=False):
         """ Input parameters are like when invoking a service directly.
         """
         headers = headers or {}
@@ -288,16 +300,26 @@ class AnyServiceInvoker(_Client):
     don't have to be available through any channels, it suffices for zato.service.invoke
     to be exposed over HTTP.
     """
-    def invoke(self, name, payload='', headers=None, channel='invoke', data_format='json', transport=None, async=False, id=None):
-        _name = name.lower()
-        output_repeated = _name.startswith('get') and _name.endswith('list')
+    def json_default_handler(self, value):
+        if isinstance(value, datetime):
+            return value.isoformat()
+        raise TypeError('Cannot serialize [{}]'.format(value))
         
+    def invoke(self, name, payload='', headers=None, channel='invoke', data_format='json', 
+            transport=None, async=False, id=None, needs_dumps=True, output_repeated=ZATO_NOT_GIVEN):
+        
+        if output_repeated == ZATO_NOT_GIVEN:
+            output_repeated = name.lower().endswith('list')
+        
+        if needs_dumps:
+            payload = dumps(payload, default=self.json_default_handler)
+
         id_, value = ('name', name) if name else ('id', id)
-        request = { id_: value, 'payload': dumps(payload).encode('base64'),
+        request = { id_: value, 'payload': payload.encode('base64'),
             'channel': channel, 'data_format': data_format, 'transport': transport,
             }
 
-        return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, headers, output_repeated)
+        return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, async, headers, output_repeated)
     
 # ##############################################################################
     

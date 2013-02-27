@@ -102,6 +102,15 @@ class FakeServer(object):
         self.fs_server_config.misc = Bunch()
         self.fs_server_config.misc.internal_services_may_be_deleted = False
         self.repo_location = rand_string()
+
+class ForceTypeWrapper(object):
+    """ Makes comparison between two ForceType elements use their names.
+    """
+    def __init__(self, value):
+        self.value = value
+        
+    def __cmp__(self, other):
+        return cmp(self.value.name, other.name)
         
 class ServiceTestCase(TestCase):
     
@@ -192,3 +201,6 @@ class ServiceTestCase(TestCase):
                 eq_(given_value, expected_value)
                 
         self._check_sio_request_input(instance, request_data)
+
+    def wrap_force_type(self, elem):
+        return ForceTypeWrapper(elem)

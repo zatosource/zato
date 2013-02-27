@@ -33,7 +33,6 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.settings import odb_engine_friendly_name
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
@@ -81,7 +80,7 @@ def index(req):
     change_password_form = ChangePasswordForm()
 
     if req.zato.cluster_id and req.method == 'GET':
-        for item in invoke_admin_service(req.zato.cluster, 'zato.outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id}):
+        for item in req.zato.client.invoke('zato.outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id}):
 
             _item =  SQLConnectionPool()
             
@@ -140,7 +139,7 @@ def edit(req):
 class Delete(_Delete):
     url_name = 'out-sql-delete'
     error_message = 'Could not delete the SQL connection'
-    soap_action = 'zato.outgoing.sql.delete'
+    service_name = 'zato.outgoing.sql.delete'
 
 @method_allowed('POST')
 def ping(req, cluster_id, id):

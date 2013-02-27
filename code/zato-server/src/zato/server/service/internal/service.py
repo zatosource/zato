@@ -49,7 +49,7 @@ class GetList(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
-        input_required = ('cluster_id',)
+        input_required = ('cluster_id', 'name_filter')
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 
                            Integer('usage'), Integer('slow_threshold'))
         output_repeated = True
@@ -59,8 +59,18 @@ class GetList(AdminService):
         sl = service_list(session, self.request.input.cluster_id, False)
         
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+        name_filter = [elem.strip().lower() for elem in self.request.input.get('name_filter', '').strip().split()]
         
         for item in sl:
+            if self.request.input.name_filter != '*':
+                skip_item = False
+                for filter in name_filter:
+                    if not filter in item.name.lower():
+                        skip_item = True
+                    
+                if skip_item:
+                    continue
+            
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
             
@@ -123,7 +133,7 @@ class Edit(AdminService):
         request_elem = 'zato_service_edit_request'
         response_elem = 'zato_service_edit_response'
         input_required = ('id', 'is_active', Integer('slow_threshold'))
-        output_required = ('id', 'name', 'impl_name', 'is_internal',)
+        output_required = ('id', 'name', 'impl_name', 'is_internal', Boolean('may_be_deleted'))
 
     def handle(self):
         input = self.request.input
@@ -141,6 +151,9 @@ class Edit(AdminService):
                 self.broker_client.publish(input)
                 
                 self.response.payload = service
+                
+                internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
+                self.response.payload.may_be_deleted = internal_del if service.is_internal else True
                 
             except Exception, e:
                 msg = 'Could not update the service, e:[{e}]'.format(e=format_exc(e))
@@ -248,8 +261,8 @@ class Invoke(AdminService):
             id_ = id
             
         response = func(id_, payload, 
-            self.request.input.channel, self.request.input.data_format,
-            self.request.input.transport, serialize=True)
+            self.request.input.get('channel'), self.request.input.get('data_format'),
+            self.request.input.get('transport'), serialize=True)
 
         self.response.payload.response = response.encode('base64') if response else ''
 

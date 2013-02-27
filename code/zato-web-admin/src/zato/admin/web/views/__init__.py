@@ -152,6 +152,7 @@ class _BaseView(object):
     
     class SimpleIO:
         input_required = []
+        input_optional = []
         output_required = []
         output_optional = []
         output_repeated = False
@@ -188,21 +189,26 @@ class Index(_BaseView):
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
-            return self.req.zato.invoke(self.service_name, {'cluster_id':self.cluster_id})
+            input_dict = {'cluster_id':self.cluster_id}
+            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+                if name != 'cluster_id':
+                    input_dict[name] = self.req.GET.get(name)
+                
+            return self.req.zato.client.invoke(self.service_name, input_dict)
     
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
-        for msg_item in item_list.item:
+        for msg_item in item_list:
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value:
-                    setattr(item, name, value.encode('utf-8'))
+                    setattr(item, name, value)
             self.items.append(item)
     
     def _handle_item(self, item):
@@ -267,7 +273,8 @@ class CreateEdit(_BaseView):
             }
             input_dict.update(initial_input_dict)
     
-            for name in self.SimpleIO.input_required:
+            
+            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 input_dict[name] = self.req.POST.get(self.form_prefix + name)
                 
             self.input_dict.update(input_dict)

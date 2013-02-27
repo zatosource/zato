@@ -158,6 +158,7 @@ class RequestDispatcher(object):
                         status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
                 else:
+                    status_code = INTERNAL_SERVER_ERROR
                     response = _format_exc
                     
                 # TODO: This should be configurable. Some people may want such

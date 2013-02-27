@@ -30,7 +30,6 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import method_allowed
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import zato_path

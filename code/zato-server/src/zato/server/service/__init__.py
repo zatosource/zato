@@ -581,7 +581,8 @@ class Service(object):
         service_instance = self.server.service_store.new_instance(impl_name)
         
         service_instance.update(service_instance, channel, self.server, self.broker_client, 
-            self.worker_store, self.cid, payload, payload, transport, {}, data_format, {})
+            self.worker_store, self.cid, payload, payload, transport, 
+            self.request.simple_io_config, data_format, {})
 
         service_instance.pre_handle()
         

@@ -256,7 +256,7 @@ class ServiceStore(InitializingObject):
                         self.id_to_impl_name[service_id] = impl_name
                         self.name_to_impl_name[name] = impl_name
                         
-                        logger.debug('Imported service, name:[{}]'.format(name))
+                        logger.debug('Imported service:[{}]'.format(name))
                         
                         item.after_add_to_store(logger)
                     else:
