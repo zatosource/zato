@@ -26,17 +26,16 @@ import logging
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import ConnDefAMQP
 
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'def-amqp'
     template = 'zato/definition/amqp.html'
-    
-    soap_action = 'zato.definition.amqp.get-list'
+    service_name = 'zato.definition.amqp.get-list'
     output_class = ConnDefAMQP
     
     class SimpleIO(_Index.SimpleIO):
@@ -52,29 +51,29 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_required = ('id',)
         
     def success_message(self, item):
-        return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'def-amqp-create'
-    soap_action = 'zato.definition.amqp.create'
+    service_name = 'zato.definition.amqp.create'
 
 class Edit(_CreateEdit):
     url_name = 'def-amqp-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.definition.amqp.edit'
+    service_name = 'zato.definition.amqp.edit'
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.definition.amqp.change-password')
 
 class Delete(_Delete):
     url_name = 'def-amqp-delete'
     error_message = 'Could not delete the AMQP definition'
-    soap_action = 'zato.definition.amqp.delete'
+    service_name = 'zato.definition.amqp.delete'

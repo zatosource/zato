@@ -39,9 +39,9 @@ from django.template.response import TemplateResponse
 from pytz import UTC
 
 # Zato
-from zato.admin.web import invoke_admin_service, from_utc_to_user
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.cluster import CreateClusterForm, DeleteClusterForm, EditClusterForm, EditServerForm
-from zato.admin.web.views import Delete as _Delete, get_lb_client, meth_allowed, set_servers_state
+from zato.admin.web.views import Delete as _Delete, get_lb_client, method_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
      DATABASE_USER, sqlalchemy_django_engine
 from zato.common import SERVER_UP_STATUS
@@ -164,7 +164,7 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
 
     initial = {}
@@ -199,11 +199,11 @@ def index(req):
 
     return TemplateResponse(req, 'zato/cluster/index.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     return _create_edit(req, 'created', Cluster(), CreateClusterForm)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     return _create_edit(req, 'updated', 
         req.zato.odb.query(Cluster).filter_by(id=req.POST['id']).one(), EditClusterForm, 'edit')
@@ -212,15 +212,15 @@ def _get(req, **filter):
     cluster = req.zato.odb.query(Cluster).filter_by(**filter).one()
     return HttpResponse(cluster.to_json(), mimetype='application/javascript')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def get_by_id(req, cluster_id):
     return _get(req, id=cluster_id)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def get_by_name(req, cluster_name):
     return _get(req, name=cluster_name)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def get_servers_state(req, cluster_id):
     cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
@@ -235,7 +235,7 @@ def get_servers_state(req, cluster_id):
 
     return TemplateResponse(req, 'zato/cluster/servers_state.html', {'cluster':cluster})
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def delete(req, cluster_id):
     """ Deletes a cluster *permanently*.
     """
@@ -252,7 +252,7 @@ def delete(req, cluster_id):
     else:
         return HttpResponse()
     
-@meth_allowed('GET')
+@method_allowed('GET')
 def servers(req):
     """ A view for server management.
     """
@@ -296,7 +296,7 @@ def servers(req):
     
     return TemplateResponse(req, 'zato/cluster/servers.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def servers_edit(req):
     """ Updates a server in both ODB and the load balancer.
     """
@@ -312,20 +312,17 @@ def servers_edit(req):
         else:
             fetch_lb_data = False
 
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato.cluster.server.edit', 
-            {'id':server_id, 'name':req.POST['edit-name']})
-        
-        msg_item = zato_message.item
+        response = req.zato.client.invoke('zato.cluster.server.edit', {'id':server_id, 'name':req.POST['edit-name']})
         
         return _common_edit_message(client, 'Server [{}] updated', 
-            msg_item.id.text, msg_item.name.text, msg_item.host.text,
-            msg_item.up_status.text, msg_item.up_mod_date.text,
+            response.data.id, response.data.name, response.data.host,
+            response.data.up_status, response.data.up_mod_date,
             req.zato.cluster_id, req.zato.user_profile, fetch_lb_data)
     
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def servers_add_remove_lb(req, action, server_id):
     """ Adds or removes a server from the load balancer's configuration.
     """
@@ -350,15 +347,15 @@ def servers_add_remove_lb(req, action, server_id):
 class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
-    soap_action = 'zato.cluster.server.delete'
+    service_name = 'zato.cluster.server.delete'
     
     def __call__(self, req, *args, **kwargs):
-        zato_message, _ = invoke_admin_service(req.zato.cluster, 'zato.cluster.server.get-by-id', {'id':req.zato.id})
+        response = req.zato.client.invoke('zato.cluster.server.get-by-id', {'id':req.zato.id})
 
         server = req.zato.odb.query(Server).filter_by(id=req.zato.id).one()
 
         client = get_lb_client(req.zato.cluster) # Checks whether the server is known by LB
         if client.get_server_data_dict(server.name):
-            client.add_remove_server('remove', zato_message.item.name.text)
+            client.add_remove_server('remove', response.data.name)
             
         return super(ServerDelete, self).__call__(req, *args, **kwargs)

@@ -51,6 +51,7 @@ deployment_lock_expires=4294967296 # 2 ** 32 seconds ≅ 136 years
 deployment_lock_timeout=180
 
 token={token}
+service_sources=./service-sources.txt
 
 [crypto]
 priv_key_location=zato-server-priv-key.pem
@@ -107,11 +108,26 @@ charset=
 errors=
 """.encode('utf-8')
 
+service_sources_contents = """# Visit TODO for more information.
+
+# All paths are relative to server root so that, for instance,
+# ./my-services will resolve to /opt/zato/server1/my-services if a server has been
+# installed into /opt/zato/server1 
+
+# List your service sources below, each on a separate line.
+
+# Recommended to be always the very last line so all services that have been
+# hot-deployed are picked up last.
+./work/hot-deploy/current
+
+# Visit TODO for more information."""
+
 default_odb_pool_size = 1
 
 directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work',
                'work/hot-deploy', 'work/hot-deploy/current', 'work/hot-deploy/backup', 'work/hot-deploy/backup/last')
-files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),}
+files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
+         'config/repo/service-sources.txt':service_sources_contents}
 
 priv_key_location = './config/repo/config-priv.pem'
 pub_key_location = './config/repo/config-pub.pem'

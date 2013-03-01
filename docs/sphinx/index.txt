@@ -34,26 +34,27 @@ Programming guide
 =================================
 
     * **Developing services and applications:**
-      :doc:`Overview <progguide/overview>` | 
-      :doc:`Connections<progguide/connections>` | 
+      :doc:`Overview <progguide/overview>` |
+      :doc:`Writing a service <progguide/write-service>` |
+      :doc:`Request and response objects<progguide/request-response>` |
+      :doc:`Outgoing connections<progguide/out-conn>` |
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
-      :doc:`Accessing the outside world <progguide/access-outside>` | 
-      :doc:`Invoking other services <progguide/service-invoke-other>` |
+      :doc:`Invoking other services <progguide/invoking-services>` |
+      :doc:`Python client<progguide/clients/python>` |
       :doc:`Security<progguide/security>` |
-      :doc:`Testing<progguide/testing>`
+      :doc:`Testing<progguide/testing>` |
+      :doc:`Documenting<progguide/documenting>` |
+      :doc:`Usage examples<progguide/usage-examples>`
       
-    * **Converting documents:**
-      :doc:`Understanding SimpleIO (SIO) <progguide/understand-sio>` | 
-      :doc:`XML <progguide/convert-xml>` | 
-      :doc:`JSON <progguide/convert-json>` |
-      :doc:`Other data formats <progguide/convert-other>`
+    * **Request/response documents:**
+      :doc:`SimpleIO (SIO) <progguide/sio>` | 
+      :doc:`JSON <progguide/json>` |
+      :doc:`XML <progguide/xml>` | 
+      :doc:`Other data formats <progguide/other-formats>`
       
     * **Sync and async:**
       :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>`
-      
-    * **Scheduler:**
-      :doc:`Running services in background <progguide/service-scheduler>`
       
     * **Service hooks:**
       :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
@@ -63,15 +64,7 @@ Programming guide
       :doc:`Debugging<progguide/debgging>`
       
     * **Customizing web admin:**
-      :doc:`Making sure you deploy on the right environment<progguide/customizing-web-admin>`
-
-Programming reference
-=================================
-
-    * :doc:`Service API<progref/service-api>` |
-      :doc:`SimpleIO (SIO)<progref/internal-api>` |
-      :doc:`Scheduler<progref/scheduler>` |
-      :doc:`Service hooks<progref/service-hooks>`
+      :doc:`Making sure you work on the right environment<progguide/web-admin-settings>`
 
 Administration guide
 ==============================
@@ -259,6 +252,7 @@ Zato, the open-source project
    admin/cli/*
    architecture/*
    intro/*
+   progguide/*
    public-api/*
    public-api/details/*
    security/*

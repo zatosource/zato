@@ -12,12 +12,14 @@ parts =
     pyyaml-src
     pyyaml-install
     zato
+    patch_anyjson
     patch_apscheduler
 
 develop =
     zato-agent
     zato-broker
     zato-cli
+    zato-client
     zato-common
     zato-server
     zato-web-admin
@@ -62,6 +64,7 @@ eggs =
     importing
     inotifyx
     iw.recipe.cmd
+    jsonlib2
     lxml
     mock
     nose
@@ -98,12 +101,13 @@ eggs =
     tornado
     urllib3
     watchdog
-    zato-admin
     zato-agent
     zato-broker
     zato-cli
+    zato-client
     zato-common
     zato-server
+    zato-web-admin
     zc.buildout
     zc.recipe.egg
     ZConfig
@@ -132,6 +136,11 @@ repository=git://github.com/dsuch/gevent-zeromq.git
 recipe = iw.recipe.cmd
 on_install = true
 cmds = cd ${buildout:directory}/parts/gevent_zeromq_patched-src; ../../bin/python setup.py install --prefer-pyzmq-static
+
+[patch_anyjson]
+recipe = collective.recipe.patch
+egg = anyjson
+patches = patches/anyjson/__init__.py.diff
 
 [patch_apscheduler]
 recipe = collective.recipe.patch

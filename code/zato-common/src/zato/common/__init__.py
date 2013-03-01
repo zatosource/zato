@@ -41,52 +41,60 @@ zato_ns_map = {None: zato_namespace}
 
 # Convenience access functions and constants.
 
-lxml_py_namespace = 'http://codespeak.net/lxml/objectify/pytype'
-
 soapenv_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
-soap_doc = Template("""<soap:Envelope xmlns:soap='%s'><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv_namespace)
-
-soap_body_path = '/soapenv:Envelope/soapenv:Body'
-soap_body_xpath = etree.XPath(soap_body_path, namespaces={'soapenv':soapenv_namespace})
-
-soap_fault_path = '/soapenv:Envelope/soapenv:Body/soapenv:Fault'
-soap_fault_xpath = etree.XPath(soap_fault_path, namespaces={'soapenv':soapenv_namespace})
-
 wsse_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'
 wsu_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'
 
-wss_namespaces = {'soapenv':soapenv_namespace, 'wsse':wsse_namespace, 'wsu':wsu_namespace}
+common_namespaces = {
+    'soapenv':soapenv_namespace,
+    'wsse':wsse_namespace, 
+    'wsu':wsu_namespace,
+    'zato':zato_namespace
+    }
+
+soap_doc = Template("""<soap:Envelope xmlns:soap='%s'><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv_namespace)
+
+soap_body_path = '/soapenv:Envelope/soapenv:Body'
+soap_body_xpath = etree.XPath(soap_body_path, namespaces=common_namespaces)
+
+soap_fault_path = '/soapenv:Envelope/soapenv:Body/soapenv:Fault'
+soap_fault_xpath = etree.XPath(soap_fault_path, namespaces=common_namespaces)
 
 wsse_password_type_text = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText'
-
-supported_wsse_password_types = (wsse_password_type_text, )
+supported_wsse_password_types = (wsse_password_type_text,)
 
 wsse_username_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username'
-wsse_username_xpath = etree.XPath(wsse_username_path, namespaces=wss_namespaces)
+wsse_username_xpath = etree.XPath(wsse_username_path, namespaces=common_namespaces)
 
 wsse_password_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password'
-wsse_password_xpath = etree.XPath(wsse_password_path, namespaces=wss_namespaces)
+wsse_password_xpath = etree.XPath(wsse_password_path, namespaces=common_namespaces)
 
 wsse_password_type_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password/@Type'
-wsse_password_type_xpath = etree.XPath(wsse_password_type_path, namespaces=wss_namespaces)
+wsse_password_type_xpath = etree.XPath(wsse_password_type_path, namespaces=common_namespaces)
 
 wsse_nonce_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce'
-wsse_nonce_xpath = etree.XPath(wsse_nonce_path, namespaces=wss_namespaces)
+wsse_nonce_xpath = etree.XPath(wsse_nonce_path, namespaces=common_namespaces)
 
 wsu_username_created_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created'
-wsu_username_created_xpath = etree.XPath(wsu_username_created_path, namespaces=wss_namespaces)
+wsu_username_created_xpath = etree.XPath(wsu_username_created_path, namespaces=common_namespaces)
 
 wsu_expires_path = '/soapenv:Envelope/soapenv:Header/wsse:Security/wsu:Timestamp/wsu:Expires'
-wsu_expires_xpath = etree.XPath(wsu_expires_path, namespaces=wss_namespaces)
+wsu_expires_xpath = etree.XPath(wsu_expires_path, namespaces=common_namespaces)
 
-wsse_username_objectify = '{%s}Security' % wsse_namespace
-wsse_username_token_objectify = '{%s}UsernameToken' % wsse_namespace
+wsse_username_objectify = '{}Security'.format(wsse_namespace)
+wsse_username_token_objectify = '{}UsernameToken'.format(wsse_namespace)
 
-zato_data_path = '/soapenv:Envelope/soapenv:Body/*[1]'
-zato_data_xpath = etree.XPath(zato_data_path, namespaces={'soapenv':soapenv_namespace, 'zato':zato_namespace})
+zato_data_path = soap_data_path = '/soapenv:Envelope/soapenv:Body/*[1]'
+zato_data_xpath = soap_data_xpath = etree.XPath(zato_data_path, namespaces=common_namespaces)
 
 zato_result_path = '//zato:zato_env/zato:result'
-zato_result_path_xpath = etree.XPath(zato_result_path, namespaces={'soapenv':soapenv_namespace, 'zato':zato_namespace})
+zato_result_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
+
+zato_cid_path = '//zato:zato_env/zato:cid'
+zato_cid_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
+
+zato_details_path = '//zato:zato_env/zato:details'
+zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces)
 
 SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
 
@@ -144,10 +152,15 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
+class DATA_FORMAT:
+    XML = 'xml'
+    JSON = 'json'
+
+# TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
     class FORMAT:
-        XML = 'xml'
-        JSON = 'json'
+        XML = DATA_FORMAT.XML
+        JSON = DATA_FORMAT.JSON
         
     class INT_PARAMETERS:
         VALUES = ['id']
@@ -217,6 +230,9 @@ class CHANNEL:
     JMS_WMQ = 'jms-wmq'
     SCHEDULER = 'scheduler'
     ZMQ = 'zmq'
+    
+class BROKER:
+    DEFAULT_EXPIRATION = 15 # In seconds
 
 #
 # Version
@@ -304,6 +320,14 @@ class ParsingException(ZatoException):
     XML document.
     """
     
+class NoDistributionFound(ZatoException):
+    """ Raised when an attempt is made to import services from a Distutils2 archive
+    or directory but they don't contain a proper Distutils2 distribution.
+    """
+    def __init__(self, path):
+        super(NoDistributionFound, self).__init__(None, 
+            'No Disutils distribution in path:[{}]'.format(path))
+    
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.
     """
@@ -374,11 +398,19 @@ class StatsElem(object):
         if not ignore:
             ignore = ['expected_time_elems', 'mean_trend_int', 'usage_trend_int']
         return {attr: getattr(self, attr) for attr in self.get_attrs(ignore)}
+
+    @staticmethod
+    def from_json(item):
+        stats_elem = StatsElem()
+        for k, v in item.items():
+            setattr(stats_elem, k, v)
+            
+        return stats_elem
     
     @staticmethod
-    def from_xml(xml_item):
+    def from_xml(item):
         stats_elem = StatsElem()
-        for child in xml_item.getchildren():
+        for child in item.getchildren():
             setattr(stats_elem, child.xpath('local-name()'), child.pyval)
             
         return stats_elem
@@ -403,3 +435,6 @@ class StatsElem(object):
         self.usage += other.usage
         
         return self
+    
+    def __bool__(self):
+        return bool(self.service_name) # Empty stats_elems won't have a service name set

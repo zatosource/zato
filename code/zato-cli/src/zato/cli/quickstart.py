@@ -191,8 +191,7 @@ class Create(ZatoCommand):
         total_steps = 8
         cluster_name = 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
         server_names = {'1':'server1', '2':'server2'}
-        tech_account_name = 'techacct-{}'.format(random.getrandbits(20)).zfill(7)
-        tech_account_password = uuid4().hex
+        admin_invoke_password = uuid4().hex
         broker_host = 'localhost'
         broker_port = 6379
         lb_host = 'localhost'
@@ -240,7 +239,7 @@ class Create(ZatoCommand):
         # 2) ODB
         #
         if create_odb.Create(args).execute(args, False) == self.SYS_ERROR.ODB_EXISTS:
-            self.logger.info('[{}/{}] ODB schema already exists, not creating it'.format(next_step.next(), total_steps))
+            self.logger.info('[{}/{}] ODB schema already exists'.format(next_step.next(), total_steps))
         else:
             self.logger.info('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
             
@@ -253,8 +252,7 @@ class Create(ZatoCommand):
         create_cluster_args.lb_host = lb_host
         create_cluster_args.lb_port = lb_port
         create_cluster_args.lb_agent_port = lb_agent_port
-        create_cluster_args.tech_account_name = tech_account_name
-        create_cluster_args.tech_account_password = tech_account_password
+        create_cluster_args.admin_invoke_password = admin_invoke_password
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
         
         self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
@@ -311,8 +309,7 @@ class Create(ZatoCommand):
         create_web_admin_args.pub_key_path = web_admin_crypto_loc.pub_path
         create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
         create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
-        create_web_admin_args.tech_account_name = tech_account_name
-        create_web_admin_args.tech_account_password = tech_account_password
+        create_web_admin_args.admin_invoke_password = admin_invoke_password
         
         password = generate_password()
         admin_created = create_web_admin.Create(create_web_admin_args).execute(create_web_admin_args, False, password)

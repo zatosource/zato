@@ -45,8 +45,9 @@ except ImportError:
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo
-from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, TRACE1, visit_py_source_from_distribution
+from zato.common import DONT_DEPLOY_ATTR_NAME, NoDistributionFound, SourceInfo
+from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, \
+    TRACE1, visit_py_source, visit_py_source_from_distribution
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -93,12 +94,10 @@ class ServiceStore(InitializingObject):
         impl_name = self.name_to_impl_name[name]
         return self.new_instance(impl_name)
 
-    def service_data(self, class_name):
+    def service_data(self, impl_name):
         """ Returns all the service-related data.
         """
-        #for name in sorted(self.services):
-        #    print(name)
-        return self.services[class_name]
+        return self.services[impl_name]
     
     def decompress(self, archive, work_dir):
         """ Decompresses an archive into a randomly named directory.
@@ -119,7 +118,7 @@ class ServiceStore(InitializingObject):
 
     def import_services_from_anywhere(self, items, base_dir, work_dir=None):
         """ Imports services from any of the supported sources, be it module names,
-        individual files or distutils2 packages (compressed or not).
+        individual files, directories or distutils2 packages (compressed or not).
         """
         for item_name in items:
             logger.debug('About to import services from:[%s]', item_name)
@@ -129,11 +128,16 @@ class ServiceStore(InitializingObject):
             # distutils2 archive, decompress and import from the newly created directory ..
             if is_archive_file(item_name):
                 new_path = self.decompress(item_name, work_dir)
-                self.import_services_from_directory(new_path)
+                self.import_services_from_dist2_directory(new_path)
             
-            # distutils2 too ..
+            # .. a regular directory or a Distutils2 one ..
             elif os.path.isdir(item_name):
-                self.import_services_from_directory(item_name)
+                try:
+                    self.import_services_from_directory(item_name, base_dir, True)
+                except NoDistributionFound, e:
+                    msg = 'Caught an exception e=[{}]'.format(format_exc(e))
+                    logger.log(TRACE1, msg)
+                    self.import_services_from_directory(item_name, base_dir, False)
             
             # .. a .py/.pyw
             elif is_python_file(item_name):
@@ -165,13 +169,20 @@ class ServiceStore(InitializingObject):
         mod = imp.load_source(mod_name, file_name)
         self._visit_module(mod, is_internal, file_name)
         
-    def import_services_from_directory(self, dir_name):
-        """ dir_name points to a Distutils2 directory. Its setup.cfg file is read
-        and all the modules from packages pointed to by the 'files' section 
-        are scanned for services.
+    def import_services_from_directory(self, dir_name, base_dir, dist2):
+        """ dir_name points to a directory. 
+        
+        If dist2 is True, the directory is assumed to be a Distutils2 one and its
+        setup.cfg file is read and all the modules from packages pointed to by the 
+        'files' section are scanned for services.
+        
+        If dist2 is False, this will be treated as a directory with a flat list
+        of Python source code to import, as is the case with services that have
+        been hot-deployed.
         """
-        for py_path in visit_py_source_from_distribution(dir_name):
-            self.import_services_from_file(py_path, False, None)
+        func = visit_py_source_from_distribution if dist2 else visit_py_source
+        for py_path in func(dir_name):
+            self.import_services_from_file(py_path, False, base_dir)
         
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
@@ -216,37 +227,46 @@ class ServiceStore(InitializingObject):
     def _visit_module(self, mod, is_internal, fs_location):
         """ Actually imports services from a module object.
         """
-        for name in dir(mod):
-            item = getattr(mod, name)
-            if self._should_deploy(name, item):
-                
-                should_add = item.before_add_to_store()
-                if should_add:
+        try:
+            for name in sorted(dir(mod)):
+                item = getattr(mod, name)
+                if self._should_deploy(name, item):
                     
-                    timestamp = datetime.utcnow().isoformat()
-                    depl_info = deployment_info('service-store', item, timestamp, fs_location)
-                    name = item.get_name()
-                    impl_name = item.get_impl_name()
-                    
-                    self.services[impl_name] = {}
-                    self.services[impl_name]['deployment_info'] = depl_info
-                    self.services[impl_name]['service_class'] = item
-                    
-                    si = self._get_source_code_info(mod)
-                    
-                    last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
-                    service_id, is_active, slow_threshold = self.odb.add_service(
-                        name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
-                    
-                    self.services[impl_name]['is_active'] = is_active
-                    self.services[impl_name]['slow_threshold'] = slow_threshold
-                    
-                    self.id_to_impl_name[service_id] = impl_name
-                    self.name_to_impl_name[name] = impl_name
-                else:
-                    msg = 'Skipping [{}] from [{}], should_add:[{}] is not True'.format(
-                        item, fs_location, should_add)
-                    logger.info(msg)
+                    should_add = item.before_add_to_store(logger)
+                    if should_add:
+                        
+                        timestamp = datetime.utcnow().isoformat()
+                        depl_info = deployment_info('service-store', item, timestamp, fs_location)
+                        name = item.get_name()
+                        impl_name = item.get_impl_name()
+                        
+                        self.services[impl_name] = {}
+                        self.services[impl_name]['deployment_info'] = depl_info
+                        self.services[impl_name]['service_class'] = item
+                        
+                        si = self._get_source_code_info(mod)
+                        
+                        last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
+                        service_id, is_active, slow_threshold = self.odb.add_service(
+                            name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
+                        
+                        self.services[impl_name]['is_active'] = is_active
+                        self.services[impl_name]['slow_threshold'] = slow_threshold
+                        
+                        self.id_to_impl_name[service_id] = impl_name
+                        self.name_to_impl_name[name] = impl_name
+                        
+                        logger.debug('Imported service:[{}]'.format(name))
+                        
+                        item.after_add_to_store(logger)
+                    else:
+                        msg = 'Skipping [{}] from [{}], should_add:[{}] is not True'.format(
+                            item, fs_location, should_add)
+                        logger.info(msg)
+        except Exception, e:
+            msg = 'Exception while visit mod:[{}], is_internal:[{}], fs_location:[{}], e:[{}]'.format(
+                mod, is_internal, fs_location, format_exc(e))
+            logger.error(msg)
                 
 if __name__ == '__main__':
     store = ServiceStore()
