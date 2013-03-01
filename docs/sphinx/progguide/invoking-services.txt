@@ -30,7 +30,7 @@ application.
 Regardless of the invocation method, there is no difference in how requests are passed
 in.
 
-If a service is being run programtically its 
+If a service is being run programmatically its 
 :ref:`channel attribute <progguide-write-service-channel>` 
 will be 'invoke' or 'invoke-async' depending on the invocation style.
 
@@ -43,11 +43,9 @@ How to pass a request to another service
 * 
 
     Passing a request is most convenient if another service uses :doc:`Simple IO (SIO) <./sio>`,
-    in such cases it's possible to use a plain Python dictionary.
+    in such cases it's possible to use a plain Python dictionary as input data.
 
     .. note ::
 
       Zato uses SIO in its own services and this is how you can invoke them if need be.
   
-
-
