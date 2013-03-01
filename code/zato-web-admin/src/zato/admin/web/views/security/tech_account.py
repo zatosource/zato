@@ -30,45 +30,41 @@ from django.http import HttpResponse, HttpResponseServerError
 from validate import is_boolean
 
 # Zato
-from zato.admin.settings import TECH_ACCOUNT_NAME
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.tech_account import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import TechnicalAccount
 
 logger = logging.getLogger(__name__)
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.security.tech-account.change-password')
     
     
-@meth_allowed('GET')
+@method_allowed('GET')
 def get_by_id(req, id_, cluster_id):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.get-by-id', {'id':id_})
+        response = req.zato.client.invoke('zato.security.tech-account.get-by-id', {'id':id_})
     except Exception, e:
         msg = 'Could not fetch the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:
         tech_account = TechnicalAccount()
-        tech_account_elem = zato_message.item
-        
-        tech_account.id = tech_account_elem.id.text
-        tech_account.name = tech_account_elem.name.text
-        tech_account.is_active = is_boolean(tech_account_elem.is_active.text)
+        tech_account.id = response.data.id
+        tech_account.name = response.data.name
+        tech_account.is_active = response.data.is_active
 
         return HttpResponse(tech_account.to_json(), mimetype='application/javascript')
     
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'security-tech-account'
     template = 'zato/security/tech-account.html'
     
-    soap_action = 'zato.security.tech-account.get-list'
+    service_name = 'zato.security.tech-account.get-list'
     output_class = TechnicalAccount
     
     class SimpleIO(_Index.SimpleIO):
@@ -84,28 +80,28 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active')
         output_required = ('id', 'name')
         
     def success_message(self, item):
-        return 'Successfully {0} the technical account [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the technical account [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'security-tech-account-create'
-    soap_action = 'zato.security.tech-account.create'
+    service_name = 'zato.security.tech-account.create'
 
 class Edit(_CreateEdit):
     url_name = 'security-tech-account-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.security.tech-account.edit'
+    service_name = 'zato.security.tech-account.edit'
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def delete(req, id, cluster_id):
     try:
-        invoke_admin_service(req.zato.cluster, 'zato.security.tech-account.delete', {'id': id, 'current_tech_account_name':TECH_ACCOUNT_NAME})
+        req.zato.client.invoke('zato.security.tech-account.delete', {'id': id})
     except Exception, e:
         msg = 'Could not delete the technical account, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)

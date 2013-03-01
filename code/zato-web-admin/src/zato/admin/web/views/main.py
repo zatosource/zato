@@ -25,21 +25,21 @@ from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import method_allowed
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index_redirect(req):
     return HttpResponseRedirect('/zato')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
     return TemplateResponse(req, 'zato/index.html')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def logout(req):
     _logout(req)
     return index_redirect(req)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def my_account(req):
     pass

@@ -196,9 +196,6 @@ class BaseConnector(BrokerMessageReceiver):
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
         
         self._setup_odb()
-
-        # Connects to the broker
-        super(BaseConnector, self)._init()
         
 def setup_logging():
     logging.addLevelName('TRACE1', TRACE1)

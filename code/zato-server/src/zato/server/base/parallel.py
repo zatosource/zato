@@ -107,7 +107,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         of the threads created in ParallelServer.run_forever method.
         """
         cid = new_cid()
-        wsgi_environ['zato.http.response.headers'] = {}
+        wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
         
         try:
             payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, self.worker_store)

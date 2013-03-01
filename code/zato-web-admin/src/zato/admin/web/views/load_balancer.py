@@ -39,7 +39,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.load_balancer import ManageLoadBalancerForm, RemoteCommandForm, \
      ManageLoadBalancerSourceCodeForm
-from zato.admin.web.views import get_lb_client, meth_allowed
+from zato.admin.web.views import get_lb_client, method_allowed
 from zato.common.haproxy import haproxy_stats, Config
 from zato.common.odb.model import Cluster
 
@@ -110,7 +110,7 @@ def _client_validate_save(req, meth, *args):
             msg = "Config is valid, it's safe to save it"
         messages.add_message(req, messages.INFO, msg, extra_tags="success")
 
-@meth_allowed("GET", "POST")
+@method_allowed("GET", "POST")
 def remote_command(req, cluster_id):
     """ Execute a HAProxy command.
     """
@@ -145,7 +145,7 @@ def remote_command(req, cluster_id):
 
     return TemplateResponse(req, 'zato/load_balancer/remote_command.html', return_data)
 
-@meth_allowed("GET")
+@method_allowed("GET")
 def manage(req, cluster_id):
     """ GUI for managing HAProxy configuration.
     """
@@ -199,7 +199,7 @@ def manage(req, cluster_id):
 
     return TemplateResponse(req, 'zato/load_balancer/manage.html', return_data)
 
-@meth_allowed("POST")
+@method_allowed("POST")
 def validate_save(req, cluster_id):
     """ A common handler for both validating and saving a HAProxy config using
     a pretty GUI form.
@@ -252,7 +252,7 @@ def validate_save(req, cluster_id):
 
     return redirect("lb-manage", cluster_id=cluster_id)
 
-@meth_allowed("GET")
+@method_allowed("GET")
 def manage_source_code(req, cluster_id):
     """ Source code view for managing HAProxy configuration.
     """
@@ -268,7 +268,7 @@ def manage_source_code(req, cluster_id):
 
     return TemplateResponse(req, 'zato/load_balancer/manage_source_code.html', return_data)
 
-@meth_allowed("POST")
+@method_allowed("POST")
 def validate_save_source_code(req, cluster_id):
     """ A common handler for both validating and saving a HAProxy config using
     the raw HAProxy config file's view.
@@ -282,7 +282,7 @@ def validate_save_source_code(req, cluster_id):
 
     return redirect("lb-manage-source-code", cluster_id=cluster_id)
 
-@meth_allowed("GET")
+@method_allowed("GET")
 def get_addresses(req, cluster_id):
     """ Return JSON-formatted addresses known to HAProxy.
     """

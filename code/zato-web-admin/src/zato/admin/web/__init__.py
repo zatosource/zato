@@ -33,9 +33,8 @@ from lxml import etree
 from lxml.objectify import Element
 
 # Zato
-from zato.admin.settings import TECH_ACCOUNT_NAME, TECH_ACCOUNT_PASSWORD
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD
 from zato.common import zato_namespace
-from zato.common.soap import invoke_admin_service as _invoke_admin_service
 from zato.common.util import from_local_to_utc as _from_local_to_utc, from_utc_to_local as _from_utc_to_local
 
 logger = logging.getLogger(__name__)
@@ -73,28 +72,6 @@ TIME_FORMATS = {
     '12': 'g:i.s A',
     '24': 'H:i:s',
 }
-
-def invoke_admin_service(cluster, soap_action, input_dict):
-    """ A thin wrapper around zato.common.soap.invoke_admin_service that adds
-    Django session-related information to the request headers.
-    """
-    zato_message = Element(soap_action.replace(':', '_').replace('.', '_').replace('-', '_') + '_request')
-    
-    for k, v in input_dict.items():
-        setattr(zato_message, k, v)
-
-    headers = {'x-zato-session-type':'web-admin/tech_acc', 
-               'x-zato-user': TECH_ACCOUNT_NAME,
-               'x-zato-password': TECH_ACCOUNT_PASSWORD
-               }
-
-    request = etree.tostring(zato_message)
-    zato_message, soap_response = _invoke_admin_service(cluster, soap_action, request, headers)
-    
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug('Request:[{}], response:[{}]'.format(request, soap_response))
-        
-    return zato_message, soap_response
 
 def last_hour_start_stop(now):
     """ Returns a ISO-8601 formatted pair of start/stop timestamps representing

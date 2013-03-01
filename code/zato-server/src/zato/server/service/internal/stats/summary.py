@@ -662,5 +662,5 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
                 stats = self.get_stats(start_iso, stop_iso, needs_trends=False, stats_key_prefix=slice.slice_type, suffixes=suffixes)
                 slices.append(SliceStats(slice.slice_type, stats, start_iso, stop_iso, slice.total_seconds))
 
-        for stats_elem in self.merge_slices(slices, self.request.input.n, self.request.input.n_type):
-            self.response.payload.append(stats_elem.to_dict())
+        self.response.payload[:] = [elem.to_dict() for elem in 
+            self.merge_slices(slices, self.request.input.n, self.request.input.n_type) if elem]

@@ -19,20 +19,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from setuptools import setup, find_packages
 
-version = "1.0.0"
+version = '1.0.0'
 
 setup(
-      name = "zato-common",
+      name = 'zato-common',
       version = version,
 
-      author = "Zato",
-      author_email = "Zato",
-      url = "Zato",
+      author = 'Zato',
+      author_email = 'Zato',
+      url = 'Zato',
 
-      package_dir = {"":"src"},
-      packages = find_packages("src"),
+      package_dir = {'':'src'},
+      packages = find_packages('src'),
 
-      namespace_packages = ["zato"],
+      namespace_packages = ['zato'],
 
       zip_safe = False,
 )
