@@ -135,7 +135,8 @@ Accessing request elements
       
       class MyService(Service):
           def handle(self):
-              relation_type = getattr(self.request.payload.cust_info, '{example.com/2}relation_type')
+              relation_type = getattr(
+                self.request.payload.cust_info, '{example.com/2}relation_type')
               if relation_type == 'AAA':
                   self.logger.info('Got it!')
                   
@@ -202,7 +203,7 @@ Producing response
    .. code-block:: xml
    
       $ curl localhost:17010/xml-example.my-service -d ''
-      <cust_data><phone_number>(123) 456-789</phone_number></cust_data>
+      <cust_data><phone_number>123-456-789</phone_number></cust_data>
       
 
 * 
@@ -226,7 +227,7 @@ SOAP support
 ------------
 
 You can receive and create SOAP messages with plain HTTP channels using the data format
-of XML just fine but Zato goes even farther and offers a special way to expose services over
+of XML just fine but Zato goes farther and offers a special way to expose services over
 SOAP that simplifies your job even more.
 
 You need to create SOAP channels instead of plain HTTP ones.
@@ -253,12 +254,14 @@ will be automatically wrapped in a SOAP envelope for you.
        def handle(self):
            cust_id = getattr(self.request.payload, '{example.com/1}cust_id')
            self.logger.info('cust_id:[{}]'.format(cust_id))
-           self.response.payload = '<customer xmlns="example.com/1"><name>楊朱</name></customer>'
+           self.response.payload = '<cust xmlns="example.com/1"><name>楊朱</name></cust>'
            
 .. code-block:: xml
 
-   $ curl localhost:17010/soap-example.my-service -H 'SOAPAction:soap-example.my-service' -d '
-    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="example.com/1">
+   $ curl localhost:17010/soap-example.my-service \
+       -H 'SOAPAction:soap-example.my-service' -d '
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns:ns="example.com/1">
      <soapenv:Body>
       <ns:root>
        <ns:cust_id>1</ns:cust_id>
@@ -267,11 +270,12 @@ will be automatically wrapped in a SOAP envelope for you.
     </soapenv:Envelope>'
     
     <?xml version='1.0' encoding='UTF-8'?>
-    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns="http://gefira.pl/zato">
      <soap:Body>
-      <customer xmlns="example.com/1">
+      <cust xmlns="example.com/1">
        <name>楊朱</name>
-      </customer>
+      </cust>
      </soap:Body>
     </soap:Envelope>
   

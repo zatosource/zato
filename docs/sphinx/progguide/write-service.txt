@@ -5,7 +5,8 @@ Writing a service
 =================
 
 From a programmer's point of view, a service is a Python class that subclasses
-zato.server.Service and implements a handle(self) method.
+`zato.server.Service <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/service/__init__.py>`_
+and implements a handle(self) method.
 
 Below is the simplest possible Zato service meant to illustrate the point of how
 little coding is needed to write services. Granted, it doesn't do much useful,
@@ -32,7 +33,7 @@ Programming conventions
   other Python versions can be used although adding support for Python 3.x is planned.
 
 * You can't use the name 'zato', case-insensitively, anywhere. Any such names
-  are reserved and can't be used, for instance 'zato.sample', 'my:zato:data',
+  are reserved and can't be used. For instance, 'zato.sample', 'my:zato:data',
   'X-ZATO-SERVER' and 'ZatoReceiver' are all invalid.
   
   This applies to any Zato object you will use - services, connection names,
@@ -42,7 +43,7 @@ Programming conventions
   encoding. Each request and response must always be in UTF-8.
 
 * You are strongly encouraged to use the following header in each source code
-  file you will keep services in. In fact, if you stumble upon any issues you
+  file you will keep services in. In fact, if you stumble upon any issues
   and need support you will be first asked that this header be added before any
   other advice can be given. Don't forget to set your code editor to write out
   files in UTF-8 too.
@@ -69,8 +70,8 @@ Programming conventions
   but not without restarting a server.
   
 * Don't start your own threads. Given Zato's architecture, there shouldn't really
-  be any need for threads but if your use-case calls for it, please let the
-  project know about it and explain why you need threads.
+  be any need for threads but if your use-case calls for it, 
+  `please let the project know more <TODO>`_ about why you need threads.
     
 What a service can do
 ---------------------
@@ -119,7 +120,10 @@ and
 Service API
 -----------
 
-This chapter will introduce the service API - a set of attributes and methods
+This chapter will introduce the service API - a set of 
+:ref:`attributes <progguide-write-service-attributes>`
+and
+:ref:`methods <progguide-write-service-methods>`
 a service can make use of during processing of the messages.
 
 First, save the following code in service_api.py and :doc:`hot-deploy <TODO>` it - this will be
@@ -268,7 +272,7 @@ environ
 ```````
 
 A dictionary of user-specific data that can be used for passing information
-between :doc:`service hooks <TODO>`. The service can store information in a
+between :doc:`service hooks <./service-hooks>`. The service can store information in a
 hook method and consult it in another one using the environ dictionary.
 
 Zato will never use environ for its own purposes.
@@ -431,7 +435,9 @@ is available as self.kvdb.conn.
 logger
 ``````
 
-A logger, instance of zato.server.log.ZatoLogger, used for writing messages out to server logs.
+A logger, instance of
+`zato.server.log.ZatoLogger <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/log.py>`_, 
+used for writing messages out to server logs.
 This is a thin wrapper around `Python's logging.Logger <http://docs.python.org/2.7/library/logging.html>`_
 which lets one use a 'cid' argument in addition to what is ordinarily available
 when using a standard logger. This allows to use a 'cid' parameter in server logs.
@@ -724,7 +730,7 @@ after_add_to_store
 .. py:staticmethod:: after_add_to_store(logger)
 
 Static method executed right after a service class has been added to the
-service store. Explained further in the :doc:`chapter on service hooks <TODO>`.
+service store. Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-after_cron_style_job:
 
@@ -734,7 +740,7 @@ after_cron_style_job
 .. py:method:: after_cron_style_job()
 
 Method executed right after a service has been invoked through a cron-style job.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-after_handle:
 
@@ -743,8 +749,8 @@ after_handle
 
 .. py:method:: after_handle()
 
-Method executed right after a service's :ref:`handle progguide-write-service-handle>`
-method has returned. Explained further in the :doc:`chapter on service hooks <TODO>`.
+Method executed right after a service's :ref:`handle <progguide-write-service-handle>`
+method has returned. Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-after_interval_based_job:
 
@@ -754,7 +760,7 @@ after_interval_based_job
 .. py:method:: after_interval_based_job()
 
 Method executed right after a service has been invoked through an interval-based job.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-after_job:
 
@@ -765,7 +771,7 @@ after_job
 
 Method executed right after a service has been invoked through a scheduler's
 job, regardless of the latter's type.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-after_one_time_job:
 
@@ -775,7 +781,7 @@ after_one_time_job
 .. py:method:: after_one_time_job()
 
 Method executed right after a service has been invoked through a one-time job.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-before_add_to_store:
 
@@ -786,7 +792,7 @@ before_add_to_store
 
 Static method executed right before a service class is added to the service store.
 The service won't be deployed unless the method returns True.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-before_cron_style_job:
 
@@ -796,7 +802,7 @@ before_cron_style_job
 .. py:method:: before_cron_style_job()
 
 Method executed right before a service is invoked through a cron-style job.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-before_handle:
 
@@ -805,8 +811,8 @@ before_handle
 
 .. py:method:: before_handle()
 
-Method executed right before a service's :ref:`handle progguide-write-service-handle>`
-is run. Explained further in the :doc:`chapter on service hooks <TODO>`.
+Method executed right before a service's :ref:`handle <progguide-write-service-handle>`
+is run. Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-before_interval_based_job:
 
@@ -816,7 +822,7 @@ before_interval_based_job
 .. py:method:: before_interval_based_job()
 
 Method executed right before a service is invoked through an interval-based job.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-before_job:
 
@@ -827,7 +833,7 @@ before_job
 
 Method executed right before a service is invoked through a scheduler's job,
 regardless of the job's type.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-before_one_time_job:
 
@@ -837,7 +843,7 @@ before_one_time_job
 .. py:method:: before_one_time_job()
 
 Method executed right before a service is invoked through a one-time job.
-Explained further in the :doc:`chapter on service hooks <TODO>`.
+Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-finalize_handle:
 
@@ -846,8 +852,8 @@ finalize_handle
 
 .. py:method:: finalize_handle()
 
-Method executed after :ref:`handle progguide-write-service-handle>` and other service
-hooks have completed. Explained further in the :doc:`chapter on service hooks <TODO>`.
+Method executed after :ref:`handle <progguide-write-service-handle>` and other service
+hooks have completed. Explained further in the :doc:`chapter on service hooks <./service-hooks>`.
 
 .. _progguide-write-service-get_name:
 
@@ -911,13 +917,15 @@ invoke
   is in. This is simply a standard invocation of another method so any exceptions
   raised in the service being invoked will propagate to the calling one.
   
-  From the point of view of the service which is invoked, there is no way to
+  Other than consulting the 
+  :ref:`channel <progguide-write-service-channel>`
+  attribute, from the point of view of the service which is invoked, there is no way to
   discern that it's not being invoked through a regular channel created in the
   :doc:`web admin <TODO>` or via :doc:`Zato's public API </public-api/intro>`.
   
   A `ZatoException <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_ will be raised if a service attempts to invoke itself.
   
-  Visit :ref:`this chapter <TODO>` for more information on how to invoke
+  Visit :doc:`this chapter <./invoking-services>` for more information on how to invoke
   other services depending on the data format they expect.
   
   :param name: Name of the service to invoke
@@ -940,12 +948,12 @@ invoke
   :param serialize: If the service which is invoked uses :doc:`SIO <./sio>`, 
                     whether its response should be serialized to data_format.
                     If False, a Python dictionary will be returned, unless as_bunch is True.
-  :type name: bool
+  :type serialize: bool
   
   :param as_bunch: If the service which is invoked uses :doc:`SIO <./sio>`, 
                     whether to return its response as a 
                     `Bunch <http://pypi.python.org/pypi/bunch>`_ object.
-  :type name: bool
+  :type as_bunch: bool
   
   :rtype: Response the service being invoked produced
   
@@ -1044,9 +1052,7 @@ log_input
 
   A helper method to write all the input data to server logs using a specified
   logging level which defaults to INFO. A user message of arbitrary data type
-  can be provided and will be logged as well. It's best to run log_input and allow
-  it to output all the keys and then to pick these which shouldn't be logged,
-  if any, for instance, due to security concerns.
+  can be provided and will be logged as well.
   
   :param user_msg: An additional user-provided message
   :param level: Logging level to use
@@ -1178,7 +1184,7 @@ Publish/subscribe broker client
 Each service can asynchronously publish messages to one or more services on
 servers running in the same cluster the publishing service is in.
 
-A message must be a dictionary of metadata whose only required key is 'action'
+A message needs to be a dictionary of metadata whose only required key is 'action'
 which must point to a Zato service you want to invoke using constants
 from the 
 `zato.common.broker_message <https://github.com/zatosource/zato/blob/feature/service-tests/code/zato-common/src/zato/common/broker_message.py>`_
@@ -1189,6 +1195,12 @@ the action must be SERVICE.PUBLISH, this which will in turn publish the message 
 :doc:`zato.service.invoke </public-api/details/zato.service.invoke>` service 
 which will next invoke the service of your choice by its 
 :ref:`name <progguide-write-service-name>`.
+
+.. note ::
+
+  Publishing of messages to your own services is even simpler if you
+  use the :ref:`invoke_async <progguide-write-service-invoke_async>`
+  method.
 
 .. _progguide-write-service-broker-client-publish:
 
@@ -1261,7 +1273,7 @@ Sending a message to one of servers (1:1)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Exactly one worker among all servers in a cluster will receive a message, possibly 
-this will be the one which is publishing the message.
+the one which is publishing the message.
 
 Redis will store the message for a configurable amount of time under a key
 starting with 'zato:broker:to-parallel:any:' and then, if no worker picks it up,
@@ -1315,4 +1327,4 @@ instead of a single one.
 .. note ::
 
   Don't forget about the :ref:`invoke_async <progguide-write-service-invoke_async>`
-  method, 95% of the time you will find it more convenient to use.
+  method, which is a convenience wrapper for executing other services asynchronously.
