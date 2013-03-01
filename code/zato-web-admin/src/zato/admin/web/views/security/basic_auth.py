@@ -25,17 +25,16 @@ import logging
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.basic_auth import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, meth_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import HTTPBasicAuth
 
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'security-basic-auth'
     template = 'zato/security/basic-auth.html'
-    
-    soap_action = 'zato.security.basic-auth.get-list'
+    service_name = 'zato.security.basic-auth.get-list'
     output_class = HTTPBasicAuth
     
     class SimpleIO(_Index.SimpleIO):
@@ -51,29 +50,29 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'username', 'realm')
         output_required = ('id', 'name')
         
     def success_message(self, item):
-        return 'Successfully {0} the HTTP Basic Auth definition [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the HTTP Basic Auth definition [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'security-basic-auth-create'
-    soap_action = 'zato.security.basic-auth.create'
+    service_name = 'zato.security.basic-auth.create'
 
 class Edit(_CreateEdit):
     url_name = 'security-basic-auth-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.security.basic-auth.edit'
+    service_name = 'zato.security.basic-auth.edit'
 
 class Delete(_Delete):
     url_name = 'security-basic-auth-delete'
     error_message = 'Could not delete the HTTP Basic Auth definition'
-    soap_action = 'zato.security.basic-auth.delete'
+    service_name = 'zato.security.basic-auth.delete'
     
-@meth_allowed('POST')
+@method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.security.basic-auth.change-password')

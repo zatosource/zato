@@ -228,7 +228,7 @@ class ServiceStore(InitializingObject):
         """ Actually imports services from a module object.
         """
         try:
-            for name in dir(mod):
+            for name in sorted(dir(mod)):
                 item = getattr(mod, name)
                 if self._should_deploy(name, item):
                     
@@ -256,7 +256,7 @@ class ServiceStore(InitializingObject):
                         self.id_to_impl_name[service_id] = impl_name
                         self.name_to_impl_name[name] = impl_name
                         
-                        logger.debug('Imported service, name:[{}]'.format(name))
+                        logger.debug('Imported service:[{}]'.format(name))
                         
                         item.after_add_to_store(logger)
                     else:

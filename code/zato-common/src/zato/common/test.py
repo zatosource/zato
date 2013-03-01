@@ -40,14 +40,17 @@ from nose.tools import eq_
 from zato.common import CHANNEL, SIMPLE_IO
 from zato.common.util import new_cid
 
+def rand_bool():
+    return choice((True, False))
+
 def rand_int(start=1, stop=100):
     return randint(start, stop)
 
 def rand_string():
-    return uuid4().hex
+    return 'a' + uuid4().hex
 
-def rand_bool():
-    return choice((True, False))
+def rand_object():
+    return object()
 
 class Expected(object):
     """ A container for the data a test expects the service to return.
@@ -99,6 +102,15 @@ class FakeServer(object):
         self.fs_server_config.misc = Bunch()
         self.fs_server_config.misc.internal_services_may_be_deleted = False
         self.repo_location = rand_string()
+
+class ForceTypeWrapper(object):
+    """ Makes comparison between two ForceType elements use their names.
+    """
+    def __init__(self, value):
+        self.value = value
+        
+    def __cmp__(self, other):
+        return cmp(self.value.name, other.name)
         
 class ServiceTestCase(TestCase):
     
@@ -189,3 +201,6 @@ class ServiceTestCase(TestCase):
                 eq_(given_value, expected_value)
                 
         self._check_sio_request_input(instance, request_data)
+
+    def wrap_force_type(self, elem):
+        return ForceTypeWrapper(elem)

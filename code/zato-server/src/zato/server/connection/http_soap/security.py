@@ -63,14 +63,14 @@ class Security(object):
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, headers):
         """ Performs the authentication using HTTP Basic Auth.
         """
-        env = {'HTTP_AUTHORIZATION':headers.get('AUTHORIZATION')}
+        env = {'HTTP_AUTHORIZATION':headers.get('HTTP_AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
         
         result = on_basic_auth(env, url_config, False)
         
         if not result:
-            msg = 'UNAUTHORIZED cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
-                cid, result.code, result.description)
+            msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                path_info, cid, result.code, result.description)
             logger.error(msg)
             raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
         
@@ -96,8 +96,8 @@ class Security(object):
             raise Unauthorized(cid, msg, 'zato-wss')
         
         if not result:
-            msg = 'UNAUTHORIZED cid:[{0}], sec-wall code:[{1}], description:[{2}]\n'.format(
-                cid, result.code, result.description)
+            msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                path_info, cid, result.code, result.description)
             logger.error(msg)
             raise Unauthorized(cid, msg, 'zato-wss')
         
@@ -108,15 +108,15 @@ class Security(object):
         
         for header in zato_headers:
             if not headers.get(header, None):
-                error_msg = ("[{0}] The header [{1}] doesn't exist or is empty, URI:[{2}, "
-                      "headers:[{3}]]").\
+                error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, "
+                      "headers:[{}]]").\
                         format(cid, header, path_info, headers)
                 logger.error(error_msg)
                 raise Unauthorized(cid, error_msg, 'zato-tech-acc')
 
         # Note that logs get a specific information what went wrong whereas the
         # user gets a generic 'username or password' message
-        msg_template = '[{0}] The {1} is incorrect, URI:[{2}], X_ZATO_USER:[{3}]'
+        msg_template = '[{}] The {} is incorrect, URI:[{}], X_ZATO_USER:[{}]'
 
         if headers['HTTP_X_ZATO_USER'] != sec_def.name:
             error_msg = msg_template.format(cid, 'username', path_info, headers['HTTP_X_ZATO_USER'])

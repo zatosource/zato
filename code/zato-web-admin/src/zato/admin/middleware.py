@@ -29,9 +29,11 @@ from django.http import HttpResponseRedirect
 from bunch import Bunch
 
 # Zato
-from zato.admin.settings import SASession
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, \
+    ADMIN_INVOKE_PATH,SASession
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.models import ClusterColorMarker, UserProfile
+from zato.client import AnyServiceInvoker
 from zato.common.odb.model import Cluster
 
 
@@ -98,10 +100,15 @@ class ZatoMiddleware(object):
 
         resolved_kwargs = resolve(req.path).kwargs
         req.zato.id = resolved_kwargs.get('id')
-        req.zato.cluster_id = req.GET.get('cluster') or req.POST.get('cluster_id') or resolved_kwargs.get('cluster_id') or resolved_kwargs.get('cluster')
+        req.zato.cluster_id = req.GET.get('cluster') or req.POST.get('cluster_id') or \
+            resolved_kwargs.get('cluster_id') or resolved_kwargs.get('cluster')
         
         if req.zato.cluster_id:
             req.zato.cluster = req.zato.odb.query(Cluster).filter_by(id=req.zato.cluster_id).one()
+            
+            url = 'http://{}:{}'.format(req.zato.cluster.lb_host, req.zato.cluster.lb_port)
+            auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
+            req.zato.client = AnyServiceInvoker(url, auth, ADMIN_INVOKE_PATH, to_bunch=True)
             
         req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
         req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)

@@ -43,6 +43,6 @@ class GetList(AdminService):
             pairs = (('basic_auth', basic_auth_list), 
                      ('tech_acc', tech_acc_list), 
                      ('wss', wss_list))
-            for def_type, meth in pairs:
-                for definition in meth(session, self.request.input.cluster_id, False):
+            for def_type, func in pairs:
+                for definition in func(session, self.request.input.cluster_id, False):
                     self.response.payload.append(definition)

@@ -22,7 +22,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from cStringIO import StringIO
-from httplib import INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from httplib import INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNAUTHORIZED
 from pprint import pprint
 from traceback import format_exc
 
@@ -41,8 +41,9 @@ from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 
-_status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
+_status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
+_status_unauthorized = b'{} {}'.format(UNAUTHORIZED, responses[UNAUTHORIZED])
 
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato"><soap:Body>{body}</soap:Body></soap:Envelope>"""
 
@@ -123,6 +124,7 @@ class RequestDispatcher(object):
 
         if url_data:
             transport = url_data['transport']
+            data_format = url_data['data_format']
             try:
                 payload = wsgi_environ['wsgi.input'].read()
                 if url_data.sec_def != ZATO_NONE:
@@ -138,7 +140,6 @@ class RequestDispatcher(object):
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
 
-                data_format = url_data['data_format']
                 service_info, response = handler.handle(cid, wsgi_environ, payload, transport, worker_store, self.simple_io_config, data_format, path_info)
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
@@ -148,22 +149,25 @@ class RequestDispatcher(object):
 
             except Exception, e:
                 _format_exc = format_exc(e)
+                status = _status_internal_server_error
                 if isinstance(e, ClientHTTPError):
                     response = e.msg
-                    status = e.status
+                    status_code = e.status
                     reason = e.reason
                     if isinstance(e, Unauthorized):
+                        status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
                 else:
+                    status_code = INTERNAL_SERVER_ERROR
                     response = _format_exc
                     
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
-                if logger.isEnabledFor(logging.DEBUG):
-                    msg = 'Caught an exception, cid:[{0}], status:[{1}], _format_exc:[{2}]'.format(
-                        cid, _status_internal_server_error, _format_exc)
-                    logger.debug(msg)
+                if logger.isEnabledFor(logging.ERROR):
+                    msg = 'Caught an exception, cid:[{0}], status_code:[{1}], _format_exc:[{2}]'.format(
+                        cid, status_code, _format_exc)
+                    logger.log(logging.ERROR, msg)
                     
                 try:
                     error_wrapper = get_client_error_wrapper(transport, data_format)
@@ -175,10 +179,10 @@ class RequestDispatcher(object):
                 else:
                     response = error_wrapper(cid, response)
                     
-                wsgi_environ['zato.http.response.status'] = _status_internal_server_error
+                wsgi_environ['zato.http.response.status'] = status
                 return response
         else:
-            response = "[{}] The URL:[{}] or SOAP action:[{}] doesn't exist".format(cid, path_info, soap_action)
+            response = "[{}] URL:[{}] or SOAP action:[{}] doesn't exist".format(cid, path_info, soap_action)
             wsgi_environ['zato.http.response.status'] = _status_not_found
             
             logger.error(response)

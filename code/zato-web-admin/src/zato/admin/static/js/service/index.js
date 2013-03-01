@@ -14,6 +14,7 @@ $.fn.zato.data_table.Service = new Class({
 // /////////////////////////////////////////////////////////////////////////////
 
 $(document).ready(function() {
+
     $('#data-table').tablesorter();
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Service;
     $.fn.zato.data_table.new_row_func = $.fn.zato.service.data_table.new_row;
@@ -23,7 +24,7 @@ $(document).ready(function() {
     $.each($.fn.zato.data_table.data, function(idx, instance) {
         $.fn.zato.service.add_stats(instance, $.fn.zato.service.get_sparklines_options());
     });
-    
+
 })
 
 $.fn.zato.service.add_stats = function(instance, sparklines_options) {
@@ -39,9 +40,9 @@ $.fn.zato.service.add_stats_callback = function(args) {
 }
 
 $.fn.zato.service.add_stats_to_table = function(id, rate, mean, mean_trend, sparklines_options) {
-    $('#rate_1h_' + id).text(rate);
-    $('#mean_1h_' + id).text(mean);
-    if(mean_trend != '0') {
+    $('#rate_1h_' + id).text(rate || '<0.01');
+    $('#mean_1h_' + id).text(mean || '<0.01');
+    if(mean_trend) {
         $('#trend_mean_1h_' + id).sparkline(mean_trend, sparklines_options);
     }
     else {
@@ -98,7 +99,12 @@ $.fn.zato.service.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td id="mean_1h_{0}"></td>', item.id);
     row += String.format('<td><span id="trend_mean_1h_{0}"></span></td>', item.id);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.edit('{0}')\">Edit</a>", data.id));
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.delete_('{0}')\">Delete</a>", data.id));
+    if(data.may_be_deleted) {
+        row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.service.delete_('{0}')\">Delete</a>", data.id));
+    }
+    else {
+        row += '<td></td>';
+    }
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_internal);

@@ -34,9 +34,8 @@ from validate import is_boolean
 from anyjson import dumps
 
 # Zato
-from zato.admin.web import invoke_admin_service
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
-from zato.admin.web.views import meth_allowed
+from zato.admin.web.views import method_allowed
 from zato.common import SECURITY_TYPES, URL_TYPE, ZATO_NONE, zato_path
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
@@ -57,10 +56,6 @@ TRANSPORT = {
     'plain_http': 'Plain HTTP',
     'soap': 'SOAP',
     }
-
-def _get_security_list(cluster):
-    zato_message, _  = invoke_admin_service(cluster, 'zato.security.get-list', {'cluster_id': cluster.id})
-    return zato_message
 
 def _get_edit_create_message(params, prefix=''):
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
@@ -103,7 +98,7 @@ def _edit_create_response(id, verb, transport, connection, name):
 
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def index(req):
     connection = req.GET.get('connection')
     transport = req.GET.get('transport')
@@ -124,22 +119,19 @@ def index(req):
         colspan += 2
 
     if req.zato.cluster_id:
-        security_list = _get_security_list(req.zato.cluster)
-        if zato_path('item_list.item').get_from(security_list) is not None:
-            for def_item in security_list.item_list.item:
-                
-                # Outgoing plain HTTP connections may use HTTP Basic Auth only,
-                # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
-                if connection == 'outgoing':
-                    if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type != _security_def_type.basic_auth:
-                        continue
-                    elif transport == URL_TYPE.SOAP and def_item.sec_type \
-                         not in(_security_def_type.basic_auth, _security_def_type.wss):
-                        continue
-                
-                value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
-                label = '{0}/{1}'.format(SECURITY_TYPES[def_item.sec_type], def_item.name)
-                _security.append((value, label))
+        for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
+            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
+            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
+            if connection == 'outgoing':
+                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type != _security_def_type.basic_auth:
+                    continue
+                elif transport == URL_TYPE.SOAP and def_item.sec_type \
+                     not in(_security_def_type.basic_auth, _security_def_type.wss):
+                    continue
+            
+            value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
+            label = '{0}/{1}'.format(SECURITY_TYPES[def_item.sec_type], def_item.name)
+            _security.append((value, label))
         
         create_form = CreateForm(_security)
         edit_form = EditForm(_security, prefix='edit')
@@ -149,41 +141,25 @@ def index(req):
             'connection': connection,
             'transport': transport,
         }
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http-soap.get-list', input_dict)
-    
-        if zato_path('item_list.item').get_from(zato_message) is not None:
-            for msg_item in zato_message.item_list.item:
-                id = msg_item.id.text
-                name = msg_item.name.text
-                is_active = is_boolean(msg_item.is_active.text)
-                is_internal = is_boolean(msg_item.is_internal.text)
-                host = msg_item.host.text
-                url_path = msg_item.url_path.text
-                method = msg_item.method.text if msg_item.method else ''
-                soap_action = msg_item.soap_action.text if msg_item.soap_action else ''
-                soap_version = msg_item.soap_version.text if msg_item.soap_version else ''
-                data_format = msg_item.data_format.text if msg_item.data_format else ''
-                service_id = msg_item.service_id.text
-                service_name = msg_item.service_name.text
-                sec_type = msg_item.sec_type.text
-                
-                _security_name = msg_item.security_name.text
-                if _security_name:
-                    security_name = '{0}<br/>{1}'.format(SECURITY_TYPES[sec_type], _security_name)
-                else:
-                    security_name = 'No security'
-                
-                _security_id = msg_item.security_id.text
-                if _security_id:
-                    security_id = '{0}/{1}'.format(sec_type, _security_id)
-                else:
-                    security_id = ZATO_NONE
-                
-                item = HTTPSOAP(id, name, is_active, is_internal, connection, 
-                        transport, host, url_path, method, soap_action, soap_version, 
-                        data_format, service_id=service_id, service_name=service_name,
-                        security_id=security_id, security_name=security_name)
-                items.append(item)
+        for item in req.zato.client.invoke('zato.http-soap.get-list', input_dict):
+
+            _security_name = item.security_name
+            if _security_name:
+                security_name = '{0}<br/>{1}'.format(SECURITY_TYPES[item.sec_type], _security_name)
+            else:
+                security_name = 'No security'
+            
+            _security_id = item.security_id
+            if _security_id:
+                security_id = '{0}/{1}'.format(item.sec_type, _security_id)
+            else:
+                security_id = ZATO_NONE
+            
+            item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection, 
+                    transport, item.host, item.url_path, item.method, item.soap_action,
+                    item.soap_version, item.data_format, service_id=item.service_id,
+                    service_name=item.service_name, security_id=security_id, security_name=security_name)
+            items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
@@ -201,46 +177,44 @@ def index(req):
 
     return TemplateResponse(req, 'zato/http_soap.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def create(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http-soap.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(zato_message.item.id.text, 'created',
+        response = req.zato.client.invoke('zato.http-soap.create', _get_edit_create_message(req.POST))
+        return _edit_create_response(response.data.id, 'created',
             req.POST['transport'], req.POST['connection'], req.POST['name'])
     except Exception, e:
         msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-
-@meth_allowed('POST')
+@method_allowed('POST')
 def edit(req):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, 'zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
-        return _edit_create_response(zato_message.item.id.text, 'updated',
+        response = req.zato.client.invoke('zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
+        return _edit_create_response(response.data.id, 'updated',
             req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
     except Exception, e:
         msg = 'Could not perform the update, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-def _delete_ping(req, id, cluster_id, service, error_template):
+def _delete_ping(req, service, id, error_template):
     try:
-        zato_message, soap_response = invoke_admin_service(req.zato.cluster, service, {'id': id})
-        return zato_message
+        return req.zato.client.invoke(service, {'id': id})
     except Exception, e:
         msg = error_template.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def delete(req, id, cluster_id):
-    _delete_ping(req, id, cluster_id, 'zato.http-soap.delete', 'Could not delete the object, e:[{e}]')
+    _delete_ping(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:[{e}]')
     return HttpResponse()
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = _delete_ping(req, id, cluster_id, 'zato.http-soap.ping', 'Could not ping the connection, e:[{e}]')
+    ret = _delete_ping(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
-    return HttpResponse(ret.response.item.info.text)
+    return HttpResponse(ret.data.info)

@@ -33,6 +33,9 @@ protocols and transports -
 and
 :doc:`FTP(S) <TODO>`.
 
+Other Python applications can use :doc:`a convenience client <./clients/python>`
+to access your services programmatically.
+
 At your disposal are also 
 :doc:`Redis key/value database <TODO>`
 and a built-in
@@ -109,6 +112,7 @@ Read next
       :doc:`Key/value DB (Redis)<./kvdb>` |
       :doc:`Scheduler<./scheduler>` |
       :doc:`Invoking other services <./invoking-services>` |
+      :doc:`Python client<progguide/clients/python>` |
       :doc:`Security<./security>` |
       :doc:`Testing<./testing>` |
       :doc:`Documenting<./documenting>` |

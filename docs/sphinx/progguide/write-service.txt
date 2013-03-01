@@ -1230,7 +1230,7 @@ could be delivered - the message will be lost.
 Note the data has been written out to logs twice because in this particular case
 the cluster consisted of two servers, each running one worker.
 
-Visit the :ref:`section on how to invoke only a single instance of a service <progguide-write-service-broker-client-async_invoke>`
+Visit the :ref:`section on how to invoke only a single instance of a service <progguide-write-service-broker-client-invoke_async>`
 if you don't want all of your services to receive the message.
   
 .. code-block:: text
@@ -1255,7 +1255,7 @@ if you don't want all of your services to receive the message.
     u'request.payload': u'My payload', u'wsgi_environ': None, u'environ': {}, 
     u'usage': 13, u'channel': u'publish'}
 
-.. _progguide-write-service-broker-client-async_invoke:
+.. _progguide-write-service-broker-client-invoke_async:
 
 Sending a message to one of servers (1:1)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1288,7 +1288,7 @@ convenience wrapper to send a message to a single worker only.
               'payload': 'My payload',
               'cid': new_cid()
           }
-          self.broker_client.async_invoke(msg)
+          self.broker_client.invoke_async(msg)
 
 ::
 

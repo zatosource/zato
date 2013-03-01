@@ -61,34 +61,42 @@ __all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
 # TODO: Move it to zato.common.
 ZATO_NO_DEFAULT_VALUE = 'ZATO_NO_DEFAULT_VALUE'
 
+logger = logging.getLogger(__name__)
+
 class ValueConverter(object):
     """ A class which knows how to convert values into the types defined in
     a service's SimpleIO config.
     """
     def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
-        
-        if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
-            value = asbool(value)
-            
-        if value is not None: # Can be a 0
-            if isinstance(param, Boolean):
-                value = asbool(value)
-            elif isinstance(param, Integer):
-                value = int(value)
-            elif isinstance(param, Unicode):
-                value = unicode(value)
-            elif isinstance(param, UTC):
-                value = value.replace('+00:00', '')
-            else:
-                if value and value != ZATO_NONE and has_simple_io_config:
-                    if any(param_name==elem for elem in self.int_parameters) or \
-                       any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
-                        value = int(value)
+        try:
+            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
+                value = asbool(value or None) # value can be an empty string and asbool chokes on that
                 
-            if date_time_format and isinstance(value, datetime):
-                value = value.strftime(date_time_format)
+            if value and value is not None: # Can be a 0
+                if isinstance(param, Boolean):
+                    value = asbool(value)
+                elif isinstance(param, Integer):
+                    value = int(value)
+                elif isinstance(param, Unicode):
+                    value = unicode(value)
+                elif isinstance(param, UTC):
+                    value = value.replace('+00:00', '')
+                else:
+                    if value and value != ZATO_NONE and has_simple_io_config:
+                        if any(param_name==elem for elem in self.int_parameters) or \
+                           any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
+                            value = int(value)
+                    
+                if date_time_format and isinstance(value, datetime):
+                    value = value.strftime(date_time_format)
+                
+            return value
+        except Exception, e:
+            msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
+                param, param_name, repr(value), format_exc(e))
+            logger.error(msg)
             
-        return value
+            raise ZatoException(msg=msg)
     
 class ForceType(object):
     """ Forces a SimpleIO element to use a specific data type.
@@ -380,12 +388,14 @@ class SimpleIOPayload(ValueConverter):
         into account the differences between dictionaries and other formats
         as well as the type conversions.
         """
+        lookup_name = name.name if isinstance(name, ForceType) else name
+            
         if is_sa_namedtuple or isinstance(item, Base):
-            elem_value = getattr(item, name, '')
+            elem_value = getattr(item, lookup_name, '')
         else:
-            elem_value = item.get(name, '')
+            elem_value = item.get(lookup_name, '')
 
-        if elem_value == '': # Don't use 'if not elem_value' here
+        if isinstance(elem_value, basestring) and not elem_value:
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
                 self.zato_logger.debug(msg)
@@ -397,7 +407,7 @@ class SimpleIOPayload(ValueConverter):
         if leave_as_is:
             return elem_value
         else:
-            return self.convert(item, name, elem_value, True)
+            return self.convert(name, lookup_name, elem_value, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -442,10 +452,11 @@ class SimpleIOPayload(ValueConverter):
                     out_item = {}
                 for is_required, name in chain(self.zato_required, self.zato_optional):
                     leave_as_is = isinstance(name, AsIs)
+                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
+                    
                     if isinstance(name, ForceType):
                         name = name.name
-
-                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
+                        
                     if isinstance(elem_value, basestring):
                         elem_value = elem_value.decode('utf-8')
                     
@@ -570,7 +581,8 @@ class Service(object):
         service_instance = self.server.service_store.new_instance(impl_name)
         
         service_instance.update(service_instance, channel, self.server, self.broker_client, 
-            self.worker_store, self.cid, payload, payload, transport, {}, data_format, {})
+            self.worker_store, self.cid, payload, payload, transport, 
+            self.request.simple_io_config, data_format, {})
 
         service_instance.pre_handle()
         
@@ -632,7 +644,7 @@ class Service(object):
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
         
-        proc_time = self.processing_time_raw.microseconds / 1000.0
+        proc_time = self.processing_time_raw.total_seconds() * 1000.0
         proc_time = proc_time if proc_time > 1 else 0
         
         self.processing_time = int(round(proc_time))
@@ -699,11 +711,11 @@ class Service(object):
                     self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
                 else:
                     try:
-                        meth_name = '{}_{}_job'.format(prefix, self.job_type)
-                        meth = getattr(self, meth_name)
-                        meth()
+                        func_name = '{}_{}_job'.format(prefix, self.job_type)
+                        func = getattr(self, func_name)
+                        func()
                     except Exception, e:
-                        self.logger.error("Can't run {}, e:[{}]".format(meth_name, format_exc(e)))
+                        self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
         def call_handle():
             try:
                 getattr(self, '{}_handle'.format(prefix))()

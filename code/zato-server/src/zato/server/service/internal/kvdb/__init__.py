@@ -30,6 +30,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 class ExecuteCommand(AdminService):
     """ Executes a command against the key/value DB.
     """
+    name = 'zato.kvdb.remote-command.execute'
+    
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_remote_command_execute_request'
         response_elem = 'zato_kvdb_remote_command_execute_response'

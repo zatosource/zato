@@ -37,7 +37,7 @@ def update_globals(config, base_dir='.'):
     priv_key = open(os.path.abspath(os.path.join(base_dir, SSL_KEY_FILE))).read()
     for k, v in config.items():
         if not k.startswith('DATABASE_'):
-            if k == 'TECH_ACCOUNT_PASSWORD':
+            if k == 'ADMIN_INVOKE_PASSWORD':
                 v = decrypt(v, priv_key)
             elif k == 'log_config':
                 v = os.path.join(base_dir, v)

@@ -12,6 +12,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.textext.js"></script>
     <script type="text/javascript" src="/static/js/fileuploader.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -84,7 +85,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show services"%}
+{% include "zato/choose-cluster.html" with page_prompt="Show services" pattern_hint="Type a service name" %}
 
 
     {% if cluster_id %}
@@ -127,8 +128,8 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.impl_name }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
-                        <td id="rate_1h_{{ item.id }}"></td>
-                        <td id="mean_1h_{{ item.id }}"></td>
+                        <td id="rate_1h_{{ item.id }}">&lt;0.01</td>
+                        <td id="mean_1h_{{ item.id }}">&lt;0.01</td>
                         <td>
                             <span id="trend_mean_1h_{{ item.id }}"></span>
                         </td>
@@ -204,7 +205,7 @@
                         </tr>                        
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    <input type="hidden" id="id_edit-id" name="id" />
+                    <input type="hidden" id="id_edit-id" name="edit-id" />
                 </form>
             </div>
         </div>
