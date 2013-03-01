@@ -34,9 +34,9 @@ and
 :doc:`FTP(S) <TODO>`.
 
 At your disposal are also 
-:doc:`Redis key/value database`
+:doc:`Redis key/value database <TODO>`
 and a built-in
-:doc:`scheduler`
+:doc:`scheduler <./scheduler>`
 which is used for executing recurring tasks.
 
 Servers know how to secure and to make use of resources secured with 
@@ -44,6 +44,10 @@ Servers know how to secure and to make use of resources secured with
 :doc:`WS-Security <TODO>`
 and
 :doc:`technical accounts <TODO>`.
+
+:doc:`Services can invoke each other <./invoking-services>`
+and for other Python applications, there's a convenient
+:doc:`client API <./clients/python>`.
 
 Zato's unique 
 :doc:`SimpleIO (SIO) <./sio>`
