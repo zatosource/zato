@@ -13,9 +13,6 @@ Which methods can be implemented depends on how a service is invoked - some
 methods are common to all access mechanisms while the rest of them is specific
 only to jobs executed through the scheduler.
 
-By default, :ref:`before_add_to_store <progguide-write-service-before_add_to_store>`
-always returns True while all other hooks are pass-through.
-
 Any exceptions raised in :ref:`before_add_to_store <progguide-write-service-before_add_to_store>`
 will mean a service won't be deployed. For all other hooks, if an exception is raised,
 it will be caught by Zato, logged, and the next method will be called as though there was
@@ -38,7 +35,8 @@ Method                                                                   Notes
 ======================================================================== ===================================================================================
 :ref:`before_add_to_store <progguide-write-service-before_add_to_store>` Class method that will be executed by each worker when a 
                                                                          server starts up. A service will be deployed by that worker 
-                                                                         only if the method returns True.
+                                                                         only if the method returns True and this is the value
+                                                                         before_add_to_store returns by default.
 :ref:`after_add_to_store <progguide-write-service-after_add_to_store>`   Class method that will be executed by each worker right after a
                                                                          service has been successfully deployed.
 
@@ -89,8 +87,10 @@ Method                                                                   Notes
             
 ::
 
-    INFO - before_add_to_store called
-    INFO - after_add_to_store called
+    INFO - Adding to store service-hooks.my-service
+    INFO - Added to store service-hooks.my-service
+    ...
+    ...
     INFO - before_handle called
     INFO - handle called
     INFO - after_handle called
@@ -194,6 +194,10 @@ Method                                                                          
             
 ::
 
+    INFO - Adding to store service-hooks.my-service
+    INFO - Added to store service-hooks.my-service
+    ...
+    ...
     INFO - before_job called
     INFO - before_interval_based_job called
     INFO - before_handle called

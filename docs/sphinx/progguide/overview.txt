@@ -33,8 +33,9 @@ protocols and transports -
 and
 :doc:`FTP(S) <TODO>`.
 
-Other Python applications can use :doc:`a convenience client <./clients/python>`
-to access your services programmatically.
+:doc:`Services can invoke each other <./invoking-services>` and other Python
+applications can use :doc:`a convenience client <./clients/python>` to access
+your services programmatically.
 
 At your disposal are also 
 :doc:`Redis key/value database <TODO>`
@@ -47,10 +48,6 @@ Servers know how to secure and to make use of resources secured with
 :doc:`WS-Security <TODO>`
 and
 :doc:`technical accounts <TODO>`.
-
-:doc:`Services can invoke each other <./invoking-services>`
-and for other Python applications, there's a convenient
-:doc:`client API <./clients/python>`.
 
 Zato's unique 
 :doc:`SimpleIO (SIO) <./sio>`

@@ -12,7 +12,7 @@ to support several distinct mechanisms:
   Each service can use 
   :ref:`1:N <progguide-write-service-broker-client-publish>`
   and 
-  :ref:`1:1 <progguide-write-service-broker-client-async_invoke>`
+  :ref:`1:1 <progguide-write-service-broker-client-invoke_async>`
   publishing. There's also 
   :ref:`a convenience method <progguide-write-service-invoke_async>`
   to simplify invoking other services asynchronously.

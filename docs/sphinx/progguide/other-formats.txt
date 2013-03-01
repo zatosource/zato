@@ -82,13 +82,13 @@ Note that the channel doesn't specify any particular data format.
       
       class MyService(Service):
           def handle(self):
-              self.response.payload = 'SPD*1.0*ACC:CZ2408000000190000000123*MSG:My payment'
+              self.response.payload = 'SPD*1.0*ACC:CZ2408000000190000000123*MSG:My debts'
               self.response.content_type = 'application/x-shortpaymentdescriptor'
               
    ::   
    
       $ curl localhost:17010/other-example.my-service
-      SPD*1.0*ACC:CZ2408000000190000000123*MSG:My payment
+      SPD*1.0*ACC:CZ2408000000190000000123*MSG:My debts
 
 Simple IO (SIO)
 ===============

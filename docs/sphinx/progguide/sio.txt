@@ -30,11 +30,11 @@ API, for example:
     
     class MyService(Service):
         class SimpleIO:
-            input_required = ('name', 'cust_type')
+            input_required = ('name', 'type')
             output_required = ('is_allowed',)
     
         def get_data(self):
-            if self.request.input.name == 'wendy' and self.request.input.cust_type == 'AXC':
+            if self.request.input.name == 'wendy' and self.request.input.type == 'AXC':
                 return True
     
         def handle(self):
@@ -59,12 +59,12 @@ depending on whether conditions get_data looks for are met or not.
 
 .. code-block:: javascript
 
-  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"wendy", "cust_type":"AXC"}'
+  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"wendy", "type":"AXC"}'
   {"response": {"is_allowed": true}}
 
 .. code-block:: javascript
   
-  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"janet", "cust_type":"AXC"}'
+  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"janet", "type":"AXC"}'
   {"response": {"is_allowed": false}}
   
 SOAP channel example
@@ -82,19 +82,21 @@ improve clarity.
 
 .. code-block:: xml
 
-  $ curl localhost:17010/soap/sio-example.my-service -H "SOAPAction:sio-example.my-service" -d '
+  $ curl localhost:17010/soap/sio-example.my-service \
+      -H "SOAPAction:sio-example.my-service" -d '
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Body>
         <zato:request>
           <zato:name>wendy</zato:name>
-          <zato:cust_type>AXC</zato:cust_type>
+          <zato:type>AXC</zato:type>
         </zato:request>
       </soapenv:Body>
     </soapenv:Envelope>'
     
   <?xml version='1.0' encoding='UTF-8'?>
-    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+        xmlns="http://gefira.pl/zato">
       <soap:Body>
         <response>
           <zato_env>
@@ -110,19 +112,21 @@ improve clarity.
   
 .. code-block:: xml
 
-  $ curl localhost:17010/soap/sio-example.my-service -H "SOAPAction:sio-example.my-service" -d '
+  $ curl localhost:17010/soap/sio-example.my-service \
+      -H "SOAPAction:sio-example.my-service" -d '
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Body>
         <zato:request>
           <zato:name>janet</zato:name>
-          <zato:cust_type>AXC</zato:cust_type>
+          <zato:type>AXC</zato:type>
         </zato:request>
       </soapenv:Body>
     </soapenv:Envelope>'
     
   <?xml version='1.0' encoding='UTF-8'?>
-    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+        xmlns="http://gefira.pl/zato">
       <soap:Body>
         <response>
           <zato_env>
@@ -155,7 +159,7 @@ The example shows a service using all of the attributes SIO allows for:
       class SimpleIO:
           request_elem = 'service_request'
           response_elem = 'service_response'
-          input_required = ('name', 'cust_type')
+          input_required = ('name', 'type')
           input_optional = ('cust_category', 'priority')
           output_required = ('is_allowed',)
           output_optional = ('session_timeout', 'should_refresh_creds', 'priority')
@@ -168,7 +172,7 @@ The example shows a service using all of the attributes SIO allows for:
 
 .. code-block:: javascript
           
-  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"wendy", "cust_type":"AXC"}'
+  $ curl localhost:17010/json/sio-example.my-service -d '{"name":"wendy", "type":"AXC"}'
   {"service_response": {"session_timeout": "", "priority": "UNKNOWN", 
       "is_allowed": false, "should_refresh_creds": true}}
 
@@ -204,10 +208,10 @@ default_value    A value to use when an optional element wasn't in the request. 
   
   Naturally, when not using SIO, Zato does allow for accepting and returning 
   any documents in 
-  :doc:`JSON <TODO>`, 
-  :doc:`XML <TODO>`
-  or indeed, in any 
-  :doc:`data format <TODO>`.
+  :doc:`JSON <./json>`, 
+  :doc:`XML <./xml>`
+  or indeed, in
+  :doc:`any data format <./other-formats>`.
 
 Returning a list of elements
 ----------------------------
@@ -430,7 +434,8 @@ JSON and XML but doubly so for the latter.
   
       def handle(self):
           for name, value in self.request.input.items():
-              self.logger.info('name:{}, value:{}, type:{}'.format(name, value, type(value)))
+              self.logger.info(
+                'name:{}, value:{}, type:{}'.format(name, value, type(value)))
 
 ::
 
@@ -459,21 +464,22 @@ type conversions:
   class MyService(Service):
       class SimpleIO:
           input_required = (AsIs('id'), Boolean('reset_required'), 
-              Integer('cust_type'), Unicode('cust_id'))
+              Integer('type'), Unicode('cust_id'))
   
       def handle(self):
           for name, value in self.request.input.items():
-              self.logger.info('name:{}, value:{}, type:{}'.format(name, repr(value), type(value)))
+              self.logger.info(
+                'name:{}, value:{}, type:{}'.format(name, repr(value), type(value)))
 
 ::
 
   $ curl localhost:17010/json/sio-example.my-service -d '{"id":"1",
-    "reset_required":"true", "cust_type":"30", "cust_id":1}'
+    "reset_required":"true", "type":"30", "cust_id":1}'
 
 ::
 
   INFO - name:cust_id, value:u'1', type:<type 'unicode'>
-  INFO - name:cust_type, value:30, type:<type 'int'>
+  INFO - name:type, value:30, type:<type 'int'>
   INFO - name:reset_required, value:True, type:<type 'bool'>
   INFO - name:id, value:u'1', type:<type 'unicode'>
 
