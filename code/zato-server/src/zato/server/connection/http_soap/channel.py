@@ -164,10 +164,10 @@ class RequestDispatcher(object):
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
-                if logger.isEnabledFor(logging.DEBUG):
+                if logger.isEnabledFor(logging.ERROR):
                     msg = 'Caught an exception, cid:[{0}], status_code:[{1}], _format_exc:[{2}]'.format(
                         cid, status_code, _format_exc)
-                    logger.debug(msg)
+                    logger.log(logging.ERROR, msg)
                     
                 try:
                     error_wrapper = get_client_error_wrapper(transport, data_format)

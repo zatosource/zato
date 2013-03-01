@@ -57,8 +57,8 @@ def _get_edit_create_message(params, prefix=''):
         'app_id': params.get(prefix + 'app_id'),
     }
 
-def _edit_create_response(client, verb, id, name, delivery_mode_text, def_id):
-    response = client.invoke('zato.definition.amqp.get-by-id', {'id':def_id})
+def _edit_create_response(client, verb, id, name, delivery_mode_text, def_id, cluster_id):
+    response = client.invoke('zato.definition.amqp.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
     return_data = {'id': id,
                    'message': 'Successfully {0} the outgoing AMQP connection [{1}]'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
@@ -102,7 +102,7 @@ def create(req):
         delivery_mode_text = delivery_friendly_name[int(req.POST['delivery_mode'])]
 
         return _edit_create_response(req.zato.client, 'created', response.data.id, 
-            req.POST['name'], delivery_mode_text, req.POST['def_id'])
+            req.POST['name'], delivery_mode_text, req.POST['def_id'], req.POST['cluster_id'])
     except Exception, e:
         msg = 'Could not create an outgoing AMQP connection, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -115,8 +115,8 @@ def edit(req):
         response = req.zato.client.invoke('zato.outgoing.amqp.edit', request)
         delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
 
-        return _edit_create_response(req.zato.cluster, 'updated', req.POST['id'], req.POST['edit-name'],
-            delivery_mode_text, req.POST['edit-def_id'])
+        return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
+            delivery_mode_text, req.POST['edit-def_id'], req.POST['cluster_id'])
     except Exception, e:
         msg = 'Could not update the outgoing AMQP connection, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)

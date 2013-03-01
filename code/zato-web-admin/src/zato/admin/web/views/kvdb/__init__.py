@@ -53,7 +53,7 @@ def remote_command_execute(req):
     """
     try:
         response = req.zato.client.invoke('zato.kvdb.remote-command.execute', {'command': req.POST['command']})
-        return_data = {'message': response.result}
+        return_data = {'message': response.data.result}
         
         return HttpResponse(dumps(return_data), mimetype='application/javascript')
     except Exception, e:

@@ -57,7 +57,7 @@ class Index(_Index):
         output_repeated = True
 
     def handle(self):
-        systems = _get_systems(self.req.zato.cluster)
+        systems = _get_systems(self.req.zato.client)
         return {
             'create_form': CreateForm(systems),
             'edit_form': EditForm(systems, prefix='edit'),
@@ -118,7 +118,7 @@ def translate(req):
         
         if response.has_data:
             for name in('value2', 'repr', 'hex', 'sha1', 'sha256'):
-                value = getattr(zato_message.data, name, None)
+                value = getattr(response.data, name, None)
                 if value and value != ZATO_NONE:
                     result[name] = value
         

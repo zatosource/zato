@@ -42,6 +42,8 @@ PREDEFINED_CRON_DEFINITIONS = {
 
 CRON_EXPRESSION_LEN = 5
 
+_service_name_prefix = 'zato.scheduler.job.'
+
 def _create_edit(action, cid, input, payload, logger, session, broker_client, response):
     """ Creating and updating a job requires a series of very similar steps
     so they've been all put here and depending on the 'action' parameter 
@@ -221,6 +223,8 @@ class _Get(AdminService):
 class GetList(_Get):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
+    name = _service_name_prefix + 'get-list'
+    
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_list_request'
         response_elem = 'zato_scheduler_job_get_list_response'
@@ -238,6 +242,8 @@ class GetList(_Get):
 class GetByName(_Get):
     """ Returns a job by its name.
     """
+    name = _service_name_prefix + 'get-by-name'
+    
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_by_name_request'
         response_elem = 'zato_scheduler_job_get_by_name_response'
@@ -255,6 +261,8 @@ class GetByName(_Get):
 class Create(_CreateEdit):
     """ Creates a new scheduler's job.
     """
+    name = _service_name_prefix + 'create'
+    
     class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_scheduler_job_create_request'
         response_elem = 'zato_scheduler_job_create_response'
@@ -262,6 +270,8 @@ class Create(_CreateEdit):
 class Edit(_CreateEdit):
     """ Updates a scheduler's job.
     """
+    name = _service_name_prefix + 'edit'
+    
     class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_scheduler_job_edit_request'
         response_elem = 'zato_scheduler_job_edit_response'
@@ -269,6 +279,8 @@ class Edit(_CreateEdit):
 class Delete(AdminService):
     """ Deletes a scheduler's job.
     """
+    name = _service_name_prefix + 'delete'
+    
     class SimpleIO(AdminSIO):
         request_elem = 'zato_scheduler_job_delete_request'
         response_elem = 'zato_scheduler_job_delete_response'
@@ -297,6 +309,8 @@ class Delete(AdminService):
 class Execute(AdminService):
     """ Executes a scheduler's job.
     """
+    name = _service_name_prefix + 'execute'
+    
     class SimpleIO(AdminSIO):
         request_elem = 'zato_scheduler_job_execute_request'
         response_elem = 'zato_scheduler_job_execute_response'

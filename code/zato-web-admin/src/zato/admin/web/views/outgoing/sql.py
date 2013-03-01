@@ -89,8 +89,8 @@ def index(req):
                 setattr(_item, name, value)
             
             _item.extra = item.extra or ''
-            _item.engine_text = odb_engine_friendly_name[engine]
-            _items.append(item)
+            _item.engine_text = odb_engine_friendly_name[_item.engine]
+            items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
@@ -145,14 +145,13 @@ class Delete(_Delete):
 def ping(req, cluster_id, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
-    try:
-        response_time = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id}).data.response_time
-    except Exception, e:
-        msg = 'Ping failed. e:[{}]'.format(format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+    response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
+    
+    if response.ok:
+        return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html', 
+            {'response_time':'%.3f' % float(response.data.response_time)})
     else:
-        return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html', {'response_time':'%.3f' % float(response_time)})
+        return HttpResponseServerError(response.details)
 
 @method_allowed('POST')
 def change_password(req):

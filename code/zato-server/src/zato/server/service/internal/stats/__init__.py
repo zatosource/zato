@@ -66,7 +66,7 @@ class Delete(AdminService):
         input_required = (UTC('start'), UTC('stop'))
 
     def handle(self):
-        self.broker_client.async_invoke(
+        self.broker_client.invoke_async(
             {'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop})
         
 # ##############################################################################

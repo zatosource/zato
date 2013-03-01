@@ -612,7 +612,7 @@ def settings_save(req):
 
     for mapping in job_mappings:
 
-        response = req.zato.client('zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
+        response = req.zato.client.invoke('zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
         if response.has_data:
             
             # Gotta love dictionary comprehensions!
@@ -664,9 +664,11 @@ def maintenance_delete(req):
     
     req.zato.client.invoke('zato.stats.delete', {'start':start, 'stop':stop})
     
+    logger.warn('[{}]'.format(stop.isoformat() + '+00:00'))
+    
     msg = 'Submitted a request to delete statistics from [{}] to [{}]. Check the server logs for details.'.format(
-        from_utc_to_user(start, req.zato.user_profile), 
-        from_utc_to_user(stop, req.zato.user_profile))
+        from_utc_to_user(start.isoformat() + '+00:00', req.zato.user_profile), 
+        from_utc_to_user(stop.isoformat() + '+00:00', req.zato.user_profile))
         
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         
