@@ -344,9 +344,9 @@ def request_response(req, service_name):
         'cluster_id': req.zato.cluster_id
     }
     
-    response = req.zato.client.invoke('zato.service.get-request-response', input_dict)
-    if response.ok:
-        request = (response.data.sample_req if response.data.sample_req else '').decode('base64')
+    service_response = req.zato.client.invoke('zato.service.get-request-response', input_dict)
+    if service_response.ok:
+        request = (service_response.data.sample_req if service_response.data.sample_req else '').decode('base64')
         request_data_format = known_data_format(request)
         if request_data_format:
             if pretty_print:
@@ -354,7 +354,7 @@ def request_response(req, service_name):
             service.sample_req_html = highlight(request, data_format_lexer[request_data_format](), 
                 HtmlFormatter(linenos='table'))
 
-        response = (response.data.sample_resp if response.data.sample_resp else '').decode('base64')
+        response = (service_response.data.sample_resp if service_response.data.sample_resp else '').decode('base64')
         response_data_format = known_data_format(response)
         if response_data_format:
             if pretty_print:
@@ -368,16 +368,16 @@ def request_response(req, service_name):
         ts = {}
         for name in('req', 'resp'):
             full_name = 'sample_{}_ts'.format(name)
-            value = getattr(response.data, full_name) or ''
+            value = getattr(service_response.data, full_name, '')
             if value:
                 value = from_utc_to_user(value+'+00:00', req.zato.user_profile)
             ts[full_name] = value
                 
-        service.id = response.data.service_id
-        service.sample_cid = response.data.sample_cid
+        service.id = service_response.data.service_id
+        service.sample_cid = service_response.data.sample_cid
         service.sample_req_ts = ts['sample_req_ts']
         service.sample_resp_ts = ts['sample_resp_ts']
-        service.sample_req_resp_freq = response.data.sample_req_resp_freq
+        service.sample_req_resp_freq = service_response.data.sample_req_resp_freq
 
     return_data = {
         'cluster_id': req.zato.cluster_id,
@@ -418,7 +418,7 @@ def package_upload(req, cluster_id):
             'payload': req.read().encode('base64'),
             'payload_name': req.GET['qqfile']
         }
-        req.zato.client.invoke(req.zato.cluster, 'zato.service.upload-package', input_dict)
+        req.zato.client.invoke('zato.service.upload-package', input_dict)
 
         return HttpResponse(dumps({'success': True}))
 
@@ -467,7 +467,7 @@ def slow_response(req, service_name):
         'name': service_name,
     }
     
-    for _item in req.zato.client.invoke(req.zato.cluster, 'zato.service.slow-response.get-list', input_dict):
+    for _item in req.zato.client.invoke('zato.service.slow-response.get-list', input_dict):
         item = SlowResponse()
         item.cid = _item.cid
         item.req_ts = from_utc_to_user(_item.req_ts+'+00:00', req.zato.user_profile)
@@ -496,7 +496,7 @@ def slow_response_details(req, cid, service_name):
         'cid': cid,
         'name': service_name,
     }
-    response = req.zato.client.invoke(req.zato.cluster, 'zato.service.slow-response.get', input_dict)
+    response = req.zato.client.invoke('zato.service.slow-response.get', input_dict)
     
     if response.has_data:
         cid = response.data.cid
@@ -510,10 +510,15 @@ def slow_response_details(req, cid, service_name):
             item.threshold = service.slow_threshold
             
             for name in('req', 'resp'):
-                value = getattr(_item, name)
+                value = getattr(response.data, name)
                 if value:
-                    value = value.decode('base64')
-                    data_format = known_data_format(value)
+                    #value = value.decode('base64')
+                    if isinstance(value, dict):
+                        value = dumps(value)
+                        data_format = 'json'
+                    else:
+                        data_format = known_data_format(value)
+                        
                     if data_format:
                         if pretty_print:
                             value = get_pretty_print(value, data_format)
@@ -558,10 +563,8 @@ def invoke(req, name, cluster_id):
         return HttpResponseServerError(msg)
     else:
         try:
-            if response.has_data:
-                out = response.inner_service_response
-                print(3333, type(response.inner_service_response), response.inner_service_response)
-                return HttpResponse(str(out))
+            if response.ok:
+                return HttpResponse(response.inner_service_response or '(None)')
             else:
                 return HttpResponseServerError(response.details)
         except Exception, e:

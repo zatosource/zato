@@ -180,20 +180,19 @@ def index(req):
 @method_allowed('POST')
 def create(req):
     try:
-        response = req.zato.client.invoke(req.zato.cluster, 'zato.http-soap.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(response.id, 'created',
+        response = req.zato.client.invoke('zato.http-soap.create', _get_edit_create_message(req.POST))
+        return _edit_create_response(response.data.id, 'created',
             req.POST['transport'], req.POST['connection'], req.POST['name'])
     except Exception, e:
         msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-
 @method_allowed('POST')
 def edit(req):
     try:
         response = req.zato.client.invoke('zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
-        return _edit_create_response(response.id, 'updated',
+        return _edit_create_response(response.data.id, 'updated',
             req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
     except Exception, e:
         msg = 'Could not perform the update, e:[{e}]'.format(e=format_exc(e))
@@ -218,4 +217,4 @@ def ping(req, id, cluster_id):
     ret = _delete_ping(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
-    return HttpResponse(ret.info)
+    return HttpResponse(ret.data.info)

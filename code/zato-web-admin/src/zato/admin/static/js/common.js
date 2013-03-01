@@ -656,7 +656,7 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 }
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
-    return String.format('<a href="/zato/service/details/{0}/?cluster={1}">{0}</a>', service, cluster_id);
+    return String.format('<a href="/zato/service/overview/{0}/?cluster={1}">{0}</a>', service, cluster_id);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

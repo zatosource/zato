@@ -224,7 +224,7 @@ class BaseAMQPConnector(BaseConnector):
         self.def_amqp.id = item.id
         self.def_amqp.host = str(item.host)
         self.def_amqp.port = item.port
-        self.def_amqp.vhost = item.vhost
+        self.def_amqp.vhost = str(item.vhost)
         self.def_amqp.username = item.username
         self.def_amqp.password = item.password
         self.def_amqp.heartbeat = item.heartbeat

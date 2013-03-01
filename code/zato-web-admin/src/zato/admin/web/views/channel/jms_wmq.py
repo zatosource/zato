@@ -53,11 +53,10 @@ def _get_edit_create_message(params, prefix=''):
     }
 
 def _edit_create_response(client, verb, id, name, cluster_id, def_id):
-    response = req.zato.client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
+    response = client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
     return_data = {'id': id,
                    'message': 'Successfully {0} the JMS WebSphere MQ channel [{1}]'.format(verb, name),
-                   'def_name': response.data.name
-                }
+                   'def_name': response.data.name}
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 

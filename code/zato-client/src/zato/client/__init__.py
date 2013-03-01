@@ -310,7 +310,7 @@ class AnyServiceInvoker(_Client):
         
         if output_repeated == ZATO_NOT_GIVEN:
             output_repeated = name.lower().endswith('list')
-        
+            
         if needs_dumps:
             payload = dumps(payload, default=self.json_default_handler)
 

@@ -228,7 +228,7 @@ class ServiceStore(InitializingObject):
         """ Actually imports services from a module object.
         """
         try:
-            for name in dir(mod):
+            for name in sorted(dir(mod)):
                 item = getattr(mod, name)
                 if self._should_deploy(name, item):
                     

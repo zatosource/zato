@@ -69,8 +69,8 @@ class ValueConverter(object):
     """
     def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
         try:
-            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
-                value = asbool(value)
+            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
+                value = asbool(value or None) # value can be an empty string and asbool chokes on that
                 
             if value and value is not None: # Can be a 0
                 if isinstance(param, Boolean):
@@ -644,7 +644,7 @@ class Service(object):
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
         
-        proc_time = self.processing_time_raw.microseconds / 1000.0
+        proc_time = self.processing_time_raw.total_seconds() * 1000.0
         proc_time = proc_time if proc_time > 1 else 0
         
         self.processing_time = int(round(proc_time))

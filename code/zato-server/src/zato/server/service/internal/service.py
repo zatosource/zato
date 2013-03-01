@@ -26,6 +26,7 @@ from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from urlparse import parse_qs
+from uuid import uuid4
 
 # anyjson
 from anyjson import loads
@@ -43,6 +44,8 @@ from zato.common.util import hot_deploy, payload_from_request
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
+_no_such_service_name = uuid4().hex
+
 class GetList(AdminService):
     """ Returns a list of services.
     """
@@ -53,6 +56,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), 
                            Integer('usage'), Integer('slow_threshold'))
         output_repeated = True
+        default_value = ''
         
     def get_data(self, session):
         out = []
@@ -60,6 +64,8 @@ class GetList(AdminService):
         
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
         name_filter = [elem.strip().lower() for elem in self.request.input.get('name_filter', '').strip().split()]
+        if not name_filter:
+            name_filter = [_no_such_service_name] # So it matches nothing
         
         for item in sl:
             if self.request.input.name_filter != '*':
@@ -239,13 +245,14 @@ class Invoke(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_required = ('payload',)
-        input_optional = ('id', 'name', 'channel', 'data_format', 'transport')
+        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport')
         output_optional = ('response',)
 
     def handle(self):
-        payload = payload_from_request(self.cid, self.request.input.payload.decode('base64'), 
-            self.request.input.data_format, self.request.input.transport)
+        payload = self.request.input.get('payload')
+        if payload:
+            payload = payload_from_request(self.cid, payload.decode('base64'), 
+                self.request.input.data_format, self.request.input.transport)
 
         id = self.request.input.get('id')
         name = self.request.input.get('name')
@@ -497,7 +504,7 @@ class _SlowResponseService(AdminService):
                 
             if cid_needed and cid_needed == item['cid']:
                 for name in('req', 'resp'):
-                    elem[name] = item.get(name, '').encode('base64')
+                    elem[name] = item.get(name, '')#.encode('base64')
                     
             data.append(elem)
 
@@ -506,6 +513,10 @@ class _SlowResponseService(AdminService):
 class GetSlowResponseList(_SlowResponseService):
     """ Returns a list of basic information regarding slow responses of a given service.
     """
+    @staticmethod
+    def get_name():
+        return 'zato.service.slow-response.get-list'
+        
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_slow_response_get_list_request'
         response_elem = 'zato_service_slow_response_get_list_response'
@@ -518,6 +529,10 @@ class GetSlowResponseList(_SlowResponseService):
 class GetSlowResponse(_SlowResponseService):
     """ Returns information regading a particular slow response of a service.
     """
+    @staticmethod
+    def get_name():
+        return 'zato.service.slow-response.get'
+        
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_slow_response_get_request'
         response_elem = 'zato_service_slow_response_get_response'

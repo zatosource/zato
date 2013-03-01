@@ -40,8 +40,8 @@ from zato.common.odb.model import WSSDefinition
 
 logger = logging.getLogger(__name__)
 
-def _edit_create_response(zato_message, action, name, password_type):
-    return_data = {'id': zato_message.item.id,
+def _edit_create_response(service_response, action, name, password_type):
+    return_data = {'id': service_response.data.id,
         'message': 'Successfully {0} the WS-Security definition [{1}]'.format(action, name),
         'password_type_raw':password_type,
         'password_type':ZATO_WSS_PASSWORD_TYPES[password_type]}
@@ -97,8 +97,8 @@ def edit(req):
     """ Updates WS-S definitions's parameters (everything except for the password).
     """
     try:
-        req.zato.client.invoke('zato.security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
-        return _edit_create_response(zato_message, 'updated', req.POST['edit-name'], req.POST['edit-password_type'])
+        response = req.zato.client.invoke('zato.security.wss.edit', _get_edit_create_message(req.POST, prefix='edit-'))
+        return _edit_create_response(response, 'updated', req.POST['edit-name'], req.POST['edit-password_type'])
     except Exception, e:
         msg = 'Could not update the WS-Security definition, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -107,8 +107,8 @@ def edit(req):
 @method_allowed('POST')
 def create(req):
     try:
-        req.zato.client.invoke('zato.security.wss.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(zato_message, 'created', req.POST['name'], req.POST['password_type'])
+        response = req.zato.client.invoke('zato.security.wss.create', _get_edit_create_message(req.POST))
+        return _edit_create_response(response, 'created', req.POST['name'], req.POST['password_type'])
     except Exception, e:
         msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
         logger.error(msg)

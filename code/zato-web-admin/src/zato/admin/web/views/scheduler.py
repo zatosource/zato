@@ -192,7 +192,7 @@ def _create_one_time(client, user_profile, cluster, params):
     logger.debug('About to create a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
     
     input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, create_one_time_prefix+'-')
-    response = client.invoke('zato.scheduler.create', input_dict)
+    response = client.invoke('zato.scheduler.job.create', input_dict)
     
     logger.debug('Successfully created a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
@@ -204,7 +204,7 @@ def _create_interval_based(client, user_profile, cluster, params):
     logger.debug('About to create an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
     
     input_dict = _get_create_edit_interval_based_message(user_profile, cluster, params, create_interval_based_prefix+'-')
-    response = client.invoke('zato.scheduler.create', input_dict)
+    response = client.invoke('zato.scheduler.job.create', input_dict)
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     start_date = input_dict.get('start_date')
@@ -227,7 +227,7 @@ def _create_cron_style(client, user_profile, cluster, params):
     logger.debug('About to create a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, create_cron_style_prefix+'-')
-    response = client.invoke('zato.scheduler.create', input_dict)
+    response = client.invoke('zato.scheduler.job.create', input_dict)
     cron_definition = response.data.cron_definition
     logger.debug('Successfully created a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
@@ -242,7 +242,7 @@ def _edit_one_time(client, user_profile, cluster, params):
     logger.debug('About to change a one_time job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, edit_one_time_prefix+'-')
-    client.invoke('zato.scheduler.edit', input_dict)
+    client.invoke('zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     return {'definition_text':_one_time_job_def(user_profile, input_dict['start_date']), 'id':params['edit-one_time-id']}
@@ -253,7 +253,7 @@ def _edit_interval_based(client, user_profile, cluster, params):
     logger.debug('About to change an interval_based job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_interval_based_message(user_profile, cluster, params, edit_interval_based_prefix+'-')
-    client.invoke('zato.scheduler.edit', input_dict)
+    client.invoke('zato.scheduler.job.edit', input_dict)
     logger.debug('Successfully updated an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     start_date = input_dict.get('start_date')
@@ -276,7 +276,7 @@ def _edit_cron_style(client, user_profile, cluster, params):
     logger.debug('About to change a cron_style job, cluster.id:[{0}, params:[{1}]]'.format(cluster.id, params))
 
     input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, edit_cron_style_prefix+'-')
-    response = client.invoke('zato.scheduler.edit', input_dict)
+    response = client.invoke('zato.scheduler.job.edit', input_dict)
     cron_definition = response.data.cron_definition
     logger.debug('Successfully updated a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
@@ -294,7 +294,7 @@ def index(req):
         if req.zato.cluster_id and req.method == 'GET':
     
             # We have a server to pick the schedulers from, try to invoke it now.
-            response = req.zato.client.invoke('zato.scheduler.get-list', {'cluster_id': req.zato.cluster_id})
+            response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id': req.zato.cluster_id})
             
             if response.has_data:
                 for job_elem in response.data:
@@ -429,7 +429,7 @@ def execute(req, job_id, cluster_id):
     """ Executes a scheduler's job.
     """
     try:
-        req.zato.client.invoke('zato.scheduler.execute', {'id':job_id})
+        req.zato.client.invoke('zato.scheduler.job.execute', {'id':job_id})
     except Exception, e:
         msg = 'Could not execute the job. job_id:[{0}], cluster_id:[{1}], e:[{2}]'.format(job_id, cluster_id, format_exc(e))
         logger.error(msg)
