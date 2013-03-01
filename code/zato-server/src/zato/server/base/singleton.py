@@ -86,8 +86,8 @@ class SingletonServer(BrokerMessageReceiver):
             # Schedule a job for letting the other servers know we're still alive
             job_data = Bunch(base_job_data.copy())
             job_data.start_date = datetime.utcnow()
-            job_data.name = 'zato.ClusterWideSingletonKeepAlive'
-            job_data.service = 'zato.server.service.internal.server.ClusterWideSingletonKeepAlive'
+            job_data.name = 'zato.server.cluster-wide-singleton-keep-alive'
+            job_data.service = 'zato.server.cluster-wide-singleton-keep-alive'
             
         else:
             # All other singleton servers that are just starting up get this job
@@ -95,8 +95,8 @@ class SingletonServer(BrokerMessageReceiver):
             if starting_up:
                 job_data = Bunch(base_job_data.copy())
                 job_data.start_date = datetime.utcnow() + timedelta(seconds=10) # Let's give the other server some time to warm up
-                job_data.name = 'zato.EnsureClusterWideSingleton'
-                job_data.service = 'zato.server.service.internal.server.EnsureClusterWideSingleton'
+                job_data.name = 'zato.server.ensure-cluster-wide-singleton'
+                job_data.service = 'zato.server.ensure-cluster-wide-singleton'
 
         if job_data:
             self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_PARALLEL_ALL)

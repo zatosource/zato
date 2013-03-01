@@ -51,9 +51,9 @@ from django_settings.models import PositiveInteger, Setting
 from pytz import timezone, utc
 
 # Zato
-from zato.admin.web import from_user_to_utc, from_utc_to_user, invoke_admin_service
+from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
-from zato.admin.web.views import get_js_dt_format, get_sample_dt, meth_allowed
+from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
 from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
 from zato.common.util import from_local_to_utc, make_repr, now, utcnow
 
@@ -96,9 +96,9 @@ class DateInfo(object):
 
 # A mapping a job type, its name and the execution interval unit
 job_mappings = {
-    JobAttrFormMapping('zato.stats.ProcessRawTimes', 
+    JobAttrFormMapping('zato.stats.process-raw-times', 
         [JobAttrForm('raw_times', 'seconds'),  JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
-    JobAttrFormMapping('zato.stats.AggregateByMinute', [JobAttrForm('per_minute_aggr', 'seconds')]),
+    JobAttrFormMapping('zato.stats.aggregate-by-minute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
 
 compare_to = {
@@ -336,7 +336,7 @@ def get_default_date(date_type, user_profile, format):
 # ##############################################################################
 
 
-def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
+def _get_stats(client, start, stop, n, n_type, stats_type=None):
     """ Returns at most n statistics elements of a given n_type for the period
     between start and stop.
     """
@@ -347,21 +347,21 @@ def _get_stats(cluster, start, stop, n, n_type, stats_type=None):
         input_dict['stop'] = stop
         
     if stats_type == 'trends':
-        service_name = 'zato.stats.get-trends'
+        service_name = 'zato.stats.trends.get-trends'
     else:
-        service_name = 'zato.stats.get-summary-by-range'
+        service_name = 'zato.stats.summary.get-summary-by-range'
     
-    zato_message, _  = invoke_admin_service(cluster, service_name, input_dict)
+    response = client.invoke(service_name, input_dict)
     
-    if zato_path('item_list.item').get_from(zato_message) is not None:
-        for msg_item in zato_message.item_list.item:
-            out.append(StatsElem.from_xml(msg_item))
+    if response.has_data:
+        for item in response.data:
+            out.append(StatsElem.from_json(item))
             
     return out
 
 # ##############################################################################
 
-def _stats_data_csv(user_profile, req_input, cluster, stats_type, is_custom):
+def _stats_data_csv(user_profile, req_input, client, stats_type, is_custom):
     
     n_type_keys = {
         'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services', 
@@ -374,7 +374,7 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type, is_custom):
     writer = DictWriter(buff, n_type_keys[req_input.n_type], extrasaction='ignore')
     writer.writeheader()
     
-    for stat in _get_stats(cluster, req_input.utc_start, req_input.utc_stop, req_input.n, req_input.n_type, stats_type):
+    for stat in _get_stats(client, req_input.utc_start, req_input.utc_stop, req_input.n, req_input.n_type, stats_type):
         d = stat.to_dict()
         d['start'] = req_input.user_start
         d['stop'] = req_input.user_stop if stats_type == 'trends' or is_custom else ''
@@ -388,7 +388,7 @@ def _stats_data_csv(user_profile, req_input, cluster, stats_type, is_custom):
     
     return response
 
-def _stats_data_html(user_profile, req_input, cluster, stats_type, is_custom):
+def _stats_data_html(user_profile, req_input, client, cluster, stats_type, is_custom):
     
     is_trends = stats_type == 'trends'
     if is_trends:
@@ -428,7 +428,7 @@ def _stats_data_html(user_profile, req_input, cluster, stats_type, is_custom):
         d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': is_trends}
         if req_input.n:
 
-            stats = _get_stats(cluster, req_input.utc_start, req_input.utc_stop, req_input.n, name, stats_type)
+            stats = _get_stats(client, req_input.utc_start, req_input.utc_stop, req_input.n, name, stats_type)
             
             # I.e. whether it's not an empty list (assuming both stats will always be available or neither will be)
             return_data['has_stats'] = len(stats)
@@ -501,13 +501,13 @@ def stats_data(req, stats_type):
         req_input['user_stop'] = req_input.user_stop
         
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile, 
-        req_input, req.zato.cluster, stats_type, is_custom)
+        req_input, req.zato.client, req.zato.cluster, stats_type, is_custom)
 
-@meth_allowed('GET', 'POST')
+@method_allowed('GET', 'POST')
 def stats_trends_data(req):
     return stats_data(req, 'trends')
 
-@meth_allowed('GET', 'POST')
+@method_allowed('GET', 'POST')
 def stats_summary_data(req):
     return stats_data(req, '{}{}'.format(SUMMARY_PREFIX, req.POST.get('choice', 'missing-value')))
 
@@ -550,17 +550,17 @@ def trends_summary(req, choice, stats_title, is_summary):
     return_data.update(get_js_dt_format(req.zato.user_profile))
     return TemplateResponse(req, 'zato/stats/trends_summary.html', return_data)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def trends(req, choice):
     return trends_summary(req, choice, 'Trends', False)
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def summary(req, choice):
     return trends_summary(req, choice, 'Summary', True)
 
 # ##############################################################################
     
-@meth_allowed('GET')
+@method_allowed('GET')
 def settings(req):
     
     if req.zato.get('cluster'):
@@ -570,10 +570,8 @@ def settings(req):
         
         for mapping in job_mappings:
 
-            zato_message, _  = invoke_admin_service(req.zato.
-                cluster, 'zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
-            if zato_path('item').get_from(zato_message) is not None:
-                item = zato_message.item
+            response = req.zato.client.invoke('zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
+            if response.has_data:
             
                 for attr in mapping.attrs:
                     try:
@@ -583,10 +581,10 @@ def settings(req):
                         setting_unit_name = 'scheduler_{}_interval_unit'.format(attr.form_name)
                         
                         defaults[setting_unit_name] = attr.job_attr
-                        _settings[setting_base_name] = getattr(zato_message.item, attr.job_attr).text
+                        _settings[setting_base_name] = getattr(response.data, attr.job_attr)
                     else:
-                        # A sample item.extra.text is 'max_batch_size=123456'
-                        _settings['scheduler_{}'.format(attr.form_name)] = item.extra.text.split('=')[1]
+                        # A sample response.data.extra is, for instance, 'max_batch_size=123456'
+                        _settings['scheduler_{}'.format(attr.form_name)] = response.data.extra.split('=')[1]
 
         for name in DEFAULT_STATS_SETTINGS:
             if not name.startswith('scheduler'):
@@ -604,7 +602,7 @@ def settings(req):
 
     return TemplateResponse(req, 'zato/stats/settings.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def settings_save(req):
     
     for name in DEFAULT_STATS_SETTINGS:
@@ -614,13 +612,11 @@ def settings_save(req):
 
     for mapping in job_mappings:
 
-        zato_message, _  = invoke_admin_service(
-            req.zato.cluster, 'zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
-        if zato_path('item').get_from(zato_message) is not None:
-            item = zato_message.item
+        response = req.zato.client.invoke('zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
+        if response.has_data:
             
             # Gotta love dictionary comprehensions!
-            params = {attr: getattr(item, attr).text for attr in(
+            params = {attr: getattr(response.data, attr) for attr in(
                 'id', 'name', 'is_active', 'job_type', 'start_date', 'extra')}
         
             for attr in mapping.attrs:
@@ -636,10 +632,10 @@ def settings_save(req):
                     
                 params[key] = value
                 
-            params['service'] = item.service_name.text
+            params['service'] = response.data.service_name
             params['cluster_id'] = req.zato.cluster.id
                 
-            invoke_admin_service(req.zato.cluster, 'zato.scheduler.job.edit', params)
+            req.zato.client.invoke('zato.scheduler.job.edit', params)
 
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
@@ -648,7 +644,7 @@ def settings_save(req):
 
 # ##############################################################################
 
-@meth_allowed('GET')
+@method_allowed('GET')
 def maintenance(req):
     return_data = {
         'zato_clusters': req.zato.clusters,
@@ -661,16 +657,18 @@ def maintenance(req):
     
     return TemplateResponse(req, 'zato/stats/maintenance.html', return_data)
 
-@meth_allowed('POST')
+@method_allowed('POST')
 def maintenance_delete(req):
     start = from_user_to_utc(req.POST['start'], req.zato.user_profile)
     stop = from_user_to_utc(req.POST['stop'], req.zato.user_profile)
     
-    invoke_admin_service(req.zato.cluster, 'zato.stats.delete', {'start':start, 'stop':stop})
+    req.zato.client.invoke('zato.stats.delete', {'start':start, 'stop':stop})
+    
+    logger.warn('[{}]'.format(stop.isoformat() + '+00:00'))
     
     msg = 'Submitted a request to delete statistics from [{}] to [{}]. Check the server logs for details.'.format(
-        from_utc_to_user(start, req.zato.user_profile), 
-        from_utc_to_user(stop, req.zato.user_profile))
+        from_utc_to_user(start.isoformat() + '+00:00', req.zato.user_profile), 
+        from_utc_to_user(stop.isoformat() + '+00:00', req.zato.user_profile))
         
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
         

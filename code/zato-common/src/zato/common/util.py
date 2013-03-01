@@ -76,7 +76,8 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import KVDB, SIMPLE_IO, soap_body_xpath, ZatoException
+from zato.common import KVDB, NoDistributionFound, SIMPLE_IO, soap_body_path, \
+    soap_body_xpath, ZatoException
 from zato.common.crypto import CryptoManager
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,6 @@ TRACE1 = 6
 logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
-
 _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
 
 random.seed()
@@ -282,16 +282,16 @@ def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
 
 def new_cid():
-    """ Returns a new 64-bit correlation identifier. It's *not* safe to use the ID
+    """ Returns a new 128-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
     
-    # The number below (29) needs to be kept in sync with zato.common.log_message.CID_LENGTH
-    # and the Service.sample_cid column. There is nothing special in the 'K' prefix,
-    # it's just so that a CID always begins with a letter and 'K' seems like something
+    # The number below (39) needs to be kept in sync with zato.common.log_message.CID_LENGTH.
+    # There is nothing special in the 'K' prefix, it's just so that a CID always
+    # begins with a letter and 'K' seems like something
     # that can't be taken for some other ASCII letter (e.g. is it Z or 2 etc.)
-    return 'K{0:0>29}'.format(getrandbits(96))
+    return 'K{0:0>39}'.format(getrandbits(128))
 
 def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object.
@@ -382,7 +382,7 @@ def get_body_payload(body):
 
     return body_payload
 
-def payload_from_request(request, data_format, transport):
+def payload_from_request(cid, request, data_format, transport):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
     if request:
@@ -391,7 +391,7 @@ def payload_from_request(request, data_format, transport):
                 soap = objectify.fromstring(request)
                 body = soap_body_xpath(soap)
                 if not body:
-                    raise ZatoException(cid, 'Client did not send the [{1}] element'.format(body_path))
+                    raise ZatoException(cid, 'Client did not send the [{}] element'.format(soap_body_path))
                 payload = get_body_payload(body)
             else:
                 payload = objectify.fromstring(request)
@@ -429,6 +429,12 @@ def decompress(archive, dir_name):
     """
     unpack_file_url(_DummyLink('file:' + archive), dir_name)
 
+def visit_py_source(dir_name):
+    for pattern in('*.py', '*.pyw'):
+        glob_path = os.path.join(dir_name, pattern)
+        for py_path in glob(glob_path):
+            yield py_path
+
 def visit_py_source_from_distribution(dir_name):
     """ Yields all the Python source modules from a Distutils2 distribution.
     """
@@ -436,8 +442,8 @@ def visit_py_source_from_distribution(dir_name):
     path = os.path.join(dir_name, 'setup.cfg')
     if not os.path.exists(path):
         msg = "Could not find setup.cfg in [{}], path:[{}] doesn't exist".format(dir_name, path)
-        logger.error(msg)
-        raise ValueError(msg)
+        logger.debug(msg)
+        raise NoDistributionFound(path)
     
     dist = Distribution()
     config = Config(dist)
@@ -447,10 +453,8 @@ def visit_py_source_from_distribution(dir_name):
     
     for package in dist.packages:
         package_dir = os.path.abspath(os.path.join(dir_name, package.replace('.', os.path.sep)))
-        for pattern in('*.py', '*.pyw'):
-            glob_path = os.path.join(package_dir, pattern)
-            for py_path in glob(glob_path):
-                yield py_path
+        yield visit_py_source(package_dir)
+
 
 def hot_deploy(parallel_server, file_name, path, delete_path=True):
     """ Hot-deploys a package if it looks like a Python module or an archive
@@ -490,7 +494,6 @@ def multikeysort(items, columns):
             return 0
     return sorted(items, cmp=comparer)
 
-    
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
 def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"

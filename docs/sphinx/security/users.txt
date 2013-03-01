@@ -7,7 +7,7 @@ OS-level users
 There are no specific operating system users needed by processes Zato components start.
 It's completely up to a cluster administrator to choose what naming conventions will be used.
 
-The only exception is that a Zato server's underlying gunicorn server
+The only addition is that a Zato server's underlying gunicorn server
 allows one to use a specific user and group for processes it starts. The values are
 set for each server in ./config/repo/server.conf - main:gunicorn_user and
 main:gunicorn_group. Visit `gunicorn's documentation <http://docs.gunicorn.org/en/latest/configure.html>`_

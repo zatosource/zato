@@ -145,7 +145,7 @@
                         {% endifequal %}
                         <td>{{ item.security_name|safe }}</td>
                         {% ifequal connection 'channel' %}
-                            <td>{{ item.method }}</td>
+                            <td>{{ item.method|default:'' }}</td>
                         {% endifequal %}
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>

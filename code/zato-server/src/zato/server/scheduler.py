@@ -76,7 +76,7 @@ class Scheduler(object):
         """
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 
                    'payload':extra, 'cid':new_cid(), 'job_type': job_type}
-        self.singleton.broker_client.send(msg)
+        self.singleton.broker_client.invoke_async(msg)
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(

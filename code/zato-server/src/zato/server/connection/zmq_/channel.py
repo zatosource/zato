@@ -147,7 +147,7 @@ class ConsumingConnector(BaseZMQConnector):
             params['payload'] = msg
             params['data_format'] = self.channel.data_format
             
-            self.broker_client.send(params)
+            self.broker_client.async_invoke(params)
                 
     def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()

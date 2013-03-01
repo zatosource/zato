@@ -64,7 +64,7 @@ class UpdateCrypto(ManageCommand):
         {'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates in PEM"},
     ]
     
-    def _update_crypto(self, args, copy_crypto_meth, update_secrets=False, load_secrets_func=None,
+    def _update_crypto(self, args, copy_crypto_func, update_secrets=False, load_secrets_func=None,
             store_secrets_func=None, conf_file_name=None, priv_key_name=None, pub_key_name=None, secret_names=[]):
         
         repo_dir = os.path.join(os.path.abspath(os.path.join(self.original_dir, args.path)), 'config', 'repo')
@@ -80,7 +80,7 @@ class UpdateCrypto(ManageCommand):
             
             secrets, conf = load_secrets_func(secrets, secret_names, cm, conf_location, conf_file_name)
             
-        copy_crypto_meth(repo_dir, args)
+        copy_crypto_func(repo_dir, args)
         
         if update_secrets:
             cm.reset()

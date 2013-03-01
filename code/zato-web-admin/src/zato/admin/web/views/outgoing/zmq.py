@@ -30,11 +30,10 @@ from zato.common.odb.model import OutgoingZMQ
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
-    meth_allowed = 'GET'
+    method_allowed = 'GET'
     url_name = 'out-zmq'
     template = 'zato/outgoing/zmq.html'
-    
-    soap_action = 'zato.outgoing.zmq.get-list'
+    service_name = 'zato.outgoing.zmq.get-list'
     output_class = OutgoingZMQ
     
     class SimpleIO(_Index.SimpleIO):
@@ -49,25 +48,24 @@ class Index(_Index):
         }
 
 class _CreateEdit(CreateEdit):
-    meth_allowed = 'POST'
-
+    method_allowed = 'POST'
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'address', 'socket_type')
         output_required = ('id',)
         
     def success_message(self, item):
-        return 'Successfully {0} the outgoing Zero MQ connection [{1}]'.format(self.verb, item.name.text)
+        return 'Successfully {0} the outgoing Zero MQ connection [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'out-zmq-create'
-    soap_action = 'zato.outgoing.zmq.create'
+    service_name = 'zato.outgoing.zmq.create'
 
 class Edit(_CreateEdit):
     url_name = 'out-zmq-edit'
     form_prefix = 'edit-'
-    soap_action = 'zato.outgoing.zmq.edit'
+    service_name = 'zato.outgoing.zmq.edit'
 
 class Delete(_Delete):
     url_name = 'out-zmq-delete'
     error_message = 'Could not delete the outgoing Zero MQ connection'
-    soap_action = 'zato.outgoing.zmq.delete'
+    service_name = 'zato.outgoing.zmq.delete'

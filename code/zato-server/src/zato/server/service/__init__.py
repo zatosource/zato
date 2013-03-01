@@ -44,7 +44,7 @@ from paste.util.converters import asbool
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import CHANNEL, KVDB, ParsingException, path, SCHEDULER_JOB_TYPE, \
+from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SCHEDULER_JOB_TYPE, \
      SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
@@ -61,34 +61,42 @@ __all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
 # TODO: Move it to zato.common.
 ZATO_NO_DEFAULT_VALUE = 'ZATO_NO_DEFAULT_VALUE'
 
+logger = logging.getLogger(__name__)
+
 class ValueConverter(object):
     """ A class which knows how to convert values into the types defined in
     a service's SimpleIO config.
     """
     def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
-        
-        if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes):
-            value = asbool(value)
-            
-        if value is not None: # Can be a 0
-            if isinstance(param, Boolean):
-                value = asbool(value)
-            elif isinstance(param, Integer):
-                value = int(value)
-            elif isinstance(param, Unicode):
-                value = unicode(value)
-            elif isinstance(param, UTC):
-                value = value.replace('+00:00', '')
-            else:
-                if value and value != ZATO_NONE and has_simple_io_config:
-                    if any(param_name==elem for elem in self.int_parameters) or \
-                       any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
-                        value = int(value)
+        try:
+            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
+                value = asbool(value or None) # value can be an empty string and asbool chokes on that
                 
-            if date_time_format and isinstance(value, datetime):
-                value = value.strftime(date_time_format)
+            if value and value is not None: # Can be a 0
+                if isinstance(param, Boolean):
+                    value = asbool(value)
+                elif isinstance(param, Integer):
+                    value = int(value)
+                elif isinstance(param, Unicode):
+                    value = unicode(value)
+                elif isinstance(param, UTC):
+                    value = value.replace('+00:00', '')
+                else:
+                    if value and value != ZATO_NONE and has_simple_io_config:
+                        if any(param_name==elem for elem in self.int_parameters) or \
+                           any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
+                            value = int(value)
+                    
+                if date_time_format and isinstance(value, datetime):
+                    value = value.strftime(date_time_format)
+                
+            return value
+        except Exception, e:
+            msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
+                param, param_name, repr(value), format_exc(e))
+            logger.error(msg)
             
-        return value
+            raise ZatoException(msg=msg)
     
 class ForceType(object):
     """ Forces a SimpleIO element to use a specific data type.
@@ -380,12 +388,14 @@ class SimpleIOPayload(ValueConverter):
         into account the differences between dictionaries and other formats
         as well as the type conversions.
         """
+        lookup_name = name.name if isinstance(name, ForceType) else name
+            
         if is_sa_namedtuple or isinstance(item, Base):
-            elem_value = getattr(item, name, '')
+            elem_value = getattr(item, lookup_name, '')
         else:
-            elem_value = item.get(name, '')
+            elem_value = item.get(lookup_name, '')
 
-        if elem_value == '': # Don't use 'if not elem_value' here
+        if isinstance(elem_value, basestring) and not elem_value:
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
                 self.zato_logger.debug(msg)
@@ -397,7 +407,7 @@ class SimpleIOPayload(ValueConverter):
         if leave_as_is:
             return elem_value
         else:
-            return self.convert(item, name, elem_value, True)
+            return self.convert(name, lookup_name, elem_value, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -442,15 +452,18 @@ class SimpleIOPayload(ValueConverter):
                     out_item = {}
                 for is_required, name in chain(self.zato_required, self.zato_optional):
                     leave_as_is = isinstance(name, AsIs)
+                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
+                    
                     if isinstance(name, ForceType):
                         name = name.name
-
-                    elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
+                        
+                    if isinstance(elem_value, basestring):
+                        elem_value = elem_value.decode('utf-8')
                     
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
                     else:
-                        out_item[name] = elem_value                    
+                        out_item[name] = elem_value
     
                 if self.zato_is_repeated:
                     value.append(out_item)
@@ -480,7 +493,7 @@ class Service(object):
     regardless whether they're built-in or user-defined ones.
     """
     def __init__(self, *ignored_args, **ignored_kwargs):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.get_name())
         self.server = None
         self.broker_client = None
         self.channel = None
@@ -512,8 +525,7 @@ class Service(object):
             name = getattr(class_, 'name', None)
             if not name:
                 name = service_name_from_impl(class_.get_impl_name())
-                if not hasattr(class_, 'dont_convert_name'):
-                    name = class_.convert_impl_name(name)
+                name = class_.convert_impl_name(name)
                     
             class_.__name = name
             
@@ -558,13 +570,19 @@ class Service(object):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
-    def invoke_by_impl_name(self, impl_name, payload, data_format=None, transport=None,
-            serialize=False, as_bunch=False):
+    def invoke_by_impl_name(self, impl_name, payload='', channel='invoke', data_format=None,
+            transport=None, serialize=False, as_bunch=False):
+            
+        if self.impl_name == impl_name:
+            msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
+            self.logger.error(msg)
+            raise ZatoException(self.cid, msg)
+            
         service_instance = self.server.service_store.new_instance(impl_name)
         
-        service_instance.update(service_instance, self.server, self.broker_client, 
-            self.worker_store, self.cid, payload, payload, 
-            transport, {}, data_format, payload)
+        service_instance.update(service_instance, channel, self.server, self.broker_client, 
+            self.worker_store, self.cid, payload, payload, transport, 
+            self.request.simple_io_config, data_format, {})
 
         service_instance.pre_handle()
         
@@ -580,6 +598,7 @@ class Service(object):
             service_instance.response.payload = response
             
         service_instance.post_handle()
+        service_instance.call_hooks('finalize')
         
         return response
         
@@ -589,19 +608,19 @@ class Service(object):
     def invoke_by_id(self, service_id, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
-    def publish(self, name, payload, to_json=True):
-        if to_json:
+    def invoke_async(self, name, payload='', expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=True):
+        if to_json_string:
             payload = dumps(payload)
             
         cid = new_cid()
             
         msg = dict()
         msg['action'] = SERVICE.PUBLISH
-        msg['service'] = self.server.service_store.name_to_impl_name[name]
+        msg['service'] = name
         msg['payload'] = payload
         msg['cid'] = cid
         
-        self.broker_client.send(msg)
+        self.broker_client.invoke_async(msg, expiration)
         
         return cid
             
@@ -624,7 +643,11 @@ class Service(object):
         
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
-        self.processing_time = int(round(self.processing_time_raw.microseconds / 1000.0))
+        
+        proc_time = self.processing_time_raw.total_seconds() * 1000.0
+        proc_time = proc_time if proc_time > 1 else 0
+        
+        self.processing_time = int(round(proc_time))
 
         self.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
         self.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
@@ -671,7 +694,7 @@ class Service(object):
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
         
-    def handle(self, *args, **kwargs):
+    def handle(self):
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
@@ -680,27 +703,37 @@ class Service(object):
 ################################################################################
 
     def call_hooks(self, prefix):
-        if self.channel == CHANNEL.SCHEDULER:
-            try:
-                getattr(self, '{}_job'.format(prefix))()
-            except Exception, e:
-                self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
-            else:
+        def call_job_hooks():
+            if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
                 try:
-                    meth_name = '{}_{}_job'.format(prefix, self.job_type)
-                    meth = getattr(self, meth_name)
-                    meth()
+                    getattr(self, '{}_job'.format(prefix))()
                 except Exception, e:
-                    self.logger.error("Can't run {}, e:[{}]".format(meth_name, format_exc(e)))
+                    self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
+                else:
+                    try:
+                        func_name = '{}_{}_job'.format(prefix, self.job_type)
+                        func = getattr(self, func_name)
+                        func()
+                    except Exception, e:
+                        self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
+        def call_handle():
+            try:
+                getattr(self, '{}_handle'.format(prefix))()
+            except Exception, e:
+                self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
+                
+        if prefix == 'before':
+            call_job_hooks()
+            call_handle()
+        else:
+            call_handle()
+            call_job_hooks()
             
-        try:
-            getattr(self, '{}_handle'.format(prefix))()
-        except Exception, e:
-            self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
-
-    def before_handle(self, *args, **kwargs):
-        """ Invoked just before the actual service receives the request data.
+    @staticmethod
+    def before_add_to_store(logger):
+        """ Invoked right before the class is added to the service store.
         """
+        return True
 
     def before_job(self):
         """ Invoked  if the service has been defined as a job's invocation target,
@@ -721,16 +754,9 @@ class Service(object):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
-
-    @staticmethod
-    def before_add_to_store(*args, **kwargs):
-        """ Invoked right before the class is added to the service store.
-        """
-        return True
-
-    def after_handle(self):
-        """ Invoked right after the actual service has been invoked, regardless
-        of whether the service raised an exception or not.
+        
+    def before_handle(self, *args, **kwargs):
+        """ Invoked just before the actual service receives the request data.
         """
 
     def after_job(self):
@@ -752,16 +778,59 @@ class Service(object):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
-
-    @staticmethod
-    def after_add_to_store(*args, **kwargs):
-        """ TODO: Docs
+        
+    def after_handle(self):
+        """ Invoked right after the actual service has been invoked, regardless
+        of whether the service raised an exception or not.
+        """
+        
+    def finalize_handle(self):
+        """ Offers the last chance to influence the service's operations.
         """
 
     @staticmethod
-    def after_remove_from_store(*args, **kwargs):
-        """ TODO: Docs
+    def after_add_to_store(logger):
+        """ Invoked right after the class has been added to the service store.
         """
+        
+################################################################################
+
+    def _log_input_output(self, user_msg, level, suppress_keys, is_response):
+    
+        suppress_keys = suppress_keys or []
+        suppressed_msg = '(suppressed)'
+        container = 'response' if is_response else 'request'
+        payload_key = '{}.payload'.format(container)
+        
+        msg = {}
+        msg['user_msg'] = user_msg
+        if payload_key not in suppress_keys:
+            msg[payload_key] = getattr(self, container).payload
+        else:
+            msg[payload_key] = suppressed_msg
+        
+        attrs = ('channel', 'cid', 'data_format', 'environ', 'impl_name', 
+             'invocation_time', 'job_type', 'name', 'slow_threshold', 'usage', 'wsgi_environ')
+             
+        if is_response:
+            attrs += ('handle_return_time', 'processing_time', 'processing_time_raw',
+                'zato.http.response.headers')
+            
+        for attr in attrs:
+            if attr not in suppress_keys:
+                msg[attr] = getattr(self, attr, '(None)')
+            else:
+                msg[attr] = suppressed_msg
+
+        self.logger.log(level, msg)
+        
+        return msg
+        
+    def log_input(self, user_msg='', level=logging.INFO, suppress_keys=None):
+        return self._log_input_output(user_msg, level, suppress_keys, False)
+        
+    def log_output(self, user_msg='', level=logging.INFO, suppress_keys=('wsgi_environ',)):
+        return self._log_input_output(user_msg, level, suppress_keys, True)
         
 ################################################################################
         

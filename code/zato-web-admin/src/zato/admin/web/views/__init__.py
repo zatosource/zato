@@ -36,7 +36,7 @@ from django.template.response import TemplateResponse
 from pytz import UTC
 
 # Zato
-from zato.admin.web import from_utc_to_user, invoke_admin_service
+from zato.admin.web import from_utc_to_user
 from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
@@ -47,6 +47,15 @@ from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, \
 from zato.common.util import get_lb_client as _get_lb_client
 
 logger = logging.getLogger(__name__)
+
+def get_definition_list(client, cluster, def_type):
+    """ Returns all definitions of a given type existing on a given cluster.
+    """
+    out = {}
+    for item in client.invoke('zato.definition.{}.get-list'.format(def_type), {'cluster_id':cluster.id}):
+        out[item.id] = item.name
+        
+    return out
 
 def get_sample_dt(user_profile):
     """ A sample date and time an hour in the future serving as a hint as to what 
@@ -71,7 +80,7 @@ def get_lb_client(cluster):
     return _get_lb_client(cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,
                           ssl_key_file, ssl_cert_file, LB_AGENT_CONNECT_TIMEOUT)
 
-def meth_allowed(*meths):
+def method_allowed(*meths):
     """ Accepts a list (possibly one-element long) of HTTP methods allowed
     for a given view. An exception will be raised if a request has been made
     with a method outside of those allowed, otherwise the view executes
@@ -79,7 +88,7 @@ def meth_allowed(*meths):
     TODO: Make it return a custom Exception so that whoever called us can
     catch it and return a correct HTTP status (405 Method not allowed).
     """
-    def inner_meth_allowed(view):
+    def inner_method_allowed(view):
         def inner_view(*args, **kwargs):
             req = args[1] if len(args) > 1 else args[0]
             if req.method not in meths:
@@ -89,7 +98,7 @@ def meth_allowed(*meths):
                 raise Exception(msg)
             return view(*args, **kwargs)
         return inner_view
-    return inner_meth_allowed
+    return inner_method_allowed
 
 def set_servers_state(cluster, client):
     """ Assignes 3 flags to the cluster indicating whether load-balancer
@@ -128,7 +137,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
             'password1': req.POST.get(field1, ''),
             'password2': req.POST.get(field2, ''),
         }
-        invoke_admin_service(req.zato.cluster, service_name, input_dict)
+        req.zato.client.invoke(service_name, input_dict)
 
     except Exception, e:
         msg = 'Could not change the password, e:[{e}]'.format(e=format_exc(e))
@@ -138,11 +147,12 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         return HttpResponse(dumps({'message':success_msg}))
     
 class _BaseView(object):
-    meth_allowed = 'meth_allowed-must-be-defined-in-a-subclass'
-    soap_action = None
+    method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
+    service_name = None
     
     class SimpleIO:
         input_required = []
+        input_optional = []
         output_required = []
         output_optional = []
         output_repeated = False
@@ -179,22 +189,26 @@ class Index(_BaseView):
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
-            zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, {'cluster_id':self.cluster_id})
-            return zato_message
+            input_dict = {'cluster_id':self.cluster_id}
+            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+                if name != 'cluster_id':
+                    input_dict[name] = self.req.GET.get(name)
+                
+            return self.req.zato.client.invoke(self.service_name, input_dict)
     
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
-        for msg_item in item_list.item:
+        for msg_item in item_list:
             item = self.output_class()
             for name in names:
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
                 if value:
-                    setattr(item, name, value.encode('utf-8'))
+                    setattr(item, name, value)
             self.items.append(item)
     
     def _handle_item(self, item):
@@ -214,13 +228,13 @@ class Index(_BaseView):
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
             zato_path_needed = 'item_list.item' if output_repeated else 'item'
             
-            if self.soap_action and self.cluster_id:
-                zato_message = self.invoke_admin_service()
-                if zato_message is not None and zato_path(zato_path_needed).get_from(zato_message) is not None:
+            if self.service_name and self.cluster_id:
+                response = self.invoke_admin_service()
+                if response.ok:
                     if output_repeated:
-                        self._handle_item_list(zato_message.item_list)
+                        self._handle_item_list(response.data)
                     else:
-                        self._handle_item(zato_message.item)
+                        self._handle_item(response.data)
     
             return_data['items'] = self.items
             return_data['item'] = self.item
@@ -259,22 +273,22 @@ class CreateEdit(_BaseView):
             }
             input_dict.update(initial_input_dict)
     
-            for name in self.SimpleIO.input_required:
+            
+            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 input_dict[name] = self.req.POST.get(self.form_prefix + name)
                 
             self.input_dict.update(input_dict)
 
-            zato_message, soap_response  = invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+            response = self.req.zato.client.invoke(self.service_name, input_dict)
     
             return_data = {
-                'message': self.success_message(zato_message.item)
+                'message': self.success_message(response.data)
                 }
             return_data.update(initial_return_data)
 
             for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
-                value = getattr(zato_message.item, name, None)
+                value = getattr(response.data, name, None)
                 if value:
-                    value = value.text
                     if isinstance(value, basestring):
                         value = value.encode('utf-8')
                     else:
@@ -298,7 +312,7 @@ class CreateEdit(_BaseView):
 class Delete(_BaseView):
     """ Our subclasses will delete objects such as connections and others.
     """
-    meth_allowed = 'POST'
+    method_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
     
     def __call__(self, req, initial_input_dict={}, *args, **kwargs):
@@ -309,7 +323,7 @@ class Delete(_BaseView):
                 'cluster_id': self.cluster_id
             }
             input_dict.update(initial_input_dict)
-            invoke_admin_service(self.req.zato.cluster, self.soap_action, input_dict)
+            req.zato.client.invoke(self.service_name, input_dict)
             return HttpResponse()
         except Exception, e:
             msg = '{}, e:[{}]'.format(self.error_message, format_exc(e))

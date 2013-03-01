@@ -38,10 +38,10 @@ from zato.common.odb.query import _service as _service
 
 logger = logging.getLogger(__name__)
 
-def _get_service_by_impl_name(session, cluster_id, impl_name):
-    logger.debug('Looking for impl_name:[{}] in cluster_id:[{}]'.format(impl_name, cluster_id))
+def _get_service_by_name(session, cluster_id, name):
+    logger.debug('Looking for name:[{}] in cluster_id:[{}]'.format(name, cluster_id))
     return _service(session, cluster_id).\
-           filter(Service.impl_name==impl_name).\
+           filter(Service.name==name).\
            one()
 
 def add_stats_jobs(cluster_id, odb, stats_jobs):
@@ -53,7 +53,7 @@ def add_stats_jobs(cluster_id, odb, stats_jobs):
         for item in stats_jobs:
             
             try:
-                service_id = _get_service_by_impl_name(session, cluster_id, item['service'])[0]
+                service_id = _get_service_by_name(session, cluster_id, item['service'])[0]
                 
                 now = datetime.utcnow().strftime(scheduler_date_time_format)
                 job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),

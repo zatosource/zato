@@ -142,8 +142,8 @@ class WorkerStore(BrokerMessageReceiver):
         else:
             if security_name:
                 sec_type = config.sec_type
-                meth = getattr(self.request_dispatcher.security, sec_type + '_get')
-                _sec_config = meth(security_name).config
+                func = getattr(self.request_dispatcher.security, sec_type + '_get')
+                _sec_config = func(security_name).config
                 
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'has_sec_config:[{}], security_name:[{}], _sec_config:[{}]'.format(
@@ -347,7 +347,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
-        service_instance = self.server.service_store.new_instance(msg.service)
+        service_instance = self.server.service_store.new_instance_by_name(msg.service)
         service_instance.update(service_instance, channel, self.server, self.broker_client,
             self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
             msg.get('data_format'), job_type=msg.get('job_type'))
@@ -362,6 +362,7 @@ class WorkerStore(BrokerMessageReceiver):
             service_instance.response.payload = service_instance.response.payload.getvalue()
             
         service_instance.post_handle()
+        service_instance.call_hooks('finalize')
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(
@@ -429,7 +430,7 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ##############################################################################
 
-    def _delete_outgoing_http_soap(self, name, transport, log_meth):
+    def _delete_outgoing_http_soap(self, name, transport, log_func):
         """ Actually deletes an outgoing HTTP/SOAP connection.
         """
         # Are we dealing with plain HTTP or SOAP?
@@ -439,7 +440,7 @@ class WorkerStore(BrokerMessageReceiver):
         try:
             del config_dict[name]
         except(KeyError, AttributeError), e:
-            log_meth('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
+            log_func('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
         
     def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an outgoing HTTP/SOAP connection.
@@ -511,7 +512,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_HOT_DEPLOY_CREATE(self, msg, *args):
         msg.cid = new_cid()
-        msg.service = 'zato.server.service.internal.hot_deploy.Create'
+        msg.service = 'zato.hot-deploy.create'
         msg.payload = {'package_id': msg.package_id}
         msg.data_format = SIMPLE_IO.FORMAT.JSON
         return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
@@ -530,7 +531,7 @@ class WorkerStore(BrokerMessageReceiver):
         # into smaller one day-long batches.
         if(stop-start).days:
             for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
-                self.broker_client.send({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
+                self.broker_client.async_invoke({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
                    
                 # So as not to drown the broker with a sudden surge of messages
                 sleep(0.02)
@@ -562,6 +563,6 @@ class WorkerStore(BrokerMessageReceiver):
 # ##############################################################################
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
-        return self._on_message_invoke_service(msg, 'publish', 'SERVICE_PUBLISH', args)
+        return self._on_message_invoke_service(msg, 'invoke_async', 'SERVICE_PUBLISH', args)
         
 # ##############################################################################

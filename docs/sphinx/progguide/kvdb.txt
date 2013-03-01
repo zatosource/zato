@@ -1,0 +1,93 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Key/value DB (Redis) 
+====================
+
+As a programmer, you can observe that Zato uses `Redis <http://redis.io>`_ as its 
+:doc:`key/value database (KVDB) </architecture/redis>`
+to support several distinct mechanisms:
+
+* As a broker for Zato's :ref:`publish/subscribe feature <progguide-write-service-broker-client>`.
+  Each service can use 
+  :ref:`1:N <progguide-write-service-broker-client-publish>`
+  and 
+  :ref:`1:1 <progguide-write-service-broker-client-async_invoke>`
+  publishing. There's also 
+  :ref:`a convenience method <progguide-write-service-invoke_async>`
+  to simplify invoking other services asynchronously.
+
+* :ref:`Translating <progguide-write-service-translate>` the
+  :doc:`dictionary values <TODO>`
+
+* Storing :doc:`statistics <TODO>` that can be accessed through 
+  the :doc:`API </public-api/details/zato.stats>`
+  
+* Accessing Redis directly through the self.kvdb.conn object, which is an instance
+  of the `StrictRedis connection <https://github.com/andymccurdy/redis-py>`_- there's a full
+  support for all `Redis verbs <http://redis.io/commands>`_, such as in the examples
+  below.
+
+  * Setting a value and getting it back:
+  
+    ::
+    
+      from zato.server.service import Service
+      
+      class MyService(Service):
+          def handle(self):
+              key = 'my-key'
+              self.kvdb.conn.set(key, 'my-value')
+              self.logger.info('key:[{}]'.format(self.kvdb.conn.get(key)))
+  
+    ::
+  
+      INFO - key:[my-value]
+
+
+  * Reading Redis server info:
+  
+    ::
+    
+      from zato.server.service import Service
+      
+      class MyService(Service):
+          def handle(self):
+              self.logger.info(self.kvdb.conn.info())
+  
+    ::
+  
+      INFO - {'pubsub_channels': 3, 'aof_enabled': 0, 'bgrewriteaof_in_progress': 0, 
+        'connected_slaves': 0, 'uptime_in_days': 0, 'multiplexing_api': 'epoll', 
+        'lru_clock': 1912835, 'last_save_time': 1361305387, 
+        'redis_version': '2.2.12', 'redis_git_sha1': 0, 'loading': 0, 
+        'connected_clients': 7, 'keyspace_misses': 231, 'used_memory': 5825776, 
+        'vm_enabled': 0, 'used_cpu_user_children': 0.01, 'role': 'master', 
+        'total_commands_processed': 2357, 'used_memory_rss': 7643136, 
+        'total_connections_received': 14, 'pubsub_patterns': 0, 
+        'used_cpu_sys': 4.94, 'used_memory_human': '5.56M', 
+        'used_cpu_sys_children': 0.11, 'blocked_clients': 0, 
+        'used_cpu_user': 0.68, 'use_tcmalloc': 0, 'client_biggest_input_buf': 0, 
+        'db0': {'keys': 19934, 'expires': 23}, 'arch_bits': 64, 
+        'redis_git_dirty': 0, 'expired_keys': 17, 'hash_max_zipmap_entries': 512,
+        'evicted_keys': 0, 'bgsave_in_progress': 0, 'client_longest_output_list': 0,
+        'hash_max_zipmap_value': 64, 'process_id': 1465, 'uptime_in_seconds': 3935,
+        'changes_since_last_save': 278, 'mem_fragmentation_ratio': 1.31,
+        'keyspace_hits': 1628}
+        
+        
+  * `Pipelines <https://github.com/andymccurdy/redis-py#pipelines>`_ can be used
+    to send multiple commands in a single batch to improve performance:
+     
+     ::
+     
+        from zato.server.service import Service
+        
+        class MyService(Service):
+            def handle(self):
+                with self.kvdb.conn.pipeline() as p:
+                    for idx in range(30):
+                        key = 'my-key-{}'.format(idx)
+                        p.delete(key)
+                        
+                    p.execute()

@@ -33,7 +33,7 @@ from bunch import Bunch
 import redis
 
 # Zato
-from zato.common import ZATO_NONE
+from zato.common import BROKER, ZATO_NONE
 from zato.common.util import new_cid
 from zato.common.broker_message import MESSAGE_TYPE, TOPICS
 
@@ -131,7 +131,7 @@ class BrokerClient(Thread):
         topic = TOPICS[msg_type]
         self.pub_client.publish(topic, dumps(msg))
         
-    def send(self, msg):
+    def invoke_async(self, msg, expiration=BROKER.DEFAULT_EXPIRATION):
         msg['msg_type'] = MESSAGE_TYPE.TO_PARALLEL_ANY
         msg = dumps(msg)
         
@@ -139,7 +139,7 @@ class BrokerClient(Thread):
         key = broker_msg = b'zato:broker:to-parallel:any:{}'.format(new_cid())
         
         self.kvdb.conn.set(key, str(msg))
-        self.kvdb.conn.expire(key, 15) # In seconds, TODO: Document it and make configurable
+        self.kvdb.conn.expire(key, expiration) # In seconds
         
         self.pub_client.publish(topic, broker_msg)
         

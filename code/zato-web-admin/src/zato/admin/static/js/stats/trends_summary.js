@@ -12,7 +12,12 @@ $.fn.zato.stats.top_n.show_hide = function(selectors, show) {
 
 $.fn.zato.stats.top_n.switch_highlight = function(this_, remove_class, add_class) { 
     var id = $(this_).attr('id');
-    id = _.last(_.str.words(id, '-'));
+	
+	var prefixes = ['left-tr-mean-', 'left-tr-usage-', 'right-tr-mean-', 'right-tr-usage-'];
+	$.each(prefixes, function(idx, prefix) {
+	    id = id.replace(prefix, '');
+	});
+	
     if(id) {
       $('tr[id*="' +id+'"] > td').removeClass(remove_class).addClass(add_class);
     };

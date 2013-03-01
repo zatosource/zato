@@ -99,6 +99,6 @@ $.fn.zato.http_soap.ping = function(id) {
 	}
 
 	var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-	$.fn.zato.post(url, callback);
+	$.fn.zato.post(url, callback, '', 'text');
 
 }

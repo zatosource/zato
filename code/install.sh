@@ -15,11 +15,12 @@ rm -rf ../code/parts
 rm -rf ../code/zato_extra_paths
 
 sudo apt-get install bzr gfortran haproxy  \
-    libatlas-dev libatlas3gf-base libblas3gf \
+    ruby-sass libatlas-dev libatlas3gf-base libblas3gf \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
     libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack5.4.0 \
     openssl python2.7-dev python-m2crypto python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime
+    
 
 mkdir ../code/zato_extra_paths
 

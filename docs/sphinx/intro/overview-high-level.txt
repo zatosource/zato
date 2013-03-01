@@ -65,11 +65,11 @@ to:
   
 .. _Python: http://python.org/
 
-Transports
+Interfaces
 ==========
 
-Various transports that Zato can access allow one for reaching out to any application,
-regardless of its origin and programming language used. The transports include:
+Various interfaces that Zato can access allow one for reaching out to any application,
+regardless of its origin and programming language used. The interfaces include:
 
 * the ubiquitous HTTP(S) protocol
 * FTP(S)
@@ -79,6 +79,7 @@ regardless of its origin and programming language used. The transports include:
 * JMS
 * REST
 * SOAP
+* SQL
 
 Web admin
 =========
