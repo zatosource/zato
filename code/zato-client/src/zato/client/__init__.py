@@ -45,6 +45,9 @@ from zato.common.log_message import CID_LENGTH
 # in a response's __repr__ method.
 CID_NO_CLIP = int(CID_LENGTH / 2)
 
+DEFAULT_MAX_RESPONSE_REPR = 2500
+DEFAULT_MAX_CID_REPR = 5
+
 mod_logger = logging.getLogger(__name__)
 
 # ##############################################################################
@@ -237,7 +240,7 @@ class _Client(object):
     """ A base class of convenience clients for invoking Zato services from other Python applications.
     """
     def __init__(self, url=None, auth=None, path=None, session=None, to_bunch=False, 
-                     max_response_repr=2500, max_cid_repr=5, logger=None):
+            max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
         self.address = '{}{}'.format(url, path)
         self.session = session or requests.session(auth=auth)
         self.to_bunch = to_bunch
