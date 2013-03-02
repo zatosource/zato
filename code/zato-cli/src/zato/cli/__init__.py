@@ -162,6 +162,7 @@ def run_command(args):
         ('from_config', 'zato.cli.FromConfig'),
         ('info', 'zato.cli.info.Info'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
+        ('service_invoke', 'zato.cli.service.Invoke'),
         ('start', 'zato.cli.start.Start'),
         ('stop', 'zato.cli.stop.Stop'),
         ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),

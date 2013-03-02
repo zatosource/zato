@@ -29,8 +29,8 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_web_admin as create_web_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     FromConfig, info as info_mod, run_command, quickstart as quickstart_mod, start as start_mod, stop as stop_mod, \
-     web_admin_auth as web_admin_auth_mod
+     FromConfig, info as info_mod, quickstart as quickstart_mod, run_command, service as service_mod, \
+     start as start_mod, stop as stop_mod, web_admin_auth as web_admin_auth_mod
 from zato.common import version as zato_version
 
 def add_opts(parser, opts):
@@ -38,11 +38,11 @@ def add_opts(parser, opts):
     """
     for opt in opts:
         arguments = {}
-        for name in('help', 'action'):
+        for name in('help', 'action', 'default'):
             try:
                 arguments[name] = opt[name]
             except KeyError:
-                # Almost no command uses the 'action' parameter
+                # Almost no command uses 'action' or 'default' parameters
                 pass
             
         parser.add_argument(opt['name'], **arguments)
@@ -181,6 +181,16 @@ def get_parser():
     quickstart_create.add_argument('path', help='Path to an empty directory for the quickstart cluster')
     quickstart_create.set_defaults(command='quickstart_create')
     add_opts(quickstart_create, quickstart_mod.Create.opts)
+    
+    # 
+    # service
+    #
+    service = subs.add_parser('service', description='Commands related to the management of Zato services')
+    service_subs = service.add_subparsers()
+    
+    service_invoke = service_subs.add_parser('invoke', description=service_mod.Invoke.__doc__, parents=[base_parser])
+    service_invoke.set_defaults(command='service_invoke')
+    add_opts(service_invoke, service_mod.Invoke.opts)
     
     #
     # start
