@@ -40,6 +40,7 @@ Name                                                Description
 :doc:`zato info<./info>`                            Shows information on a Zato component
 :doc:`zato from-config<./from-config>`              Runs commands from a config file
 :doc:`zato quickstart<./quickstart>`                Quickly sets up a working Zato environment
+:doc:`zato service<./service>`                      Service management
 :doc:`zato start<./start>`                          Starts a Zato component
 :doc:`zato stop<./stop>`                            Stops a Zato component
 :doc:`zato update<./update>`                        Updates parts of a Zato component

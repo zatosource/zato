@@ -126,9 +126,8 @@ and
 :ref:`methods <progguide-write-service-methods>`
 a service can make use of during processing of the messages.
 
-First, save the following code in service_api.py and :doc:`hot-deploy <TODO>` it - this will be
-the servce that will be modified throughout the rest of the text. A new plain HTTP channel
-should also be created so that the service can be easily accessed through `curl <http://curl.haxx.se>`_.
+Save the following code in service_api.py and :doc:`hot-deploy <TODO>` it - this will be
+the servce that will be modified throughout the rest of the text.
 
 ::
 
@@ -137,9 +136,6 @@ should also be created so that the service can be easily accessed through `curl 
    class MyService(Service):
        def handle(self):
            pass
-
-.. image:: /gfx/progguide/service-api-channel1.png
-   :align: center
 
 .. _progguide-write-service-attributes:
 
@@ -183,11 +179,11 @@ class.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
-  INFO - channel:[http-soap]
+  INFO - channel:[invoke]
   
 
 .. _progguide-write-service-cid:
@@ -228,7 +224,7 @@ CID has always 40 characters.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -260,11 +256,11 @@ class.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service --data-format json
   
 ::
 
-  INFO - data_format:[None]
+  INFO - data_format:[json]
 
 .. _progguide-write-service-environ:
   
@@ -294,7 +290,7 @@ Zato will never use environ for its own purposes.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -338,7 +334,7 @@ with :ref:`name <progguide-write-service-name>`.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -368,7 +364,7 @@ and
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -400,7 +396,7 @@ The constants are defined in the
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -426,7 +422,7 @@ is available as self.kvdb.conn.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -458,7 +454,7 @@ Observe how the log output contains the CID now:
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -485,7 +481,7 @@ Visit :ref:`get_name <progguide-write-service-get_name>` for a way to override i
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -519,7 +515,7 @@ context manager in the example below.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -569,7 +565,7 @@ processing_time will be equal to 0 if it took less than 1 ms.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -600,7 +596,7 @@ Note that it will be available as a non-None value only in the
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -639,7 +635,7 @@ of a service are stored for a later inspection.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -659,7 +655,7 @@ How many times the service has run, including the current invocation.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -676,6 +672,11 @@ one. If a service has been invoked through HTTP, wsgi_environ will be a dictiona
 The dictionary under zato.http.response.headers must not be used directly to define
 what HTTP response headers a service will return. Use 
 :ref:`response.headers <progguide-req-resp-resp>` instead.
+
+Note that the example below assumes the service has been mounted at /service-api.my-service
+through a plain HTTP channel,
+otherwise, had :doc:`zato service invoke <TODO>` been used as an access method, 
+wsgi_environ would've been empty.
 
 ::
 
@@ -880,7 +881,7 @@ automatically generates.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -910,7 +911,7 @@ Request and response objects are documented in
 
 invoke
 ``````
-.. py:method:: invoke(name[, payload='', channel=None, data_format=None, transport=None, serialize=False, as_bunch=False])
+.. py:method:: invoke(name[, payload='', channel=CHANNEL.INVOKE, data_format=None, transport=None, serialize=False, as_bunch=False])
 
   Synchronously invokes a service by its :ref:`name <progguide-write-service-name>`. The service
   is invoked in the same operating system's process and thread the current service
@@ -970,7 +971,7 @@ invoke
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -984,7 +985,7 @@ invoke
 
 invoke_async
 ````````````
-.. py:method:: invoke_async(name[, payload='', to_json_string=True])
+.. py:method:: invoke_async(name[, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None, transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False])
 
   Uses a service's :ref:`broker client <progguide-write-service-broker-client>`
   to execute another service asynchronously. It's not defined which server
@@ -1001,9 +1002,16 @@ invoke_async
                   Python dictionary if the service which is invoked uses 
                   :doc:`SIO<./sio>`.
                   
-  :param to_string: If payload should be serialized to a JSON string. Should be
-                    kept at True if payload is a dictionary.
-  :type to_string: bool
+  :param channel: Same as for :ref:`invoke <progguide-write-service-invoke>`
+  :param data_format: 〃
+  :param transport: 〃
+  
+  :param expiration: After how many seconds the message should expire. Default is 15 seconds.
+  :type expiration: int
+                  
+  :param to_json_string: Whether payload should be serialized to a JSON string. Should be
+                         set to True if payload is a dictionary.
+  :type to_json_string: bool
   
   :rtype: :ref:`CID <progguide-write-service-cid>` the other service will be
           invoked with
@@ -1018,7 +1026,7 @@ invoke_async
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -1058,6 +1066,10 @@ log_input
   :param level: Logging level to use
   :param suppress_keys: A list of keys which shouldn't be logged
   :rtype: A dictionary of information which was logged
+  
+Note that below the service has been expoxed through a plain HTTP channel
+at /service-api.my-service so it can be invoked from curl in order to show
+input HTTP headers which log_input has access to.
   
 ::
 
@@ -1123,7 +1135,7 @@ log_output
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 ::
 
@@ -1170,7 +1182,7 @@ translate
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
   
 .. code-block:: text
 
@@ -1237,7 +1249,7 @@ could be delivered - the message will be lost.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
 
 Note the data has been written out to logs twice because in this particular case
 the cluster consisted of two servers, each running one worker.
@@ -1304,7 +1316,7 @@ convenience wrapper to send a message to a single worker only.
 
 ::
 
-  $ curl localhost:17010/service-api.my-service
+  $ zato service invoke /opt/zato/server1 service-api.my-service
 
 Note the data has been written out to logs once only even though the cluster
 consisted of two servers, each running one worker.
@@ -1328,3 +1340,4 @@ instead of a single one.
 
   Don't forget about the :ref:`invoke_async <progguide-write-service-invoke_async>`
   method, which is a convenience wrapper for executing other services asynchronously.
+
