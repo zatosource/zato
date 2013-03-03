@@ -140,7 +140,8 @@ class RequestDispatcher(object):
                 
                 handler = getattr(self, '{0}_handler'.format(transport))
 
-                service_info, response = handler.handle(cid, wsgi_environ, payload, transport, worker_store, self.simple_io_config, data_format, path_info)
+                service_info, response = handler.handle(cid, wsgi_environ, payload, transport, worker_store, 
+                    self.simple_io_config, data_format, path_info)
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
                 wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, responses[response.status_code])
@@ -239,35 +240,29 @@ class _BaseMessageHandler(object):
             
         service_data = self.server.service_store.service_data(service_info.impl_name)
         
-        return payload_from_request(cid, request, data_format, transport), service_info, service_data
+        return service_info
     
     def handle_security(self):
         raise NotImplementedError('Must be implemented by subclasses')
+        
+    def _set_response_data(self, service, **kwargs):
+        data_format = kwargs.get('data_format')
+        transport = kwargs.get('transport')
+        
+        self.set_payload(service.response, data_format, transport, service)
+        self.set_content_type(service.response, data_format, transport, kwargs['service_info'])
+        
+        return service.response
     
     def handle(self, cid, wsgi_environ, raw_request, transport, worker_store, simple_io_config, data_format, path_info):
-        payload, service_info, service_data = self.init(cid, path_info, raw_request, wsgi_environ, transport, data_format)
-
-        service_instance = self.server.service_store.new_instance(service_info.impl_name)
-        service_instance.update(service_instance, CHANNEL.HTTP_SOAP, self.server, worker_store.broker_client,
-            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ)
-
-        service_instance.pre_handle()
+    
+        service_info = self.init(cid, path_info, raw_request, wsgi_environ, transport, data_format)
+        service = self.server.service_store.new_instance(service_info.impl_name)
         
-        service_instance.call_hooks('before')
-        service_instance.handle()
-        service_instance.call_hooks('after')
-        
-        response = service_instance.response
-        
-        self.set_payload(response, data_format, transport, service_instance)
-        self.set_content_type(response, data_format, transport, service_info)
-        
-        service_instance.post_handle()
-        service_instance.call_hooks('finalize')
-
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('[{}] Returning response.content_type:[{}], response.payload:[{}]'.format(
-                cid, response.content_type, response.payload.decode('utf-8')))
+        response = service.update_handle(self._set_response_data, service, raw_request,
+            CHANNEL.HTTP_SOAP, data_format, transport, self.server, worker_store.broker_client,
+            worker_store, cid, simple_io_config, service_info=service_info, wsgi_environ=wsgi_environ)
+                
         return service_info, response
 
     # ##########################################################################

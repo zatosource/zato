@@ -48,7 +48,7 @@ from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SCHEDULER
      SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Base
-from zato.common.util import uncamelify, new_cid, service_name_from_impl, TRACE1
+from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -180,7 +180,7 @@ class Request(ValueConverter):
         optional_list = getattr(io, 'input_optional', [])
         default_value = getattr(io, 'default_value', None)
         use_text = getattr(io, 'use_text', True)
-
+        
         if self.simple_io_config:
             self.has_simple_io_config = True
             self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
@@ -502,6 +502,7 @@ class Service(object):
         self.worker_store = None
         self.odb = None
         self.data_format = None
+        self.transport = None
         self.wsgi_environ = None
         self.job_type = None
         self.environ = {}
@@ -570,7 +571,36 @@ class Service(object):
             self.request.init(self.cid, self.SimpleIO, self.data_format)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
-    def invoke_by_impl_name(self, impl_name, payload='', channel='invoke', data_format=None,
+    def set_response_data(self, service, **kwargs):
+        response = service.response.payload
+        if not isinstance(response, basestring):
+            response = response.getvalue(serialize=kwargs['serialize'])
+            if kwargs['as_bunch']:
+                response = bunchify(response)
+            service.response.payload = response
+            
+        return response
+            
+    def update_handle(self, set_response_func, service, raw_request, channel, data_format, 
+            transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
+
+        payload = payload_from_request(cid, raw_request, data_format, transport)
+        
+        service.update(service, channel, server, broker_client, 
+            worker_store, cid, payload, raw_request, transport, 
+            simple_io_config, data_format, kwargs.get('wsgi_environ', {}), 
+            job_type=kwargs.get('job_type'))
+            
+        service.pre_handle()
+        service.call_hooks('before')
+        service.handle()
+        service.call_hooks('after')
+        service.post_handle()
+        service.call_hooks('finalize')
+        
+        return set_response_func(service, data_format=data_format, transport=transport, **kwargs)
+            
+    def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=None,
             transport=None, serialize=False, as_bunch=False):
             
         if self.impl_name == impl_name:
@@ -578,29 +608,10 @@ class Service(object):
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
             
-        service_instance = self.server.service_store.new_instance(impl_name)
-        
-        service_instance.update(service_instance, channel, self.server, self.broker_client, 
-            self.worker_store, self.cid, payload, payload, transport, 
-            self.request.simple_io_config, data_format, {})
-
-        service_instance.pre_handle()
-        
-        service_instance.call_hooks('before')
-        service_instance.handle()
-        service_instance.call_hooks('after')
-        
-        response = service_instance.response.payload
-        if not isinstance(response, basestring):
-            response = response.getvalue(serialize=serialize)
-            if as_bunch:
-                response = bunchify(response)
-            service_instance.response.payload = response
-            
-        service_instance.post_handle()
-        service_instance.call_hooks('finalize')
-        
-        return response
+        service = self.server.service_store.new_instance(impl_name)
+        return self.update_handle(self.set_response_data, service, payload, channel, 
+            data_format, transport, self.server, self.broker_client, self.worker_store,
+            self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch)
         
     def invoke(self, name, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
@@ -608,17 +619,22 @@ class Service(object):
     def invoke_by_id(self, service_id, *args, **kwargs):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
-    def invoke_async(self, name, payload='', expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=True):
+    def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None, 
+            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False):
+            
         if to_json_string:
             payload = dumps(payload)
             
         cid = new_cid()
             
-        msg = dict()
+        msg = {}
         msg['action'] = SERVICE.PUBLISH
         msg['service'] = name
         msg['payload'] = payload
         msg['cid'] = cid
+        msg['channel'] = channel
+        msg['data_format'] = data_format
+        msg['transport'] = transport
         
         self.broker_client.invoke_async(msg, expiration)
         
@@ -848,6 +864,7 @@ class Service(object):
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
+        service.transport = transport
         service.request.simple_io_config = simple_io_config
         service.response.simple_io_config = simple_io_config
         service.data_format = data_format

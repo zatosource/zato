@@ -227,6 +227,8 @@ class SCHEDULER_JOB_TYPE:
 class CHANNEL:
     AMQP = 'amqp'
     HTTP_SOAP = 'http-soap'
+    INVOKE = 'invoke'
+    INVOKE_ASYNC = 'invoke-async'
     JMS_WMQ = 'jms-wmq'
     SCHEDULER = 'scheduler'
     ZMQ = 'zmq'

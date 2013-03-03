@@ -47,7 +47,7 @@ from paste.util.multidict import MultiDict
 # Zato
 from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
-from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
+from zato.common.util import new_cid, pairwise, payload_from_request, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import PlainHTTPHandler, RequestDispatcher, SOAPHandler
@@ -343,13 +343,30 @@ class WorkerStore(BrokerMessageReceiver):
             
 # ##############################################################################
 
+    def _set_service_response_data(self, service, **ignored):
+        if not isinstance(service.response.payload, basestring):
+            service.response.payload = service.response.payload.getvalue()
+
     def _on_message_invoke_service(self, msg, channel, action, args=None):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
+        
+        # def update_handle(self, set_response_func, service, raw_request, channel, data_format, 
+        #    transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
+        
+        service = self.server.service_store.new_instance_by_name(msg.service)
+        service.update_handle(self._set_service_response_data, service, msg.payload,
+            channel, msg.get('data_format'), msg.get('transport'), self.server,
+            self.broker_client, self, msg.cid, self.worker_config.simple_io,
+            job_type=msg.get('job_type'))
+        
+        '''
         service_instance = self.server.service_store.new_instance_by_name(msg.service)
         service_instance.update(service_instance, channel, self.server, self.broker_client,
-            self, msg.cid, msg.payload, msg.payload, None, self.worker_config.simple_io,
+            self, msg.cid, 
+            payload_from_request(msg.cid, msg.payload, msg.get('data_format'), msg.get('transport')),
+            msg.payload, msg.get('transport'), self.worker_config.simple_io,
             msg.get('data_format'), job_type=msg.get('job_type'))
         
         service_instance.pre_handle()
@@ -358,9 +375,6 @@ class WorkerStore(BrokerMessageReceiver):
         service_instance.handle()
         service_instance.call_hooks('after')
         
-        if not isinstance(service_instance.response.payload, basestring):
-            service_instance.response.payload = service_instance.response.payload.getvalue()
-            
         service_instance.post_handle()
         service_instance.call_hooks('finalize')
         
@@ -368,6 +382,7 @@ class WorkerStore(BrokerMessageReceiver):
             msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(
                 msg.service, channel, action, repr(service_instance.response.payload))
             logger.debug(msg)
+        '''
             
 # ##############################################################################
 
@@ -563,6 +578,6 @@ class WorkerStore(BrokerMessageReceiver):
 # ##############################################################################
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
-        return self._on_message_invoke_service(msg, 'invoke_async', 'SERVICE_PUBLISH', args)
+        return self._on_message_invoke_service(msg, CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
         
 # ##############################################################################

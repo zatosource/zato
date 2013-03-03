@@ -50,7 +50,7 @@ class Invoke(ZatoCommand):
         {'name':'--data-format', 'help':"Payload's data format", 'default': 'json'},
         {'name':'--transport', 'help':'Transport to invoke the service over'},
         {'name':'--url-path', 'help':'URL path zato.service.invoke is exposed on', 'default':'/zato/admin/invoke'},
-        {'name':'--max-cid-repr', 'help':'How many characters of a CID to print out in verbose mode, defaults to {}, use {} to print the whole of it'.format(
+        {'name':'--max-cid-repr', 'help':'How many characters of each end of a CID to print out in verbose mode, defaults to {}, use {} to print the whole of it'.format(
             DEFAULT_MAX_CID_REPR, CID_NO_CLIP), 'default':DEFAULT_MAX_CID_REPR},
         {'name':'--max-response-repr', 'help':'How many characters of a response to print out in verbose mode, defaults to {}'.format(
             DEFAULT_MAX_RESPONSE_REPR), 'default':DEFAULT_MAX_RESPONSE_REPR},
@@ -112,4 +112,3 @@ class Invoke(ZatoCommand):
         if args.verbose:
             self.logger.debug('inner.text:[{}]'.format(response.inner.text))
             self.logger.debug('response:[{}]'.format(response))
-
