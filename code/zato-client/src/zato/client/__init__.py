@@ -140,17 +140,24 @@ class SOAPResponse(XMLResponse):
     """
     path, xpath = soap_data_path, soap_data_xpath
     
+    def init(self):
+        #self.ok ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+        
+        if self.set_data():
+            self.set_has_data()
+    
     def set_data(self):
         if self._set_data_details():
             data = self.xpath(self.data)
             if not data:
                 self.details = 'No {} in SOAP response'.format(self.path)
             else:
-                if self.ok:
-                    self.data = data[0]
-                    return True
-                else:
+                if soap_fault_xpath(data[0]):
                     self.details = data[0]
+                else:
+                    self.data = data[0]
+                    self.ok = True
+                    return True
         
 # ##############################################################################
 
