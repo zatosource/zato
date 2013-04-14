@@ -19,23 +19,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# anyjson
-from anyjson import loads
-
 # Bunch
 from bunch import Bunch
 
 # mock
-from mock import Mock, patch
-
-# nose
-from nose.tools import eq_
+from mock import patch
 
 # Zato
 from zato.common import zato_namespace
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelAMQP, Service
-from zato.common.test import Expected, rand_bool, rand_int, rand_string, ServiceTestCase
+from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal.channel.amqp import Create, Edit, Delete, GetList
 
 # ##############################################################################
@@ -108,8 +102,9 @@ class CreateTestCase(_Base):
             }
     
     def get_request_data(self):
-        return {'cluster_id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'queue':rand_string(), 
-             'consumer_tag_prefix':rand_string(), 'def_id':self.def_id, 'data_format':rand_string()}
+        return {'cluster_id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'def_id':self.def_id,
+                'queue':rand_string(), 'consumer_tag_prefix':rand_string(), 'service':rand_string(),
+                'data_format':rand_string()}
     
     def get_response_data(self):
         return Bunch({'id':self.id, 'name':self.name})
