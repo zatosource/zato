@@ -197,7 +197,7 @@ The string is prefixed with the letter 'K' to ensure that it always start with a
 is nothing special about the letter 'K', it just seemed a character that shouldn't
 be easy to confuse with any other in the ASCII range.
 
-When 
+Note that when 
 :ref:`publishing <progguide-write-service-broker-client-publish>`
 a 
 `SERVICE.PUBLISH <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/broker_message.py>`_

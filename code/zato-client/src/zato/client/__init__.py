@@ -37,8 +37,9 @@ from lxml import objectify
 import requests
 
 # Zato
-from zato.common import soap_doc, soap_body_path, soap_data_path, soap_data_xpath, soap_fault_xpath, \
-     ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
+from zato.common import BROKER, soap_doc, soap_body_path, soap_data_path, soap_data_xpath, \
+     soap_fault_xpath, ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, \
+     ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
 from zato.common.log_message import CID_LENGTH
 
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
@@ -98,7 +99,7 @@ class _StructuredResponse(_Response):
             
     def _set_data_details(self):
         try:
-            self.data = self.load_func(self.inner.text)
+            self.data = self.load_func(self.inner.text.encode('utf-8'))
         except Exception, e:
             self.details = format_exc(e)
         else:
@@ -145,8 +146,11 @@ class SOAPResponse(XMLResponse):
             if not data:
                 self.details = 'No {} in SOAP response'.format(self.path)
             else:
-                self.data = data[0]
-                return True                
+                if self.ok:
+                    self.data = data[0]
+                    return True
+                else:
+                    self.details = data[0]
         
 # ##############################################################################
 
@@ -231,43 +235,47 @@ class RawDataResponse(_Response):
             self.has_data = True
         
     def set_data(self):
-        self.data = self.inner.text
-        return len(self.data) > 0
+        if self.ok:
+            self.data = self.inner.text
+        else:
+            self.details = self.inner.text
+            
+        return self.data and len(self.data) > 0
     
 # ##############################################################################
 
 class _Client(object):
     """ A base class of convenience clients for invoking Zato services from other Python applications.
     """
-    def __init__(self, url=None, auth=None, path=None, session=None, to_bunch=False, 
+    def __init__(self, address, path, auth=None, session=None, to_bunch=False, 
             max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
-        self.address = '{}{}'.format(url, path)
+        self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session(auth=auth)
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr
         self.logger = logger or mod_logger
         
-    def inner_invoke(self, request, response_class, is_async, headers, output_repeated=False):
+    def inner_invoke(self, request, response_class, async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
         """
-        raw_response = self.session.post(self.address, request, headers=headers)
+        raw_response = self.session.post(self.service_address, request, headers=headers)
         response = response_class(raw_response, self.to_bunch, self.max_response_repr,
             self.max_cid_repr, self.logger, output_repeated)
             
         if self.logger.isEnabledFor(logging.DEBUG):
-            msg = ('request:[{}]\nresponse_class:[{}]\nis_async:[{}]\nheaders:[{}]\n'
+            msg = ('request:[{}]\nresponse_class:[{}]\nasync:[{}]\nheaders:[{}]\n'
                   'text:[{}]\ndata:[{}]').format(request,
-                response_class, is_async, headers, raw_response.text, response.data)
+                response_class, async, headers, raw_response.text, response.data)
             self.logger.debug(msg)
             
         return response
     
-    def invoke(self, request, response_class, is_async=False, headers=None, output_repeated=False):
+    def invoke(self, request, response_class, async=False, headers=None, output_repeated=False):
         """ Input parameters are like when invoking a service directly.
         """
         headers = headers or {}
-        return self.inner_invoke(request, response_class, False, headers)
+        return self.inner_invoke(request, response_class, async, headers)
     
 # ##############################################################################
 
@@ -276,8 +284,10 @@ class _JSONClient(_Client):
     """
     response_class = None
     
-    def invoke(self, payload=None, headers=None):
-        return super(_JSONClient, self).invoke(dumps(payload), self.response_class, headers)
+    def invoke(self, payload='', headers=None, to_json=True):
+        if to_json:
+            payload = dumps(payload)
+        return super(_JSONClient, self).invoke(payload, self.response_class, headers)
 
 class JSONClient(_JSONClient):
     """ Client for services that accept JSON input.
@@ -290,13 +300,14 @@ class JSONSIOClient(_JSONClient):
     """ Client for services that accept Simple IO (SIO) in JSON.
     """
     response_class = JSONSIOResponse
-    
+
 class SOAPSIOClient(_Client):
     """ Client for services that accept Simple IO (SIO) in SOAP.
     """
     def invoke(self, soap_action, payload=None, headers=None):
-        headers = headers or {'SOAPAction':soap_action}
-        return super(SOAPSIOClient, self).invoke(payload, SOAPSIOResponse, headers)
+        headers = headers or {}
+        headers['SOAPAction'] = soap_action
+        return super(SOAPSIOClient, self).invoke(payload, SOAPSIOResponse, headers=headers)
     
 class AnyServiceInvoker(_Client):
     """ Uses zato.service.invoke to invoke other services. The services being invoked
@@ -308,21 +319,32 @@ class AnyServiceInvoker(_Client):
             return value.isoformat()
         raise TypeError('Cannot serialize [{}]'.format(value))
         
-    def invoke(self, name, payload='', headers=None, channel='invoke', data_format='json', 
-            transport=None, async=False, id=None, needs_dumps=True, output_repeated=ZATO_NOT_GIVEN):
+    def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json', 
+            transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
+            to_json=True, output_repeated=ZATO_NOT_GIVEN):
+            
+        if not(name or id):
+            raise ZatoException(msg='Either name or id must be provided')
         
-        if output_repeated == ZATO_NOT_GIVEN:
+        if name and output_repeated == ZATO_NOT_GIVEN:
             output_repeated = name.lower().endswith('list')
             
-        if needs_dumps:
+        if to_json:
             payload = dumps(payload, default=self.json_default_handler)
 
         id_, value = ('name', name) if name else ('id', id)
         request = { id_: value, 'payload': payload.encode('base64'),
             'channel': channel, 'data_format': data_format, 'transport': transport,
+            'async': async, 'expiration':expiration
             }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, async, headers, output_repeated)
+        
+    def invoke(self, *args, **kwargs):
+        return self._invoke(async=False, *args, **kwargs)
+        
+    def invoke_async(self, *args, **kwargs):
+        return self._invoke(async=True, *args, **kwargs)
     
 # ##############################################################################
     
@@ -332,8 +354,9 @@ class XMLClient(_Client):
     
 class SOAPClient(_Client):
     def invoke(self, soap_action, payload='', headers=None):
-        headers = headers or {'SOAPAction':soap_action}
-        return super(SOAPClient, self).invoke(payload, SOAPResponse, headers)
+        headers = headers or {}
+        headers['SOAPAction'] = soap_action
+        return super(SOAPClient, self).invoke(payload, SOAPResponse, headers=headers)
     
 # ##############################################################################
     

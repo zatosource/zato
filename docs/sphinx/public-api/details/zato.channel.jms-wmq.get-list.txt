@@ -32,7 +32,7 @@ id           int      ---      Channel ID
 name         string   ---      Name of the channel
 is_active    boolean  ---      Whether the channel should be active
 def_id       int      ---      ID of :doc:`a JMS WebSphere MQ connection definition</public-api/details/zato.definition.jms-wmq>` to use for connecting to a queue manager
-def_name     int      ---      Name of the JMS WebSphere MQ connection definition
+def_name     string   ---      Name of the JMS WebSphere MQ connection definition
 queue        string   ---      Name of the queue to read messages off
 service_name string   ---      Name of a service that will be invoked upon reading each message from the queue
 data_format  string   Yes      Expected data format. If returned, it will be either 'xml' or 'json'.

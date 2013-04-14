@@ -121,12 +121,16 @@ class RequestDispatcher(object):
         path_info = wsgi_environ['PATH_INFO']
         soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')
         url_data = self.security.url_sec_get(path_info, soap_action)
+        payload = wsgi_environ['wsgi.input'].read()
+        
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = 'cid:[{}], payload:[{}], wsgi_environ:[{}]'.format(cid, payload, wsgi_environ)
+            logger.debug(msg)
 
         if url_data:
             transport = url_data['transport']
             data_format = url_data['data_format']
             try:
-                payload = wsgi_environ['wsgi.input'].read()
                 if url_data.sec_def != ZATO_NONE:
                     if url_data.sec_def.sec_type in(security_def_type.tech_account, security_def_type.basic_auth, 
                                                 security_def_type.wss):
@@ -196,8 +200,6 @@ class _BaseMessageHandler(object):
         self.server = server # A ParallelServer instance
     
     def init(self, cid, path_info, request, headers, transport, data_format):
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug('[{0}] request:[{1}] headers:[{2}]'.format(cid, request.decode('utf-8'), headers))
 
         if transport == 'soap':
             # HTTP headers are all uppercased at this point.
@@ -268,8 +270,6 @@ class _BaseMessageHandler(object):
     # ##########################################################################
     
     def _get_xml_admin_payload(self, service_instance, zato_message_template, payload):
-        #return zato_message_template.format(cid=service_instance.cid, result=response.result, 
-        #    details=response.result_details, data=data.encode('utf-8'))
         
         if payload:
             data=payload.getvalue()

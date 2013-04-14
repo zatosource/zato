@@ -241,6 +241,7 @@ class ServiceStore(InitializingObject):
                         impl_name = item.get_impl_name()
                         
                         self.services[impl_name] = {}
+                        self.services[impl_name]['name'] = name
                         self.services[impl_name]['deployment_info'] = depl_info
                         self.services[impl_name]['service_class'] = item
                         

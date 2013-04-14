@@ -87,6 +87,10 @@ language, only catapulted to a much higher level - instead of exposing API to ot
 classes or modules, you operate with services and data-sources dispersed across
 many applications and systems.
 
+Reusability is the key to creating successful services. Services should be reusable
+across multiple applications, regarding of programming languages they're implemented in
+or particulars of any specific data format they may use internally or when connecting to Zato.
+
 .. _progguide-what-is-an-application:
 
 What is an application
@@ -109,7 +113,7 @@ Read next
       :doc:`Key/value DB (Redis)<./kvdb>` |
       :doc:`Scheduler<./scheduler>` |
       :doc:`Invoking other services <./invoking-services>` |
-      :doc:`Python client<progguide/clients/python>` |
+      :doc:`Python client<./clients/python>` |
       :doc:`Security<./security>` |
       :doc:`Testing<./testing>` |
       :doc:`Documenting<./documenting>` |
@@ -122,14 +126,14 @@ Read next
       :doc:`Other data formats <./other-formats>`
       
     * **Sync and async:**
-      :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>`
+      :doc:`Synchronous and asynchronous processes <./sync-async-proc>`
       
     * **Service hooks:**
-      :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
+      :doc:`Hooking into a service's lifecycle <./service-hooks>`
       
     * **Logging and debugging techniques:**
-      :doc:`Logging<progguide/logging>` | 
-      :doc:`Debugging<progguide/debgging>`
+      :doc:`Logging<./logging>` | 
+      :doc:`Debugging<./debgging>`
       
     * **Customizing web admin:**
-      :doc:`Making sure you work on the right environment<progguide/web-admin-settings>`
+      :doc:`Making sure you work on the right environment<./web-admin-settings>`
