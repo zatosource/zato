@@ -134,6 +134,8 @@ class ServiceTestCase(TestCase):
 
         def get_data(self, *ignored_args, **ignored_kwargs):
             return expected.get_data()
+            
+        instance.get_data = get_data
         
         for attr_name, mock_path_data_list in mock_data.iteritems():
             setattr(instance, attr_name, Mock())
