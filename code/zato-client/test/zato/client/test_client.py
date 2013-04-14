@@ -80,7 +80,7 @@ class _Base(TestCase):
 class JSONClientTestCase(_Base):
     client_class = JSONClient
     
-    def test__client(self):
+    def test_client(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -100,7 +100,7 @@ class JSONClientTestCase(_Base):
 class XMLClientTestCase(_Base):
     client_class = XMLClient
     
-    def test__client(self):
+    def test_client(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -120,7 +120,7 @@ class XMLClientTestCase(_Base):
 class SOAPClientTestCase(_Base):
     client_class = SOAPClient
     
-    def test__client_ok(self):
+    def test_client_ok(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -142,14 +142,15 @@ class SOAPClientTestCase(_Base):
         expected_response_data = """
             <abc xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">{}</abc>
             """.format(_rand).strip()
-        
+
+        eq_(response.details, None)
         eq_(response.ok, ok)
         eq_(response.inner.text, text)
         eq_(etree.tostring(response.data), expected_response_data)
         eq_(response.has_data, True)
         eq_(response.cid, cid)
         
-    def test__client_no_soap_response(self):
+    def test_client_no_soap_response(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -173,7 +174,7 @@ class SOAPClientTestCase(_Base):
 class JSONSIOClientTestCase(_Base):
     client_class = JSONSIOClient
     
-    def test__client(self):
+    def test_client(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -210,7 +211,7 @@ class JSONSIOClientTestCase(_Base):
 class SOAPSIOClientTestCase(_Base):
     client_class = SOAPSIOClient
     
-    def test__client_ok(self):
+    def test_client_ok(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -260,7 +261,7 @@ class SOAPSIOClientTestCase(_Base):
             
             self.assertEquals(expected, actual)
             
-    def test__client_soap_fault(self):
+    def test_client_soap_fault(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -315,7 +316,7 @@ NoResultFound: No row was found for one()
 class AnyServiceInvokerTestCase(_Base):
     client_class = AnyServiceInvoker
     
-    def test__client(self):
+    def test_client(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -349,7 +350,7 @@ class AnyServiceInvokerTestCase(_Base):
 class RawDataClientTestCase(_Base):
     client_class = RawDataClient
     
-    def test__client(self):
+    def test_client(self):
 
         cid = new_cid()
         headers = {'x-zato-cid':cid}
@@ -370,9 +371,9 @@ class RawDataClientTestCase(_Base):
 
 class NotImplementedErrorTestCase(_Base):
     
-    def test__not_implemented_error(self):
+    def test_not_implemented_error(self):
         inner = FakeInnerResponse({}, rand_int(), rand_string(), rand_int())
-        response_data = (inner, rand_bool(), rand_int(), rand_int())
+        response_data = (inner, rand_bool(), rand_int(), rand_int(), None)
         
         self.assertRaises(NotImplementedError, _Response, *response_data)
         self.assertRaises(NotImplementedError, _StructuredResponse(*response_data).load_func)
@@ -395,7 +396,7 @@ class TestResponse(TestCase):
         for(max_response_repr, max_cid_repr) in max_repr:
             
             inner = FakeInnerResponse(*inner_params)
-            response = MyResponse(inner, False, max_response_repr, max_cid_repr)
+            response = MyResponse(inner, False, max_response_repr, max_cid_repr, None)
             response.ok = ok
             
             cid_ellipsis = '' if max_cid_repr == CID_NO_CLIP else '..'
