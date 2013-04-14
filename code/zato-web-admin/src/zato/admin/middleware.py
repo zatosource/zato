@@ -108,7 +108,7 @@ class ZatoMiddleware(object):
             
             url = 'http://{}:{}'.format(req.zato.cluster.lb_host, req.zato.cluster.lb_port)
             auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-            req.zato.client = AnyServiceInvoker(url, auth, ADMIN_INVOKE_PATH, to_bunch=True)
+            req.zato.client = AnyServiceInvoker(url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
             
         req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
         req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)

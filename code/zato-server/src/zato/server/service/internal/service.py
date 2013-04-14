@@ -35,7 +35,7 @@ from anyjson import loads
 from validate import is_boolean
 
 # Zato
-from zato.common import KVDB, ZatoException
+from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
      DeployedService, HTTPSOAP, Server, Service
@@ -245,7 +245,8 @@ class Invoke(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport')
+        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', 
+            Boolean('async'), Integer('expiration'))
         output_optional = ('response',)
 
     def handle(self):
@@ -256,20 +257,24 @@ class Invoke(AdminService):
 
         id = self.request.input.get('id')
         name = self.request.input.get('name')
-        
+
+        channel = self.request.input.get('channel')
+        data_format = self.request.input.get('data_format')
+        transport = self.request.input.get('transport')
+        expiration = self.request.input.get('expiration') or BROKER.DEFAULT_EXPIRATION
+
         if name and id:
             raise ZatoException('Cannot accept both id:[{}] and name:[{}]'.format(id, name))
-        
-        if name:
-            func = self.invoke
-            id_ = name
+
+        if self.request.input.async:
+            if id:
+                impl_name = self.server.service_store.id_to_impl_name[id]
+                self.logger.warn(self.server.service_store.service_data(impl_name))
+                name = self.server.service_store.service_data(impl_name)['name']
+            response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
         else:
-            func = self.invoke_by_id
-            id_ = id
-            
-        response = func(id_, payload, 
-            self.request.input.get('channel'), self.request.input.get('data_format'),
-            self.request.input.get('transport'), serialize=True)
+            func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
+            response = func(id_, payload, channel, data_format, transport, serialize=True)
 
         self.response.payload.response = response.encode('base64') if response else ''
 

@@ -56,7 +56,7 @@ How to pass a request to another service
         class MyService(Service):
             def handle(self):
             
-                # A regular dictionary will do when invoking a SIO service
+                # A regular dictionary will do when invoking an SIO service
                 input_data = {'cluster_id': 1}
                 
                 response = self.invoke('zato.security.get-list', input_data, as_bunch=True)

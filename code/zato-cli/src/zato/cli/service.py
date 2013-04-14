@@ -32,6 +32,7 @@ from bunch import Bunch
 # Zato
 from zato.cli import ZatoCommand, ZATO_INFO_FILE
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
+from zato.common import BROKER
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server, Service
 from zato.common.util import get_config
@@ -54,9 +55,13 @@ class Invoke(ZatoCommand):
             DEFAULT_MAX_CID_REPR, CID_NO_CLIP), 'default':DEFAULT_MAX_CID_REPR},
         {'name':'--max-response-repr', 'help':'How many characters of a response to print out in verbose mode, defaults to {}'.format(
             DEFAULT_MAX_RESPONSE_REPR), 'default':DEFAULT_MAX_RESPONSE_REPR},
+        {'name':'--async', 'help':'If given, the service will be invoked asynchronously', 'action':'store_true'},
+        {'name':'--expiration', 'help':'In async mode, after how many seconds the message should expire, defaults to {} seconds'.format(
+            BROKER.DEFAULT_EXPIRATION), 'default':BROKER.DEFAULT_EXPIRATION},
     ]
     
     def execute(self, args):
+
         repo_dir = os.path.join(os.path.abspath(os.path.join(self.original_dir, args.path)), 'config', 'repo')
         config = get_config(repo_dir, 'server.conf')
         priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
@@ -100,9 +105,11 @@ class Invoke(ZatoCommand):
                 k, v = pair.strip().split('=', 1)
                 headers[k] = v
                     
-        client = AnyServiceInvoker('http://{}'.format(config.main.gunicorn_bind), auth, args.url_path,
+        client = AnyServiceInvoker('http://{}'.format(config.main.gunicorn_bind), args.url_path, auth,
             max_response_repr=int(args.max_response_repr), max_cid_repr=int(args.max_cid_repr))
-        response = client.invoke(args.name, args.payload, headers, args.channel, args.data_format, args.transport)
+        
+        response = client.invoke(args.name, args.payload, headers, args.channel, args.data_format, args.transport,
+            args.async)
         
         if response.ok:
             self.logger.info(response.data or '(None)')

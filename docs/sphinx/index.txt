@@ -253,6 +253,7 @@ Zato, the open-source project
    architecture/*
    intro/*
    progguide/*
+   progguide/clients/*
    public-api/*
    public-api/details/*
    security/*
