@@ -54,7 +54,7 @@ Programming guide
       :doc:`Other data formats <progguide/other-formats>`
       
     * **Sync and async:**
-      :doc:`Synchronous and asynchronous processes <progguide/sync-async-proc>`
+      :doc:`Synchronous and asynchronous message flow<progguide/sync-async/flow>`
       
     * **Service hooks:**
       :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
