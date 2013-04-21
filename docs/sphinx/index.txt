@@ -44,8 +44,7 @@ Programming guide
       :doc:`Python client<progguide/clients/python>` |
       :doc:`Security<progguide/security>` |
       :doc:`Testing<progguide/testing>` |
-      :doc:`Documenting<progguide/documenting>` |
-      :doc:`Usage examples<progguide/usage-examples>`
+      :doc:`Documenting<progguide/documenting>`
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <progguide/sio>` | 
