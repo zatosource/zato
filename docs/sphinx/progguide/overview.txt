@@ -115,7 +115,6 @@ Read next
       :doc:`Invoking other services <./invoking-services>` |
       :doc:`Python client<./clients/python>` |
       :doc:`Security<./security>` |
-      :doc:`Testing<./testing>` |
       :doc:`Documenting<./documenting>`
       
     * **Request/response documents:**
