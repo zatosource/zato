@@ -60,7 +60,7 @@ Programming guide
       
     * **Logging and debugging techniques:**
       :doc:`Logging<progguide/logging>` | 
-      :doc:`Debugging<progguide/debgging>`
+      :doc:`Debugging<progguide/debugging>`
       
     * **Customizing web admin:**
       :doc:`Making sure you work on the right environment<progguide/web-admin-settings>`
