@@ -1,0 +1,53 @@
+Synchronous and asynchronous message flow
+=========================================
+
+In order to maximize the throughput of a Zato cluster and indeed, of the whole
+environment Zato is a part of, it's usually desirable to consider whether the procesess,
+even synchronous ones, shouldn't be in fact implemented in an asynchronous, non-blocking,
+fashion.
+
+Consider the simple synchronous process below. A client application is asking for
+a customer's credit score. 
+
+The second and subsequent requests can be very
+fast however the initial one can take a considerable amount of time because the 
+backend will have to perform the initial calculation, possibly consulting several
+external applications along.
+
+Once the initial score is obtained, it can be assigned a validity time and stored for 
+a later use.
+
+.. image:: /gfx/progguide/sync-async-process.png
+   :align: center
+
+Clearly the high-level process is a synchronous one yet it can be implemented in two different
+ways:
+
+* Invoking Zato and waiting for the response, blocking the client application, Zato and backend along.
+
+   .. image:: /gfx/progguide/sync-async-sync.png
+      :align: center
+      
+      
+  This is a blocking way. Every part involved will wait for the credit score to be 
+  calculated. From Zato's point of view, given that it's implemented on top of 
+  :doc:`an asynchronous gunicorn framework <../../architecture/servers>`, 
+  the fact that it needs to wait is to some extent 
+  acceptable. For other parts, however, this may mean a performance drop if,
+  for instance, several minutes will be needed to obtain the credit score.
+
+
+* Submitting the request to be notified when the result is ready and fetching the
+  result after it's known the score is ready.
+
+   .. image:: /gfx/progguide/sync-async-async.png
+         :align: center
+
+  Client application receives a correlation ID assigned to the request by Zato. The backend application
+  receives it as well and when the credit score is ready, it notifies Zato, which
+  forwards the message to the client. Only then the latter fetches the score - this can
+  be done by correlation or customer ID.
+  
+  Except for backend, which does the heavy work in either scenario, none of the components is blocked, 
+  no resources are wasted unnecessarily. Note that the individual services Zato exposes
+  to both sides can be in fact synchronous, however the approach is an asynchronous one.
