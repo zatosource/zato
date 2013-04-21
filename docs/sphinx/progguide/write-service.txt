@@ -428,6 +428,8 @@ is available as self.kvdb.conn.
 
   INFO - service-api.my-service was invoked 16 time(s)
 
+.. _progguide-write-service-logger:
+
 logger
 ``````
 
