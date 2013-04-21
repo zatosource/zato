@@ -116,8 +116,7 @@ Read next
       :doc:`Python client<./clients/python>` |
       :doc:`Security<./security>` |
       :doc:`Testing<./testing>` |
-      :doc:`Documenting<./documenting>` |
-      :doc:`Usage examples<./usage-examples>`
+      :doc:`Documenting<./documenting>`
       
     * **Request/response documents:**
       :doc:`SimpleIO (SIO) <./sio>` | 
@@ -126,7 +125,7 @@ Read next
       :doc:`Other data formats <./other-formats>`
       
     * **Sync and async:**
-      :doc:`Synchronous and asynchronous processes <./sync-async-proc>`
+      :doc:`Synchronous and asynchronous message flow<./sync-async/flow>`
       
     * **Service hooks:**
       :doc:`Hooking into a service's lifecycle <./service-hooks>`
