@@ -37,7 +37,7 @@ Programming guide
       :doc:`Overview <progguide/overview>` |
       :doc:`Writing a service <progguide/write-service>` |
       :doc:`Request and response objects<progguide/request-response>` |
-      :doc:`Outgoing connections<progguide/out-conn>` |
+      :doc:`Outgoing connections<progguide/outconn/overview>` |
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |
       :doc:`Invoking other services <progguide/invoking-services>` |
@@ -254,6 +254,7 @@ Zato, the open-source project
    intro/*
    progguide/*
    progguide/clients/*
+   progguide/outconn/*
    public-api/*
    public-api/details/*
    security/*

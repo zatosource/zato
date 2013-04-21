@@ -1,0 +1,33 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Outgoing connections
+====================
+
+Each service can automatically access external resources using a range of protocols
+documented in subsequent chapters. Some of the protocols are synchronous while
+communicating over the rest is performed asynchronously, in a fire-and-forget
+manner.
+
+=================================== ===========
+Protocol                            Synchronous
+=================================== ===========
+:doc:`AMQP <./amqp>`                ---        
+:doc:`FTP <./ftp>`                  Yes
+:doc:`HTTP <./http>`                Yes
+:doc:`JMS WebSphere MQ <./jms-wmq>` ---
+:doc:`SQL <./sql>`                  Yes
+:doc:`ZeroMQ <./zmq>`               ---
+=================================== ===========
+
+.. note::
+
+  There's nothing preventing you from accessing external resources using
+  other transfer protocols.
+  
+  You won't have any particular support for doing
+  so from Zato but the platform itself doesn't disallow using any other means of
+  communicating if you establish and maintain the connections yourself.
+  
+  The list above introduces what Zato can offer out of the box in the current version 
+  and will surely grow in future releases.
