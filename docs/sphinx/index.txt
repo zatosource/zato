@@ -31,7 +31,7 @@ Introduction
       :doc:`Hot-deploying the service and invoking it<intro/tutorial05>`
 
 Programming guide
-=================================
+=================
 
     * **Developing services and applications:**
       :doc:`Overview <progguide/overview>` |
@@ -43,7 +43,6 @@ Programming guide
       :doc:`Invoking other services <progguide/invoking-services>` |
       :doc:`Python client<progguide/clients/python>` |
       :doc:`Security<progguide/security>` |
-      :doc:`Testing<progguide/testing>` |
       :doc:`Documenting<progguide/documenting>`
       
     * **Request/response documents:**
@@ -66,7 +65,7 @@ Programming guide
       :doc:`Making sure you work on the right environment<progguide/web-admin-settings>`
 
 Administration guide
-==============================
+====================
 
     * :doc:`Installing and configuring Zato components<admin/install>` |
       :doc:`Web admin<admin/web-admin>` | 
@@ -77,7 +76,7 @@ Administration guide
       :doc:`Periodic tasks<admin/periodic>`
       
 Web admin
-==============================
+=========
 
     * **Overview:** 
       :doc:`Introduction<web-admin/intro>` | 
@@ -154,7 +153,7 @@ Web admin
       :doc:`Cluster color markers<web-admin/settings/cluster-color-markers>`
 
 Architecture
-==============================
+============
 
     * **Zato components:**
       :doc:`Overview<architecture/overview>` | 
@@ -166,14 +165,14 @@ Architecture
       :doc:`Certificate Authority (CA)<architecture/ca>`
       
 Statistics
-==============================
+==========
 
     * :doc:`Guide<stats/guide>` |
       :doc:`Maintenance<stats/maintenance>` | 
       :doc:`Load balancer statistics<stats/lb-statistics>`
       
 Security
-==============================
+========
 
     * **Users:**
       :doc:`OS-level and application users<security/users>`
@@ -184,6 +183,8 @@ Security
       
     * **Other:**
       :doc:`Reporting security issues<security/reporting-issues>`
+
+.. _index-public-api-toc:
 
 Public SOAP and JSON server API
 ================================
