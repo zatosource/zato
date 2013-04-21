@@ -132,7 +132,7 @@ Read next
       
     * **Logging and debugging techniques:**
       :doc:`Logging<./logging>` | 
-      :doc:`Debugging<./debgging>`
+      :doc:`Debugging<./debugging>`
       
     * **Customizing web admin:**
       :doc:`Making sure you work on the right environment<./web-admin-settings>`
