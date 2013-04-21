@@ -43,7 +43,6 @@ Programming guide
       :doc:`Invoking other services <progguide/invoking-services>` |
       :doc:`Python client<progguide/clients/python>` |
       :doc:`Security<progguide/security>` |
-      :doc:`Testing<progguide/testing>` |
       :doc:`Documenting<progguide/documenting>`
       
     * **Request/response documents:**
