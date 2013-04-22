@@ -1283,8 +1283,8 @@ if you don't want all of your services to receive the message.
 
 .. _progguide-write-service-broker-client-invoke_async:
 
-Sending a message to one of servers (1:1)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Sending a message to one of the servers (1:1)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Exactly one worker among all servers in a cluster will receive a message, possibly 
 the one which is publishing the message.

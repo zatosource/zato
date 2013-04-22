@@ -31,7 +31,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ConnectionException
-from zato.common.broker_message import OUTGOING, MESSAGE_TYPE
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.common.util import TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
@@ -88,7 +88,8 @@ class PublisherFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
+        #self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
+        self.broker_client.invoke_async(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -107,7 +108,7 @@ class OutgoingConnector(BaseAMQPConnector):
         
         self.broker_client_id = 'amqp-publishing-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL]: self.on_broker_msg,
             MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
@@ -144,9 +145,10 @@ class OutgoingConnector(BaseAMQPConnector):
                 
     def filter(self, msg):
         """ Finds out whether the incoming message actually belongs to the 
-        listener. All the listeners receive incoming each of the PUB messages 
+        listener. All the listeners receive each of the incoming PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
+        print(33333333, self, msg)
         if super(OutgoingConnector, self).filter(msg):
             return True
         

@@ -35,7 +35,7 @@ import redis
 # Zato
 from zato.common import BROKER, ZATO_NONE
 from zato.common.util import new_cid
-from zato.common.broker_message import MESSAGE_TYPE, TOPICS
+from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +60,7 @@ class _ClientThread(Thread):
         if self.pubsub == 'sub':
             self.client = self.kvdb.pubsub()
             self.client.subscribe(self.topic_callbacks.keys())
+            print(4444444444444, 'sub', self.topic_callbacks)
             try:
                 while self.keep_running:
                     for msg in self.client.listen():
@@ -131,12 +132,12 @@ class BrokerClient(Thread):
         topic = TOPICS[msg_type]
         self.pub_client.publish(topic, dumps(msg))
         
-    def invoke_async(self, msg, expiration=BROKER.DEFAULT_EXPIRATION):
-        msg['msg_type'] = MESSAGE_TYPE.TO_PARALLEL_ANY
+    def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
+        msg['msg_type'] = msg_type
         msg = dumps(msg)
         
-        topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
-        key = broker_msg = b'zato:broker:to-parallel:any:{}'.format(new_cid())
+        topic = TOPICS[msg_type]
+        key = broker_msg = b'zato:broker:{}:{}'.format(KEYS[msg_type], new_cid())
         
         self.kvdb.conn.set(key, str(msg))
         self.kvdb.conn.expire(key, expiration) # In seconds
