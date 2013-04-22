@@ -109,7 +109,7 @@ class OutgoingConnector(BaseAMQPConnector):
         self.broker_client_id = 'amqp-publishing-connector'
         self.broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL]: self.on_broker_msg,
-            MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         
@@ -148,7 +148,6 @@ class OutgoingConnector(BaseAMQPConnector):
         listener. All the listeners receive each of the incoming PUB messages 
         and filtering out is being performed here, on the client side, not in the broker.
         """
-        print(33333333, self, msg)
         if super(OutgoingConnector, self).filter(msg):
             return True
         

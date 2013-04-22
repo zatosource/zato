@@ -30,7 +30,7 @@ from threading import Thread
 from bunch import Bunch
 
 # Zato
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, TOPICS
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
@@ -85,8 +85,8 @@ class ConsumingConnector(BaseAMQPConnector):
         
         self.broker_client_id = 'amqp-consuming-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL]: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         

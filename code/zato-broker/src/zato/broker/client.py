@@ -60,7 +60,6 @@ class _ClientThread(Thread):
         if self.pubsub == 'sub':
             self.client = self.kvdb.pubsub()
             self.client.subscribe(self.topic_callbacks.keys())
-            print(4444444444444, 'sub', self.topic_callbacks)
             try:
                 while self.keep_running:
                     for msg in self.client.listen():
@@ -111,7 +110,10 @@ class BrokerClient(Thread):
         self.decrypt_func = kvdb.decrypt_func
         self.name = '{}-{}'.format(client_type, new_cid())
         self.topic_callbacks = topic_callbacks
-        self._to_parallel_any_topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
+        #self._needs_tmp_key = [
+        #    TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
+        #
+        self._needs_tmp_key = [v for k,v in TOPICS.items() if k not in(MESSAGE_TYPE.TO_SINGLETON, MESSAGE_TYPE.TO_PARALLEL_ALL)]
         
     def run(self):
         logger.info('Starting broker client, host:[{}], port:[{}], name:[{}]'.format(
@@ -137,7 +139,7 @@ class BrokerClient(Thread):
         msg = dumps(msg)
         
         topic = TOPICS[msg_type]
-        key = broker_msg = b'zato:broker:{}:{}'.format(KEYS[msg_type], new_cid())
+        key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
         
         self.kvdb.conn.set(key, str(msg))
         self.kvdb.conn.expire(key, expiration) # In seconds
@@ -151,7 +153,7 @@ class BrokerClient(Thread):
         if msg.type == 'message':
     
             # Replace payload with stuff read off the KVDB in case this is where the actual message happens to reside.
-            if msg.channel == self._to_parallel_any_topic:
+            if msg.channel in self._needs_tmp_key:
                 tmp_key = '{}.tmp'.format(msg.data)
                 
                 try:
