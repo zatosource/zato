@@ -37,6 +37,7 @@ Programming guide
       :doc:`Overview <progguide/overview>` |
       :doc:`Writing a service <progguide/write-service>` |
       :doc:`Request and response objects<progguide/request-response>` |
+      :doc:`Channels<progguide/channels/overview>` |
       :doc:`Outgoing connections<progguide/outconn/overview>` |
       :doc:`Key/value DB (Redis)<progguide/kvdb>` |
       :doc:`Scheduler<progguide/scheduler>` |

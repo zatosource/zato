@@ -11,8 +11,8 @@ Asynchronously sends a message to an AMQP queue specified in the
 :doc:`connection's details <TODO>`. Doesn't support publishing of messages to a topic.
 
 The message is first published on the :doc:`Zato broker </architecture/redis>`
-off of which the connector process responsible for communication with external
-AMQP resources picks it up and actually sends it to the remote queue.
+off of which the connector process responsible for communication with this particular
+AMQP broker picks it up and actually sends it to the remote queue.
 
 Usage example
 -------------
