@@ -31,7 +31,7 @@ from bunch import Bunch
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.common.util import TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
@@ -128,8 +128,8 @@ class OutgoingConnector(BaseJMSWMQConnector):
         
         self.broker_client_id = 'jms-wmq-outgoing-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL]: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         

@@ -27,7 +27,7 @@ from threading import RLock, Thread
 from bunch import Bunch
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.common.util import TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
@@ -86,8 +86,8 @@ class OutgoingConnector(BaseZMQConnector):
         
         self.broker_client_id = 'zmq-outgoing-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL]: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         

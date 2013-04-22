@@ -27,7 +27,7 @@ from threading import RLock, Thread
 from bunch import Bunch
 
 # Zato
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, TOPICS
 from zato.common.util import new_cid
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
@@ -65,8 +65,8 @@ class ConsumingConnector(BaseZMQConnector):
         
         self.broker_client_id = 'zmq-consuming-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL]: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         

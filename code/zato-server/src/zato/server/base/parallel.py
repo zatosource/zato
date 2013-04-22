@@ -505,7 +505,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 msg = {}
                 msg['action'] = action
                 msg['token'] = self.odb.token
-                self.broker_client.publish(msg, msg_type=msg_type)
+                self.broker_client.invoke_async(msg, msg_type=msg_type)
                 time.sleep(0.2)
             
             self.broker_client.close()

@@ -68,10 +68,12 @@ TOPICS = {
     MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: b'/zato/connector/zmq/all',
 }
 
-KEYS = {
-    MESSAGE_TYPE.TO_PARALLEL_ANY: 'to-parallel:any',
-    MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL: 'to-amqp-pub-all',
-    }
+KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
+
+#KEYS = {
+#    MESSAGE_TYPE.TO_PARALLEL_ANY: 'to-parallel:any',
+#    MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL: 'to-amqp-pub-all',
+#    }
 
 SCHEDULER = Bunch()
 SCHEDULER.CREATE = b'10000'
