@@ -16,6 +16,8 @@ The message is first published on the :doc:`Zato broker </architecture/redis>`
 off of which the connector process responsible for communication with this particular
 AMQP broker picks it up and actually sends it to the remote queue.
 
+The underlying client AMQP library is `Pika <https://pika.readthedocs.org/>`_.
+
 API
 ---
 
