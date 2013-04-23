@@ -5,9 +5,12 @@ Outgoing connections
 ====================
 
 Each service can automatically access external resources using a range of protocols
-documented in subsequent chapters. Some of the protocols are synchronous while
-communicating over the rest is performed asynchronously, in a fire-and-forget
-manner.
+documented in subsequent chapters. 
+
+Some of the protocols are synchronous while communicating over the rest is 
+performed asynchronously, in a fire-and-forget manner.
+
+None of the protocols blocks the current server thread.
 
 =================================== ===========
 Protocol                            Synchronous
