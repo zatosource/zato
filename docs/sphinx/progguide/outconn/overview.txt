@@ -27,7 +27,10 @@ Protocol                            Synchronous
   
   You won't have any particular support for doing
   so from Zato but the platform itself doesn't disallow using any other means of
-  communicating if you establish and maintain the connections yourself.
+  communicating if you establish and maintain the connections yourself. Do keep
+  in mind though that Zato servers use a gevent-based main loop by default which
+  means you shouldn't open TCP connections from extensions written in C, any sockets
+  should be open in Python only.
   
   The list above introduces what Zato can offer out of the box in the current version 
   and will surely grow in future releases.
