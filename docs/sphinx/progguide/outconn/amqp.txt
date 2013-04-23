@@ -7,12 +7,92 @@ AMQP outgoing connections
 Overview
 --------
 
-Asynchronously sends a message to an AMQP queue specified in the 
-:doc:`connection's details <TODO>`. Doesn't support publishing of messages to a topic.
+Asynchronously sends a message to an AMQP exchange using 
+:doc:`connection <TODO>`
+:doc:`parameters <TODO>`
+specified. Doesn't support publishing of messages to a topic.
 
 The message is first published on the :doc:`Zato broker </architecture/redis>`
 off of which the connector process responsible for communication with this particular
 AMQP broker picks it up and actually sends it to the remote queue.
 
+API
+---
+
+.. _progguide-outconn-amqp-send:
+
+send
+````
+
+.. py:method:: send(self, msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
+
+  Uses an outgoing connection of a given name to send a message to an AMQP 
+  exchange under a provided routing key.
+  
+  :param msg: Message to send
+  :param out_conn: Outgoing connection to use
+  :param exchange: Name of an exchange to send the message to
+  :param routing_key: Name of a routing key, if any should be used
+  :param properties: A dictionary, possibly empty, of additional properties to send
+                     along with the message body. Each property takes precedence over 
+                     any one set in the :doc:`connection template <TODO>`. 
+                     
+                     Supported keys are:
+                     
+                     * content_type
+                     * content_encoding
+                     * delivery_mode 
+                     * priority
+                     * expiration
+                     * user_id
+                     * app_id
+                     * correlation_id
+                     * cluster_id
+                     
+                     Consult AMQP docs for more information on how to use them. 
+                     
+  :param args: A tuple of arguments that can be passed into the underlying 
+               AMQP channel's .basic_publish method.
+                      
+  :param kwargs: A dictionary of named arguments that can be passed into the underlying 
+                 AMQP channel's .basic_publish method.
+  
+  :type msg: string
+  :type out_conn: string
+  :type exchange: string
+  :type routing_key: string
+  :type properties: dict
+  :type args: tuple
+  :type kwargs: dict
+  
+  :rtype: (None)
+
 Usage example
 -------------
+
+::
+
+    from zato.server.service import Service
+        
+    class MyService(Service):
+        def handle(self):
+                
+            # Request parameters
+            msg = 'Hello AMQP broker!'
+            out_name = 'CRM1'
+            exchange = 'CRM1'
+            routing_key = ''
+            properties = {'app_id': 'ESB'}
+                
+            # Send a message to the broker
+            self.outgoing.amqp.send(msg, out_name, exchange, routing_key)
+            
+We can now observe that a message sent to the CRM1 exchange ..
+
+.. image:: /gfx/progguide/outconn-amqp-exch.png
+   :align: center
+   
+went straight to the queue bound to the exchange - named CRM1 as well.
+
+.. image:: /gfx/progguide/outconn-amqp-queue.png
+   :align: center

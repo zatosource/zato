@@ -88,7 +88,6 @@ class PublisherFacade(object):
         params['args'] = args
         params['kwargs'] = kwargs
         
-        #self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
         self.broker_client.invoke_async(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
