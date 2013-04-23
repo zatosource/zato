@@ -23,10 +23,10 @@ API
 
 .. _progguide-outconn-amqp-send:
 
-send
-````
+self.outgoing.amqp.send
+```````````````````````
 
-.. py:method:: send(self, msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
+.. py:method:: send(msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
 
   Uses an outgoing connection of a given name to send a message to an AMQP 
   exchange under a provided routing key.
