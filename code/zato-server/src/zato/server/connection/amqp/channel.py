@@ -104,7 +104,7 @@ class ConsumingConnector(BaseAMQPConnector):
         self.channel_amqp.is_active = item.is_active
         self.channel_amqp.queue = item.queue
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
-        self.channel_amqp.service = item.service_impl_name
+        self.channel_amqp.service = item.service_name
         self.channel_amqp.data_format = item.data_format
         
     def _setup_amqp(self):
@@ -187,7 +187,7 @@ class ConsumingConnector(BaseAMQPConnector):
                 params['cid'] = new_cid()
                 params['payload'] = body
                 
-                self.broker_client.async_invoke(params)
+                self.broker_client.invoke_async(params)
 
     def on_broker_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation

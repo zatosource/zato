@@ -70,11 +70,6 @@ TOPICS = {
 
 KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
 
-#KEYS = {
-#    MESSAGE_TYPE.TO_PARALLEL_ANY: 'to-parallel:any',
-#    MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL: 'to-amqp-pub-all',
-#    }
-
 SCHEDULER = Bunch()
 SCHEDULER.CREATE = b'10000'
 SCHEDULER.EDIT = b'10001'

@@ -10,13 +10,16 @@ Overview
 Asynchronously sends a message to an AMQP exchange using 
 :doc:`connection <TODO>`
 :doc:`parameters <TODO>`
-specified. Doesn't support publishing of messages to a topic.
+specified.
 
 The message is first published on the :doc:`Zato broker </architecture/redis>`
 off of which the connector process responsible for communication with this particular
 AMQP broker picks it up and actually sends it to the remote queue.
 
-The underlying client AMQP library is `Pika <https://pika.readthedocs.org/>`_.
+Note that the connection to the broker is initialized in a lazy fashion, it will
+be established the first time it's needed.
+
+The underlying client AMQP library is `Kombu <https://kombu.readthedocs.org/>`_.
 
 API
 ---
@@ -26,7 +29,7 @@ API
 self.outgoing.amqp.send
 ```````````````````````
 
-.. py:method:: send(msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
+.. py:method:: send(msg, out_name, exchange, routing_key, properties={}, headers={}):
 
   Uses an outgoing connection of a given name to send a message to an AMQP 
   exchange under a provided routing key.
@@ -52,20 +55,19 @@ self.outgoing.amqp.send
                      * cluster_id
                      
                      Consult AMQP docs for more information on how to use them. 
-                     
-  :param args: A tuple of arguments that can be passed into the underlying 
-               AMQP channel's .basic_publish method.
-                      
-  :param kwargs: A dictionary of named arguments that can be passed into the underlying 
-                 AMQP channel's .basic_publish method.
+
+  :param headers: A dictionary, possibly empty, of extra headers to be sent along
+                  with the messages. If not specified manually, Zato will send 
+                  X-Zato-Component and X-Zato-Msg-TS headers to indicate 
+                  where the message originated from and when it was. The latter
+                  is in UTC.
   
   :type msg: string
   :type out_conn: string
   :type exchange: string
   :type routing_key: string
   :type properties: dict
-  :type args: tuple
-  :type kwargs: dict
+  :type headers: dict
   
   :rtype: (None)
 
@@ -74,21 +76,22 @@ Usage example
 
 ::
 
-    from zato.server.service import Service
-        
-    class MyService(Service):
-        def handle(self):
-                
-            # Request parameters
-            msg = 'Hello AMQP broker!'
-            out_name = 'CRM1'
-            exchange = 'CRM1'
-            routing_key = ''
-            properties = {'app_id': 'ESB'}
-                
-            # Send a message to the broker
-            self.outgoing.amqp.send(msg, out_name, exchange, routing_key,
-                properties)
+  from zato.server.service import Service
+      
+  class MyService(Service):
+      def handle(self):
+              
+          # Request parameters
+          msg = 'Hello AMQP broker!'
+          out_name = 'CRM1'
+          exchange = 'CRM1'
+          routing_key = ''
+          properties = {'app_id': 'ESB'}
+          headers = {'X-Foo': 'bar'}
+              
+          # Send a message to the broker
+          self.outgoing.amqp.send(msg, out_name, exchange, routing_key,
+              properties, headers)
             
 We can now observe that a message sent to the CRM1 exchange ..
 
