@@ -21,51 +21,27 @@ from __future__ import absolute_import, division, print_function
 
 # stdlib
 import logging, os
-from threading import Thread
-
-# Pika
-from pika import BasicProperties
+from threading import currentThread, Thread
 
 # Bunch
 from bunch import Bunch
 
+# Kombu
+from kombu import Connection, Exchange
+from kombu.pools import producers, reset as reset_pools
+
+# Pika
+#from pika import BasicProperties
+
 # Zato
 from zato.common import ConnectionException
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
-from zato.common.util import TRACE1
+from zato.common.util import get_component_name, TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_OUT_ID'
-
-class PublishingConnection(BaseAMQPConnection):
-    """ A connection for publishing of the AMQP messages.
-    """
-    def __init__(self, *args, **kwargs):
-        super(PublishingConnection, self).__init__(*args, **kwargs)
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-    def _on_connected(self, *args, **kwargs):
-        self.logger.info(u'Started an AMQP publisher for [{}]'.format(self._conn_info()))
-        self.has_valid_connection = True
-        super(PublishingConnection, self)._on_connected(*args, **kwargs)
-        
-    def publish(self, msg, exchange, routing_key, properties=None, *args, **kwargs):
-        if self.channel:
-            if self.conn.is_open:
-                properties = properties if properties else self.properties
-                self.channel.basic_publish(exchange, routing_key, msg, properties, *args, **kwargs)
-                if(self.logger.isEnabledFor(logging.DEBUG)):
-                    log_msg = 'AMQP message published [{0}], exchange [{1}], routing key [{2}], publisher ID [{3}]'
-                    self.logger.log(logging.DEBUG, log_msg.format(msg, exchange, routing_key, str(hex(id(self)))))
-            else:
-                msg = "Can't publish, the connection for {0} is not open".format(self._conn_info())
-                self.logger.error(msg)
-                raise ConnectionException(msg)
-        else:
-            msg = "Can't publish, don't have a channel for {0}".format(self._conn_info())
-            self.logger.error(msg)
-            raise ConnectionException(msg)
+CONN_TEMPLATE = 'amqp://{username}:{password}@{host}:{port}/{vhost}'
 
 class PublisherFacade(object):
     """ An AMQP facade for services so they aren't aware that publishing AMQP
@@ -74,7 +50,7 @@ class PublisherFacade(object):
     def __init__(self, broker_client):
         self.broker_client = broker_client # A Zato broker client, not the AMQP one.
     
-    def send(self, msg, out_name, exchange, routing_key, properties={}, *args, **kwargs):
+    def send(self, msg, out_name, exchange, routing_key, properties={}, headers={}, *args, **kwargs):
         """ Publishes the message on the Zato broker which forwards it to one of the
         AMQP connectors.
         """
@@ -85,6 +61,7 @@ class PublisherFacade(object):
         params['exchange'] = bytes(exchange)
         params['routing_key'] = bytes(routing_key)
         params['properties'] = properties
+        params['headers'] = headers
         params['args'] = args
         params['kwargs'] = kwargs
         
@@ -97,8 +74,7 @@ class PublisherFacade(object):
         return self
 
 class OutgoingConnector(BaseAMQPConnector):
-    """ An AMQP publishing connector started as a subprocess. Each connection to an AMQP
-    broker gets its own connector.
+    """ An AMQP publishing connector started as a subprocess.
     """
     def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, def_id)
@@ -114,7 +90,10 @@ class OutgoingConnector(BaseAMQPConnector):
         
         if init:
             self._init()
-            self._setup_amqp()
+        
+        # TODO    
+        # self.logger.info(u'Started an AMQP publisher for [{}]'.format(self._conn_info()))
+        
             
     def _setup_odb(self):
         super(OutgoingConnector, self)._setup_odb()
@@ -134,13 +113,6 @@ class OutgoingConnector(BaseAMQPConnector):
         self.out_amqp.def_name = item.def_name
         self.out_amqp.def_id = item.def_id
         self.out_amqp.sender = None
-        
-    def _setup_amqp(self):
-        """ Sets up the AMQP sender on startup.
-        """
-        with self.out_amqp_lock:
-            with self.def_amqp_lock:
-                self._recreate_sender()
                 
     def filter(self, msg):
         """ Finds out whether the incoming message actually belongs to the 
@@ -160,54 +132,6 @@ class OutgoingConnector(BaseAMQPConnector):
             if self.logger.isEnabledFor(TRACE1):
                 self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
-        
-    def _stop_connection(self):
-        """ Stops the given outgoing AMQP connection's sender. The method must 
-        be called from a method that holds onto all AMQP-related RLocks.
-        """
-        if self.out_amqp.get('sender') and self.out_amqp.sender.conn and self.out_amqp.sender.conn.is_open:
-            self.out_amqp.sender.close()
-                            
-    def _recreate_sender(self):
-        """ (Re-)creates an AMQP sender and updates the related outgoing
-        AMQP connection's attributes so that they point to the newly created
-        sender. The method must be called from a method that holds
-        onto all AMQP-related RLocks.
-        """
-        self._stop_connection()
-            
-        vhost = self.def_amqp.virtual_host if 'virtual_host' in self.def_amqp else self.def_amqp.vhost
-        if 'credentials' in self.def_amqp:
-            username = self.def_amqp.credentials.username
-            password = self.def_amqp.credentials.password
-        else:
-            username = self.def_amqp.username
-            password = self.def_amqp.password
-        
-        conn_params = self._amqp_conn_params()
-        
-        # Default properties for published messages
-        properties = self._amqp_basic_properties(self.out_amqp.content_type, 
-            self.out_amqp.content_encoding, self.out_amqp.delivery_mode, self.out_amqp.priority, 
-            self.out_amqp.expiration, self.out_amqp.user_id, self.out_amqp.app_id)
-
-        # An actual AMQP sender
-        if self.out_amqp.is_active:
-            sender = self._sender(conn_params, self.out_amqp.name, properties)
-            self.out_amqp.sender = sender
-            
-    def _sender(self, conn_params, out_name, properties):
-        sender = PublishingConnection(conn_params, out_name, properties)
-        t = Thread(target=sender._run)
-        t.start()
-        
-        return sender
-    
-    def _stop_amqp_connection(self):
-        """ Stops the AMQP connection.
-        """
-        if self.out_amqp.sender:
-            self.out_amqp.sender.close()
     
     def def_amqp_get(self, id):
         """ Returns the configuration of the AMQP definition of the given name.
@@ -256,26 +180,28 @@ class OutgoingConnector(BaseAMQPConnector):
         """
         properties = {}
         msg_properties = msg['properties']
-        property_names = ('content_type', 'content_encoding', 'delivery_mode', 
-                          'priority', 'expiration', 'user_id', 'app_id', 
-                          'correlation_id', 'cluster_id')
-
-        for name in property_names:
-            if msg['properties']:
+        
+        for name in ('content_type', 'content_encoding', 'delivery_mode', 
+                     'priority', 'expiration', 'user_id', 'app_id', 'correlation_id', 'cluster_id'):
+            if msg_properties:
                 value = msg_properties.get(name) if msg_properties.get(name) else getattr(self.out_amqp, name, None)
             else:
                 value = getattr(self.out_amqp, name, None)
             properties[name] = value
-                
-        # Now that we've collected all the properties we need to build a pika-specific
-        # structure out of them.
-        
-        pika_properties = BasicProperties()
-        for name, value in properties.items():
-            setattr(pika_properties, name, value)
             
-        self.out_amqp.sender.publish(msg['body'], msg['exchange'], 
-                    msg['routing_key'], pika_properties, *msg['args'], **msg['kwargs'])
+        headers = msg.get('headers') or {}
+        if not 'X-Zato-Component' in headers:
+            headers['X-Zato-Component'] = get_component_name('out-amqp')
+        
+        conn = Connection(CONN_TEMPLATE.format(**self.def_amqp))
+        
+        with producers[conn].acquire(block=True) as producer:
+            producer.publish(msg.body, exchange=msg.exchange, headers=headers, **properties)
+        
+    def _stop_amqp_connection(self):
+        """ Stops any underlying connections.
+        """
+        reset_pools()
 
 def run_connector():
     """ Invoked on the process startup.
@@ -289,7 +215,7 @@ def run_connector():
     connector = OutgoingConnector(repo_location, def_id, item_id)
     
     logger = logging.getLogger(__name__)
-    logger.debug('Starting AMQP connector listener, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
+    logger.warn('Starting AMQP connector listener, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
         repo_location, item_id, def_id))
     
 def start_connector(repo_location, item_id, def_id):

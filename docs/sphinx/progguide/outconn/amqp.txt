@@ -87,7 +87,8 @@ Usage example
             properties = {'app_id': 'ESB'}
                 
             # Send a message to the broker
-            self.outgoing.amqp.send(msg, out_name, exchange, routing_key)
+            self.outgoing.amqp.send(msg, out_name, exchange, routing_key,
+                properties)
             
 We can now observe that a message sent to the CRM1 exchange ..
 
