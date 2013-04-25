@@ -31,11 +31,10 @@ import errno, socket
 from threading import RLock
 
 # Pika
-#from pika import BasicProperties
-#from pika.adapters import SelectConnection
-#from pika.connection import ConnectionParameters
-#from pika.credentials import PlainCredentials
-#from pika.spec import BasicProperties
+from pika.adapters import SelectConnection
+from pika.connection import ConnectionParameters
+from pika.credentials import PlainCredentials
+from pika.spec import BasicProperties
 
 # Bunch
 from bunch import Bunch
@@ -44,6 +43,11 @@ from bunch import Bunch
 from zato.common.broker_message import AMQP_CONNECTOR, DEFINITION
 from zato.common.util import TRACE1
 from zato.server.connection import BaseConnection, BaseConnector
+
+logger = logging.getLogger(__name__)
+
+def _conn_info(host, port, vhost, item_name):
+    return '{0}:{1}{2} ({3})'.format(host, port, vhost, item_name)
 
 class BaseAMQPConnection(BaseConnection):
     """ An object which does an actual job of (re-)connecting to the the AMQP broker.
@@ -57,17 +61,9 @@ class BaseAMQPConnection(BaseConnection):
         self.conn = None
         self.channel = None
         self.reconnect_exceptions = (TypeError, EnvironmentError)
-        
-    def zz_open(self, *args, **kwargs):
-        logging.error('open {} {}'.format(str(args), str(kwargs)))
-        
-    def zz_close(self, *args, **kwargs):
-        logging.error('close {} {}'.format(str(args), str(kwargs)))
-        
+
     def _start(self):
         self.conn = SelectConnection(self.conn_params, self._on_connected)
-        self.conn.add_on_open_callback(self.zz_open)
-        self.conn.add_on_close_callback(self.zz_close)
         self.conn.ioloop.start()
         
     def _close(self):
@@ -82,12 +78,13 @@ class BaseAMQPConnection(BaseConnection):
                     raise
             
     def _conn_info(self):
-        return u'{0}:{1}{2} ({3})'.format(self.conn_params.host, self.conn_params.port, self.conn_params.virtual_host, self.item_name)
+        return _conn_info(self.conn_params.host, self.conn_params.port, self.conn_params.virtual_host, self.item_name)
             
     def _on_channel_open(self, channel):
         self.channel = channel
-        msg = u'Got a channel for {0}'.format(self._conn_info())
-        self.logger.warn(msg)
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = u'Got a channel for {0}'.format(self._conn_info())
+            logger.debug(msg)
         
     def _keep_connecting(self, e):
         # We need to catch TypeError because pika will sometimes erroneously raise
@@ -122,6 +119,9 @@ class BaseAMQPConnector(BaseConnector):
         self.channel_amqp_lock = RLock()
         
         super(BaseAMQPConnector, self)._init()
+        
+    def _conn_info(self):
+        return _conn_info(self.def_amqp.host, self.def_amqp.port, self.def_amqp.vhost, self.out_amqp.name)
     
     def filter(self, msg):
         """ The base class knows how to manage the AMQP definitions but not channels
