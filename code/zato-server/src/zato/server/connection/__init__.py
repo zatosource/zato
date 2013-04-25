@@ -98,7 +98,7 @@ class BaseConnection(object):
         self._close()
             
         msg = 'Closed the connection for {0}'.format(self._conn_info())
-        self.logger.debug(msg)
+        self.logger.warn(msg)
     
     def _on_connected(self, *ignored_args, **ignored_kwargs):
         """ Invoked after establishing a successful connection to the resource.

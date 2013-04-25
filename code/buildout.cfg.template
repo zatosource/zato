@@ -65,6 +65,7 @@ eggs =
     inotifyx
     iw.recipe.cmd
     jsonlib2
+    kombu
     lxml
     mock
     nose

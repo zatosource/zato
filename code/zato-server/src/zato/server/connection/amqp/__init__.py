@@ -31,11 +31,11 @@ import errno, socket
 from threading import RLock
 
 # Pika
-from pika import BasicProperties
-from pika.adapters import SelectConnection
-from pika.connection import ConnectionParameters
-from pika.credentials import PlainCredentials
-from pika.spec import BasicProperties
+#from pika import BasicProperties
+#from pika.adapters import SelectConnection
+#from pika.connection import ConnectionParameters
+#from pika.credentials import PlainCredentials
+#from pika.spec import BasicProperties
 
 # Bunch
 from bunch import Bunch
@@ -58,8 +58,16 @@ class BaseAMQPConnection(BaseConnection):
         self.channel = None
         self.reconnect_exceptions = (TypeError, EnvironmentError)
         
+    def zz_open(self, *args, **kwargs):
+        logging.error('open {} {}'.format(str(args), str(kwargs)))
+        
+    def zz_close(self, *args, **kwargs):
+        logging.error('close {} {}'.format(str(args), str(kwargs)))
+        
     def _start(self):
         self.conn = SelectConnection(self.conn_params, self._on_connected)
+        self.conn.add_on_open_callback(self.zz_open)
+        self.conn.add_on_close_callback(self.zz_close)
         self.conn.ioloop.start()
         
     def _close(self):
@@ -79,7 +87,7 @@ class BaseAMQPConnection(BaseConnection):
     def _on_channel_open(self, channel):
         self.channel = channel
         msg = u'Got a channel for {0}'.format(self._conn_info())
-        self.logger.debug(msg)
+        self.logger.warn(msg)
         
     def _keep_connecting(self, e):
         # We need to catch TypeError because pika will sometimes erroneously raise
