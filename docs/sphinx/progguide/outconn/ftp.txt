@@ -9,7 +9,7 @@ Overview
 
 Synchronously sends commands to a remote FTP server. Each service invocation
 receives own connection which is closed after the service is done, 
-connections not kept around across multiple invocations.
+connections are not kept around across multiple invocations.
 
 Commands are sent in a synchronous manner but they don't block the current server thread.
 
