@@ -66,7 +66,6 @@ session attribute A handle to the underlying `Requests <http://docs.python-reque
 .. _progguide-outconn-ping:
 
 .. py:method:: ping(cid):
-`````````````````````````
 
   Uses HTTP HEAD to chech whether the remote server is alive, returns a text 
   report on how long it took for the other end to reply.
@@ -75,18 +74,57 @@ session attribute A handle to the underlying `Requests <http://docs.python-reque
               the Zato request and any entries in the logs the other end may produce
   :type cid: string
   
-  :rtype: (A text report regarding how it took for the othe side to reply)
+  :rtype: (A text report regarding how long it took for the othe side to reply)
 
 
 .. _progguide-outconn-get:
 
-.get
-````
+.. py:method:: get(cid, params=None, prefetch=True, *args, **kwargs):
+
+  Issues an HTTP GET request.
+  
+  :param cid: A correlation ID that can be used to establish a connection between
+              the Zato request and any entries in the logs the other end may produce
+              
+  :param params: A dictionary of GET parameters to use
+  :param prefetch: If the response should be downloaded immediately
+  :param args: Positional arguments passed to the underlying HTTP library
+  :param kwargs: Keyword arguments passed to the underlying HTTP library
+              
+  :type cid: string
+  :type params: dict
+  :type prefetch: bool
+  :type args: tuple
+  :type kwargs: dict
+  
+  :rtype: An instance of `requests.Response <http://docs.python-requests.org/en/latest/api/#requests.Response>`_
+          class
 
 .. _progguide-outconn-post:
 
 .post
 `````
+
+.. py:method:: post(cid, post='', prefetch=True, *args, **kwargs):
+
+  Issues an HTTP POST request.
+  
+  :param cid: A correlation ID that can be used to establish a connection between
+              the Zato request and any entries in the logs the other end may produce
+              
+  :param data: String data to send to the remote peer
+  :param prefetch: If the response should be downloaded immediately
+  :param args: Positional arguments passed to the underlying HTTP library
+  :param kwargs: Keyword arguments passed to the underlying HTTP library
+              
+  :type cid: string
+  :type post: string
+  :type prefetch: bool
+  :type args: tuple
+  :type kwargs: dict
+  
+  :rtype: An instance of `requests.Response <http://docs.python-requests.org/en/latest/api/#requests.Response>`_
+          class
 
 Usage examples
 --------------
@@ -109,7 +147,7 @@ Plain HTTP - JSON
           cust_cases = self.outgoing.plain_http.get('CRM Customer Cases')
           
           request = dumps({'cust_id':1, 'name':'Foo Bar'})
-          response = cust_profile.conn.send(request)
+          response = cust_profile.conn.post(request)
           
           self.logger.info(response.headers['content-type'])
           self.logger.info(response.text)
@@ -120,3 +158,12 @@ Plain HTTP - JSON
           
 SOAP
 ````
+
+::
+
+  from zato.server.service import Service
+  
+  class MyService(Service):
+      def handle(self):
+          service = self.outgoing.soap.get('Set Account Balance')
+          service.conn.send(self.cid, '<data><id>123</id><value>45.67</value></data>')
