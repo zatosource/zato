@@ -169,8 +169,10 @@ class HTTPSOAPWrapper(object):
     def post(self, cid, data='', prefetch=True, *args, **kwargs):
         """ Invokes a resource using the POST method.
         """
+        headers = kwargs.pop('headers', {})
+        
         if self.config['transport'] == 'soap':
-            data, headers = self._soap_data(data, kwargs.pop('headers', {}))
+            data, headers = self._soap_data(data, headers)
             
         if not 'X-Zato-CID' in headers:
             headers['X-Zato-CID'] = cid

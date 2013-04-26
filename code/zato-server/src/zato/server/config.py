@@ -50,13 +50,15 @@ class ConfigDict(object):
         with self.lock:
             return self._bunch.get(key, default)
         
-    __getitem__ = get
-        
     def set(self, key, value):
         with self.lock:
             self._bunch[key] = value
             
     __setitem__ = set
+    
+    def __getitem__(self, key):
+        with self.lock:
+            return self._bunch.__getitem__(key)
             
     def __delitem__(self, key):
         with self.lock:
@@ -76,6 +78,14 @@ class ConfigDict(object):
     def __nonzero__(self):
         with self.lock:
             return bool(self._bunch)
+
+    def keys(self):
+        with self.lock:
+            return self._bunch.keys()
+        
+    def values(self):
+        with self.lock:
+            return self._bunch.values()
         
     def items(self):
         with self.lock:

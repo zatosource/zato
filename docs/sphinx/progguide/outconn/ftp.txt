@@ -25,8 +25,8 @@ self.outgoing.ftp.get
 
 .. py:method:: get(name):
 
-  Fetches an object whose .conn attribute represents a connection to an FTP server.
-  The connection accessed through the .conn attribute supports a range of operations
+  Fetches an object representing a connection to an FTP server.
+  The connection supports a range of operations
   explained in the `fs project's documentation <http://pythonhosted.org/fs/interface.html>`_.
   
   :param name: Name of the :doc:`FTP connection template <TODO>`
