@@ -149,7 +149,7 @@ class BrokerClient(Thread):
         
     def on_message(self, msg):
         if logger.isEnabledFor(logging.DEBUG):
-            logger.warn('Got broker message:[{}]'.format(msg))
+            logger.debug('Got broker message:[{}]'.format(msg))
         
         if msg.type == 'message':
     

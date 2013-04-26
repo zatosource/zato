@@ -438,7 +438,7 @@ class WorkerStore(BrokerMessageReceiver):
         del_name = old_name if old_name else msg['name']
 
         # .. delete the connection if it exists ..
-        self._delete_outgoing_http_soap(msg['name'], msg['transport'], logger.debug)
+        self._delete_outgoing_http_soap(del_name, msg['transport'], logger.error)
         
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, False)

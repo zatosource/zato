@@ -550,7 +550,7 @@ def invoke(req, name, cluster_id):
     """ Executes a service directly, even if it isn't exposed through any channel.
     """
     try:
-        input_dict = {'needs_dumps': False}
+        input_dict = {}
         for attr in('payload', 'data_format', 'transport'):
             input_dict[attr] = req.POST.get(attr, '')
         
