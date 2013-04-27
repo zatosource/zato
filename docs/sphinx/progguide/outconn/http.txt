@@ -8,11 +8,34 @@ Overview
 --------
 
 Synchronously invokes a remote HTTP server using JSON, SOAP or any other transport
-method using :doc:`previously configured <TODO>` connection parameters.
+method using :doc:`previously configured <TODO>` connection parameters. 
+
+If the connection has been configured to use a security definition, it will be picked up
+automatically, without any coding. Likewise, if the service to be invoked is a SOAP one,
+only the contents of a SOAP body should be passed to :ref:`.post <progguide-outconn-post>` 
+and the envelope will be added by Zato.
 
 Requests are sent in a synchronous manner but they don't block the current server thread.
 
 The underlying client HTTP library is `Requests <http://docs.python-requests.org/en/latest/>`_.
+
+Each request sent using one of the 
+:ref:`.ping <progguide-outconn-ping>`, 
+:ref:`.get <progguide-outconn-get>`
+or 
+:ref:`.post <progguide-outconn-post>`
+methods will contain 3
+Zato-specific HTTP headers:
+
+================ ============================================= ========================================================================
+Name             Example                                       Notes 
+================ ============================================= ========================================================================
+X-Zato-CID       K294883017331181958264688131768546402685      :ref:`CID <progguide-write-service-cid>` the service issuing the request
+                                                               has been invoked with
+X-Zato-Component parallel/esb1/esb1.example.com/21358/Thread-4 Information regarding which Zato parallel server issued the request
+X-Zato-Msg-TS    2013-04-26T23:41:45.271911                    Request timestamp (in UTC)
+================ ============================================= ========================================================================
+
 
 API
 ---
@@ -105,7 +128,7 @@ session attribute A handle to the underlying `Requests <http://docs.python-reque
 .post
 `````
 
-.. py:method:: post(cid, post='', prefetch=True, *args, **kwargs):
+.. py:method:: post(cid, data='', prefetch=True, *args, **kwargs):
 
   Issues an HTTP POST request.
   
