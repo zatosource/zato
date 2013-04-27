@@ -170,6 +170,8 @@ class ZMQPush(object):
     def send(self, msg):
         try:
             self.socket.send_unicode(msg)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Sent PUSH msg:[{}] to {}'.format(msg, self.address))
         except zmq.ZMQError, e:
             msg = '[{0}] Caught ZMQError [{1}], continuing anyway.'.format(
                 self.name, e.strerror)
