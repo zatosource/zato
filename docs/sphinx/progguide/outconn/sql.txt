@@ -1,0 +1,99 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Outgoing SQL connections
+========================
+
+Overview
+--------
+
+Fetches an 
+`SQLAlchemy <http://sqlalchemy.org/>`_
+connection session from a pool of connections to the SQL database specified.
+
+The session needs to be closed by the programmer - otherwise the pool will run out
+of connections - the easiest
+way to do it is to use the 
+`with statement <http://docs.python.org/2.7/reference/datamodel.html#context-managers>`_ 
+along with the 
+`closing decorator <http://docs.python.org/2.7/library/contextlib.html#contextlib.closing>`_,
+as in the example below.
+
+The database may be one of:
+
+* PostgreSQL
+* Oracle
+
+When using Simple IO (SIO) and SQLAlchemy models together, the service is able 
+to construct the response - JSON or XML - directly out of a model's instance,
+such as in the usage example.
+
+
+.. note::
+
+    Support for Oracle connections needs to be :doc:`manually enabled <TODO>`
+    by administrators.
+
+API
+---
+
+.. _progguide-outconn-jms-wmq.send:
+
+self.outgoing.jms_wmq.send
+``````````````````````````
+
+.. py:method:: send(msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None):
+
+  Uses an outgoing connection of a given name to send a JMS message to a WebSphere MQ
+  queue manager.
+  
+  Optional parameters, if not given, take values from the connection template,
+  which in turn uses default values Spring Python provides and these are in accordance
+  with the JMS spec.
+  
+  :param msg: Message to send
+  :param out_name: Outgoing connection to use
+  :param queue: Name of the queue to put a message on
+  :param delivery_mode: Whether the message should be persistent or not
+  :param expiration: After how many milliseconds after reaching the queue should the message expire
+  :param priority: Message priority between 1 and 9 - 1 being the minimum priority
+  :param max_chars_printed: How many characters of the message should Spring Python write out to logs
+                            when running in DEBUG mode
+  
+  :type msg: string
+  :type out_name: string
+  :type queue: string
+  :type delivery_mode: DELIVERY_MODE_NON_PERSISTENT or DELIVERY_MODE_PERSISTENT from the `springpython.jms module <https://github.com/SpringSource/spring-python/blob/master/src/springpython/jms/__init__.py>`_
+  :type expiration: int
+  :type priority: int
+  :type max_chars_printed: int
+  
+  :rtype: (None)
+
+Usage example
+-------------
+
+::
+
+  from zato.server.service import Service
+      
+  class MyService(Service):
+      def handle(self):
+              
+          # Request parameters
+          msg = 'Hello MQ!'
+          out_name = 'Customer Cases'
+          queue = 'CUSTOMER.CASES.1'
+          
+          # Send the message to a queue manager
+          self.outgoing.jms_wmq.send(msg, out_name, queue)
+
+When caught travelling over the wire the raw bytes sent across to the 
+queue manager can be confirmed to be a JMS message indeed.
+          
+::
+
+  RFH \x00\x00\x00\x02\x00\x00\x00\xa0\x00\x00\x01\x11\x00\x00\x04\xb8
+  MQSTR   \x00\x00\x00\x00\x00\x00\x04\xb8\x00\x00\x00x
+  <jms><Dst>queue:///CUSTOMER.CASES.1</Dst><Tms>1367515530623</Tms><Dlv>1</Dlv>
+  <Exp>1367515535623</Exp><Pri>5</Pri></jms> Hello MQ!
