@@ -88,7 +88,7 @@ class OutgoingConnection(BaseJMSWMQConnection):
         jms_msg.jms_correlation_id = msg.get('jms_correlation_id')
         jms_msg.jms_delivery_mode = msg.get('jms_delivery_mode') or default_delivery_mode
         jms_msg.jms_destination = msg.get('jms_destination')
-        jms_msg.jms_expiration = msg.get('jms_expiration') or default_expiration
+        jms_msg.jms_expiration = int(msg.get('jms_expiration') or default_expiration)
         jms_msg.jms_message_id = msg.get('jms_message_id')
         jms_msg.jms_priority = msg.get('jms_priority') or default_priority
         jms_msg.jms_redelivered = msg.get('jms_redelivered')
@@ -173,8 +173,11 @@ class OutgoingConnector(BaseJMSWMQConnector):
         if super(OutgoingConnector, self).filter(msg):
             return True
 
-        elif msg.action in(OUTGOING.JMS_WMQ_SEND, OUTGOING.JMS_WMQ_DELETE, OUTGOING.JMS_WMQ_EDIT):
+        elif msg.action in(OUTGOING.JMS_WMQ_DELETE, OUTGOING.JMS_WMQ_EDIT):
             return self.out.name == msg['old_name']
+        
+        elif msg.action == OUTGOING.JMS_WMQ_SEND:
+            return self.out.name == msg['name']
         
     def _stop_connection(self):
         """ Stops the given outgoing connection's sender. The method must 

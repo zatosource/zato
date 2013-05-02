@@ -31,12 +31,6 @@ symlink_py 'scipy'
 sudo pip install --upgrade distribute
 sudo pip install --upgrade virtualenv
 
-# Prepare buildout.cfg, taking into account the fact that not everyone uses WebSphere MQ
-
-locate cmqc.h &> /dev/null
-CMQC_H_OUT=$?
-python ./prepare_buildout.py $CMQC_H_OUT
-
 virtualenv .
 
 ./bin/python bootstrap.py -v 1.7.0

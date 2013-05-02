@@ -73,7 +73,7 @@ def index(req):
     edit_form = EditForm(prefix='edit')
 
     if req.zato.cluster_id and req.method == 'GET':
-        def_ids = _get_def_ids(req.zato.cluster)
+        def_ids = get_definition_list(req.zato.client, req.zato.cluster, 'jms-wmq')
         create_form.set_def_id(def_ids)
         edit_form.set_def_id(def_ids)
 

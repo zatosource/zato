@@ -14,7 +14,7 @@ specified.
 
 The message is first published on the :doc:`Zato broker </architecture/redis>`
 off of which the connector process responsible for communication with this particular
-AMQP broker picks it up and actually sends it to the remote queue.
+AMQP broker picks it up and actually sends it to the remote exchange.
 
 Note that the connection to the broker is initialized in a lazy fashion, it will
 be established the first time it's needed.
