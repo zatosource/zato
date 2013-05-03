@@ -33,7 +33,7 @@ from springpython.jms import WebSphereMQJMSException, NoMessageAvailableExceptio
 from springpython.jms.core import reserved_attributes
 
 # Zato
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, TOPICS
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
@@ -45,7 +45,7 @@ ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_CHANNEL_ID'
 
 MESSAGE_ATTRS = deepcopy(reserved_attributes)
 MESSAGE_ATTRS.remove('text')
-MESSAGE_ATTRS = MESSAGE_ATTRS - set(dir(object) + ["__weakref__", "__dict__", "__module__"])
+MESSAGE_ATTRS = MESSAGE_ATTRS - set(dir(object) + ['__weakref__', '__dict__', '__module__'])
 
 class ConsumingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, name, queue, callback):
@@ -109,8 +109,8 @@ class ConsumingConnector(BaseJMSWMQConnector):
         
         self.broker_client_id = 'jms-wmq-consuming-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL]: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         

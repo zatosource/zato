@@ -34,12 +34,15 @@ import redis
 
 # Zato
 from zato.common import BROKER, ZATO_NONE
-from zato.common.util import new_cid
-from zato.common.broker_message import MESSAGE_TYPE, TOPICS
+from zato.common.util import new_cid, TRACE1
+from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
 
 logger = logging.getLogger(__name__)
 
 REMOTE_END_CLOSED_SOCKET = 'Socket closed on remote end'
+NEEDS_TMP_KEY = [v for k,v in TOPICS.items() if k in(
+    MESSAGE_TYPE.TO_PARALLEL_ANY, 
+)]
 
 class _ClientThread(Thread):
     def __init__(self, kvdb, pubsub, name, topic_callbacks=None, on_message=None):
@@ -75,6 +78,8 @@ class _ClientThread(Thread):
             self.client = self.kvdb
             
     def publish(self, topic, msg):
+        if logger.isEnabledFor(TRACE1):
+            logger.log(TRACE1, 'Publishing [{}] to [{}]'.format(msg, topic))
         return self.client.publish(topic, msg)
     
     def close(self):
@@ -88,7 +93,7 @@ class BrokerClient(Thread):
     There may be 3 types of messages sent out:
     
     1) to the singleton server
-    2) to all the parallel servers
+    2) to all the servers/connectors/all connectors of a certain type (e.g. only AMQP ones)
     3) to one of the parallel servers
     
     1) and 2) are straightforward, a message is being published on a topic, 
@@ -110,11 +115,10 @@ class BrokerClient(Thread):
         self.decrypt_func = kvdb.decrypt_func
         self.name = '{}-{}'.format(client_type, new_cid())
         self.topic_callbacks = topic_callbacks
-        self._to_parallel_any_topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
         
     def run(self):
-        logger.info('Starting broker client, host:[{}], port:[{}], name:[{}]'.format(
-            self.kvdb.config.host, self.kvdb.config.port, self.name))
+        logger.info('Starting broker client, host:[{}], port:[{}], name:[{}], topics:[{}]'.format(
+            self.kvdb.config.host, self.kvdb.config.port, self.name, sorted(self.topic_callbacks)))
         
         self.pub_client = _ClientThread(self.kvdb.copy(), 'pub', self.name)
         self.sub_client = _ClientThread(self.kvdb.copy(), 'sub', self.name, self.topic_callbacks, self.on_message)
@@ -131,12 +135,12 @@ class BrokerClient(Thread):
         topic = TOPICS[msg_type]
         self.pub_client.publish(topic, dumps(msg))
         
-    def invoke_async(self, msg, expiration=BROKER.DEFAULT_EXPIRATION):
-        msg['msg_type'] = MESSAGE_TYPE.TO_PARALLEL_ANY
+    def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
+        msg['msg_type'] = msg_type
         msg = dumps(msg)
         
-        topic = TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]
-        key = broker_msg = b'zato:broker:to-parallel:any:{}'.format(new_cid())
+        topic = TOPICS[msg_type]
+        key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
         
         self.kvdb.conn.set(key, str(msg))
         self.kvdb.conn.expire(key, expiration) # In seconds
@@ -145,12 +149,12 @@ class BrokerClient(Thread):
         
     def on_message(self, msg):
         if logger.isEnabledFor(logging.DEBUG):
-            logger.info('Got broker message:[{}]'.format(msg))
+            logger.debug('Got broker message:[{}]'.format(msg))
         
         if msg.type == 'message':
     
             # Replace payload with stuff read off the KVDB in case this is where the actual message happens to reside.
-            if msg.channel == self._to_parallel_any_topic:
+            if msg.channel in NEEDS_TMP_KEY:
                 tmp_key = '{}.tmp'.format(msg.data)
                 
                 try:
@@ -176,6 +180,10 @@ class BrokerClient(Thread):
                     logger.debug('Got broker message payload [{}]'.format(payload))
                     
                 return self.topic_callbacks[msg.channel](payload)
+            
+            else:
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug('No payload in msg:[{}]'.format(msg))
 
     def close(self):
         for client in(self.pub_client, self.sub_client):

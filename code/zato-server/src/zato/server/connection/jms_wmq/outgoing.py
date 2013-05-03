@@ -31,7 +31,7 @@ from bunch import Bunch
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.common.util import TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
@@ -88,7 +88,7 @@ class OutgoingConnection(BaseJMSWMQConnection):
         jms_msg.jms_correlation_id = msg.get('jms_correlation_id')
         jms_msg.jms_delivery_mode = msg.get('jms_delivery_mode') or default_delivery_mode
         jms_msg.jms_destination = msg.get('jms_destination')
-        jms_msg.jms_expiration = msg.get('jms_expiration') or default_expiration
+        jms_msg.jms_expiration = int(msg.get('jms_expiration') or default_expiration)
         jms_msg.jms_message_id = msg.get('jms_message_id')
         jms_msg.jms_priority = msg.get('jms_priority') or default_priority
         jms_msg.jms_redelivered = msg.get('jms_redelivered')
@@ -128,8 +128,8 @@ class OutgoingConnector(BaseJMSWMQConnector):
         
         self.broker_client_id = 'jms-wmq-outgoing-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL]: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         
@@ -173,8 +173,11 @@ class OutgoingConnector(BaseJMSWMQConnector):
         if super(OutgoingConnector, self).filter(msg):
             return True
 
-        elif msg.action in(OUTGOING.JMS_WMQ_SEND, OUTGOING.JMS_WMQ_DELETE, OUTGOING.JMS_WMQ_EDIT):
+        elif msg.action in(OUTGOING.JMS_WMQ_DELETE, OUTGOING.JMS_WMQ_EDIT):
             return self.out.name == msg['old_name']
+        
+        elif msg.action == OUTGOING.JMS_WMQ_SEND:
+            return self.out.name == msg['name']
         
     def _stop_connection(self):
         """ Stops the given outgoing connection's sender. The method must 

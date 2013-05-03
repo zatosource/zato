@@ -108,8 +108,8 @@ class Invoke(ZatoCommand):
         client = AnyServiceInvoker('http://{}'.format(config.main.gunicorn_bind), args.url_path, auth,
             max_response_repr=int(args.max_response_repr), max_cid_repr=int(args.max_cid_repr))
         
-        response = client.invoke(args.name, args.payload, headers, args.channel, args.data_format, args.transport,
-            args.async)
+        func = client.invoke_async if args.async else client.invoke
+        response = func(args.name, args.payload, headers, args.channel, args.data_format, args.transport)
         
         if response.ok:
             self.logger.info(response.data or '(None)')

@@ -36,7 +36,7 @@ class CreateForm(forms.Form):
     vhost = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:50%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     frame_max = forms.CharField(initial=FRAME_MAX_SIZE, widget=forms.TextInput(attrs={'style':'width:20%'}))
-    heartbeat = forms.CharField(initial=10, widget=forms.TextInput(attrs={'style':'width:10%'}))
+    heartbeat = forms.CharField(initial=0, widget=forms.TextInput(attrs={'style':'width:10%'}))
 
     def __repr__(self):
         return make_repr(self)
