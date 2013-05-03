@@ -1,0 +1,44 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Channels
+========
+
+.. image:: /gfx/progguide-channels.png
+   :align: center
+
+Services accept requests either from jobs initiated by the 
+:doc:`scheduler <./scheduler>` or via 
+:doc:`AMQP <>`,
+:doc:`JMS WebSphere MQ <>`,
+:doc:`plain HTTP <>`,
+:doc:`SOAP <>` and 
+:doc:`Zero MQ <>`
+channels. 
+
+Only HTTP channels are synchronous and make the requesting side wait before the response is ready. 
+
+Except for plain HTTP and SOAP channels, requests are accepted through connector
+processes which publish messages on Zato broker off of which they are consumed by
+services.
+
+Plain HTTP and SOAP channels are exposed via Zato servers directly.
+
+One of the key features of Zato is that precisely the same service can be exposed over 
+multiple channels without any changes to the service's implementation. That is,
+once the service has been written and deployed, it's only a matter of a server's
+configuration to make a service available through, say, AMQP in addition to Zero MQ.
+
+Regardless of which channel a service was invoked over, the very same 
+:doc:`request and response objects <./request-response>`
+will be available, same 
+:ref:`attributes <progguide-write-service-attributes>`
+and
+:ref:`methods <progguide-write-service-methods>`,
+and the service
+can make use of the same API for producing responses using 
+:doc:`Simple IO <./sio>`, 
+:doc:`JSON <./json>`, 
+:doc:`XML <./xml>`
+or 
+:doc:`any other data format <./other-formats>`.
