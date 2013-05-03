@@ -1,0 +1,39 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Installing and configuring Zato components
+==========================================
+
+Subsequent chapters present information on how to install each of the Zato components along
+with a discussion on their config files.
+
+To set up a completely new Zato environment you need to:
+
+* Make sure Redis is installed and configured to allow access for Zato
+* Ensure an SQL database is installed. Zato supports PostgreSQL and Oracle.
+* Make a new cluster by:
+
+  * Using a :doc:`a quickstart cluster <../../cli/quickstart>`
+  * Manually creating each of the components needed:
+    
+    * SQL ODB
+    * Web admin
+    * 
+
+================== ====================================================== ======================================
+Component          Chapter                                                Chapter 
+================== ====================================================== ======================================
+Web admin          :doc:`How to install <./install-web-admin>`            :doc:`How to configure <./configure->`
+Server             :doc:`How to install <./install-server>`               :doc:`How to configure <./configure->`
+Cluster            :doc:`How to install <./install-cluster>`              :doc:`How to configure <./configure->`
+Quickstart cluster A quickstart cluster is a shortcut way                 Not applicable
+                   to create a working Zato environment 
+                   as :doc:`described here <../../cli/quickstart>`
+Load-balancer      :doc:`How to install <./install-lb>`
+Connectors      
+SQL ODB            :doc:`How to install <./install-odb>`                  :doc:`How to configure <./configure->`
+Redis broker       `The Redis project <http://redis.io>`_                 Not applicable
+                   provides information on how to                       
+                   install the software
+CA                 :doc:`How to install <./install->`                     :doc:`How to configure <./configure->`
+================== ====================================================== ======================================
