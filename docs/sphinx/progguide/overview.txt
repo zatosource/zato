@@ -109,7 +109,7 @@ Read next
     * **Developing services and applications:**
       :doc:`Writing a service <./write-service>` | 
       :doc:`Request and response objects<./request-response>` |
-      :doc:`Outgoing connections<./out-conn>` |
+      :doc:`Outgoing connections<./outconn/overview>` |
       :doc:`Key/value DB (Redis)<./kvdb>` |
       :doc:`Scheduler<./scheduler>` |
       :doc:`Invoking other services <./invoking-services>` |

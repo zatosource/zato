@@ -68,6 +68,8 @@ TOPICS = {
     MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: b'/zato/connector/zmq/all',
 }
 
+KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
+
 SCHEDULER = Bunch()
 SCHEDULER.CREATE = b'10000'
 SCHEDULER.EDIT = b'10001'

@@ -172,7 +172,7 @@ class WorkerStore(BrokerMessageReceiver):
         # Connect to ODB
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
         self.odb = SessionWrapper()
-        self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME])
+        self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
         
         # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
@@ -351,39 +351,12 @@ class WorkerStore(BrokerMessageReceiver):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
-        
-        # def update_handle(self, set_response_func, service, raw_request, channel, data_format, 
-        #    transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
-        
         service = self.server.service_store.new_instance_by_name(msg.service)
         service.update_handle(self._set_service_response_data, service, msg.payload,
             channel, msg.get('data_format'), msg.get('transport'), self.server,
             self.broker_client, self, msg.cid, self.worker_config.simple_io,
             job_type=msg.get('job_type'))
-        
-        '''
-        service_instance = self.server.service_store.new_instance_by_name(msg.service)
-        service_instance.update(service_instance, channel, self.server, self.broker_client,
-            self, msg.cid, 
-            payload_from_request(msg.cid, msg.payload, msg.get('data_format'), msg.get('transport')),
-            msg.payload, msg.get('transport'), self.worker_config.simple_io,
-            msg.get('data_format'), job_type=msg.get('job_type'))
-        
-        service_instance.pre_handle()
-        
-        service_instance.call_hooks('before')
-        service_instance.handle()
-        service_instance.call_hooks('after')
-        
-        service_instance.post_handle()
-        service_instance.call_hooks('finalize')
-        
-        if logger.isEnabledFor(logging.DEBUG):
-            msg = 'Invoked [{0}], channel [{1}], action [{2}], response [{3}]'.format(
-                msg.service, channel, action, repr(service_instance.response.payload))
-            logger.debug(msg)
-        '''
-            
+
 # ##############################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
@@ -465,7 +438,7 @@ class WorkerStore(BrokerMessageReceiver):
         del_name = old_name if old_name else msg['name']
 
         # .. delete the connection if it exists ..
-        self._delete_outgoing_http_soap(msg['name'], msg['transport'], logger.debug)
+        self._delete_outgoing_http_soap(del_name, msg['transport'], logger.error)
         
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, False)

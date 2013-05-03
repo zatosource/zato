@@ -30,7 +30,7 @@ from threading import Thread
 from bunch import Bunch
 
 # Zato
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
+from zato.common.broker_message import CHANNEL, MESSAGE_TYPE, TOPICS
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection.amqp import BaseAMQPConnection, BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
@@ -85,8 +85,8 @@ class ConsumingConnector(BaseAMQPConnector):
         
         self.broker_client_id = 'amqp-consuming-connector'
         self.broker_callbacks = {
-            MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: self.on_broker_msg,
-            MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: self.on_broker_msg
+            TOPICS[MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL]: self.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL]: self.on_broker_msg
         }
         self.broker_messages = self.broker_callbacks.keys()
         
@@ -104,7 +104,7 @@ class ConsumingConnector(BaseAMQPConnector):
         self.channel_amqp.is_active = item.is_active
         self.channel_amqp.queue = item.queue
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
-        self.channel_amqp.service = item.service_impl_name
+        self.channel_amqp.service = item.service_name
         self.channel_amqp.data_format = item.data_format
         
     def _setup_amqp(self):
@@ -187,7 +187,7 @@ class ConsumingConnector(BaseAMQPConnector):
                 params['cid'] = new_cid()
                 params['payload'] = body
                 
-                self.broker_client.async_invoke(params)
+                self.broker_client.invoke_async(params)
 
     def on_broker_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation

@@ -29,7 +29,7 @@ from datetime import datetime
 import requests
 
 # Zato
-from zato.common.util import security_def_type
+from zato.common.util import get_component_name, security_def_type
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,8 @@ class HTTPSOAPWrapper(object):
         self.config_no_sensitive['password'] = '***'
         self.requests_module = requests
         self.session = self.requests_module.session()
+        
+        self._component_name = get_component_name()
         
         self.soap = {}
         self.soap['1.1'] = {}
@@ -114,6 +116,16 @@ class HTTPSOAPWrapper(object):
     
     auth = property(fget=_get_auth, doc=_get_auth)
     
+    def _create_headers(self, cid, user_headers):
+        headers = {
+            'X-Zato-CID': cid,
+            'X-Zato-Component':self._component_name,
+            'X-Zato-Msg-TS':datetime.utcnow().isoformat(),
+            }
+        headers.update(user_headers)
+        
+        return headers
+    
     def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
         """
@@ -128,7 +140,7 @@ class HTTPSOAPWrapper(object):
         
         # .. invoke the other end ..
         r = self.session.head(self.config['address'], auth=self.requests_auth, prefetch=True,
-                config={'verbose':verbose}, headers={'X-Zato-CID':cid})
+                config={'verbose':verbose}, headers=self._create_headers(cid, {}))
         
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(r.status_code))
@@ -141,12 +153,10 @@ class HTTPSOAPWrapper(object):
     def get(self, cid, params=None, prefetch=True, *args, **kwargs):
         """ Invokes a resource using the GET method.
         """
-        headers = kwargs.pop('headers', {})
-        if not 'X-Zato-CID' in headers:
-            headers['X-Zato-CID'] = cid
+        headers = self._create_headers(cid, kwargs.pop('headers', {}))
 
         return self.session.get(self.config['address'], params=params or {}, 
-            prefetch=prefetch, auth=self.requests_auth, *args, **kwargs)
+            prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)
     
     def _soap_data(self, data, headers):
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
@@ -169,11 +179,10 @@ class HTTPSOAPWrapper(object):
     def post(self, cid, data='', prefetch=True, *args, **kwargs):
         """ Invokes a resource using the POST method.
         """
+        headers = self._create_headers(cid, kwargs.pop('headers', {}))
+        
         if self.config['transport'] == 'soap':
-            data, headers = self._soap_data(data, kwargs.pop('headers', {}))
-            
-        if not 'X-Zato-CID' in headers:
-            headers['X-Zato-CID'] = cid
+            data, headers = self._soap_data(data, headers)
 
         return self.session.post(self.config['address'], data=data, 
             prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)

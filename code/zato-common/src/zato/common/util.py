@@ -36,6 +36,7 @@ from pwd import getpwuid
 from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
+from threading import current_thread
 
 # packaging/Distutils2
 try:
@@ -585,3 +586,9 @@ def uncamelify(s, separator='-', elem_func=unicode.lower):
     depending on the value of separator and elem_func.
     """
     return separator.join(elem_func(elem) for elem in re.sub(_uncamelify_re, r' \1', s).split())
+
+def get_component_name(prefix='parallel'):
+    """ Returns a name of the component issuing a given request so it's possible
+    to trace which Zato component issued it.
+    """
+    return '{}/{}/{}/{}'.format(prefix, current_host(), os.getpid(), current_thread().name)

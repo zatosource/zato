@@ -37,6 +37,7 @@ import psutil
 from bunch import Bunch
 
 # Zato
+from zato.broker.client import BrokerClient
 from zato.common import ZATO_ODB_POOL_NAME
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, TRACE1
@@ -97,7 +98,7 @@ class BaseConnection(object):
         self._close()
             
         msg = 'Closed the connection for {0}'.format(self._conn_info())
-        self.logger.debug(msg)
+        self.logger.info(msg)
     
     def _on_connected(self, *ignored_args, **ignored_kwargs):
         """ Invoked after establishing a successful connection to the resource.
@@ -181,6 +182,11 @@ class BaseConnector(BrokerMessageReceiver):
         self.kvdb.decrypt_func = self.odb.crypto_manager.decrypt
         self.kvdb.init()
         
+        # Broker client
+        self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
+        self.broker_client.start()
+        
+        # ODB
         odb_data = Bunch()
         odb_data.db_name = config_odb.db_name
         odb_data.engine = config_odb.engine
