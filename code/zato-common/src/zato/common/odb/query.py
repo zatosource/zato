@@ -104,7 +104,8 @@ def basic_auth_list(session, cluster_id, needs_columns=False):
                          HTTPBasicAuth.password_type).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==HTTPBasicAuth.cluster_id).\
-        order_by('sec_basic_auth.name')
+        filter(SecurityBase.id==HTTPBasicAuth.id).\
+        order_by('sec_base.name')
 
 @needs_columns
 def tech_acc_list(session, cluster_id, needs_columns=False):
@@ -117,7 +118,8 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
         order_by(TechnicalAccount.name).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TechnicalAccount.cluster_id).\
-        order_by('sec_tech_acc.name')
+        filter(SecurityBase.id==TechnicalAccount.id).\
+        order_by('sec_base.name')
 
 @needs_columns
 def wss_list(session, cluster_id, needs_columns=False):
@@ -130,7 +132,8 @@ def wss_list(session, cluster_id, needs_columns=False):
                          WSSDefinition.sec_type).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==WSSDefinition.cluster_id).\
-        order_by('sec_wss_def.name')
+        filter(SecurityBase.id==WSSDefinition.id).\
+        order_by('sec_base.name')
 
 # ##############################################################################
 
