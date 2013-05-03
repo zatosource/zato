@@ -4,6 +4,9 @@
 Outgoing connections
 ====================
 
+.. image:: /gfx/progguide-outconn.png
+   :align: center
+
 Each service can automatically access external resources using a range of protocols
 documented in subsequent chapters. 
 
