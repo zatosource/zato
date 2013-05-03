@@ -47,14 +47,16 @@ class SessionWrapper(object):
     """
     def __init__(self):
         self.session_initialized = False
+        self.pool = None
         
     def init_session(self, pool, use_scoped_session=True):
-        pool.ping()
+        self.pool = pool
+        self.pool.ping()
         
         if use_scoped_session:
-            self._Session = scoped_session(sessionmaker(bind=pool.engine))
+            self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
         else:
-            self._Session = sessionmaker(bind=pool.engine)
+            self._Session = sessionmaker(bind=self.pool.engine)
             
         self._session = self._Session()
         self.session_initialized = True
@@ -166,7 +168,6 @@ class SQLConnectionPool(object):
     
     impl = property(fget=_impl, doc=_impl.__doc__)
 
-
 class PoolStore(DisposableObject):
     """ A main class for accessing all of the SQL connection pools. Each server
     thread has its own store.
@@ -175,13 +176,13 @@ class PoolStore(DisposableObject):
         super(PoolStore, self).__init__()
         self.sql_conn_class = sql_conn_class
         self._lock = RLock()
-        self.pools = {}
+        self.wrappers = {}
         
     def __getitem__(self, name):
         """ Checks out the connection pool.
         """
         with self._lock:
-            return self.pools[name]
+            return self.wrappers[name]
         
     get = __getitem__
         
@@ -190,25 +191,29 @@ class PoolStore(DisposableObject):
         using updated settings.
         """
         with self._lock:
-            if name in self.pools:
+            if name in self.wrappers:
                 del self[name]
                 
             config_no_sensitive = deepcopy(config)
             config_no_sensitive['password'] = '***'
             pool = self.sql_conn_class(name, config, config_no_sensitive)
-            self.pools[name] = pool
+
+            wrapper = SessionWrapper()
+            wrapper.init_session(pool)
+            
+            self.wrappers[name] = wrapper
     
     def __delitem__(self, name):
         """ Stops a pool and deletes it from the store.
         """
         with self._lock:
-            self.pools[name].engine.dispose()
-            del self.pools[name]
+            self.wrappers[name].engine.dispose()
+            del self.wrappers[name]
             
     def __str__(self):
         out = StringIO()
-        out.write('<{} at {} pools:['.format(self.__class__.__name__, hex(id(self))))
-        out.write(', '.join(sorted(self.pools.keys())))
+        out.write('<{} at {} wrappers:['.format(self.__class__.__name__, hex(id(self))))
+        out.write(', '.join(sorted(self.wrappers.keys())))
         out.write(']>')
         return out.getvalue()
     
@@ -219,7 +224,7 @@ class PoolStore(DisposableObject):
         password.
         """
         with self._lock:
-            config = deepcopy(self.pools[name].config)
+            config = deepcopy(self.wrappers[name].config)
             config['password'] = password
             self[name] = config
         
@@ -227,5 +232,5 @@ class PoolStore(DisposableObject):
         """ Invoked when Spring Python's container is releasing the store.
         """
         with self._lock:
-            for name, pool in self.pools.items():
-                pool.engine.dispose()
+            for name, wrapper in self.wrappers.items():
+                wrapper.pool.engine.dispose()
