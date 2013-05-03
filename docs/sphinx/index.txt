@@ -68,13 +68,11 @@ Programming guide
 Administration guide
 ====================
 
-    * :doc:`Installing and configuring Zato components<admin/install>` |
-      :doc:`Web admin<admin/web-admin>` | 
+    * :doc:`Installing and configuring Zato components<admin/guide/install-config/overview>` |
       :doc:`Command line interface (CLI)<admin/cli/index>` |
       :doc:`High availability<admin/ha>` |
       :doc:`Capacity planning<admin/capacity>` |
-      :doc:`Installing services<admin/periodic>` |
-      :doc:`Periodic tasks<admin/periodic>`
+      :doc:`Installing services<admin/periodic>`
       
 Web admin
 =========
@@ -251,6 +249,7 @@ Zato, the open-source project
    :glob:
    
    admin/cli/*
+   admin/guide/install-config/*
    architecture/*
    intro/*
    progguide/*
