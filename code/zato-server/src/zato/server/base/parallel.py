@@ -443,7 +443,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def set_odb_pool(self):
         # This is the call that creates an SQLAlchemy connection
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
+        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token
     
     @staticmethod
