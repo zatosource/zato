@@ -81,7 +81,7 @@ class SQLConnectionPool(object):
         _extra = {}
         extra = self.config.get('extra') # Will be None at times
         if extra:
-            for line in extra.splitlines():
+            for line in extra.split(';'):
                 original_line = line
                 if line:
                     line = line.split('=')
