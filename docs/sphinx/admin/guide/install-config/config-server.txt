@@ -430,6 +430,33 @@ Of special interest are keys:
 By default logs are written out to local files but it's possible to reconfigure
 the logging to use any other destination Python itself supports such as syslog, Zero MQ etc.
 
+.. _admin-guide-config-server-service-sources:
+
+Service sources - service-sources.txt
+-------------------------------------
+
+Example
+```````
+
+::
+
+  ./my-services/import1
+  ./my-services/import2
+  
+  # This should be kept at the end
+  ./work/hot-deploy/current
+
+Discussion
+``````````
+
+A list of paths, each relative to the server root, that will be scanned in order
+to find services to deploy when the server is starting. 
+
+Your own services, unless hot-deployed, should be kept in directories each of which 
+has its own entry in this file.
+
+Any line starting with the # sign is ignored.
+
 .. _admin-guide-config-server-crypto:
 
 Crypto material - zato-server-\*.pem
