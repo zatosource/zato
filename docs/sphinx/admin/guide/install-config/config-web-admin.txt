@@ -93,8 +93,8 @@ Database type for the web admin to use, can be one of:
 log_config
 @@@@@@@@@@
 
-Path to the :ref:`logging configuration <admin-guide-config-web-admin-logging>`,
-relative to web admin's top-level directory.
+Path to the :ref:`logging configuration <admin-guide-config-web-admin-logging>`.
+If not absolute, the path is relative to web admin's top-level directory.
 
 DEBUG
 @@@@@
