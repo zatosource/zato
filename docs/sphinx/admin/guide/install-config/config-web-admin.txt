@@ -191,7 +191,70 @@ HTTP path admin services the console should invoke are available on.
 Logging configuration - logging.conf
 ------------------------------------
 
+Example
+```````
+
+::
+
+    [loggers]
+    keys=root,zato
+    
+    [handlers]
+    keys=rotating_file_handler, stdout_handler
+    
+    [formatters]
+    keys=default_formatter, colour_formatter
+    
+    [logger_root]
+    level=WARN
+    handlers=rotating_file_handler, stdout_handler
+    
+    [logger_zato]
+    level=DEBUG
+    handlers=rotating_file_handler, stdout_handler
+    qualname=zato
+    propagate=0
+    
+    [handler_rotating_file_handler]
+    class=logging.handlers.RotatingFileHandler
+    formatter=default_formatter
+    args=('./logs/web-admin.log', 'a', 20000000, 10)
+    
+    [handler_stdout_handler]
+    class=StreamHandler
+    formatter=colour_formatter
+    args=(sys.stdout,)
+    
+    [formatter_default_formatter]
+    format=%(asctime)s - %(levelname)s - %(message)s
+    
+    [formatter_colour_formatter]
+    format=%(asctime)s - %(levelname)s - %(message)s
+    class=zato.common.util.ColorFormatter
+
+Discussion
+``````````
+
+Uses `Python's own syntax <http://docs.python.org/2.7/library/logging.config.html#configuration-file-format>`_
+to configure how and where logging messages should be  written to.
+
+Of special interest are keys:
+
+* logger_root.level - sets the log level for anything but Zato 
+* logger_zato.level - sets the log level for Zato and nothing else
+
+By default logs are written out to local files but it's possible to reconfigure
+the logging to use any other destination Python itself supports such as syslog, Zero MQ etc.
+
 .. _admin-guide-config-web-admin-crypto:
 
 Crypto material - web-admin-\*.pem
 ----------------------------------
+
+Web admin's cryptograpical material is kept in PEM files. Private files must not
+be password-protected.
+
+* web-admin-priv-key.pem - private key
+* web-admin-pub-key.pem - public key
+* web-admin-cert.pem - certificate
+* web-admin-ca-certs.pem - a list of CA certificates web admin should trust
