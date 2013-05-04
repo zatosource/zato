@@ -75,13 +75,13 @@ with a discussion on their config files.
 ================== ====================================================== ====================================================================
 Component          Install chapter                                        Configure chapter 
 ================== ====================================================== ====================================================================
-Web admin          :doc:`How to install <./install-web-admin>`            :doc:`How to configure <./config->`
-Server             :doc:`How to install <./install-server>`               :doc:`How to configure <./config->`
+Web admin          :doc:`How to install <./install-web-admin>`            :doc:`How to configure <./config-web-admin>`
+Server             :doc:`How to install <./install-server>`               :doc:`How to configure <./config-server>`
 Cluster's config   :doc:`How to install <./install-cluster>`              :doc:`Documented along with other web admin features <TODO>`
 Quickstart cluster A quickstart cluster is a shortcut way                 Not applicable
                    to create a working Zato environment 
                    as :doc:`described here <../../cli/quickstart>`
-Load-balancer      :doc:`How to install <./install-lb>`                   :doc:`How to configure <./config->`
+Load-balancer      :doc:`How to install <./install-lb>`                   :doc:`How to configure <./config-lb>`
 Connectors      
 SQL ODB            :doc:`How to install <./install-odb>`                  Not applicable - once created, the ODB
                                                                           needs no configuration
