@@ -177,12 +177,198 @@ actually perform the action. Other servers will wait up that many seconds for th
 try to deploy the service in case the server which was previously attempting to hot-deploy
 it gave up for any reason.
 
+main.token
+@@@@@@@@@@
+
+A unique token automatically assigned to this server purely for the purpose of 
+identyfying a server in the ODB prior to obtaining the server's ID in the database,
+i.e. this is akin to a primary key in its purpose.
+
+Must not be repeated across all servers across all cluster re-using the same ODB. 
+
+The default value is a UUID4 and it's recommended that it not be changed.
+
+main.service_sources
+@@@@@@@@@@@@@@@@@@@@
+
+Path to the file containing :ref:`service sources <admin-guide-config-server-service-sources>`
+that describe which services to import when the server is starting up.
+
+If not an absolute path, the path is relative to the main server.conf config file.
+
 crypto.*
 @@@@@@@@
 
-Paths to the server's :ref:`crypto material <admin-guide-config-server-crypto>`,
-relative to the main config file.
+Paths to the server's :ref:`crypto material <admin-guide-config-server-crypto>`.
+If not absoulte, the paths are relative to the main config file.
 
+odb.db_name
+@@@@@@@@@@@
+
+ODB database name.
+
+odb.engine
+@@@@@@@@@@
+
+ODB type, may be one of:
+
+* postgresql
+* oracle
+
+odb.extra
+@@@@@@@@@
+
+Extra parameters passed as kwargs directly into 
+`SQLAlchemy's engine initializer <http://docs.sqlalchemy.org/en/rel_0_8/core/engines.html#engine-creation-api>`_.
+For instance, setting the option to
+
+.. code-block:: text
+
+    [odb]
+    extra=echo=True;logging_name=foobar
+
+  
+will make SQLAlchemy log all the SQL statements issued using the log name provided.
+
+odb.host
+@@@@@@@@
+
+ODB database host.
+
+odb.password
+@@@@@@@@@@@@
+
+The ODB user's password to use, encrypted using the server's private key. The password
+can be 
+:doc:`decrypted <../../cli/decrypt>`
+and
+:doc:`encrypted <../../cli/encrypt>`
+from command line using 
+:doc:`the CLI <../../cli/index>`.
+
+odb.pool_size
+@@@@@@@@@@@@@
+
+ODB connection pool size.
+
+odb.username
+@@@@@@@@@@@@
+
+Username to connect to the ODB with.
+
+hot_deploy.pickup_dir
+@@@@@@@@@@@@@@@@@@@@@
+
+A path to the directory that will be used to :doc:`hot-deploy Zato services <TODO>` from.
+If not absolute, the path is relative to the main server.conf config file.
+
+.. _admin-guide-config-server-hot_deploy.work_dir:
+
+hot_deploy.work_dir
+@@@@@@@@@@@@@@@@@@@
+
+A path to the directory that will be used to:
+
+* :doc:`hot-deploy Zato services <TODO>` to
+* keep a set of backups of services in their state prior to the deployment
+
+If not absolute, the path is relative to the main server.conf config file.
+
+hot_deploy.backup_history
+@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Before hot-deploying a service, a backup of already existing services is created.
+This setting controls how many backups to keep.
+
+hot_deploy.backup_format
+@@@@@@@@@@@@@@@@@@@@@@@@
+
+Backed-up services are compressed using this format which may be one of the 
+values Python's `shutil.make_archive <http://docs.python.org/2.7/library/shutil.html#archiving-operations>`_
+accepts.
+
+hot_deploy.current_work_dir
+@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+A path to the directory that will be used to hot-deploy the services to. 
+
+Must be relative to :ref:`hot_deploy.work_dir <admin-guide-config-server-hot_deploy.work_dir>`.
+
+.. _admin-guide-config-server-hot_deploy.backup_work_dir:
+
+hot_deploy.backup_work_dir
+@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+A path to the directory that will be used to keep a linear log of service backups.
+
+Must be relative to :ref:`hot_deploy.work_dir <admin-guide-config-server-hot_deploy.work_dir>`.
+
+hot_deploy.last_backup_work_dir
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+A path to the directory that will be used to keep the last backup only - this is in addition
+to the fact that the backup will be stored in 
+:ref:`hot_deploy.backup_work_dir <admin-guide-config-server-hot_deploy.backup_work_dir>`
+as well.
+
+singleton.initial_sleep_time
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+How many milliseconds to wait before starting a singleton server's thread. May need
+manual tweaking on busy servers.
+
+.. _admin-guide-config-server-singleton.connector_server_keep_alive_job_time:
+
+singleton.connector_server_keep_alive_job_time
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+If there are any connectors running in the cluster and the server that is currently 
+the connector server doesn't update its keep-alive status in 
+singleton.connector_server_keep_alive_job_time * singleton.grace_time_multiplier
+seconds, one of the other servers left - if any - will assume that the connector
+server is down and will start the connectors itself assuming the role of a new connector
+server for this cluster.
+
+singleton.grace_time_multiplier
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Visit :ref:`singleton.connector_server_keep_alive_job_time <admin-guide-config-server-singleton.connector_server_keep_alive_job_time>`
+
+spring.context_class
+@@@@@@@@@@@@@@@@@@@@
+
+Name of a Python class to create the 
+`Spring Python context <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/spring_context.py>`_
+from.
+
+misc.internal_services_may_be_deleted
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+If a request to delete a Zato's own internal service arrives, whether this server
+should allow for it. The value must be consistent across all servers in a given
+cluster.
+
+misc.initial_cluster_name
+@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Name of the cluster this server was initially a part of. Useful if a cluster
+is renamed and there's a need to look up the server's original cluster name.
+
+misc.initial_server_name
+@@@@@@@@@@@@@@@@@@@@@@@@
+
+Original name of this server at the time when it was created.
+
+kvdb.*
+@@@@@@
+
+Settings allowing to connect to the Redis key/value DB which is used as the Zato broker.
+Note that password, if any should be
+:doc:`decrypted <../../cli/decrypt>`
+and
+:doc:`encrypted <../../cli/encrypt>`
+from command line using 
+:doc:`the CLI <../../cli/index>`.
 
 .. _admin-guide-config-server-logging:
 
