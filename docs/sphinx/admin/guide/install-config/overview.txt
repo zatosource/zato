@@ -46,8 +46,11 @@ To set up a completely new Zato environment you need to:
     * Cluster's config
     * Web admin
     * Load-balancer
+    * Servers
     
-
+    SQL ODB and a cluster's config need to me be created first and in that order,
+    the rest can be installed in any order.
+    
 Read more
 ---------
 
@@ -55,22 +58,22 @@ Subsequent chapters present information on how to install each of the Zato compo
 with a discussion on their config files.
 
 ================== ====================================================== ======================================
-Component          Chapter                                                Chapter 
+Component          Install chapter                                        Configure chapter 
 ================== ====================================================== ======================================
 Web admin          :doc:`How to install <./install-web-admin>`            :doc:`How to configure <./configure->`
 Server             :doc:`How to install <./install-server>`               :doc:`How to configure <./configure->`
-Cluster's config   :doc:`How to install <./install-cluster>`              Not applicable - it's particular 
-                                                                          components, such as servers and
-                                                                          a load-balancer, that need to be
-                                                                          configured,
+Cluster's config   :doc:`How to install <./install-cluster>`              Not applicable
 Quickstart cluster A quickstart cluster is a shortcut way                 Not applicable
                    to create a working Zato environment 
                    as :doc:`described here <../../cli/quickstart>`
 Load-balancer      :doc:`How to install <./install-lb>`
 Connectors      
-SQL ODB            :doc:`How to install <./install-odb>`                  :doc:`How to configure <./configure->`
+SQL ODB            :doc:`How to install <./install-odb>`                  Not applicable - once created, the ODB
+                                                                          needs no configuration
 Redis broker       `The Redis project <http://redis.io>`_                 Not applicable
                    provides information on how to                       
                    install the software
-CA                 :doc:`How to install <./install->`                     :doc:`How to configure <./configure->`
+CA                 :doc:`How to install <./install->`                     Not applicable - the CA should be used
+                                                                          only for development clusters, it's
+                                                                          recommeded you don't reconfigure it
 ================== ====================================================== ======================================
