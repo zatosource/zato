@@ -4,6 +4,21 @@
 Installing and configuring Zato components
 ==========================================
 
+.. note ::
+
+  Thoroughly familiarize yourself with the
+  :doc:`high-level overview <../../../intro/overview-high-level>`
+  and
+  :doc:`the technical one <../../../intro/overview-tech>`
+  as well with 
+  :doc:`Zato's architecture <../../../architecture/overview>`,
+  :doc:`OS-level and application users <../../../security/users>`
+  and 
+  :doc:`the attack surface <../../../security/attack-surface>`
+  before you start to install and configure Zato components.
+  
+  It's also highly recommeded that you :doc:`go through the tutorial first <../../../tutorial/step1>`.
+
 Overview
 --------
 
@@ -57,16 +72,16 @@ Read more
 Subsequent chapters present information on how to install each of the Zato components along
 with a discussion on their config files.
 
-================== ====================================================== ======================================
+================== ====================================================== ====================================================================
 Component          Install chapter                                        Configure chapter 
-================== ====================================================== ======================================
-Web admin          :doc:`How to install <./install-web-admin>`            :doc:`How to configure <./configure->`
-Server             :doc:`How to install <./install-server>`               :doc:`How to configure <./configure->`
-Cluster's config   :doc:`How to install <./install-cluster>`              Not applicable
+================== ====================================================== ====================================================================
+Web admin          :doc:`How to install <./install-web-admin>`            :doc:`How to configure <./config->`
+Server             :doc:`How to install <./install-server>`               :doc:`How to configure <./config->`
+Cluster's config   :doc:`How to install <./install-cluster>`              :doc:`Documented along with other web admin features <TODO>`
 Quickstart cluster A quickstart cluster is a shortcut way                 Not applicable
                    to create a working Zato environment 
                    as :doc:`described here <../../cli/quickstart>`
-Load-balancer      :doc:`How to install <./install-lb>`
+Load-balancer      :doc:`How to install <./install-lb>`                   :doc:`How to configure <./config->`
 Connectors      
 SQL ODB            :doc:`How to install <./install-odb>`                  Not applicable - once created, the ODB
                                                                           needs no configuration
@@ -76,4 +91,4 @@ Redis broker       `The Redis project <http://redis.io>`_                 Not ap
 CA                 :doc:`How to install <./install->`                     Not applicable - the CA should be used
                                                                           only for development clusters, it's
                                                                           recommeded you don't reconfigure it
-================== ====================================================== ======================================
+================== ====================================================== ====================================================================
