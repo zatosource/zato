@@ -1,4 +1,4 @@
-.. highlight:: python
+.. highlight:: bash
    :linenothreshold: 0
 
 Installing and configuring Zato components
@@ -65,6 +65,67 @@ To set up a completely new Zato environment you need to:
     
     SQL ODB and a cluster's config need to me be created first and in that order,
     the rest can be installed in any order.
+
+Config files are versioned
+--------------------------
+
+A history of changes to any config file is automatically kept in a given component's
+`Bazaar <http://bazaar.canonical.com/en/>`_ repository, i.e. in the ./config/repo directory.
+
+This allows to compare different config versions or to revert to a safe state
+after a mix-up.
+
+The repository is created and managed completely behind the scenes and needs no
+manual management however it's worth pointing out that it contains the whole history
+of a given config file, possibly including any old secrets, such as passwords.
+
+::
+
+  user@dev1:~/zato/server/config/repo$ bzr log
+  ------------------------------------------------------------
+  revno: 2
+  committer: user@dev1
+  branch nick: repo
+  timestamp: Fri 2013-05-03 12:53:40 +0200
+  message:
+    Committed modified files
+  ------------------------------------------------------------
+  revno: 1
+  committer: user@dev1
+  branch nick: repo
+  timestamp: Fri 2013-05-03 12:52:27 +0200
+  message:
+    Added new unversioned files
+  user@dev1:~/zato/server/config/repo$
+  
+::
+
+  user@dev1:~/zato/server/config/repo$ bzr diff -r1..2
+  === modified file 'server.conf'
+  --- server.conf	2013-05-03 10:52:27 +0000
+  +++ server.conf	2013-05-03 10:53:40 +0000
+  @@ -1,7 +1,7 @@
+   [main]
+   gunicorn_bind=localhost:17010
+   gunicorn_worker_class=gevent
+  -gunicorn_workers=4
+  +gunicorn_workers=2
+   gunicorn_timeout=240
+   gunicorn_user=
+   gunicorn_group=
+  user@dev1:~/zato/server/config/repo$ 
+
+::
+
+  user@dev1:~/zato/server/config/repo$ bzr revert -r 1
+   M  server.conf                                                                                                                           
+  user@dev1:~/zato/server/config/repo$
+
+::
+  
+  user@dev1:~/zato/server/config/repo$ cat server.conf | grep gunicorn_workers
+  gunicorn_workers=4
+  user@dev1:~/zato/server/config/repo$
     
 Read more
 ---------
