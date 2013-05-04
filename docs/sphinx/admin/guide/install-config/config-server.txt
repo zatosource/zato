@@ -1,0 +1,258 @@
+.. highlight:: ini
+   :linenothreshold: 0
+
+Configuring a server
+====================
+
+================================================================== ==================== ======================================================
+Purpose                                                            File                 Example full path
+================================================================== ==================== ======================================================
+:ref:`Main config <admin-guide-config-server-main>`                server.conf          /opt/zato/dev1/server1/config/repo/server.conf
+:ref:`Logging configuration <admin-guide-config-server-logging>`   logging.conf         /opt/zato/dev1/server1/config/repo/logging.conf
+:ref:`Service sources <admin-guide-config-server-service-sources>` service-sources.txt  /opt/zato/dev1/server1/config/repo/service-sources.txt
+:ref:`Crypto material <admin-guide-config-server-crypto>`          zato-server-\*.pem   /opt/zato/dev1/server1/config/repo/zato-server-\*.pem
+================================================================== ==================== ======================================================
+
+
+.. _admin-guide-config-server-main:
+
+Main config - server.conf
+-------------------------
+
+Example
+```````
+
+(Long lines reformatted for clarity)
+
+::
+
+    [main]
+    gunicorn_bind=localhost:17010
+    gunicorn_worker_class=gevent
+    gunicorn_workers=2
+    gunicorn_timeout=240
+    gunicorn_user=
+    gunicorn_group=
+    gunicorn_proc_name=
+    gunicorn_logger_class=
+    
+    deployment_lock_expires=4294967296 # 2 ** 32 seconds ≅ 136 years
+    deployment_lock_timeout=180
+    
+    token=647866dd32744fb2a4cdab3552ce0646
+    service_sources=./service-sources.txt
+    
+    [crypto]
+    priv_key_location=zato-server-priv-key.pem
+    pub_key_location=zato-server-pub-key.pem
+    cert_location=zato-server-cert.pem
+    ca_certs_location=zato-server-ca-certs.pem
+    
+    [odb]
+    db_name=zato1
+    engine=postgresql
+    extra=
+    host=localhost
+    password=C1/DeQiVpGPbM+tM1gMVRI3i+FOPqYZufdJhHNA0nbDRmjictGNQCMEng4m7
+      g8Oz6QyJ6J406KHWQQEQ5Uj2SG6v2z35/tqzMKsdrXrHYaWoKA8PGbUuHzigp7ikjGk
+      x1T117JiAo6UuyIqWt8FfswrlDkT/bSXG+Ac+FW4wvf97iASzzex11MQ9PY2yb5fAtB
+      InKonj2lCNqePD8eG39N18EpLt3eHDWpWw9smJnYA8iRk1Qe6j/CEkHA36T8QNXR+Id
+      1w2+C2YbhrOq0H/dEoeKoqGdfIwb3ZjAoURIcMqnCkUln1TamTe9y338WhjZ+MkMO5u
+      Rqj1cZ0w9TR0+g==
+    pool_size=1
+    username=zato1
+    
+    [hot_deploy]
+    pickup_dir=../../pickup-dir
+    work_dir=../../work
+    backup_history=100
+    backup_format=bztar
+    
+    # These three are relative to work_dir
+    current_work_dir=./hot-deploy/current
+    backup_work_dir=./hot-deploy/backup
+    last_backup_work_dir=./hot-deploy/backup/last
+    
+    [singleton]
+    initial_sleep_time=500
+    
+    # If a server doesn't update its keep alive data in 
+    # connector_server_keep_alive_job_time * grace_time_multiplier seconds
+    # it will be considered down and another server from the cluster will assume
+    # the control of connectors
+    connector_server_keep_alive_job_time=30 # In seconds
+    grace_time_multiplier=3
+    
+    [spring]
+    context_class=zato.server.spring_context.ZatoContext
+    
+    [misc]
+    internal_services_may_be_deleted=False
+    initial_cluster_name = quickstart-737709
+    initial_server_name = server1
+    
+    [kvdb]
+    host=localhost
+    port=6379
+    unix_socket_path=
+    password=
+    db=0
+    socket_timeout=
+    charset=
+    errors=
+
+
+Discussion
+``````````
+
+main.gunicorn_bind
+@@@@@@@@@@@@@@@@@@
+
+Host and port to bind to.
+
+main.gunicorn_worker_class
+@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Main worker class - using 'gevent', the defualt value makes Zato servers non-blocking
+asynchronous ones however advanced users may wish to use 
+`any other value gunicorn support <http://docs.gunicorn.org/en/latest/configure.html#worker-processes>`_
+
+main.gunicorn_workers
+@@@@@@@@@@@@@@@@@@@@@
+
+How many worker processes this server should start - in general, the total number
+of workers in a given system across all servers shouldn't be more than 2 * CPU_COUNT,
+so if there are 4 CPUs and 2 servers, each shouldn't have more than 4 main.gunicorn_workers.
+
+Note that this is a recommendation only, each particular workload may need different settings.
+
+main.gunicorn_timeout
+@@@@@@@@@@@@@@@@@@@@@
+
+After how many seconds a worker should be considered inactive - this should be set
+to at least as many seconds as you expect your slowest service to respond in.
+
+For instance, you know each service running on the server will respond under 10 s
+so it's safe to set main.gunicorn_timeout to 20 in under to kill any processes with
+services that take too long to complete.
+
+Likewise, if you know there will be long-running scheduler-initiated batch processes
+and each needs 60 s to complete, main.gunicorn_timeout should be set to a higher value
+to allow for a long-running service to complete.
+
+main.gunicorn_user
+@@@@@@@@@@@@@@@@@@
+
+Same as `gunicorn's user <http://docs.gunicorn.org/en/latest/configure.html#user>`_.
+
+main.gunicorn_group
+@@@@@@@@@@@@@@@@@@@
+
+Same as `gunicorn's group <http://docs.gunicorn.org/en/latest/configure.html#group>`_.
+
+main.gunicorn_proc_name
+@@@@@@@@@@@@@@@@@@@@@@@
+
+Same as `gunicorn's proc_name <http://docs.gunicorn.org/en/latest/configure.html#proc-name>`_.
+
+main.gunicorn_logger_class
+@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+Same as `gunicorn's logger_class <http://docs.gunicorn.org/en/latest/configure.html#logger-class>`_.
+
+main.deployment_lock_expires
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+When using a disitributed lock to coordinate a :doc:`hot-deployment <TODO>`
+of a service, how many seconds to wait for a server to finish the deployment.
+
+Should be at least as many seconds as it takes to hot-deploy a service in the worst 
+case.
+
+main.deployment_lock_timeout
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+When :doc:`hot-deploying <TODO>` a service only one server will be allowed to
+actually perform the action. Other servers will wait up that many seconds for their
+try to deploy the service in case the server which was previously attempting to hot-deploy
+it gave up for any reason.
+
+crypto.*
+@@@@@@@@
+
+Paths to the server's :ref:`crypto material <admin-guide-config-server-crypto>`,
+relative to the main config file.
+
+
+.. _admin-guide-config-server-logging:
+
+Logging configuration - logging.conf
+------------------------------------
+
+Example
+```````
+
+::
+
+    [loggers]
+    keys=root,zato
+    
+    [handlers]
+    keys=rotating_file_handler, stdout_handler
+    
+    [formatters]
+    keys=default_formatter, colour_formatter
+    
+    [logger_root]
+    level=WARN
+    handlers=rotating_file_handler, stdout_handler
+    
+    [logger_zato]
+    level=DEBUG
+    handlers=rotating_file_handler, stdout_handler
+    qualname=zato
+    propagate=0
+    
+    [handler_rotating_file_handler]
+    class=logging.handlers.RotatingFileHandler
+    formatter=default_formatter
+    args=('./logs/server.log', 'a', 20000000, 10)
+    
+    [handler_stdout_handler]
+    class=StreamHandler
+    formatter=colour_formatter
+    args=(sys.stdout,)
+    
+    [formatter_default_formatter]
+    format=%(asctime)s - %(levelname)s - %(message)s
+    
+    [formatter_colour_formatter]
+    format=%(asctime)s - %(levelname)s - %(message)s
+    class=zato.common.util.ColorFormatter
+
+Discussion
+``````````
+
+Uses `Python's own syntax <http://docs.python.org/2.7/library/logging.config.html#configuration-file-format>`_
+to configure how and where logging messages should be  written to.
+
+Of special interest are keys:
+
+* logger_root.level - sets the log level for anything but Zato 
+* logger_zato.level - sets the log level for Zato and nothing else
+
+By default logs are written out to local files but it's possible to reconfigure
+the logging to use any other destination Python itself supports such as syslog, Zero MQ etc.
+
+.. _admin-guide-config-server-crypto:
+
+Crypto material - zato-server-\*.pem
+------------------------------------
+
+Server's cryptograpical material is kept in PEM files. Private files must not
+be password-protected.
+
+* zato-server-priv-key.pem - private key
+* zato-server-pub-key.pem - public key
+* zato-server-cert.pem - certificate
+* zato-server-ca-certs.pem - a list of CA certificates this server should trust

@@ -68,11 +68,13 @@ Programming guide
 Administration guide
 ====================
 
-    * :doc:`Installing and configuring Zato components<admin/guide/install-config/overview>` |
+    * :doc:`Installing Zato in the OS<admin/guide/install-zato/overview>` |
+      :doc:`Components<admin/guide/install-config/overview>` |
       :doc:`Command line interface (CLI)<admin/cli/index>` |
       :doc:`High availability<admin/ha>` |
       :doc:`Capacity planning<admin/capacity>` |
-      :doc:`Installing services<admin/periodic>`
+      :doc:`Installing services<admin/periodic>` |
+      :doc:`Enabling 3rd-party libraries <progguide/3rd-party-libs>`
       
 Web admin
 =========
