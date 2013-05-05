@@ -68,7 +68,7 @@ Programming guide
 Administration guide
 ====================
 
-    * :doc:`Installing Zato in the OS<admin/guide/install-zato/overview>` |
+    * :doc:`Installing Zato binaries<admin/guide/install-zato>` |
       :doc:`Components<admin/guide/install-config/overview>` |
       :doc:`Command line interface (CLI)<admin/cli/index>` |
       :doc:`High availability<admin/ha>` |
@@ -251,6 +251,7 @@ Zato, the open-source project
    :glob:
    
    admin/cli/*
+   admin/guide/*
    admin/guide/install-config/*
    architecture/*
    intro/*
