@@ -13,6 +13,24 @@ Purpose                                                                   File  
 :ref:`Crypto material <admin-guide-config-lb-crypto>`                     zato-lba-\*.pem /opt/zato/dev1/web-admin/config/repo/web-admin-\*.pem
 ========================================================================= =============== =====================================================
 
+.. _admin-guide-config-lb-main:
+
+Main config
+-----------
+
+The main config file is `a HAProxy one <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html>`_
+and :doc:`should be usually modified using the web admin <TODO>`.
+
+One thing that you may want to edit is the username and password to browse the
+load-balancer's statistics with, available under 'defaults -> stats auth'.
+
+However, if you're an advanced HAProxy user you may wish to update other parts 
+yourself too, just keep in mind that any lines starting with the '# ZATO' string must
+be left intact.
+
+Note that any changes you introduce won't be picked up by HAProxy until it will have
+been restarted.
+
 .. _admin-guide-config-lb-agent:
 
 Load-balancer's XML-RPC agent config
