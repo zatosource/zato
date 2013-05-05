@@ -170,7 +170,7 @@ Statistics
 
     * :doc:`Guide<stats/guide>` |
       :doc:`Maintenance<stats/maintenance>` | 
-      :doc:`Load balancer statistics<stats/lb-statistics>`
+      :doc:`Load-balancer's statistics<stats/lb>`
       
 Security
 ========
@@ -261,3 +261,4 @@ Zato, the open-source project
    public-api/*
    public-api/details/*
    security/*
+   stats/*
