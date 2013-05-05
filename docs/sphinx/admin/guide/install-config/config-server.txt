@@ -117,6 +117,8 @@ Main worker class - using 'gevent', the defualt value makes Zato servers non-blo
 asynchronous ones however advanced users may wish to use 
 `any other value gunicorn support <http://docs.gunicorn.org/en/latest/configure.html#worker-processes>`_
 
+.. _admin-guide-config-server-main.gunicorn_workers:
+
 main.gunicorn_workers
 @@@@@@@@@@@@@@@@@@@@@
 
