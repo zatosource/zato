@@ -1,0 +1,39 @@
+Statistics guide
+================
+
+Zato's statistics can be divided into two parts:
+
+* Data regarding how services perform, :ref:`documented below <stats-guide-service-statistics>`
+* Load-balancer's statistics :doc:`documented in their own chapter <./lb>`
+
+.. _stats-guide-service-statistics:
+
+Service statistics
+------------------
+
+Each execution of any service prompts Zato to store certain statistics in the Redis
+broker:
+
+* Which service has been invoked and when it was
+* How long it took for the service to complete
+* :ref:`CID <progguide-write-service-cid>` the service has been invoked with
+
+Zato's own 
+`internal (look up stats_jobs) <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/spring_context.py>`_
+:doc:`scheduler's jobs <../progguide/scheduler>` aggregate raw information
+into higher-order structures, all stored in Redis too - per minute stats are
+converted into per hour status, these get aggregated into per day information and so
+on until a summary information concerning each year has been constructed.
+
+Note that the lowest level data that has been already aggregated is left in Redis and, unless it's 
+needed, :doc:`must be cleaned up manually or using a custom job <./maintenance>`
+in order to avoid an unnecessary growth of Redis.
+
+Trends and summaries
+--------------------
+
+.. image:: /gfx/stats/trends-summaries.png
+   :alt:
+
+Settings
+--------
