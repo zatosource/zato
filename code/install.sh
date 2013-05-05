@@ -35,5 +35,6 @@ virtualenv .
 
 ./bin/python bootstrap.py -v 1.7.0
 ./bin/buildout
-echo OK
 
+echo
+echo OK
