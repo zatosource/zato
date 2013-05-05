@@ -1,2 +1,48 @@
 Enabling extra libraries
 ========================
+
+Overview
+--------
+
+Each Zato installation contains a directory labeled zato_extra_paths the contents
+of which is automatically added to PYTHONPATH.
+
+For instance, Zato binaries are installed into /opt/zato so the zato command
+is in /opt/zato/bin/zato - hence the full path to zato_extra_paths is
+/opt/zato/zato_extra_paths.
+
+This directory can be used to enable any libraries, dependencies or services
+themselves needed for a particular Zato installation.
+
+PyMQI and WebSphere MQ
+----------------------
+
+To enable support for the optional connectivity to WebSphere MQ queue managers:
+
+* `Install PyMQI <https://github.com/dsuch/pymqi>`_
+* Create symlinks from each PyMQI module to zato_extra_paths, e.g. assuming PyMQI
+  has been installed to /usr/local/lib/python2.7/dist-packages and Zato binaries
+  are in /opt/zato:
+  
+  ::
+  
+    $ ln -s /usr/local/lib/python2.7/dist-packages/pymqe.so /opt/zato/zato_extra_paths
+    $ ln -s /usr/local/lib/python2.7/dist-packages/pymqi.py /opt/zato/zato_extra_paths
+    $ ln -s /usr/local/lib/python2.7/dist-packages/CMQC.py /opt/zato/zato_extra_paths
+    $ ln -s /usr/local/lib/python2.7/dist-packages/CMQCFC.py /opt/zato/zato_extra_paths
+    $ ln -s /usr/local/lib/python2.7/dist-packages/CMQXC.py /opt/zato/zato_extra_paths
+    $ ln -s /usr/local/lib/python2.7/dist-packages/CMQZC.py /opt/zato/zato_extra_paths
+
+cx_Oracle and Oracle Database
+-----------------------------
+
+To enable optional support for the Oracle Database:
+
+* Install `cx_Oracle <https://pypi.python.org/pypi/cx_Oracle>`_
+* Create a symlink from cx_Oracle to zato_extra_paths, e.g. assuming cx_Oracle
+  has been installed to /usr/local/lib/python2.7/dist-packages and Zato binaries
+  are in /opt/zato
+  
+  ::
+  
+    $ ln -s /usr/local/lib/python2.7/dist-packages/cx_Oracle.so /opt/zato/zato_extra_paths
