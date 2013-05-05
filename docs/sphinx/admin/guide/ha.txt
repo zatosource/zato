@@ -1,0 +1,144 @@
+.. highlight:: bash
+   :linenothreshold: 0
+
+High-availability
+=================
+
+Overview
+--------
+
+Zato's high-availability options can be discussed on several planes, depending 
+on the level of granularity needed and on a need or the lack of to make a given
+component redundant.
+
+Reminding a couple of facts will make it easier to discuss the matter:
+
+* Each server in a cluster always carry the same set of services as the others
+
+* All servers are always active, there's no concept of an active-standby setup
+
+* Each cluster has a single HTTP load-balancer in front of it so the traffic
+  is always distribute fairly over all servers
+
+* If a cluster establishes any AMQP, JMS WebSphere MQ or Zero MQ connections,
+  these are always managed by connector processes - there are as many connectors
+  as there are channels and outgoing connections using these 3 technologies.
+  
+  One of the servers in the cluster assumes a role of the connector server
+  and every connector process runs on the system this particular server is on.
+  
+  Connectos are never redundant, there is always one copy of a given connector
+  process in a given cluster.
+  
+  Should the connector server ever die, another server will pick up the former's duties
+  and the connector processes will be restarted on the system the latter is on.
+  
+Clusters without connectors
+---------------------------
+
+If there are no connectors and all the incoming traffic is HTTP, the frontend
+load-balancer will take care of making servers gets its own fair share of requests
+to handle. Each server contains the same services so if there are at least 2 servers
+running in such a cluster and each one can handle the full traffic in the case the other
+one should fail, it can be said that HA has been provided to a great extent.
+
+.. image:: /gfx/ha-no-connectors.png
+   :alt:
+   
+However, in such a situation, the load-balancer itself becomes a part that has
+no redundant copy so it may be worth considering whether such a particular environment
+shouldn't be composed of at least 2 identical cluster with a load-balancing mechanism
+external to Zato to distribute the requests.
+
+.. image:: /gfx/ha-no-connectors-2-clusters.png
+   :alt:
+
+Naturally, there still remains the question of how to make the external load-balancer
+immune to crashes and downtimes but this is something that should be considered
+on a case by case basis and is well beyond the scope of this document.
+
+Clusters with connectors
+------------------------
+
+If there are AMQP, JMS WebSphere MQ or Zero MQ connectos running in a given Zato
+environment, it's recommended that there be at least 2 clusters to handle the traffic.
+This is because there's a certain gap possible - the value of which depends on 
+:ref:`how servers have been configured <admin-guide-config-server-singleton.connector_server_keep_alive_job_time>`
+- during which it may happen that no connectors are available
+to handle incoming or outgoing connections using these 3 technologies.
+
+.. image:: /gfx/ha-connectors-2-clusters.png
+   :alt:
+
+Monitoring services
+-------------------
+
+* The load-balancer exposes an HTTP monitoring service, on /zato-lb-alive by default,
+  that can be used by external tools to checks whether the component is still alive, e.g.
+  by checking if HTTP response code is 200:
+  
+  .. code-block:: text
+      :emphasize-lines: 4,10
+    
+      $ curl -v localhost:11223/zato-lb-alive
+      * About to connect() to localhost port 11223 (#0)
+      *   Trying 127.0.0.1... connected
+      > GET /zato-lb-alive HTTP/1.1
+      > User-Agent: curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1
+      > Host: localhost:11223
+      > Accept: */*
+      > 
+      * HTTP 1.0, assume close after body
+      < HTTP/1.0 200 OK
+      < Cache-Control: no-cache
+      < Connection: close
+      < Content-Type: text/html
+      < 
+      <html><body><h1>200 OK</h1>
+      HAProxy: service ready.
+      </body></html>
+      * Closing connection #0
+      $
+
+* Each server exposes a /zato/ping service that also can be used by external
+  tools to checks whether the server is still alive, e.g.
+  by checking if HTTP response code is 200 as well:
+  
+  .. code-block:: text
+      :emphasize-lines: 4,9
+    
+      $ curl -v localhost:17010/zato/ping
+      * About to connect() to localhost port 17010 (#0)
+      *   Trying 127.0.0.1... connected
+      > GET /zato/ping HTTP/1.1
+      > User-Agent: curl/7.22.0 (x86_64-pc-linux-gnu) libcurl/7.22.0 OpenSSL/1.0.1
+      > Host: localhost:17010
+      > Accept: */*
+      > 
+      < HTTP/1.1 200 OK
+      < Server: gunicorn/0.16.1
+      < Date: Sun, 05 May 2013 15:55:16 GMT
+      < Connection: keep-alive
+      < Transfer-Encoding: chunked
+      < Content-Type: application/json
+      < X-Zato-CID: K320539453722916924772131370942490069006
+      < 
+      * Connection #0 to host localhost left intact
+      * Closing connection #0
+      {"zato_env": {"details": "", "result": "ZATO_OK", "cid": 
+      "K320539453722916924772131370942490069006"}, "zato_ping_response": {"pong": "zato"}}
+      $
+
+
+Other considerations
+--------------------
+
+Recall from 
+chapters on the architecture
+that Zato makes use of
+`Redis <http://redis.io>`_ and an SQL database, 
+`PostgreSQL <https://www.postgresql.org/>`_
+or
+`Oracle <http://www.oracle.com/us/products/database/>`_. These elements should also
+be part of an HA plan however they should be
+tackled is something outside the scope of this discussion.

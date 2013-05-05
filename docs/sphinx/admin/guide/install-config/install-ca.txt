@@ -1,0 +1,16 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Installing the certificate authority
+====================================
+
+Steps
+-----
+
+* Prepare an empty directory to store the CA in
+* Issue the :doc:`zato ca create ca <../../cli/ca-create-ca>` command
+
+.. note ::
+
+   The CA should be used for development only, it's not a full-featured solution
+   and there are no plans to make it become one.

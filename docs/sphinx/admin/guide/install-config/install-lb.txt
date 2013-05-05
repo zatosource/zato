@@ -1,0 +1,25 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Installing the load-balancer
+============================
+
+Steps
+-----
+
+* Prepare crypto material, in PEM, with no passwords, for the load-balancer to use:
+
+  * Public key
+  * Private key
+  * Certificate
+  * A list of CA certificates the load-balancer can trust
+  
+  Note that Zato ships with :doc:`a simple CA <../../cli/ca>` 
+  that can be used on development environments.
+  
+* Issue the :doc:`zato create load_balancer <../../cli/create-load-balancer>` command
+
+More information
+----------------
+
+:doc:`Click here <./config-lb>` for information on how to configure an already existing load-balancer.
