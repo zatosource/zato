@@ -98,6 +98,6 @@ zato_extra_paths
 Each Zato installation package contains a directory name zato_extra_paths,
 :doc:`documented in its own chapter <./enabling-extra-libs>`,
 and whatever is put into zato_extra_paths will
-automatically appear on PYTHONPATH. This can be used in conjunction with 
+automatically appears on PYTHONPATH. This can be used in conjunction with 
 :ref:`service-sources.txt <admin-installing-services-service-sources.txt>` to install
 services from sources other than flat Python modules.
