@@ -460,7 +460,7 @@ class Job(Base):
     job_type = Column(Enum(SCHEDULER_JOB_TYPE.ONE_TIME, SCHEDULER_JOB_TYPE.INTERVAL_BASED,
                            SCHEDULER_JOB_TYPE.CRON_STYLE, name='job_type'), nullable=False)
     start_date = Column(DateTime(), nullable=False)
-    extra = Column(LargeBinary(400000), nullable=True)
+    extra = Column(LargeBinary(500000), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('jobs', order_by=name, cascade='all, delete, delete-orphan'))
