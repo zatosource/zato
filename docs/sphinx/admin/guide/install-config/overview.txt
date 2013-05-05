@@ -149,7 +149,7 @@ SQL ODB            :doc:`How to install <./install-odb>`                  Not ap
 Redis broker       `The Redis project <http://redis.io>`_                 Not applicable
                    provides information on how to                       
                    install the software
-CA                 :doc:`How to install <./install->`                     Not applicable - the CA should be used
+CA                 :doc:`How to install <./install-ca>`                   Not applicable - the CA should be used
                                                                           only for development clusters, it's
                                                                           recommeded you don't reconfigure it
 ================== ====================================================== ====================================================================
