@@ -71,10 +71,10 @@ Administration guide
     * :doc:`Installing Zato binaries<admin/guide/install-zato>` |
       :doc:`Components<admin/guide/install-config/overview>` |
       :doc:`Command line interface (CLI)<admin/cli/index>` |
-      :doc:`High availability<admin/ha>` |
-      :doc:`Capacity planning<admin/capacity>` |
-      :doc:`Installing services<admin/periodic>` |
-      :doc:`Enabling 3rd-party libraries <progguide/3rd-party-libs>`
+      :doc:`High availability<admin/guide/ha>` |
+      :doc:`Capacity planning<admin/guide/capacity>` |
+      :doc:`Installing services<admin/guide/installing-services>` |
+      :doc:`Enabling 3rd-party libraries <admin/guide/enabling-3rd-party-libs>`
       
 Web admin
 =========
