@@ -74,7 +74,7 @@ Administration guide
       :doc:`High availability<admin/guide/ha>` |
       :doc:`Capacity planning<admin/guide/capacity>` |
       :doc:`Installing services<admin/guide/installing-services>` |
-      :doc:`Enabling 3rd-party libraries <admin/guide/enabling-3rd-party-libs>`
+      :doc:`Enabling extra libraries <admin/guide/enabling-extra-libs>`
       
 Web admin
 =========

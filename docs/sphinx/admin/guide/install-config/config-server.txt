@@ -190,6 +190,8 @@ Must not be repeated across all servers across all cluster re-using the same ODB
 
 The default value is a UUID4 and it's recommended that it not be changed.
 
+.. _admin-guide-config-server-main.service_sources:
+
 main.service_sources
 @@@@@@@@@@@@@@@@@@@@
 
@@ -257,6 +259,8 @@ odb.username
 @@@@@@@@@@@@
 
 Username to connect to the ODB with.
+
+.. _admin-guide-config-server-hot_deploy.pickup_dir:
 
 hot_deploy.pickup_dir
 @@@@@@@@@@@@@@@@@@@@@
