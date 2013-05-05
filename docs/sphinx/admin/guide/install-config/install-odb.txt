@@ -1,0 +1,28 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Installing an SQL ODB
+=====================
+
+Steps
+-----
+
+* Install one of the supported databases
+
+  * PostgreSQL 9.x
+  * Oracle 11.2.x
+  
+* Create a user for Zato servers
+
+* (PostgreSQL only) Create a separate schema for Zato
+
+* Make Zato user the owner of the database created or grant it permissions to issue DDL
+  statements
+  
+* Issue the :doc:`zato create odb <../../cli/create-odb>` command
+
+* Revoke any DDL rights given to the Zato user
+
+.. note ::
+
+    A single ODB can be used be used by multiple clusters.

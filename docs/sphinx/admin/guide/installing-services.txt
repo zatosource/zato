@@ -1,0 +1,103 @@
+Installing services
+===================
+
+There are several ways to install Zato services
+
+* :ref:`Add them to service-sources.txt <admin-installing-services-service-sources.txt>`
+* :ref:`Hot-deploy them from command line <admin-installing-services-hot-deploy-cli>`
+* :ref:`Hot-deploy them from the web-admin <admin-installing-services-hot-web-admin>`
+* :ref:`Add them to zato_extra_paths <admin-installing-services-zato_extra_paths>`
+
+.. _admin-installing-services-service-sources.txt:
+
+service-sources.txt
+-------------------
+
+Each server has a file describing sources, such as directories or names of Python modules
+to :ref:`import services off <admin-guide-config-server-service-sources>`.
+By convention, the file is called service-sources.txt but 
+:ref:`it can be renamed <admin-guide-config-server-main.service_sources>`.
+
+A new entry needs to be added to that file for each new source that 
+a starting server should pick up the services from.
+
+A rollout using service-sources.text can take a couple of forms:
+
+* Using directories and flat Python modules:
+
+    * Create a new directory
+    * Copy Python modules containing the services to be released onto it,
+      note that only flat Python modules can be used, no packages or archives
+      are allowed
+    * Add the path to the directory to service-sources.txt
+    * Repeat steps above for each server
+    * Restart the servers
+    
+* Using flat or dotted Python module names:
+
+    * Make Python modules containing the services available on $PYTHONPATH
+    * Add names of the modules, flat or dotted, to service-sources.txt
+    * Repeat steps above for each server
+    * Restart the servers
+
+.. _admin-installing-services-hot-deploy-cli:
+
+Hot-deploying from command line
+-------------------------------
+
+A Python module containing one or more services can be installed 
+from command line, this will make it available on all servers from a given cluster
+regardless of which server picks up the Python module to import - the information
+will be propagated automatically.
+
+A service which has been installed in such a way will survive the server's restart.
+
+Only flat Python modules can be hot-deployed.
+
+server.conf's option beginning with 
+:ref:`hot_deploy.* <admin-guide-config-server-hot_deploy.pickup_dir>`
+all describe the details of where
+to listen for new services to be installed and where they should be installed,
+how many backups to keep and more.
+
+An example session would look like:
+
+::
+
+    $ cp crm_channel_customer.py ~/zato/server1/pickup-dir/
+    $ 
+    
+Note that a service becomes available only after all servers confirm that it's
+been deployed, in the example below there are 2 servers to wait in the logs
+for a confirmation from.
+
+::
+
+    INFO - 6578:Thread-4 Uploaded package id:[22], payload_name:[crm_channel_customer.py]
+    INFO - 6579:Thread-4 Uploaded package id:[22], payload_name:[crm_channel_customer.py]
+
+.. _admin-installing-services-hot-web-admin:
+
+Hot-deploying from the web admin
+--------------------------------
+
+.. _admin-installing-services-zato_extra_paths:
+
+Flat Python packages can also be hot-deployed in a cluster using the web admin.
+
+.. image:: /gfx/admin-upload-package.png
+   :alt:
+
+Refer to 
+:doc:`web admin's docs <TODO>`
+for more information.
+
+zato_extra_paths
+----------------
+
+Each Zato installation package contains a directory name zato_extra_paths,
+:doc:`documented in its own chapter <./enabling-extra-libs>`,
+and whatever is put into zato_extra_paths will
+automatically appears on PYTHONPATH. This can be used in conjunction with 
+:ref:`service-sources.txt <admin-installing-services-service-sources.txt>` to install
+services from sources other than flat Python modules.

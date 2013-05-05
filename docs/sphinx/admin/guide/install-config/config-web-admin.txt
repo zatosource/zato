@@ -1,0 +1,260 @@
+.. highlight:: json
+   :linenothreshold: 0
+
+Configuring a web admin console
+===============================
+
+=================================================================== ================ =====================================================
+Purpose                                                             File             Example full path
+=================================================================== ================ =====================================================
+:ref:`Main config <admin-guide-config-web-admin-main>`              web-admin.conf   /opt/zato/dev1/web-admin/config/repo/web-admin.conf
+:ref:`Logging configuration <admin-guide-config-web-admin-logging>` logging.conf     /opt/zato/dev1/web-admin/config/repo/logging.conf
+:ref:`Crypto material <admin-guide-config-web-admin-crypto>`        web-admin-\*.pem /opt/zato/dev1/web-admin/config/repo/web-admin-\*.pem
+=================================================================== ================ =====================================================
+
+
+.. _admin-guide-config-web-admin-main:
+
+Main config - web-admin.conf
+----------------------------
+
+Example
+```````
+
+(Long lines reformatted for clarity)
+
+::
+
+  {
+    "host": "0.0.0.0",
+    "port": 8183,
+    "db_type": "postgresql",
+    "log_config": "./config/repo/logging.conf",
+  
+    "DEBUG": 1,
+  
+    "DATABASE_NAME": "zato1",
+    "DATABASE_USER": "zato1",
+    
+    "DATABASE_PASSWORD": "GlAySrBZGwMVsz+fPAepoqt81wI4vShzqHLWwEFkQlCkK0x0khN
+          iP8XFIXvxlROpkq45vu4tLDr38MCfacf0j+mtqkugxSQvMg82h9S6oRXyJYHO9PBy2q
+          WWjK7CgY4Kxy5AXPlEwSqRb85tj0fDScSTWLQqr2jP0oDJE3PpaY/Fgqf4mKEY3wHM/
+          WQh9jzKln9+7n+IC117nWzISXajiOoOGeJ1I/bHSTYEi7l0/+N5JxTEjbRleFNDN/qd
+          d99Lz3rVFVurQWhQFvZZIiqunx8NoWQwdeyCrWpgzIBFKn23g05mzvWQuKFJfs4NRMD
+          ZkhWApP5AqwVgaH9SQ6gFxQ==",
+          
+    "DATABASE_HOST": "localhost",
+    "DATABASE_PORT": "5432",
+  
+    "TIME_ZONE": "America/New_York",
+    "LANGUAGE_CODE": "en-us",
+    "SITE_ID": 368109,
+    
+    "SECRET_KEY": "CApjLd5eMLAovOda4HmkyspWKSVlA09DgQC5FYv6qfR88xZ+Ce+R2RyD+7
+    ho5GfMh/GpJpuwutR1HKmDSFUUc5PEMDL17dRzLAadZo03GD0TAc5/+Y7AhZMLOCHCpDX2xla
+    fzIP9u4Jgk/cvyYBLI2/nUMIptLIbRtimWQzQJrUHgCsqDQAgIunDaDLKH/o4XR0ZXksFidj8
+    pN4Hk58iZCs4HnL6R0HORLkP/nbrG4+tafVVteI7hBCvAU2NVoeVXBPgvWvDaS++vn2z9Hx0H
+    tBhHOBoACaXWnqQqMo/nqMFQUpKnpMghchMzAUm9fK4LjkFI36SUbUgkL0Zo1MhZg==",
+    
+    "ADMIN_INVOKE_NAME": "admin.invoke",
+    
+    "ADMIN_INVOKE_PASSWORD": "d5ZGktt5af597fNQWTSS4y4Jaj4I6Nt/Kr4Ofz2G3/7rtim
+    FJKhbK982cfntMjQWToXBy2U5Y76rqH7Vd8aFMX+TBYcBySkYg2lPiSY8Z85AULqIx7oBrfgX
+    R8q6KbB6T5vQARGyGJ7dCV4JnQ4QcL5EvT0R1+9noC2+UCrzDkOI4lrcjX5x9/cUG73c9GkFc
+    1qbM/4l40iEMV9+fUeyd6YMmqEwiWhlwWLIQRrI83iBu0LJMq4XQ1KoKbkQEaCTVzeaQ5OayP
+    0Dha2vqT2Dvk2AYxaDjWsL0dgDIUHrmuvPrS59aRYdnw6kNngQcAlawucz7B4j8cqGugeRQFr
+    ZRQ==",
+    
+    "ADMIN_INVOKE_PATH": "/zato/admin/invoke"
+  }
+
+
+Discussion
+``````````
+
+host
+@@@@
+
+Hostname for the web admin to listen on.
+
+port
+@@@@
+
+Port for the web admin to bind to.
+
+db_type
+@@@@@@@
+
+Database type for the web admin to use, can be one of:
+
+* postgresql
+* oracle
+
+log_config
+@@@@@@@@@@
+
+Path to the :ref:`logging configuration <admin-guide-config-web-admin-logging>`.
+If not absolute, the path is relative to web admin's top-level directory.
+
+DEBUG
+@@@@@
+
+Whether web admin should run in DEBUG mode:
+
+* 1 if yes
+* 0 otherwise
+
+DATABASE_NAME
+@@@@@@@@@@@@@
+
+Name of the database to use.
+
+DATABASE_USER
+@@@@@@@@@@@@@
+
+Database user to use.
+
+DATABASE_PASSWORD
+@@@@@@@@@@@@@@@@@
+
+Database user's password to use, encrypted using web admin's private key. The password
+can be 
+:doc:`decrypted <../../cli/decrypt>`
+and
+:doc:`encrypted <../../cli/encrypt>`
+from command line using 
+:doc:`the CLI <../../cli/index>`.
+
+DATABASE_HOST
+@@@@@@@@@@@@@
+
+Host of the database to use.
+
+DATABASE_PORT
+@@@@@@@@@@@@@
+
+Port of the database to use.
+
+TIME_ZONE
+@@@@@@@@@
+
+Same as `Django's TIME_ZONE <https://docs.djangoproject.com/en/1.5/ref/settings/#time-zone>`_.
+
+LANGUAGE_CODE
+@@@@@@@@@@@@@
+
+Same as `Django's LANGUAGE_CODE <https://docs.djangoproject.com/en/1.5/ref/settings/#language-code>`_.
+
+SITE_ID
+@@@@@@@
+
+Same as `Django's SITE_ID <https://docs.djangoproject.com/en/1.5/ref/settings/#site-id>`_.
+
+SECRET_KEY
+@@@@@@@@@@
+
+Same as `Django's SECRET_KEY <https://docs.djangoproject.com/en/1.5/ref/settings/#secret-key>`_. 
+
+Encrypted using web admin's private key. The key
+can be 
+:doc:`decrypted <../../cli/decrypt>`
+and
+:doc:`encrypted <../../cli/encrypt>`
+from command line using 
+:doc:`the CLI <../../cli/index>`.
+
+ADMIN_INVOKE_NAME
+@@@@@@@@@@@@@@@@@
+
+Name of the technical user the web admin should use for invoking Zato services.
+
+ADMIN_INVOKE_PASSWORD
+@@@@@@@@@@@@@@@@@@@@@
+
+Technical user's password.
+
+Encrypted using web admin's private key. The password
+can be 
+:doc:`decrypted <../../cli/decrypt>`
+and
+:doc:`encrypted <../../cli/encrypt>`
+from command line using 
+:doc:`the CLI <../../cli/index>`.
+
+ADMIN_INVOKE_PATH
+@@@@@@@@@@@@@@@@@
+
+HTTP path admin services the console should invoke are available on.
+
+.. _admin-guide-config-web-admin-logging:
+
+Logging configuration - logging.conf
+------------------------------------
+
+Example
+```````
+
+::
+
+    [loggers]
+    keys=root,zato
+    
+    [handlers]
+    keys=rotating_file_handler, stdout_handler
+    
+    [formatters]
+    keys=default_formatter, colour_formatter
+    
+    [logger_root]
+    level=WARN
+    handlers=rotating_file_handler, stdout_handler
+    
+    [logger_zato]
+    level=DEBUG
+    handlers=rotating_file_handler, stdout_handler
+    qualname=zato
+    propagate=0
+    
+    [handler_rotating_file_handler]
+    class=logging.handlers.RotatingFileHandler
+    formatter=default_formatter
+    args=('./logs/web-admin.log', 'a', 20000000, 10)
+    
+    [handler_stdout_handler]
+    class=StreamHandler
+    formatter=colour_formatter
+    args=(sys.stdout,)
+    
+    [formatter_default_formatter]
+    format=%(asctime)s - %(levelname)s - %(message)s
+    
+    [formatter_colour_formatter]
+    format=%(asctime)s - %(levelname)s - %(message)s
+    class=zato.common.util.ColorFormatter
+
+Discussion
+``````````
+
+Uses `Python's own syntax <http://docs.python.org/2.7/library/logging.config.html#configuration-file-format>`_
+to configure how and where logging messages should be  written to.
+
+Of special interest are keys:
+
+* logger_root.level - sets the log level for anything but Zato 
+* logger_zato.level - sets the log level for Zato and nothing else
+
+By default logs are written out to local files but it's possible to reconfigure
+the logging to use any other destination Python itself supports such as syslog, Zero MQ etc.
+
+.. _admin-guide-config-web-admin-crypto:
+
+Crypto material - web-admin-\*.pem
+----------------------------------
+
+Web admin's cryptograpical material is kept in PEM files. Private files must not
+be password-protected.
+
+* web-admin-priv-key.pem - private key
+* web-admin-pub-key.pem - public key
+* web-admin-cert.pem - certificate
+* web-admin-ca-certs.pem - a list of CA certificates web admin should trust
