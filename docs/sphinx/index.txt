@@ -243,7 +243,7 @@ Public SOAP and JSON server API
 Zato, the open-source project
 ==============================
 
-    * :doc:`Getting involved<project/getting-involved>` | :doc:`Diversity statement<project/diversity-statement>`
+    * :doc:`Getting involved<project/get-involved>` | :doc:`Diversity statement<project/diversity>`
     
 .. toctree::
    :hidden:
@@ -258,6 +258,7 @@ Zato, the open-source project
    progguide/*
    progguide/clients/*
    progguide/outconn/*
+   project/*
    public-api/*
    public-api/details/*
    security/*
