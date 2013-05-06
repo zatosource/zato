@@ -1,0 +1,206 @@
+Statistics guide
+================
+
+Zato's :ref:`service statistics  <stats-guide-service-statistics>` allow one to observe
+trends in behaviour of services deployed
+on servers and to compare historical data in order to find weak spots and first
+symptoms of a misbehaving service. 
+
+They're meant to be an aid for developers and administrators more than a strategical
+tool for making long-term decisions.
+
+Another group of statistics are these :doc:`produced by the load-balancer <./lb>`, concerning
+its current state - how many servers are up, whether there were any downtimes,
+how many clients are connected and more.
+
+.. _stats-guide-service-statistics:
+
+Service statistics
+------------------
+
+Each execution of any service prompts Zato to store certain statistics in the Redis
+broker:
+
+* Which service has been invoked and when it was
+* How long it took for the service to complete
+* :ref:`CID <progguide-write-service-cid>` the service has been invoked with
+
+Zato's own 
+`internal (look up stats_jobs) <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/spring_context.py>`_
+:doc:`scheduler's jobs <../progguide/scheduler>` aggregate raw information
+into higher-order structures, all stored in Redis too - per minute stats are
+converted into per hour status, these get aggregated into per day information and so
+on until a summary information concerning each year has been constructed.
+
+Note that the lowest level data that has been already aggregated is left in Redis and, unless it's 
+needed, :doc:`must be cleaned up manually or using a custom job <./maintenance>`
+in order to avoid an unnecessary growth of Redis.
+
+Trends and summaries
+--------------------
+
+Trends are summaries are used to get an understanding of which services are the
+slowest ones and which ones are the most commonly used.
+
+.. image:: /gfx/stats/trends-summaries.png
+   :alt:
+   
+The difference between the two is that trends charts are generated on fly
+and they're a heavy-weight operation. Trends should not be used for checking 
+more than just a few hours worth of data.
+
+Summaries are pre-computed, have no charts, and can span aribitrary datetime
+ranges, hours, days, months or even years.
+
+.. warning ::
+
+  Again, note that you shouldn't use trends for displaying more than a few hours
+  of statistics - doing so is a very intensive operation which effectively works
+  as a DoS attack which needs restarting a server.
+
+Understanding the inteface
+--------------------------
+
+.. image:: /gfx/stats/overview.png
+   :alt:
+   
+.. image:: /gfx/stats/comparison.png
+   :alt:
+   :scale: 50%
+
+* Both trends and summaries present a unified inteface with the whole exception
+  being that summaries have no charts
+  
+* Statistics can always be downloaded in CSV
+  
+* There are always at least two groups of statistics. If a side-by-side
+  comparison has been choosen, there are also two groups of relevant statistics
+  for the time period to compare with.
+  
+  Each column in each group can be clicked to make the stats sorted by the column.
+  
+  Hovering over a row highlights the same service in other groups.
+  
+  All statistics always deal with the given time period selected only - for
+  summaries this can be arbitrarily long.
+  
+Slowest services
+~~~~~~~~~~~~~~~~~~
+======= ===============================================================
+Column  Notes
+======= ===============================================================
+Name    Service name
+M       Service's mean response time in milliseconds
+AM      Average response of all services, 
+        including the service from the current row
+U%      Service usage share as a percentage of all service invocations,
+        i.e. CURRENT_SERVICE_USAGE / TOTAL_SERVICE_USAGE
+T%      Service usage share as a percentage of time spent by Zato
+        on processing all services, 
+        i.e. TIME_SPENT_BY_THIS_SERVICE / TOTAL_TIME_SPENT_BY_ZATO
+TU      Total usage of all services
+(Trend) Shown for trends statistics only. A chart showing the trend
+        of response times, the chart can be hovered over to get information
+        on a concrete response in a given moment - the value is in 
+        milliseconds.
+
+        .. image:: /gfx/stats/trends-hover.png
+           :alt:
+           :align: left
+        
+======= ===============================================================
+  
+Most commonly used
+~~~~~~~~~~~~~~~~~~
+
+======= =====================================================================
+Column  Notes
+======= =====================================================================
+Name    Service name
+U       How many times the given service was invoked
+Rq/s    How many times a second the service was being invoked
+U%      Service usage share as a percentage of all service invocations,
+        i.e. CURRENT_SERVICE_USAGE / TOTAL_SERVICE_USAGE
+T%      Service usage share as a percentage of time spent by Zato
+        on processing all services, 
+        i.e. TIME_SPENT_BY_THIS_SERVICE / TOTAL_TIME_SPENT_BY_ZATO
+TU      Total usage of all services
+(Trend) Shown for trends statistics only. A chart showing the trend
+        of request rates, the chart can be hovered over to get information
+        on many times a second the service was invoked in a given moment.
+
+        .. image:: /gfx/stats/trends-hover2.png
+           :alt:
+           :align: left
+======= =====================================================================
+
+Attention grabbers
+~~~~~~~~~~~~~~~~~~
+
+
+.. image:: /gfx/stats/attention.png
+   :alt:
+   
+It is possible to :ref:`set <stats-guide-settings>` that special attention grabbers
+be displayed to the left of each service if:
+
+* Response time is greater than a threshold specified (for trends)
+* Usage share is greater than a percentage specified (for summaries)
+
+.. _stats-guide-settings:
+
+Settings
+--------
+
+.. image:: /gfx/stats/settings.png
+   :alt:
+   :scale: 50%
+   
+scheduler -> How often to process raw statistics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+How often to invoke a background job to turn raw statistics into per-minute
+statistics - default value lets some statistics be gathered in Redis before
+they're aggregated.
+
+The value should take into account how long it will take to process a single 
+batch of statistics and how big the batch will be (next setting).
+
+scheduler -> At most, how many raw statistics to process in one batch
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a background job starts to aggregate raw statistics, it will fetch at
+most that many raw data items from Redis.
+
+This should be set in conjunction with the previous settings - proper values should
+take into account how many requests a second Zato processes.
+
+For instance, if:
+
+* How often to process raw statistics is 120
+* How often to process raw statistics is 90000
+* 90000 / 120 = 750 req/s
+* This is the upper limit of raw data stored that Zato will make use of - 
+  if now the platform starts processing 900 req/s any additional requests
+  will be ignored and the statistics will be incorrect.
+  
+The value should take into account how often the batches are fetched (previous setting)
+as processing of the previous batch should complete before a new one is started.
+
+scheduler -> How often to aggregate per-minute statistics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+How often to fetch per-minute statistics and turn them into statistics for
+each hour, day, month and so on. Should be no less than 60.
+
+Attention grabbers -> Slow service threshold
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If an average response time in less than this value, an attention grabber will
+be displayed to the left of the service name in trends.
+
+Attention grabbers -> Top service usage threshold
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If a given service's usage share is more than this value, an attention grabber will
+be displayed to the left of the service name in summaries.
