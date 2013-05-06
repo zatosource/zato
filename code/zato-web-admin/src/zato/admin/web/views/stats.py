@@ -361,7 +361,7 @@ def _get_stats(client, start, stop, n, n_type, stats_type=None):
 
 # ##############################################################################
 
-def _stats_data_csv(user_profile, req_input, client, stats_type, is_custom):
+def _stats_data_csv(user_profile, req_input, client, ignored, stats_type, is_custom):
     
     n_type_keys = {
         'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services', 
