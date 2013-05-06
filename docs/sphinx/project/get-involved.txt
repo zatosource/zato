@@ -1,0 +1,28 @@
+Getting involved
+================
+
+Want to help? **Superb!**
+
+* Programmers should famliarize themselves with 
+  `the source code on GitHub <https://github.com/zatosource/zato/>`_.
+  Fork and send patches at will! :-)
+
+* Designers are always needed to help make 
+  `the website <TODO>`_, 
+  :doc:`documentation <../index>`
+  and
+  :doc:`Zato itself <TODO-link-to-web-admin>`
+  even more prettier!
+  
+* Wanna send a quick documentation patch or suggestion? Just 
+  `open a new ticket in GitHub <https://github.com/zatosource/zato/issues>`_
+  
+* Packagers are wanted to :doc:`help port Zato to more platforms <../admin/guide/install-zato>`
+
+* Always feel welcome to spend time on `forums <TODO>`_ and `IRC <irc://irc.freenode.net/zato>`_
+  if you'd like to help other community members out or just chat in general
+  
+And remember - Zato project is all about tolerance - make sure you always act
+in accordance with our :doc:`diversity statement <./diversity>`.
+
+Have fun and see you there!
