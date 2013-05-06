@@ -7,7 +7,7 @@ Configuring the load-balancer
 ========================================================================= =============== =====================================================
 Purpose                                                                   File            Example full path
 ========================================================================= =============== =====================================================
-:ref:`Main config <admin-guide-config-lb-main>`                           zato.config     /opt/zato/dev1/web-admin/config/repo/web-admin-\*.pem
+:ref:`Main config <admin-guide-config-lb-main>`                           zato.config     /opt/zato/dev1/web-admin/config/repo/zato.config
 :ref:`Load-balancer's XML-RPC agent config <admin-guide-config-lb-agent>` lb-agent.conf   /opt/zato/dev1/web-admin/config/repo/web-admin.conf
 :ref:`Logging configuration <admin-guide-config-lb-logging>`              logging.conf    /opt/zato/dev1/web-admin/config/repo/logging.conf
 :ref:`Crypto material <admin-guide-config-lb-crypto>`                     zato-lba-\*.pem /opt/zato/dev1/web-admin/config/repo/web-admin-\*.pem
