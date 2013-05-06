@@ -1,0 +1,24 @@
+Statistics maintenance
+======================
+
+Statistics need proper maintenance in order to avoid the unlimited growth
+of Redis, the place where they're stored.
+
+If you know you won't need information past or prior to a given date, you can 
+use a  maintenance form to delete unneeded data.
+
+.. image:: /gfx/stats/maintenance.png
+   :alt:
+   :scale: 50%
+
+The same can also be achieved using 
+:doc:`the API <../public-api/details/zato.stats.delete>`
+- for instance, a custom 
+:doc:`sheduler's job <../progguide/scheduler>`
+or an external tool
+can invoke the service periodically in order to reclaim space.
+
+.. warning ::
+
+ It's guaranteed that without proper maintenance the statistics
+ will sooner or later clog up Redis completely.
