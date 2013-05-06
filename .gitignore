@@ -1,7 +1,6 @@
 code/.coverage
 code/.installed.cfg
 code/bin/*
-code/buildout.cfg
 code/build/*
 code/develop-eggs/*
 code/eggs/*
