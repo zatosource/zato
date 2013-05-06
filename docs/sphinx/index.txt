@@ -263,3 +263,4 @@ Zato, the open-source project
    public-api/details/*
    security/*
    stats/*
+   web-admin/*
