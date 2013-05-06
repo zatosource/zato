@@ -16,7 +16,8 @@ politics, race, religion, sex, sexual orientation, socio-economic status,
 and subculture. We welcome people regardless of the values of these or
 other attributes.
 
-We encourage and offer tolerance and expect the same from you.
+We encourage and offer tolerance and expect the same from you. Indeed, there will
+be no tolerance for intolerance.
 
 Note - this diversity statement was heavily inspired by 
 `the Python's one <http://python.org/community/diversity/>`_.
