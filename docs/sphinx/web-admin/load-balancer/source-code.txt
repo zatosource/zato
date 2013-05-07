@@ -1,0 +1,23 @@
+Load-balancer - Config source code view
+=======================================
+
+Overview
+--------
+
+Lets one update the 
+`HAProxy load-balancer's configuration file <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html>`_
+directly from the browser.
+
+Any lines containing the '# ZATO' string must not be deleted and the comment
+must be left intact.
+
+* Menu path: Clusters -> (pick one from the table) -> Load-balancer -> Config source code view
+* Example address: http://localhost:8183/zato/load-balancer/manage/source-code/cluster/1/
+
+.. image:: /gfx/web-admin/load-balancer/config-source-code.png
+   :width: 90%
+   
+Validating and saving configuration
+-----------------------------------
+
+Same as for :ref:`the GUI config view <web-admin-load-balancer-gui-validating-saving>`.

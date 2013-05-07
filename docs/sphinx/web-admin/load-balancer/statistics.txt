@@ -1,0 +1,7 @@
+Load-balancer - Statistics
+==========================
+
+:doc:`Load-balancer's statistics <../../stats/lb>`
+are documented in their own chapter
+along with 
+:doc:`other stats <../../stats/guide>`.

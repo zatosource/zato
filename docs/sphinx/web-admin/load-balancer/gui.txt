@@ -82,6 +82,8 @@ Header             Notes
                      `server stanza <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html#4-server>`_
 ================== ==========================================================================================
 
+.. _web-admin-load-balancer-gui-validating-saving:
+
 Validating and saving configuration
 -----------------------------------
 
