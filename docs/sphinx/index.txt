@@ -92,8 +92,8 @@ Web admin
       :doc:`Editing a server<web-admin/servers/edit>`
       
     * **Load balancer:**
-      :doc:`GUI view<web-admin/load-balancer/config-gui>` | 
-      :doc:`Source code view<web-admin/load-balancer/config-source-code>` | 
+      :doc:`GUI view<web-admin/load-balancer/gui>` | 
+      :doc:`Source code view<web-admin/load-balancer/source-code>` | 
       :doc:`Remote commands<web-admin/load-balancer/remote-commands>` | 
       :doc:`Statistics<web-admin/load-balancer/statistics>`
       
@@ -264,3 +264,4 @@ Zato, the open-source project
    security/*
    stats/*
    web-admin/*
+   web-admin/load-balancer/*
