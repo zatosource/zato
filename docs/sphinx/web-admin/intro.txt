@@ -38,8 +38,7 @@ Read more
       
     * **Servers:**
       :doc:`Main view<./servers/main>` | 
-      :doc:`Adding and removing servers from a cluster<./servers/add-remove>` | 
-      :doc:`Editing a server<./servers/edit>`
+      :doc:`Adding and removing servers <./servers/add-remove>`
       
     * **Load balancer:**
       :doc:`GUI view<./load-balancer/gui>` | 
