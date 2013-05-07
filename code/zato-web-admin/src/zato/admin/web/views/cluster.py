@@ -255,6 +255,7 @@ def servers(req):
         bck_http_plain = client.get_config()['backend']['bck_http_plain']
         lb_client_invoked = True
     except Exception, e:
+        logger.error(format_exc(e))
         lb_client_invoked = False
     
     if lb_client_invoked:
@@ -338,10 +339,10 @@ def servers_add_remove_lb(req, action, server_id):
 class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
-    service_name = 'zato.cluster.server.delete'
+    service_name = 'zato.server.delete'
     
     def __call__(self, req, *args, **kwargs):
-        response = req.zato.client.invoke('zato.cluster.server.get-by-id', {'id':req.zato.id})
+        response = req.zato.client.invoke('zato.server.get-by-id', {'id':req.zato.id})
 
         server = req.zato.odb.query(Server).filter_by(id=req.zato.id).one()
 

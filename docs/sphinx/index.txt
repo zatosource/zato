@@ -88,8 +88,7 @@ Web admin
       
     * **Servers:**
       :doc:`Main view<web-admin/servers/main>` | 
-      :doc:`Adding and removing servers from a cluster<web-admin/servers/add-remove>` | 
-      :doc:`Editing a server<web-admin/servers/edit>`
+      :doc:`Adding and removing servers<web-admin/servers/add-remove>`
       
     * **Load balancer:**
       :doc:`GUI view<web-admin/load-balancer/gui>` | 
@@ -265,3 +264,4 @@ Zato, the open-source project
    stats/*
    web-admin/*
    web-admin/load-balancer/*
+   web-admin/servers/*
