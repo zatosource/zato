@@ -4,13 +4,13 @@ Clusters
 Overview
 --------
 
-.. image:: /gfx/web-admin/clusters/index.png
-   :width: 90%
-
 Lists all clusters the ODB the web admin is configured to use contain.
 
 * Menu path: Clusters
 * Example address: http://localhost:8183/zato/cluster/
+
+.. image:: /gfx/web-admin/clusters/index.png
+   :width: 90%
 
 ============= ===========================================================================================
 Header        Notes

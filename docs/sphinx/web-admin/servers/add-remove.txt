@@ -4,11 +4,11 @@ Adding and removing servers
 Overview
 --------
 
-.. image:: /gfx/web-admin/servers/add-remove.png
-   :width: 90%
-
 * Menu path: Clusters -> (pick one from the table) -> Servers -> Add to LB/Remove from LB/Delete
 * Example address: http://localhost:8183/zato/cluster/
+
+.. image:: /gfx/web-admin/servers/add-remove.png
+   :width: 90%
 
 How to add a server to the load-balancer
 ----------------------------------------

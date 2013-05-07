@@ -10,7 +10,7 @@ Use '*' to show all services
 or type one or more service name keywords to search for. Keywords are AND-joined.
 
 * Menu path: Services
-* Example address: http://localhost:8183/zato/cluster/
+* Example address: http://localhost:8183/zato/service/?cluster=1&name_filter=stats
 
 .. image:: /gfx/web-admin/services/main1.png
    :width: 90%
