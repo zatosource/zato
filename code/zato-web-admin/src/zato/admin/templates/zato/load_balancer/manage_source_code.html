@@ -4,16 +4,19 @@
 {% endblock %}
 
 {% block extra_js %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/load_balancer.js"></script>
+
 {% endblock %}
 
 {% block content %}
 <h2 class="zato">Clusters : <a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Load balancer : Config source code view</h2>
 
-{% if messages %}
-    {% for message in messages %}
-    <div id="user-message-div"><pre id="user-message" class="user-message user-message-{{ message.tags }}">{{ message }}</pre></div>
-    {% endfor %}
-{% endif %}
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 <div class='page_prompt'>
 <a href="{% url lb-manage cluster.id %}" class="common">Config GUI view</a>
@@ -29,7 +32,7 @@
 
 
 <div id="markup">
-    <form action="{% url lb-manage-source-code-validate-save cluster.id %}" method="post">
+    <form action="{% url lb-manage-source-code-validate-save cluster.id %}" method="post" id="lb-validate-save">
         <table id="data-table">
             <tr>
                 <td>
