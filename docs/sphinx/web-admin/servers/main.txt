@@ -4,13 +4,13 @@ Servers - main view
 Overview
 --------
 
-.. image:: /gfx/web-admin/servers/main.png
-   :width: 90%
-
 Lists all servers in a given cluster along with their state.
 
 * Menu path: Clusters -> (pick one from the table) -> Servers
 * Example address: http://localhost:8183/zato/cluster/servers/?cluster=1
+
+.. image:: /gfx/web-admin/servers/main.png
+   :width: 90%
 
 =================== ===========================================================================================
 Header              Notes
