@@ -1,0 +1,69 @@
+Load-balancer
+=============
+
+Overview
+--------
+
+Lists all clusters the ODB the web admin is configured to use contain.
+
+* Menu path: Clusters -> (pick one from the table) -> Load-balancer
+* Example address: http://localhost:8183/zato/load-balancer/manage/cluster/1/
+
+Config GUI view
+---------------
+
+.. image:: /gfx/web-admin/load-balancer/config-gui.png
+   :width: 90%
+   
+Shows current server status, whether all are up or not, details of key configuration
+and a GUI form to update load-balancer's core settings.
+
+HAProxy status 
+~~~~~~~~~~~~~~
+
+Displays information whether all servers are up running or if some are down.
+
+Use the 
+:doc:`load-balancer's statistics <../stats/lb>`
+to find out long a given server has been up or down.
+
+.. image:: /gfx/web-admin/load-balancer/down-stats.png
+   :width: 90%
+
+Agent info 
+~~~~~~~~~~
+
+============= ===========================================================================================
+Header        Notes
+============= ===========================================================================================
+Started on
+ Work dir
+ HAProxy command
+  Key file
+  Cert file
+  CA certs file
+   Cert verify fields:
+============= ===========================================================================================
+ 
+Frontend config 
+~~~~~~~~~~~~~~~
+
+Syslog host, port, level facility
+
+Timeouts (ms) connect, client server
+
+Plain HTTP host port log maxconn monitor URI 
+  
+Plain HTTP servers 
+~~~~~~~~~~~~~~~~~~
+
+Name, e.g. zato-quickstart-server-01 host port
+
+Config source code view
+-----------------------
+
+Remote commands
+---------------
+
+Statistics 
+----------
