@@ -6,6 +6,15 @@ Want to help? **Superb!**
 * Programmers should famliarize themselves with 
   `the source code on GitHub <https://github.com/zatosource/zato/>`_.
   Fork and send patches at will! :-)
+  
+  * Most of the server's code is written in Python on top of 
+    `gunicorn <http://gunicorn.org>`_ and a dozen of other libraries
+  
+  * The web admin frontend is written using Django, jQuery and a bit of other JS libraries
+  
+  * All other parts are in Python and make heavy use of other open-source projects,
+    there are 
+    `almost 100 dependencies listed in buildout.cfg <https://github.com/zatosource/zato/blob/master/code/buildout.cfg>`_
 
 * Designers are always needed to help make 
   `the website <TODO>`_, 
