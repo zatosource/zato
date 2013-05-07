@@ -67,6 +67,8 @@ Plain HTTP                                        * host - host LB should accept
                                                     :ref:`can be used by external tools <admin-ha-monitoring-services>` 
                                                     to check whether LB is still alive
 ================================================= =======================================================================================================================================
+
+.. _web-admin-load-balancer-servers:
   
 Plain HTTP servers 
 ------------------
@@ -75,8 +77,12 @@ Plain HTTP servers
 Header             Notes
 ================== ==========================================================================================
 (Name of a server) * host, port - where should the LB believe the given server is running.
+                     
                      This is meant to inform the LB of a server's whereabouts, changing the
                      values won't make a server use the new ones.
+                     
+                     host and port always need to be kept synchronized with each server's
+                     :ref:`main.gunicorn_bind <admin-guide-config-server-main.gunicorn_bind>`
                      
                    * extra - extra information passed to HAProxy to use in a given 
                      `server stanza <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html#4-server>`_

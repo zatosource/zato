@@ -105,10 +105,13 @@ Example
 Discussion
 ``````````
 
+.. _admin-guide-config-server-main.gunicorn_bind:
+
 main.gunicorn_bind
 @@@@@@@@@@@@@@@@@@
 
-Host and port to bind to.
+Host and port to bind to. Note that it always needs to synchronized with 
+:ref:`the address the LB will attempt to find a server at <web-admin-load-balancer-servers>`.
 
 main.gunicorn_worker_class
 @@@@@@@@@@@@@@@@@@@@@@@@@@
