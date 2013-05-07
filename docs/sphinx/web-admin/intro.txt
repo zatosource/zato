@@ -34,7 +34,7 @@ Read more
       :doc:`Securing the web admin<./security>`
       
     * **Clusters:**
-      :doc:`Main view<./clusters/main>`
+      :doc:`Main view<./clusters>`
       
     * **Servers:**
       :doc:`Main view<./servers/main>` | 
