@@ -1,0 +1,32 @@
+Uploading a service
+===================
+
+Overview
+--------
+
+Hot-deploys one or more services to a cluster. All servers are updated automatically.
+If any service already exists, it will be replaced. Currently running instances
+of a service will not be stopped.
+
+* Menu path: Services -> (choose a cluster and click 'Upload a service package' below the search form)
+* Example address: http://localhost:8183/zato/service/?cluster=1&name_filter=stats
+
+.. image:: /gfx/web-admin/services/upload.png
+   :width: 90%
+
+
+Uploading services is an asynchronous process - always check the server logs
+to find out if everything went fine. For each server, there must be as many
+confirmations of  a successful deployment in server logs as there are
+:doc:`main.gunicorn_workers<../../admin/guide/install-config/config-server>` configured.
+
+::
+
+   INFO - 2774:Thread-4 - Uploaded package id:[1], payload_name:[sio_example.py]
+   INFO - 2775:Thread-4 - Uploaded package id:[1], payload_name:[sio_example.py]
+
+.. note ::
+
+  Only flat Python modules can be hot-deployed - 
+  :doc:`visit here <../../admin/guide/installing-services>`
+  for information on how to make more complex service packages available to Zato.
