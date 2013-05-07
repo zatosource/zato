@@ -11,11 +11,7 @@
 {% block content %}
 
 {% if not zato_clusters %}
-    <p>
-    There aren't any Zato clusters registered with this ZatoAdmin instance.
-    <a href="{% url cluster %}" class="common">Click here</a> to register a new cluster first.
-    <br/><br/>
-    </p>
+    {% include "zato/no-clusters.html" %}
 {% else %}
 
 <h2 class="zato">Statistics : Settings</h2>
