@@ -70,7 +70,7 @@ class LoadBalancerAgent(SSLServer):
         self.certfile = os.path.abspath(os.path.join(self.repo_dir, self.json_config['certfile']))
         self.ca_certs = os.path.abspath(os.path.join(self.repo_dir, self.json_config['ca_certs']))
         
-        self.pid_path = os.path.abspath(os.path.join(self.work_dir, self.json_config['pid_file']))
+        self.pid_path = os.path.abspath(os.path.join(self.repo_dir, '../', '../', self.json_config['pid_file']))
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
         logging.config.fileConfig(log_config)

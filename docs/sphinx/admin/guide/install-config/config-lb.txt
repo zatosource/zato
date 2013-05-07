@@ -119,7 +119,7 @@ pid_file
 @@@@@@@@
 
 Path to a file into which the PID of a running load-balancer agent should written out,
-relative to :ref:`work_dir <admin-guide-config-lb-agent-work_dir>`.
+relative to load-balancer's top-level directory.
 
 
 .. _admin-guide-config-lb-logging:
