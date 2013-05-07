@@ -33,19 +33,10 @@
             'id',
             'name',
             'description',
-            'odb_type',
-            
-            'odb_host',
-            'odb_port',
-            'odb_db_name',
-            'odb_user',
-            'odb_schema',
+
             'lb_host',
             'lb_port',
             'lb_agent_port',
-            'broker_host',
-            'broker_start_port',
-            'broker_token',
         ]
     }
     </script>
@@ -57,12 +48,6 @@
 
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
-
-<!--
-    <div class='page_prompt'>
-        <a href="javascript:$.fn.zato.cluster.create()">Create a new cluster</a>
-    </div>
--->
 
     <div id="markup">
         <table id="data-table">
@@ -81,16 +66,7 @@
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
                     
-                    <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
-                    <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
                     <th class='ignore'>&nbsp;</th>
@@ -139,7 +115,7 @@
                     </td>
                     <td>
                         {% if item.lb_config %}
-                            <a href="{% url lb-manage item.id %}">Load balancer</a>
+                            <a href="{% url lb-manage item.id %}">Load-balancer</a>
                         {% endif %}
                     </td>
                     <td>
@@ -152,19 +128,9 @@
                     <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     <td class='ignore'>{{ item.name }}</td>
                     <td class='ignore'>{{ item.description|default_if_none:'' }}</td>
-                    <td class='ignore'>{{ item.odb_type }}</td>
-                    
-                    <td class='ignore'>{{ item.odb_host }}</td>
-                    <td class='ignore'>{{ item.odb_port }}</td>
-                    <td class='ignore'>{{ item.odb_db_name }}</td>
-                    <td class='ignore'>{{ item.odb_user }}</td>
-                    <td class='ignore'>{{ item.odb_schema|default_if_none:'' }}</td>
                     <td class='ignore'>{{ item.lb_host }}</td>
                     <td class='ignore'>{{ item.lb_port }}</td>
                     <td class='ignore'>{{ item.lb_agent_port }}</td>
-                    <td class='ignore'>{{ item.broker_host }}</td>
-                    <td class='ignore'>{{ item.broker_start_port }}</td>
-                    <td class='ignore'>{{ item.broker_token }}</td>
                 </tr>
             {% endfor %}
             {% else %}
@@ -175,63 +141,6 @@
 
             </tbody>
         </table>
-    </div>
-
-    <div id="create-div" class='data-popup ignore'>
-        <div class="bd">
-            <form action="{% url cluster-create %}" method="post" id="create-form">
-                <table class="form-data">
-                    <tr>
-                        <td style="vertical-align:middle;width:15%">Name</td>
-                        <td colspan="5">{{ create_form.name }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">Description</td>
-                        <td colspan="5">{{ create_form.description }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">ODB type</td>
-                        <td>{{ create_form.odb_type }}</td>
-                        <td style="vertical-align:middle">ODB host</td>
-                        <td>{{ create_form.odb_host }}</td>
-                        <td style="vertical-align:middle">ODB port</td>
-                        <td>{{ create_form.odb_port }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">ODB name</td>
-                        <td>{{ create_form.odb_db_name }}</td>
-                        <td style="vertical-align:middle">ODB user</td>
-                        <td>{{ create_form.odb_user }}</td>
-                        <td style="vertical-align:middle">ODB schema</td>
-                        <td>{{ create_form.odb_schema }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">LB host</td>
-                        <td>{{ create_form.lb_host }}</td>
-                        <td style="vertical-align:middle">LB port</td>
-                        <td>{{ create_form.lb_port }}</td>
-                        <td style="vertical-align:middle">LB agent port</td>
-                        <td>{{ create_form.lb_agent_port }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">Broker host</td>
-                        <td colspan='2'>{{ create_form.broker_host }}</td>
-                        <td style="vertical-align:middle">Broker starting port</td>
-                        <td colspan='2'>{{ create_form.broker_start_port }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">Broker token<br/><span class='form_hint'>(will be echoed)</span></td>
-                        <td colspan='5' style="vertical-align:middle">{{ create_form.broker_token }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="6" style="text-align:right">
-                            <input type="submit" value="OK" />
-                            <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                        </td>
-                    </tr>
-                </table>
-            </form>
-        </div>
     </div>
 
     <div id="edit-div" class='data-popup ignore'>
@@ -247,38 +156,12 @@
                         <td colspan="5">{{ edit_form.description }}</td>
                     </tr>
                     <tr>
-                        <td style="vertical-align:middle">ODB type</td>
-                        <td>{{ edit_form.odb_type }}</td>
-                        <td style="vertical-align:middle">ODB host</td>
-                        <td>{{ edit_form.odb_host }}</td>
-                        <td style="vertical-align:middle">ODB port</td>
-                        <td>{{ edit_form.odb_port }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">ODB name</td>
-                        <td>{{ edit_form.odb_db_name }}</td>
-                        <td style="vertical-align:middle">ODB user</td>
-                        <td>{{ edit_form.odb_user }}</td>
-                        <td style="vertical-align:middle">ODB schema</td>
-                        <td>{{ edit_form.odb_schema }}</td>
-                    </tr>
-                    <tr>
                         <td style="vertical-align:middle">LB host</td>
                         <td>{{ edit_form.lb_host }}</td>
                         <td style="vertical-align:middle">LB port</td>
                         <td>{{ edit_form.lb_port }}</td>
                         <td style="vertical-align:middle">LB agent port</td>
                         <td>{{ edit_form.lb_agent_port }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">Broker host</td>
-                        <td colspan='2'>{{ edit_form.broker_host }}</td>
-                        <td style="vertical-align:middle">Broker starting port</td>
-                        <td colspan='2'>{{ edit_form.broker_start_port }}</td>
-                    </tr>
-                    <tr>
-                        <td style="vertical-align:middle">Broker token<br/><span class='form_hint'>(will be echoed)</span></td>
-                        <td colspan='5' style="vertical-align:middle">{{ edit_form.broker_token }}</td>
                     </tr>
                     <tr>
                         <td colspan="6" style="text-align:right">

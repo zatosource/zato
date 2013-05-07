@@ -40,10 +40,7 @@
 <h2 class="zato">Technical accounts</h2>
 
 {% if not zato_clusters %}
-    <div class='page_prompt'>
-    There aren't any Zato clusters registered with this ZatoAdmin instance.
-    <a href="{% url cluster %}" class="common">Click here</a> to create a new cluster first.
-    </div>
+    {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>

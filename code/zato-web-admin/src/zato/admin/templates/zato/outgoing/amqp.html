@@ -49,11 +49,7 @@
 <h2 class="zato">Outgoing AMQP connections</h2>
 
 {% if not zato_clusters %}
-    <p>
-    There aren't any Zato clusters registered with this ZatoAdmin instance.
-    <a href="{% url clusters %}" class="common">Click here</a> to register a new cluster first.
-    <br/><br/>
-    </p>
+    {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
