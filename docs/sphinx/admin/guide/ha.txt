@@ -70,6 +70,8 @@ to handle incoming or outgoing connections using these 3 technologies.
 .. image:: /gfx/ha-connectors-2-clusters.png
    :alt:
 
+.. _admin-ha-monitoring-services:
+
 Monitoring services
 -------------------
 

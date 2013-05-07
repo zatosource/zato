@@ -84,7 +84,7 @@ Web admin
       :doc:`Securing the web admin<web-admin/security>`
       
     * **Clusters:**
-      :doc:`Main view<web-admin/clusters/main>`
+      :doc:`Main view<web-admin/clusters>`
       
     * **Servers:**
       :doc:`Main view<web-admin/servers/main>` | 
