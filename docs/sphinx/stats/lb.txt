@@ -2,7 +2,9 @@ Load-balancer's statistics
 ==========================
 
 `HAProxy <http://haproxy.1wt.eu/>`_, the underlying tool Zato's load-balancer is built on top of,
-provides statistics regarding its current and historical state, which servers
+provides 
+`statistics <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html#9>`_
+regarding its current and historical state, which servers
 are up, how many clients there are, what is the transfer rate and similar data.
 
 Note that the link to statistics requires a username/password combination be set in 

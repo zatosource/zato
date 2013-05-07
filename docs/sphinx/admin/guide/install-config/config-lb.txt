@@ -25,8 +25,8 @@ One thing that you may want to edit is the username and password to browse the
 load-balancer's statistics with, available under 'defaults -> stats auth'.
 
 However, if you're an advanced HAProxy user you may wish to update other parts 
-yourself too, just keep in mind that any lines starting with the '# ZATO' string must
-be left intact.
+yourself too, just keep in mind that any lines containing the '# ZATO' string must
+not be deleted and the comment must be left intact.
 
 Note that any changes you introduce won't be picked up by HAProxy until it will have
 been restarted.
