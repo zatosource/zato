@@ -30,8 +30,7 @@ except ImportError:
     from ordereddict import OrderedDict
 
 # Django
-from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseServerError
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
@@ -92,23 +91,22 @@ def _get_validate_save_flag(cluster_id, req_post):
 
     return save
 
-def _client_validate_save(req, meth, *args):
+def _client_validate_save(req, func, *args):
     """ A convenience function for validating or validating & saving a config
     file on a remote SSL XML-RPC server.
     """
     save = args[1]
     try:
-        meth(*args)
+        func(*args)
     except Exception, e:
-        msg = "Caught an exception while invoking the load-balancer agent, e={e}".format(e=format_exc(e))
+        msg = 'Caught an exception while invoking the load-balancer agent, e:[{}]'.format(format_exc(e))
         logger.error(msg)
-        messages.add_message(req, messages.INFO, msg, extra_tags="failure")
+        return HttpResponseServerError(msg)
     else:
         if save:
-            msg = "Config validated and saved successfully"
+            return HttpResponse('Config validated and saved successfully')
         else:
-            msg = "Config is valid, it's safe to save it"
-        messages.add_message(req, messages.INFO, msg, extra_tags="success")
+            return HttpResponse("Config is valid, it's safe to save it")
 
 @method_allowed("GET", "POST")
 def remote_command(req, cluster_id):
@@ -248,9 +246,7 @@ def validate_save(req, cluster_id):
                 lb_config.backend[backend_type][backend_name][token] = value
 
     # Invoke the LB agent
-    _client_validate_save(req, client.validate_save, lb_config, save)
-
-    return redirect("lb-manage", cluster_id=cluster_id)
+    return _client_validate_save(req, client.validate_save, lb_config, save)
 
 @method_allowed("GET")
 def manage_source_code(req, cluster_id):
@@ -278,9 +274,7 @@ def validate_save_source_code(req, cluster_id):
 
     # Invoke the LB agent
     client = get_lb_client(cluster)
-    _client_validate_save(req, client.validate_save_source_code, req.POST["source_code"], save)
-
-    return redirect("lb-manage-source-code", cluster_id=cluster_id)
+    return _client_validate_save(req, client.validate_save_source_code, req.POST["source_code"], save)
 
 @method_allowed("GET")
 def get_addresses(req, cluster_id):
