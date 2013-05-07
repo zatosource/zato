@@ -42,8 +42,8 @@ Read more
       :doc:`Editing a server<./servers/edit>`
       
     * **Load balancer:**
-      :doc:`GUI view<./load-balancer/config-gui>` | 
-      :doc:`Source code view<./load-balancer/config-source-code>` | 
+      :doc:`GUI view<./load-balancer/gui>` | 
+      :doc:`Source code view<./load-balancer/source-code>` | 
       :doc:`Remote commands<./load-balancer/remote-commands>` | 
       :doc:`Statistics<./load-balancer/statistics>`
       
