@@ -389,6 +389,7 @@ class Service(Base):
         self.amqp_channels = [] # Not used by the database
         self.wmq_channels = [] # Not used by the database
         self.zmq_channels = [] # Not used by the database
+        self.scheduler_jobs = [] # Not used by the database
         self.deployment_info = [] # Not used by the database
         self.source_info = None # Not used by the database
         self.may_be_deleted = False # Not used by the database
