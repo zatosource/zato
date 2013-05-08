@@ -1,0 +1,37 @@
+Service details - Slow responses
+================================
+
+Overview
+--------
+
+It's possible to :ref:`set a slow response threshold <web-admin-services-edit>`
+for a service so that last 100 slow invocations of a service will be stored for 
+a later inspection.
+
+* Menu path: Services -> (find a service and clicks its name) -> Slow responses
+* Example address: http://localhost:8183/zato/service/request-response/zato.service.invoke/?cluster=1
+
+.. image:: /gfx/web-admin/service-details/slow-response.png
+   :width: 90%
+
+Details
+-------
+   
+.. image:: /gfx/web-admin/service-details/slow-response-details.png
+   :width: 90%
+
+=================== =========================================================
+Header              Notes
+=================== =========================================================
+Configuration       One in how many invocations should be stored as a sample
+                    request/response pair. Using 0 disables the feature
+                    but doesn't delete the old sample, if any has been 
+                    stored.
+CID                 :ref:`Correlation ID <progguide-write-service-cid>`
+Request timestamp   When was the request received,
+                    :doc:`in current user's timezone <>`
+Response timestamp  When was the response returned,
+                    :doc:`in current user's timezone <>`
+Request             Request data
+Response            Response data
+=================== =========================================================

@@ -33,6 +33,8 @@ Internal       A boolean flag indicating whether a given service is Zato's inter
 1h mean trend  Last hour's mean response time, as a chart 
 ============== ===========================================================================
 
+.. _web-admin-services-edit:
+
 Edit
 ----
 

@@ -42,7 +42,7 @@ Read more
       
     * **Load balancer:**
       :doc:`GUI view<./load-balancer/gui>` | 
-      :doc:`Source code view<./load-balancer/source-code>` | 
+      :doc:`Source code<./load-balancer/source-code>` | 
       :doc:`Remote commands<./load-balancer/remote-commands>` | 
       :doc:`Statistics<./load-balancer/statistics>`
       

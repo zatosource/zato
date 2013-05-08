@@ -1,0 +1,23 @@
+Service details - Source code
+=============================
+
+Overview
+--------
+
+Returns source code of a Python module a service is defined in along with
+additional metadata.
+
+* Menu path: Services -> (find a service and clicks its name) -> Invoker
+* Example address: http://localhost:8183/zato/service/source-info/zato.ping/?cluster=1
+
+.. image:: /gfx/web-admin/service-details/source-code.png
+   :width: 95%
+   
+====== ======================================================
+Header Notes
+====== ======================================================
+Server Name of a server the source code has been fetched from
+Path   File-system path the service has been deployed from
+Hash   Hash of a Python module the service is in
+Source Source code of the module
+====== ======================================================

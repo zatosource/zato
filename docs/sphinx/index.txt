@@ -103,7 +103,7 @@ Web admin
     * **Service details:**
       :doc:`Main view<web-admin/service-details/main>` | 
       :doc:`Invoker<web-admin/service-details/invoker>` | 
-      :doc:`Source code view<web-admin/service-details/source-code>` | 
+      :doc:`Source code<web-admin/service-details/source-code>` | 
       :doc:`WSDL<web-admin/service-details/wsdl>` | 
       :doc:`Sample requests/responses<web-admin/service-details/sample-req-resp>` | 
       :doc:`Slow responses<web-admin/service-details/slow-responses>`
