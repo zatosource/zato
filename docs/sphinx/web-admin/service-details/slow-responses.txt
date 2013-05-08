@@ -14,24 +14,46 @@ a later inspection.
 .. image:: /gfx/web-admin/service-details/slow-response.png
    :width: 90%
 
+===================== ===================================================
+Header                Notes
+===================== ===================================================
+Threshold             Slow response threshold which the service exceeded
+CID                   :ref:`Correlation ID <progguide-write-service-cid>`
+Request time          When was the service invoked,
+                      :doc:`in current user's timezone <>`
+Response time         When did the service reply,
+                      :doc:`in current user's timezone <>`
+Processing time (ms)  How long did it take for the service to reply, 
+                      in milliseconds
+===================== ===================================================
+
+
 Details
 -------
    
 .. image:: /gfx/web-admin/service-details/slow-response-details.png
    :width: 90%
 
-=================== =========================================================
-Header              Notes
-=================== =========================================================
-Configuration       One in how many invocations should be stored as a sample
-                    request/response pair. Using 0 disables the feature
-                    but doesn't delete the old sample, if any has been 
-                    stored.
-CID                 :ref:`Correlation ID <progguide-write-service-cid>`
-Request timestamp   When was the request received,
-                    :doc:`in current user's timezone <>`
-Response timestamp  When was the response returned,
-                    :doc:`in current user's timezone <>`
-Request             Request data
-Response            Response data
-=================== =========================================================
+===================== ===================================================
+Header                Notes
+===================== ===================================================
+CID                   :ref:`Correlation ID <progguide-write-service-cid>`
+Threshold             Slow response threshold which the service exceeded
+Processing time (ms)  How long did it take for the service to reply, 
+                      in milliseconds
+Request time          When was the service invoked,
+                      :doc:`in current user's timezone <>`
+Response time         When did the service reply,
+                      :doc:`in current user's timezone <>`
+Request               Request the service received
+Response              Response the service received
+===================== ===================================================
+
+Request and response can be pretty-printed in order to ease with understanding
+how they looked like.
+
+.. note ::
+
+  As with :doc:`sample requests/responses <./sample-req-resp>` - only the actual
+  payload the service received/produced is shown - this is a caveat only
+  services invoked through SOAP XML channels should be concerned with.
