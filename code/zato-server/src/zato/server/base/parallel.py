@@ -345,6 +345,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             _info[item.soap_action] = Bunch()
             _info[item.soap_action].id = item.id
             _info[item.soap_action].name = item.name
+            _info[item.soap_action].is_active = item.is_active
             _info[item.soap_action].is_internal = item.is_internal
             _info[item.soap_action].url_path = item.url_path
             _info[item.soap_action].method = item.method
@@ -352,6 +353,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             _info[item.soap_action].service_id = item.service_id
             _info[item.soap_action].service_name = item.service_name
             _info[item.soap_action].impl_name = item.impl_name
+            _info[item.soap_action].data_format = item.data_format
             _info[item.soap_action].transport = item.transport
             _info[item.soap_action].connection = item.connection
             http_soap.add(item.url_path, _info)
