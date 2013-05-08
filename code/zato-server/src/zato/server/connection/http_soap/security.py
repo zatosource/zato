@@ -327,6 +327,7 @@ class Security(object):
             soap_action_bunch = url_path_bunch.setdefault(msg.soap_action, Bunch())
 
             soap_action_bunch.sec_def = sec_def
+            soap_action_bunch.is_active = msg.is_active
             soap_action_bunch.transport = msg.transport
             soap_action_bunch.data_format = msg.data_format
             

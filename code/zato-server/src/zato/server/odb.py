@@ -124,6 +124,7 @@ class ODBManager(SessionWrapper):
             
             _info = Bunch()
             _info[item.soap_action] = Bunch()
+            _info[item.soap_action].is_active = item.is_active
             _info[item.soap_action].transport = item.transport
             _info[item.soap_action].data_format = item.data_format
 
