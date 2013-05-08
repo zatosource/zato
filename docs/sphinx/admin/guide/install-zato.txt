@@ -18,7 +18,7 @@ Steps
 -----
 
 * Prepare a system with at least 300 MB of disk space 
-* Ensure you have root/sudo permissionsons that system
+* Ensure you have root/sudo permissions on that system
 * Make sure the system will let the installer establish outgoing connections to the Internet,
   this is needed in order to download all the dependencies required
 * Create an empty directory (DIR)
