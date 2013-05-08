@@ -113,7 +113,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
         self.request_dispatcher.security = ConnectionHTTPSOAPSecurity(
-            self.server.odb.get_url_security(self.server.cluster_id)[0],
+            self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
         # Create all the expected connections
