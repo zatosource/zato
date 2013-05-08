@@ -1,0 +1,43 @@
+Service details - Sample requests/responses
+===========================================
+
+Overview
+--------
+
+Lets one specify that 1 in N invocations of a service should store its request
+and response for a later use.
+
+For instance, 1 in 10,000 invocations could serve as a usage example.
+
+By default, requests and responses are displayed as they were accepted/produced
+by a service - toggling pretty print on and off makes them be shown in a 
+human-readable form or otherwise, assuming they're either JSON or XML.
+
+Note that only the payload a service received or produced is returned - without any
+transport-specific headers, envelopes or similar - this is mostly important
+only if you're using SOAP XML as for JSON requests/responses or SIO responses,
+the raw data is already what a service deals with, there are no envelopes of any sort.
+
+Put a server into DEBUG mode to find out what the actual raw data is.
+
+* Menu path: Services -> (find a service and clicks its name) -> Sample request/response
+* Example address: http://localhost:8183/zato/service/request-response/zato.service.invoke/?cluster=1
+
+.. image:: /gfx/web-admin/service-details/sample-req-resp.png
+   :width: 90%
+
+=================== =========================================================
+Header              Notes
+=================== =========================================================
+Configuration       One in how many invocations should be stored as a sample
+                    request/response pair. Using 0 disables the feature
+                    but doesn't delete the old sample, if any has been 
+                    stored.
+CID                 :ref:`Correlation ID <progguide-write-service-cid>`
+Request timestamp   When was the request received,
+                    :doc:`in current user's timezone <>`
+Response timestamp  When was the response returned,
+                    :doc:`in current user's timezone <>`
+Request             Request data
+Response            Response data
+=================== =========================================================

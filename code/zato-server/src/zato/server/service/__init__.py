@@ -683,12 +683,16 @@ class Service(object):
         #
         key, freq = request_response.should_store(self.kvdb, self.usage, self.name)
         if freq:
+
+            # TODO: Don't parse it here and a moment later below
+            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''            
+            
             data = {
                 'cid': self.cid,
                 'req_ts': self.invocation_time.isoformat(),
                 'resp_ts': self.handle_return_time.isoformat(),
                 'req': self.request.raw_request or '',
-                'resp': self.response.payload or '',
+                'resp':resp,
             }
             request_response.store(self.kvdb, key, self.usage, freq, **data)
             
@@ -696,6 +700,10 @@ class Service(object):
         # Slow responses
         #
         if self.processing_time > self.slow_threshold:
+
+            # TODO: Don't parse it here and a moment earlier above
+            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''            
+            
             data = {
                 'cid': self.cid,
                 'proc_time': self.processing_time,
@@ -703,7 +711,7 @@ class Service(object):
                 'req_ts': self.invocation_time.isoformat(),
                 'resp_ts': self.handle_return_time.isoformat(),
                 'req': self.request.raw_request or '',
-                'resp': self.response.payload or '',
+                'resp': resp,
             }
             slow_response.store(self.kvdb, self.name, **data)
             
