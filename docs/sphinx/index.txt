@@ -265,4 +265,5 @@ Zato, the open-source project
    web-admin/*
    web-admin/load-balancer/*
    web-admin/servers/*
+   web-admin/service-details/*
    web-admin/services/*
