@@ -29,52 +29,6 @@ Introduction
       :doc:`Introducing the web admin panel<intro/tutorial03>` |
       :doc:`Writing a Zato service<intro/tutorial04>` |
       :doc:`Hot-deploying the service and invoking it<intro/tutorial05>`
-
-Programming guide
-=================
-
-    * **Developing services and applications:**
-      :doc:`Overview <progguide/overview>` |
-      :doc:`Writing a service <progguide/write-service>` |
-      :doc:`Request and response objects<progguide/request-response>` |
-      :doc:`Channels<progguide/channels>` |
-      :doc:`Outgoing connections<progguide/outconn/overview>` |
-      :doc:`Key/value DB (Redis)<progguide/kvdb>` |
-      :doc:`Scheduler<progguide/scheduler>` |
-      :doc:`Invoking other services <progguide/invoking-services>` |
-      :doc:`Python client<progguide/clients/python>` |
-      :doc:`Security<progguide/security>` |
-      :doc:`Documenting<progguide/documenting>`
-      
-    * **Request/response documents:**
-      :doc:`SimpleIO (SIO) <progguide/sio>` | 
-      :doc:`JSON <progguide/json>` |
-      :doc:`XML <progguide/xml>` | 
-      :doc:`Other data formats <progguide/other-formats>`
-      
-    * **Sync and async:**
-      :doc:`Synchronous and asynchronous message flow<progguide/sync-async/flow>`
-      
-    * **Service hooks:**
-      :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
-      
-    * **Logging and debugging techniques:**
-      :doc:`Logging<progguide/logging>` | 
-      :doc:`Debugging<progguide/debugging>`
-      
-    * **Customizing web admin:**
-      :doc:`Making sure you work on the right environment<progguide/web-admin-settings>`
-
-Administration guide
-====================
-
-    * :doc:`Installing Zato binaries<admin/guide/install-zato>` |
-      :doc:`Components<admin/guide/install-config/overview>` |
-      :doc:`Command line interface (CLI)<admin/cli/index>` |
-      :doc:`High availability<admin/guide/ha>` |
-      :doc:`Capacity planning<admin/guide/capacity>` |
-      :doc:`Installing services<admin/guide/installing-services>` |
-      :doc:`Enabling extra libraries <admin/guide/enabling-extra-libs>`
       
 Web admin
 =========
@@ -152,6 +106,52 @@ Web admin
       :doc:`Date and time<web-admin/settings/date-time>` |
       :doc:`Cluster color markers<web-admin/settings/cluster-color-markers>`
 
+Programming guide
+=================
+
+    * **Developing services and applications:**
+      :doc:`Overview <progguide/overview>` |
+      :doc:`Writing a service <progguide/write-service>` |
+      :doc:`Request and response objects<progguide/request-response>` |
+      :doc:`Channels<progguide/channels>` |
+      :doc:`Outgoing connections<progguide/outconn/overview>` |
+      :doc:`Key/value DB (Redis)<progguide/kvdb>` |
+      :doc:`Scheduler<progguide/scheduler>` |
+      :doc:`Invoking other services <progguide/invoking-services>` |
+      :doc:`Python client<progguide/clients/python>` |
+      :doc:`Security<progguide/security>` |
+      :doc:`Documenting<progguide/documenting>`
+      
+    * **Request/response documents:**
+      :doc:`SimpleIO (SIO) <progguide/sio>` | 
+      :doc:`JSON <progguide/json>` |
+      :doc:`XML <progguide/xml>` | 
+      :doc:`Other data formats <progguide/other-formats>`
+      
+    * **Sync and async:**
+      :doc:`Synchronous and asynchronous message flow<progguide/sync-async/flow>`
+      
+    * **Service hooks:**
+      :doc:`Hooking into a service's lifecycle <progguide/service-hooks>`
+      
+    * **Logging and debugging techniques:**
+      :doc:`Logging<progguide/logging>` | 
+      :doc:`Debugging<progguide/debugging>`
+      
+    * **Customizing web admin:**
+      :doc:`Making sure you work on the right environment<progguide/web-admin-settings>`
+
+Administration guide
+====================
+
+    * :doc:`Installing Zato binaries<admin/guide/install-zato>` |
+      :doc:`Components<admin/guide/install-config/overview>` |
+      :doc:`Command line interface (CLI)<admin/cli/index>` |
+      :doc:`High availability<admin/guide/ha>` |
+      :doc:`Capacity planning<admin/guide/capacity>` |
+      :doc:`Installing services<admin/guide/installing-services>` |
+      :doc:`Enabling extra libraries <admin/guide/enabling-extra-libs>`
+      
 Architecture
 ============
 
