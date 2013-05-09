@@ -208,6 +208,7 @@ class ConfigStore(object):
                     _info[soap_action] = Bunch()
                     _info[soap_action].id = item.id
                     _info[soap_action].name = item.name
+                    _info[soap_action].is_active = item.is_active
                     _info[soap_action].is_internal = item.is_internal
                     _info[soap_action].url_path = item.url_path
                     _info[soap_action].method = item.method
