@@ -199,7 +199,7 @@ class BaseConnector(BrokerMessageReceiver):
         
         self.sql_pool_store = app_context.get_object('sql_pool_store')
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = odb_data
-        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME]
+        self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         
         self._setup_odb()
         
