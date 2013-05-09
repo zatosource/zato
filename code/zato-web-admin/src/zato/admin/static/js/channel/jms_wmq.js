@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.ChannelWMQ = new Class({
     toString: function() {
-        var s = '<ChannelWMQ id:{0} name:{1} is_active:{2} def_id:{3} queue:{4} consumer_tag_prefix:{5} service:{6}>';
+        var s = '<ChannelWMQ id:{0} name:{1} is_active:{2} def_id:{3} queue:{4} service:{5}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
