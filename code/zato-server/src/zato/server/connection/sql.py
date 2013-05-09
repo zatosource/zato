@@ -40,6 +40,7 @@ from validate import is_boolean, is_integer, VdtTypeError
 from springpython.context import DisposableObject
 
 # Zato
+from zato.common import PASSWORD_SHADOW
 from zato.common.odb import engine_def, ping_queries
 
 class SessionWrapper(object):
@@ -195,7 +196,7 @@ class PoolStore(DisposableObject):
                 del self[name]
                 
             config_no_sensitive = deepcopy(config)
-            config_no_sensitive['password'] = '***'
+            config_no_sensitive['password'] = PASSWORD_SHADOW
             pool = self.sql_conn_class(name, config, config_no_sensitive)
 
             wrapper = SessionWrapper()
