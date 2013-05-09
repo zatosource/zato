@@ -27,6 +27,7 @@ from copy import deepcopy
 from cStringIO import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
+from traceback import format_exc
 from time import time
 
 # SQLAlchemy
@@ -49,18 +50,24 @@ class SessionWrapper(object):
     def __init__(self):
         self.session_initialized = False
         self.pool = None
+        self.logger = getLogger(self.__class__.__name__)
         
-    def init_session(self, pool, use_scoped_session=True):
+    def init_session(self, name, pool, use_scoped_session=True, warn_on_ping_fail=False):
         self.pool = pool
-        self.pool.ping()
         
-        if use_scoped_session:
-            self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
+        try:
+            self.pool.ping()
+        except Exception, e:
+            msg = 'Could not ping:[{}], session will be left uninitialized, e:[{}]'.format(name, format_exc(e))
+            self.logger.warn(msg)
         else:
-            self._Session = sessionmaker(bind=self.pool.engine)
-            
-        self._session = self._Session()
-        self.session_initialized = True
+            if use_scoped_session:
+                self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
+            else:
+                self._Session = sessionmaker(bind=self.pool.engine)
+                
+            self._session = self._Session()
+            self.session_initialized = True
     
     def session(self):
         return self._Session()
@@ -72,9 +79,9 @@ class SQLConnectionPool(object):
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
     def __init__(self, name, config, config_no_sensitive):
-        self.logger = getLogger(self.__class__.__name__)
         self.name = name
         self.config = config
+        self.logger = getLogger(self.__class__.__name__)
         
         # Safe for printing out to logs, any sensitive data has been shadowed
         self.config_no_sensitive = config_no_sensitive 
@@ -178,6 +185,7 @@ class PoolStore(DisposableObject):
         self.sql_conn_class = sql_conn_class
         self._lock = RLock()
         self.wrappers = {}
+        self.logger = getLogger(self.__class__.__name__)
         
     def __getitem__(self, name):
         """ Checks out the connection pool.
@@ -200,7 +208,7 @@ class PoolStore(DisposableObject):
             pool = self.sql_conn_class(name, config, config_no_sensitive)
 
             wrapper = SessionWrapper()
-            wrapper.init_session(pool)
+            wrapper.init_session(name, pool)
             
             self.wrappers[name] = wrapper
     
@@ -208,7 +216,7 @@ class PoolStore(DisposableObject):
         """ Stops a pool and deletes it from the store.
         """
         with self._lock:
-            self.wrappers[name].engine.dispose()
+            self.wrappers[name].pool.engine.dispose()
             del self.wrappers[name]
             
     def __str__(self):
@@ -225,7 +233,8 @@ class PoolStore(DisposableObject):
         password.
         """
         with self._lock:
-            config = deepcopy(self.wrappers[name].config)
+            self[name].pool.engine.dispose()
+            config = deepcopy(self.wrappers[name].pool.config)
             config['password'] = password
             self[name] = config
         

@@ -35,7 +35,7 @@ from paste.util.multidict import MultiDict
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, ZATO_NONE
+from zato.common import DEPLOYMENT_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
      DeploymentStatus, HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
@@ -66,7 +66,7 @@ class ODBManager(SessionWrapper):
         to the value pointed to by the server's .cluster attribute.
         """
         if not self.session_initialized:
-            self.init_session(self.pool, False)
+            self.init_session(ZATO_ODB_POOL_NAME, self.pool, False)
             
         try:
             self.server = self._session.query(Server).\
