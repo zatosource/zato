@@ -207,7 +207,7 @@ class Index(_BaseView):
                 value = getattr(msg_item, name, None)
                 if value is not None:
                     value = getattr(value, 'text', '') or value
-                if value:
+                if value or value == 0:
                     setattr(item, name, value)
             self.items.append(item)
     
