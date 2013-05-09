@@ -96,6 +96,8 @@ zato_cid_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
 zato_details_path = '//zato:zato_env/zato:details'
 zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces)
 
+PASSWORD_SHADOW = '***'
+
 SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
 
 #iso8601_format = '%Y-%m-%dT%H:%M:%S.%fZ'
@@ -329,6 +331,13 @@ class NoDistributionFound(ZatoException):
     def __init__(self, path):
         super(NoDistributionFound, self).__init__(None, 
             'No Disutils distribution in path:[{}]'.format(path))
+        
+class Inactive(ZatoException):
+    """ Raised when an attempt was made to use an inactive resource, such
+    as an outgoing connection or a channel.
+    """
+    def __init__(self, name):
+        super(Inactive, self).__init__(None, '[{}] is inactive'.format(name))
     
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.

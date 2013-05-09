@@ -21,6 +21,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from copy import deepcopy
 from threading import RLock
 from traceback import format_exc
 
@@ -28,7 +29,8 @@ from traceback import format_exc
 from fs.ftpfs import FTPFS, _GLOBAL_DEFAULT_TIMEOUT
 
 # Zato
-from zato.common import ZatoException
+from zato.common import Inactive, PASSWORD_SHADOW
+from zato.common.util import TRACE1
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,16 @@ class FTPStore(object):
         """
         self.conn_params[params.name] = params
         
+        msg = 'FTP params added:[{!r}]'
+        
+        if logger.isEnabledFor(TRACE1):
+            logger.log(TRACE1, msg.format(params))
+            
+        elif logger.isEnabledFor(logging.DEBUG):
+            params = deepcopy(params)
+            params['password'] = PASSWORD_SHADOW
+            logger.debug(params)
+        
     def add_params(self, params_list):
         with self._lock:
             for params in params_list:
@@ -70,7 +82,7 @@ class FTPStore(object):
                 timeout = params.timeout if params.timeout else _GLOBAL_DEFAULT_TIMEOUT
                 return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
             else:
-                raise ZatoException('FTP connection [{0}] is not active'.format(params.name))
+                raise Inactive(params.name)
         
     def create_edit(self, params, old_name):
         with self._lock:
@@ -86,20 +98,18 @@ class FTPStore(object):
                 finally:
                     self._add(params)
                         
-            if old_name:
+            if old_name and old_name != params.name:
                 del self.conn_params[old_name]
-                msg = 'FTP connection updated, name:[{}], old_name:[{}]'.format(params.name, old_name)
-            else:
-                msg = 'FTP connection created, name:[{}]'.format(params.name)
                 
-            logger.debug(msg)
+            msg = 'FTP connection stored, name:[{}], old_name:[{}]'.format(params.name, old_name)
+            logger.info(msg)
                 
     def change_password(self, name, password):
         with self._lock:
             self.conn_params[name].password = password
-            logger.debug('Password updated - FTP connection [{}]'.format(name))
+            logger.info('Password updated - FTP connection [{}]'.format(name))
 
     def delete(self, name):
         with self._lock:
             del self.conn_params[name]
-            logger.debug('FTP connection [{}] deleted'.format(name))
+            logger.info('FTP connection [{}] deleted'.format(name))
