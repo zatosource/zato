@@ -172,7 +172,7 @@ class WorkerStore(BrokerMessageReceiver):
         # Connect to ODB
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
         self.odb = SessionWrapper()
-        self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
+        self.odb.init_session(ZATO_ODB_POOL_NAME, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
         
         # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
