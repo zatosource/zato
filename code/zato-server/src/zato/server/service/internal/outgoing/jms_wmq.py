@@ -170,7 +170,8 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': OUTGOING.JMS_WMQ_DELETE, 'name': item.name,
+                       'old_name': item.name, 'id':item.id}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
                 
             except Exception, e:
