@@ -14,6 +14,8 @@ is in /opt/zato/bin/zato - hence the full path to zato_extra_paths is
 This directory can be used to enable any libraries, dependencies or services
 themselves needed for a particular Zato installation.
 
+.. _admin-guide-enabling-extra-libs-pymqi:
+
 PyMQI and WebSphere MQ
 ----------------------
 
