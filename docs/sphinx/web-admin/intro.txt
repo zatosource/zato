@@ -88,15 +88,13 @@ Read more
       :doc:`Remote commands<./kvdb/remote-commands>`
       
     * **Scheduler:**
-      :doc:`One-time jobs<./scheduler/one-time>` |
-      :doc:`Interval-based jobs<./scheduler/interval-based>` |
-      :doc:`Cron-style jobs<./scheduler/cron-style>`
+      :doc:`Main view<./scheduler/main>`
       
     * **Statistics:**
-      :doc:`Trends<./stats/trends>` |
-      :doc:`Summaries<./stats/summary>` |
-      :doc:`Settings<./stats/settings>` |
-      :doc:`Maintenance<./stats/maintenance>`
+      *(Documented in their own section)*
+      :doc:`Guide<../stats/guide>` |
+      :doc:`Maintenance<../stats/maintenance>` | 
+      :doc:`Load-balancer's statistics<../stats/lb>`
       
     * **User settings:**
       :doc:`Date and time<./settings/date-time>` |

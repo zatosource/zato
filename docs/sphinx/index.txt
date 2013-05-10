@@ -92,15 +92,13 @@ Web admin
       :doc:`Remote commands<web-admin/kvdb/remote-commands>`
       
     * **Scheduler:**
-      :doc:`One-time jobs<web-admin/scheduler/one-time>` |
-      :doc:`Interval-based jobs<web-admin/scheduler/interval-based>` |
-      :doc:`Cron-style jobs<web-admin/scheduler/cron-style>`
+      :doc:`Main view<web-admin/scheduler/main>`
       
     * **Statistics:**
-      :doc:`Trends<web-admin/stats/trends>` |
-      :doc:`Summaries<web-admin/stats/summary>` |
-      :doc:`Settings<web-admin/stats/settings>` |
-      :doc:`Maintenance<web-admin/stats/maintenance>`
+      *(Documented in their own section)*
+      :doc:`Guide<stats/guide>` |
+      :doc:`Maintenance<stats/maintenance>` | 
+      :doc:`Load-balancer's statistics<stats/lb>`
       
     * **User settings:**
       :doc:`Date and time<web-admin/settings/date-time>` |
@@ -263,8 +261,14 @@ Zato, the open-source project
    security/*
    stats/*
    web-admin/*
+   web-admin/channels/*
+   web-admin/conn-def/*
+   web-admin/kvdb/*
    web-admin/load-balancer/*
+   web-admin/outgoing/*
+   web-admin/scheduler/*
    web-admin/security/*
    web-admin/servers/*
    web-admin/service-details/*
    web-admin/services/*
+   web-admin/settings/*
