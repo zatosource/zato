@@ -8,10 +8,11 @@ Used to create, update, delete and browse technical accounts.
 
 On HTTP level a technical account is similar to 
 :doc:`HTTP Basic Auth <./basic-auth>` except it doesn't use BASE64, a username
-and password are sent in clear text in :ref:`HTTP headers documented below <TODO>`.
+and password are sent in clear text in :ref:`HTTP headers documented below 
+<web-admin-security-tech-account>`.
 
-Technical accounts are meant to be used in environments where BASE64 is not
-available or cumbersome to use.
+Technical accounts are meant to be used in environments where BASE64 is 
+cumbersome to use or not available at all.
 
 
 * Menu path: Security -> Technical accounts
@@ -28,9 +29,8 @@ Create and Edit
 ======== ========================================================
 Header   Notes
 ======== ========================================================
-Name     Connection name
-Username HTTP user name 
-Realm    HTTP realm name (won't be used for outgoing connections)
+Name     Connection name which also serves as the username for
+         clients to use
 ======== ========================================================
 
 A newly created security definition a password set a random UUID4
@@ -60,3 +60,75 @@ Deletes a security definition and all the connections that make use of it.
   
 HTTP headers
 ------------
+
+HTTP clients need to pass usernames in the X-Zato-User header and the
+accompanying password in X-Zato-Password.
+
+The HTTP sessions caught below illustrate how the headers should be used. 
+For the purpose of this discussion, assume that:
+
+* A /foo/bar :doc:`plain HTTP channel <../TODO>` has been created and assigned a
+  myusername technical account 
+  
+* myusername's password is mypassword
+
+::
+
+  $ curl -v localhost:17010/foo/bar -H X-Zato-User:myusername -H X-Zato-Password:mypassword
+  * About to connect() to localhost port 17010 (#0)
+  *   Trying 127.0.0.1... connected
+  > GET /foo/bar HTTP/1.1
+  > User-Agent: curl/7.22.0 (x86_64-pc-linux-gnu)
+  > Host: localhost:17010
+  > Accept: */*
+  > X-Zato-User:myusername
+  > X-Zato-Password:mypassword
+  > 
+  < HTTP/1.1 200 OK
+  < Server: gunicorn/0.16.1
+  < Date: Fri, 10 May 2013 17:24:42 GMT
+  < Connection: keep-alive
+  < Transfer-Encoding: chunked
+  < Content-Type: text/plain
+  < X-Zato-CID: K297888237060215241230205806003977942023
+  < 
+  * Connection #0 to host localhost left intact
+  * Closing connection #0
+  Hello$
+  
+::
+
+  $ curl -v localhost:17010/foo/bar -H X-Zato-User:myusername -H X-Zato-Password:incorrect
+  * About to connect() to localhost port 17010 (#0)
+  *   Trying 127.0.0.1... connected
+  > GET /foo/bar HTTP/1.1
+  > User-Agent: curl/7.22.0 (x86_64-pc-linux-gnu)
+  > Host: localhost:17010
+  > Accept: */*
+  > X-Zato-User:myusername
+  > X-Zato-Password:incorrect
+  > 
+  < HTTP/1.1 401 Unauthorized
+  < Server: gunicorn/0.16.1
+  < Date: Fri, 10 May 2013 17:25:42 GMT
+  < Connection: keep-alive
+  < Transfer-Encoding: chunked
+  < X-Zato-CID: K298497805121494368012872906178482886098
+  < WWW-Authenticate: zato-tech-acc
+  < 
+  * Connection #0 to host localhost left intact
+  * Closing connection #0
+  [K298497805121494368012872906178482886098] The username or password is incorrect,
+      URI:[/foo/bar], X_ZATO_USER:[myusername]$
+  
+Note that even though the message a client receives says only that either username
+or password was incorrect, the server logs will have information what was actually
+was not correct. 
+
+Comparing X-Zato-CID with with a CID that was written to the logs will be helpful
+in diagnosing such situations:
+
+::
+
+  ERROR - [K298497805121494368012872906178482886098] 
+      The password is incorrect, URI:[/foo/bar], X_ZATO_USER:[myusername]
