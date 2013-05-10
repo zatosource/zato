@@ -63,7 +63,7 @@ Web admin
       :doc:`Slow responses<web-admin/service-details/slow-responses>`
       
     * **Security:**
-      :doc:`HTTP Basic Auth<web-admin/security/http-basic-auth>` | 
+      :doc:`HTTP Basic Auth<web-admin/security/basic-auth>` | 
       :doc:`Technical accounts<web-admin/security/tech-account>` | 
       :doc:`WS-Security<web-admin/security/ws-security>`
       
@@ -264,6 +264,7 @@ Zato, the open-source project
    stats/*
    web-admin/*
    web-admin/load-balancer/*
+   web-admin/security/*
    web-admin/servers/*
    web-admin/service-details/*
    web-admin/services/*
