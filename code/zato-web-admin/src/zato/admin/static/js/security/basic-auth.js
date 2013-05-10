@@ -3,10 +3,9 @@
 
 $.fn.zato.data_table.BasicAuth = new Class({
     toString: function() {
-        var s = '<BasicAuth id:{0} name:{1} is_active:{2} username:{3} realm:{4}>';
+        var s = '<BasicAuth id:{0} name:{1} username:{2} realm:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
-                                this.is_active ? this.is_active : '(none)',
                                 this.username ? this.username : '(none)',
                                 this.realm ? this.realm : '(none)');
     }
@@ -43,7 +42,6 @@ $.fn.zato.security.basic_auth.data_table.new_row = function(item, data, include_
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.username);
     row += String.format('<td>{0}</td>', item.realm);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));

@@ -1,0 +1,25 @@
+Load-balancer - Remote commands
+===============================
+
+Overview
+--------
+
+Invokes a HAProxy command using 
+`its UNIX command socket <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html#9.2>`_. 
+
+Note that not all HAProxy commands are implemented by Zato.
+
+* Menu path: Clusters -> (pick one from the table) -> Load-balancer -> Remote commands
+* Example address: http://localhost:8183/zato/load-balancer/remote-command/1/
+
+.. image:: /gfx/web-admin/load-balancer/remote-commands.png
+   :width: 90%
+   
+   
+========= ==============================================
+Header    Notes
+========= ==============================================
+Command   HAProxy command to execute
+Timeout   How long to wait for a reply
+Paramater Any extra parameters that a command may expect
+========= ==============================================

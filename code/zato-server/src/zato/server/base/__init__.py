@@ -51,7 +51,7 @@ class BrokerMessageReceiver(object):
         """
         try:
             if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug('Got message [{0}]'.format(msg))
+                self.logger.debug('Got message [{!r}]'.format(msg))
     
             if self.filter(msg):
                 action = code_to_name[msg['action']]
@@ -59,9 +59,9 @@ class BrokerMessageReceiver(object):
                 getattr(self, handler)(msg)
             else:
                 if self.logger.isEnabledFor(logging.DEBUG):
-                    self.logger.debug('Rejecting broker message [{0}]'.format(msg))
+                    self.logger.debug('Rejecting broker message [{!r}]'.format(msg))
         except Exception, e:
-            msg = 'Could not handle broker msg:[{}], e:[{}]'.format(msg, format_exc(e))
+            msg = 'Could not handle broker msg:[{!r}], e:[{}]'.format(msg, format_exc(e))
             logger.error(msg)
             
     def filter(self, msg):

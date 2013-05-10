@@ -32,6 +32,19 @@ To enable support for the optional connectivity to WebSphere MQ queue managers:
     $ ln -s /usr/local/lib/python2.7/dist-packages/CMQCFC.py /opt/zato/zato_extra_paths
     $ ln -s /usr/local/lib/python2.7/dist-packages/CMQXC.py /opt/zato/zato_extra_paths
     $ ln -s /usr/local/lib/python2.7/dist-packages/CMQZC.py /opt/zato/zato_extra_paths
+    
+* (Optionally) If there is an
+
+  ::
+  
+    ImportError: libmqic_r.so: wrong ELF class: ELFCLASS32
+  
+  error when starting a server, add an additional path to $LD_LIBRARY_PATH
+  prior to starting it:
+  
+  ::
+  
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/mqm/lib64/
 
 cx_Oracle and Oracle Database
 -----------------------------

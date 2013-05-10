@@ -35,7 +35,7 @@ from paste.util.multidict import MultiDict
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, ZATO_NONE
+from zato.common import DEPLOYMENT_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
      DeploymentStatus, HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
@@ -61,12 +61,12 @@ class ODBManager(SessionWrapper):
         self.cluster = cluster
         self.pool = pool
         
-    def fetch_server(self):
+    def fetch_server(self, odb_config):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
         to the value pointed to by the server's .cluster attribute.
         """
         if not self.session_initialized:
-            self.init_session(self.pool, False)
+            self.init_session(ZATO_ODB_POOL_NAME, odb_config, self.pool, False)
             
         try:
             self.server = self._session.query(Server).\
@@ -100,7 +100,7 @@ class ODBManager(SessionWrapper):
             session.add(server)
             session.commit()
 
-    def get_url_security(self, cluster_id):
+    def get_url_security(self, cluster_id, connection=None):
         """ Returns the security configuration of HTTP URLs.
         """
 
@@ -113,7 +113,7 @@ class ODBManager(SessionWrapper):
 
         result = MultiDict()
 
-        query = http_soap_security_list(self._session, cluster_id)
+        query = http_soap_security_list(self._session, cluster_id, connection)
         columns = Bunch()
         
         # So ConfigDict has its data in the format it expects
@@ -124,6 +124,7 @@ class ODBManager(SessionWrapper):
             
             _info = Bunch()
             _info[item.soap_action] = Bunch()
+            _info[item.soap_action].is_active = item.is_active
             _info[item.soap_action].transport = item.transport
             _info[item.soap_action].data_format = item.data_format
 

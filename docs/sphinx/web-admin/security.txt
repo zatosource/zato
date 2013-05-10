@@ -1,0 +1,45 @@
+Securing access to the web admin panel
+======================================
+
+When you attempt to visit a web admin instance, such as the one on
+http://localhost:8183/, you are greeted with a login box which requires
+you to present a username and its accompanying password.
+
+.. image:: /gfx/web-admin/security-login.png
+   :alt:
+   :width: 90%
+   
+The credentials can be added and updated using the command line.
+
+* To add a new user account use the :doc:`zato create user <../admin/cli/create-user>` command, 
+  e.g.:
+  
+  ::
+  
+   $ zato create user /opt/zato/dev1/web-admin
+   Username (Leave blank to use 'user'): ohara
+   E-mail address: ohara@example.com
+   Password: 
+   Password (again): 
+   OK
+   $
+   
+* To update a password use the :doc:`zato update password <../admin/cli/update-password>` command, 
+  e.g.:
+  
+  ::
+  
+    $ zato update password /opt/zato/dev1/web-admin ohara
+    Changing password for user 'ohara'
+    Password: 
+    Password (again): 
+    OK
+    $
+
+
+.. note ::
+   There are no roles nor user groups, every user is treated equally. There is no
+   way to delete a user - set its password to a random string if you'd like to
+   block the access. 
+   
+   Future Zato versions will certainly add a lot in this area.

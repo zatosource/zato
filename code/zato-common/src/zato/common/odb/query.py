@@ -358,8 +358,15 @@ def _http_soap(session, cluster_id):
            filter(Cluster.id==cluster_id).\
            order_by(HTTPSOAP.name)
 
-# No point in creating a new function if we can alias an already existing one.
-http_soap_security_list = _http_soap
+def http_soap_security_list(session, cluster_id, connection=None):
+    """ HTTP/SOAP security definitions.
+    """
+    q = _http_soap(session, cluster_id)
+    
+    if connection:
+        q = q.filter(HTTPSOAP.connection==connection)
+        
+    return q
 
 def http_soap(session, cluster_id, id):
     """ An HTTP/SOAP connection.

@@ -1,0 +1,103 @@
+Clusters
+========
+
+Overview
+--------
+
+Lists all clusters the ODB the web admin is configured to use contain.
+
+* Menu path: Clusters
+* Example address: http://localhost:8183/zato/cluster/
+
+.. image:: /gfx/web-admin/clusters/index.png
+   :width: 90%
+
+============= ===========================================================================================
+Header        Notes
+============= ===========================================================================================
+Cluster       Cluster's name and textual description
+
+Addresses     * HTTP - address the cluster will accept incoming HTTP
+                connections on, as returned by the load-balancer.
+                       
+                This is the information external appications should 
+                be given.
+                       
+              * LB XML-RPC agent - address the load-balancer's agent listens on
+              * LB stats - :doc:`link to load-balancer's statistics <../stats/lb>`
+              * LB HTTP health-check - link to 
+                :ref:`load-balancer's health monitoring service <admin-ha-monitoring-services>`
+Edit          :ref:`Cluster edit form <web-admin-cluster-edit>`
+Delete        :ref:`Cluster delete form <web-admin-cluster-delete>`
+Load-balancer :doc:`Link to load-balancer's management forms <./load-balancer>`
+Servers       :doc:`Link to a list of servers on this cluster along with their state <./servers/main>`
+============= ===========================================================================================
+
+.. _web-admin-cluster-edit:
+
+Edit
+----
+
+.. image:: /gfx/web-admin/clusters/edit.png
+
+Updates a cluster's definition as it's seen by the web admin.
+
+============= ==============================
+Header        Notes
+============= ==============================
+Name          Name of the cluster
+Description   Cluster's textual description
+LB host       Host the load-balancer runs on
+LB port       Load-balancer's port
+LB agent port Load-balancer agent's port
+============= ==============================
+
+.. note ::
+
+  Updating LB host, port and agent port merely notifies the web admin of where
+  to find these components - it doesn't make them use new values provided.
+
+.. _web-admin-cluster-delete:
+
+Delete
+------
+
+.. image:: /gfx/web-admin/clusters/delete.png
+   
+Lets you completely delete every piece of information in the ODB regarding this
+particular cluster.
+
+All Zato components need to be :doc:`stopped <../../admin/cli/stop>` prior to using this form.
+
+You need to confirm the deletion by:
+
+* checking whether a name of the cluster is correct
+* typing GO AHEAD
+
+Only now it's possible to delete the cluster in the ODB.
+
+.. warning ::
+
+  This operation cannot be undone. Triple-check everything before you choose
+  to delete a cluster.
+
+Highlighting
+------------
+
+When navigating to the list of clusters from other parts of the application,
+and if any has been selected, the row containing this cluster will be highlighted.
+   
+.. image:: /gfx/web-admin/clusters/highlight.png
+   :width: 90%
+   
+The row will also be highlighted if:
+
+* The load-balancer's configuration couldn't be fetched - as though the load-balancer's
+  XML-RPC agent wasn't running
+  
+* One or more servers in the cluster are down (as reported by HAProxy)
+
+* All servers in the cluster are down (as reported by HAProxy)
+   
+.. image:: /gfx/web-admin/clusters/down.png
+   :width: 90%

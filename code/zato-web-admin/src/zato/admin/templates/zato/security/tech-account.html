@@ -24,7 +24,6 @@
             '_numbering',
             '_selection',
             'name',
-            '_is_active',
             '_change_password',
             '_edit',
             '_delete',
@@ -40,10 +39,7 @@
 <h2 class="zato">Technical accounts</h2>
 
 {% if not zato_clusters %}
-    <div class='page_prompt'>
-    There aren't any Zato clusters registered with this ZatoAdmin instance.
-    <a href="{% url cluster %}" class="common">Click here</a> to create a new cluster first.
-    </div>
+    {% include "zato/no-clusters.html" %}
 {% else %}
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
@@ -65,16 +61,13 @@
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
-                            <td>{{ create_form.is_active }}</td>
-                        </tr>
-                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>                        
                     </table>
+                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -89,11 +82,6 @@
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Is active</td>
-                            <td>{{ edit_form.is_active }} </td>
-                        </tr>
-
-                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -101,6 +89,7 @@
                         </tr>
                         
                     </table>
+                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
@@ -158,7 +147,6 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td>{% if item.is_active %}Yes{% else %}No{% endif %}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.security.tech_account.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.tech_account.delete_('{{ item.id }}')">Delete</a></td>

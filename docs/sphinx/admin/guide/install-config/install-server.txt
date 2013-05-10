@@ -23,6 +23,13 @@ Steps
   
 * Issue the :doc:`zato create server <../../cli/create-server>` command
 
+* Start it using the :doc:`zato start <../../cli/start>` command
+
+* Add it to load-balancer's configuration using 
+  :doc:`source code view <../../../web-admin/load-balancer/source-code>`
+  or 
+  :doc:`from the server list <../../../web-admin/servers/add-remove>`
+
 More information
 ----------------
 

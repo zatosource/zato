@@ -42,7 +42,7 @@ API
 self.outgoing.sql.get(out_name).session()
 ``````````````````````````````````````````
 
-.. py:method:: get(out_name):
+.. py:method:: get(out_name[, enforce_is_active=True]):
 
   Returns an object whose .session() method returns an SQLAlchemy session object
   which can be used to issue SQL queries against a database configured for the
@@ -50,6 +50,12 @@ self.outgoing.sql.get(out_name).session()
   
   :param out_name: Outgoing connection to use
   :type out_name: string
+  
+  :param enforce_is_active: Whether the connection's is_active flag should be
+                            taken into account when checking out the object.
+                            If False, it's possible to fetch it even though it's
+                            not active.
+  :type enforce_is_active: boolean
   
   :rtype: An object whose .session() method should be invoked to obtain 
           `a handle to an SQL session <http://docs.sqlalchemy.org/en/rel_0_8/orm/session.html>`_

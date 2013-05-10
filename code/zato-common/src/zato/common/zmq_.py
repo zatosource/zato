@@ -88,7 +88,7 @@ class ZMQPullSub(object):
             poller.register(self.pull_socket, zmq.POLLIN)
             _socks.append(('pull', self.pull_socket))
             
-            logger.debug('Starting PULL [{0}/{1}]'.format(
+            logger.info('Starting PULL [{0}/{1}]'.format(
                 self.name, self.broker_push_client_pull))
             
         if self.broker_pub_client_sub:
@@ -99,7 +99,7 @@ class ZMQPullSub(object):
             poller.register(self.sub_socket, zmq.POLLIN)
             _socks.append(('sub', self.sub_socket))
             
-            logger.debug('Starting SUB [{0}/{1}]'.format(
+            logger.info('Starting SUB [{0}/{1}]'.format(
                 self.name, self.broker_pub_client_sub))
             
         _handlers_args = {}
@@ -249,7 +249,7 @@ class ZMQClient(object):
         if self._pull_sub:
             self._pull_sub.close()
             
-        logger.debug('Closed [{0}]'.format(self.get_connection_info()))
+        logger.info('Closed [{0}]'.format(self.get_connection_info()))
             
     def get_connection_info(self):
         return 'name:[{0}] client_pull:[{1}] client_push:[{2}] client_sub:[{3}] sub_key:[{4}]'.format(
