@@ -41,7 +41,7 @@ from validate import is_boolean, is_integer, VdtTypeError
 from springpython.context import DisposableObject
 
 # Zato
-from zato.common import PASSWORD_SHADOW
+from zato.common import Inactive, PASSWORD_SHADOW
 from zato.common.odb import engine_def, ping_queries
 
 class SessionWrapper(object):
@@ -50,9 +50,11 @@ class SessionWrapper(object):
     def __init__(self):
         self.session_initialized = False
         self.pool = None
+        self.config = None
         self.logger = getLogger(self.__class__.__name__)
         
-    def init_session(self, name, pool, use_scoped_session=True, warn_on_ping_fail=False):
+    def init_session(self, name, config, pool, use_scoped_session=True, warn_on_ping_fail=False):
+        self.config = config
         self.pool = pool
         
         try:
@@ -187,11 +189,18 @@ class PoolStore(DisposableObject):
         self.wrappers = {}
         self.logger = getLogger(self.__class__.__name__)
         
-    def __getitem__(self, name):
-        """ Checks out the connection pool.
+    def __getitem__(self, name, enforce_is_active=True):
+        """ Checks out the connection pool. If enforce_is_active is False,
+        the pool's is_active flag will be ignored.
         """
         with self._lock:
-            return self.wrappers[name]
+            if enforce_is_active:
+                wrapper = self.wrappers[name]
+                if wrapper.config['is_active']:
+                    return wrapper
+                raise Inactive(name)
+            else:
+                return self.wrappers[name]
         
     get = __getitem__
         
@@ -208,7 +217,7 @@ class PoolStore(DisposableObject):
             pool = self.sql_conn_class(name, config, config_no_sensitive)
 
             wrapper = SessionWrapper()
-            wrapper.init_session(name, pool)
+            wrapper.init_session(name, config, pool)
             
             self.wrappers[name] = wrapper
     

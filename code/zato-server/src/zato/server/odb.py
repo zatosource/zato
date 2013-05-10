@@ -61,12 +61,12 @@ class ODBManager(SessionWrapper):
         self.cluster = cluster
         self.pool = pool
         
-    def fetch_server(self):
+    def fetch_server(self, odb_config):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
         to the value pointed to by the server's .cluster attribute.
         """
         if not self.session_initialized:
-            self.init_session(ZATO_ODB_POOL_NAME, self.pool, False)
+            self.init_session(ZATO_ODB_POOL_NAME, odb_config, self.pool, False)
             
         try:
             self.server = self._session.query(Server).\
