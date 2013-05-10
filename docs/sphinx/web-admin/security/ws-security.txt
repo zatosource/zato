@@ -39,7 +39,7 @@ Nonce freshness (seconds)              After how many seconds after its creation
                                        (`consult spec <https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=wss>`_)
 ====================================== ===================================================================================
 
-A newly created security definition a password set a random UUID4
+A newly created security definition has a password set a random UUID4
 and needs to be changed in order to be usable.
 
 Change password

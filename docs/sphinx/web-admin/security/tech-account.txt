@@ -33,7 +33,7 @@ Name     Connection name which also serves as the username for
          clients to use
 ======== ========================================================
 
-A newly created security definition a password set a random UUID4
+A newly created security definition has a password set a random UUID4
 and needs to be changed in order to be usable.
 
 Change password

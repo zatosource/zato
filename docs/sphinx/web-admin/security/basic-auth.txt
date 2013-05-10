@@ -30,7 +30,7 @@ Username HTTP user name
 Realm    HTTP realm name (won't be used for outgoing connections)
 ======== ========================================================
 
-A newly created security definition a password set a random UUID4
+A newly created security definition has a password set a random UUID4
 and needs to be changed in order to be usable.
 
 Change password
