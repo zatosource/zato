@@ -1,0 +1,62 @@
+Security - Technical accounts
+=============================
+
+Overview
+--------
+
+Used to create, update, delete and browse technical accounts.
+
+On HTTP level a technical account is similar to 
+:doc:`HTTP Basic Auth <./basic-auth>` except it doesn't use BASE64, a username
+and password are sent in clear text in :ref:`HTTP headers documented below <TODO>`.
+
+Technical accounts are meant to be used in environments where BASE64 is not
+available or cumbersome to use.
+
+
+* Menu path: Security -> Technical accounts
+* Example address: http://localhost:8183/zato/security/tech-account/?cluster=1
+
+.. image:: /gfx/web-admin/security/tech-account.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/security/tech-account-update.png
+
+======== ========================================================
+Header   Notes
+======== ========================================================
+Name     Connection name
+Username HTTP user name 
+Realm    HTTP realm name (won't be used for outgoing connections)
+======== ========================================================
+
+A newly created security definition a password set a random UUID4
+and needs to be changed in order to be usable.
+
+Change password
+---------------
+
+.. image:: /gfx/web-admin/security/tech-account-change-password.png
+
+Updates a definition's password - the password is stored in the ODB along with
+other details of a security definition.
+
+Delete
+------
+
+.. image:: /gfx/web-admin/security/tech-account-delete.png
+
+Deletes a security definition and all the connections that make use of it.
+
+.. note ::
+
+  It needs to be emphasized that any plain HTTP or SOAP channels and outgoing
+  connections that were using the definition will also be deleted automatically.
+
+.. _web-admin-security-tech-account:
+  
+HTTP headers
+------------
