@@ -40,7 +40,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.forms.cluster import CreateClusterForm, DeleteClusterForm, EditClusterForm, EditServerForm
+from zato.admin.web.forms.cluster import DeleteClusterForm, EditClusterForm, EditServerForm
 from zato.admin.web.views import Delete as _Delete, get_lb_client, method_allowed, set_servers_state
 from zato.admin.settings import DATABASE_ENGINE, DATABASE_HOST, DATABASE_NAME, DATABASE_PORT, \
      DATABASE_USER, sqlalchemy_django_engine
@@ -79,18 +79,10 @@ def _create_edit(req, verb, item, form_class, prefix=''):
 
         item.name = req.POST[prefix + join + 'name'].strip()
         item.description = description
-        item.odb_type = req.POST[prefix + join + 'odb_type'].strip()
-        item.odb_host = req.POST[prefix + join + 'odb_host'].strip()
-        item.odb_port = req.POST[prefix + join + 'odb_port'].strip()
-        item.odb_user = req.POST[prefix + join + 'odb_user'].strip()
-        item.odb_db_name = req.POST[prefix + join + 'odb_db_name'].strip()
-        item.odb_schema = req.POST[prefix + join + 'odb_schema'].strip()
+
         item.lb_host = req.POST[prefix + join + 'lb_host'].strip()
         item.lb_port = req.POST[prefix + join + 'lb_port'].strip()
         item.lb_agent_port = req.POST[prefix + join + 'lb_agent_port'].strip()
-        item.broker_host = req.POST[prefix + join + 'broker_host'].strip()
-        item.broker_start_port = req.POST[prefix + join + 'broker_start_port'].strip()
-        item.broker_token = req.POST[prefix + join + 'broker_token'].strip()
 
         try:
             req.zato.odb.add(item)
@@ -174,7 +166,6 @@ def index(req):
     initial['odb_user'] = DATABASE_USER
     initial['odb_db_name'] = DATABASE_NAME
 
-    create_form = CreateClusterForm(initial=initial)
     delete_form = DeleteClusterForm(prefix='delete')
 
     items = req.zato.odb.query(Cluster).order_by('name').all()
@@ -194,7 +185,7 @@ def index(req):
             logger.error(msg)
             item.lb_config = None
 
-    return_data = {'create_form':create_form, 'delete_form':delete_form,
+    return_data = {'delete_form':delete_form,
                    'edit_form':EditClusterForm(prefix='edit'), 'items':items}
 
     return TemplateResponse(req, 'zato/cluster/index.html', return_data)
@@ -236,11 +227,11 @@ def get_servers_state(req, cluster_id):
     return TemplateResponse(req, 'zato/cluster/servers_state.html', {'cluster':cluster})
 
 @method_allowed('POST')
-def delete(req, cluster_id):
+def delete(req, id):
     """ Deletes a cluster *permanently*.
     """
     try:
-        cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
+        cluster = req.zato.odb.query(Cluster).filter_by(id=id).one()
 
         req.zato.odb.delete(cluster)
         req.zato.odb.commit()
@@ -264,6 +255,7 @@ def servers(req):
         bck_http_plain = client.get_config()['backend']['bck_http_plain']
         lb_client_invoked = True
     except Exception, e:
+        logger.error(format_exc(e))
         lb_client_invoked = False
     
     if lb_client_invoked:
@@ -347,10 +339,10 @@ def servers_add_remove_lb(req, action, server_id):
 class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
-    service_name = 'zato.cluster.server.delete'
+    service_name = 'zato.server.delete'
     
     def __call__(self, req, *args, **kwargs):
-        response = req.zato.client.invoke('zato.cluster.server.get-by-id', {'id':req.zato.id})
+        response = req.zato.client.invoke('zato.server.get-by-id', {'id':req.zato.id})
 
         server = req.zato.odb.query(Server).filter_by(id=req.zato.id).one()
 

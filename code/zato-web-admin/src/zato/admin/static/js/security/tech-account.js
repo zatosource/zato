@@ -3,10 +3,9 @@
 
 $.fn.zato.data_table.TechAccount = new Class({
 	toString: function() {
-		var s = '<TechAccount id:{0} name:{1} is_active:{2}>';
+		var s = '<TechAccount id:{0} name:{1}>';
 		return String.format(s, this.id ? this.id : '(none)', 
-								this.name ? this.name : '(none)', 
-								this.is_active ? this.is_active : '(none)');
+								this.name ? this.name : '(none)');
 	}
 });
 
@@ -40,7 +39,6 @@ $.fn.zato.security.tech_account.data_table.new_row = function(item, data, includ
 	row += "<td class='numbering'>&nbsp;</td>";
 	row += "<td class='impexp'><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', item.name);
-	row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
 	row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.security.tech_account.edit('{0}')\">Edit</a>", item.id));
 	row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.tech_account.delete_({0});'>Delete</a>", item.id));

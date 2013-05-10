@@ -159,16 +159,16 @@ class OutgoingConnector(BaseZMQConnector):
         """ Puts a message on a socket.
         """
         if not self.out.get('is_active'):
-            log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out)
+            log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out.toDict())
             self.logger.info(log_msg)
             return
             
         if self.out.get('sender'):
             self.out.sender.send(msg.body)
         else:
-            if self.logger.isEnabledFor(TRACE1):
-                log_msg = 'No sender for [{0}]'.format(self.out)
-                self.logger.log(TRACE1, log_msg)
+            if self.logger.isEnabledFor(logging.DEBUG):
+                log_msg = 'No sender for [{0}]'.format(self.out.toDict())
+                self.logger.debug(log_msg)
                 
     def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()

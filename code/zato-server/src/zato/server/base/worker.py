@@ -113,7 +113,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
         self.request_dispatcher.security = ConnectionHTTPSOAPSecurity(
-            self.server.odb.get_url_security(self.server.cluster_id)[0],
+            self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
         
         # Create all the expected connections
@@ -172,7 +172,7 @@ class WorkerStore(BrokerMessageReceiver):
         # Connect to ODB
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.worker_config.odb_data
         self.odb = SessionWrapper()
-        self.odb.init_session(self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
+        self.odb.init_session(ZATO_ODB_POOL_NAME, self.worker_config.odb_data, self.sql_pool_store[ZATO_ODB_POOL_NAME].pool)
         
         # Any user-defined SQL connections left?
         for pool_name in self.worker_config.out_sql:
@@ -438,7 +438,7 @@ class WorkerStore(BrokerMessageReceiver):
         del_name = old_name if old_name else msg['name']
 
         # .. delete the connection if it exists ..
-        self._delete_outgoing_http_soap(del_name, msg['transport'], logger.error)
+        self._delete_outgoing_http_soap(del_name, msg['transport'], logger.debug)
         
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, False)

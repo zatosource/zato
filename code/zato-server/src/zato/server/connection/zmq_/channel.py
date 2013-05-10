@@ -92,7 +92,7 @@ class ConsumingConnector(BaseZMQConnector):
         self.channel.is_active = item.is_active
         self.channel.address = str(item.address)
         self.channel.socket_type = self.socket_type = item.socket_type
-        self.channel.service = item.service_impl_name
+        self.channel.service = item.service_name
         self.channel.sub_key = item.sub_key or ''
         self.channel.data_format = item.data_format
         self.channel.listener = None
@@ -147,7 +147,7 @@ class ConsumingConnector(BaseZMQConnector):
             params['payload'] = msg
             params['data_format'] = self.channel.data_format
             
-            self.broker_client.async_invoke(params)
+            self.broker_client.invoke_async(params)
                 
     def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()
@@ -155,7 +155,11 @@ class ConsumingConnector(BaseZMQConnector):
     def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg, args=None):
         with self.channel_lock:
             listener = self.channel.listener
+            
+            service_name = self.channel.service
             self.channel = msg
+            self.channel.service = service_name
+            
             self.socket_type = self.channel.socket_type
             self.channel.sub_key = msg.sub_key or ''
             self.channel.listener = listener

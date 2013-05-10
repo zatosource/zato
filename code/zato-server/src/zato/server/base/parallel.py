@@ -345,6 +345,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             _info[item.soap_action] = Bunch()
             _info[item.soap_action].id = item.id
             _info[item.soap_action].name = item.name
+            _info[item.soap_action].is_active = item.is_active
             _info[item.soap_action].is_internal = item.is_internal
             _info[item.soap_action].url_path = item.url_path
             _info[item.soap_action].method = item.method
@@ -352,6 +353,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             _info[item.soap_action].service_id = item.service_id
             _info[item.soap_action].service_name = item.service_name
             _info[item.soap_action].impl_name = item.impl_name
+            _info[item.soap_action].data_format = item.data_format
             _info[item.soap_action].transport = item.transport
             _info[item.soap_action].connection = item.connection
             http_soap.add(item.url_path, _info)
@@ -438,6 +440,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         odb_data.token = parallel_server.fs_server_config.main.token
         odb_data.is_odb = True
         
+        # Note that we don't read is_active off of anywhere - ODB always must
+        # be active and it's not a regular connection pool anyway.
+        odb_data.is_active = True
+        
         return odb_data
     
     def set_odb_pool(self):
@@ -458,7 +464,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
-        server = parallel_server.odb.fetch_server()
+        server = parallel_server.odb.fetch_server(parallel_server.config.odb_data)
         
         if not server:
             raise Exception('Server does not exist in the ODB')
@@ -526,7 +532,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.config.odb_data = self.get_config_odb_data(self)
             self.set_odb_pool()
             
-            self.odb.init_session(self.odb.pool, False)
+            self.odb.init_session(self.odb.pool, self.config.odb_data, False)
             
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()

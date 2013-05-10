@@ -43,3 +43,4 @@ class CreateForm(forms.Form):
 class EditForm(CreateForm):
     cache_open_send_queues = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     cache_open_receive_queues = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    use_shared_connections = forms.BooleanField(required=False, widget=forms.CheckboxInput())

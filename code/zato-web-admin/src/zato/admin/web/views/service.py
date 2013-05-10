@@ -61,7 +61,7 @@ from zato.common.odb.model import Service
 
 logger = logging.getLogger(__name__)
 
-Channel = namedtuple('Channel', ['id', 'name', 'url'])
+ExposedThrough = namedtuple('ExposedThrough', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
 
 class SlowResponse(object):
@@ -124,7 +124,7 @@ def _get_channels(client, cluster, id, channel_type):
 
         url += '&highlight={}'.format(item.id)
 
-        channel = Channel(item.id, item.name, url)
+        channel = ExposedThrough(item.id, item.name, url)
         out.append(channel)
 
     return out
@@ -241,6 +241,18 @@ def overview(req, service_name):
 
             for item in req.zato.client.invoke('zato.service.get-deployment-info-list', {'id': service.id}):
                 service.deployment_info.append(DeploymentInfo(item.server_name, loads(item.details)))
+                
+            # TODO: There needs to be a new service added zato.service.scheduler.job.get-by-service
+            #       or .get-list should start accept a service name. Right now we pull all the
+            #       jobs which is suboptimal.
+            response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id':cluster_id})
+            if response.has_data:
+                for item in response.data:
+                    if item.service_name == service_name:
+                        url = reverse('scheduler')
+                        url += '?cluster={}'.format(cluster_id)
+                        url += '&highlight={}'.format(item.id)
+                        service.scheduler_jobs.append(ExposedThrough(item.id, item.name, url))
 
     return_data = {'zato_clusters':req.zato.clusters,
         'service': service,

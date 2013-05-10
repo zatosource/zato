@@ -3,10 +3,9 @@
 
 $.fn.zato.data_table.WSS = new Class({
 	toString: function() {
-		var s = '<WSS id:{0} name:{1} is_active:{2} reject_empty_nonce_creat:{3}">';
+		var s = '<WSS id:{0} name:{1} reject_empty_nonce_creat:{2}">';
 		return String.format(s, this.id ? this.id : '(none)', 
 								this.name ? this.name : '(none)', 
-								this.is_active ? this.is_active : '(none)',
 								this.reject_empty_nonce_creat ? this.reject_empty_nonce_creat : '(none)'
 								);
 	}
@@ -45,7 +44,6 @@ $.fn.zato.security.wss.data_table.new_row = function(item, data, include_tr) {
 	row += "<td class='numbering'>&nbsp;</td>";
 	row += "<td class='impexp'><input type='checkbox' /></td>";
 	row += String.format('<td>{0}</td>', item.name);
-	row += String.format('<td>{0}</td>', item.is_active ? 'Yes' : 'No');
 	row += String.format('<td>{0}</td>', item.username);
 	row += String.format('<td>{0}</td>', item.reject_empty_nonce_creat ? 'Yes' : 'No');
 	row += String.format('<td>{0}</td>', item.reject_stale_tokens ? 'Yes' : 'No');

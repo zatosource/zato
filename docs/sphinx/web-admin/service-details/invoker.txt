@@ -1,0 +1,22 @@
+Service details - Invoker
+=========================
+
+Overview
+--------
+
+Invokes a service directly, regardless of whether it's exposed through any means
+or not.
+
+* Menu path: Services -> (find a service and clicks its name) -> Invoker
+* Example address: http://localhost:8183/zato/service/invoker/zato.ping/?cluster=1
+
+.. image:: /gfx/web-admin/service-details/invoker.png
+   :width: 95%
+
+Data format choosen will populate a service instance's
+:ref:`data_format <progguide-write-service-data_format>` attribute
+while transport will make Zato understand it needs to parse the request 
+out of an envelope, if any.
+
+Note that if you select a data format and transport you need to make sure the input
+data actually conforms to it.

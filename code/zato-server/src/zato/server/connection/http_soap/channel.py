@@ -131,6 +131,11 @@ class RequestDispatcher(object):
             transport = url_data['transport']
             data_format = url_data['data_format']
             try:
+                if not url_data.is_active:
+                    msg = 'url_data:[{}] is not active, raising NotFound'.format(sorted(url_data.items()))
+                    logger.warn(msg)
+                    raise NotFound(cid, 'Inactive channel')
+                
                 if url_data.sec_def != ZATO_NONE:
                     if url_data.sec_def.sec_type in(security_def_type.tech_account, security_def_type.basic_auth, 
                                                 security_def_type.wss):
@@ -162,6 +167,8 @@ class RequestDispatcher(object):
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
+                    elif isinstance(e, NotFound):
+                        status = _status_not_found
                 else:
                     status_code = INTERNAL_SERVER_ERROR
                     response = _format_exc

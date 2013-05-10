@@ -100,8 +100,8 @@ frontend front_http_plain
 """
 
 default_backend="""
-    server http_plain--zato-quickstart-server-01 127.0.0.1:{server01_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--zato-quickstart-server-01
-    server http_plain--zato-quickstart-server-02 127.0.0.1:{server02_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--zato-quickstart-server-02
+    server http_plain--server1 127.0.0.1:{server01_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server1
+    server http_plain--server2 127.0.0.1:{server02_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server2
 """
 
 class Create(ZatoCommand):

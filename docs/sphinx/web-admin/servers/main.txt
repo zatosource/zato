@@ -1,0 +1,41 @@
+Servers - main view
+===================
+
+Overview
+--------
+
+Lists all servers in a given cluster along with their state.
+
+* Menu path: Clusters -> (pick one from the table) -> Servers
+* Example address: http://localhost:8183/zato/cluster/servers/?cluster=1
+
+.. image:: /gfx/web-admin/servers/main.png
+   :width: 90%
+
+=================== ===========================================================================================
+Header              Notes
+=================== ===========================================================================================
+Name                Server name
+Server host/FQDN    Server's host and fully qualified name - as reported by the server itself. 
+                    Will be (unknown) if the server has never been started.
+**Server state**    Whether the server is up and running - **as reported by the server itself**
+                    Will be (unknown) if the server has never been started.
+Server state update When has the server last updated its state.
+                    Will be (unknown) if the server has never been started.
+**LB state**        Whether the server is up and running - **as reported by the load-balancer**.
+LB address
+                    Address the load-balancer understands the server to be available at.
+Add to LB           (Optional) :doc:`Documented here <./add-remove>`
+Remove from LB      (Optional) :doc:`Documented here <./add-remove>`
+Edit 	            :doc:`Documented here <./add-remove>`
+Delete              (Optional) :doc:`Documented here <./add-remove>`
+=================== ===========================================================================================
+
+Editing a server
+----------------
+
+Clicking the 'Edit' link lets one update a server's name. Saving the new value
+hot-reloads the load-balancer's configuration.
+
+.. image:: /gfx/web-admin/servers/edit.png
+   :width: 90%

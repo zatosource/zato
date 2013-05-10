@@ -2,7 +2,7 @@
 .highlight .hll { background-color: #ffffcc }
 .highlight  { background: #eeffcc; }
 .highlight .c { color: #408090; font-style: italic } /* Comment */
-.highlight .err { border: 1px solid #FF0000 } /* Error */
+.highlight .err {} /* Error (set to no style by dsuch) */
 .highlight .k { color: #007020; font-weight: bold } /* Keyword */
 .highlight .o { color: #666666 } /* Operator */
 .highlight .cm { color: #408090; font-style: italic } /* Comment.Multiline */

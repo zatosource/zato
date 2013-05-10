@@ -1,0 +1,52 @@
+Services
+========
+
+Overview
+--------
+
+Lists services defined on a given cluster. 
+
+Use '*' to show all services
+or type one or more service name keywords to search for. Keywords are AND-joined.
+
+* Menu path: Services
+* Example address: http://localhost:8183/zato/service/?cluster=1&name_filter=stats
+
+.. image:: /gfx/web-admin/services/main1.png
+   :width: 90%
+   
+.. image:: /gfx/web-admin/services/main2.png
+   :width: 90%
+   
+.. image:: /gfx/web-admin/services/main3.png
+   :width: 90%
+
+============== ===========================================================================
+Header         Notes
+============== ===========================================================================
+Name           A service's name and a link to :doc:`its details <../service-details/main>`
+Active         Whether it can be invoked
+Implementation Name of a Python class the service is implemented in
+Internal       A boolean flag indicating whether a given service is Zato's internal one
+1h req/s       Last hour's request rate 
+1h mean        Last hour's mean response time, in milliseconds
+1h mean trend  Last hour's mean response time, as a chart 
+============== ===========================================================================
+
+.. _web-admin-services-edit:
+
+Edit
+----
+
+.. image:: /gfx/web-admin/services/edit.png
+   :width: 90%
+   
+Updates details of a selected service.
+
+============== ============================================================================
+Header         Notes
+============== ============================================================================
+Active         Whether it can be invoked
+Slow threshold Its :doc:`slow response time threshold <../service-details/slow-responses>`,
+               in milliseconds
+============== ============================================================================

@@ -1,0 +1,29 @@
+Service details - WSDL
+======================
+
+Overview
+--------
+
+Lets one upload a service's WSDL. The file size limit is 5 MB. Use zip, bzip2
+or similar tools to compress larger WSDLs before assigning them to a service.
+
+The WSDL's contents is not inspected, validated or parsed. It's stored as is
+and is not used by Zato itself for anything, such as for checking whether
+incoming requests are WSDL-conformant.
+
+* Menu path: Services -> (find a service and clicks its name) -> WSDL
+* Example address: http://localhost:8183/zato/service/wsdl/zato.ping/?cluster=1
+
+.. image:: /gfx/web-admin/service-details/wsdl1.png
+
+
+.. image:: /gfx/web-admin/service-details/wsdl2.png
+
+================= ======================================================
+Header            Notes
+================= ======================================================
+Click to download Downloads the WSDL
+Direct address    WSDL download address as exposed by the load-balancer.
+                  Useful if servers are not to be exposed to external
+                  users.
+================= ======================================================

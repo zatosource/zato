@@ -66,6 +66,7 @@ $.namespace('zato.kvdb.data_dict.dictionary');
 $.namespace('zato.kvdb.data_dict.translation');
 $.namespace('zato.kvdb.data_dict.system');
 $.namespace('zato.http_soap');
+$.namespace('zato.load_balancer');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
@@ -199,7 +200,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                         if(_.include(skip_boolean, field_name)) {
                             form_elem.val(value);
                         }
-                            else {
+						else {
                             if($.fn.zato.to_bool(value)) {
                                 form_elem.attr('checked', 'checked');
                             }
@@ -487,58 +488,34 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var name = '';
     var id = '';
     var tag_name = '';
+	var html_elem;
     var _columns = $.fn.zato.data_table.get_columns();
-    
+	
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
-        item[name] = elem.value;
-        tag_name = $('#id_' + prefix + name).prop('tagName');
+		html_elem = $('#id_' + prefix + name);
+        tag_name = html_elem.prop('tagName');
+		
+        if(tag_name && html_elem.prop('type') == 'checkbox') {
+            item[name] = html_elem.is(':checked');
+        }
+		
+		else {
+			item[name] = elem.value;
+		}
+		
         if(tag_name && tag_name.toLowerCase() == 'select') {
             item[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
         }
+
     })
+
     if(!item.id) {
         item.id = data.id;
     }
-
-
-    /* TODO: Boolean fields should be dealt with in a generic way, without hard-coding
-       anything like below, of course.
-    */
-    if(item.is_active) {
-        item.is_active = $.fn.zato.to_bool(item.is_active);
-    }
-
-    if(item.cache_open_send_queues) {
-        item.cache_open_send_queues = $.fn.zato.to_bool(item.cache_open_send_queues);
-    }
-
-    if(item.cache_open_receive_queues) {
-        item.cache_open_receive_queues = $.fn.zato.to_bool(item.cache_open_receive_queues);
-    }
-
-    if(item.use_shared_connections) {
-        item.use_shared_connections = $.fn.zato.to_bool(item.use_shared_connections);
-    }
-
-    if(item.ssl) {
-        item.ssl = $.fn.zato.to_bool(item.ssl);
-    }
-
-    if(item.needs_mcd) {
-        item.needs_mcd = $.fn.zato.to_bool(item.needs_mcd);
-    }
-    
-    if(item.dircache) {
-        item.dircache = $.fn.zato.to_bool(item.dircache);
-    }
-    
-    if(item.is_internal) {
-        item.is_internal = $.fn.zato.to_bool(item.is_internal);
-    }
-    
+	
     $.fn.zato.data_table.data[item.id] = item;
-    
+	
     return new_row_func(item, data, include_tr);
 }
 
@@ -628,7 +605,7 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
-
+		
         if($('#data-table').data('is_empty')) {
             $('#data-table tr:last').remove();
         }
@@ -686,12 +663,7 @@ $.fn.zato.to_bool = function(item) {
 $.fn.zato.like_bool = function(item) {
     var s = new String(item).toLowerCase();
 
-    // 'on' too because it may be a form's field
-    if(s == 'false') {
-        return false;
-    }
-
-    return(s == "true" || s == 'on' || _.isBoolean(item));
+    return(s == "false" || s == "true" || s == "on" || _.isBoolean(item));
 }
 
 String.prototype.capitalize = function() {

@@ -105,3 +105,14 @@ div.bd {
 div.ui-dialog {
     width:33em !important;
 }
+
+p.no-clusters {
+	background-color: $attention;
+	width:50%;
+	margin:0 auto;
+	padding:20px;
+	margin-top:20px;
+	text-align:center;
+	font-size:large;
+	border:1px solid #999
+}

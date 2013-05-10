@@ -1,0 +1,51 @@
+Adding and removing servers
+===========================
+
+Overview
+--------
+
+* Menu path: Clusters -> (pick one from the table) -> Servers -> Add to LB/Remove from LB/Delete
+* Example address: http://localhost:8183/zato/cluster/
+
+.. image:: /gfx/web-admin/servers/add-remove.png
+   :width: 90%
+
+How to add a server to the load-balancer
+----------------------------------------
+
+* Make sure it's been :doc:`installed and started <../../admin/guide/install-config/install-server>`
+* Click 'Add to LB' - this will add it to LB's config and hot-reload the latter's config
+* Navigate to
+  :doc:`GUI <../load-balancer/gui>`
+  or
+  :doc:`source code view <../load-balancer/source-code>`
+  and fix its port so it doesn't read 123456
+  
+  This step is needed because servers don't store port they listen on anywhere
+  except in
+  :doc:`their config files <../../admin/guide/install-config/config-server>`
+  so the LB doesn't access have access to such information in
+  the previous step - it needs to be provided manually by an admin.
+  
+.. note ::
+
+  Future Zato versions will automate the process and the manual update won't
+  be needed.
+  
+How to remove a server from the load-balancer's config
+------------------------------------------------------
+
+* This can be done only if a server has been previously added to the LB
+* Click 'Remove from LB' - this will remove it from LB's config and hot-reload the latter's config
+
+How to delete a server from the ODB
+-----------------------------------
+
+* :doc:`Stop the server <../../admin/cli/stop>`
+* Remove it from LB's config
+* Click 'Delete' - this will delete it completely from the ODB, cascading to
+  any related SQL data
+  
+.. note ::
+
+  A server cannot delete itself.

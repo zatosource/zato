@@ -29,6 +29,7 @@ from datetime import datetime
 import requests
 
 # Zato
+from zato.common import Inactive
 from zato.common.util import get_component_name, security_def_type
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,10 @@ class HTTPSOAPWrapper(object):
         
         return headers
     
+    def _enforce_is_active(self):
+        if not self.config['is_active']:
+            raise Inactive(self.config['name'])
+    
     def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
         """
@@ -153,8 +158,9 @@ class HTTPSOAPWrapper(object):
     def get(self, cid, params=None, prefetch=True, *args, **kwargs):
         """ Invokes a resource using the GET method.
         """
+        self._enforce_is_active()
+        
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
-
         return self.session.get(self.config['address'], params=params or {}, 
             prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)
     
@@ -179,8 +185,9 @@ class HTTPSOAPWrapper(object):
     def post(self, cid, data='', prefetch=True, *args, **kwargs):
         """ Invokes a resource using the POST method.
         """
-        headers = self._create_headers(cid, kwargs.pop('headers', {}))
+        self._enforce_is_active()
         
+        headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
 
