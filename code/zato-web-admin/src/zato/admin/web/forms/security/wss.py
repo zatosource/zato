@@ -34,3 +34,5 @@ class CreateForm(forms.Form):
             
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    reject_empty_nonce_creat = forms.BooleanField(widget=forms.CheckboxInput())
+    reject_stale_tokens = forms.BooleanField(widget=forms.CheckboxInput())
