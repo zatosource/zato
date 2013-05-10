@@ -59,7 +59,7 @@ Read more
       :doc:`Slow responses<./service-details/slow-responses>`
       
     * **Security:**
-      :doc:`HTTP Basic Auth<./security/http-basic-auth>` | 
+      :doc:`HTTP Basic Auth<./security/basic-auth>` | 
       :doc:`Technical accounts<./security/tech-account>` | 
       :doc:`WS-Security<./security/ws-security>`
       
