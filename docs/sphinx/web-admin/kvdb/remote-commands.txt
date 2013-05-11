@@ -1,0 +1,18 @@
+Key/value database (Redis) - remote commands
+==============================================
+
+Overview
+--------
+
+* Menu path: Key/value DB -> Remote commands
+* Example address: http://localhost:8183/zato/kvdb/remote-command/?cluster=1
+
+A form is provided to run Redis commands directly from the browser. This can be
+used to debug, administer, manage, list, delete, add Redis keys or to perform any
+other action the database supports.
+
+The string (None) is returned if a given command doesn't produce any output.
+Otherwise the response is dumped into a string and displayed in the textarea.
+
+.. image:: /gfx/web-admin/kvdb/remote-commands.png
+   :width: 95%
