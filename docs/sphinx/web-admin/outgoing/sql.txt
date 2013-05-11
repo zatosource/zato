@@ -1,0 +1,56 @@
+Outgoing connections - SQL
+==========================
+
+Overview
+--------
+
+Used to create, update, delete and browse through outgoing SQL connections,
+used by Zato services to access SQL databases.
+
+* Menu path: Connections -> Outgoing -> SQL
+* Example address: http://localhost:8183/zato/outgoing/sql/?cluster=1
+
+.. image:: /gfx/web-admin/outgoing/sql.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/outgoing/sql-update.png
+
+=================== ===============================================================================================================================================================================
+Header              Notes
+=================== ===============================================================================================================================================================================
+Name                Connection name
+Active              Whether the connection can be used by services or not. 
+
+                    If a connection is not active a service will encounter a 
+                    `zato.common.Inactive <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+                    exception when attempting to use it.
+                    
+                    Note that an inactive connection still can be 
+                    :ref:`pinged <web-admin-outgoing-sql-ping>`.
+                    
+Host                Database host
+Port                Database port
+Database name       Database name
+User                Database user
+Pool size           Connection pool size. Always start with 1 and increase only if it's not enough in practice.
+Extra               *(Optional)* Any extra parameters passed directly into 
+                    `SQLAlchemy's create_engine function <https://bitbucket.org/sqlalchemy/sqlalchemy/src/d0aaaf28c64075e1d7565920766d3b7254c47ebb/lib/sqlalchemy/engine/__init__.py?at=default>`_
+                    as its keyword arguments. A connection won't be available if any of the keywords is not a valid SQLAlchemy one.
+=================== ===============================================================================================================================================================================
+
+.. _web-admin-outgoing-sql-ping:
+
+Ping
+----
+
+.. image:: /gfx/web-admin/outgoing/sql-ping.png
+
+A connection can be pinged - this sends 
+`a dummy query <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/odb/__init__.py>`_
+from one of a  cluster's servers. This can be used to check whether a given
+database is reachable by Zato servers.
+
+The feature is available even if a connection is inactive.
