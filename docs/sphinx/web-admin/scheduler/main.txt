@@ -1,0 +1,37 @@
+Scheduler
+=========
+
+Overview
+--------
+
+* Menu path: Scheduler
+* Example address: http://localhost:8183/zato/scheduler/?cluster=1
+
+Manages scheduler-initiated background jobs. A background scheduler is always started
+by one of the servers in a cluster. When a time arrives for a job to be invoked,
+the scheduler publishes a message on a broker, the message is picked up
+by one of the servers and a service is invoked.
+
+Extra data is a string which Zato doesn't interfere with - it's provided as is 
+to a service in its request's :doc:`raw_request<../../progguide/request-response>`
+attribute.
+
+A job is of a specific type:
+
+============== ====================================================================
+Type           Notes
+============== ====================================================================
+One-time       For one-off jobs, a job is run and then it's never scheduled again
+Interval-based For recurring tasks, repeated indefinitely or until a specified time
+Cron-style     Similar to interval-based one but uses 
+               `cron syntax <https://en.wikipedia.org/wiki/Cron>`_
+============== ====================================================================
+
+.. image:: /gfx/web-admin/scheduler/scheduler.png
+   :width: 95%
+   
+.. image:: /gfx/web-admin/scheduler/scheduler-one-time.png
+
+.. image:: /gfx/web-admin/scheduler/scheduler-interval-based.png
+
+.. image:: /gfx/web-admin/scheduler/scheduler-cron-style.png
