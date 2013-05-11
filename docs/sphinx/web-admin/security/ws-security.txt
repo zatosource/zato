@@ -1,0 +1,63 @@
+Security - HTTP Basic Auth
+==========================
+
+Overview
+--------
+
+Used to create, update, delete and browse Web Services Security definitions
+as per 
+`OASIS Standard 200401 Username Token Profile V1.0 <https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=wss>`_
+specification.
+
+The definitions  can be used by 
+:doc:`plain HTTP <../channels/plain-http>`/:doc:`SOAP  <../channels/soap>`
+:doc:`channels <../outgoing/plain-http>`
+and 
+:doc:`outgoing connections <../outgoing/soap>`.
+
+* Menu path: Security -> WS-Security
+* Example address: http://localhost:8183/zato/security/wss/?cluster=1
+
+.. image:: /gfx/web-admin/security/wss.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/security/wss-update.png
+
+====================================== ===================================================================================
+Header                                 Notes
+====================================== ===================================================================================
+Name                                   Connection name
+Username                               WS-Security user name 
+Reject empty nonce creation timestamps `Consult spec <https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=wss>`_
+Reject stale username tokens           `Consult spec <https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=wss>`_
+Expiry (seconds)                       After how many seconds after its creation a request should be rejected
+                                       (`consult spec <https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=wss>`_)
+Nonce freshness (seconds)              After how many seconds after its creations unique nonces should be rejected
+                                       (`consult spec <https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=wss>`_)
+====================================== ===================================================================================
+
+A newly created security definition has a password set a random UUID4
+and needs to be changed in order to be usable.
+
+Change password
+---------------
+
+.. image:: /gfx/web-admin/security/wss-change-password.png
+
+Updates a definition's password - the password is stored in the ODB along with
+other details of a security definition.
+
+Delete
+------
+
+.. image:: /gfx/web-admin/security/wss-delete.png
+
+Deletes a security definition and all the connections that make use of it.
+
+.. note ::
+
+  It needs to be emphasized that any plain HTTP or SOAP channels and outgoing
+  connections that were using the definition will also be deleted automatically.

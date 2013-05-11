@@ -1,0 +1,67 @@
+Channels - AMQP
+===============
+
+Overview
+--------
+
+Used to create, update, delete and browse through AMQP channels.
+
+Each channels represents a connection through which AMQP broker messages are 
+received by Zato. A given service is invoked for each message received.
+
+Creating or updating a channel (re-)establishes a connection to an AMQP broker
+and there are as many connectors and connections to any broker as there are 
+active channels and :doc:`outgoing connections <../outgoing/amqp>` using it. 
+
+For instance, if there is 1 
+:doc:`AMQP definition <../conn-def/amqp>` and 5 channels using it, there will
+be 5 connector processes started in a cluster each maintaining 1 connection
+to the broker pointed to by the definition.
+
+Reading messages off a queue and invoking a service is an asynchronous
+activity - messages are not rolled back onto queues if there are any errors
+along.
+
+* Menu path: Connections -> Channels -> AMQP
+* Example address: http://localhost:8183/zato/channel/amqp/?cluster=1
+
+.. image:: /gfx/web-admin/channels/amqp.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/channels/amqp-create.png
+
+=================== ===================================================================
+Header              Notes
+=================== ===================================================================
+Name                Channel name
+Active              :ref:`Documented below <web-admin-channels-amqp-active>`
+Definition          :doc:`AMQP definition <../conn-def/amqp>` to read basic
+                    connection information from
+Queue               Name of the AMQP queue to fetch messages from
+Consumer tag prefix Each channel can be given a prefix that can be used to
+                    tell channels apart from AMQP's end, e.g. each Zato 
+                    environment can use a different one
+Service             Name of an already existing service to invoke for
+                    each AMQP message received
+Data format         *(Optional)* The expected data format Zato should parse
+                    incoming messages as. This will also populate a service's
+                    :ref:`data_format attribute <progguide-write-service-data_format>`.
+=================== ===================================================================
+
+Delete
+------
+
+.. image:: /gfx/web-admin/channels/amqp-delete.png
+
+Stops a channel's connector and deletes the channel from ODB.
+
+.. _web-admin-channels-amqp-active:
+  
+The 'Active' flag
+-----------------
+
+If a channel is made inactive, its underlying AMQP connection will be stopped
+but the connector itself will be still running.

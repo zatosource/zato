@@ -2,7 +2,7 @@
 zato create cluster
 ===================
 
-Creates a cluster's configuration in the :doc:`ODB<architecture/sql-odb>`. Doesn't create servers nor any other
+Creates a cluster's configuration in the :doc:`ODB<../../architecture/sql-odb>`. Doesn't create servers nor any other
 Zato components. Any passwords asked for won't be echoed. The command requires that
 the ODB be up and running.
 

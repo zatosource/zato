@@ -29,7 +29,7 @@ Addresses     * HTTP - address the cluster will accept incoming HTTP
                 :ref:`load-balancer's health monitoring service <admin-ha-monitoring-services>`
 Edit          :ref:`Cluster edit form <web-admin-cluster-edit>`
 Delete        :ref:`Cluster delete form <web-admin-cluster-delete>`
-Load-balancer :doc:`Link to load-balancer's management forms <./load-balancer>`
+Load-balancer :doc:`Link to load-balancer's management forms <./load-balancer/gui>`
 Servers       :doc:`Link to a list of servers on this cluster along with their state <./servers/main>`
 ============= ===========================================================================================
 

@@ -8,8 +8,8 @@ Overview
 --------
 
 Asynchronously sends a message to a WebSphere MQ queue manager using 
-:doc:`connection <TODO>`
-:doc:`parameters <TODO>`
+:doc:`connection <../../web-admin/conn-def/jms-wmq>`
+:doc:`parameters <../../web-admin/outgoing/jms-wmq>`
 specified.
 
 The application on the receiving end is assummed to have been written in Java
@@ -27,7 +27,7 @@ and `Spring Python <http://static.springsource.org/spring-python/1.2.x/sphinx/ht
 .. note::
 
     Before making using of the connections, 
-    :doc:`PyMQI needs to be first manually enabled <TODO>`
+    :doc:`PyMQI needs to be first manually enabled <../../admin/guide/enabling-extra-libs>`
     by administrators.
 
 API

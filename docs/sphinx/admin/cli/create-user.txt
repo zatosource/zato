@@ -2,7 +2,7 @@
 zato create user
 ================
 
-Creates a new user. As of now, the command creates new :doc:`web admin<architecture/web-admin>`
+Creates a new user. As of now, the command creates new :doc:`web admin<../../architecture/web-admin>`
 users only and as such, needs an active connection to the ODB. ODB connection parameters
 are read off the web admin directory *path* points to.
 

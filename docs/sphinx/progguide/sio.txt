@@ -40,11 +40,8 @@ API, for example:
         def handle(self):
             self.response.payload.is_allowed = self.get_data()
             
-Save it in an sio_example.py file, :doc:`hot-deploy<TODO>` it and add new channels the service
-will be exposed over. For this exercise, let's use 
-:doc:`JSON <TODO>`
-and
-:doc:`SOAP <TODO>`.
+Save it in an sio_example.py file, :doc:`hot-deploy<../admin/guide/installing-services>` it and add new channels the service
+will be exposed over. For this exercise, let's use JSON and SOAP.
 
 JSON channel example
 ~~~~~~~~~~~~~~~~~~~~
@@ -357,7 +354,7 @@ SQLAlchemy objects
 
 You can directly use SQLAlchemy query results, Zato will convert it itself.
 This is great if you want to use
-:doc:`SQL connections <TODO>` as it simply means you only have to write SQLAlchemy
+:doc:`SQL connections <./outconn/sql>` as it simply means you only have to write SQLAlchemy
 queries without a need for converting their results into the payload format.
 
 Let's say you've defined your database table as follows:

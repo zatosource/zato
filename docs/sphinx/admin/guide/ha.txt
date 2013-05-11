@@ -20,7 +20,7 @@ Reminding a couple of facts will make it easier to discuss the matter:
 * Each cluster has a single HTTP load-balancer in front of it so the traffic
   is always distribute fairly over all servers
 
-* If a cluster establishes any AMQP, JMS WebSphere MQ or Zero MQ connections,
+* If a cluster establishes any AMQP, JMS WebSphere MQ or ZeroMQ connections,
   these are always managed by connector processes - there are as many connectors
   as there are channels and outgoing connections using these 3 technologies.
   
@@ -60,7 +60,7 @@ on a case by case basis and is well beyond the scope of this document.
 Clusters with connectors
 ------------------------
 
-If there are AMQP, JMS WebSphere MQ or Zero MQ connectos running in a given Zato
+If there are AMQP, JMS WebSphere MQ or ZeroMQ connectos running in a given Zato
 environment, it's recommended that there be at least 2 clusters to handle the traffic.
 This is because there's a certain gap possible - the value of which depends on 
 :ref:`how servers have been configured <admin-guide-config-server-singleton.connector_server_keep_alive_job_time>`

@@ -147,6 +147,7 @@ class BaseConnector(BrokerMessageReceiver):
         self.repo_location = repo_location
         self.def_id = def_id
         self.odb = None
+        self.odb_config = None
         self.sql_pool_store = None
         
     def _close(self):
@@ -159,7 +160,7 @@ class BaseConnector(BrokerMessageReceiver):
     
     def _setup_odb(self):
         # First let's see if the server we're running on top of exists in the ODB.
-        self.server = self.odb.fetch_server()
+        self.server = self.odb.fetch_server(self.odb_config)
         if not self.server:
             raise Exception('Server does not exist in the ODB')
         
@@ -187,19 +188,19 @@ class BaseConnector(BrokerMessageReceiver):
         self.broker_client.start()
         
         # ODB
-        odb_data = Bunch()
-        odb_data.db_name = config_odb.db_name
-        odb_data.is_active = config_odb.is_active
-        odb_data.engine = config_odb.engine
-        odb_data.extra = config_odb.extra
-        odb_data.host = config_odb.host
-        odb_data.password = self.odb.crypto_manager.decrypt(config_odb.password)
-        odb_data.pool_size = config_odb.pool_size
-        odb_data.username = config_odb.username
-        odb_data.is_odb = True
+        self.odb_config = Bunch()
+        self.odb_config.db_name = config_odb.db_name
+        self.odb_config.is_active = True
+        self.odb_config.engine = config_odb.engine
+        self.odb_config.extra = config_odb.extra
+        self.odb_config.host = config_odb.host
+        self.odb_config.password = self.odb.crypto_manager.decrypt(config_odb.password)
+        self.odb_config.pool_size = config_odb.pool_size
+        self.odb_config.username = config_odb.username
+        self.odb_config.is_odb = True
         
         self.sql_pool_store = app_context.get_object('sql_pool_store')
-        self.sql_pool_store[ZATO_ODB_POOL_NAME] = odb_data
+        self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.odb_config
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         
         self._setup_odb()

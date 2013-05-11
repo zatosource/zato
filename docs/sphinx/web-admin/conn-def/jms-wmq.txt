@@ -1,0 +1,77 @@
+Connection definitions - JMS WebSphere MQ
+=========================================
+
+Overview
+--------
+
+Used to create, update, delete and browse 
+`JMS <https://en.wikipedia.org/wiki/Java_Message_Service>`_
+`WebSphere MQ <http://www-03.ibm.com/software/products/us/en/wmq>`_
+connection definitions.
+
+A definition is a template off of which a concrete connection, either 
+:doc:`channel <../channels/jms-wmq>`
+or an 
+:doc:`outgoing one<../outgoing/jms-wmq>`,
+is created. Merely creating a definition doesn't start a connection to a broker.
+
+One definition can serve to create multiple channels or outgoing connections.
+
+Only JMS connections are supported - it's not possible to send or receive plain MQ
+messages.
+
+The JMS support is completely transparent - from a Java application's point
+of view Zato will seem to be a Java application as well.
+
+.. note ::
+
+  Before connecting to queue managers, 
+  `PyMQI <https://github.com/dsuch/pymqi>`_
+  :ref:`needs to be enabled first <admin-guide-enabling-extra-libs-pymqi>`.
+
+* Menu path: Connections -> Definitions -> JMS WebSphere MQ
+* Example address: http://localhost:8183/zato/definition/jms-wmq/?cluster=1
+
+.. image:: /gfx/web-admin/conn-def/jms-wmq.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/conn-def/jms-wmq-create.png
+
+============================ ==============================================================
+Header                       Notes
+============================ ==============================================================
+Name                         Definition's name
+Host                         Queue manager's host
+Port                         Queue manager's listener's port
+Queue manager                Queue manager's name
+Channel                      Name of SVRCONN channel to connect through
+Cache open send queues       If queues open for sending should be cached for a later use,
+                             or should they be open for each MQPUT operation
+Cache open receive queues    *(Currently unused and should be set to True)*
+Use shared connections       Queue managers running on z/OS mainframe don't support 
+                             shared client connections - untick this option if a queue
+                             manager is on z/OS
+Use SSL                      Whether the connection should use SSL/TLS
+SSL cipher spec              If connecting with SSL, a cipher spec to use (not cipher 
+                             suite)
+SSL key repository           If connecting with SSL, a path to an SSL key repository, 
+                             the type of which must be CMS (not JKS)
+Needs MCD folder             Set to True for MQ 6.0 or older
+Max characters printed       When running in DEBUG mode, how many characters of
+                             messages passing through to write out to logs
+============================ ==============================================================
+
+Delete
+------
+
+.. image:: /gfx/web-admin/conn-def/jms-wmq-delete.png
+
+Deletes a JMS WebSphere MQ definition and all the connections that make use of it.
+
+.. note ::
+
+  It needs to be emphasized that any channels or outgoing
+  connections that were using the definition will also be deleted automatically.

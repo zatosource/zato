@@ -19,7 +19,7 @@ Main config
 -----------
 
 The main config file is `a HAProxy one <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html>`_
-and :doc:`should be usually modified using the web admin <TODO>`.
+and :doc:`should be usually modified using the web admin <../../../web-admin/load-balancer/source-code>`.
 
 One thing that you may want to edit is the username and password to browse the
 load-balancer's statistics with, available under 'defaults -> stats auth'.
@@ -180,7 +180,7 @@ Of special interest are keys:
 * logger_zato.level - sets the log level for Zato and nothing else
 
 By default logs are written out to local files but it's possible to reconfigure
-the logging to use any other destination Python itself supports such as syslog, Zero MQ etc.
+the logging to use any other destination Python itself supports such as syslog, ZeroMQ etc.
 
 .. _admin-guide-config-lb-crypto:
 

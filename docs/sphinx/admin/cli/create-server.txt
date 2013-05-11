@@ -2,14 +2,14 @@
 zato create server
 =========================
 
-Creates a :doc:`Zato server<architecture/servers>` - all the directories needed
+Creates a :doc:`Zato server<../../architecture/servers>` - all the directories needed
 by a server and sets it up so it is ready to join a cluster. The directory pointed
 to by *path* must already exist and be empty. *cluster_name* must be a name of 
 a cluster previously created using the :doc:`zato create cluster<./create-cluster>` command.
 
 The command *does not* make the server start accepting messages immediately.
-An administrator still needs to :doc:`start the server<admin/start/server>` and accept it into a cluster
-by :doc:`confirming the step in the web admin<web-admin/servers/add-remove>`.
+An administrator still needs to :doc:`start the server<./start>` and accept it into a cluster
+by :doc:`confirming the step in the web admin<../../web-admin/servers/add-remove>`.
 
 Command-specific parameters
 ---------------------------

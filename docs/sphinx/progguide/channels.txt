@@ -9,11 +9,11 @@ Channels
 
 Services accept requests either from jobs initiated by the 
 :doc:`scheduler <./scheduler>` or via 
-:doc:`AMQP <>`,
-:doc:`JMS WebSphere MQ <>`,
-:doc:`plain HTTP <>`,
-:doc:`SOAP <>` and 
-:doc:`Zero MQ <>`
+:doc:`AMQP <../web-admin/channels/amqp>`,
+:doc:`JMS WebSphere MQ <../web-admin/channels/jms-wmq>`,
+:doc:`plain HTTP <../web-admin/channels/plain-http>`,
+:doc:`SOAP <../web-admin/channels/soap>` and 
+:doc:`ZeroMQ <../web-admin/channels/zmq>`
 channels. 
 
 Only HTTP channels are synchronous and make the requesting side wait before the response is ready. 
@@ -27,7 +27,7 @@ Plain HTTP and SOAP channels are exposed via Zato servers directly.
 One of the key features of Zato is that precisely the same service can be exposed over 
 multiple channels without any changes to the service's implementation. That is,
 once the service has been written and deployed, it's only a matter of a server's
-configuration to make a service available through, say, AMQP in addition to Zero MQ.
+configuration to make a service available through, say, AMQP in addition to ZeroMQ.
 
 Regardless of which channel a service was invoked over, the very same 
 :doc:`request and response objects <./request-response>`

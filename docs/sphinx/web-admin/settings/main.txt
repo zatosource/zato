@@ -1,0 +1,16 @@
+User settings
+==============
+
+.. image:: /gfx/web-admin/settings/arrow.png
+
+.. image:: /gfx/web-admin/settings/main.png
+   :width: 95%
+   
+Clicking 'My settings' allows you to update:
+
+* Your timezone and preffered date/time format. This will be used throughout
+  the whole of the web admin except for a few places that are explicitly 
+  documented to use UTC.
+  
+* Cluster color markers - a feature that lets you easily tell one cluster from
+  another which is documented in :doc:`its own chapter <../../progguide/web-admin-settings>`.

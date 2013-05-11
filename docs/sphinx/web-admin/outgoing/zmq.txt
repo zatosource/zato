@@ -1,0 +1,64 @@
+Outgoing connections - ZeroMQ
+=============================
+
+Overview
+--------
+
+Used to create, update, delete and browse through outgoing ZeroMQ connections.
+
+Each outgoing connection represents a link through which messages are sent 
+to ZMQ sockets.
+
+Creating or updating a connection (re-)establishes a link to a socket
+and there are as many connectors and connections to a socket as there are 
+active outgoing connections and :doc:`channels <../channels/zmq>` in a cluster.
+
+For instance, if there are 5 outgoing connections using a socket, there will
+be 5 connector processes started in a cluster each maintaining 1 connection
+to the socket.
+
+Sending messages to a ZMQ socket is an asynchronous activity - messages are not
+rolled back to Zato services if there are any errors
+along.
+
+* Menu path: Connections -> Outgoing -> ZeroMQ
+* Example address: http://localhost:8183/zato/outgoing/zmq/?cluster=1
+
+.. image:: /gfx/web-admin/outgoing/zmq.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/outgoing/zmq-update.png
+
+=================== ================================================================================
+Header              Notes
+=================== ================================================================================
+Name                Connection name
+Active              :ref:`Documented below <web-admin-outgoing-zmq-active>`
+Address             Address of a ZeroMQ socket to connect to. Must start
+                    with tcp://
+Socket type         Type of a socket to connect to. Currently always PUSH.
+=================== ================================================================================
+
+Delete
+------
+
+.. image:: /gfx/web-admin/outgoing/zmq-delete.png
+
+Stops the underlying connector and deletes the connection from ODB.
+
+.. _web-admin-outgoing-zmq-active:
+  
+The 'Active' flag
+-----------------
+
+If an **outgoing connection** is made **inactive** and there are services still making
+use of it, the **messages** services send **will be lost**. 
+
+You need to ensure no service is able to reach an outgoing connection before
+it's turned off - otherwise **you will lose messages**.
+
+Also an inactive outgoing connection closes its underlying link to a queue manager
+but the connector's process continues to run.

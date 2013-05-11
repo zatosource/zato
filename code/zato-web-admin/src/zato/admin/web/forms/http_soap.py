@@ -40,11 +40,11 @@ class CreateForm(DataFormatForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, security_list=[], prefix=None, post_data=None):
+    def __init__(self, security_list=[], soap_versions=SOAP_VERSIONS, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['soap_version'].choices = []
-        for name in sorted(SOAP_VERSIONS):
+        for name in sorted(soap_versions):
             self.fields['soap_version'].choices.append([name, name])
             
         self.fields['security'].choices = []

@@ -1,0 +1,45 @@
+Outgoing connections - FTP
+==========================
+
+Overview
+--------
+
+Used to create, update, delete and browse through outgoing FTP connections.
+
+Each usage of a connection by a service establishes a new link to the FTP
+server, i.e. there is no connection pool created in the background, each time
+a new service connects to a server a new FTP connection is needed. Within a 
+single instance of a service only a single connection to the FTP server 
+is maintained though.
+
+* Menu path: Connections -> Outgoing -> FTP
+* Example address: http://localhost:8183/zato/outgoing/ftp/?cluster=1
+
+.. image:: /gfx/web-admin/outgoing/ftp.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/outgoing/ftp-create.png
+
+=================== ======================================================================================================================
+Header              Notes
+=================== ======================================================================================================================
+Name                Connection name
+Active              Whether the connection can be used by services or not. If a connection
+                    is not active a service will encounter 
+                    a 
+                    `zato.common.Inactive <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+                    exception when attempting to use it.
+Host                FTP server's host
+Port                Port to connect to
+User                *(Optional)* A username to connect with. Leave blank to connect anonymously.
+Password            *(Optional)* A password to connect with
+Accounting info     *(Optional)* An accounting information a server may possibly require (rarely used)
+Timeout             *(Optional)* Connection timeout, in seconds
+Cache directories   Whether FTP directories should be cached within a single FTP connection. In either case, they won't be cached 
+                    across multiple invocations of services using the FTP connection.
+=================== ======================================================================================================================
+
+A newly created connection definition has a password set to an empty string.
