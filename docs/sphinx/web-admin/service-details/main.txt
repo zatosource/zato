@@ -41,7 +41,7 @@ Lists all, if any, the
 :doc:`SOAP <TODO>`,
 :doc:`AMQP <TODO>`,
 :doc:`JMS WebSphere MQ <TODO>`,
-:doc:`Zero MQ <TODO>`,
+:doc:`ZeroMQ <TODO>`,
 channels
 and
 :doc:`scheduler jobs <TODO>`

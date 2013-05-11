@@ -1,5 +1,5 @@
-Outgoing connections - Zero MQ
-==============================
+Outgoing connections - ZeroMQ
+=============================
 
 Overview
 --------
@@ -21,7 +21,7 @@ Sending messages to a ZMQ socket is an asynchronous activity - messages are not
 rolled back to Zato services if there are any errors
 along.
 
-* Menu path: Connections -> Outgoing connections -> Zero MQ
+* Menu path: Connections -> Outgoing connections -> ZeroMQ
 * Example address: http://localhost:8183/zato/outgoing/zmq/?cluster=1
 
 .. image:: /gfx/web-admin/outgoing/zmq.png
@@ -37,7 +37,7 @@ Header              Notes
 =================== ================================================================================
 Name                Connection name
 Active              :ref:`Documented below <admin-guide-outgoing-zmq-active>`
-Address             Address of a Zero MQ socket to connect to. Must start
+Address             Address of a ZeroMQ socket to connect to. Must start
                     with tcp://
 Socket type         Type of a socket to connect to. Currently always PUSH.
 =================== ================================================================================

@@ -437,7 +437,7 @@ Of special interest are keys:
 * logger_zato.level - sets the log level for Zato and nothing else
 
 By default logs are written out to local files but it's possible to reconfigure
-the logging to use any other destination Python itself supports such as syslog, Zero MQ etc.
+the logging to use any other destination Python itself supports such as syslog, ZeroMQ etc.
 
 .. _admin-guide-config-server-service-sources:
 
