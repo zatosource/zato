@@ -12,7 +12,7 @@ a new service connects to a server a new FTP connection is needed. Within a
 single instance of a service only a single connection to the FTP server 
 is maintained though.
 
-* Menu path: Connections -> Outgoing connections -> FTP
+* Menu path: Connections -> Outgoing -> FTP
 * Example address: http://localhost:8183/zato/outgoing/ftp/?cluster=1
 
 .. image:: /gfx/web-admin/outgoing/ftp.png

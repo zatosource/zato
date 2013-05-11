@@ -22,7 +22,7 @@ Sending messages to a queue manager is an asynchronous activity - messages are n
 rolled back to Zato services if there are any errors
 along.
 
-* Menu path: Connections -> Outgoing connections -> JMS WebSphere MQ
+* Menu path: Connections -> Outgoing -> JMS WebSphere MQ
 * Example address: http://localhost:8183/zato/outgoing/jms-wmq/?cluster=1
 
 .. image:: /gfx/web-admin/outgoing/jms-wmq.png
