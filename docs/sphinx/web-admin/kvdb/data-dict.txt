@@ -4,6 +4,9 @@ Key/value database (Redis) - data dictionaries
 Overview
 --------
 
+* Menu path: Key/value DB -> Data dictionaries
+* Example address: http://localhost:8183/zato/kvdb/data-dict/dictionary/?cluster=1
+
 Data dictionaries (dicts) are meant to ease with translating codes, symbols, IDs
 and other dictionary-like information between systems.
 
@@ -55,6 +58,9 @@ Import/export
 Translations can be exported into a format that can be later imported into 
 a cluster. Not that importing an export wipes out any previously declared
 translations.
+
+An export is a bzip2-encoded JSON file which can be update manually but to
+import it onto environment it needs to be bzip2-compressed again.
 
 Import is an either-or operation performed as an atomic Redis transaction.
 Either all translations are imported or none is.
