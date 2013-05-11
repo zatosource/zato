@@ -14,7 +14,7 @@ have to manipulate XML as such at all - everything will be generated for you.
 
 First, let's define a bare-bones service and an HTTP channel that will be used
 throughout the chapter. Save the following code in an xml_example.py file
-and :doc:`hot-deploy <TODO>` it.
+and :doc:`hot-deploy <../admin/guide/installing-services>` it.
 
 ::
 

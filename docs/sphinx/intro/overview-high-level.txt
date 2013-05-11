@@ -32,7 +32,7 @@ of a Zato environment allows for:
 * introducing a common security model across different parts of the IT infrastructure
 
 Zato environments are composed of clusters, each of which is a set of servers
-and supporting applications running in a :doc:`HA<admin/ha>` configuration.
+and supporting applications running in a :doc:`HA<../admin/guide/ha>` configuration.
 
 Message processing
 ==================
@@ -96,9 +96,9 @@ Zato, the open-source project
 =============================
 
 Zato is open-source software licensed under a commercial-friendly `LGPL`_ license and is not only
-code but also an open-source project promoting open collaboration through
+code proper but also an open-source project promoting open collaboration through
 peer production and the exchange of ideas between developers
-and users. :doc:`Everyone is strongly encouraged to take part in the project<project/getting-involved>`
+and users. :doc:`Everyone is strongly encouraged to take part in the project<../project/get-involved>`
 and help build better world through nicer, faster, easier and more reliable software!
 
 .. _LGPL: https://en.wikipedia.org/wiki/LGPL

@@ -9,7 +9,7 @@ to be prepared for and there's a couple of recommendations to make it less bothe
 
 Upon encountering any abnormal situation you should make sure you know which
 version of the service you're dealing with. Either do it yourself or ask an administrator
-to :doc:`obtain the SHA sum of a module the service is contained in <TODO>`. Even though
+to :doc:`obtain the SHA sum of a module the service is contained in <../web-admin/service-details/source-code>`. Even though
 you will most likely use some sort of a versioning scheme it will still be possible
 that someone will deploy a service without updating its version. Hence comparing
 the hash of the service that's deployed with the one you have access to locally
@@ -37,12 +37,12 @@ on the lookout for - either manually or using any automated means. For instance,
 that's not WARN or more severe could be ignored by production admins.
 
 Remember that Zato is able to collect sample 
-:doc:`service requests and responses <TODO>`. If a service
+:doc:`service requests and responses <../web-admin/service-details/sample-req-resp>`. If a service
 possibly produces an incorrect response and you have access to other environment the same service
 is deployed in and the latter doesn't cause problems, you can compare its sample response and decide 
 when the former one's is proper or not.
 
 It's possible to store requests and responses belonging to service invocations that
-:doc:`took more than a specified amount of time <TODO>` to complete. By comparing
+:doc:`took more than a specified amount of time <../web-admin/service-details/slow-responses>` to complete. By comparing
 these documents you may be able to discover that a slow response stems for a particular
 set of input arguments.

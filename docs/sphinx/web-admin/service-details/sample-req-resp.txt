@@ -35,9 +35,9 @@ Configuration       One in how many invocations should be stored as a sample
                     stored.
 CID                 :ref:`Correlation ID <progguide-write-service-cid>`
 Request timestamp   When was the request received,
-                    :doc:`in current user's timezone <>`
+                    :doc:`in current user's timezone <../settings/main>`
 Response timestamp  When was the response returned,
-                    :doc:`in current user's timezone <>`
+                    :doc:`in current user's timezone <../settings/main>`
 Request             Request data
 Response            Response data
 =================== =========================================================

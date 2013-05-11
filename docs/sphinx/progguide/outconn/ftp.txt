@@ -29,7 +29,7 @@ self.outgoing.ftp.get
   The connection supports a range of operations
   explained in the `fs project's documentation <http://pythonhosted.org/fs/interface.html>`_.
   
-  :param name: Name of the :doc:`FTP connection template <TODO>`
+  :param name: Name of the :doc:`FTP connection template <../../web-admin/outgoing/ftp>`
   :type name: string
   
   :rtype: (A thin wrapper around an `fs.ftpfs.FTPFS <http://pythonhosted.org/fs/ftpfs.html#fs.ftpfs.FTPFS>`_ object)

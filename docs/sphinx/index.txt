@@ -24,11 +24,11 @@ Introduction
       :doc:`Technical overview <intro/overview-tech>`
 
     * **Tutorial:**
-      :doc:`Installing<intro/tutorial01>` |
-      :doc:`Creating a quickstart cluster<intro/tutorial02>` |
-      :doc:`Introducing the web admin panel<intro/tutorial03>` |
-      :doc:`Writing a Zato service<intro/tutorial04>` |
-      :doc:`Hot-deploying the service and invoking it<intro/tutorial05>`
+      :doc:`Installing<tutorial/01>` |
+      :doc:`Creating a quickstart cluster<tutorial/02>` |
+      :doc:`Introducing the web admin panel<tutorial/03>` |
+      :doc:`Writing a Zato service<tutorial/04>` |
+      :doc:`Hot-deploying the service and invoking it<tutorial/05>`
       
 Web admin
 =========

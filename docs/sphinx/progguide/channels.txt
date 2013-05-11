@@ -9,11 +9,11 @@ Channels
 
 Services accept requests either from jobs initiated by the 
 :doc:`scheduler <./scheduler>` or via 
-:doc:`AMQP <>`,
-:doc:`JMS WebSphere MQ <>`,
-:doc:`plain HTTP <>`,
-:doc:`SOAP <>` and 
-:doc:`ZeroMQ <>`
+:doc:`AMQP <../web-admin/channels/amqp>`,
+:doc:`JMS WebSphere MQ <../web-admin/channels/jms-wmq>`,
+:doc:`plain HTTP <../web-admin/channels/plain-http>`,
+:doc:`SOAP <../web-admin/channels/soap>` and 
+:doc:`ZeroMQ <../web-admin/channels/zmq>`
 channels. 
 
 Only HTTP channels are synchronous and make the requesting side wait before the response is ready. 

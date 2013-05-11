@@ -10,7 +10,7 @@ In its current version of |version|, Zato can be installed in one of the followi
 * `Linux Mint 13 LTS <http://www.linuxmint.com/index.php>`_
 
 There is nothing Linux-specific to Zato's codebase and reports regarding a successful
-installation on other systems are :ref:`highly encouraged <TODO>`.
+installation on other systems are :doc:`highly encouraged <../../project/get-involved>`.
 
 Future Zato versions will most certainly support additional platforms and systems.
 
@@ -66,18 +66,18 @@ Steps
   Depending on how fast the system is and on the quality of the
   Internet connectivity, it will take at least several minutes for the installer
   to complete so in that time, why don't you have a look at 
-  :doc:`the tutorial <../../tutorial/step1>`,
+  :doc:`the tutorial <../../tutorial/01>`,
   :doc:`Zato's <../../intro/overview-high-level>`
   :doc:`overview <../../intro/overview-tech>`, 
   :doc:`its architecture <../../architecture/overview>`,
-  :doc:`the web-admin <../../web-admin/index>`, 
+  :doc:`the web-admin <../../web-admin/intro>`, 
   :doc:`programming documentation<../../progguide/overview>`
   and
   :doc:`several  <../../admin/cli/index>`
   :doc:`of  <../../admin/guide/install-config/overview>`
-  :doc:`the  <../../admin/ha>`
-  :doc:`admin  <../../admin/capacity-planning>`
-  :doc:`guides <../../admin/installing-services>`
+  :doc:`the  <../../admin/guide/ha>`
+  :doc:`admin  <../../admin/guide/capacity>`
+  :doc:`guides <../../admin/guide/installing-services>`
   or something else in 
   :doc:`the docs <../../index>`?
 

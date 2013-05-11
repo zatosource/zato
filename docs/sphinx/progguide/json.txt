@@ -12,7 +12,7 @@ to accept or return JSON in your services but if that's not an option using
 JSON directly is still a piece of cake.
 
 For starters, let's save the code below in a json_example.py file and
-:doc:`hot-deploy <TODO>` it. This will be the service we'll be modifying in this chapter.
+:doc:`hot-deploy <../admin/guide/installing-services>` it. This will be the service we'll be modifying in this chapter.
 
 A channel through which it will be exposed to the outside world will also be needed.
 Note the channel's data format is JSON. 

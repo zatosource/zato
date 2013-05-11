@@ -21,7 +21,7 @@ object which is an instance of a Python stdlib's `logging.Logger class
            self.logger.info('handle called')
            
 The message will be written to the logs though where to exactly depends on 
-:doc:`how a server has been configured by administrators <TODO>` - by default
+:doc:`how a server has been configured by administrators <../admin/guide/install-config/config-server>` - by default
 messages are written to local log files but the exact location or locations
 can be set to anything Python's logging library supports, including syslog, e-mail
 or ZeroMQ sockets.

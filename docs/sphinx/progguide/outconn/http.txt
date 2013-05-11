@@ -8,7 +8,9 @@ Overview
 --------
 
 Synchronously invokes a remote HTTP server using JSON, SOAP or any other transport
-method using :doc:`previously configured <TODO>` connection parameters. 
+method using 
+:doc:`previously configured <../../web-admin/outgoing/plain-http>`
+:doc:`connection parameters <../../web-admin/outgoing/soap>`. 
 
 If the connection has been configured to use a security definition, it will be picked up
 automatically, without any coding. Likewise, if the service to be invoked is a SOAP one,
@@ -50,7 +52,7 @@ self.outgoing.plain_http.get
   Fetches an object whose .conn attribute represents a connection to an HTTP server
   invoked through plain HTTP, including JSON.
   
-  :param name: Name of the :doc:`HTTP connection template <TODO>`
+  :param name: Name of the :doc:`HTTP connection template <../../web-admin/outgoing/plain-http>`
   :type name: string
   
   :rtype: (A thin wrapper around a connection to the server)
@@ -65,7 +67,7 @@ self.outgoing.soap.get
   Fetches an object whose .conn attribute represents a connection to an HTTP server
   invoked through SOAP.
   
-  :param name: Name of the :doc:`SOAP connection template <TODO>`
+  :param name: Name of the :doc:`SOAP connection template <../../web-admin/outgoing/soap>`
   :type name: string
   
   :rtype: (A thin wrapper around a connection to the server)

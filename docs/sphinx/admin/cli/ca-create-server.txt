@@ -2,7 +2,7 @@
 zato ca create server
 =====================
 
-Creates a certificate and a pair of private and public keys for a :doc:`Zato server<architecture/servers>`.
+Creates a certificate and a pair of private and public keys for a :doc:`Zato server<../../architecture/servers>`.
 The certificate's organizational unit name (OU) will be in the format of *CLUSTER_NAME:SERVER_NAME*.
 
 Files will be stored in following locations, where *path* is the path to the CA used for generating the crypto material.

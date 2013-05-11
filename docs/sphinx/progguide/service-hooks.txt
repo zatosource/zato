@@ -27,7 +27,8 @@ Common methods
 --------------
 
 These methods can be overridden regardless of the means a service will be executed
-with, no matter its channel, if any, or if it's invoked through the :doc:`scheduler <TODO>`
+with, no matter its channel, if any, or if it's invoked through the 
+:doc:`scheduler <../web-admin/scheduler/main>`
 or not.
 
 ======================================================================== ===================================================================================
@@ -105,17 +106,17 @@ A scheduler-initiated service can access all the
 :ref:`common methods <progguide-service-hooks-common-methods>`
 and a set of supplementary ones, and even then, some will depend on the job's type.
 
-==================================================================================== ==============================================================================================
+==================================================================================== ====================================================================================================================
 Method                                                                               Notes
-==================================================================================== ==============================================================================================
+==================================================================================== ====================================================================================================================
 :ref:`before_add_to_store <progguide-write-service-before_add_to_store>`             Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
 :ref:`after_add_to_store <progguide-write-service-after_add_to_store>`               Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
 :ref:`before_job <progguide-write-service-before_job>`                               Executed before a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      will be called but only if the service has been triggered by the 
-                                                                                     :doc:`scheduler <TODO>`, regardless of the :ref:`job type <progguide-write-service-job_type>`
+                                                                                     :doc:`scheduler <../web-admin/scheduler/main>`, regardless of the :ref:`job type <progguide-write-service-job_type>`
 :ref:`before_one_time_job <progguide-write-service-before_one_time_job>`             Executed before a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      will be called but only if the service has been triggered by the 
-                                                                                     :doc:`scheduler <TODO>` and its 
+                                                                                     :doc:`scheduler <../web-admin/scheduler/main>` and its 
                                                                                      :ref:`job_type <progguide-write-service-job_type>` is 'one_time'
 :ref:`before_interval_based_job <progguide-write-service-before_interval_based_job>` 〃 when :ref:`job_type <progguide-write-service-job_type>` is 'interval_based'
 :ref:`before_cron_style_job <progguide-write-service-before_cron_style_job>`         〃 when :ref:`job_type <progguide-write-service-job_type>` is 'cron_style'
@@ -123,15 +124,15 @@ Method                                                                          
 :ref:`after_handle <progguide-write-service-after_handle>`                           Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
 :ref:`after_job <progguide-write-service-after_job>`                                 Executed after a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      has been called but only if the service has been triggered by the 
-                                                                                     :doc:`scheduler <TODO>`, regardless of the :ref:`job type <progguide-write-service-job_type>`
+                                                                                     :doc:`scheduler <../web-admin/scheduler/main>`, regardless of the :ref:`job type <progguide-write-service-job_type>`
 :ref:`after_one_time_job <progguide-write-service-after_one_time_job>`               Executed after a service's :ref:`handle <progguide-write-service-handle>`
                                                                                      has been called but only if the service has been triggered by the 
-                                                                                     :doc:`scheduler <TODO>` and its 
+                                                                                     :doc:`scheduler <../web-admin/scheduler/main>` and its 
                                                                                      :ref:`job_type <progguide-write-service-job_type>` is 'one_time'
 :ref:`after_interval_based_job <progguide-write-service-after_interval_based_job>`   〃 when :ref:`job_type <progguide-write-service-job_type>` is 'interval_based'
 :ref:`after_cron_style_job <progguide-write-service-after_cron_style_job>`           〃 when :ref:`job_type <progguide-write-service-job_type>` is 'cron_style'  
 :ref:`finalize_handle <progguide-write-service-finalize_handle>`                     Documented along with other :ref:`common methods <progguide-service-hooks-common-methods>`
-==================================================================================== ==============================================================================================
+==================================================================================== ====================================================================================================================
 
 .. image:: /gfx/progguide/service-hooks-common-scheduler.png
    :align: center

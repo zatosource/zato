@@ -20,7 +20,7 @@ Want to help? **Superb!**
   `the website <TODO>`_, 
   :doc:`documentation <../index>`
   and
-  :doc:`Zato itself <TODO-link-to-web-admin>`
+  :doc:`Zato itself <../web-admin/intro>`
   even more prettier!
   
 * Wanna send a quick documentation patch or suggestion? Just 
