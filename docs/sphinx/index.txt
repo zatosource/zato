@@ -76,7 +76,7 @@ Web admin
       :doc:`JMS WebSphere MQ<web-admin/channels/jms-wmq>` | 
       :doc:`Plain HTTP<web-admin/channels/plain-http>` | 
       :doc:`SOAP<web-admin/channels/soap>` | 
-      :doc:`Zero MQ<web-admin/channels/zeromq>`
+      :doc:`Zero MQ<web-admin/channels/zmq>`
       
     * **Outgoing connections:**
       :doc:`AMQP<web-admin/outgoing/amqp>` | 
@@ -85,7 +85,7 @@ Web admin
       :doc:`Plain HTTP<web-admin/outgoing/plain-http>` | 
       :doc:`SOAP<web-admin/outgoing/soap>` | 
       :doc:`SQL<web-admin/outgoing/soap>` | 
-      :doc:`Zero MQ<web-admin/outgoing/zeromq>`
+      :doc:`Zero MQ<web-admin/outgoing/zmq>`
       
     * **Key/value DB (Redis):**
       :doc:`Data dictionaries<web-admin/kvdb/data-dict>` |
