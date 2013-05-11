@@ -37,7 +37,7 @@ Create and Edit
 Header              Notes
 =================== ===================================================================
 Name                Channel name
-Active              :ref:`Documented below <admin-guide-channels-jms-wmq-active>`
+Active              :ref:`Documented below <web-admin-channels-jms-wmq-active>`
 Definition          :doc:`JMS WebSphere MQ definition <../conn-def/jms-wmq>` 
                     to read basic connection information from
 Queue               Name of the MQ queue to fetch messages from
@@ -56,7 +56,7 @@ Delete
 
 Stops a channel's connector and deletes the channel from ODB.
 
-.. _admin-guide-channels-jms-wmq-active:
+.. _web-admin-channels-jms-wmq-active:
   
 The 'Active' flag
 -----------------

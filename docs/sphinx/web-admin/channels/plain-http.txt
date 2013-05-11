@@ -26,7 +26,7 @@ Create and Edit
 Header              Notes
 =================== ===================================================================
 Name                Channel name
-Active              :ref:`Documented below <admin-guide-channels-plain-http-active>`
+Active              :ref:`Documented below <web-admin-channels-plain-http-active>`
 URL path            A path to mount this channel on. Must be unique in a cluster.
 Method              *(Optional)* An HTTP method that must be used by clients to invoke
                     this particular channel. It can be any string and Zato won't check
@@ -60,7 +60,7 @@ Delete
 Deletes the channel from ODB and servers. The channel won't exist anymore and invoking
 a URL it was mounted on will return HTTP 404 error.
 
-.. _admin-guide-channels-plain-http-active:
+.. _web-admin-channels-plain-http-active:
   
 The 'Active' flag
 -----------------

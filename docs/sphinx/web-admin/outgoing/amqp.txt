@@ -37,7 +37,7 @@ Create and Edit
 Header              Notes
 =================== =============================================================================
 Name                Connection name
-Active              :ref:`Documented below <admin-guide-outgoing-amqp-active>`
+Active              :ref:`Documented below <web-admin-outgoing-amqp-active>`
 Definition          :doc:`AMQP definition <../conn-def/amqp>` to read basic
                     connection information from
 Delivery mode       Whether messages send should be persistent by default
@@ -62,7 +62,7 @@ Delete
 
 Stops the underlying connector and deletes the connection from ODB.
 
-.. _admin-guide-outgoing-amqp-active:
+.. _web-admin-outgoing-amqp-active:
   
 The 'Active' flag
 -----------------

@@ -36,7 +36,7 @@ Create and Edit
 Header              Notes
 =================== ================================================================================
 Name                Connection name
-Active              :ref:`Documented below <admin-guide-outgoing-zmq-active>`
+Active              :ref:`Documented below <web-admin-outgoing-zmq-active>`
 Address             Address of a ZeroMQ socket to connect to. Must start
                     with tcp://
 Socket type         Type of a socket to connect to. Currently always PUSH.
@@ -49,7 +49,7 @@ Delete
 
 Stops the underlying connector and deletes the connection from ODB.
 
-.. _admin-guide-outgoing-zmq-active:
+.. _web-admin-outgoing-zmq-active:
   
 The 'Active' flag
 -----------------

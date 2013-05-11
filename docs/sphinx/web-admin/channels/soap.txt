@@ -24,7 +24,7 @@ Create and Edit
 Header              Notes
 =================== ===================================================================
 Name                Channel name
-Active              :ref:`Documented below <admin-guide-channels-soap-active>`
+Active              :ref:`Documented below <web-admin-channels-soap-active>`
 URL path            A path to mount this channel on. Must be unique in a cluster. URL 
                     path and SOAP action must be unique in a cluster.
 Method              *(Optional)* An HTTP method that must be used by clients to invoke
@@ -72,7 +72,7 @@ Delete
 Deletes the channel from ODB and servers. The channel won't exist anymore and invoking
 a URL it was mounted on will return HTTP 404 error.
 
-.. _admin-guide-channels-soap-active:
+.. _web-admin-channels-soap-active:
   
 The 'Active' flag
 -----------------
