@@ -34,6 +34,7 @@ from anyjson import dumps
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
+from zato.common import ZatoException
 
 @method_allowed('GET')
 def remote_command(req):
@@ -53,8 +54,9 @@ def remote_command_execute(req):
     """
     try:
         response = req.zato.client.invoke('zato.kvdb.remote-command.execute', {'command': req.POST['command']})
-        return_data = {'message': response.data.result}
-        
-        return HttpResponse(dumps(return_data), mimetype='application/javascript')
+        if response.has_data:
+            return HttpResponse(dumps({'message': dumps(response.data.result)}), mimetype='application/javascript')
+        else:
+            raise ZatoException(msg=response.details)
     except Exception, e:
         return HttpResponseServerError(format_exc(e))

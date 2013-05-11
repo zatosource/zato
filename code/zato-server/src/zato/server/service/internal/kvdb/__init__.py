@@ -64,7 +64,7 @@ class ExecuteCommand(AdminService):
             elif command in('HLEN', 'LLEN', 'LRANGE', 'SMEMBERS', 'HGETALL'):
                 response = str(response)
                 
-            self.response.payload.result = response
+            self.response.payload.result = response or '(None)'
             
         except Exception, e:
             msg = 'Command parsing error, command:[{}], e:[{}]'.format(input_command, format_exc(e))
