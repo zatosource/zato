@@ -84,7 +84,7 @@ Web admin
       :doc:`JMS WebSphere MQ<web-admin/outgoing/jms-wmq>` | 
       :doc:`Plain HTTP<web-admin/outgoing/plain-http>` | 
       :doc:`SOAP<web-admin/outgoing/soap>` | 
-      :doc:`SQL<web-admin/outgoing/soap>` | 
+      :doc:`SQL<web-admin/outgoing/sql>` | 
       :doc:`ZeroMQ<web-admin/outgoing/zmq>`
       
     * **Key/value DB (Redis):**

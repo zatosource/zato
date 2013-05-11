@@ -90,7 +90,7 @@ Read more
       :doc:`JMS WebSphere MQ<./outgoing/jms-wmq>` | 
       :doc:`Plain HTTP<./outgoing/plain-http>` | 
       :doc:`SOAP<./outgoing/soap>` | 
-      :doc:`SQL<./outgoing/soap>` | 
+      :doc:`SQL<./outgoing/sql>` | 
       :doc:`ZeroMQ<./outgoing/zmq>`
       
     * **Key/value DB (Redis):**
