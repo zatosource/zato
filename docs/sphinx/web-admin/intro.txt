@@ -14,6 +14,16 @@ static configuration of an environment or making sure operating system-level
 packages are playing nicely together, the web admin is used to manage most aspects
 of already existing clusters and services.
 
+.. note ::
+
+  A key feature of web admin is that all changes you make are always automatically 
+  introduced on all servers and other components.  **No restarts are ever required**.
+  
+  Everything is always hot-reconfigured. There is no concept of a downtime 
+  due to configuration reload. A load-balancer takes care of distributing load
+  to servers which need more time to update their config. 
+  
+
 .. image:: /gfx/web-admin/intro1.png
    :alt:
    :width: 90%
