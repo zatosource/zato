@@ -32,7 +32,7 @@ from validate import is_boolean
 from anyjson import dumps
 
 # Zato
-from zato.admin.settings import odb_engine_friendly_name
+from zato.admin.settings import engine_friendly_name
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
@@ -64,7 +64,7 @@ def _edit_create_response(verb, id, name, engine, cluster_id):
     """
     return_data = {'id': id,
                    'message': 'Successfully {0} the outgoing SQL connection [{1}]'.format(verb, name.encode('utf-8')),
-                   'engine_text': odb_engine_friendly_name[engine],
+                   'engine_text': engine_friendly_name[engine],
                    'cluster_id': cluster_id,
                 }
 
@@ -89,8 +89,8 @@ def index(req):
                 setattr(_item, name, value)
             
             _item.extra = item.extra or ''
-            _item.engine_text = odb_engine_friendly_name[_item.engine]
-            items.append(item)
+            _item.engine_text = engine_friendly_name[_item.engine]
+            items.append(_item)
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
