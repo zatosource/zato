@@ -36,8 +36,8 @@ Create and Edit
 =================== =============================================================================
 Header              Notes
 =================== =============================================================================
-Name                Channel name
-Active              :ref:`Documented below <admin-guide-channels-amqp-active>`
+Name                Connection name
+Active              :ref:`Documented below <admin-guide-outgoing-amqp-active>`
 Definition          :doc:`AMQP definition <../conn-def/amqp>` to read basic
                     connection information from
 Delivery mode       *(Optional)* Whether messages send should be persistent by default
@@ -60,7 +60,7 @@ Delete
 
 .. image:: /gfx/web-admin/outgoing/amqp-delete.png
 
-Stops a channel's connector and deletes the channel from ODB.
+Stops the underlying connector and deletes the connection from ODB.
 
 .. _admin-guide-outgoing-amqp-active:
   
