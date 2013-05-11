@@ -95,7 +95,7 @@ same service, with no changes to the code, available across multiple channels
 :doc:`Plain HTTP <TODO>`
 :doc:`SOAP <TODO>`
 and 
-:doc:`Zero MQ <TODO>`
+:doc:`ZeroMQ <TODO>`
 
 
 You can store data in 
@@ -112,7 +112,7 @@ The latter ones include
 :doc:`JMS WebSphere MQ <TODO>`,
 :doc:`Plain HTTP <TODO>`,
 :doc:`SOAP <TODO>`,
-:doc:`Zero MQ <TODO>`
+:doc:`ZeroMQ <TODO>`
 and 
 :doc:`FTP <TODO>`.
 

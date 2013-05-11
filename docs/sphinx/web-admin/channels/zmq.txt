@@ -1,15 +1,15 @@
-Channels - Zero MQ
+Channels - ZeroMQ
 ==================
 
 Overview
 --------
 
-Used to create, update, delete and browse through Zero MQ channels.
+Used to create, update, delete and browse through ZeroMQ channels.
 
-Each channels represents a connection through which Zero MQ messages are 
+Each channels represents a connection through which ZeroMQ messages are 
 received by Zato. A given service is invoked for each message received.
 
-Creating or updating a channel (re-)establishes a connection to a Zero MQ socket
+Creating or updating a channel (re-)establishes a connection to a ZeroMQ socket
 and there are as many connectors and connections to any socket as there are 
 active channels connected to it. 
 
@@ -21,7 +21,7 @@ Reading messages off a socket and invoking a service is an asynchronous
 activity - messages are not rolled back onto sockets if there are any errors
 along.
 
-* Menu path: Connections -> Channels -> Zero MQ
+* Menu path: Connections -> Channels -> ZeroMQ
 * Example address: http://localhost:8183/zato/channel/zmq/?cluster=1
 
 .. image:: /gfx/web-admin/channels/zmq.png
@@ -37,13 +37,13 @@ Header              Notes
 =================== ===================================================================
 Name                Channel name
 Active              :ref:`Documented below <admin-guide-channels-zmq-active>`
-Address             Address of a Zero MQ socket to connect to. Must start
+Address             Address of a ZeroMQ socket to connect to. Must start
                     with tcp://
 Socket type         Type of a socket to connect to. Either PULL or SUB.
 Subscription key    *(Optional and ignored if socket type is not SUB)*
                     Consumer's subscription key
 Service             Name of an already existing service to invoke for
-                    each Zero MQ message received
+                    each ZeroMQ message received
 Data format         *(Optional)* The expected data format Zato should parse
                     incoming messages as. This will also populate a service's
                     :ref:`data_format attribute <progguide-write-service-data_format>`.
@@ -62,5 +62,5 @@ Stops a channel's connector and deletes the channel from ODB.
 The 'Active' flag
 -----------------
 
-If a channel is made inactive, its underlying Zero MQ connection will be stopped
+If a channel is made inactive, its underlying ZeroMQ connection will be stopped
 but the connector itself will be still running.

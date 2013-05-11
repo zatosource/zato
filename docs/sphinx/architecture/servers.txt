@@ -119,7 +119,7 @@ Connectors
 
 AMQP, JMS WebSphere MQ and ZeroMQ are protocols that Zato uses asynchronously
 through cluster connectors. For that protocols, each channel and an outgoing connection
-will start a new connector, e.g. if there are 3 AMQP channels and 2 Zero MQ outgoing
+will start a new connector, e.g. if there are 3 AMQP channels and 2 ZeroMQ outgoing
 connections defined, there will be 5 connectors started by the :ref:`singleton server <arch-servers-singletons>`.
 
 Services and connectors communicate indirectly through Redis.

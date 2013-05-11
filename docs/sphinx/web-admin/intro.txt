@@ -82,7 +82,7 @@ Read more
       :doc:`JMS WebSphere MQ<./channels/jms-wmq>` | 
       :doc:`Plain HTTP<./channels/plain-http>` | 
       :doc:`SOAP<./channels/soap>` | 
-      :doc:`Zero MQ<./channels/zmq>`
+      :doc:`ZeroMQ<./channels/zmq>`
       
     * **Outgoing connections:**
       :doc:`AMQP<./outgoing/amqp>` | 
@@ -91,7 +91,7 @@ Read more
       :doc:`Plain HTTP<./outgoing/plain-http>` | 
       :doc:`SOAP<./outgoing/soap>` | 
       :doc:`SQL<./outgoing/soap>` | 
-      :doc:`Zero MQ<./outgoing/zmq>`
+      :doc:`ZeroMQ<./outgoing/zmq>`
       
     * **Key/value DB (Redis):**
       :doc:`Data dictionaries<./kvdb/data-dict>` |

@@ -31,7 +31,7 @@ Zato's :doc:`CLI </admin/cli/index>` can be used to start, stop
 and manage other aspects of web admin, load-balancer and servers.
 
 Exactly one of servers in a cluster is considered a connector server. This is the
-server that will start AMQP, JMS WebSphere MQ and Zero MQ connectors in order
+server that will start AMQP, JMS WebSphere MQ and ZeroMQ connectors in order
 to accept or send messages coming through these protocols. Note that when a connector
 server goes down, another server will assume its role.
 
@@ -100,7 +100,7 @@ Exit points
 ~~~~~~~~~~~
 
 Servers access other services, either Zato's own or belonging to external systems,
-through AMQP, FTP, JMS WebSphere MQ, Plain HTTP, SOAP, SQL or Zero MQ.
+through AMQP, FTP, JMS WebSphere MQ, Plain HTTP, SOAP, SQL or ZeroMQ.
 
 Servers need to access Redis and SQL ODB, both read and write, for a proper functioning.
 It's not required for servers to have any sort of a DDL authority 

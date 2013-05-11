@@ -29,7 +29,7 @@ Overview
   to administer more than one cluster
 * Each cluster has zero or more servers
 * Incoming and outgoing connections are handled by servers and certain types of
-  protocols - AMQP, JMS WebSphere MQ and Zero MQ - require separate connector
+  protocols - AMQP, JMS WebSphere MQ and ZeroMQ - require separate connector
   processes to handle the traffic. The connectors are started
   and managed automatically, they don't need manual configuration.
 
