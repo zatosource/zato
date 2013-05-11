@@ -11,7 +11,7 @@ received by Zato. A given service is invoked for each message received.
 
 Creating or updating a channel (re-)establishes a connection to an AMQP broker
 and there are as many connectors and connections to any broker as there are 
-active channels  connected to it. 
+active channels and :doc:`outgoing connections <../outgoing/amqp>` using it. 
 
 For instance, if there is 1 
 :doc:`AMQP definition <../conn-def/amqp>` and 5 channels using it, there will
@@ -50,7 +50,6 @@ Data format         *(Optional)* The expected data format Zato should parse
                     incoming messages as. This will also populate a service's
                     :ref:`data_format attribute <progguide-write-service-data_format>`.
 =================== ===================================================================
-
 
 Delete
 ------
