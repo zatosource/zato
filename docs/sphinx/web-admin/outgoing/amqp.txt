@@ -40,7 +40,7 @@ Name                Connection name
 Active              :ref:`Documented below <admin-guide-outgoing-amqp-active>`
 Definition          :doc:`AMQP definition <../conn-def/amqp>` to read basic
                     connection information from
-Delivery mode       *(Optional)* Whether messages send should be persistent by default
+Delivery mode       Whether messages send should be persistent by default
                     or not
 Priority            *(Optional)* Default message priority. 9 is the highest one.s
 Content type        *(Optional)* Default content type for messages sent
