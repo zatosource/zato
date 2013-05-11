@@ -17,7 +17,7 @@ Installing and configuring Zato components
   :doc:`the attack surface <../../../security/attack-surface>`
   before you start to install and configure Zato components.
   
-  It's also highly recommeded that you :doc:`go through the tutorial first <../../../tutorial/step1>`.
+  It's also highly recommeded that you :doc:`go through the tutorial first <../../../tutorial/01>`.
 
 Overview
 --------
@@ -29,7 +29,7 @@ Overview
   to administer more than one cluster
 * Each cluster has zero or more servers
 * Incoming and outgoing connections are handled by servers and certain types of
-  protocols - AMQP, JMS WebSphere MQ and Zero MQ - require separate connector
+  protocols - AMQP, JMS WebSphere MQ and ZeroMQ - require separate connector
   processes to handle the traffic. The connectors are started
   and managed automatically, they don't need manual configuration.
 
@@ -65,6 +65,8 @@ To set up a completely new Zato environment you need to:
     
     SQL ODB and a cluster's config need to me be created first and in that order,
     the rest can be installed in any order.
+
+.. _admin-guide-install-config-versioned:
 
 Config files are versioned
 --------------------------
@@ -133,12 +135,12 @@ Read more
 Subsequent chapters present information on how to install each of the Zato components along
 with a discussion on their config files.
 
-================== ====================================================== ====================================================================
+================== ====================================================== ===================================================================================
 Component          Install chapter                                        Configure chapter 
-================== ====================================================== ====================================================================
+================== ====================================================== ===================================================================================
 Web admin          :doc:`How to install <./install-web-admin>`            :doc:`How to configure <./config-web-admin>`
 Server             :doc:`How to install <./install-server>`               :doc:`How to configure <./config-server>`
-Cluster's config   :doc:`How to install <./install-cluster>`              :doc:`Documented along with other web admin features <TODO>`
+Cluster's config   :doc:`How to install <./install-cluster>`              :doc:`Documented along with other web admin features <../../../web-admin/intro>`
 Quickstart cluster A quickstart cluster is a shortcut way                 Not applicable
                    to create a working Zato environment 
                    as :doc:`described here <../../cli/quickstart>`
@@ -152,4 +154,4 @@ Redis broker       `The Redis project <http://redis.io>`_                 Not ap
 CA                 :doc:`How to install <./install-ca>`                   Not applicable - the CA should be used
                                                                           only for development clusters, it's
                                                                           recommeded you don't reconfigure it
-================== ====================================================== ====================================================================
+================== ====================================================== ===================================================================================

@@ -2,7 +2,7 @@
 zato create odb
 =========================
 
-Creates an :doc:`ODB<architecture/sql-odb>`'s structure - sets up all the SQL
+Creates an :doc:`ODB<../../architecture/sql-odb>`'s structure - sets up all the SQL
 objects needed to support multiple Zato clusters, such as tables and indexes. 
 
 Depending on the database type, the database user will need to be granted rights

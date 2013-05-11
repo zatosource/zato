@@ -24,11 +24,11 @@ Introduction
       :doc:`Technical overview <intro/overview-tech>`
 
     * **Tutorial:**
-      :doc:`Installing<intro/tutorial01>` |
-      :doc:`Creating a quickstart cluster<intro/tutorial02>` |
-      :doc:`Introducing the web admin panel<intro/tutorial03>` |
-      :doc:`Writing a Zato service<intro/tutorial04>` |
-      :doc:`Hot-deploying the service and invoking it<intro/tutorial05>`
+      :doc:`Installing<tutorial/01>` |
+      :doc:`Creating a quickstart cluster<tutorial/02>` |
+      :doc:`Introducing the web admin panel<tutorial/03>` |
+      :doc:`Writing a Zato service<tutorial/04>` |
+      :doc:`Hot-deploying the service and invoking it<tutorial/05>`
       
 Web admin
 =========
@@ -63,7 +63,7 @@ Web admin
       :doc:`Slow responses<web-admin/service-details/slow-responses>`
       
     * **Security:**
-      :doc:`HTTP Basic Auth<web-admin/security/http-basic-auth>` | 
+      :doc:`HTTP Basic Auth<web-admin/security/basic-auth>` | 
       :doc:`Technical accounts<web-admin/security/tech-account>` | 
       :doc:`WS-Security<web-admin/security/ws-security>`
       
@@ -76,7 +76,7 @@ Web admin
       :doc:`JMS WebSphere MQ<web-admin/channels/jms-wmq>` | 
       :doc:`Plain HTTP<web-admin/channels/plain-http>` | 
       :doc:`SOAP<web-admin/channels/soap>` | 
-      :doc:`Zero MQ<web-admin/channels/zeromq>`
+      :doc:`ZeroMQ<web-admin/channels/zmq>`
       
     * **Outgoing connections:**
       :doc:`AMQP<web-admin/outgoing/amqp>` | 
@@ -84,27 +84,24 @@ Web admin
       :doc:`JMS WebSphere MQ<web-admin/outgoing/jms-wmq>` | 
       :doc:`Plain HTTP<web-admin/outgoing/plain-http>` | 
       :doc:`SOAP<web-admin/outgoing/soap>` | 
-      :doc:`SQL<web-admin/outgoing/soap>` | 
-      :doc:`Zero MQ<web-admin/outgoing/zeromq>`
+      :doc:`SQL<web-admin/outgoing/sql>` | 
+      :doc:`ZeroMQ<web-admin/outgoing/zmq>`
       
     * **Key/value DB (Redis):**
       :doc:`Data dictionaries<web-admin/kvdb/data-dict>` |
       :doc:`Remote commands<web-admin/kvdb/remote-commands>`
       
     * **Scheduler:**
-      :doc:`One-time jobs<web-admin/scheduler/one-time>` |
-      :doc:`Interval-based jobs<web-admin/scheduler/interval-based>` |
-      :doc:`Cron-style jobs<web-admin/scheduler/cron-style>`
+      :doc:`Main view<web-admin/scheduler/main>`
       
     * **Statistics:**
-      :doc:`Trends<web-admin/stats/trends>` |
-      :doc:`Summaries<web-admin/stats/summary>` |
-      :doc:`Settings<web-admin/stats/settings>` |
-      :doc:`Maintenance<web-admin/stats/maintenance>`
+      *(Documented in their own section)*
+      :doc:`Guide<stats/guide>` |
+      :doc:`Maintenance<stats/maintenance>` | 
+      :doc:`Load-balancer's statistics<stats/lb>`
       
     * **User settings:**
-      :doc:`Date and time<web-admin/settings/date-time>` |
-      :doc:`Cluster color markers<web-admin/settings/cluster-color-markers>`
+      :doc:`Main view<web-admin/settings/main>`
 
 Programming guide
 =================
@@ -263,7 +260,14 @@ Zato, the open-source project
    security/*
    stats/*
    web-admin/*
+   web-admin/channels/*
+   web-admin/conn-def/*
+   web-admin/kvdb/*
    web-admin/load-balancer/*
+   web-admin/outgoing/*
+   web-admin/scheduler/*
+   web-admin/security/*
    web-admin/servers/*
    web-admin/service-details/*
    web-admin/services/*
+   web-admin/settings/*

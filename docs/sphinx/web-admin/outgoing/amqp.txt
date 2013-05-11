@@ -1,0 +1,77 @@
+Outgoing connections - AMQP
+===========================
+
+Overview
+--------
+
+Used to create, update, delete and browse through outgoing AMQP connections.
+
+Each outgoing connection represents a link through which AMQP messages are 
+sent by Zato services.
+
+Creating or updating a connection (re-)establishes a link to an AMQP broker
+and there are as many connectors and connections to any broker as there are 
+active outgoing connections and :doc:`channels <../channels/amqp>` in a cluster.
+
+For instance, if there is 1 
+:doc:`AMQP definition <../conn-def/amqp>` and 5 outgoing connections using it, there will
+be 5 connector processes started in a cluster each maintaining 1 connection
+to the broker pointed to by the definition.
+
+Sending messages to a remote broker is an asynchronous activity - messages are not
+rolled back to Zato services if there are any errors
+along.
+
+* Menu path: Connections -> Outgoing -> AMQP
+* Example address: http://localhost:8183/zato/outgoing/amqp/?cluster=1
+
+.. image:: /gfx/web-admin/outgoing/amqp.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/outgoing/amqp-create.png
+
+=================== =============================================================================
+Header              Notes
+=================== =============================================================================
+Name                Connection name
+Active              :ref:`Documented below <web-admin-outgoing-amqp-active>`
+Definition          :doc:`AMQP definition <../conn-def/amqp>` to read basic
+                    connection information from
+Delivery mode       Whether messages send should be persistent by default
+                    or not
+Priority            *(Optional)* Default message priority. 9 is the highest one.s
+Content type        *(Optional)* Default content type for messages sent
+Encoding            *(Optional)* Default message encoding
+Expiration          *(Optional)* After how many milliseconds messages should expire
+User ID             *(Optional)* User ID sending the message 
+                    (consult `AMQP spec <http://www.rabbitmq.com/tutorials/amqp-concepts.html>`_)
+App ID              *(Optional)* App ID sending the message 
+                    (consult `AMQP spec <http://www.rabbitmq.com/tutorials/amqp-concepts.html>`_)
+=================== =============================================================================
+
+Each optional value can be overridden by a service 
+:doc:`making use of the outgoing connection <../../progguide/outconn/amqp>`.
+
+Delete
+------
+
+.. image:: /gfx/web-admin/outgoing/amqp-delete.png
+
+Stops the underlying connector and deletes the connection from ODB.
+
+.. _web-admin-outgoing-amqp-active:
+  
+The 'Active' flag
+-----------------
+
+If an **outgoing connection** is made **inactive** and there are services still making
+use of it, the **messages** services send **will be lost**. 
+
+You need to ensure no service is able to reach an outgoing connection before
+it's turned off - otherwise **you will lose messages**.
+
+Also an inactive outgoing AMQP connection closes its underlying link to a broker
+but the connector's process continues to run.

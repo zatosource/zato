@@ -12,42 +12,42 @@ implement any solution of any scale and size, from tiny ones to the very
 largest.
 
 Code you develop is 
-:doc:`hot-deployed <TODO>`
-or
-:doc:`installed statically <TODO>`
-on servers running
-in high-availability clusters.
+:doc:`hot-deployed or installed statically <../admin/guide/installing-services>`
+on servers running in high-availability clusters.
 
 You have access to a browser-based 
-:doc:`web admin <TODO>` which aids you with development and maintenance.
+:doc:`web admin <../web-admin/intro>`
+which aids you with development and maintenance.
 
-Your code can both invoke or accept connections through the most commonly used
+Your code can both 
+:doc:`invoke <./outconn/overview>`
+or 
+:doc:`accept connections <./channels>`
+through the most commonly used
 protocols and transports - 
-:doc:`Plain HTTP(S) <TODO>`,
-:doc:`SOAP <TODO>`,
-:doc:`JSON <TODO>`,
-:doc:`AMQP <TODO>`,
-:doc:`JMS WebSphere MQ <TODO>`,
-:doc:`ZeroMQ <TODO>`,
-:doc:`SQL <TODO>`,
+:doc:`Plain HTTP(S), SOAP, JSON <./outconn/http>`,
+:doc:`AMQP <./outconn/amqp>`,
+:doc:`JMS WebSphere MQ <./outconn/jms-wmq>`,
+:doc:`ZeroMQ <./outconn/zmq>`,
+:doc:`SQL <./outconn/sql>`,
 and
-:doc:`FTP(S) <TODO>`.
+:doc:`FTP(S) <./outconn/ftp>`.
 
 :doc:`Services can invoke each other <./invoking-services>` and other Python
 applications can use :doc:`a convenience client <./clients/python>` to access
 your services programmatically.
 
 At your disposal are also 
-:doc:`Redis key/value database <TODO>`
+:doc:`Redis key/value database <./kvdb>`
 and a built-in
 :doc:`scheduler <./scheduler>`
 which is used for executing recurring tasks.
 
 Servers know how to secure and to make use of resources secured with 
-:doc:`HTTP Basic Auth <TODO>`,
-:doc:`WS-Security <TODO>`
+:doc:`HTTP Basic Auth <../web-admin/security/basic-auth>`,
+:doc:`WS-Security <../web-admin/security/ws-security>`
 and
-:doc:`technical accounts <TODO>`.
+:doc:`technical accounts <../web-admin/security/tech-account>`.
 
 Zato's unique 
 :doc:`SimpleIO (SIO) <./sio>`
@@ -55,9 +55,9 @@ mechanism allows you to write code once while still being able to expose
 it through multiple protocols and interfaces without any code change nor restarts.
 
 You are supported in writing code that is easy to 
-:doc:`test <TODO>`
+test
 and
-:doc:`document <TODO>`.
+:doc:`document <./documenting>`.
 
 While technically possible, you'll rarely, if ever, use HTML or CSS. Zato is a
 :doc:`middleware and backend server </intro/overview-high-level>`. Consider using 

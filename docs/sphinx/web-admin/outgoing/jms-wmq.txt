@@ -1,0 +1,71 @@
+Outgoing connections - JMS WebSphere MQ
+=======================================
+
+Overview
+--------
+
+Used to create, update, delete and browse through outgoing JMS WebSphere MQ connections.
+
+Each outgoing connection represents a link through which MQ messages are 
+sent by Zato services.
+
+Creating or updating a connection (re-)establishes a link to a queue manager
+and there are as many connectors and connections to any queue manager as there are 
+active outgoing connections and :doc:`channels <../channels/jms-wmq>` in a cluster.
+
+For instance, if there is 1 
+:doc:`definition <../conn-def/jms-wmq>` and 5 outgoing connections using it, there will
+be 5 connector processes started in a cluster each maintaining 1 connection
+to the queue manager pointed to by the definition.
+
+Sending messages to a queue manager is an asynchronous activity - messages are not
+rolled back to Zato services if there are any errors
+along.
+
+* Menu path: Connections -> Outgoing -> JMS WebSphere MQ
+* Example address: http://localhost:8183/zato/outgoing/jms-wmq/?cluster=1
+
+.. image:: /gfx/web-admin/outgoing/jms-wmq.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/outgoing/jms-wmq-create.png
+
+=================== ================================================================================
+Header              Notes
+=================== ================================================================================
+Name                Connection name
+Active              :ref:`Documented below <web-admin-outgoing-jms-wmq-active>`
+Definition          :doc:`JMS WebSphere MQ definition <../conn-def/jms-wmq>` to read basic
+                    connection information from
+Delivery mode       Whether messages send should be persistent by default
+                    or not
+Encoding            *(Optional)* Default message encoding
+Expiration          *(Optional)* After how many milliseconds messages should expire
+=================== ================================================================================
+
+Each optional value can be overridden by a service 
+:doc:`making use of the outgoing connection <../../progguide/outconn/jms-wmq>`.
+
+Delete
+------
+
+.. image:: /gfx/web-admin/outgoing/jms-wmq-delete.png
+
+Stops the underlying connector and deletes the connection from ODB.
+
+.. _web-admin-outgoing-jms-wmq-active:
+  
+The 'Active' flag
+-----------------
+
+If an **outgoing connection** is made **inactive** and there are services still making
+use of it, the **messages** services send **will be lost**. 
+
+You need to ensure no service is able to reach an outgoing connection before
+it's turned off - otherwise **you will lose messages**.
+
+Also an inactive outgoing connection closes its underlying link to a queue manager
+but the connector's process continues to run.

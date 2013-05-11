@@ -5,10 +5,10 @@ Overview
 ------------
 
 Quickly creates a Zato cluster. Sets up a
-:doc:`Certificate Authority (CA)<architecture/ca>`,
-:doc:`web admin<architecture/web-admin>`,
-a :doc:`load-balancer<architecture/load-balancer>`,
-and two :doc:`Zato servers<architecture/servers>`. This is a great way to get
+:doc:`Certificate Authority (CA)<../../architecture/ca>`,
+:doc:`web admin<../../architecture/web-admin>`,
+a :doc:`load-balancer<../../architecture/load-balancer>`,
+and two :doc:`Zato servers<../../architecture/servers>`. This is a great way to get
 started with Zato as its creates everything that is needed to familiarize yourself
 with how a complete Zato environment looks like.
 
@@ -19,7 +19,7 @@ Before running the command, make sure the following are up and running
 
 On a successful completion, the following environment will be created:
 
-* :doc:`ODB objects<architecture/sql-odb>`, if they didn't already exist
+* :doc:`ODB objects<../../architecture/sql-odb>`, if they didn't already exist
 * A CA 
 * web admin running on http://localhost:8183
 * A load-balancer accepting HTTP connections on http://localhost:11223

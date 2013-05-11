@@ -36,15 +36,15 @@ All time min/max/mean (ms) Minimum, maximum and mean response time across all in
 Channels and scheduler
 ----------------------
 
-Lists all, if any, the
-:doc:`plain HTTP <TODO>`,
-:doc:`SOAP <TODO>`,
-:doc:`AMQP <TODO>`,
-:doc:`JMS WebSphere MQ <TODO>`,
-:doc:`Zero MQ <TODO>`,
+Lists all, if any,
+:doc:`plain HTTP <../channels/plain-http>`,
+:doc:`SOAP <../channels/soap>`,
+:doc:`AMQP <../channels/amqp>`,
+:doc:`JMS WebSphere MQ <../channels/jms-wmq>`,
+:doc:`ZeroMQ <../channels/zmq>`,
 channels
 and
-:doc:`scheduler jobs <TODO>`
+:doc:`scheduler jobs <../scheduler/main>`
 a service is exposed through.
 
 Deployment info

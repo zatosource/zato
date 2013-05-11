@@ -2,7 +2,7 @@
 zato ca create lb_agent
 =======================
 
-Creates a certificate and a pair of private and public keys for a :doc:`Zato load-balancer's agent<architecture/load-balancer>`.
+Creates a certificate and a pair of private and public keys for a :doc:`Zato load-balancer's agent<../../architecture/load-balancer>`.
 Files will be stored in following locations, where *path* is the path to the CA used for generating the crypto material.
 
 ============== =================================================

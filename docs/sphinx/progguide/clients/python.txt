@@ -118,7 +118,7 @@ invoke
   :param data_format: :ref:`Data format <progguide-write-service-data_format>` the service will be invoked with
   :type data_format:  `zato.common.DATA_FORMAT <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
   
-  :param transport: :ref:`Transport <progguide-write-service-transport>` the service will be invoked with
+  :param transport: Transport the service will be invoked over
   :type transport:  `zato.common.TRANSPORT <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
   
   :param id:    ID of the service to invoke. Either name or id must be provided.

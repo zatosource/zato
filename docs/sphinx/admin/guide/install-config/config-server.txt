@@ -168,7 +168,7 @@ Same as `gunicorn's logger_class <http://docs.gunicorn.org/en/latest/configure.h
 main.deployment_lock_expires
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-When using a disitributed lock to coordinate a :doc:`hot-deployment <TODO>`
+When using a disitributed lock to coordinate a :doc:`hot-deployment <../installing-services>`
 of a service, how many seconds to wait for a server to finish the deployment.
 
 Should be at least as many seconds as it takes to hot-deploy a service in the worst 
@@ -177,7 +177,7 @@ case.
 main.deployment_lock_timeout
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-When :doc:`hot-deploying <TODO>` a service only one server will be allowed to
+When :doc:`hot-deploying <../installing-services>` a service only one server will be allowed to
 actually perform the action. Other servers will wait up that many seconds for their
 try to deploy the service in case the server which was previously attempting to hot-deploy
 it gave up for any reason.
@@ -268,7 +268,8 @@ Username to connect to the ODB with.
 hot_deploy.pickup_dir
 @@@@@@@@@@@@@@@@@@@@@
 
-A path to the directory that will be used to :doc:`hot-deploy Zato services <TODO>` from.
+A path to the directory that will be used to :doc:`hot-deploy Zato services 
+<../installing-services>` from.
 If not absolute, the path is relative to the main server.conf config file.
 
 .. _admin-guide-config-server-hot_deploy.work_dir:
@@ -278,7 +279,7 @@ hot_deploy.work_dir
 
 A path to the directory that will be used to:
 
-* :doc:`hot-deploy Zato services <TODO>` to
+* :doc:`hot-deploy Zato services <../installing-services>` to
 * keep a set of backups of services in their state prior to the deployment
 
 If not absolute, the path is relative to the main server.conf config file.
@@ -437,7 +438,7 @@ Of special interest are keys:
 * logger_zato.level - sets the log level for Zato and nothing else
 
 By default logs are written out to local files but it's possible to reconfigure
-the logging to use any other destination Python itself supports such as syslog, Zero MQ etc.
+the logging to use any other destination Python itself supports such as syslog, ZeroMQ etc.
 
 .. _admin-guide-config-server-service-sources:
 

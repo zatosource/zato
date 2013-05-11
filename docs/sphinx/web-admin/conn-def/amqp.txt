@@ -1,0 +1,64 @@
+Connection definitions - AMQP
+=============================
+
+Overview
+--------
+
+Used to create, update, delete and browse 
+`AMQP 0.9.1 <http://www.rabbitmq.com/tutorials/amqp-concepts.html>`_
+connection definitions.
+
+A definition is a template off of which a concrete connection, either 
+:doc:`channel <../channels/amqp>`
+or an 
+:doc:`outgoing one<../outgoing/amqp>`,
+is created. Merely creating a definition doesn't start a connection to a broker.
+
+One definition can serve to create multiple channels or outgoing connections.
+
+* Menu path: Connections -> Definitions -> AMQP
+* Example address: http://localhost:8183/zato/definition/amqp/?cluster=1
+
+.. image:: /gfx/web-admin/conn-def/amqp.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/conn-def/amqp-create.png
+
+============================ ========================================================
+Header                       Notes
+============================ ========================================================
+Name                         Definition's name
+Host                         AMQP broker's host
+Port                         AMQP broker's port
+Virtual host                 Virtual host to use when connecting
+Username                     Username to log on with
+Max frame size (bytes)       Maximum size of a single AMQP frame, in bytes,
+                             the default is from the AMQP spec.
+Heartbeat interval (seconds) How often to send heartbeats, in seconds. 0 disables
+                             the feature.
+============================ ========================================================
+
+A newly created definition has a password set a random UUID4
+and needs to be changed in order to be usable.
+
+Change password
+---------------
+
+.. image:: /gfx/web-admin/conn-def/amqp-change-password.png
+
+Updates a definition's password - the password is stored in the ODB.
+
+Delete
+------
+
+.. image:: /gfx/web-admin/conn-def/amqp-delete.png
+
+Deletes an AMQP definition and all the connections that make use of it.
+
+.. note ::
+
+  It needs to be emphasized that any channels or outgoing
+  connections that were using the definition will also be deleted automatically.

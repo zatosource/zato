@@ -8,8 +8,8 @@ Overview
 --------
 
 Asynchronously sends a message to an AMQP exchange using 
-:doc:`connection <TODO>`
-:doc:`parameters <TODO>`
+:doc:`connection <../../web-admin/conn-def/amqp>`
+:doc:`parameters <../../web-admin/outgoing/amqp>`
 specified.
 
 The message is first published on the :doc:`Zato broker </architecture/redis>`
@@ -40,7 +40,7 @@ self.outgoing.amqp.send
   :param routing_key: Name of a routing key, if any should be used
   :param properties: A dictionary, possibly empty, of additional properties to send
                      along with the message body. Each property takes precedence over 
-                     any one set in the :doc:`connection template <TODO>`. 
+                     any one set in the :doc:`connection template <../../web-admin/outgoing/amqp>`. 
                      
                      Supported keys are:
                      

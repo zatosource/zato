@@ -2,7 +2,7 @@ Architecture overview
 =====================
 
 Zato is composed of several components that cooperate with the aim of exposing
-:doc:`services <TODO>` and :doc:`applications <TODO>` to external clients.
+:doc:`services and applications <../progguide/overview>` to external clients.
 
 .. image:: /gfx/arch-tech-overview.png
    :align: center

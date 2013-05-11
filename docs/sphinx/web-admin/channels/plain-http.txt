@@ -1,0 +1,69 @@
+Channels - Plain HTTP
+=====================
+
+Overview
+--------
+
+Used to create, update, delete and browse through plain HTTP channels.
+
+A plain HTTP channels is a means of accepting synchronous HTTP service invocations.
+Contrary to what :doc:`SOAP channels <./soap>` assume, plain HTTP ones don't except
+the data to be in any particular format, it can be anything that can be
+transfered over HTTP, including JSON, CSV, XML or virtually anything.
+
+* Menu path: Connections -> Channels -> Plain HTTP
+* Example address: http://localhost:8183/zato/http-soap/?cluster=1&connection=channel&transport=plain_http
+
+.. image:: /gfx/web-admin/channels/plain-http.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/channels/plain-http-update.png
+
+=================== ===================================================================
+Header              Notes
+=================== ===================================================================
+Name                Channel name
+Active              :ref:`Documented below <web-admin-channels-plain-http-active>`
+URL path            A path to mount this channel on. Must be unique in a cluster.
+Method              *(Optional)* An HTTP method that must be used by clients to invoke
+                    this particular channel. It can be any string and Zato won't check
+                    if it's a valid HTTP 1.1 method. Leave empty to allow any method
+                    be used.
+Service             Name of an already existing service to invoke for
+                    each HTTP request received
+Data format         *(Optional)* The expected data format Zato should parse
+                    incoming messages as. This will also populate a service's
+                    :ref:`data_format attribute <progguide-write-service-data_format>`.
+Security            Name of a security definition - 
+                    :doc:`HTTP Basic Auth <../security/basic-auth>`,
+                    :doc:`technical account <../security/tech-account>`
+                    or a 
+                    :doc:`WS-Security <../security/ws-security>` definition
+                    - to use for securing the access to the channel. 
+                    
+                    Pick 'No security' explicitly to indicate that no such definition
+                    should be used.  This can be used to expose certain services 
+                    without any 
+                    usernames or to indicate that a service will implement a custom
+                    security scheme itself.
+=================== ===================================================================
+
+
+Delete
+------
+
+.. image:: /gfx/web-admin/channels/plain-http-delete.png
+
+Deletes the channel from ODB and servers. The channel won't exist anymore and invoking
+a URL it was mounted on will return HTTP 404 error.
+
+.. _web-admin-channels-plain-http-active:
+  
+The 'Active' flag
+-----------------
+
+If a channel is made inactive, an attempt to invoke it will result in an HTTP
+404 error. 

@@ -4,16 +4,12 @@
 Making sure you work on the right environment
 =============================================
 
-This is the same advice 
-:doc:`administration guide <TODO>`
-:doc:`contains <TODO>`.
-
 A single 
 :doc:`web admin </architecture/web-admin>`
 instance can be used to handle multiple environments,
 such as production, tests and development, and to help you with differentiating
 which environment you currently work with, you can assign 
-(click :doc:`'My settings' <TODO>` in the top-right corner) a color to each cluster
+(click :doc:`'My settings' <../web-admin/settings/main>` in the top-right corner) a color to each cluster
 so that, for instance, a production cluster will be in yellow while development
 will use green.
 

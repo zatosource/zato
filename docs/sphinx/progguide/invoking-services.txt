@@ -6,7 +6,7 @@ Invoking other services
 
 .. note ::
     This chapter documents how other services running in a Zato cluster can be invoked.
-    Visit :doc:`here <TODO>` for information how to establish connections to external
+    Visit :doc:`here <./outconn/overview>` for information how to establish connections to external
     services and resources.
     
 Choosing a mode of invocation

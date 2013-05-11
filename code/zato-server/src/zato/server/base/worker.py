@@ -154,6 +154,7 @@ class WorkerStore(BrokerMessageReceiver):
             sec_config['username'] = _sec_config['username']
             sec_config['password'] = _sec_config['password']
             sec_config['password_type'] = _sec_config.get('password_type')
+            sec_config['salt'] = _sec_config.get('salt')
             
         wrapper_config = {'id':config.id, 
             'is_active':config.is_active, 'method':config.method, 

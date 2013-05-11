@@ -1,0 +1,81 @@
+Channels - SOAP
+===============
+
+Overview
+--------
+
+Used to create, update, delete and browse through plain SOAP channels.
+
+Unlike :doc:`plain HTTP channel <./soap>` that can accept data in any format,
+SOAP ones expect it always to be a SOAP XML.
+
+* Menu path: Connections -> Channels -> Plain HTTP
+* Example address: http://localhost:8183/zato/http-soap/?cluster=1&connection=channel&transport=soap
+
+.. image:: /gfx/web-admin/channels/soap.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/channels/soap-update.png
+
+=================== ===================================================================
+Header              Notes
+=================== ===================================================================
+Name                Channel name
+Active              :ref:`Documented below <web-admin-channels-soap-active>`
+URL path            A path to mount this channel on. Must be unique in a cluster. URL 
+                    path and SOAP action must be unique in a cluster.
+Method              *(Optional)* An HTTP method that must be used by clients to invoke
+                    this particular channel. It can be any string and Zato won't check
+                    if it's a valid HTTP 1.1 method. Leave empty to allow any method
+                    be used.
+Data format         *(Optional)* The expected data format Zato should parse
+                    incoming messages as. This will also populate a service's
+                    :ref:`data_format attribute <progguide-write-service-data_format>`.
+                    
+                    For SOAP channels, this almost always should be set to XML
+                    unless your channels are actually using SOAP for conveying
+                    non-XML messages.
+
+SOAP action         SOAP action this channel should be available as. URL path
+                    and SOAP action must be unique in a cluster.
+                    
+SOAP version        Currently only version 1.1 SOAP channels are supported.
+                    Use a :doc:`plain HTTP <./plain-http>` channel with a service
+                    which parses SOAP 1.2 itself if you need to expose services
+                    through the latter version.
+
+Service             Name of an already existing service to invoke for
+                    each HTTP request received                    
+Security            Name of a security definition - 
+                    :doc:`HTTP Basic Auth <../security/basic-auth>`,
+                    :doc:`technical account <../security/tech-account>`
+                    or a 
+                    :doc:`WS-Security <../security/ws-security>` definition
+                    - to use for securing the access to the channel. 
+                    
+                    Pick 'No security' explicitly to indicate that no such definition
+                    should be used.  This can be used to expose certain services 
+                    without any 
+                    usernames or to indicate that a service will implement a custom
+                    security scheme itself.
+=================== ===================================================================
+
+
+Delete
+------
+
+.. image:: /gfx/web-admin/channels/soap-delete.png
+
+Deletes the channel from ODB and servers. The channel won't exist anymore and invoking
+a URL it was mounted on will return HTTP 404 error.
+
+.. _web-admin-channels-soap-active:
+  
+The 'Active' flag
+-----------------
+
+If a channel is made inactive, an attempt to invoke it will result in an HTTP
+404 error. 

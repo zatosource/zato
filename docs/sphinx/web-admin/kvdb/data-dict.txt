@@ -1,0 +1,66 @@
+Key/value database (Redis) - data dictionaries
+==============================================
+
+Overview
+--------
+
+* Menu path: Key/value DB -> Data dictionaries
+* Example address: http://localhost:8183/zato/kvdb/data-dict/dictionary/?cluster=1
+
+Data dictionaries (dicts) are meant to ease with translating codes, symbols, IDs
+and other dictionary-like information between systems.
+
+For instance, in `ISO 4217 <https://en.wikipedia.org/wiki/ISO_4217>`_ 
+Swiss franc has a code of CHF but its numerical symbol is 756. Let's now imagine
+that one system connecting to Zato sends data using the former while the 
+recipient of such messages uses the latter. 
+
+Data dicts allow Zato to translate codes between the two without manual coding,
+i.e. the web admin's features discussed below are used to define the 
+mapping and services uses :ref:`the API <progguide-write-service-translate>` to actually
+translate incoming data.
+
+A translation is always performed between elements generically dubbed System1, 
+Key1 and Value1 into System2 and Key2 and its result is a Value2.
+
+Dictionaries
+------------
+
+.. image:: /gfx/web-admin/kvdb/dicts.png
+   :width: 95%
+   
+A dictionary entry needs to be created for each triple of System, Key and Value.
+
+Translations
+------------
+
+.. image:: /gfx/web-admin/kvdb/translations.png
+   :width: 95%
+   
+A translation is created between the triples of System, Key and Value.
+
+Translations - translate
+------------------------
+
+.. image:: /gfx/web-admin/kvdb/translations-translate.png
+   :width: 95%
+   
+A form is provided to test out how a service translates values - this uses 
+exactly the same API a service uses and it's a great way to find out why
+a translation may misbehave.
+
+Import/export
+-------------
+
+.. image:: /gfx/web-admin/kvdb/impexp.png
+   :width: 95%
+   
+Translations can be exported into a format that can be later imported into 
+a cluster. Not that importing an export wipes out any previously declared
+translations.
+
+An export is a bzip2-encoded JSON file which can be update manually but to
+import it onto environment it needs to be bzip2-compressed again.
+
+Import is an either-or operation performed as an atomic Redis transaction.
+Either all translations are imported or none is.

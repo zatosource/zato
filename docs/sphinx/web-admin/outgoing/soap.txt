@@ -1,0 +1,62 @@
+Outgoing connections - SOAP
+===========================
+
+Overview
+--------
+
+Used to create, update, delete and browse through outgoing SOAP connections.
+
+Unlike :doc:`plain HTTP connections <./plain-http>`, SOAP ones always except
+that a service intends to send XML.
+
+* Menu path: Connections -> Outgoing -> SOAP
+* Example address: http://localhost:8183/zato/http-soap/?cluster=1&connection=outgoing&transport=soap
+
+.. image:: /gfx/web-admin/outgoing/soap.png
+   :width: 95%
+
+Create and Edit
+---------------
+
+.. image:: /gfx/web-admin/outgoing/soap-update.png
+
+=================== ======================================================================================================================
+Header              Notes
+=================== ======================================================================================================================
+Name                Connection name
+Active              Whether the connection can be used by services or not. 
+
+                    If a connection is not active a service will encounter a 
+                    `zato.common.Inactive <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
+                    exception when attempting to use it.
+                    
+                    Note that an inactive connection still can be 
+                    :ref:`pinged <web-admin-outgoing-soap-ping>`.
+                    
+Host                HTTP server's host, may include a port
+URL path            Path a service to be invoked is mounted on
+SOAP action         SOAP action a service to be invoked uses
+SOAP version        SOAP version a service to be invoked uses, can be either 1.1 or 1.2.
+Security            Name of a security definition - 
+                    :doc:`HTTP Basic Auth <../security/basic-auth>`,
+                    :doc:`technical account <../security/tech-account>`
+                    or a 
+                    :doc:`WS-Security <../security/ws-security>` definition
+                    - to use for accessing the resource. 
+                    
+                    Pick 'No security' explicitly to indicate that no such definition
+                    should be used.
+=================== ======================================================================================================================
+
+.. _web-admin-outgoing-soap-ping:
+
+Ping
+----
+
+.. image:: /gfx/web-admin/outgoing/soap-ping.png
+
+A connection can be pinged - this sends an HTTP HEAD request from one of a 
+cluster's servers to a location specified by the connection's definition. 
+This can be used to check whether a given resource is reachable by Zato servers.
+
+The feature is available even if a connection is inactive.

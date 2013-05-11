@@ -14,6 +14,16 @@ static configuration of an environment or making sure operating system-level
 packages are playing nicely together, the web admin is used to manage most aspects
 of already existing clusters and services.
 
+.. note ::
+
+  A key feature of web admin is that all changes you make are always automatically 
+  introduced on all servers and other components.  **No restarts are ever required**.
+  
+  Everything is always hot-reconfigured. There is no concept of a downtime 
+  due to configuration reload. A load-balancer takes care of distributing load
+  to servers which need more time to update their config. 
+  
+
 .. image:: /gfx/web-admin/intro1.png
    :alt:
    :width: 90%
@@ -59,7 +69,7 @@ Read more
       :doc:`Slow responses<./service-details/slow-responses>`
       
     * **Security:**
-      :doc:`HTTP Basic Auth<./security/http-basic-auth>` | 
+      :doc:`HTTP Basic Auth<./security/basic-auth>` | 
       :doc:`Technical accounts<./security/tech-account>` | 
       :doc:`WS-Security<./security/ws-security>`
       
@@ -72,7 +82,7 @@ Read more
       :doc:`JMS WebSphere MQ<./channels/jms-wmq>` | 
       :doc:`Plain HTTP<./channels/plain-http>` | 
       :doc:`SOAP<./channels/soap>` | 
-      :doc:`Zero MQ<./channels/zeromq>`
+      :doc:`ZeroMQ<./channels/zmq>`
       
     * **Outgoing connections:**
       :doc:`AMQP<./outgoing/amqp>` | 
@@ -80,24 +90,21 @@ Read more
       :doc:`JMS WebSphere MQ<./outgoing/jms-wmq>` | 
       :doc:`Plain HTTP<./outgoing/plain-http>` | 
       :doc:`SOAP<./outgoing/soap>` | 
-      :doc:`SQL<./outgoing/soap>` | 
-      :doc:`Zero MQ<./outgoing/zeromq>`
+      :doc:`SQL<./outgoing/sql>` | 
+      :doc:`ZeroMQ<./outgoing/zmq>`
       
     * **Key/value DB (Redis):**
       :doc:`Data dictionaries<./kvdb/data-dict>` |
       :doc:`Remote commands<./kvdb/remote-commands>`
       
     * **Scheduler:**
-      :doc:`One-time jobs<./scheduler/one-time>` |
-      :doc:`Interval-based jobs<./scheduler/interval-based>` |
-      :doc:`Cron-style jobs<./scheduler/cron-style>`
+      :doc:`Main view<./scheduler/main>`
       
     * **Statistics:**
-      :doc:`Trends<./stats/trends>` |
-      :doc:`Summaries<./stats/summary>` |
-      :doc:`Settings<./stats/settings>` |
-      :doc:`Maintenance<./stats/maintenance>`
+      *(Documented in their own section)*
+      :doc:`Guide<../stats/guide>` |
+      :doc:`Maintenance<../stats/maintenance>` | 
+      :doc:`Load-balancer's statistics<../stats/lb>`
       
     * **User settings:**
-      :doc:`Date and time<./settings/date-time>` |
-      :doc:`Cluster color markers<./settings/cluster-color-markers>`
+      :doc:`Main view<./settings/main>`

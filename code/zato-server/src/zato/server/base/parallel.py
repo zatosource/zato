@@ -532,7 +532,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.config.odb_data = self.get_config_odb_data(self)
             self.set_odb_pool()
             
-            self.odb.init_session(self.odb.pool, self.config.odb_data, False)
+            self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
             
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
