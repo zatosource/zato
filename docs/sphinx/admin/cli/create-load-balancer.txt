@@ -2,7 +2,7 @@
 zato create load_balancer
 =========================
 
-Creates a :doc:`load-balancer<architecture/load-balancer>`. The directory the load-balancer will be created in
+Creates a :doc:`load-balancer<../../architecture/load-balancer>`. The directory the load-balancer will be created in
 must already exist and be empty. 
 
 Command-specific parameters

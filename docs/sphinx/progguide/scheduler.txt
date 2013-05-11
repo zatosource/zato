@@ -4,13 +4,10 @@
 Scheduler
 =========
 
-You can use :doc:`web admin <TODO>` and :doc:`the API </public-api/details/zato.scheduler.job>`
+You can use :doc:`web admin <../web-admin/scheduler/main>`
+and :doc:`the API </public-api/details/zato.scheduler.job>`
 to specify a service be invoked once or at certain intervals. Jobs type supported
-are 
-:doc:`one-time <TODO>`, 
-:doc:`interval-based <TODO>`
-and 
-:doc:`cron-style <TODO>`.
+are one-time, interval-based and cron-style.
 
 Among other things, the cluster's :doc:`singleton server </architecture/servers>`
 runs a background thread whose sole purpose is to publish messages on 

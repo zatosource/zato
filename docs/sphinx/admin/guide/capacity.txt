@@ -96,7 +96,7 @@ Statistics will always generate a lot of keys and you should use tools such
 as `redis-sampler <https://github.com/antirez/redis-sampler>`_ to get an understanding
 of how much they will take up.
 
-Note that old and uneeded statistics :doc:`can always be cleaned up <TODO>`.
+Note that old and uneeded statistics :doc:`can always need to be cleaned up <../../stats/maintenance>`.
 
 CPU
 ---

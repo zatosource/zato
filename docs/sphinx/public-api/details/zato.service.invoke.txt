@@ -30,8 +30,7 @@ payload     string   Yes      BASE64-encoded payload that will be decoded on a s
 channel     string   Yes      :ref:`Channel <progguide-write-service-channel>`
                               the service will believe it's being invoked over
 data_format string   Yes      Payload's :ref:`data format <progguide-write-service-data_format>`
-transport   string   Yes      :ref:`Transport <progguide-write-service-transport>` 
-                              the service should believe it's being invoked with
+transport   string   Yes      Transport the service should believe it's being invoked with
 async       boolean  Yes      Whether the service should be invoked asynchronously, defaults to False
 expiration  int      Yes      If using async mode, after how many seconds the message should expire,
                               defaults to 15 seconds

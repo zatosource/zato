@@ -23,8 +23,8 @@ and
 :ref:`methods <progguide-write-service-methods>`
 a service has access to.
 
-Save the following code in req_resp.py and :doc:`hot-deploy <TODO>` it - this will be
-the servce that will be modified later in the chapter. 
+Save the following code in req_resp.py and :doc:`hot-deploy <../admin/guide/installing-services>` 
+it - this will be the servce that will be modified later in the chapter. 
 
 You'll also need to create a new plain HTTP channel so that the service can be easily accessed
 through `curl <http://curl.haxx.se>`_.
@@ -209,6 +209,3 @@ More information
   
 * Other :ref:`service attributes <progguide-write-service-attributes>`
   will contain more information regarding the execution context
-  
-* There's a :doc:`chapter dedicated to usage examples <./usage-examples>` to
-  show you how to accept and return responses in various data formats

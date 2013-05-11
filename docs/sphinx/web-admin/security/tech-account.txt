@@ -67,7 +67,7 @@ accompanying password in X-Zato-Password.
 The HTTP sessions caught below illustrate how the headers should be used. 
 For the purpose of this discussion, assume that:
 
-* A /foo/bar :doc:`plain HTTP channel <../TODO>` has been created and assigned a
+* A /foo/bar :doc:`plain HTTP channel <../channels/plain-http>` has been created and assigned a
   myusername technical account 
   
 * myusername's password is mypassword

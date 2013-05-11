@@ -31,7 +31,7 @@ such as in a usage example.
 
 .. note::
 
-    Support for Oracle connections needs to be :doc:`manually enabled <TODO>`
+    Support for Oracle connections needs to be :doc:`manually enabled <../../admin/guide/enabling-extra-libs>`
     by administrators.
 
 API

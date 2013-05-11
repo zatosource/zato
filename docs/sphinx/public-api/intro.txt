@@ -13,7 +13,7 @@ passwords and so on.
 Most of the services are available
 through Zato's public API in both SOAP and JSON via HTTP. It is possible to use
 the services exposed for creating external applications that assume the roles
-of what is typically performed by the :doc:`web admin</admin/web-admin>`. These
+of what is typically performed by the :doc:`web admin<../web-admin/intro>`. These
 could be anything ranging from custom iPhone applications through Java clients
 to simply invoking the services from `curl <http://curl.haxx.se/>`_.
 
@@ -26,7 +26,7 @@ Message format
 ==============
 
 A service always has request and response documents defined. Being 
-written using :doc:`SimpleIO (SIO) </progguide/understand-sio>`, these can be either SOAP
+written using :doc:`SimpleIO (SIO) <../progguide/sio>`, these can be either SOAP
 or JSON. For each response document, there is always a technical envelope - called :ref:`zato_env` - 
 defined and optionally, the actual business payload users are mostly interested in.
 

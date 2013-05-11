@@ -10,11 +10,11 @@ and implements a handle(self) method.
 
 Below is the simplest possible Zato service meant to illustrate the point of how
 little coding is needed to write services. Granted, it doesn't do much useful,
-but still can be :doc:`hot-deployed <TODO>` and while it's not possible to
-:doc:`invoke <TODO>`
-it
-:doc:`through <TODO>`
-:doc:`channels <TODO>`,
+but still can be :doc:`hot-deployed <../admin/guide/installing-services>` 
+and while it's not possible to
+:doc:`invoke <./invoking-services>`
+it through
+:doc:`channels <./channels>`,
 it's still a valid service.
 
 
@@ -63,15 +63,15 @@ Programming conventions
 * Each service invocation creates a new instance of the class the service is 
   represented as.
     
-* Don't keep any state around if you want to use the :doc:`hot-deployment` feature.
+* Don't keep any state around if you want to use the :doc:`hot-deployment <../admin/guide/installing-services>` feature.
   Don't assign any values to classes the services are implemented in. Don't modify
-  any module-global data. Use :doc:`Redis <TODO>` if you need to store data between
+  any module-global data. Use :doc:`Redis <../architecture/redis>` if you need to store data between
   invocations of a service. Otherwise it will still be possible to deploy a service
   but not without restarting a server.
   
 * Don't start your own threads. Given Zato's architecture, there shouldn't really
   be any need for threads but if your use-case calls for it, 
-  `please let the project know more <TODO>`_ about why you need threads.
+  `please let the project know more <TODO-link-to-support>`_ about why you need threads.
     
 What a service can do
 ---------------------
@@ -88,15 +88,9 @@ or
 in your services.
 
 Depending on the choices you make, it will be usually possible to make the very
-same service, with no changes to the code, available across multiple channels
-- 
-:doc:`AMQP <TODO>`
-:doc:`JMS WebSphere MQ <TODO>`
-:doc:`Plain HTTP <TODO>`
-:doc:`SOAP <TODO>`
-and 
-:doc:`ZeroMQ <TODO>`
-
+same service, with no changes to the code, available across multiple 
+:doc:`channels <./channels>`
+- AMQP, JMS WebSphere MQ, Plain HTTP, SOAP and ZeroMQ
 
 You can store data in 
 Redis,
@@ -108,13 +102,13 @@ A service can
 :doc:`invoke other services <./invoking-services>`
 as well as access resources outside a Zato environment.
 The latter ones include
-:doc:`AMQP <TODO>`,
-:doc:`JMS WebSphere MQ <TODO>`,
-:doc:`Plain HTTP <TODO>`,
-:doc:`SOAP <TODO>`,
-:doc:`ZeroMQ <TODO>`
+:doc:`AMQP <./outconn/amqp>`,
+:doc:`JMS WebSphere MQ <./outconn/jms-wmq>`,
+:doc:`Plain HTTP <./outconn/http>`,
+:doc:`SOAP <./outconn/http>`,
+:doc:`ZeroMQ <./outconn/zmq>`
 and 
-:doc:`FTP <TODO>`.
+:doc:`FTP <./outconn/ftp>`.
 
 
 Service API
@@ -126,7 +120,7 @@ and
 :ref:`methods <progguide-write-service-methods>`
 a service can make use of during processing of the messages.
 
-Save the following code in service_api.py and :doc:`hot-deploy <TODO>` it - this will be
+Save the following code in service_api.py and :doc:`hot-deploy <../admin/guide/installing-services>` it - this will be
 the servce that will be modified throughout the rest of the text.
 
 ::
@@ -192,7 +186,8 @@ cid
 ```
 
 A correlation ID (CID) of this request. Each request is assigned a CID
-which is :doc:`(TODO update public API) <TODO>` 128 bits of random data, encoded as a string.
+which is :doc:`(TODO update public API) <TODO-update-public-API>` 128 bits
+of random data, encoded as a string.
 The string is prefixed with the letter 'K' to ensure that it always start with a character. There
 is nothing special about the letter 'K', it just seemed a character that shouldn't
 be easy to confuse with any other in the ASCII range.
@@ -304,7 +299,7 @@ handle_return_time
 ``````````````````
 
 A `datetime.datetime <http://docs.python.org/2.7/library/datetime.html#datetime-objects>`_
-objects representing the time a service's :ref:`handle <TODO>` method returned at.
+objects representing the time a service's :ref:`handle <progguide-write-service-handle>` method returned at.
 Always in UTC.
 
 Note that it will be available as a non-None value only in the 
@@ -405,7 +400,7 @@ The constants are defined in the
 kvdb
 ````
 
-An object which lets one use :doc:`Redis, Zato's key/value database (KVDB) <TODO>`.
+An object which lets one use :doc:`Redis, Zato's key/value database (KVDB) <../architecture/redis>`.
 The underlying `redis-py connection <https://github.com/andymccurdy/redis-py>`_
 is available as self.kvdb.conn.
 
@@ -531,14 +526,14 @@ outgoing
 ````````
 
 Lets one invoke external
-:doc:`FTP <TODO>`,
-:doc:`AMQP <TODO>`,
-:doc:`ZeroMQ <TODO>`,
-:doc:`JMS WebSphere MQ <TODO>`,
-:doc:`SQL <TODO>`,
-:doc:`Plain HTTP <TODO>`
+:doc:`FTP <./outconn/ftp>`,
+:doc:`AMQP <./outconn/amqp>`,
+:doc:`ZeroMQ <./outconn/zmq>`,
+:doc:`JMS WebSphere MQ <./outconn/jms-wmq>`,
+:doc:`SQL <./outconn/sql>`,
+:doc:`Plain HTTP <./outconn/http>`
 and 
-:doc:`SOAP <TODO>`
+:doc:`SOAP <./outconn/http>`
 resources. Consult the documentation of each one for more information.
 
 .. _progguide-write-service-processing_time:
@@ -624,7 +619,8 @@ attributes are discussed in
 slow_threshold
 ``````````````
 Response time threshold, in milliseconds, after exceeding of which a service
-invocation will be considered :doc:`a slow one <TODO>`. Top 100 slow invocations
+invocation will be considered :doc:`a slow one <../web-admin/service-details/slow-responses>`. 
+Top 100 slow invocations
 of a service are stored for a later inspection.
 
 ::
@@ -677,8 +673,8 @@ what HTTP response headers a service will return. Use
 
 Note that the example below assumes the service has been mounted at /service-api.my-service
 through a plain HTTP channel,
-otherwise, had :doc:`zato service invoke <TODO>` been used as an access method, 
-wsgi_environ would've been empty.
+otherwise, had :doc:`zato service invoke <../admin/cli/service-invoke>` been used
+as an access method,  wsgi_environ would've been empty.
 
 ::
 
@@ -901,10 +897,8 @@ message processing will take place. Each time a channel accepts a message,
 a new instance of the service class will be created and its handle method will
 be called. 
 
-A service is fully initialized at the time handle is being invoked.
-
-There is a :doc:`chapter with usage examples <TODO>` to give you an idea what a service's
-handle method can do.
+A service is fully initialized and ready to process the request at the time
+handle is being invoked.
 
 Request and response objects are documented in 
 :doc:`their own chapter <./request-response>`.
@@ -924,7 +918,7 @@ invoke
   :ref:`channel <progguide-write-service-channel>`
   attribute, from the point of view of the service which is invoked, there is no way to
   discern that it's not being invoked through a regular channel created in the
-  :doc:`web admin <TODO>` or via :doc:`Zato's public API </public-api/intro>`.
+  :doc:`web admin <../web-admin/intro>` or via :doc:`Zato's public API </public-api/intro>`.
   
   A `ZatoException <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_ will be raised if a service attempts to invoke itself.
   
@@ -945,7 +939,7 @@ invoke
                       Can be skipped if the service uses :doc:`SIO<./sio>` and payload is a dictionary.
   :type data_format: `zato.common.DATA_FORMAT <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
   
-  :param transport: :ref:`Transport <TODO progguide-write-service-transport>` a service will think it's invoked with
+  :param transport: Transport a service will think it's invoked with
   :type transport: `zato.common.TRANSPORT <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
   
   :param serialize: If the service which is invoked uses :doc:`SIO <./sio>`, 
@@ -1158,7 +1152,8 @@ translate
 `````````
 .. py:method:: translate(system1, key1, value1, system2, key2[, default=''])
           
-   Uses :doc:`Redis </architecture/redis>` to return a new :doc:`translation <TODO>`
+   Uses :doc:`Redis <../architecture/redis>` to return a new 
+   :doc:`translation <../web-admin/kvdb/data-dict>`
    from system1, key1 and value1 to system2 and key2.
    
    If there are two or more systems using different data dictionaries, it is desirable

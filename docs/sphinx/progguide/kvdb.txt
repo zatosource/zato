@@ -18,9 +18,9 @@ to support several distinct mechanisms:
   to simplify invoking other services asynchronously.
 
 * :ref:`Translating <progguide-write-service-translate>` the
-  :doc:`dictionary values <TODO>`
+  :doc:`dictionary values <../web-admin/kvdb/data-dict>`
 
-* Storing :doc:`statistics <TODO>` that can be accessed through 
+* Storing :doc:`statistics <../stats/guide>` that can be accessed through 
   the :doc:`API </public-api/details/zato.stats>`
   
 * Accessing Redis directly through the self.kvdb.conn object, which is an instance

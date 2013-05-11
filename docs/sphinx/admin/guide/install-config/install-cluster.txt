@@ -11,8 +11,3 @@ Steps
   e.g. a user for Zato has been added
 * :doc:`Install an ODB <./install-odb>`
 * Issue the :doc:`zato create cluster <../../cli/create-cluster>` command
-
-More information
-----------------
-
-* :doc:`Click here<TODO>` to visit a chapter on how to configure an already existing cluster  

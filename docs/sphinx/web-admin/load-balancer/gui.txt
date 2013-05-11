@@ -28,10 +28,10 @@ to find out long a given server has been up or down.
 Agent info 
 ----------
 
-================== ===========================================================================
+================== ==============================================================================
 Header             Notes
-================== ===========================================================================
-Started on         When HAProxy was started, in :doc:`current user's timezone <TODO>`
+================== ==============================================================================
+Started on         When HAProxy was started, in :doc:`current user's timezone <../settings/main>`
 Work dir           Same as :doc:`work_dir <../../admin/guide/install-config/config-lb>`
 HAProxy command    Same as :doc:`haproxy_command <../../admin/guide/install-config/config-lb>`
 Key file           Same as :doc:`keyfile <../../admin/guide/install-config/config-lb>`
@@ -39,7 +39,7 @@ Cert file          Same as :doc:`certfile <../../admin/guide/install-config/conf
 CA certs file      Same as :doc:`ca_certs <../../admin/guide/install-config/config-lb>`
 Cert verify fields Same as :doc:`verify_fields <../../admin/guide/install-config/config-lb>` 
                    though a reminder will be shown if no verify fields have been set
-================== ===========================================================================
+================== ==============================================================================
  
 Frontend config 
 ---------------

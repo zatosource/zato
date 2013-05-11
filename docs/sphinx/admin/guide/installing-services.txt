@@ -89,7 +89,7 @@ Flat Python packages can also be hot-deployed in a cluster using the web admin.
    :alt:
 
 Refer to 
-:doc:`web admin's docs <TODO>`
+:doc:`web admin's docs <../../web-admin/services/upload>`
 for more information.
 
 zato_extra_paths

@@ -7,7 +7,7 @@ Servers
 Overview
 --------
 
-Servers are the central point of Zato. This is where :doc:`services <TODO>` are running,
+Servers are the central point of Zato. This is where :doc:`services <../progguide/write-service>` are running,
 where request issued by external applications arrive and where requests from
 Zato to other systems originate from.
 
@@ -100,7 +100,7 @@ applications directly, in a synchronous fashion.
 HTTP can be either plain HTTP or HTTPS and uses the `requests <http://pypi.python.org/pypi/requests/>`_
 library. Any messages can be exchanged, JSON, XML,
 CSV or any other format although Zato has special and unique support for the first two
-if you decide to use Zato's :doc:`Simple IO <sio>` mechanism.
+if you decide to use Zato's :doc:`Simple IO <../progguide/sio>` mechanism.
 
 FTP should be understood as both FTP and FTPS. Note that Zato opens a new FTP
 connection for each service invocation, for instance - you scheduled a job
