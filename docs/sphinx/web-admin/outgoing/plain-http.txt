@@ -36,7 +36,7 @@ Active              Whether the connection can be used by a service or not.
                     :ref:`pinged <web-admin-outgoing-plain-http-ping>`.
                     
 Host                HTTP server's host, may include a port
-User                Path a resource to be invoked is mounted on
+URL path            Path a resource to be invoked is mounted on
 Security            Name of a security definition - 
                     :doc:`HTTP Basic Auth <../security/basic-auth>`,
                     :doc:`technical account <../security/tech-account>`
