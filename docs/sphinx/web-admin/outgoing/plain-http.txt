@@ -26,7 +26,7 @@ Create and Edit
 Header              Notes
 =================== ======================================================================================================================
 Name                Connection name
-Active              Whether the connection can be used by a service or not. 
+Active              Whether the connection can be used by services or not. 
 
                     If a connection is not active a service will encounter a 
                     `zato.common.Inactive <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/__init__.py>`_
