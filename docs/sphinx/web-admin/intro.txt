@@ -107,5 +107,4 @@ Read more
       :doc:`Load-balancer's statistics<../stats/lb>`
       
     * **User settings:**
-      :doc:`Date and time<./settings/date-time>` |
-      :doc:`Cluster color markers<./settings/cluster-color-markers>`
+      :doc:`Main view<./settings/main>`
