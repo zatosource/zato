@@ -11,7 +11,7 @@ Contrary to what :doc:`SOAP connections <./soap>` assume, plain HTTP ones don't 
 the data to be send in any particular format, it can be anything that can be
 transfered over HTTP, including JSON, CSV, XML or virtually anything.
 
-* Menu path: Connections -> Outgoing connections -> Plain HTTP
+* Menu path: Connections -> Outgoing -> Plain HTTP
 * Example address: http://localhost:8183/zato/http-soap/?cluster=1&connection=outgoing&transport=plain_http
 
 .. image:: /gfx/web-admin/outgoing/plain-http.png

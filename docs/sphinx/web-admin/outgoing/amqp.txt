@@ -22,7 +22,7 @@ Sending messages to a remote broker is an asynchronous activity - messages are n
 rolled back to Zato services if there are any errors
 along.
 
-* Menu path: Connections -> Outgoing connections -> AMQP
+* Menu path: Connections -> Outgoing -> AMQP
 * Example address: http://localhost:8183/zato/outgoing/amqp/?cluster=1
 
 .. image:: /gfx/web-admin/outgoing/amqp.png

@@ -21,7 +21,7 @@ Sending messages to a ZMQ socket is an asynchronous activity - messages are not
 rolled back to Zato services if there are any errors
 along.
 
-* Menu path: Connections -> Outgoing connections -> ZeroMQ
+* Menu path: Connections -> Outgoing -> ZeroMQ
 * Example address: http://localhost:8183/zato/outgoing/zmq/?cluster=1
 
 .. image:: /gfx/web-admin/outgoing/zmq.png
