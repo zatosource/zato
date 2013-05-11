@@ -36,7 +36,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import method_allowed
-from zato.common import SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, URL_TYPE, ZATO_NONE, zato_path
+from zato.common import SECURITY_TYPES, SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, URL_TYPE, ZATO_NONE, zato_path
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 
@@ -132,9 +132,11 @@ def index(req):
             value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
             label = '{0}/{1}'.format(SECURITY_TYPES[def_item.sec_type], def_item.name)
             _security.append((value, label))
+
+        _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
         
-        create_form = CreateForm(_security, SOAP_CHANNEL_VERSIONS)
-        edit_form = EditForm(_security, SOAP_CHANNEL_VERSIONS, prefix='edit')
+        create_form = CreateForm(_security, _soap_versions)
+        edit_form = EditForm(_security, _soap_versions, prefix='edit')
     
         input_dict = {
             'cluster_id': req.zato.cluster_id,
