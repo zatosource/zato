@@ -11,7 +11,7 @@ processes, Zato is best suited at the middle or far backend of your IT
 infrastructure.
 
 Areas where Zato shines are business integration - such as implementing an `Enterprise Service Bus (ESB)`_, 
-and core services - such as billing, customer management,
+and core services - billing, customer management,
 purchase processing, supporting marketing campaings, core banking and many
 similar activities that form a backbone of an enterprise.
 
