@@ -16,8 +16,10 @@ to any party that would like to use it. It's like a function or a method but
 running on massively higher level - instead of exposing APIs to other parts of
 code in a single application, a service is exposed to other systems. 
 
-Such an atomic building as a service can be used to build any online 
-middleware and backend application for any purpose.
+Such an atomic and reusable building block as a service can be used to build any online 
+:doc:`middleware and backend <../intro/overview-high-level>`
+:doc:`application <../intro/overview-tech>`
+for any purpose.
 
 Services can can 
 :doc:`invoke <../progguide/outconn/overview>`
@@ -57,7 +59,7 @@ If you haven't done it yet, take a look at Zato's
 to get an understanding how all various pieces play together.
 
 What will the tutorial achieve, exactly?
----------------------------------------------
+----------------------------------------
 
 The service we'll create will be:
 
@@ -76,3 +78,46 @@ and several more.
 
 This all will be only a tip of the iceberg but still should give you a thorough
 introduction to Zato.
+
+The message flow
+----------------
+
+.. image:: /gfx/tutorial/service-complete.png
+
+We'll be building part of what could be a beginning of a bank application.
+
+* A client applications wishes to learn a couple of things about a customer given their CUST_ID.
+  The data it expects is:
+
+  * Customer's first and last name
+  * Last time the client made a payment
+  * The payment amount
+  
+* Customer data is stored in a `CRM <https://en.wikipedia.org/wiki/Consumer_relationship_system>`_
+* Payments are stored in a different application
+* For certain customer types, there's a business requirement that a frauds detection
+  system be notified of any operations regarding such customers, so our service
+  needs to comply with it even though it's merely reading customer-related data,
+  it doesn't really transfer money between accounts.
+  
+Note that in the diagram above both the service and Redis are of the same color,
+this is because they both are part of the same Zato 
+:doc:`cluster <../architecture/overview>`
+while the other parties don't be belong to Zato.
+
+Installing Zato and creating a quickstart cluster
+-------------------------------------------------
+
+First thing needed is installing Zato itself. There's 
+:doc:`a short chapter <../admin/guide/install-zato>`
+on doing just that
+in the administration guide and you're encouraged to get through it now
+but basically, this amounts to 3 things:
+
+* Download `the latest version <TODO>`_
+* Run ./install.sh in INSTALL_DIR
+* Add INSTALL_DIR/bin to $PATH
+
+You'll also need access to Redis and a PostgreSQL instance.
+
+Done yet? OK, so let's create a quickstart cluster.
