@@ -80,7 +80,7 @@ SOAP example
     <soap:Body>
         <zato_definition_jms_wmq_edit_response xmlns="http://gefira.pl/zato">
         <zato_env>
-            <cid>K66845836803103295133419154317</cid>
+            <cid>K163840667719174898175592543790978233104</cid>
             <result>ZATO_OK</result>
         </zato_env>
         <item>
@@ -116,7 +116,7 @@ JSON example
       "zato_env": {
         "details": "",
         "result": "ZATO_OK",
-        "cid": "K40483422149973313933383733941"
+        "cid": "K163840667719174898175592543790978233104"
       },
       "zato_definition_jms_wmq_edit_response": {
         "id": 1,

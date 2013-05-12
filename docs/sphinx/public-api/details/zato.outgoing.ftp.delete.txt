@@ -51,7 +51,7 @@ SOAP example
    <soap:Body>
        <zato_outgoing_ftp_delete_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K23174316467534728912464157238</cid>
+           <cid>K339643887353820255491102476448034770488</cid>
            <result>ZATO_OK</result>
        </zato_env>
    </zato_outgoing_ftp_delete_response>
@@ -71,6 +71,6 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K08844566698649194425656437076"
+       "cid": "K339643887353820255491102476448034770488"
      }
    }

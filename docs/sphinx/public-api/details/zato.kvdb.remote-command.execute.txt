@@ -50,7 +50,7 @@ SOAP example
   <soap:Body>
       <zato_kvdb_remote_command_execute_response xmlns="http://gefira.pl/zato">
       <zato_env>
-          <cid>K30061751554541689680195842359</cid>
+          <cid>K192941007181962730829522014929117599691</cid>
           <result>ZATO_OK</result>
       </zato_env>
       <item>
@@ -115,7 +115,7 @@ JSON example
     "zato_env": {
       "details": "",
       "result": "ZATO_OK",
-      "cid": "K78370490583750027068477613425"
+      "cid": "K192941007181962730829522014929117599691"
     },
     "zato_kvdb_remote_command_execute_response": {
       "result": "{'usage': '77', 'max': '1', 'rate': '0.01', 'min': '0', 'mean': '0.01'}"

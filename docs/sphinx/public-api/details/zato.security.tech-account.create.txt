@@ -58,7 +58,7 @@ SOAP example
    <soap:Body>
        <zato_security_tech_account_create_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K35208379358174005369427403102</cid>
+           <cid>K048363785575216960625054393732831924020</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
@@ -84,7 +84,7 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K57483655063014180045495194626"
+       "cid": "K048363785575216960625054393732831924020"
      },
      "zato_security_tech_account_create_response": {
        "id": 7,

@@ -70,7 +70,7 @@ SOAP example
   <soap:Body>
       <zato_stats_get_summary_by_week_response xmlns="http://gefira.pl/zato">
       <zato_env>
-          <cid>K22412700051452388839362966517</cid>
+          <cid>K057012199657918239497981730846052011023</cid>
           <result>ZATO_OK</result>
       </zato_env>
       <item_list>
@@ -192,6 +192,6 @@ JSON example
     "zato_env": {
       "details": "",
       "result": "ZATO_OK",
-      "cid": "K59771325356078585289531563282"
+      "cid": "K057012199657918239497981730846052011023"
     }
   }

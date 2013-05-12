@@ -58,7 +58,7 @@ SOAP example
     <soap:Body>
         <zato_definition_amqp_get_list_response xmlns="http://gefira.pl/zato">
         <zato_env>
-            <cid>K48397822304226596596877196492</cid>
+            <cid>K174867027327501117568780635191739226561</cid>
             <result>ZATO_OK</result>
         </zato_env>
         <item_list>
@@ -110,7 +110,7 @@ JSON example
       "zato_env": {
         "details": "",
         "result": "ZATO_OK",
-        "cid": "K11906096933398962054935316585"
+        "cid": "K174867027327501117568780635191739226561"
       },
       "zato_definition_amqp_get_list_response": [
         {

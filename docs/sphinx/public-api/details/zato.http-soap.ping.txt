@@ -53,7 +53,7 @@ SOAP example
       <soap:Body>
             <zato_http_soap_ping_response xmlns="http://gefira.pl/zato">
                <zato_env>
-                  <cid>K10321864292769822370147339313</cid>
+                  <cid>K204660548112160790937666720114230927115</cid>
                   <result>ZATO_OK</result>
                </zato_env>
                <item>
@@ -79,7 +79,7 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K65759470643978575137933072132"
+       "cid": "K204660548112160790937666720114230927115"
      },
      "zato_http_soap_ping_response": {
  "info": "2013-01-28T14:30:22.316458   HEAD   http://10.152.11.182:9093/json\nCode: 302\nResponse time: 0:00:00.124191"

@@ -61,7 +61,7 @@ SOAP example
    <soap:Body>
        <zato_outgoing_zmq_create_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K42053466328835637706480528396</cid>
+           <cid>K078396595331368248379866766428258392061</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
@@ -93,6 +93,6 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K20002944915102551245458759081"
+       "cid": "K078396595331368248379866766428258392061"
      }
    }

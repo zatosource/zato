@@ -53,7 +53,7 @@ SOAP example
    <soap:Body>
        <zato_service_has_wsdl_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K38339961375425849379891882408</cid>
+           <cid>K015350015213906559860626315761238525381</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
@@ -79,7 +79,7 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K27691849484159845380564088372"
+       "cid": "K015350015213906559860626315761238525381"
      },
      "zato_service_has_wsdl_response": {
        "service_id": 5207,
