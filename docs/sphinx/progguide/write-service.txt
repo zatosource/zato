@@ -188,9 +188,12 @@ cid
 A correlation ID (CID) of this request. Each request is assigned a CID
 which is :doc:`(TODO update public API) <TODO-update-public-API>` 128 bits
 of random data, encoded as a string.
+
 The string is prefixed with the letter 'K' to ensure that it always start with a character. There
 is nothing special about the letter 'K', it just seemed a character that shouldn't
-be easy to confuse with any other in the ASCII range.
+be easy to confuse with any other in the ASCII range. Don't assume the prefix 
+will always be 'K', future Zato versions may make it configurable or change it
+without prior notice.
 
 Note that when 
 :ref:`publishing <progguide-write-service-broker-client-publish>`
