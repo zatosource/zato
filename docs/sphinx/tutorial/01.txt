@@ -1,0 +1,78 @@
+Tutorial - part 1
+=================
+
+Introduction
+------------
+
+This tutorial will guide you through a process of creating a simple service that
+will be integrated with 3 external applications over HTTP and Zero MQ and which
+will use JSON as a data exchange format.
+
+But what is a service anyway? 
+
+To paraphrase the :doc:`programming guide's overview <../progguide/overview>`,
+a service is a piece of functionality that does something useful and interesting
+to any party that would like to use it. It's like a function or a method but 
+running on massively higher level - instead of exposing APIs to other parts of
+code in a single application, a service is exposed to other systems. 
+
+Such an atomic building as a service can be used to build any online 
+middleware and backend application for any purpose.
+
+Services can can 
+:doc:`invoke <../progguide/outconn/overview>`
+or 
+:doc:`accept connections <../progguide/channels>`
+through many
+protocols and transports - 
+:doc:`plain HTTP(S), SOAP, JSON <../progguide/outconn/http>`,
+:doc:`AMQP <../progguide/outconn/amqp>`,
+:doc:`JMS WebSphere MQ <../progguide/outconn/jms-wmq>`,
+:doc:`ZeroMQ <../progguide/outconn/zmq>`,
+:doc:`SQL <../progguide/outconn/sql>`,
+and
+:doc:`FTP(S) <../progguide/outconn/ftp>`.
+
+There's also
+:doc:`Redis key/value database <../progguide/kvdb>`
+and a built-in
+:doc:`scheduler <../progguide/scheduler>`
+which is used for executing recurring tasks.
+
+Services can also make use of
+:doc:`HTTP Basic Auth <../web-admin/security/basic-auth>`,
+:doc:`WS-Security <../web-admin/security/ws-security>`
+and
+:doc:`technical accounts <../web-admin/security/tech-account>`.
+
+And there are 
+:doc:`CLI <../admin/cli/index>`, 
+:doc:`API <../public-api/intro>` 
+and a fabulous 
+:doc:`web admin <../web-admin/intro>`
+console for admins to use. 
+
+If you haven't done it yet, take a look at Zato's 
+:doc:`architecture <../architecture/overview>`
+to get an understanding how all various pieces play together.
+
+What will the tutorial achieve, exactly?
+---------------------------------------------
+
+The service we'll create will be:
+
+* Accepting input in JSON or XML through HTTP
+* Invoking HTTP JSON services of 2 systems
+* Optionally notifying a 3rd system using JSON over Zero MQ
+* Fetching business rules from Redis
+
+After finishing the tutorial you'll also have a good understanding of key
+Zato features, such as 
+:doc:`CLI <../admin/cli/index>`, 
+:doc:`web admin <../web-admin/intro>`,
+:doc:`hot-deployment <../admin/guide/installing-services>`,
+:doc:`statistics <../stats/guide>`
+and several more.
+
+This all will be only a tip of the iceberg but still should give you a thorough
+introduction to Zato.

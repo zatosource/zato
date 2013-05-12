@@ -186,8 +186,7 @@ cid
 ```
 
 A correlation ID (CID) of this request. Each request is assigned a CID
-which is :doc:`(TODO update public API) <TODO-update-public-API>` 128 bits
-of random data, encoded as a string.
+which is 128 bits of random data, encoded as a string.
 
 The string is prefixed with the letter 'K' to ensure that it always start with a character. There
 is nothing special about the letter 'K', it just seemed a character that shouldn't
