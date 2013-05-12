@@ -67,7 +67,7 @@ SOAP example
    <soap:Body>
       <zato_scheduler_job_get_by_name_response xmlns="http://gefira.pl/zato">
          <zato_env>
-            <cid>K53273825172013113047625680249</cid>
+            <cid>K024466323355551756336988497407212297603</cid>
             <result>ZATO_OK</result>
          </zato_env>
          <item xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -105,7 +105,7 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K14454139924755454804066076436"
+       "cid": "K024466323355551756336988497407212297603"
      },
      "zato_scheduler_job_get_by_name_response": {
        "name": "Process Dunning Letters",

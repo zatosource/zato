@@ -63,7 +63,7 @@ SOAP example
     <soap:Body>
         <zato_scheduler_job_get_list_response xmlns="http://gefira.pl/zato">
         <zato_env>
-            <cid>K24474669593954802554481783281</cid>
+            <cid>K237362692748966364413240918727038909268</cid>
             <result>ZATO_OK</result>
         </zato_env>
         <item_list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -137,7 +137,7 @@ JSON example
     "zato_env": {
       "details": "",
       "result": "ZATO_OK",
-      "cid": "K48363454113262950898700646813"
+      "cid": "K237362692748966364413240918727038909268"
     },
     "zato_scheduler_job_get_list_response": [
       {

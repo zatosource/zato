@@ -48,7 +48,7 @@ SOAP example
       <zato_kvdb_data_dict_dictionary_get_last_id_response
         xmlns="http://gefira.pl/zato">
       <zato_env>
-          <cid>K56082738184110167207273662877</cid>
+          <cid>K269509884515948494556837452591312942700</cid>
           <result>ZATO_OK</result>
       </zato_env>
       <item>
@@ -73,6 +73,6 @@ JSON example
     "zato_env": {
       "details": "",
       "result": "ZATO_OK",
-      "cid": "K46197195794204423416812347999"
+      "cid": "K269509884515948494556837452591312942700"
     }
   }

@@ -60,13 +60,13 @@ SOAP example
    <soap:Body>
        <zato_service_request_response_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K49755538203536615472746164485</cid>
+           <cid>K127881993035064182846540348120605055222</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
            <service_id>110</service_id>
            <sample_req_resp_freq>1</sample_req_resp_freq>
-           <sample_cid>K61482511379707433053322089747</sample_cid>
+           <sample_cid>K246061663471527112546072229362545308008</sample_cid>
            <sample_req_ts>2013-02-09T21:09:30.981342</sample_req_ts>
            <sample_resp_ts>2013-02-09T21:09:30.984400</sample_resp_ts>
            <sample_req>ICAgPHNvYXBlbnY6RW52ZWxvcGUgeG1sbnM6c29hcGVudj0iaHR0cDovL3NjaGVtYXMueG1sc29h
@@ -109,7 +109,7 @@ JSON example
      "zato_service_request_response_response": {
        "sample_req": "ICAgPHNvYXBlbnY6RW52ZWxvcGUgeG1sbnM6c29hcGVudj0iaHR0cDovL3NjaGVtYXMueG1sc29h\ncC5vcmcvc29hcC9lbnZlbG9wZS8iICAgICAgICB4bWxuczp6YXRvPSJodHRwOi8vZ2VmaXJhLnBs\nL3phdG8iPiAgICAgIDxzb2FwZW52OkhlYWRlci8+ICAgICAgPHNvYXBlbnY6Qm9keT4gICAgICAg\nICA8emF0bzp6YXRvX3NlcnZpY2VfZ2V0X3JlcXVlc3RfcmVzcG9uc2VfcmVxdWVzdD4gICAgICAg\nICAgICA8emF0bzpjbHVzdGVyX2lkPjE8L3phdG86Y2x1c3Rlcl9pZD4gICAgICAgICAgICA8emF0\nbzpuYW1lPnphdG8uc2VydmljZS5HZXRSZXF1ZXN0UmVzcG9uc2U8L3phdG86bmFtZT4gICAgICAg\nICA8L3phdG86emF0b19zZXJ2aWNlX2dldF9yZXF1ZXN0X3Jlc3BvbnNlX3JlcXVlc3Q+ICAgICAg\nPC9zb2FwZW52OkJvZHk+ICAgPC9zb2FwZW52OkVudmVsb3BlPg==\n",
        "sample_req_resp_freq": "1",
-       "sample_cid": "K49755538203536615472746164485",
+       "sample_cid": "K246061663471527112546072229362545308008",
        "sample_resp_ts": "2013-02-09T21:09:31.876008",
        "sample_req_ts": "2013-02-09T21:09:31.863094",
        "service_id": 110,
@@ -118,6 +118,6 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K24051035620174912226551280079"
+       "cid": "K127881993035064182846540348120605055222"
      }
    }

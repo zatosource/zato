@@ -78,7 +78,7 @@ SOAP example
    <soap:Body>
        <zato_scheduler_job_edit_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K04564254033087095923405420841</cid>
+           <cid>K109505492546573651449185369278138334766</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
@@ -110,7 +110,7 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K25233659942391760821183657034"
+       "cid": "K109505492546573651449185369278138334766"
      },
      "zato_scheduler_job_edit_response": {
        "cron_definition": "0 * * * *",

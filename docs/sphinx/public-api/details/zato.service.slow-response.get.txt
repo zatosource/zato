@@ -53,7 +53,7 @@ SOAP example
         xmlns:zato="http://gefira.pl/zato">
       <soapenv:Body>
          <zato:zato_service_slow_response_get_request>
-            <zato:cid>K44459917338408357324042445244</zato:cid>
+            <zato:cid>K077603789707537717899916083679530758790</zato:cid>
             <zato:name>zato.ping</zato:name>
          </zato:zato_service_slow_response_get_request>
       </soapenv:Body>
@@ -64,11 +64,11 @@ SOAP example
    <soap:Body>
        <zato_service_slow_response_get_response xmlns="http://gefira.pl/zato">
        <zato_env>
-           <cid>K40940272493722012763515961307</cid>
+           <cid>K043013568412949543889447041183382953200</cid>
            <result>ZATO_OK</result>
        </zato_env>
        <item>
-           <cid>K44459917338408357324042445244</cid>
+           <cid>K077603789707537717899916083679530758790</cid>
            <req_ts>2013-02-09T23:54:42.018323</req_ts>
            <resp_ts>2013-02-09T23:54:42.319288</resp_ts>
            <proc_time>301</proc_time>
@@ -89,7 +89,7 @@ JSON example
 .. code-block:: javascript
 
    {
-      "cid": "K44459917338408357324042445244",
+      "cid": "K077603789707537717899916083679530758790",
       "name": "zato.ping"
    }
 
@@ -97,11 +97,11 @@ JSON example
      "zato_env": {
        "details": "",
        "result": "ZATO_OK",
-       "cid": "K61503331968322208686025658018"
+       "cid": "K043013568412949543889447041183382953200"
      },
      "zato_service_slow_response_get_response": {
        "proc_time": 301,
-       "cid": "K44459917338408357324042445244",
+       "cid": "K077603789707537717899916083679530758790",
        "resp": "eyJ6YXRvX2VudiI6IHsiZGV0YWlscyI6ICIiLCAicmVzdWx0IjogIlpBVE9fT0siLCAiY2lkIjog\nIks0NDQ1OTkxNzMzODQwODM1NzMyNDA0MjQ0NTI0NCJ9LCAiemF0b19waW5nX3Jlc3BvbnNlIjog\neyJwb25nIjogInphdG8ifX0=\n",
        "req": "",
        "resp_ts": "2013-02-09T23:54:42.319288",

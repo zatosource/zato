@@ -46,7 +46,7 @@ SOAP example
   <soap:Body>
       <zato_kvdb_data_dict_translation_delete_response xmlns="http://gefira.pl/zato">
       <zato_env>
-          <cid>K47783279455010819256984581235</cid>
+          <cid>K100530951880589156380962735407698788037</cid>
           <result>ZATO_OK</result>
       </zato_env>
   </zato_kvdb_data_dict_translation_delete_response>
@@ -66,6 +66,6 @@ JSON example
     "zato_env": {
       "details": "",
       "result": "ZATO_OK",
-      "cid": "K13291118737365039725780611627"
+      "cid": "K100530951880589156380962735407698788037"
     }
   }
