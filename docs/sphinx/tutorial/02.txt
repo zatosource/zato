@@ -1,0 +1,187 @@
+Tutorial - part 2/2
+===================
+
+Calling other systems
+---------------------
+
+.. note ::
+
+  Be sure to get through the :doc:`part 1 <./01>` of the tutorial first. 
+  Many concepts and ideas previously explained over there are not repeated here.
+
+You'll recall from the :doc:`previous part <./01>` that we've already created
+a cluster, a skeleton service and the service has been invoked succesfully.
+
+Now we'll make it use external systems' services through HTTP, ZeroMQ and JSON. 
+:ref:`Head on <tutorial-01-message-flow>` to the part 1 if you need a recap
+of what we're creating in the tutorial business-wise.
+
+Unless you insist on doing it manually, services never know what exact URLs
+to invoke. They're always shielded from such information by a layer of 
+:doc:`outgoing connections <../../progguide/outconn/overview>`. 
+
+You just point a service to a connection known as, say, 'CRM' and a service can start 
+pushing requests towards it. When a CRM changes its address, a service needs no reconfiguration,
+you just need to enter new address in the web admin and this will be propagated
+automatically throughout the whole cluster so that the next time a service uses
+the connection it will connect to the new location just like that.
+
+We don't have a CRM and payments systems handy but for the purpose of the tutorial
+we can imitate them by invoking some previously prepared services available over at
+https://TODO/tutorial/crm/get-customer and https://TODO/tutorial/payments/get-last-payment.
+
+We'll connect to the frauds detection system with ZeroMQ in a while.
+
+For now, log into the `web admin <http://localhost:8183/>`_, select 
+Connections -> Outgoing -> Plain HTTP and create 2 new outgoing connections.
+
+.. image:: /gfx/tutorial/outconn-plain-http.png
+
+CRM connection
+~~~~~~~~~~~~~~
+
+.. image:: /gfx/tutorial/outconn-crm.png
+
+======== ======================
+Header   Value
+======== ======================
+Name     CRM
+Active   Yes
+Host     https://zato.io
+URL path /tutorial/get-customer
+Security No security
+======== ======================
+
+Payments connection
+~~~~~~~~~~~~~~~~~~~
+
+.. image:: /gfx/tutorial/outconn-payments.png
+
+======== ==========================
+Header   Value
+======== ==========================
+Name     CRM
+Active   Yes
+Host     https://zato.io
+URL path /tutorial/get-last-payment
+Security No security
+======== ==========================
+
+Synchronous invocations
+-----------------------
+
+The newly created connections can be used straightaway. Visiting
+`the <https://TODO/tutorial/get-customer>`_
+`services <https:/TODO//tutorial/get-last-payment>`_
+they point to lets us discover the data they produce is
+
+::
+
+ {
+  "firstName": "Sean", 
+  "lastName": "O'Brien"
+ }
+
+.. and ..
+
+::
+
+ {
+  "DATE": "2013-05-14T10:42:14.401555", 
+  "AMOUNT": "357"
+ }
+ 
+Looks a tad like the first one was written in Java and the other one in COBOL, hm..
+we'd like it to have much more Pythonic look & feel so a service to fetch all the 
+information, combine it and produce a nice looking JSON document may look like this:
+
+::
+
+  # stdlib
+  from json import dumps, loads
+  
+  # Bunch
+  from bunch import Bunch
+  
+  # Zato
+  from zato.server.service import Service
+  
+  class GetClientDetails(Service):
+      def handle(self):
+          
+          self.logger.info('Request: {}'.format(self.request.payload))
+          self.logger.info('Request type: {}'.format(type(self.request.payload)))
+          
+          # Fetch connection to CRM
+          crm = self.outgoing.plain_http.get('CRM')
+          
+          # Fetch connection to Payments
+          payments = self.outgoing.plain_http.get('Payments')
+          
+          # Grab the customer info ..
+          cust = crm.conn.send(dumps(self.request.payload))
+          cust = loads(cust.text)
+          
+          # .. and last payment's details
+          last_payment = payments.conn.send(dumps(self.request.payload))
+          last_payment = loads(last_payment.text)
+          
+          self.logger.info('Customer details: {}'.format(cust))
+          self.logger.info('Last payment: {}'.format(last_payment))
+          
+          response = Bunch()
+          
+          response.first_name = cust['firstName']
+          response.last_name = cust['lastName']
+          response.last_payment_date = last_payment['DATE']
+          response.last_payment_amount = last_payment['AMOUNT']
+          
+          self.response.payload = dumps(response)
+                
+Hot-deploy the service:
+
+::
+
+  $ cp my_service.py $path/server1/pickup-dir
+  
+And invoke it using curl:
+
+::
+
+  $ curl localhost:11223/tutorial/first-service -d '{"cust_id":123, "cust_type":"A"}'
+    {"first_name": "Sean", "last_name": "O'Brien", 
+     "last_payment_date": "2013-05-14T10:42:14.401555", 
+     "last_payment_amount": "357", }
+  $  
+
+As expected, everything has also been logged just fine:
+
+::
+
+  INFO - Request: {u'cust_id': 123L, u'cust_type': u'A'}
+  INFO - Request type: <type 'dict'>
+
+  INFO - Customer details: {u'lastName': u"O'Brien", u'firstName': u'Sean'}
+  INFO - Last payment: {u'DATE': u'2013-05-14T10:42:14.401555', u'AMOUNT': u'357'}
+
+Note a couple of points:
+
+* self.request.input.payload is equal to what we've posted on the command line
+* the payload is already a Python dictionary because the channel created in 
+  :doc:`part 1 <./01>` was told to expect JSON on input
+* outgoing connections don't know anything about formats of services they 
+  aim at so responses from CRM and Payments need to be parsed manually
+* we're using Bunch to make the process of creating a response more pleasing 
+  to the eye but this is purely optional
+* assigning any string to self.response.payload creates a response that a service
+  will return - there are :doc:`smarter ways <../progguide/sio>` too and we'll
+  get to it later in the chapter but this one is always available just in case.
+
+Sending messages asynchronously
+-------------------------------
+
+SIO
+---
+
+Adding security
+---------------
