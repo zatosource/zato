@@ -1,3 +1,6 @@
+.. highlight:: python
+   :linenothreshold: 0
+
 Tutorial - part 2/2
 ===================
 
@@ -30,7 +33,7 @@ We don't have a CRM and payments systems handy but for the purpose of the tutori
 we can imitate them by invoking some previously prepared services available over at
 https://TODO/tutorial/crm/get-customer and https://TODO/tutorial/payments/get-last-payment.
 
-We'll connect to the frauds detection system with ZeroMQ in a while.
+We'll connect to the fraud detection system with ZeroMQ in a while.
 
 For now, log into the `web admin <http://localhost:8183/>`_, select 
 Connections -> Outgoing -> Plain HTTP and create 2 new outgoing connections.
@@ -100,9 +103,6 @@ information, combine it and produce a nice looking JSON document may look like t
   # stdlib
   from json import dumps, loads
   
-  # Bunch
-  from bunch import Bunch
-  
   # Zato
   from zato.server.service import Service
   
@@ -129,14 +129,18 @@ information, combine it and produce a nice looking JSON document may look like t
           self.logger.info('Customer details: {}'.format(cust))
           self.logger.info('Last payment: {}'.format(last_payment))
           
-          response = Bunch()
+          response = {}
+          response['first_name'] = cust['firstName']
+          response['last_name'] = cust['lastName']
+          response['last_payment_date'] = last_payment['DATE']
+          response['last_payment_amount'] = last_payment['AMOUNT']
+          response = dumps(response)
           
-          response.first_name = cust['firstName']
-          response.last_name = cust['lastName']
-          response.last_payment_date = last_payment['DATE']
-          response.last_payment_amount = last_payment['AMOUNT']
+          self.logger.info('Response: {}'.format(response))
           
-          self.response.payload = dumps(response)
+          self.response.payload = response
+        
+        
                 
 Hot-deploy the service:
 
@@ -163,6 +167,9 @@ As expected, everything has also been logged just fine:
 
   INFO - Customer details: {u'lastName': u"O'Brien", u'firstName': u'Sean'}
   INFO - Last payment: {u'DATE': u'2013-05-14T10:42:14.401555', u'AMOUNT': u'357'}
+  
+  INFO - Response: {'last_payment_amount': u'357', 'first_name': u'Sean', 
+    'last_name': u"O'Brien", 'last_payment_date': u'2013-05-14T10:42:14.401555'}
 
 Note a couple of points:
 
@@ -171,8 +178,6 @@ Note a couple of points:
   :doc:`part 1 <./01>` was told to expect JSON on input
 * outgoing connections don't know anything about formats of services they 
   aim at so responses from CRM and Payments need to be parsed manually
-* we're using Bunch to make the process of creating a response more pleasing 
-  to the eye but this is purely optional
 * assigning any string to self.response.payload creates a response that a service
   will return - there are :doc:`smarter ways <../progguide/sio>` too and we'll
   get to it later in the chapter but this one is always available just in case.
@@ -180,8 +185,78 @@ Note a couple of points:
 Sending messages asynchronously
 -------------------------------
 
+So now we have a service which receives JSON over HTTP, invokes 2 systems 
+using JSON through HTTP as well and outputs a single JSON document containing
+both responses in a unified data format (no Java style, no COBOL either).
+
+But, as you remember from :doc:`part 1 <./01>`, business folks decided that 
+customers of certain types (say, 'A', B' and 'C') need a closer look, any 
+operations regarding such customers should go to a fraud detection system, 
+even operations as innocuous as checking their last payment.
+
+We don't have access to any such system but we'll create a mock one if a few lines.
+This will only run a `ZeroMQ <http://www.zeromq.org/>`_ PULL socket in an
+infinite loop and log any incoming data but this is everything we need from Zato's end. 
+We'll make our service asynchronously PUSH data to a server and whatever the 
+server does with it isn't a service's concern.
+
+::
+
+                # stdlib
+                import logging
+                
+                # ZeroMQ
+                import zmq
+                
+                logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+                
+                address = 'tcp://127.0.0.1:35101'
+                
+                context = zmq.Context()
+                socket = context.socket(zmq.PULL)
+                socket.bind(address)
+                
+                logging.info('Fraud detection app running on {}'.format(address))
+                
+                while True:
+                    msg = socket.recv_json()
+                    logging.info(msg)
+                    
+Such a system will do perfectly. After all, that's the whole point of async
+messaging, you just fire a message and forget about it. That in this particular
+case, the recpient only logs all the requests received is not our business.
+
+Assuming you've installed Zato binaries in $install_dir, you can run the server
+like below - note that the command really is 'py', not 'python':
+
+::
+
+  $ py zmq-server1.py 
+  INFO - Fraud detection app running on tcp://127.0.0.1:35101
+  
+As you probably imagine, to make use of such a server, a service needs access
+to an outgoing connection of some sort so let's 
+`open the web admin <http://localhost:8183>`_ 
+again, go to Connections -> Outgoing -> ZeroMQ ..
+
+.. image:: /gfx/tutorial/outconn-zmq.png
+
+\.\. and create a new one.
+
+.. image:: /gfx/tutorial/outconn-zmq-create.png
+
+Hot-deploy the service below and observe the fraud detection system's logs:
+
+
+
+Redis
+-----
+
 SIO
 ---
 
 Adding security
 ---------------
+
+Wrapping it all up
+------------------

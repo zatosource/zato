@@ -1,3 +1,6 @@
+.. highlight:: python
+   :linenothreshold: 0
+
 Tutorial - part 1/2
 ===================
 
@@ -97,7 +100,7 @@ We'll be building part of what could be a beginning of a bank application.
   
 * Customer data is stored in a `CRM <https://en.wikipedia.org/wiki/Consumer_relationship_system>`_
 * Payments are stored in a different application
-* For certain customer types, there's a business requirement that a frauds detection
+* For certain customer types, there's a business requirement that a fraud detection
   system be notified of any operations regarding such customers, so our service
   needs to comply with it even though it's merely reading customer-related data,
   it doesn't really transfer money between accounts.
