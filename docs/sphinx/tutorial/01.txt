@@ -1,12 +1,12 @@
-Tutorial - part 1
-=================
+Tutorial - part 1/2
+===================
 
 Introduction
 ------------
 
 This tutorial will guide you through a process of creating a simple service that
-will be integrated with 3 external applications over HTTP and Zero MQ and which
-will use JSON as a data exchange format.
+will be integrated with 3 external applications over HTTP and Zero MQ using
+JSON or XML as a data exchange format.
 
 But what is a service anyway? 
 
@@ -56,7 +56,7 @@ console for admins to use.
 
 If you haven't done it yet, take a look at Zato's 
 :doc:`architecture <../architecture/overview>`
-to get an understanding how all various pieces play together.
+to get an understanding of how all the various pieces play together.
 
 What will the tutorial achieve, exactly?
 ----------------------------------------
@@ -229,7 +229,7 @@ as many servers as you need.
 Invoking services with cURL
 ---------------------------
 
-Let's start the whole of it:
+First off, let's start the thing we've just brought to this world:
 
 ::
 
@@ -255,11 +255,12 @@ can be invoked through the load-balancer using curl (output below is slightly re
    "zato_ping_response": {"pong": "zato"}}
   $
   
-The response produced by zato.ping happens to be a JSON document. We can see 
-there were no errors encountered (ZATO_OK). 
-The :ref:`correlation ID <progguide-write-service-cid>` (cid) serves as a request
-identifier and can be used to reconcile information regarding the fate of a service's
-invocation across multiple systems.
+The response produced by zato.ping happens to be a JSON document. 
+
+* We can see  there were no errors encountered (ZATO_OK)
+* The :ref:`correlation ID <progguide-write-service-cid>` (cid) serves as an
+  identifier which can be used to reconcile information regarding the fate of a service's
+  invocation across multiple systems
   
 .. note ::
 
@@ -272,13 +273,13 @@ invocation across multiple systems.
   
   Also note, Zato is not meant to take part in HelloWorld contests - it's much
   more than a plain HTTP daemon and it doesn't make much sense to compare it against
-  raw-WSGI servers.
+  raw-`WSGI <https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface>`_ servers.
   
   
 Hot-deploying your first service
 --------------------------------
 
-Fire up you favourite programming and let's finally create your own Zato service.
+Fire up you favourite programming and let's finally create our own Zato service.
 
 Save the following code as my_service.py
 
@@ -300,7 +301,8 @@ Save the following code as my_service.py
   this is where the actual action takes place, this is the heart of a service
   
 * :ref:`log_input <progguide-write-service-log_input>`
-  is one of the helper methods a service have access to
+  is one of the helper methods a service have access to. As you can imagine,
+  this one dumps all the input data into server logs.
     
 Code saved? Good, now we can hot-deploy it. 
 
@@ -334,7 +336,7 @@ of a successful deployment as there are worker processes running in your cluster
   
 Our service is there but we can't reach it from the client application yet because
 it's not exposed through any 
-:doc:`channels <../../progguide/channels>` and a single service can be used over
+:doc:`channels <../../progguide/channels>` - a single service can be used over
 many independent channels, each using different security configuration, transport
 protocols, data format etc.
 
@@ -382,16 +384,73 @@ in the
 where it's all detailed.
 
 Note that in order to emphasize the point that a service's name is decoupled
-from names of any channels that may be using or from a HTTP path it's mounted
-under, these are all different in the tutorial.
+from names of any channels that may be using or from an HTTP path it's mounted
+under, those values are all different in the tutorial.
 
 .. image:: /gfx/tutorial/web-admin-channels-new-success.png
 
 And that's it. The channel has been created, all servers have been notified of
-its creation so they automatically hot-reloaded their HTTP configuration and we can
+its having been formed so they automatically hot-updated their HTTP configuration and we can
 now use curl again to invoke our creation.
 
 ::
 
   $ curl localhost:11223/tutorial/first-service
   $
+  
+This doesn't produce any output because the service returns none, it's only
+logging its input data to server logs so this is where we need to look for 
+a palpable proof that a service was indeed invoked.
+
+Note that the request went through a load-balancer and because we use local
+files instead of logging to syslog, we can't be sure which server's logs to check
+hence you need to grep in both of them and look for an entry similar to the one below
+(reformatted a bit for clarity)
+
+::
+
+  INFO - {u'impl_name': u'my_service.GetClientDetails', 
+      u'name': u'my-service.get-client-details', 
+      u'cid': u'K226134078656111264088116403218497665719', 
+      u'invocation_time': datetime.datetime(2013, 5, 14, 7, 39, 47, 417059), 
+      u'job_type': None, u'data_format': u'json', 
+      u'slow_threshold': 99999, 
+      u'request.payload': '', 
+      u'wsgi_environ': {'SERVER_PROTOCOL': 'HTTP/1.1', 
+            'SERVER_SOFTWARE': 'gunicorn/0.16.1', 
+            'SCRIPT_NAME': '', 
+            'wsgi.input': <gunicorn.http.body.Body object at 0x4396a50>, 
+            'REQUEST_METHOD': 'GET', 
+            'HTTP_HOST': 'localhost:11223', 
+            'PATH_INFO': '/tutorial/first-service', 
+            'wsgi.multithread': False, 
+            'QUERY_STRING': '', 
+            'HTTP_CONNECTION': 'close', 
+            'HTTP_ACCEPT': '*/*', 
+            'HTTP_USER_AGENT': 'curl/7.22.0', 
+            'wsgi.version': (1, 0), 
+            'REMOTE_PORT': '42325', 
+            'RAW_URI': '/tutorial/first-service', 
+            'REMOTE_ADDR': '127.0.0.1', 
+            'wsgi.run_once': False, 
+            'wsgi.errors': <open file '<stderr>', mode 'w' at 0x7f34db2fe270>, 
+            'wsgi.multiprocess': False, 
+            'wsgi.url_scheme': 'http', 
+            'gunicorn.socket': <socket at 0x42e9290 fileno=25 sock=127.0.0.1:17011 
+                                   peer=127.0.0.1:42325>, 
+            'SERVER_NAME': 'localhost', 
+            'SERVER_PORT': '11223', 
+            u'zato.http.response.headers': 
+              {u'X-Zato-CID': u'K226134078656111264088116403218497665719'}, 
+            'wsgi.file_wrapper': <class gunicorn.http.wsgi.FileWrapper at 0x202e390>}, 
+            u'environ': {}, 
+            u'user_msg': u'', 
+            u'usage': 27, 
+            u'channel': u'http-soap'}
+  
+And that concludes the first part! You've created a cluster, a service, hot-deployed it
+and then invoked it successfully. The :doc:`next part <./02.txt>` will focus much
+more on the business functionality now that the general framework to work within has
+been laid down.
+
+:doc:`Continue on to part 2/2 <./02.txt>`
