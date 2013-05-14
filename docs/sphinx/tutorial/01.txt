@@ -79,6 +79,8 @@ and several more.
 This all will be only a tip of the iceberg but still should give you a thorough
 introduction to Zato.
 
+.. _tutorial-01-message-flow:
+
 The message flow
 ----------------
 
@@ -449,8 +451,8 @@ hence you need to grep in both of them and look for an entry similar to the one 
             u'channel': u'http-soap'}
   
 And that concludes the first part! You've created a cluster, a service, hot-deployed it
-and then invoked it successfully. The :doc:`next part <./02.txt>` will focus much
+and then invoked it successfully. The :doc:`next part <./02>` will focus much
 more on the business functionality now that the general framework to work within has
 been laid down.
 
-:doc:`Continue on to part 2/2 <./02.txt>`
+:doc:`Continue on to part 2/2 <./02>`
