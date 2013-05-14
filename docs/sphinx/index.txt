@@ -25,10 +25,7 @@ Introduction
 
     * **Tutorial:**
       :doc:`Part 1<tutorial/01>` |
-      :doc:`Creating a quickstart cluster<tutorial/02>` |
-      :doc:`Introducing the web admin panel<tutorial/03>` |
-      :doc:`Writing a Zato service<tutorial/04>` |
-      :doc:`Hot-deploying the service and invoking it<tutorial/05>`
+      :doc:`Part 2<tutorial/02>`
       
 Web admin
 =========
