@@ -17,7 +17,7 @@ receives and produces. Both objects will always exist for each service invocatio
 but their payload can be empty, it's perfectly fine for a service not to accept
 any input data nor to create output either.
 
-There are other complementing
+There are also other complementing
 :ref:`attributes <progguide-write-service-attributes>`
 and
 :ref:`methods <progguide-write-service-methods>`
