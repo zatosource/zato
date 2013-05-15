@@ -746,7 +746,7 @@ covered but you should already have a solid understanding of some of the core ap
   It's not always doable but this is the goal.
   
 At that point, a question you may have is whether Zato really is the long sought 
-best thing since the sliced bread? Glad you asked it because answer is yes, indeed it is :-)
+best thing since the sliced bread? Glad you asked it because the answer is yes, indeed it is :-)
 
 What next?
 
