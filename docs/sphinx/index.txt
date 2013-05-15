@@ -24,11 +24,8 @@ Introduction
       :doc:`Technical overview <intro/overview-tech>`
 
     * **Tutorial:**
-      :doc:`Installing<tutorial/01>` |
-      :doc:`Creating a quickstart cluster<tutorial/02>` |
-      :doc:`Introducing the web admin panel<tutorial/03>` |
-      :doc:`Writing a Zato service<tutorial/04>` |
-      :doc:`Hot-deploying the service and invoking it<tutorial/05>`
+      :doc:`Part 1<tutorial/01>` |
+      :doc:`Part 2<tutorial/02>`
       
 Web admin
 =========
@@ -259,6 +256,7 @@ Zato, the open-source project
    public-api/details/*
    security/*
    stats/*
+   tutorial/*
    web-admin/*
    web-admin/channels/*
    web-admin/conn-def/*
