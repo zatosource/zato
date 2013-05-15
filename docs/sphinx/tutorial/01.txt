@@ -125,7 +125,7 @@ on doing just that
 in the administration guide and you're encouraged to get through it now
 but basically, this amounts to 3 things:
 
-* Download `the latest version <TODO>`_
+* Download `the latest version <https://zato.io/download/latest>`_
 * Run ./install.sh in INSTALL_DIR
 * Add INSTALL_DIR/bin to $PATH
 
@@ -183,7 +183,7 @@ For instance:
   Quickstart cluster quickstart-34657 created
   Web admin user:[admin], password:[esou-kozo-unda-snon]
   Start the cluster by issuing the /home/dsuch/tmp/qs-1/zato-qs-start.sh command
-  Visit https://TODO for more information and support options
+  Visit https://zato.io/support for more information and support options
   $
   
 Note the highlighted line - these are credentials you'll need to log into a 
@@ -245,7 +245,7 @@ First off, let's start the thing we've just brought to this world:
   [3/4] server2 started
   [4/4] Web admin started
   Zato quickstart environment started
-  Visit https://TODO for more information and support options
+  Visit https://zato.io/support for more information and support options
   $
   
 Zato comes with several goodies meant to ease with development and one of them
