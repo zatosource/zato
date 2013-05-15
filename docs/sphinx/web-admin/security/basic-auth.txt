@@ -5,7 +5,7 @@ Overview
 --------
 
 Used to create, update, delete and browse HTTP Basic Auth security definitions
-as per `RFC <TODO>`_ that can be used by 
+as per `RFC <https://tools.ietf.org/html/rfc1945#section-11>`_ that can be used by 
 :doc:`plain HTTP <../channels/plain-http>`/:doc:`SOAP  <../channels/soap>`
 :doc:`channels <../outgoing/plain-http>`
 and 

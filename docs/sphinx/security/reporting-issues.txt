@@ -5,10 +5,11 @@ Any security issues will be given top priority. Please be responsible and
 give the project a chance to fix them before you disclose anything in public
 forums or lists.
 
-Send an email explaining the situation to security@TODO with a subject line of
+Send an email explaining the situation to security@zato.io with a subject line of
 "Security report". This is an address only trusted developers have access to.
 
-You are encouraged to use this `PGP key for contacting the developers securely <TODO>`_,
+You are encouraged to use this 
+`PGP key for contacting the developers securely <TODO-https://zato.io/support/pgp>`_,
 the key’s fingerprint is TODO.
 
 Within 72 hours you will be notified of its reception and we will work with you

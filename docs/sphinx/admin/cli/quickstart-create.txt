@@ -106,5 +106,5 @@ Usage
     Quickstart cluster quickstart-579475 created
     Web admin user:[admin], password:[otot-oama-mges-enan]
     Start the cluster by issuing the /home/zato1/zato/quickstart1/zato-qs-start.sh command
-    Visit https://TODO for more information and support options
+    Visit https://zato.io/support for more information and support options
     $

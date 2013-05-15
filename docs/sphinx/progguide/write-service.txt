@@ -71,7 +71,7 @@ Programming conventions
   
 * Don't start your own threads. Given Zato's architecture, there shouldn't really
   be any need for threads but if your use-case calls for it, 
-  `please let the project know more <TODO-link-to-support>`_ about why you need threads.
+  `please let the project know more <https://zato.io/support>`_ about why you need threads.
     
 What a service can do
 ---------------------
