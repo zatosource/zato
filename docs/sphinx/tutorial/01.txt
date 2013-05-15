@@ -1,0 +1,461 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Tutorial - part 1/2
+===================
+
+Introduction
+------------
+
+This tutorial will guide you through a process of creating a simple service that
+will be integrated with 3 external applications over HTTP and Zero MQ using
+JSON or XML as a data exchange format.
+
+But what is a service anyway? 
+
+To paraphrase the :doc:`programming guide <../progguide/overview>`,
+a service is a piece of functionality that does something useful and interesting
+to any party that would like to use it. It's like a function or a method but 
+running on massively higher level - instead of exposing APIs to other parts of
+code in a single application, a service is exposed to other systems. 
+
+Such an atomic and reusable building block as a service can be used to build any online 
+:doc:`middleware and backend <../intro/overview-high-level>`
+:doc:`application <../intro/overview-tech>`
+for any purpose.
+
+Services can can 
+:doc:`invoke <../progguide/outconn/overview>`
+or 
+:doc:`accept connections <../progguide/channels>`
+through many
+protocols and transports - 
+:doc:`plain HTTP(S), SOAP, JSON <../progguide/outconn/http>`,
+:doc:`AMQP <../progguide/outconn/amqp>`,
+:doc:`JMS WebSphere MQ <../progguide/outconn/jms-wmq>`,
+:doc:`ZeroMQ <../progguide/outconn/zmq>`,
+:doc:`SQL <../progguide/outconn/sql>`,
+and
+:doc:`FTP(S) <../progguide/outconn/ftp>`.
+
+There's also
+:doc:`Redis key/value database <../progguide/kvdb>`
+and a built-in
+:doc:`scheduler <../progguide/scheduler>`
+which is used for executing recurring tasks.
+
+Services can also make use of
+:doc:`HTTP Basic Auth <../web-admin/security/basic-auth>`,
+:doc:`WS-Security <../web-admin/security/ws-security>`
+and
+:doc:`technical accounts <../web-admin/security/tech-account>`.
+
+And there are 
+:doc:`CLI <../admin/cli/index>`, 
+:doc:`API <../public-api/intro>` 
+and a fabulous 
+:doc:`web admin <../web-admin/intro>`
+console for admins to use. 
+
+If you haven't done it yet, take a look at Zato's 
+:doc:`architecture <../architecture/overview>`
+to get an understanding of how all the various pieces play together.
+
+What will the tutorial achieve, exactly?
+----------------------------------------
+
+The service we'll create will be:
+
+* Accepting input in JSON or XML through HTTP
+* Invoking HTTP JSON services of 2 systems
+* Optionally notifying a 3rd system using JSON over Zero MQ
+* Fetching business rules from Redis
+
+After finishing the tutorial you'll also have a good understanding of key
+Zato features, such as 
+:doc:`CLI <../admin/cli/index>`, 
+:doc:`web admin <../web-admin/intro>`,
+:doc:`hot-deployment <../admin/guide/installing-services>`,
+:doc:`statistics <../stats/guide>`
+and several more.
+
+This all will be only a tip of the iceberg but still should give you a thorough
+introduction to Zato.
+
+.. _tutorial-01-message-flow:
+
+The message flow
+----------------
+
+.. image:: /gfx/tutorial/service-complete.png
+
+We'll be building part of what could be a beginning of a bank application.
+
+* A client applications wishes to learn a couple of things about a customer given their CUST_ID.
+  The data it expects is:
+
+  * Customer's first and last name
+  * Last time the client made a payment
+  * The payment amount
+  
+* Customer data is stored in a `CRM <https://en.wikipedia.org/wiki/Consumer_relationship_system>`_
+* Payments are stored in a different application
+* For certain customer types, there's a business requirement that a fraud detection
+  system be notified of any operations regarding such customers, so our service
+  needs to comply with it even though it's merely reading customer-related data,
+  it doesn't really transfer money between accounts.
+  
+Note that in the diagram above both the service and Redis are of the same color,
+this is because they both are part of the same Zato 
+:doc:`cluster <../architecture/overview>`
+while the other parties don't be belong to Zato.
+
+The Client App is something we won't cover - this is where Django, RoR, .NET forms,
+Groovy, PHP and many other frontend technologies come into play - a Client App can
+be simply anything that can invoke a Zato service and in this tutorial the Client App
+will be simulated by 
+`curl <http://curl.haxx.se/>`_.
+
+Installing Zato and creating a quickstart cluster
+-------------------------------------------------
+
+First thing needed is installing Zato itself. There's 
+:doc:`a short chapter <../admin/guide/install-zato>`
+on doing just that
+in the administration guide and you're encouraged to get through it now
+but basically, this amounts to 3 things:
+
+* Download `the latest version <https://zato.io/download/latest>`_
+* Run ./install.sh in INSTALL_DIR
+* Add INSTALL_DIR/bin to $PATH
+
+You'll also need access to Redis and a PostgreSQL instance. You could also
+use Oracle instead of Postgres but to keep it simple, let's use the latter for the
+tutorial.
+
+Done yet? OK, so let's create a quickstart cluster, which is a sort of a cluster
+created by running of the 
+:doc:`CLI commands <../../admin/cli/index>`,
+appropiately called 
+:doc:`zato quickstart create <../../admin/cli/quickstart-create>`.
+
+You need to prepare:
+
+* An empty directory ($path)
+* PostgreSQL's host, port, database and user name along with its password
+  ($odb_host, $odb_port, $odb_db_name, $odb_user and $odb_password)
+* Host, port and a password for connecting to Redis 
+  ($kvdb_host, $kvdb_port and $kvdb_password)
+  
+Now run the following command, substituting placeholders with the information
+you've prepared. You'll be asked for passwords and they won't be echoed. Note 
+that a Redis password can be empty.
+
+::
+
+  $ zato quickstart create $path \
+      postgresql $odb_host $odb_port $odb_user $odb_db_name \
+      $kvdb_host $kvdb_port --verbose
+
+For instance:
+
+.. code-block:: text
+  :emphasize-lines: 20
+  
+  $ zato quickstart create ~/tmp/qs-1/ \
+      postgresql localhost 5432 zato1 zato1 \
+      localhost 6379 --verbose
+
+  ODB database password (will not be echoed): 
+  Enter the odb_password again (will not be echoed): 
+  
+  Key/value database password (will not be echoed): 
+  Enter the kvdb_password again (will not be echoed): 
+  [1/8] Certificate authority created
+  [2/8] ODB schema created
+  [3/8] ODB initial data created
+  [4/8] server1 created
+  [5/8] server2 created
+  [6/8] Load-balancer created
+  Superuser created successfully.
+  [7/8] Web admin created
+  [8/8] Management scripts created
+  Quickstart cluster quickstart-34657 created
+  Web admin user:[admin], password:[esou-kozo-unda-snon]
+  Start the cluster by issuing the /home/dsuch/tmp/qs-1/zato-qs-start.sh command
+  Visit https://zato.io/support for more information and support options
+  $
+  
+Note the highlighted line - these are credentials you'll need to log into a 
+:doc:`web admin's instance <../web-admin/intro>`
+just created. In case you feel the 
+`randomly generated password <https://github.com/zatosource/zato/blob/master/code/zato-common/src/zato/common/markov_passwords.py>`_, 
+even  a human-readable one, should still be changed, you can do it using the 
+:doc:`zato update password <../../admin/cli/update-password>`
+command.
+
+What was created by invoking zato quickstart create, you ask?
+
+* A development CA
+* 2 servers
+* An HA load-balancer in front of the two
+* A web-admin panel instance and an admin user
+* ODB structure in Postgres and Redis
+* Scripts to (re-)start the environment and stop it
+
+The whole of it uses randomly generated crypto material (keys and certificates), 
+and is automatically configured so that all the parts are aware of each other,
+e.g. the load balancer knows what servers to route the traffic to, the web admin
+understands where all the components to manage are and so on. 
+
+In short, the command has just created a complete environment. 
+
+Important TCP ports that will be used are:
+
+================================== =======================================================================
+Port                               Notes
+================================== =======================================================================
+`11223 <http://localhost:11223>`_  Load-balancer's HTTP port 
+                                   (this is what external applications use to invoke services you develop)
+`17010 <http://localhost:17010>`_  server1's HTTP port
+`17011 <http://localhost:17011>`_  server2's HTTP port
+`8183 <http://localhost:8183>`_    Web admin's HTTP port (this is where you point your browser to and log 
+                                   in as an admin user)
+================================== =======================================================================
+
+.. image:: /gfx/tutorial/quickstart-ports.png
+
+This is only a tutorial now, but this can be a good approach to easily 
+create any serious Zato environment later on. Just create a quickstart
+cluster, rename it to 'dev1' or similarly and start 
+:doc:`adding and configuring <../../admin/guide/install-config/overview>`
+as many servers as you need.
+
+Invoking services with cURL
+---------------------------
+
+First off, let's start the thing we've just brought to this world:
+
+::
+
+  $ ./zato-qs-start.sh 
+  Starting the Zato quickstart environment
+  [1/4] Load-balancer started
+  [2/4] server1 started
+  [3/4] server2 started
+  [4/4] Web admin started
+  Zato quickstart environment started
+  Visit https://zato.io/support for more information and support options
+  $
+  
+Zato comes with several goodies meant to ease with development and one of them
+is the zato.ping service which is automatically mounted on /zato/ping so it
+can be invoked through the load-balancer using curl (output below is slightly reformatted for clarity).
+
+::
+
+  $ curl localhost:11223/zato/ping
+  {"zato_env": 
+    {"details": "", "result": "ZATO_OK", "cid": "K215495307960446051245422023713428938487"}, 
+   "zato_ping_response": {"pong": "zato"}}
+  $
+  
+The response produced by zato.ping happens to be a JSON document. 
+
+* We can see  there were no errors encountered (ZATO_OK)
+* The :ref:`correlation ID <progguide-write-service-cid>` (cid) serves as an
+  identifier which can be used to reconcile information regarding the fate of a service's
+  invocation across multiple systems
+  
+.. note ::
+
+  Now that you've learned how to invoke a load-balancer you might be tempted to start
+  benchmarking the ping service, but before you start doing it - stop for 
+  a while and read 
+  :doc:`how to configure a server <../../admin/guide/install-config/config-server>`, 
+  in particular, have a look at gunicorn_workers 
+  and play with it for a while.
+  
+  Also note, Zato is not meant to take part in HelloWorld contests - it's much
+  more than a plain HTTP daemon and it doesn't make much sense to compare it against
+  raw-`WSGI <https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface>`_ servers.
+  
+  
+Hot-deploying your first service
+--------------------------------
+
+Fire up you favourite programming and let's finally create our own Zato service.
+
+Save the following code as my_service.py
+
+:: 
+
+  from zato.server.service import Service
+  
+  class GetClientDetails(Service):
+      def handle(self):
+          self.log_input()
+          
+
+* Each 
+  :doc:`service <../progguide/write-service>`
+  always subclasses zato.server.service.Service
+
+* :ref:`handle(self) <progguide-write-service-handle>`
+  is the only method that a service must implement, 
+  this is where the actual action takes place, this is the heart of a service
+  
+* :ref:`log_input <progguide-write-service-log_input>`
+  is one of the helper methods a service have access to. As you can imagine,
+  this one dumps all the input data into server logs.
+    
+Code saved? Good, now we can hot-deploy it. 
+
+The story is, there are 
+:doc:`several ways <../../admin/guide/installing-services>`
+to make code available to Zato and hot-deployment is one of them. 
+
+Either through command line or using the web admin, you can push services to one 
+of the servers in a cluster and it will be picked up automatically by all the nodes
+without any restarts. This includes updates to services that already exist.
+
+To hot-deploy a service from command line you need to copy the Python module 
+it's in into a pick-up dir. 
+
+In the tutorial you can use either $path/server1/pickup-dir or
+$path/server2/pickup-dir, it doesn't matter which one you'll choose as the other
+server will instantly synchronize its state with the one that will receive the service.
+
+So, choosing $path/server1/pickup-dir, copy the module:
+
+::
+
+  $ cp my_service.py $path/server1/pickup-dir
+
+Now, in each server log - ./logs/server.log - there will be as many confirmations
+of a successful deployment as there are worker processes running in your cluster.
+  
+::  
+
+  INFO - zato.hot-deploy.create:33 - Uploaded package id:[1], payload_name:[my_service.py]
+  
+Our service is there but we can't reach it from the client application yet because
+it's not exposed through any 
+:doc:`channels <../../progguide/channels>` - a single service can be used over
+many independent channels, each using different security configuration, transport
+protocols, data format etc.
+
+You need to explicitly tell Zato how to make a given service available to all
+and each of external systems interested in invoking it. You do it in the 
+web admin so let's visit http://localhost:8183/ with a browser now.
+
+Log in using the credentials you surely noted down a couple of steps above
+or :doc:`update <../../admin/cli/update-password>` the admin's password
+if you can't access it anymore.
+
+.. image:: /gfx/tutorial/web-admin-login.png
+
+From the main menu pick *Services*, choose your cluster, type *get-client* in the 
+search box and click *Show services*.
+
+.. image:: /gfx/tutorial/web-admin-search.png
+   :width: 95%
+   
+This confirms that the service indeed exists on the cluster even though it's
+still not possible to access it from the outside.
+
+A question may arise, how come the service is called my-service.get-client-details?
+It's because Zato uncamelifies strings such as MyFancyName or PrepareCustomerDocuments
+into my-fancy-name or prepare-customer-documents to make them more Pythonic.
+Naturally, this can be :ref:`overridden <progguide-write-service-get_name>`.
+   
+Exposing a service over HTTP and invoking it
+--------------------------------------------
+
+OK, the service is deployed so why don't we make it possible for others to invoke it.
+
+Still in the web admin, navigate to Connections -> Channels -> Plain HTTP
+
+.. image:: /gfx/tutorial/web-admin-channels.png
+
+.. and create a new channel ..
+
+.. image:: /gfx/tutorial/web-admin-channels-new.png
+
+All the fields should be fairly self-explanatory but there is, of course,
+:doc:`a chapter <../web-admin/channels/plain-http>`
+in the 
+:doc:`web admin guide <../web-admin/intro>`
+where it's all detailed.
+
+Note that in order to emphasize the point that a service's name is decoupled
+from names of any channels that may be using or from an HTTP path it's mounted
+under, those values are all different in the tutorial.
+
+.. image:: /gfx/tutorial/web-admin-channels-new-success.png
+
+And that's it. The channel has been created, all servers have been notified of
+its having been formed so they automatically hot-updated their HTTP configuration and we can
+now use curl again to invoke our creation.
+
+::
+
+  $ curl localhost:11223/tutorial/first-service
+  $
+  
+This doesn't produce any output because the service returns none, it's only
+logging its input data to server logs so this is where we need to look for 
+a palpable proof that a service was indeed invoked.
+
+Note that the request went through a load-balancer and because we use local
+files instead of logging to syslog, we can't be sure which server's logs to check
+hence you need to grep in both of them and look for an entry similar to the one below
+(reformatted a bit for clarity)
+
+::
+
+  INFO - {u'impl_name': u'my_service.GetClientDetails', 
+      u'name': u'my-service.get-client-details', 
+      u'cid': u'K226134078656111264088116403218497665719', 
+      u'invocation_time': datetime.datetime(2013, 5, 14, 7, 39, 47, 417059), 
+      u'job_type': None, u'data_format': u'json', 
+      u'slow_threshold': 99999, 
+      u'request.payload': '', 
+      u'wsgi_environ': {'SERVER_PROTOCOL': 'HTTP/1.1', 
+            'SERVER_SOFTWARE': 'gunicorn/0.16.1', 
+            'SCRIPT_NAME': '', 
+            'wsgi.input': <gunicorn.http.body.Body object at 0x4396a50>, 
+            'REQUEST_METHOD': 'GET', 
+            'HTTP_HOST': 'localhost:11223', 
+            'PATH_INFO': '/tutorial/first-service', 
+            'wsgi.multithread': False, 
+            'QUERY_STRING': '', 
+            'HTTP_CONNECTION': 'close', 
+            'HTTP_ACCEPT': '*/*', 
+            'HTTP_USER_AGENT': 'curl/7.22.0', 
+            'wsgi.version': (1, 0), 
+            'REMOTE_PORT': '42325', 
+            'RAW_URI': '/tutorial/first-service', 
+            'REMOTE_ADDR': '127.0.0.1', 
+            'wsgi.run_once': False, 
+            'wsgi.errors': <open file '<stderr>', mode 'w' at 0x7f34db2fe270>, 
+            'wsgi.multiprocess': False, 
+            'wsgi.url_scheme': 'http', 
+            'gunicorn.socket': <socket at 0x42e9290 fileno=25 sock=127.0.0.1:17011 
+                                   peer=127.0.0.1:42325>, 
+            'SERVER_NAME': 'localhost', 
+            'SERVER_PORT': '11223', 
+            u'zato.http.response.headers': 
+              {u'X-Zato-CID': u'K226134078656111264088116403218497665719'}, 
+            'wsgi.file_wrapper': <class gunicorn.http.wsgi.FileWrapper at 0x202e390>}, 
+            u'environ': {}, 
+            u'user_msg': u'', 
+            u'usage': 27, 
+            u'channel': u'http-soap'}
+  
+And that concludes the first part! You've created a cluster, a service, hot-deployed it
+and then invoked it successfully. The :doc:`next part <./02>` will focus much
+more on the business functionality now that the general framework to work within has
+been laid down.
+
+:doc:`Continue on to part 2/2 <./02>`

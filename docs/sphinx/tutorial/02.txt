@@ -1,0 +1,769 @@
+.. highlight:: python
+   :linenothreshold: 0
+
+Tutorial - part 2/2
+===================
+
+Calling other systems
+---------------------
+
+.. note ::
+
+  Be sure to get through the :doc:`part 1 <./01>` of the tutorial first. 
+  Many concepts and ideas previously explained over there are not repeated here.
+
+You'll recall from the :doc:`previous part <./01>` that we've already created
+a cluster, a skeleton service and the service has been invoked succesfully.
+
+Now we'll make it use external systems' services through HTTP, ZeroMQ and JSON. 
+:ref:`Head on <tutorial-01-message-flow>` to the part 1 if you need a recap
+of what we're creating in the tutorial business-wise.
+
+Unless you insist on doing it manually, services never know what exact URLs
+to invoke. They're always shielded from such information by a layer of 
+:doc:`outgoing connections <../../progguide/outconn/overview>`. 
+
+You just point a service to a connection known as, say, 'CRM' and a service can start 
+pushing requests towards it. When a CRM changes its address, a service needs no reconfiguration,
+you just need to enter new address in the web admin and this will be propagated
+automatically throughout the whole cluster so that the next time a service uses
+the connection it will connect to the new location just like that.
+
+We don't have a CRM and payments systems handy but for the purpose of the tutorial
+we can imitate them by invoking some previously prepared services available over at
+https://zato.io/tutorial/crm/get-customer and https://zato.io/tutorial/payments/get-last-payment.
+
+We'll connect to the fraud detection system with ZeroMQ in a while.
+
+For now, log into the `web admin <http://localhost:8183/>`_, select 
+Connections -> Outgoing -> Plain HTTP and create 2 new outgoing connections.
+
+.. image:: /gfx/tutorial/outconn-plain-http.png
+
+CRM connection
+~~~~~~~~~~~~~~
+
+.. image:: /gfx/tutorial/outconn-crm.png
+
+======== ======================
+Header   Value
+======== ======================
+Name     CRM
+Active   Yes
+Host     https://zato.io
+URL path /tutorial/get-customer
+Security No security
+======== ======================
+
+Payments connection
+~~~~~~~~~~~~~~~~~~~
+
+.. image:: /gfx/tutorial/outconn-payments.png
+
+======== ==========================
+Header   Value
+======== ==========================
+Name     CRM
+Active   Yes
+Host     https://zato.io
+URL path /tutorial/get-last-payment
+Security No security
+======== ==========================
+
+Synchronous invocations
+-----------------------
+
+The newly created connections can be used straightaway. Visiting
+`the <https://zato.io/tutorial/get-customer>`_
+`services <https:/zato.io/tutorial/get-last-payment>`_
+they point to lets us discover the data they produce is
+
+::
+
+ {
+  "firstName": "Sean", 
+  "lastName": "O'Brien"
+ }
+
+.. and ..
+
+::
+
+ {
+  "DATE": "2013-05-14T10:42:14.401555", 
+  "AMOUNT": "357"
+ }
+ 
+Looks a tad like the first one was written in Java and the other one in COBOL, hm..
+we'd like it to have much more Pythonic look & feel so a service to fetch all the 
+information, combine it and produce a nice looking JSON document may look like this:
+
+::
+
+  # stdlib
+  from json import dumps, loads
+  
+  # Zato
+  from zato.server.service import Service
+  
+  class GetClientDetails(Service):
+      def handle(self):
+          
+          self.logger.info('Request: {}'.format(self.request.payload))
+          self.logger.info('Request type: {}'.format(type(self.request.payload)))
+          
+          # Fetch connection to CRM
+          crm = self.outgoing.plain_http.get('CRM')
+          
+          # Fetch connection to Payments
+          payments = self.outgoing.plain_http.get('Payments')
+          
+          # Grab the customer info ..
+          cust = crm.conn.send(dumps(self.request.payload))
+          cust = loads(cust.text)
+          
+          # .. and last payment's details
+          last_payment = payments.conn.send(dumps(self.request.payload))
+          last_payment = loads(last_payment.text)
+          
+          self.logger.info('Customer details: {}'.format(cust))
+          self.logger.info('Last payment: {}'.format(last_payment))
+          
+          response = {}
+          response['first_name'] = cust['firstName']
+          response['last_name'] = cust['lastName']
+          response['last_payment_date'] = last_payment['DATE']
+          response['last_payment_amount'] = last_payment['AMOUNT']
+          response = dumps(response)
+          
+          self.logger.info('Response: {}'.format(response))
+          
+          self.response.payload = response
+        
+Note that in line 35 we're converting the dictionary into a string - keep it 
+in mind because later in the chapter we'll be assigning a dictionary to the response
+and Zato will figure it out itself how to make a string out of it.
+                
+Hot-deploy the service:
+
+::
+
+  $ cp my_service.py $path/server1/pickup-dir
+  
+And invoke it using curl:
+
+::
+
+  $ curl localhost:11223/tutorial/first-service -d '{"cust_id":123, "cust_type":"A"}'
+    {"first_name": "Sean", "last_name": "O'Brien", 
+     "last_payment_date": "2013-05-14T10:42:14.401555", 
+     "last_payment_amount": "357", }
+  $  
+
+As expected, everything has also been logged just fine:
+
+::
+
+  INFO - Request: {u'cust_id': 123L, u'cust_type': u'A'}
+  INFO - Request type: <type 'dict'>
+
+  INFO - Customer details: {u'lastName': u"O'Brien", u'firstName': u'Sean'}
+  INFO - Last payment: {u'DATE': u'2013-05-14T10:42:14.401555', u'AMOUNT': u'357'}
+  
+  INFO - Response: {'last_payment_amount': u'357', 'first_name': u'Sean', 
+    'last_name': u"O'Brien", 'last_payment_date': u'2013-05-14T10:42:14.401555'}
+
+Note a couple of points:
+
+* self.request.input.payload is equal to what we've posted on the command line
+* the payload is already a Python dictionary because the channel created in 
+  :doc:`part 1 <./01>` was told to expect JSON on input
+* outgoing connections don't know anything about formats of services they 
+  aim at so responses from CRM and Payments need to be parsed manually
+* assigning any string to self.response.payload creates a response that a service
+  will return - there are :doc:`smarter ways <../progguide/sio>` too and we'll
+  get to it later in the chapter but this one is always available just in case.
+
+Sending messages asynchronously
+-------------------------------
+
+So now we have a service which receives JSON over HTTP, invokes 2 systems 
+using JSON through HTTP as well and outputs a single JSON document containing
+both responses in a unified data format (no Java style, no COBOL either).
+
+But, as you remember from :doc:`part 1 <./01>`, business folks decided that 
+customers of certain types (say, 'A', B' and 'C') need a closer look, any 
+operations regarding such customers should go to a fraud detection system, 
+even operations as innocuous as checking their last payment.
+
+We don't have access to any such system but we'll create a mock one if a few lines.
+This will only run a `ZeroMQ <http://www.zeromq.org/>`_ PULL socket in an
+infinite loop and log any incoming data but this is everything we need from Zato's end. 
+We'll make our service asynchronously PUSH data to a server and whatever the 
+server does with it isn't a service's concern.
+
+::
+
+                # stdlib
+                import logging
+                
+                # ZeroMQ
+                import zmq
+                
+                logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+                
+                address = 'tcp://127.0.0.1:35101'
+                
+                context = zmq.Context()
+                socket = context.socket(zmq.PULL)
+                socket.bind(address)
+                
+                logging.info('Fraud detection app running on {}'.format(address))
+                
+                while True:
+                    msg = socket.recv_json()
+                    logging.info(msg)
+                    
+Such a system will do perfectly. After all, that's the whole point of async
+messaging, you just fire a message and forget about it. That in this particular
+case, the recpient only logs all the requests received is not our business.
+
+Assuming you've installed Zato binaries in $install_dir, you can run the server
+like below - note that the command really is 'py', not 'python':
+
+::
+
+  $ py zmq-server1.py 
+  INFO - Fraud detection app running on tcp://127.0.0.1:35101
+  
+As you probably imagine, to make use of such a server, a service needs access
+to an outgoing connection of some sort so let's 
+`open the web admin <http://localhost:8183>`_ 
+again, go to Connections -> Outgoing -> ZeroMQ ..
+
+.. image:: /gfx/tutorial/outconn-zmq.png
+
+\.\. and create a new one.
+
+.. image:: /gfx/tutorial/outconn-zmq-create.png
+
+Hot-deploy the service below and observe the fraud detection system's logs:
+
+::
+
+        # stdlib
+        from datetime import datetime
+        from json import dumps, loads
+        
+        # Zato
+        from zato.server.service import Service
+        
+        class GetClientDetails(Service):
+        
+            def should_notify_frauds(self, cust_type):
+                return cust_type in ('A', 'B', 'C')
+            
+            def handle(self):
+                
+                request = dumps(self.request.payload)
+                
+                self.logger.info('Request: {}'.format(self.request.payload))
+                self.logger.info('Request type: {}'.format(type(self.request.payload)))
+                
+                # Fetch connection to CRM
+                crm = self.outgoing.plain_http.get('CRM')
+                
+                # Fetch connection to Payments
+                payments = self.outgoing.plain_http.get('Payments')
+                
+                # Grab the customer info ..
+                cust = crm.conn.send(request)
+                cust = loads(cust.text)
+                
+                # .. and last payment's details
+                last_payment = payments.conn.send(request)
+                last_payment = loads(last_payment.text)
+                
+                self.logger.info('Customer details: {}'.format(cust))
+                self.logger.info('Last payment: {}'.format(last_payment))
+        
+                # Create response
+                
+                response = {}
+                response['first_name'] = cust['firstName']
+                response['last_name'] = cust['lastName']
+                response['last_payment_date'] = last_payment['DATE']
+                response['last_payment_amount'] = last_payment['AMOUNT']
+                response = dumps(response)
+                
+                self.logger.info('Response: {}'.format(response))
+                
+                # Create a request to fraud detection and send it asynchronously
+                # but only if customer is of a certain type.
+                
+                if self.should_notify_frauds(self.request.payload['cust_type']):
+                
+                    fraud_request = {}
+                    fraud_request['timestamp'] = datetime.utcnow().isoformat()
+                    fraud_request['request'] = request
+                    fraud_request['response'] = response
+                    fraud_request = dumps(fraud_request)
+                    
+                    self.outgoing.zmq.send(fraud_request, 'Fraud detection')
+                    
+                else:
+                    self.logger.info('Skipped fraud detection for CID {}'.format(self.cid))
+                
+                # And return response to the caller
+                self.response.payload = response
+
+
+::
+
+  $ curl localhost:11223/tutorial/first-service -d '{"cust_id":123, "cust_type":"A"}'
+  {"last_payment_amount": "357", "first_name": "Sean", 
+   "last_name": "O'Brien", "last_payment_date": "2013-05-14T10:42:14.401555"}
+  $
+
+::
+
+  INFO - Fraud detection app running on tcp://127.0.0.1:35101
+  INFO - {u'timestamp': u'2013-05-14T18:16:56.048224', 
+          u'request': u'{"cust_id": 123, "cust_type": "A"}', 
+          u'response': u'{"last_payment_amount": "357", "first_name": "Sean", 
+                          "last_name": "O\'Brien", 
+                          "last_payment_date": "2013-05-14T10:42:14.401555"}'}
+
+Go try it yourself and change the request's cust_type from 'A' to 'D' and 
+you'll see that the frauds app will not be notified.
+
+Redis
+-----
+
+What we've got so far is already cool but a really jarring thing was
+added in the previous step - information which customer types need an additional
+async message to the fraud detection system is hard-coded in the service itself.
+
+Now, should business folks decide new types should be also covered, we'd have to 
+change the service's code and re-deploy it. Clearly, this isn't optimal, to say
+the least.
+
+Let's store such configuration in `Redis <http://redis.io>`_ which Zato can 
+use out of the box.
+
+Let's `navigate <http://localhost:8183/>`_ to our trusted web admin and pick
+Key/value DB -> Remote commands in the menu.
+
+.. image:: /gfx/tutorial/redis.png
+
+This will present a form that can be used for executing Redis 
+`commands <http://redis.io/commands>`_ directly in the browser, like in the 
+screenshot below which shows a result of running the 
+`INFO <http://redis.io/commands/info>`_
+command.
+
+.. image:: /gfx/tutorial/redis-commands.png
+   :width: 95%
+
+Issue these 3 Redis commands. Newer Redis versions allow to execute them in one
+batch but to be sure our tutorial works with older versions as well, let's
+make it in 3 separate commands:
+
+::
+
+  LPUSH myapp:fraud-detection:cust-type A
+  LPUSH myapp:fraud-detection:cust-type B
+  LPUSH myapp:fraud-detection:cust-type C
+
+Now check out a new version of the service - self.should_notify_frauds
+has been modified to use `LRANGE <http://redis.io/commands/lrange>`_ to fetch
+all the config values:
+
+::
+
+                # stdlib
+                from datetime import datetime
+                from json import dumps, loads
+                
+                # Zato
+                from zato.server.service import Service
+                
+                class GetClientDetails(Service):
+                
+                    def should_notify_frauds(self, cust_type):
+                        config_key = 'myapp:fraud-detection:cust-type'
+                        return cust_type in self.kvdb.conn.lrange(config_key, 0, -1)
+                    
+                    def handle(self):
+                        
+                        request = dumps(self.request.payload)
+                        
+                        self.logger.info('Request: {}'.format(self.request.payload))
+                        self.logger.info('Request type: {}'.format(type(self.request.payload)))
+                        
+                        # Fetch connection to CRM
+                        crm = self.outgoing.plain_http.get('CRM')
+                        
+                        # Fetch connection to Payments
+                        payments = self.outgoing.plain_http.get('Payments')
+                        
+                        # Grab the customer info ..
+                        cust = crm.conn.send(request)
+                        cust = loads(cust.text)
+                        
+                        # .. and last payment's details
+                        last_payment = payments.conn.send(request)
+                        last_payment = loads(last_payment.text)
+                        
+                        self.logger.info('Customer details: {}'.format(cust))
+                        self.logger.info('Last payment: {}'.format(last_payment))
+                
+                        # Create response
+                        
+                        response = {}
+                        response['first_name'] = cust['firstName']
+                        response['last_name'] = cust['lastName']
+                        response['last_payment_date'] = last_payment['DATE']
+                        response['last_payment_amount'] = last_payment['AMOUNT']
+                        response = dumps(response)
+                        
+                        self.logger.info('Response: {}'.format(response))
+                        
+                        # Create a request to fraud detection and send it asynchronously
+                        # but only if a customer is of a certain type.
+                        
+                        if self.should_notify_frauds(self.request.payload['cust_type']):
+                        
+                            fraud_request = {}
+                            fraud_request['timestamp'] = datetime.utcnow().isoformat()
+                            fraud_request['request'] = request
+                            fraud_request['response'] = response
+                            fraud_request = dumps(fraud_request)
+                            
+                            self.outgoing.zmq.send(fraud_request, 'Fraud detection')
+                            
+                        else:
+                            self.logger.info('Skipped fraud detection for CID {}'.format(self.cid))
+                        
+                        # And return response to the caller
+                        self.response.payload = response
+
+
+
+So when new business requirements arrive - and there's no 'if' because they *will* arrive
+- everything  you'll need to do will be to update the Redis config key. No changes to the
+service will be needed, no restarts, no deployment, nothing.
+
+Try it out for a second - play around with various Redis commands, add new config values,
+observe how the async message is being sent or not depending on the request data
+you provide.
+
+.. note ::
+
+  If you're wondering why it's called self.kvdb, Key/value DB or similarly instead
+  of Redis, directly - it's
+  because future Zato versions will add support for more key/value databases. It's
+  only Redis for now but there will be more with time.
+
+SIO
+---
+
+As time passes, our service gets more popular and a new client application appears
+on the scene. They also want to receive the same informations but they're adamant
+to use XML only. Like it or not, we need to accept their requirements.
+
+Luckily for us, Zato introduces a unique concept of :doc:`SimpleIO (SIO) <../progguide/sio>`.
+
+The idea is, you only declare that your service will return such and such elements
+and how they should be mapped onto a specific data format is up to Zato. 
+
+This way you can have one service producing XML in one channel and JSON in another.
+What's more, the input to build responses in a concrete data format can be one of:
+
+* dicts or dicts' subclasses, such as `Bunch <https://pypi.python.org/pypi/bunch>`_
+* `collections.namedtuple <http://docs.python.org/2.7/library/collections.html#collections.namedtuple>`_
+* `SQLAlchemy <http://www.sqlalchemy.org/>`_ model instances
+* `lxml.objectify <http://lxml.de/objectify.html>`_ objects
+* anything that looks like a dict
+* anything that can be getattr'd in search for data attributes
+
+Just imagine - you select an object from an SQL database, assign it to 
+self.request.payload *directly as is* and that's it. Zato will understand how
+to serialize it properly for each channel.
+
+To make a service SIO-aware it needs to have an inner SimpleIO class. The class
+lists what is requried or optional on input/output and what specific data types 
+to use - by default, everything is translated into strings but you can force
+serialization into a concrete type if you need it.
+
+SIO is also keen on using helpful conventions, e.g. everything that ends with '_id'
+or '_timeout' is treated as an integer, anything that begins with 'is\_' or 'should\_'
+will be a boolean and so on. Naturally, this can be turned off.
+
+::
+
+                # stdlib
+                from datetime import datetime
+                from json import dumps, loads
+                
+                # Zato
+                from zato.server.service import Service
+                
+                class GetClientDetails(Service):
+                    
+                    class SimpleIO:
+                        input_required = ('cust_id', 'cust_type')
+                        output_required = ('first_name', 'last_name', 
+                            'last_payment_date', 'last_payment_amount')
+                
+                    def should_notify_frauds(self, cust_type):
+                        config_key = 'myapp:fraud-detection:cust-type'
+                        return cust_type in self.kvdb.conn.lrange(config_key, 0, -1)
+                    
+                    def handle(self):
+                        
+                        request = dumps(self.request.payload)
+                        
+                        self.logger.info('Request: {}'.format(self.request.payload))
+                        self.logger.info('Request type: {}'.format(type(self.request.payload)))
+                        
+                        # Fetch connection to CRM
+                        crm = self.outgoing.plain_http.get('CRM')
+                        
+                        # Fetch connection to Payments
+                        payments = self.outgoing.plain_http.get('Payments')
+                        
+                        # Grab the customer info ..
+                        cust = crm.conn.send(request)
+                        cust = loads(cust.text)
+                        
+                        # .. and last payment's details
+                        last_payment = payments.conn.send(request)
+                        last_payment = loads(last_payment.text)
+                        
+                        self.logger.info('Customer details: {}'.format(cust))
+                        self.logger.info('Last payment: {}'.format(last_payment))
+                
+                        # Create response
+                        
+                        response = {}
+                        response['first_name'] = cust['firstName']
+                        response['last_name'] = cust['lastName']
+                        response['last_payment_date'] = last_payment['DATE']
+                        response['last_payment_amount'] = last_payment['AMOUNT']
+                        
+                        self.logger.info('Response: {}'.format(response))
+                        
+                        # Create a request to fraud detection and send it asynchronously
+                        # but only if a customer is of a certain type.
+                        
+                        if self.should_notify_frauds(self.request.payload['cust_type']):
+                        
+                            fraud_request = {}
+                            fraud_request['timestamp'] = datetime.utcnow().isoformat()
+                            fraud_request['request'] = request
+                            fraud_request['response'] = response
+                            fraud_request = dumps(fraud_request)
+                            
+                            self.outgoing.zmq.send(fraud_request, 'Fraud detection')
+                            
+                        else:
+                            self.logger.info('Skipped fraud detection for CID {}'.format(self.cid))
+                        
+                        # And return response to the caller
+                        self.response.payload = response
+
+This looks almost the same except that:
+
+* An inner class named SimpleIO lists what the service expects and what it will
+  produce - both input and output are validated - so not only invalid requests
+  but also incorrect responses you produce will be rejected
+  
+* self.request.input is a Bunch instance, made out of the request XML
+  
+* We're assigning the 'response' dictionary directly to self.response.payload,
+  there's no need to convert it into a string because SIO will do it for us
+  
+Armed with these new features which required, we can create a new channel for
+our XML friends. 
+
+Go to Connections -> Channels -> Plain HTTP 
+
+.. image:: /gfx/tutorial/web-admin-channels.png
+
+\.\. and add a new channel noting its data format, this time it's XML:
+
+.. image:: /gfx/tutorial/web-admin-channels-new-xml.png
+
+The channel can be invoked right away (XML pretty-printed for clarity):
+
+::
+
+  $ curl localhost:11223/tutorial/first-service/xml -d \
+        '<request><cust_id>123</cust_id><cust_type>A</cust_type></request>'
+  <response>
+   <zato_env>
+    <cid>K165677756723569771024237580055026758472</cid>
+    <result>ZATO_OK</result>
+   </zato_env>
+   <item>
+    <first_name>Sean</first_name>
+    <last_name>O'Brien</last_name>
+    <last_payment_date>2013-05-14T10:42:14.401555</last_payment_date>
+    <last_payment_amount>357</last_payment_amount>
+   </item>
+  </response>
+  $
+
+Our original JSON channel is still there:
+
+::
+  
+ $ curl localhost:11223/tutorial/first-service -d '{"cust_id":123, "cust_type":"A"}'
+ {"response": 
+   {"last_payment_amount": "357", 
+    "first_name": "Sean", 
+    "last_name": "O'Brien", 
+    "last_payment_date": 
+    "2013-05-14T10:42:14.401555"}}
+ $ 
+ 
+So there you have it. When using doc:`SIO <../progguide/sio>` you are not required
+to directly deal with any specific data format, you just treat everything as though
+it were all dicts or bunches and Zato converts it to and fro for you.
+
+.. note ::
+
+  If you're doing a lot of 
+  `SOAP <https://en.wikipedia.org/wiki/SOAP>`_ you'll be glad to hear that there are even more
+  goodies waiting when you use (well, that won't be difficult to guess),
+  :doc:`SOAP channels <../web-admin/channels/soap>` instead of plain HTTP ones
+
+Statistics
+----------
+
+Our service has been already invoked at least a couple of time so we can 
+check the statistics Zato collected during that time. 
+
+There are 2 types of stats you have access to:
+
+* :doc:`Generated by Zato servers <../stats/guide>`
+* :doc:`Generated by the load-balancer <../stats/lb>`
+
+Both can be accessed through the web-admin and the former can be used how well
+a given service performs while the latter works on a level of the whole servers
+and can be used to diagnose misbehaving nodes in a cluster.
+
+For instance, when you go to Statistics -> Trends -> Last hour ..
+
+.. image:: /gfx/tutorial/stats-trends-last-hour-menu.png
+
+\.\. you can observe
+that our service was among top 10 slowest services in the cluster with a mean
+response time (M) of 145.87 ms . This is necessarily bad because the average 
+mean time (AM) across all the services was 857 ms. We can also learn that as far
+as the usage share goes, the service constitutes 3% of all the services (U%)
+however its time share was 9% (T%). Last bits tell us that there were 299 invocations
+of various services in the last hour (TU) and then there's a trends charts so we
+can quickly understand that the service was mostly sleepin the last 60 minutes,
+only the last quarter saw any activity.
+
+.. image:: /gfx/tutorial/stats-trends-last-hour.png
+
+As for the load-balancer, when you choose Cluster in the menu, you can LB stats
+for each cluster. Note that this part needs a different set of credentials,
+these are managed by the underlying load-balancer 
+(`HAProxy <http://haproxy.1wt.eu/>`_)
+directly and the user name and password are in $path/load-balancer/config/repo/zato.config, where
+$path is where you installed the quickstart cluster to. Open the file and look up
+'admin1', this is the username and a randomly generated password is next to it.
+
+.. image:: /gfx/tutorial/stats-lb-menu.png
+
+Enter the user name and password in the log in pop-up and you can now look at 
+the cluster through the eyes of its load-balancer - there are 2 servers, a total
+of 351 req/s coming in (evenly divided between the two) and the servers have been
+up for almost 2 hours.
+
+The stats are really part of HAProxy itself so it's best to check out their
+docs `over here <http://cbonte.github.io/haproxy-dconv/configuration-1.5.html>`_
+to find out more about the feature.
+
+.. image:: /gfx/tutorial/stats-lb.png
+
+.. image:: /gfx/tutorial/stats-lb2.png
+
+Wrapping it all up
+------------------
+
+So that would be it for the tutorial. A small part of Zato's features have been 
+covered but you should already have a solid understanding of some of the core apects:
+
+* Zato is open-source software, licensed under a commercial friendly 
+  `LGPL <https://en.wikipedia.org/wiki/LGPL>`_ license
+
+* the project has excellent `documentation <https://zato.io/docs>`_
+  and you can always rely on its commercial and community 
+  `support <https://zato.io/support>`_
+
+* everything you 
+  :doc:`develop <../progguide/overview>`
+  is in `Python <http://python.org>`_, a very high-level programming language
+  
+* out of the box, you have access to
+
+  * :doc:`HTTP(S) <../progguide/outconn/http>`
+  * :doc:`AMQP <../progguide/outconn/amqp>`
+  * :doc:`JMS WebSphere MQ <../progguide/outconn/jms-wmq>`
+  * :doc:`ZeroMQ <../progguide/outconn/zmq>`
+  * :doc:`SimpleIO (SIO)<../progguide/sio>`
+  * :doc:`JSON <../progguide/json>`
+  * :doc:`SOAP <../progguide/xml>`
+  * :doc:`SQL <../progguide/outconn/sql>`
+  * :doc:`Redis <../progguide/kvdb>`
+  * :doc:`FTP(S) <../progguide/outconn/ftp>`
+  * :doc:`Basic Auth <../web-admin/security/basic-auth>`
+  * :doc:`WS-Security <../web-admin/security/ws-security>`
+  * :doc:`technical accounts <../web-admin/security/tech-account>`
+  * :doc:`scheduler <../web-admin/scheduler/main>`
+  * :doc:`statistics <../stats/guide>`
+  
+  and it's trivial to add more transport, connection types, protocols or anything
+  you require
+  
+* services run on servers which are grouped in clusters
+* clusters have a high-availability load-balancer
+* there's
+  :doc:`web admin <../web-admin/intro>`,
+  an
+  :doc:`API <../public-api/intro>`
+  and 
+  :doc:`CLI <../admin/cli/index>`
+  for you
+* almost every possible thing can be hot-reloaded, hot-deployed, hot-updated 
+  or hot-something-else - this is one of the areas where Zato will usually go out of 
+  its way to give you a platform that introduces as little downtime as possible.
+  It's not always doable but this is the goal.
+  
+At that point, a question you may have is whether Zato really is the long sought 
+best thing since the sliced bread? Glad you asked it because the answer is yes, indeed it is :-)
+
+What next?
+
+Well, it would be best if you have a look at the rest of the 
+:doc:`docs <../index>`.
+This is
+some several hundred A4 pages so you don't really need to read it cover to cover
+in one go but it would be really beneficial if you could read as much of it 
+as possible - hopefully the docs cover everything you'll ever need.
+
+Start with
+the
+overviews,
+architecture and follow the links - they will lead you to chapters that explain
+all the ideas in details.
+
+And remember - if you're stuck, need a hand or just want to ask anything - be sure
+to check the support pages.
+
+Good luck and have fun using Zato!

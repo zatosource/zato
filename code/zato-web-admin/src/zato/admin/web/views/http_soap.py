@@ -36,7 +36,8 @@ from anyjson import dumps
 # Zato
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import method_allowed
-from zato.common import SECURITY_TYPES, SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, URL_TYPE, ZATO_NONE, zato_path
+from zato.common import SECURITY_TYPES, SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, \
+     URL_TYPE, ZatoException, ZATO_NONE, zato_path
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 
@@ -183,8 +184,11 @@ def index(req):
 def create(req):
     try:
         response = req.zato.client.invoke('zato.http-soap.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(response.data.id, 'created',
-            req.POST['transport'], req.POST['connection'], req.POST['name'])
+        if response.has_data:
+            return _edit_create_response(response.data.id, 'created',
+                req.POST['transport'], req.POST['connection'], req.POST['name'])
+        else:
+            raise ZatoException(msg=response.details)
     except Exception, e:
         msg = 'Could not create the object, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
@@ -194,8 +198,11 @@ def create(req):
 def edit(req):
     try:
         response = req.zato.client.invoke('zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
-        return _edit_create_response(response.data.id, 'updated',
-            req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
+        if response.has_data:
+            return _edit_create_response(response.data.id, 'updated',
+                req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
+        else:
+            raise ZatoException(msg=response.details)
     except Exception, e:
         msg = 'Could not perform the update, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
