@@ -17,7 +17,7 @@ Want to help? **Superb!**
     `almost 100 dependencies listed in buildout.cfg <https://github.com/zatosource/zato/blob/master/code/buildout.cfg>`_
 
 * Designers are always needed to help make 
-  `the website <TODO>`_, 
+  `the website <https://zato.io>`_, 
   :doc:`documentation <../index>`
   and
   :doc:`Zato itself <../web-admin/intro>`

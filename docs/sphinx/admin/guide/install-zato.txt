@@ -23,12 +23,12 @@ Steps
   this is needed in order to download all the dependencies required
 * Create an empty directory (DIR)
 * Download 
-  `the installation package <TODO>`_
+  `the installation package <https://zato.io/download/1.0>`_
   into DIR, e.g.:
 
   .. parsed-literal::
       
-    DIR$ wget -c TODO/download/|version| .
+    DIR$ wget -c https://zato.io/download/1.0 .
   
 * Decompress the package, e.g.:
 
