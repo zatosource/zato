@@ -25,7 +25,7 @@ needs_sphinx = '1.0'
 extensions = ["djangodocs"]
 
 # Add any paths that contain templates here, relative to this directory.
-# templates_path = []
+templates_path = ['_templates']
 
 # The suffix of source filenames.
 source_suffix = '.txt'
@@ -265,5 +265,5 @@ epub_copyright = u'2011, Zato developers'
 html_show_sourcelink = False
 
 html_sidebars = {
-   '**': ['localtoc.html',],
+   '**': ['localtoc.html', 'searchbox.html', 'zato_sidebar.html'],
 }
