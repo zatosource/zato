@@ -261,3 +261,9 @@ epub_copyright = u'2011, Zato developers'
 
 # Allow duplicate toc entries.
 #epub_tocdup = True
+
+html_show_sourcelink = False
+
+html_sidebars = {
+   '**': ['localtoc.html',],
+}
