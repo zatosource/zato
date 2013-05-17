@@ -1,19 +1,7 @@
 {% extends "basic/layout.html" %}
 
 {%- macro secondnav() %}
-  {%- if prev %}
-    &laquo; <a href="{{ prev.link|e }}" title="{{ prev.title|e }}">previous</a> 
-    {{ reldelim2 }}
-  {%- endif %}
-  {%- if parents %}
-    <a href="{{ parents.0.link|e }}" title="{{ parents.0.title|e }}" accesskey="U">up</a> 
-  {%- else %}
-    <a title="{{ docstitle }}" href="{{ pathto('index') }}" accesskey="U">up</a> 
-  {%- endif %}
-  {%- if next %}
-  {{ reldelim2 }}
-    <a href="{{ next.link|e }}" title="{{ next.title|e }}">next</a> &raquo;
-  {%- endif %}
+  <br/>
 {%- endmacro %}
 
 {% block extrahead %}
@@ -58,7 +46,7 @@
     <div id="hd">
       <h1><a href="{{ pathto('index') }}">{{ docstitle }}</a></h1>
       <div id="global-nav">
-        <a title="Project's page" href="http://TODO/">Project's page</a>
+        <a title="Project's page" href="https://zato.io/">Project's page</a>
       </div>
       <div class="nav">{{ secondnav() }}</div>
     </div>
@@ -91,15 +79,6 @@
 {% endblock %}
 
 {% block sidebarrel %}
-  <h3>Browse</h3>
-  <ul>
-    {% if prev %}
-      <li>Prev: <a href="{{ prev.link }}">{{ prev.title }}</a></li>
-    {% endif %}
-    {% if next %}
-      <li>Next: <a href="{{ next.link }}">{{ next.title }}</a></li>
-    {% endif %}
-  </ul>
   <h3>You are here:</h3>
   <ul>
       <li>

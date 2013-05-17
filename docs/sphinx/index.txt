@@ -5,16 +5,16 @@ The next generation ESB and application server. Open-source. In Python.
 Getting help
 ============
 
-* `Priority commercial support`_
+* `Priority commercial support and training <https://zato.io/support>`_
 
-* `Visit GitHub`_ to post questions and submit issues
+* `Visit GitHub <https://github.com/zatosource/zato>`_ to fork code or submit issues
 
-* Ask a question in the `#zato IRC channel`_ on Freenode network
+* Ask a question in the `#zato IRC channel <irc://irc.freenode.net/zato>`_ on Freenode network
 
+* Look up fellow professionals on `LinkedIn <https://www.linkedin.com/groups?gid=5015554>`_
 
-.. _Priority commercial support: ZZZ
-.. _Visit GitHub: https://github.com/zatosource/zato
-.. _#zato IRC channel: irc://irc.freenode.net/zato
+* `Twitter <https://twitter.com/zatosource>`_ for quick questions and answers 
+
 
 Introduction
 ============
