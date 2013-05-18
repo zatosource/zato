@@ -278,33 +278,15 @@ class Create(ZatoCommand):
                 
             elif name == 'zato.service.invoke':
                 self.add_admin_invoke(session, cluster, service, admin_invoke_sec)
-            
-            # REALLY TODO
-            # BIG TODO
-            # REALLY TODO
-            #
-            # bring security back before release
-            #
-            # REALLY TODO
-            # BIG TODO
-            # REALLY TODO
+
             zato_soap = HTTPSOAP(None, name, True, True, 'channel', 
                 'soap', None, '/zato/soap', None, name, '1.1', 
-                SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=None)
+                SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=pubapi_sec)
             session.add(zato_soap)
-            
-            # REALLY TODO
-            # BIG TODO
-            # REALLY TODO
-            #
-            # bring security back before release
-            #
-            # REALLY TODO
-            # BIG TODO
-            # REALLY TODO
+
             json_url_path = '/zato/json/{}'.format(name)            
             json_http = HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', 
-                None, json_url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=None)
+                None, json_url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=pubapi_sec)
             session.add(json_http)
 
     def add_ping_services(self, session, cluster):
