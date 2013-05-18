@@ -34,7 +34,7 @@ Steps
 
   .. parsed-literal::
   
-    DIR$ tar -xjf zato-|version|.tar.bz
+    DIR$ tar -xjf zato-|version|.tar.bz2
     
 * Run the installer 
 
