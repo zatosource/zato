@@ -36,7 +36,7 @@ from lxml.objectify import ObjectPath as _ObjectPath
 from bunch import Bunch
 
 # The namespace for use in all Zato's own services.
-zato_namespace = 'http://gefira.pl/zato' # TODO: Change it to a target URL when we finally have it
+zato_namespace = 'https://zato.io/ns/20130518'
 zato_ns_map = {None: zato_namespace}
 
 # Convenience access functions and constants.

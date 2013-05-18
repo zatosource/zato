@@ -33,9 +33,9 @@ from zato.common import util
 class ZatoPathTestCase(TestCase):
     def test_zato_path(self):
         xml = etree.fromstring("""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-         xmlns="http://gefira.pl/zato">
+         xmlns="https://zato.io/ns/20130518">
       <soap:Body>
-            <zato_channel_amqp_edit_response xmlns="http://gefira.pl/zato">
+            <zato_channel_amqp_edit_response xmlns="https://zato.io/ns/20130518">
                <zato_env>
                   <cid>K08984532360785332835581231451</cid>
                   <result>ZATO_OK</result>

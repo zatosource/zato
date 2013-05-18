@@ -45,9 +45,9 @@ _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses
 _status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 _status_unauthorized = b'{} {}'.format(UNAUTHORIZED, responses[UNAUTHORIZED])
 
-soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato"><soap:Body>{body}</soap:Body></soap:Envelope>"""
+soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>"""
 
-zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
   <soap:Body>{data}</soap:Body>
 </soap:Envelope>"""
 
