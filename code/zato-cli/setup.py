@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
+"""
+Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
 from setuptools import setup, find_packages
 
 version = '1.0'
@@ -18,8 +24,8 @@ setup(
       namespace_packages = ['zato'],
 
       zip_safe = False,
-      entry_points = '''
+      entry_points = """
       [console_scripts]
       zato = zato.cli.zato_command:main
-      '''
+      """
 )
