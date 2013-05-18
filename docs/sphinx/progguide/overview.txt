@@ -2,7 +2,7 @@ Overview
 ========
 
 You 
-:doc:`develop <./write-service>`
+:doc:`develop <./service-dev>`
 :ref:`services <progguide-what-is-a-service>`
 and 
 :ref:`applications <progguide-what-is-an-application>`
@@ -107,7 +107,7 @@ Read next
 =========
 
     * **Developing services and applications:**
-      :doc:`Writing a service <./write-service>` |
+      :doc:`Developing services <./service-dev>` |
       :doc:`Request and response objects<./request-response>` |
       :doc:`Channels<./channels>` |
       :doc:`Outgoing connections<./outconn/overview>` |

@@ -298,7 +298,7 @@ Save the following code as my_service.py
           
 
 * Each 
-  :doc:`service <../progguide/write-service>`
+  :doc:`service <../progguide/service-dev>`
   always subclasses zato.server.service.Service
 
 * :ref:`handle(self) <progguide-write-service-handle>`

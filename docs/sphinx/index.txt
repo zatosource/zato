@@ -109,7 +109,7 @@ Programming guide
 
     * **Developing services and applications:**
       :doc:`Overview <progguide/overview>` |
-      :doc:`Writing a service <progguide/write-service>` |
+      :doc:`Developing services <progguide/service-dev>` |
       :doc:`Request and response objects<progguide/request-response>` |
       :doc:`Channels<progguide/channels>` |
       :doc:`Outgoing connections<progguide/outconn/overview>` |

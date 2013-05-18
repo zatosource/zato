@@ -1,8 +1,8 @@
 .. highlight:: python
    :linenothreshold: 0
 
-Writing a service
-=================
+Developing services
+===================
 
 From a programmer's point of view, a service is a Python class that subclasses
 `zato.server.Service <https://github.com/zatosource/zato/blob/master/code/zato-server/src/zato/server/service/__init__.py>`_

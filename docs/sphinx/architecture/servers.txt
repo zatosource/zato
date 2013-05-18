@@ -7,7 +7,7 @@ Servers
 Overview
 --------
 
-Servers are the central point of Zato. This is where :doc:`services <../progguide/write-service>` are running,
+Servers are the central point of Zato. This is where :doc:`services <../progguide/service-dev>` are running,
 where request issued by external applications arrive and where requests from
 Zato to other systems originate from.
 
