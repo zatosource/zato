@@ -1,4 +1,0 @@
-    <wsdl:operation name="zato.outgoing.ftp.edit">
-      <wsdl:input message="zato:zato_outgoing_ftp_edit_request_message"/>
-      <wsdl:output message="zato:zato_outgoing_ftp_edit_response_message"/>
-    </wsdl:operation>
