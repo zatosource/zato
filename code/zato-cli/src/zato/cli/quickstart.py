@@ -79,7 +79,7 @@ echo [4/4] Web admin started
 
 cd $BASE_DIR
 echo Zato quickstart environment started
-echo Visit https://TODO for more information and support options
+echo Visit https://zato.io/support for more information and support options
 exit 0
 """ 
 
@@ -347,4 +347,4 @@ class Create(ZatoCommand):
             
         start_command = os.path.join(args.path, 'zato-qs-start.sh')
         self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
-        self.logger.info('Visit https://TODO for more information and support options')
+        self.logger.info('Visit https://zato.io/support for more information and support options')
