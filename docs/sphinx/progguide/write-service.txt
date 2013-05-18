@@ -40,7 +40,9 @@ Programming conventions
   channel names, any other.
   
 * All input and output is always in UTF-8. Zato doesn't use nor support any other 
-  encoding. Each request and response must always be in UTF-8.
+  encoding. Each request and response must always be in UTF-8. Being a subset
+  of UTF-8, ASCII will also be accepted but you're adviced to alwys use UTF-8 anyway.
+  Any other encodings, such as ISO-8859-1 or EBCDIC, are invalid.
 
 * You are strongly encouraged to use the following header in each source code
   file you will keep services in. In fact, if you stumble upon any issues
