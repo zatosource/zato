@@ -8,9 +8,9 @@ setup(
       name = 'zato-cli',
       version = version,
 
-      author = 'Zato',
-      author_email = 'Zato',
-      url = 'Zato',
+      author = 'Zato Developers',
+      author_email = 'info@zato.io',
+      url = 'https://zato.io',
 
       package_dir = {'':'src'},
       packages = find_packages('src'),
