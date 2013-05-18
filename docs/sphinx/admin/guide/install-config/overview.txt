@@ -45,7 +45,7 @@ Creating a new environment
 
 To set up a completely new Zato environment you need to:
 
-* Make sure Redis is installed and configured to allow access for Zato
+* Make sure Redis 2.1.3+ is installed and configured to allow access for Zato
 * Ensure an SQL database is installed and a schema/username for Zato is created.
   Supported databases are:
 

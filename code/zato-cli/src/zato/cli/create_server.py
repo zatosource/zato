@@ -108,7 +108,7 @@ charset=
 errors=
 """.encode('utf-8')
 
-service_sources_contents = """# Visit TODO for more information.
+service_sources_contents = """# Visit https://zato.io/docs for more information.
 
 # All paths are relative to server root so that, for instance,
 # ./my-services will resolve to /opt/zato/server1/my-services if a server has been
@@ -120,7 +120,7 @@ service_sources_contents = """# Visit TODO for more information.
 # hot-deployed are picked up last.
 ./work/hot-deploy/current
 
-# Visit TODO for more information."""
+# Visit https://zato.io/docs for more information."""
 
 default_odb_pool_size = 1
 
