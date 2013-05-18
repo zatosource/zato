@@ -219,7 +219,7 @@ class SOAPSIOClientTestCase(_Base):
         status_code = rand_int()
         rand_id, rand_name, soap_action = rand_string(), rand_string(), rand_string()
 
-        sio_response = """<zato_outgoing_amqp_edit_response xmlns="http://gefira.pl/zato">
+        sio_response = """<zato_outgoing_amqp_edit_response xmlns="https://zato.io/ns/20130518">
            <zato_env>
             <cid>{}</cid>
             <result>ZATO_OK</result>
@@ -231,7 +231,7 @@ class SOAPSIOClientTestCase(_Base):
           </zato_outgoing_amqp_edit_response>
         """.format(cid, rand_id, rand_name)
 
-        text = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+        text = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
              <soap:Body>
               {}
              </soap:Body>
