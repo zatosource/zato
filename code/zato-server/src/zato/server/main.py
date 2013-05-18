@@ -87,8 +87,7 @@ def run(base_dir):
     
     # We're doing it here even if someone doesn't use PostgreSQL at all
     # so we're not suprised when someone suddenly starts using PG.
-    # TODO: Make sure it's registered for each of the subprocess when the code's
-    #       finally modified to use subprocesses.
+    # TODO: Make sure it's registered for each of the subprocess
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 

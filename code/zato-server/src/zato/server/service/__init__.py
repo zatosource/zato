@@ -675,7 +675,7 @@ class Service(object):
         # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) 
         # to aggregate processing times for a given minute and then it will expire
         
-        # TODO: Document that we need Redis 2.1.3+ otherwise the key has just been overwritten
+        # Note that we need Redis 2.1.3+ otherwise the key has just been overwritten
         self.kvdb.conn.expire(key, 300)
         
         # 
