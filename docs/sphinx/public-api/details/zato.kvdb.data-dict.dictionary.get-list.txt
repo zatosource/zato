@@ -36,16 +36,16 @@ SOAP example
 .. code-block:: xml
 
   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
-    xmlns:zato="http://gefira.pl/zato">
+    xmlns:zato="https://zato.io/ns/20130518">
   <soapenv:Body>
       <zato:zato_kvdb_data_dict_dictionary_get_list_request>
       </zato:zato_kvdb_data_dict_dictionary_get_list_request>
   </soapenv:Body>
   </soapenv:Envelope>
       
-  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="http://gefira.pl/zato">
+  <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
   <soap:Body>
-      <zato_kvdb_data_dict_dictionary_get_list_response xmlns="http://gefira.pl/zato">
+      <zato_kvdb_data_dict_dictionary_get_list_response xmlns="https://zato.io/ns/20130518">
       <zato_env>
           <cid>K004764029118735304331595862443893163398</cid>
           <result>ZATO_OK</result>

@@ -372,7 +372,7 @@ invoke
     client = SOAPClient(address, path, auth)
 
     payload = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
-            xmlns="http://gefira.pl/zato">
+            xmlns="https://zato.io/ns/20130518">
           <soap:Body>
               <zato_service_has_wsdl_request>
                   <cluster_id>1</cluster_id>
@@ -393,7 +393,7 @@ invoke
 .. code-block:: xml
 
     $ py myclient.py
-    <zato_service_has_wsdl_response xmlns="http://gefira.pl/zato" 
+    <zato_service_has_wsdl_response xmlns="https://zato.io/ns/20130518" 
       xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
         <zato_env>
           <cid>K031150888300645689530407544411404011007</cid>
@@ -444,7 +444,7 @@ invoke
     client = SOAPSIOClient(address, path, auth)
 
     payload = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
-            xmlns="http://gefira.pl/zato">
+            xmlns="https://zato.io/ns/20130518">
           <soap:Body>
               <zato_service_has_wsdl_request>
                   <cluster_id>1</cluster_id>
@@ -464,7 +464,7 @@ invoke
     
 .. code-block:: xml
 
-    <zato_service_has_wsdl_response xmlns="http://gefira.pl/zato" 
+    <zato_service_has_wsdl_response xmlns="https://zato.io/ns/20130518" 
       xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
         <zato_env>
           <cid>K015583100463424928664896214562918540979</cid>

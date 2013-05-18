@@ -9,8 +9,8 @@ Send an email explaining the situation to security@zato.io with a subject line o
 "Security report". This is an address only trusted developers have access to.
 
 You are encouraged to use this 
-`PGP key for contacting the developers securely <TODO-https://zato.io/support/pgp>`_,
-the key’s fingerprint is TODO.
+`PGP key for contacting the developers securely <https://zato.io/support/zato-security.pgp.asc>`_,
+the key’s fingerprint is E4C58D88.
 
 Within 72 hours you will be notified of its reception and we will work with you
 through e-mail and other means on resolving the issue.

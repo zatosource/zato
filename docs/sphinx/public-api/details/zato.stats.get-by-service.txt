@@ -58,7 +58,7 @@ SOAP example
 .. code-block:: xml
 
    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns:zato="http://gefira.pl/zato">
+        xmlns:zato="https://zato.io/ns/20130518">
       <soapenv:Body>
          <zato:zato_stats_get_by_service_request>
             <zato:start>2013-02-10T12:10:00</zato:start>
@@ -69,9 +69,9 @@ SOAP example
    </soapenv:Envelope>
       
    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-      xmlns="http://gefira.pl/zato">
+      xmlns="https://zato.io/ns/20130518">
    <soap:Body>
-       <zato_stats_get_by_service_response xmlns="http://gefira.pl/zato">
+       <zato_stats_get_by_service_response xmlns="https://zato.io/ns/20130518">
        <zato_env>
            <cid>K058574002097791812475192404320398858404</cid>
            <result>ZATO_OK</result>

@@ -33,7 +33,7 @@ SOAP example
 .. code-block:: xml
 
    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns:zato="http://gefira.pl/zato">
+        xmlns:zato="https://zato.io/ns/20130518">
       <soapenv:Body>
          <zato:zato_security_wss_delete_request>
             <zato:id>5</zato:id>
@@ -42,9 +42,9 @@ SOAP example
    </soapenv:Envelope>
       
    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-         xmlns="http://gefira.pl/zato">
+         xmlns="https://zato.io/ns/20130518">
       <soap:Body>
-            <zato_security_wss_delete_response xmlns="http://gefira.pl/zato">
+            <zato_security_wss_delete_response xmlns="https://zato.io/ns/20130518">
                <zato_env>
                   <cid>K198736267980802414997853483835386013797</cid>
                   <result>ZATO_OK</result>
