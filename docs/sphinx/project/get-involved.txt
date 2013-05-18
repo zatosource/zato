@@ -28,8 +28,9 @@ Want to help? **Superb!**
   
 * Packagers are wanted to :doc:`help port Zato to more platforms <../admin/guide/install-zato>`
 
-* Always feel welcome to spend time on `forums <TODO>`_ and `IRC <irc://irc.freenode.net/zato>`_
-  if you'd like to help other community members out or just chat in general
+* Always feel welcome to join the friendly `mailing list <https://mailman-mail5.webfaction.com/listinfo/zato-discuss>`_ 
+  and `IRC <irc://irc.freenode.net/zato>`_ if you'd like to help other community 
+  members out or just chat in general
   
 And remember - Zato project is all about tolerance - make sure you always act
 in accordance with our :doc:`diversity statement <./diversity>`.

@@ -271,7 +271,7 @@ will be automatically wrapped in a SOAP envelope for you.
     
     <?xml version='1.0' encoding='UTF-8'?>
     <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns="http://gefira.pl/zato">
+        xmlns="https://zato.io/ns/20130518">
      <soap:Body>
       <cust xmlns="example.com/1">
        <name>楊朱</name>

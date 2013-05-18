@@ -82,7 +82,7 @@ improve clarity.
   $ curl localhost:17010/soap/sio-example.my-service \
       -H "SOAPAction:sio-example.my-service" -d '
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns:zato="http://gefira.pl/zato">
+        xmlns:zato="https://zato.io/ns/20130518">
       <soapenv:Body>
         <zato:request>
           <zato:name>wendy</zato:name>
@@ -93,7 +93,7 @@ improve clarity.
     
   <?xml version='1.0' encoding='UTF-8'?>
     <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
-        xmlns="http://gefira.pl/zato">
+        xmlns="https://zato.io/ns/20130518">
       <soap:Body>
         <response>
           <zato_env>
@@ -112,7 +112,7 @@ improve clarity.
   $ curl localhost:17010/soap/sio-example.my-service \
       -H "SOAPAction:sio-example.my-service" -d '
     <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns:zato="http://gefira.pl/zato">
+        xmlns:zato="https://zato.io/ns/20130518">
       <soapenv:Body>
         <zato:request>
           <zato:name>janet</zato:name>
@@ -123,7 +123,7 @@ improve clarity.
     
   <?xml version='1.0' encoding='UTF-8'?>
     <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns="http://gefira.pl/zato">
+        xmlns="https://zato.io/ns/20130518">
       <soap:Body>
         <response>
           <zato_env>

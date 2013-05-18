@@ -44,7 +44,7 @@ SOAP example
 .. code-block:: xml
 
    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-        xmlns:zato="http://gefira.pl/zato">
+        xmlns:zato="https://zato.io/ns/20130518">
       <soapenv:Body>
          <zato:zato_channel_zmq_get_list_request>
             <zato:cluster_id>1</zato:cluster_id>
@@ -53,9 +53,9 @@ SOAP example
    </soapenv:Envelope>
       
   <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
-    xmlns="http://gefira.pl/zato">
+    xmlns="https://zato.io/ns/20130518">
   <soap:Body>
-      <zato_channel_zmq_get_list_response xmlns="http://gefira.pl/zato">
+      <zato_channel_zmq_get_list_response xmlns="https://zato.io/ns/20130518">
       <zato_env>
           <cid>K004310809543222223040961174983507853171</cid>
           <result>ZATO_OK</result>

@@ -50,7 +50,7 @@ SOAP
 .. code-block:: xml
 
       <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
-           xmlns:zato="http://gefira.pl/zato">
+           xmlns:zato="https://zato.io/ns/20130518">
          <soapenv:Header/>
          <soapenv:Body>
             <zato:zato_get_foo_request>
@@ -63,7 +63,7 @@ SOAP
       </soapenv:Envelope>
       
       <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-           xmlns="http://gefira.pl/zato">
+           xmlns="https://zato.io/ns/20130518">
          <soap:Body>
             <zato_get_foo_response>
                <zato_env>
@@ -83,7 +83,7 @@ SOAP
 .. code-block:: xml
 
       <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
-           xmlns:zato="http://gefira.pl/zato">
+           xmlns:zato="https://zato.io/ns/20130518">
          <soapenv:Header/>
          <soapenv:Body>
             <zato:zato_get_bar_list_request>
@@ -96,7 +96,7 @@ SOAP
       </soapenv:Envelope>
       
       <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-           xmlns="http://gefira.pl/zato">
+           xmlns="https://zato.io/ns/20130518">
          <soap:Body>
             <zato_get_bar_list_response>
                <zato_env>
