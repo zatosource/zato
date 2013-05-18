@@ -234,19 +234,14 @@ class BROKER:
 
 major = 1
 minor = 0
-micro = 0
-releaselevel = 'a0'
 
 class VersionInfo(object):
-    def __init__(self, major, minor, micro, releaselevel):
+    def __init__(self, major, minor):
         self.major = major
         self.minor = minor
-        self.micro = micro
-        self.releaselevel = releaselevel
     
-version_info = VersionInfo(major, minor, micro, releaselevel)
-version_raw = '{}.{}.{}.{}'.format(version_info.major, version_info.minor, 
-    version_info.micro, version_info.releaselevel)
+version_info = VersionInfo(major, minor)
+version_raw = '{}.{}'.format(version_info.major, version_info.minor)
 version = 'Zato {}'.format(version_raw)
 
 
