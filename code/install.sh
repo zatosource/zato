@@ -21,6 +21,10 @@ rm -rf $CURDIR/lib
 rm -rf $CURDIR/parts
 rm -rf $CURDIR/zato_extra_paths
 
+# Always run an update so there are no surprises later on when it actually
+# comes to fetching the packages from repositories.
+sudo apt-get update
+
 sudo apt-get install bzr gfortran haproxy  \
     ruby-sass libatlas-dev libatlas3gf-base libblas3gf \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
