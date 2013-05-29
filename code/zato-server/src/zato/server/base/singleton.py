@@ -55,22 +55,17 @@ class SingletonServer(BrokerMessageReceiver):
         self.logger.info('Pickup notifier starting')
         self.pickup.watch()
         
-    def become_cluster_wide(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
-            server_id, cluster_id, starting_up):
-        """ Attempts to become a connector server, the one to start the connector
-        processes.
-        """
+    def start_cluster_wide_scheduler_jobs(self, connector_server_keep_alive_job_time, cluster_id, starting_up):
         base_job_data = Bunch({
                 'weeks': None, 'days': None, 
                 'hours': None, 'minutes': None, 
                 'seconds': connector_server_keep_alive_job_time, 
                 'repeats': None, 
-                'extra': 'server_id:{};cluster_id:{}'.format(server_id, cluster_id),
+                'extra': 'server_id:{};cluster_id:{}'.format(self.server_id, cluster_id),
                 })
         job_data = None
         
-        if self.parallel_server.odb.become_cluster_wide(connector_server_grace_time):
-            self.is_cluster_wide = True
+        if self.is_cluster_wide:
             
             # Schedule a job for letting the other servers know we're still alive
             job_data = Bunch(base_job_data.copy())
@@ -89,7 +84,12 @@ class SingletonServer(BrokerMessageReceiver):
 
         if job_data:
             self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_PARALLEL_ALL)
-
+        
+    def become_cluster_wide(self, connector_server_grace_time):
+        """ Attempts to become a connector and scheduler server, the one to start the connector
+        processes and a cluster-wide scheduler.
+        """
+        self.is_cluster_wide = self.parallel_server.odb.become_cluster_wide(connector_server_grace_time)
         return self.is_cluster_wide
         
 ################################################################################
