@@ -92,14 +92,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config = ConfigStore()
         
     def on_wsgi_request(self, wsgi_environ, start_response):
-        """ Handles incoming HTTP requests. Each request is being handled by one
-        of the threads created in ParallelServer.run_forever method.
+        """ Handles incoming HTTP requests.
         """
         cid = new_cid()
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
         
         try:
             payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, self.worker_store)
+            
         # Any exception at this point must be our fault
         except Exception, e:
             tb = format_exc(e)
