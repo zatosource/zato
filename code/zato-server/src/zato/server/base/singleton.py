@@ -17,6 +17,7 @@ from time import sleep
 from bunch import Bunch
 
 # Zato
+from zato.common import ENSURE_SINGLETON_JOB
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER, SINGLETON
 from zato.server.base import BrokerMessageReceiver
 
@@ -55,17 +56,22 @@ class SingletonServer(BrokerMessageReceiver):
         self.logger.info('Pickup notifier starting')
         self.pickup.watch()
         
-    def start_cluster_wide_scheduler_jobs(self, connector_server_keep_alive_job_time, cluster_id, starting_up):
+    def become_cluster_wide(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
+            server_id, cluster_id, starting_up):
+        """ Attempts to become a connector server, the one to start the connector
+        processes.
+        """
         base_job_data = Bunch({
                 'weeks': None, 'days': None, 
                 'hours': None, 'minutes': None, 
                 'seconds': connector_server_keep_alive_job_time, 
                 'repeats': None, 
-                'extra': 'server_id:{};cluster_id:{}'.format(self.server_id, cluster_id),
+                'extra': 'server_id:{};cluster_id:{}'.format(server_id, cluster_id),
                 })
         job_data = None
         
-        if self.is_cluster_wide:
+        if self.parallel_server.odb.become_cluster_wide(connector_server_grace_time):
+            self.is_cluster_wide = True
             
             # Schedule a job for letting the other servers know we're still alive
             job_data = Bunch(base_job_data.copy())
@@ -79,17 +85,12 @@ class SingletonServer(BrokerMessageReceiver):
             if starting_up:
                 job_data = Bunch(base_job_data.copy())
                 job_data.start_date = datetime.utcnow() + timedelta(seconds=10) # Let's give the other server some time to warm up
-                job_data.name = 'zato.server.ensure-cluster-wide-singleton'
+                job_data.name = ENSURE_SINGLETON_JOB
                 job_data.service = 'zato.server.ensure-cluster-wide-singleton'
 
         if job_data:
-            self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_PARALLEL_ALL)
-        
-    def become_cluster_wide(self, connector_server_grace_time):
-        """ Attempts to become a connector and scheduler server, the one to start the connector
-        processes and a cluster-wide scheduler.
-        """
-        self.is_cluster_wide = self.parallel_server.odb.become_cluster_wide(connector_server_grace_time)
+            self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
+
         return self.is_cluster_wide
         
 ################################################################################

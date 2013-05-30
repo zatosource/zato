@@ -236,12 +236,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.singleton_server.pickup.pickup_event_processor.pickup_dir = pickup_dir
             self.singleton_server.pickup.pickup_event_processor.server = self.singleton_server
             
-    def _after_init_accepted(self, server, deployment_key):
-        
-        if self.singleton_server:
+            # TODO: Passing a broker client around isn't thread-safe
+            kwargs = {'broker_client':self.broker_client} 
+            Thread(target=self.singleton_server.run, kwargs=kwargs).start()
+            
             # Let the scheduler fully initialize
             self.singleton_server.scheduler.wait_for_init()
             self.singleton_server.server_id = server.id
+    
+    def _after_init_accepted(self, server, deployment_key):
+        
+        if self.singleton_server:
 
             # Let's see if we can become a connector server, the one to start all
             # the connectors, and start the connectors only once throughout the whole cluster.
@@ -250,9 +255,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.connector_server_grace_time = int(
                 self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
             
-            has_cluster_wide_singleton = self.singleton_server.become_cluster_wide(self.connector_server_grace_time)
-            
-            if has_cluster_wide_singleton:
+            if self.singleton_server.become_cluster_wide(
+                self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
+                server.id, server.cluster_id, True):
+                self.init_connectors()
+                
                 for(_, name, is_active, job_type, start_date, extra, service_name, _,
                     _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
                         in self.odb.get_job_list(server.cluster.id):
@@ -264,21 +271,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                             'seconds':seconds,  'repeats':repeats, 
                             'cron_definition':cron_definition})
                         self.singleton_server.scheduler.create_edit('create', job_data)
-
-            # Start connectors and add scheduler jobs but only if we're cluster-wide
-            # singleton, so both of them are started once only.
-            if has_cluster_wide_singleton:
-                
-                # Scheduler
-                # TODO: Passing a broker client around isn't thread-safe
-                kwargs = {'broker_client':self.broker_client} 
-                Thread(target=self.singleton_server.run, kwargs=kwargs).start()
-                
-                self.singleton_server.start_cluster_wide_scheduler_jobs(self.connector_server_keep_alive_job_time,
-                    server.cluster_id, True)
-                
-                # Connectors
-                self.init_connectors()
                 
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.

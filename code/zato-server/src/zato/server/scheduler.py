@@ -19,7 +19,7 @@ from apscheduler.scheduler import Scheduler as APScheduler
 from dateutil.parser import parse
 
 # Zato 
-from zato.common import SCHEDULER_JOB_TYPE
+from zato.common import ENSURE_SINGLETON_JOB, SCHEDULER_JOB_TYPE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.util import new_cid
 
@@ -65,7 +65,13 @@ class Scheduler(object):
         """
         msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 
                    'payload':extra, 'cid':new_cid(), 'job_type': job_type}
-        self.singleton.broker_client.invoke_async(msg)
+
+        # Special case an internal job that needs to be delivered to all parallel
+        # servers.
+        if name == ENSURE_SINGLETON_JOB:
+            self.singleton.broker_client.publish(msg)
+        else:
+            self.singleton.broker_client.invoke_async(msg)
         
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(
