@@ -1,5 +1,7 @@
 {% extends "zato/index.html" %}
 
+{% block html_title %}{{ service.name }} - Source{% endblock %}
+
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
 {% endblock %}
