@@ -36,7 +36,7 @@ gunicorn_group=
 gunicorn_proc_name=
 gunicorn_logger_class=
 
-deployment_lock_expires=4294967296 # 2 ** 32 seconds ≅ 136 years
+deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
 deployment_lock_timeout=180
 
 token={token}
