@@ -9,6 +9,10 @@
 # that Zato is included in your system as a package out of the box instead. Many thanks!
 #
 
+CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
+while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
+N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
+
 IS_DEB=0
 IS_RHEL=0
 IS_SLES=0
@@ -25,12 +29,12 @@ if (($? == 0)) ; then IS_RHEL=1 ; fi
 zypper > /dev/null 2>&1
 if (($? == 0)) ; then IS_SLES=1 ; fi
 
-brew > /dev/null 2>&1
+brew --help > /dev/null 2>&1
 if (($? == 0)) ; then IS_DARWIN=1 ; fi
 
 if [ $IS_DEB -eq 1 ]
 then
-  bash ./_install-deb.sh
+  bash $CURDIR/_install-deb.sh
   RUN=1
 fi
 
@@ -40,34 +44,34 @@ fi
 
 if [ $IS_SLES -eq 1 ]
 then
-  bash ./_install-sles.sh
+  bash $CURDIR/_install-sles.sh
   RUN=1
 fi
 
 if [ $IS_RHEL -eq 1 ]
 then
-  bash ./_install-rhel.sh
+  bash $CURDIR/_install-rhel.sh
   RUN=1
 fi
 
 if [ $IS_SLES -eq 1 ]
 then
-  bash ./_install-rhel.sh
+  bash $CURDIR/_install-rhel.sh
   RUN=1
 fi
 
 if [ $IS_DARWIN -eq 1 ]
 then
 
-  cp buildout.cfg buildout.cfg.bak
-  cp versions.cfg versions.cfg.bak
+  cp $CURDIR/buildout.cfg $CURDIR/buildout.cfg.bak
+  cp $CURDIR/versions.cfg $CURDIR/versions.cfg.bak
   
-  sed '/    console_scripts/d' ./buildout.cfg
-  sed '/inotifyx/d' ./buildout.cfg
+  sed -n '/    console_scripts/d' $CURDIR/buildout.cfg
+  sed -n '/inotifyx/d' $CURDIR/buildout.cfg
   
-  sed '/inotifyx/d' ./version.cfg
+  sed -n '/inotifyx/d' $CURDIR/versions.cfg
 
-  bash ./_install-darwin.sh
+  bash $CURDIR/_install-darwin.sh
   RUN=1
 fi
 

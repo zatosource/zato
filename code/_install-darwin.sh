@@ -55,6 +55,8 @@ brew install samueljohn/python/numpy
 brew install scipy
 
 symlink_py 'M2Crypto'
+symlink_py 'scipy'
+symlink_py 'numpy'
 
 virtualenv .
 
