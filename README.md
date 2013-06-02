@@ -13,6 +13,6 @@ released under a commercial-friendly LGPL license_. Think:
 * Slick web admin GUI, CLI and API
 * Awesome documentation
 * 24x7 commercial support and training
-* Ever-growing community
+* Growing community around the project
 
 Visit the project's site at https://zato.io for more information. See you there!
