@@ -31,7 +31,7 @@ backend_server = Literal("server").suppress() + Word(alphanums + ".-_") + \
                              Word(alphanums + ".-_") + Literal(":").suppress() + \
                              Word(nums) + restOfLine
 simple_option = Literal("option").suppress() + Word(alphas)
-frontend_bind = Literal("bind").suppress() + Or("*", Word(alphanums + ".-_")) + Literal(":").suppress() + Word(nums)
+frontend_bind = Literal("bind").suppress() + Or("*" | Word(alphanums + ".-_")) + Literal(":").suppress() + Word(nums)
 maxconn = Literal("maxconn").suppress() + Word(nums)
 timeout = Literal("timeout").suppress() + Word(alphas).suppress() + Word(nums)
 
