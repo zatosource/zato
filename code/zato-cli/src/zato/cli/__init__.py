@@ -138,6 +138,7 @@ def run_command(args):
         ('ca_create_lb_agent', 'zato.cli.ca_create_lb_agent.Create'),
         ('ca_create_server', 'zato.cli.ca_create_server.Create'),
         ('ca_create_web_admin', 'zato.cli.ca_create_web_admin.Create'),
+        ('check_config', 'zato.cli.check_config.CheckConfig'),
         ('component_version', 'zato.cli.component_version.ComponentVersion'),
         ('create_cluster', 'zato.cli.create_cluster.Create'),
         ('create_lb', 'zato.cli.create_lb.Create'),
