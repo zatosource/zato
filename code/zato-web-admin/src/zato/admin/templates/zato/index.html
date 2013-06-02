@@ -1,8 +1,9 @@
-<!doctype html>
-<html>
-<head>
-    <title>Zato</title>
+{% extends "zato/base.html" %}
 
+{% block html_title %}Hello{% endblock %}
+
+
+{% block head %}
     <script type="text/javascript" src="/static/jquery/jquery.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.ui.custom.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.formalize.min.js"></script>
@@ -31,14 +32,12 @@
     
     {% block extra_css %}{% endblock %}
 
-
     {% block extra_js %}
-
-
     {% endblock %}
 
+{% endblock %}
 
-</head>
+{% block body %}
 <body>
     <div>
         <div id="hd">
@@ -172,6 +171,4 @@
         </div>
     </div>
 </div>
-
-</body>
-</html>
+{% endblock %}

@@ -1,5 +1,21 @@
 {% extends "zato/index.html" %}
 
+{% block html_title %}
+
+    {% ifequal transport 'plain_http' %}
+        Plain HTTP
+    {% else %}
+        SOAP
+    {% endifequal %}
+
+    {% ifequal connection 'channel' %}
+        channels
+    {% else %}
+        outconns
+    {% endifequal %}
+
+{% endblock %}
+
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}

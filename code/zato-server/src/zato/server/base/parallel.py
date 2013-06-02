@@ -92,14 +92,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config = ConfigStore()
         
     def on_wsgi_request(self, wsgi_environ, start_response):
-        """ Handles incoming HTTP requests. Each request is being handled by one
-        of the threads created in ParallelServer.run_forever method.
+        """ Handles incoming HTTP requests.
         """
         cid = new_cid()
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
         
         try:
             payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, self.worker_store)
+            
         # Any exception at this point must be our fault
         except Exception, e:
             tb = format_exc(e)
@@ -247,18 +247,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def _after_init_accepted(self, server, deployment_key):
         
         if self.singleton_server:
-            for(_, name, is_active, job_type, start_date, extra, service_name, _,
-                _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
-                    in self.odb.get_job_list(server.cluster.id):
-                if is_active:
-                    job_data = Bunch({'name':name, 'is_active':is_active, 
-                        'job_type':job_type, 'start_date':start_date, 
-                        'extra':extra, 'service':service_name, 'weeks':weeks, 
-                        'days':days, 'hours':hours, 'minutes':minutes, 
-                        'seconds':seconds,  'repeats':repeats, 
-                        'cron_definition':cron_definition})
-                    #logger.error(str(job_data))
-                    self.singleton_server.scheduler.create_edit('create', job_data)
 
             # Let's see if we can become a connector server, the one to start all
             # the connectors, and start the connectors only once throughout the whole cluster.
@@ -271,6 +259,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
                 server.id, server.cluster_id, True):
                 self.init_connectors()
+                
+                for(_, name, is_active, job_type, start_date, extra, service_name, _,
+                    _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
+                        in self.odb.get_job_list(server.cluster.id):
+                    if is_active:
+                        job_data = Bunch({'name':name, 'is_active':is_active, 
+                            'job_type':job_type, 'start_date':start_date, 
+                            'extra':extra, 'service':service_name, 'weeks':weeks, 
+                            'days':days, 'hours':hours, 'minutes':minutes, 
+                            'seconds':seconds,  'repeats':repeats, 
+                            'cron_definition':cron_definition})
+                        self.singleton_server.scheduler.create_edit('create', job_data)
                 
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.

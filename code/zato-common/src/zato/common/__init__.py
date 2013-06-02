@@ -136,6 +136,10 @@ SOAP_CHANNEL_VERSIONS = ('1.1',)
 
 SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}
 
+# Name of the scheduler's job that will ensure a singleton server is always
+# available in a cluster.
+ENSURE_SINGLETON_JOB = 'zato.server.ensure-cluster-wide-singleton'
+
 DEFAULT_STATS_SETTINGS = {
     'scheduler_per_minute_aggr_interval':60,
     'scheduler_raw_times_interval':90,
@@ -233,7 +237,7 @@ class BROKER:
 # 
 
 major = 1
-minor = 0
+minor = 1
 
 class VersionInfo(object):
     def __init__(self, major, minor):

@@ -1,46 +1,74 @@
 #!/bin/bash
 
 #
-# Taken from https://gist.github.com/josephwecker/2884332
+# I'm just waiting for someone to tell me they use apt-get on Fedora
+# or yum on Ubuntu. But I'm really not going to chase and compare all the options
+# and environment variables various shells and distros use. (dsuch 1 VI 2013)
 #
+# Please help out with it by advocating among your distribution's developers
+# that Zato be included in your system as a package out of the box instead. Many thanks!
+#
+
 CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL -f")
 while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
-function symlink_py {
-    ln -s `python -c 'import '${1}', os.path, sys; sys.stdout.write(os.path.dirname('${1}'.__file__))'` $CURDIR/zato_extra_paths
-}
+IS_DEB=0
+IS_FEDORA=0
+IS_DARWIN=0
 
-rm -rf $CURDIR/bin
-rm -rf $CURDIR/develop-eggs
-rm -rf $CURDIR/downloads
-rm -rf $CURDIR/eggs
-rm -rf $CURDIR/include
-rm -rf $CURDIR/.installed.cfg
-rm -rf $CURDIR/lib
-rm -rf $CURDIR/parts
-rm -rf $CURDIR/zato_extra_paths
+RUN=0
 
-sudo apt-get install bzr gfortran haproxy  \
-    ruby-sass libatlas-dev libatlas3gf-base libblas3gf \
-    libevent-dev libgfortran3 liblapack-dev liblapack3gf \
-    libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack5.4.0 \
-    openssl python2.7-dev python-m2crypto python-numpy python-pip \
-    python-scipy python-zdaemon swig uuid-dev uuid-runtime
+#
+# What OS are we on
+#
 
-mkdir $CURDIR/zato_extra_paths
+apt-get > /dev/null 2>&1
+if (($? == 0)) ; then IS_DEB=1 ; fi
 
-symlink_py 'M2Crypto'
-symlink_py 'numpy'
-symlink_py 'scipy'
+yum --help > /dev/null 2>&1
+if (($? == 0)) ; then IS_FEDORA=1 ; fi
 
-sudo pip install --upgrade distribute
-sudo pip install --upgrade virtualenv
+brew --help > /dev/null 2>&1
+if (($? == 0)) ; then IS_DARWIN=1 ; fi
 
-virtualenv .
+#
+# Run an OS-specific installer
+#
 
-$CURDIR/bin/python bootstrap.py -v 1.7.0
-$CURDIR/bin/buildout
+if [ $IS_DEB -eq 1 ]
+then
+  bash $CURDIR/_install-deb.sh
+  RUN=1
+fi
 
-echo
-echo OK
+if [ $IS_FEDORA -eq 1 ]
+then
+  bash $CURDIR/_install-fedora.sh
+  RUN=1
+fi
+
+if [ $IS_DARWIN -eq 1 ]
+then
+
+  cp $CURDIR/buildout.cfg $CURDIR/buildout.cfg.bak
+  cp $CURDIR/versions.cfg $CURDIR/versions.cfg.bak
+  
+  sed -n '/    console_scripts/d' $CURDIR/buildout.cfg
+  sed -n '/inotifyx/d' $CURDIR/buildout.cfg
+  
+  sed -n '/inotifyx/d' $CURDIR/versions.cfg
+
+  bash $CURDIR/_install-darwin.sh
+  RUN=1
+fi
+
+#
+# Unknown system
+#
+
+if [ $RUN -ne 1 ]
+then
+   echo "Could not find apt-get, yum nor brew. OS could not be determined, installer cannot run."
+   exit 1
+fi

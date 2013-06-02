@@ -40,31 +40,39 @@ BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 zato_qs_start_template = """#!/bin/bash
 
+set -e
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
 {script_dir}
 ZATO_BIN={zato_bin}
 
 echo Starting the Zato quickstart environment
+echo Running sanity checks
+
+$ZATO_BIN check-config $BASE_DIR/server1
+$ZATO_BIN check-config $BASE_DIR/server2
+
+echo [1/6] Redis connection OK
+echo [2/6] SQL ODB connection OK
 
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
 $ZATO_BIN start .
-echo [1/4] Load-balancer started
+echo [3/6] Load-balancer started
 
 # .. servers ..
 cd $BASE_DIR/server1
 $ZATO_BIN start .
-echo [2/4] server1 started
+echo [4/6] server1 started
 
 cd $BASE_DIR/server2
 $ZATO_BIN start .
-echo [3/4] server2 started
+echo [5/6] server2 started
 
 # .. web admin comes as the last one because it may ask Django-related questions.
 cd $BASE_DIR/web-admin
 $ZATO_BIN start .
-echo [4/4] Web admin started
+echo [6/6] Web admin started
 
 cd $BASE_DIR
 echo Zato quickstart environment started
@@ -311,7 +319,7 @@ class Create(ZatoCommand):
         #
         # 8) Scripts
         #
-        zato_bin = os.path.join(os.path.dirname(sys.executable), 'zato')
+        zato_bin = 'zato'
         zato_qs_start_path = os.path.join(args.path, 'zato-qs-start.sh')
         zato_qs_stop_path = os.path.join(args.path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args.path, 'zato-qs-restart.sh')
