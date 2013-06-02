@@ -40,6 +40,7 @@ BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 zato_qs_start_template = """#!/bin/bash
 
+set -e
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
 {script_dir}

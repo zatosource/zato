@@ -237,7 +237,7 @@ class BROKER:
 # 
 
 major = 1
-minor = 0
+minor = 1
 
 class VersionInfo(object):
     def __init__(self, major, minor):
