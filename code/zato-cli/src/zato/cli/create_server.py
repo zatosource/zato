@@ -36,7 +36,7 @@ gunicorn_group=
 gunicorn_proc_name=
 gunicorn_logger_class=
 
-deployment_lock_expires=4294967296 # 2 ** 32 seconds ≅ 136 years
+deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
 deployment_lock_timeout=180
 
 token={token}
@@ -213,7 +213,7 @@ class Create(ZatoCommand):
             server_conf.write(
                 server_conf_template.format(
                     port=port,
-                    gunicorn_workers=cpu_count() * 2,
+                    gunicorn_workers=cpu_count(),
                     odb_db_name=args.odb_db_name, 
                     odb_engine=args.odb_type, 
                     odb_host=args.odb_host,

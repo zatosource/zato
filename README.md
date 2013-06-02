@@ -5,7 +5,7 @@ Zato /zɑːtəʊ/
 _The next generation ESB and application server written in Python and 
 released under a commercial-friendly LGPL license_. Think:
 
-* Incredible productivity
+* Increased productivity
 * Painless rollouts with less downtime
 * Out-of-the-box support for HTTP, JSON, SOAP, Redis, AMQP, JMS WebSphere MQ, 
   ZeroMQ, FTP, SQL, hot-deployment, job scheduling, statistics, 
@@ -13,6 +13,6 @@ released under a commercial-friendly LGPL license_. Think:
 * Slick web admin GUI, CLI and API
 * Awesome documentation
 * 24x7 commercial support and training
-* Ever-growing community
+* Growing community around the project
 
 Visit the project's site at https://zato.io for more information. See you there!

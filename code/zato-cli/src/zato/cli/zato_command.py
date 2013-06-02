@@ -15,7 +15,7 @@ import argparse, time
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_web_admin as ca_create_web_admin_mod, \
-     component_version as component_version_mod, create_cluster as create_cluster_mod, \
+     check_config as check_config_mod, component_version as component_version_mod, create_cluster as create_cluster_mod, \
      create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
      create_web_admin as create_web_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
      FromConfig, info as info_mod, quickstart as quickstart_mod, run_command, service as service_mod, \
@@ -75,6 +75,16 @@ def get_parser():
     ca_create_web_admin.set_defaults(command='ca_create_web_admin')
     ca_create_web_admin.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_web_admin, ca_create_web_admin_mod.Create.opts)
+
+    # 
+    # check-config
+    #
+    check_config = subs.add_parser('check-config',
+        description='Checks config of a Zato component (currently limited to servers only)', 
+        parents=[base_parser])
+    check_config.set_defaults(command='check_config')
+    check_config.add_argument('path', help='Path to a Zato component')
+    add_opts(check_config, check_config_mod.CheckConfig.opts)
 
     # 
     # component-version

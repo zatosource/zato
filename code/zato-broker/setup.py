@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from setuptools import setup, find_packages
 
-version = '1.0'
+version = '1.1'
 
 setup(
       name = 'zato-broker',
