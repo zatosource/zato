@@ -311,7 +311,7 @@ class Create(ZatoCommand):
         #
         # 8) Scripts
         #
-        zato_bin = os.path.join(os.path.dirname(sys.executable), 'zato')
+        zato_bin = 'zato'
         zato_qs_start_path = os.path.join(args.path, 'zato-qs-start.sh')
         zato_qs_stop_path = os.path.join(args.path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args.path, 'zato-qs-restart.sh')
