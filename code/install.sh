@@ -14,7 +14,7 @@ while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
 IS_DEB=0
-IS_RHEL=0
+IS_FEDORA=0
 IS_DARWIN=0
 
 RUN=0
@@ -26,8 +26,8 @@ RUN=0
 apt-get > /dev/null 2>&1
 if (($? == 0)) ; then IS_DEB=1 ; fi
 
-yum > /dev/null 2>&1
-if (($? == 0)) ; then IS_RHEL=1 ; fi
+yum --help > /dev/null 2>&1
+if (($? == 0)) ; then IS_FEDORA=1 ; fi
 
 brew --help > /dev/null 2>&1
 if (($? == 0)) ; then IS_DARWIN=1 ; fi
@@ -42,9 +42,9 @@ then
   RUN=1
 fi
 
-if [ $IS_RHEL -eq 1 ]
+if [ $IS_FEDORA -eq 1 ]
 then
-  bash $CURDIR/_install-rhel.sh
+  bash $CURDIR/_install-fedora.sh
   RUN=1
 fi
 
@@ -69,6 +69,6 @@ fi
 
 if [ $RUN -ne 1 ]
 then
-   echo "Could not find apt-get, yum, zypper nor brew. OS could not be determined, installer cannot run."
+   echo "Could not find apt-get, yum nor brew. OS could not be determined, installer cannot run."
    exit 1
 fi
