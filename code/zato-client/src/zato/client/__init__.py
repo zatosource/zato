@@ -214,8 +214,12 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 # Not a JSON response
                 self.data = self.inner_service_response
             else:
-                data_key = data.keys()[0]
-                self.data = data[data_key]
+                data_keys = data.keys()
+                if len(data_keys) == 1:
+                    data_key = data_keys[0]
+                    self.data = data[data_key]
+                else:
+                    self.data = data
 
             return True 
 
