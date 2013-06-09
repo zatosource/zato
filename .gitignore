@@ -12,6 +12,7 @@ code/parts/*
 code/sec-wall-trunk-src/*
 code/zato-web-admin/src/zato/admin/static/css/.sass-cache/
 code/zato_extra_paths/*
+hotfixes
 *.pyc
 *.pyo
 *.egg-info*
