@@ -339,6 +339,9 @@ class SimpleIOPayload(ValueConverter):
         """
         self.zato_output[i:j] = seq
         self.zato_is_repeated = True
+        
+    def _is_sqlalchemy(self, item):
+        return hasattr(item, '_sa_class_manager')
 
     def set_expected_attrs(self, required_list, optional_list):
         """ Dynamically assigns all the expected attributes to self. Setting a value
@@ -355,7 +358,7 @@ class SimpleIOPayload(ValueConverter):
         names = None
         if isinstance(attrs, (dict, NamedTuple)):
             names = attrs.keys()
-        elif isinstance(attrs, Base):
+        elif self._is_sqlalchemy(attrs):
             names = attrs._sa_class_manager.keys()
             
         if not names:
@@ -378,8 +381,8 @@ class SimpleIOPayload(ValueConverter):
         as well as the type conversions.
         """
         lookup_name = name.name if isinstance(name, ForceType) else name
-            
-        if is_sa_namedtuple or isinstance(item, Base):
+
+        if is_sa_namedtuple or self._is_sqlalchemy(item):
             elem_value = getattr(item, lookup_name, '')
         else:
             elem_value = item.get(lookup_name, '')
