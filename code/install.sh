@@ -50,15 +50,6 @@ fi
 
 if [ $IS_DARWIN -eq 1 ]
 then
-
-  cp $CURDIR/buildout.cfg $CURDIR/buildout.cfg.bak
-  cp $CURDIR/versions.cfg $CURDIR/versions.cfg.bak
-  
-  sed -n '/    console_scripts/d' $CURDIR/buildout.cfg
-  sed -n '/inotifyx/d' $CURDIR/buildout.cfg
-  
-  sed -n '/inotifyx/d' $CURDIR/versions.cfg
-
   bash $CURDIR/_install-darwin.sh
   RUN=1
 fi

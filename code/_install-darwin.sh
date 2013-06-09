@@ -61,7 +61,7 @@ symlink_py 'numpy'
 virtualenv .
 
 ./bin/python bootstrap.py -v 1.7.0
-./bin/buildout
+./bin/buildout -c buildout-darwin.cfg
 
 echo
 echo OK
