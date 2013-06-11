@@ -218,7 +218,7 @@ class Request(ValueConverter):
                     
                 # Use a default value if an element is empty and we're allowed to
                 # substitute its (empty) value with the default one.
-                if default_value != ZATO_NO_DEFAULT_VALUE and not value:
+                if default_value != ZATO_NO_DEFAULT_VALUE and value is None:
                     value = default_value
                 else:
                     if value is not None:
