@@ -628,7 +628,7 @@ class Service(object):
         msg['data_format'] = data_format
         msg['transport'] = transport
         
-        self.broker_client.invoke_async(msg, expiration)
+        self.broker_client.invoke_async(msg, expiration=expiration)
         
         return cid
             
