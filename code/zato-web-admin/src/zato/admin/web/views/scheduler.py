@@ -411,7 +411,7 @@ def index(req):
 class Delete(_Delete):
     url_name = 'scheduler-job-delete'
     error_message = 'Could not delete the job'
-    service_name = 'zato.scheduler.delete'
+    service_name = 'zato.scheduler.job.delete'
     
 @method_allowed('POST')
 def execute(req, job_id, cluster_id):
