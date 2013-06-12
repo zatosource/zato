@@ -80,7 +80,8 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
                 
-                start_connector(self.server.repo_location, item.id)
+                if item.is_active:
+                    start_connector(self.server.repo_location, item.id)
                 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
