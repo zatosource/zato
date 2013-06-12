@@ -75,7 +75,8 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
                 
-                start_connector(self.server.repo_location, item.id, item.def_id)
+                if item.is_active:
+                    start_connector(self.server.repo_location, item.id, item.def_id)
                 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
