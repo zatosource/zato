@@ -368,7 +368,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         channel_amqp_list = self.odb.get_channel_amqp_list(self.cluster_id)
         if channel_amqp_list:
             for item in channel_amqp_list:
-                amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
+                if item.is_active:
+                    amqp_channel_start_connector(self.repo_location, item.id, item.def_id)
+                else:
+                    logger.info('Not starting an inactive channel (AMQP {})'.format(item.name))
+                    
         else:
             logger.info('No AMQP channels to start')
         
@@ -376,7 +380,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         out_amqp_list = self.odb.get_out_amqp_list(self.cluster_id)
         if out_amqp_list:
             for item in out_amqp_list:
-                amqp_out_start_connector(self.repo_location, item.id, item.def_id)
+                if item.is_active:
+                    amqp_out_start_connector(self.repo_location, item.id, item.def_id)
+                else:
+                    logger.info('Not starting an inactive outgoing connection (AMQP {})'.format(item.name))
         else:
             logger.info('No AMQP outgoing connections to start')
             
@@ -384,7 +391,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         channel_jms_wmq_list = self.odb.get_channel_jms_wmq_list(self.cluster_id)
         if channel_jms_wmq_list:
             for item in channel_jms_wmq_list:
-                jms_wmq_channel_start_connector(self.repo_location, item.id, item.def_id)
+                if item.is_active:
+                    jms_wmq_channel_start_connector(self.repo_location, item.id, item.def_id)
+                else:
+                    logger.info('Not starting an inactive channel (JMS WebSphere MQ {})'.format(item.name))
         else:
             logger.info('No JMS WebSphere MQ channels to start')
     
@@ -392,7 +402,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         out_jms_wmq_list = self.odb.get_out_jms_wmq_list(self.cluster_id)
         if out_jms_wmq_list:
             for item in out_jms_wmq_list:
-                jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
+                if item.is_active:
+                    jms_wmq_out_start_connector(self.repo_location, item.id, item.def_id)
+                else:
+                    logger.info('Not starting an inactive outgoing connection (JMS WebSphere MQ {})'.format(item.name))
         else:
             logger.info('No JMS WebSphere MQ outgoing connections to start')
             
@@ -400,15 +413,22 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         channel_zmq_list = self.odb.get_channel_zmq_list(self.cluster_id)
         if channel_zmq_list:
             for item in channel_zmq_list:
-                zmq_channel_start_connector(self.repo_location, item.id)
+                if item.is_active:
+                    zmq_channel_start_connector(self.repo_location, item.id)
+                else:
+                    logger.info('Not starting an inactive channel (ZeroMQ {})'.format(item.name))
         else:
             logger.info('No Zero MQ channels to start')
             
-        # ZMQ - outgoimg
+        # ZMQ - outgoing
         out_zmq_list = self.odb.get_out_zmq_list(self.cluster_id)
         if out_zmq_list:
             for item in out_zmq_list:
-                zmq_outgoing_start_connector(self.repo_location, item.id)
+                if item.is_active:
+                    logger.error(item)
+                    zmq_outgoing_start_connector(self.repo_location, item.id)
+                else:
+                    logger.info('Not starting an inactive outgoing connection (ZeroMQ {})'.format(item.name))
         else:
             logger.info('No Zero MQ outgoing connections to start')
             
