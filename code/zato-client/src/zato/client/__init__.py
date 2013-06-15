@@ -11,10 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime
+from inspect import getargspec
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import dumps as anyjson_dumps, loads
 
 # Bunch
 from bunch import bunchify
@@ -39,6 +40,13 @@ DEFAULT_MAX_RESPONSE_REPR = 2500
 DEFAULT_MAX_CID_REPR = 5
 
 mod_logger = logging.getLogger(__name__)
+
+# Work around https://bitbucket.org/runeh/anyjson/pull-request/4/
+if getargspec(anyjson_dumps).keywords:
+    dumps = anyjson_dumps
+else:
+    def dumps(data, *args, **kwargs):
+        return anyjson_dumps(data)
 
 # ##############################################################################
 
@@ -155,18 +163,30 @@ class JSONSIOResponse(_Response):
     """
     def init(self):
         json = loads(self.inner.text)
-        self.details = json['zato_env']['details']
-        self.sio_result = json['zato_env']['result']
-        self.ok = self.sio_result == ZATO_OK
+        if 'zato_env' in json:
+            has_zato_env = True
+            self.details = json['zato_env']['details']
+            self.sio_result = json['zato_env']['result']
+            self.ok = self.sio_result == ZATO_OK
+        else:
+            has_zato_env = False
+            self.details = self.inner.text
+            self.ok = self.inner.ok
         
         if self.ok:
-            # There will be two keys, zato_env and the actual payload
-            for key, value in json.items():
-                if key != 'zato_env':
-                    if self.set_data(value):
-                        self.has_data = True
-                        if self.to_bunch:
-                            self.data = bunchify(self.data)
+            if has_zato_env:
+                # There will be two keys, zato_env and the actual payload
+                for key, _value in json.items():
+                    if key != 'zato_env':
+                        value = _value
+                        break
+            else:
+                value = json
+                    
+            if self.set_data(value, has_zato_env):
+                self.has_data = True
+                if self.to_bunch:
+                    self.data = bunchify(self.data)
                     
     def set_data(self, payload):  
         self.data = payload
@@ -205,24 +225,28 @@ class ServiceInvokeResponse(JSONSIOResponse):
         self.inner_service_response = None
         super(ServiceInvokeResponse, self).__init__(*args, **kwargs)
 
-    def set_data(self, payload):
-        if payload.get('response'):
-            self.inner_service_response = payload['response'].decode('base64')
-            try:
-                data = loads(self.inner_service_response)
-            except ValueError, e:
-                # Not a JSON response
-                self.data = self.inner_service_response
-            else:
-                data_keys = data.keys()
-                if len(data_keys) == 1:
-                    data_key = data_keys[0]
-                    if isinstance(data_key, basestring) and data_key.startswith('zato'):
-                        self.data = data[data_key]
+    def set_data(self, payload, has_zato_env):
+        response = payload.get('response')
+        if response:
+            if has_zato_env:
+                self.inner_service_response = payload['response'].decode('base64')
+                try:
+                    data = loads(self.inner_service_response)
+                except ValueError, e:
+                    # Not a JSON response
+                    self.data = self.inner_service_response
+                else:
+                    data_keys = data.keys()
+                    if len(data_keys) == 1:
+                        data_key = data_keys[0]
+                        if isinstance(data_key, basestring) and data_key.startswith('zato'):
+                            self.data = data[data_key]
+                        else:
+                            self.data = data
                     else:
                         self.data = data
-                else:
-                    self.data = data
+            else:
+                self.data = response
 
             return True 
 
