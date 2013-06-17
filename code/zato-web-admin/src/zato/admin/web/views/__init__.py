@@ -26,7 +26,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.common import zato_path
+from zato.common import ZatoException, zato_path
 
 logger = logging.getLogger(__name__)
 
@@ -269,23 +269,27 @@ class CreateEdit(_BaseView):
             self.input_dict.update(input_dict)
 
             response = self.req.zato.client.invoke(self.service_name, input_dict)
+            if response.ok:
+                return_data = {
+                    'message': self.success_message(response.data)
+                    }
+                return_data.update(initial_return_data)
     
-            return_data = {
-                'message': self.success_message(response.data)
-                }
-            return_data.update(initial_return_data)
-
-            for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
-                value = getattr(response.data, name, None)
-                if value:
-                    if isinstance(value, basestring):
-                        value = value.encode('utf-8')
-                    else:
-                        value = str(value)
-                        
-                return_data[name] = value
-                
-            return HttpResponse(dumps(return_data), mimetype='application/javascript')
+                for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
+                    value = getattr(response.data, name, None)
+                    if value:
+                        if isinstance(value, basestring):
+                            value = value.encode('utf-8')
+                        else:
+                            value = str(value)
+                            
+                    return_data[name] = value
+                return HttpResponse(dumps(return_data), mimetype='application/javascript')
+            else:
+                msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)
+                logger.error(msg)
+                raise ZatoException(msg=msg)
+            
         except Exception, e:
             return HttpResponseServerError(format_exc(e))
     
