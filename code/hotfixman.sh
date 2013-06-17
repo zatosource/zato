@@ -1,7 +1,9 @@
 #!/bin/bash
 
-mkdir -p ./hotfixes/backups-1.1
-rm -rf ./hotfixes/hotfixes-1.1
-curl https://zato.io/hotfixes/hotfixes-1.1.tar.bz2 -o ./hotfixes/hotfixes-1.1.tar.bz2
-tar xvfj ./hotfixes/hotfixes-1.1.tar.bz2 -C ./hotfixes
-rsync -abvv --suffix=_`date +"%Y%m%d_%H_%M_%S"` --backup-dir ./hotfixes/backups-1.1 hotfixes/hotfixes-1.1/ .
+VERSION=1.1
+
+mkdir -p ./hotfixes/backups-$VERSION
+rm -rf ./hotfixes/hotfixes-$VERSION
+curl https://zato.io/hotfixes/hotfixes-$VERSION.tar.bz2 -o ./hotfixes/hotfixes-$VERSION.tar.bz2
+tar xvfj ./hotfixes/hotfixes-$VERSION.tar.bz2 -C ./hotfixes
+rsync -abvv --suffix=_`date +"%Y%m%d_%H_%M_%S"` --backup-dir ./hotfixes/backups-$VERSION hotfixes/hotfixes-$VERSION/ .
