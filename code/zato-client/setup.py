@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from setuptools import setup, find_packages
 
-version = '1.1.3'
+version = '1.1.4'
 
 long_description = description = 'Convenience Python client for Zato ESB and app server (https://zato.io)'
 
