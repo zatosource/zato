@@ -188,7 +188,7 @@ class JSONSIOResponse(_Response):
                 if self.to_bunch:
                     self.data = bunchify(self.data)
                     
-    def set_data(self, payload):  
+    def set_data(self, payload, _ignored):  
         self.data = payload
         return True
     
