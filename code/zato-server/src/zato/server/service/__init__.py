@@ -817,9 +817,9 @@ class Service(object):
         suppressed_msg = '(suppressed)'
         container = 'response' if is_response else 'request'
         payload_key = '{}.payload'.format(container)
+        user_msg = '{} '.format(user_msg) if user_msg else user_msg
         
         msg = {}
-        msg['user_msg'] = user_msg
         if payload_key not in suppress_keys:
             msg[payload_key] = getattr(self, container).payload
         else:
@@ -838,7 +838,7 @@ class Service(object):
             else:
                 msg[attr] = suppressed_msg
 
-        self.logger.log(level, msg)
+        self.logger.log(level, '{}{}'.format(user_msg, msg))
         
         return msg
         
