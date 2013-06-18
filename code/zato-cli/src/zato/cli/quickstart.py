@@ -195,6 +195,8 @@ class Create(ZatoCommand):
         lb_port = 11223
         lb_agent_port = 20151
         
+        args_path = os.path.abspath(args.path)
+        
         # This could've been set to True by user in the command-line so we'd want
         # to unset it so that individual commands quickstart invokes don't attempt
         # to store their own configs.
@@ -203,7 +205,7 @@ class Create(ZatoCommand):
         #
         # 1) CA
         #
-        ca_path = os.path.join(args.path, 'ca')
+        ca_path = os.path.join(args_path, 'ca')
         os.mkdir(ca_path)
         
         ca_args = self._bunch_from_args(args, cluster_name)
@@ -259,7 +261,7 @@ class Create(ZatoCommand):
         # 5) server2
         #
         for key in server_names:
-            server_path = os.path.join(args.path, server_names[key])
+            server_path = os.path.join(args_path, server_names[key])
             os.mkdir(server_path)
             
             create_server_args = self._bunch_from_args(args, cluster_name)
@@ -277,7 +279,7 @@ class Create(ZatoCommand):
         #
         # 6) load-balancer
         #
-        lb_path = os.path.join(args.path, 'load-balancer')
+        lb_path = os.path.join(args_path, 'load-balancer')
         os.mkdir(lb_path)
         
         create_lb_args = self._bunch_from_args(args, cluster_name)
@@ -297,7 +299,7 @@ class Create(ZatoCommand):
         #
         # 7) Web admin
         #
-        web_admin_path = os.path.join(args.path, 'web-admin')
+        web_admin_path = os.path.join(args_path, 'web-admin')
         os.mkdir(web_admin_path)
         
         create_web_admin_args = self._bunch_from_args(args, cluster_name)
@@ -320,9 +322,9 @@ class Create(ZatoCommand):
         # 8) Scripts
         #
         zato_bin = 'zato'
-        zato_qs_start_path = os.path.join(args.path, 'zato-qs-start.sh')
-        zato_qs_stop_path = os.path.join(args.path, 'zato-qs-stop.sh')
-        zato_qs_restart_path = os.path.join(args.path, 'zato-qs-restart.sh')
+        zato_qs_start_path = os.path.join(args_path, 'zato-qs-start.sh')
+        zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
+        zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
 
         open(zato_qs_start_path, 'w').write(zato_qs_start_template.format(zato_bin=zato_bin, script_dir=script_dir))
         open(zato_qs_stop_path, 'w').write(zato_qs_stop_template.format(zato_bin=zato_bin, script_dir=script_dir))
@@ -342,6 +344,6 @@ class Create(ZatoCommand):
         else:
             self.logger.info('User [admin] already exists in the ODB')
             
-        start_command = os.path.join(args.path, 'zato-qs-start.sh')
+        start_command = os.path.join(args_path, 'zato-qs-start.sh')
         self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
         self.logger.info('Visit https://zato.io/support for more information and support options')
