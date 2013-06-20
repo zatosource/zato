@@ -375,7 +375,7 @@ def get_body_payload(body):
 def payload_from_request(cid, request, data_format, transport):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
     """
-    if request:
+    if request is not None:
         if data_format == DATA_FORMAT.XML:
             if transport == 'soap':
                 soap = objectify.fromstring(request)
