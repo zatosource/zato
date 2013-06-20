@@ -384,7 +384,10 @@ def payload_from_request(cid, request, data_format, transport):
                     raise ZatoException(cid, 'Client did not send the [{}] element'.format(soap_body_path))
                 payload = get_body_payload(body)
             else:
-                payload = objectify.fromstring(request)
+                if isinstance(request, objectify.ObjectifiedElement):
+                    payload = request
+                else:
+                    payload = objectify.fromstring(request)
         elif data_format == DATA_FORMAT.JSON:
             if isinstance(request, basestring):
                 payload = loads(request)
