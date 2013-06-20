@@ -21,7 +21,7 @@ from bunch import Bunch
 # Zato
 from zato.cli import ZatoCommand, ZATO_INFO_FILE
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
-from zato.common import BROKER
+from zato.common import BROKER, DATA_FORMAT
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server, Service
 from zato.common.util import get_config
@@ -97,8 +97,11 @@ class Invoke(ZatoCommand):
         client = AnyServiceInvoker('http://{}'.format(config.main.gunicorn_bind), args.url_path, auth,
             max_response_repr=int(args.max_response_repr), max_cid_repr=int(args.max_cid_repr))
         
+        # Prevents attempts to convert/escape XML into JSON
+        to_json = True if args.data_format == DATA_FORMAT.JSON else False
+        
         func = client.invoke_async if args.async else client.invoke
-        response = func(args.name, args.payload, headers, args.channel, args.data_format, args.transport)
+        response = func(args.name, args.payload, headers, args.channel, args.data_format, args.transport, to_json=to_json)
         
         if response.ok:
             self.logger.info(response.data or '(None)')
