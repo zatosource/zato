@@ -378,7 +378,10 @@ def payload_from_request(cid, request, data_format, transport):
     if request is not None:
         if data_format == DATA_FORMAT.XML:
             if transport == 'soap':
-                soap = objectify.fromstring(request)
+                if isinstance(request, objectify.ObjectifiedElement):
+                    soap = request
+                else:
+                    soap = objectify.fromstring(request)
                 body = soap_body_xpath(soap)
                 if not body:
                     raise ZatoException(cid, 'Client did not send the [{}] element'.format(soap_body_path))
