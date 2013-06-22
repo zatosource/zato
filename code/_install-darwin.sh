@@ -23,8 +23,6 @@ rm -rf $CURDIR/zato_extra_paths
 
 mkdir $CURDIR/zato_extra_paths
 
-sudo gem install sass
-
 brew install git
 brew install swig
 brew install python
