@@ -149,7 +149,8 @@ class WorkerStore(BrokerMessageReceiver):
             'is_active':config.is_active, 'method':config.method, 
             'name':config.name, 'transport':config.transport, 
             'address':config.host + config.url_path, 
-            'soap_action':config.soap_action, 'soap_version':config.soap_version}
+            'soap_action':config.soap_action, 'soap_version':config.soap_version,
+            'ping_method':config.ping_method}
         wrapper_config.update(sec_config)
         return HTTPSOAPWrapper(wrapper_config)
     

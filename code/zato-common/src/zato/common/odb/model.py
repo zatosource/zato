@@ -266,6 +266,9 @@ class HTTPSOAP(Base):
     soap_version = Column(String(20), nullable=True)
     
     data_format = Column(String(20), nullable=True)
+
+    # New in 1.2
+    ping_method = Column(String(60), nullable=True)
     
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
@@ -278,9 +281,9 @@ class HTTPSOAP(Base):
     
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, 
                  connection=None, transport=None, host=None, url_path=None, method=None, 
-                 soap_action=None, soap_version=None, data_format=None, service_id=None, service=None,
-                 security=None, cluster_id=None, cluster=None, service_name=None,
-                 security_id=None, security_name=None):
+                 soap_action=None, soap_version=None, data_format=None, ping_method=None,
+                 service_id=None, service=None, security=None, cluster_id=None,
+                 cluster=None, service_name=None, security_id=None, security_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -293,6 +296,7 @@ class HTTPSOAP(Base):
         self.soap_action = soap_action
         self.soap_version = soap_version
         self.data_format = data_format
+        self.ping_method = ping_method
         self.service_id = service_id
         self.service = service
         self.security = security
@@ -301,7 +305,7 @@ class HTTPSOAP(Base):
         self.service_name = service_name # Not used by the DB
         self.security_id = security_id
         self.security_name = security_name
-
+        
 ################################################################################
 
 class SQLConnectionPool(Base):

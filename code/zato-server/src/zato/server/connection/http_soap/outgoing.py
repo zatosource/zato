@@ -133,7 +133,8 @@ class HTTPSOAPWrapper(object):
         start = datetime.utcnow()
         
         # .. invoke the other end ..
-        r = self.session.head(self.config['address'], auth=self.requests_auth, prefetch=True,
+        r = self.session.request(self.config['ping_method'], self.config['address'], 
+                auth=self.requests_auth, prefetch=True,
                 config={'verbose':verbose}, headers=self._create_headers(cid, {}))
         
         # .. store additional info, get and close the stream.
