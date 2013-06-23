@@ -609,4 +609,4 @@ class ManageCommand(ZatoCommand):
         json_data = json.load(open(os.path.join(self.component_dir, found)))
 
         os.chdir(self.component_dir)
-        self._get_dispatch()[json_data['component']](args)
+        return self._get_dispatch()[json_data['component']](args)
