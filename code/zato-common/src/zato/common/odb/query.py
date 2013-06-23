@@ -11,7 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from functools import wraps
 
+# SQLAlchemy
+from sqlalchemy.sql.expression import case
+
 # Zato
+from zato.common import DEFAULT_HTTP_PING_METHOD
 from zato.common.odb.model import(ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, 
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, 
     Job, OutgoingAMQP,  OutgoingFTP, OutgoingWMQ, OutgoingZMQ, 
@@ -332,6 +336,7 @@ def _http_soap(session, cluster_id):
             HTTPSOAP.url_path, HTTPSOAP.method, HTTPSOAP.soap_action, 
             HTTPSOAP.soap_version, HTTPSOAP.data_format, HTTPSOAP.security_id, 
             HTTPSOAP.connection,
+            case([(HTTPSOAP.ping_method != None,HTTPSOAP.ping_method)], else_=DEFAULT_HTTP_PING_METHOD).label('ping_method'),
             SecurityBase.sec_type,
             Service.name.label('service_name'),
             Service.id.label('service_id'),

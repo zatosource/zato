@@ -107,6 +107,9 @@ ZATO_ERROR = 'ZATO_ERROR'
 ZATO_WARNING = 'ZATO_WARNING'
 ZATO_NONE = b'ZATO_NONE'
 
+# Default HTTP method outgoing connections use to ping resources
+DEFAULT_HTTP_PING_METHOD = 'HEAD'
+
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 

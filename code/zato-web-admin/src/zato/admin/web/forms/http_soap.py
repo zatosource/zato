@@ -14,7 +14,7 @@ from django import forms
 # Zato
 from zato.admin.web.forms import ChooseClusterForm as _ChooseClusterForm
 from zato.admin.web.forms import DataFormatForm
-from zato.common import SOAP_VERSIONS, ZATO_NONE
+from zato.common import DEFAULT_HTTP_PING_METHOD, SOAP_VERSIONS, ZATO_NONE
 
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -25,6 +25,7 @@ class CreateForm(DataFormatForm):
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
     service = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    ping_method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     security = forms.ChoiceField(widget=forms.Select())
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
@@ -42,6 +43,8 @@ class CreateForm(DataFormatForm):
         
         for value, label in security_list:
             self.fields['security'].choices.append([value, label])
+            
+        self.fields['ping_method'].initial = DEFAULT_HTTP_PING_METHOD
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
