@@ -26,11 +26,11 @@ logger = logging.getLogger(__name__)
 class HTTPSOAPWrapper(object):
     """ A thin wrapper around the API exposed by the 'requests' package.
     """
-    def __init__(self, config):
+    def __init__(self, config, requests_module=None):
         self.config = config
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
-        self.requests_module = requests
+        self.requests_module = requests_module or requests
         self.session = self.requests_module.session()
         
         self._component_name = get_component_name()

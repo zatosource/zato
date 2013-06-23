@@ -32,7 +32,7 @@ class GetListTestCase(ServiceTestCase):
         return Bunch({'id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'is_internal':rand_bool(), 'url_path':rand_string(),
                       'service_id':rand_int(), 'service_name':rand_string(), 'security_id':rand_int(),
                       'security_name':rand_int(), 'sec_type':rand_string(), 'method':rand_string(), 'soap_action':rand_string(), 'soap_version':rand_string(),
-                      'data_format':rand_string(), 'host':rand_string()}
+                      'data_format':rand_string(), 'host':rand_string(), 'ping_method':rand_string() }
         )
     
     def test_sio(self):
@@ -41,7 +41,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.input_required, ('cluster_id', 'connection', 'transport'))
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'is_internal', 'url_path'))
         self.assertEquals(self.sio.output_optional, ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
-                                                     'method', 'soap_action', 'soap_version', 'data_format', 'host'))
+                                                     'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
         
@@ -72,7 +72,7 @@ class CreateTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_http_soap_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_http_soap_create_response')
         self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'))
-        self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host'))
+        self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method'))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -104,7 +104,7 @@ class EditTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_http_soap_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_http_soap_edit_response')
         self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path'))
-        self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host')) 
+        self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method')) 
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
