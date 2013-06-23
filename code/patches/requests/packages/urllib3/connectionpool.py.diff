@@ -1,0 +1,11 @@
+--- requests/packages/urllib3/connectionpool.py.orig	2013-06-23 19:05:27.595117133 +0200
++++ requests/packages/urllib3/connectionpool.py	2013-06-23 19:05:34.699152368 +0200
+@@ -164,7 +164,7 @@
+ 
+     scheme = 'http'
+ 
+-    def __init__(self, host, port=None, strict=False, timeout=None, maxsize=1,
++    def __init__(self, host, port=None, strict=False, timeout=None, maxsize=300,
+                  block=False, headers=None):
+         super(HTTPConnectionPool, self).__init__(host, port)
+ 
