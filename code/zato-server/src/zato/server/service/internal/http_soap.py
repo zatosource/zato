@@ -16,7 +16,7 @@ from traceback import format_exc
 from json import dumps
 
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, URL_TYPE, ZATO_NONE
+from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
@@ -67,7 +67,8 @@ class GetList(AdminService):
         input_required = ('cluster_id', 'connection', 'transport')
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
-                           'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method')
+                           'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method',
+                           'pool_size')
         output_repeated = True
         
     def get_data(self, session):
@@ -86,7 +87,7 @@ class Create(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-                          'host', 'ping_method')
+                          'host', 'ping_method', 'pool_size')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -143,6 +144,7 @@ class Create(AdminService, _HTTPSOAPService):
                 item.data_format = input.data_format
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
 
                 session.add(item)
                 session.commit()
@@ -179,7 +181,7 @@ class Edit(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 
-                          'host', 'ping_method')
+                          'host', 'ping_method', 'pool_size')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -238,6 +240,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.data_format = input.data_format
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
+                item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
 
                 session.add(item)
                 session.commit()

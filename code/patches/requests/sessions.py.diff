@@ -1,5 +1,25 @@
---- requests/sessions.py.orig	2013-06-24 15:42:33.342034610 +0200
-+++ requests/sessions.py	2013-06-24 15:39:00.268978030 +0200
+--- requests/sessions.py.orig	2013-06-24 21:23:37.000000000 +0200
++++ requests/sessions.py	2013-06-24 21:14:18.065295738 +0200
+@@ -168,7 +168,7 @@
+         'params', 'verify', 'cert', 'prefetch', 'adapters', 'stream',
+         'trust_env', 'max_redirects']
+ 
+-    def __init__(self):
++    def __init__(self, pool_connections=300, pool_maxsize=500):
+ 
+         #: A case-insensitive dictionary of headers to be sent on each
+         #: :class:`Request <Request>` sent from this
+@@ -213,8 +213,8 @@
+ 
+         # Default connection adapters.
+         self.adapters = OrderedDict()
+-        self.mount('https://', HTTPAdapter())
+-        self.mount('http://', HTTPAdapter())
++        self.mount('https://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize))
++        self.mount('http://', HTTPAdapter(pool_connections=pool_connections, pool_maxsize=pool_maxsize))
+ 
+     def __enter__(self):
+         return self
 @@ -431,6 +431,9 @@
  
          # Get the appropriate adapter to use
@@ -10,3 +30,12 @@
  
          # Start time (approximately) of the request
          start = datetime.utcnow()
+@@ -495,7 +498,7 @@
+             setattr(self, attr, value)
+ 
+ 
+-def session():
++def session(*args, **kwargs):
+     """Returns a :class:`Session` for context-management."""
+ 
+     return Session()

@@ -25,8 +25,8 @@ from anyjson import dumps
 # Zato
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import method_allowed
-from zato.common import DEFAULT_HTTP_PING_METHOD, SECURITY_TYPES, SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, \
-     URL_TYPE, ZatoException, ZATO_NONE, zato_path
+from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, SECURITY_TYPES, \
+     SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, URL_TYPE, ZatoException, ZATO_NONE, zato_path
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 
@@ -73,6 +73,7 @@ def _get_edit_create_message(params, prefix=''):
         'data_format': params.get(prefix + 'data_format', None),
         'service': params.get(prefix + 'service'),
         'ping_method': params.get(prefix + 'ping_method'),
+        'pool_size': params.get(prefix + 'pool_size'),
         'security_id': security_id,
     }
 
@@ -150,7 +151,7 @@ def index(req):
             
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection, 
                     transport, item.host, item.url_path, item.method, item.soap_action,
-                    item.soap_version, item.data_format, item.ping_method, service_id=item.service_id,
+                    item.soap_version, item.data_format, item.ping_method, item.pool_size, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, security_name=security_name)
             items.append(item)
 
@@ -166,7 +167,8 @@ def index(req):
         'connection_label_plural':CONNECTION_PLURAL[connection],
         'transport_label':TRANSPORT[transport],
         'colspan': colspan,
-        'default_http_ping_method':DEFAULT_HTTP_PING_METHOD
+        'default_http_ping_method':DEFAULT_HTTP_PING_METHOD,
+        'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         }
 
     return TemplateResponse(req, 'zato/http_soap.html', return_data)

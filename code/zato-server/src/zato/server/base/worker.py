@@ -150,7 +150,7 @@ class WorkerStore(BrokerMessageReceiver):
             'name':config.name, 'transport':config.transport, 
             'address':config.host + config.url_path, 
             'soap_action':config.soap_action, 'soap_version':config.soap_version,
-            'ping_method':config.ping_method}
+            'ping_method':config.ping_method, 'pool_size':config.pool_size,}
         wrapper_config.update(sec_config)
         return HTTPSOAPWrapper(wrapper_config)
     
@@ -417,8 +417,16 @@ class WorkerStore(BrokerMessageReceiver):
         
         # Delete the connection first, if it exists at all ..
         try:
-            del config_dict[name]
-        except(KeyError, AttributeError), e:
+            try:
+                wrapper = config_dict[name].conn
+            except (KeyError, AttributeError), e:
+                log_func('Could not access a wrapper, e:[{}]'.format(format_exc(e)))
+            else:
+                try:
+                    wrapper.session.close()
+                finally:
+                    del config_dict[name]
+        except Exception, e:
             log_func('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
         
     def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
