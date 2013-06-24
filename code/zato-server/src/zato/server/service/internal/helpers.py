@@ -12,9 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import INFO
 
 # Zato
+from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
-class Echo(AdminService):
+class Echo(Service):
     """ Copies request over to response.
     """
     def handle(self):
