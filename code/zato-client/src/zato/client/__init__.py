@@ -283,7 +283,8 @@ class _Client(object):
     def __init__(self, address, path, auth=None, session=None, to_bunch=False, 
             max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
         self.service_address = '{}{}'.format(address, path)
-        self.session = session or requests.session(auth=auth)
+        self.session = session or requests.session()
+        self.session.auth = auth
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr

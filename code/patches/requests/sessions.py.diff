@@ -1,0 +1,12 @@
+--- requests/sessions.py.orig	2013-06-24 15:42:33.342034610 +0200
++++ requests/sessions.py	2013-06-24 15:39:00.268978030 +0200
+@@ -431,6 +431,9 @@
+ 
+         # Get the appropriate adapter to use
+         adapter = self.get_adapter(url=request.url)
++        
++        zato_pre_request_data = {'session':self, 'request':request, 'kwargs':kwargs}
++        r = dispatch_hook('zato_pre_request', hooks, zato_pre_request_data)
+ 
+         # Start time (approximately) of the request
+         start = datetime.utcnow()

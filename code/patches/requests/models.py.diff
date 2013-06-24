@@ -1,0 +1,11 @@
+--- requests/models.py.orig	2013-06-24 15:42:13.809937748 +0200
++++ requests/models.py	2013-06-24 15:25:25.040935520 +0200
+@@ -140,6 +140,8 @@
+         """Properly register a hook."""
+ 
+         if isinstance(hook, collections.Callable):
++            if event == 'zato_pre_request':
++                self.hooks[event] = []
+             self.hooks[event].append(hook)
+         elif hasattr(hook, '__iter__'):
+             self.hooks[event].extend(h for h in hook if isinstance(h, collections.Callable))
