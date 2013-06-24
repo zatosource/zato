@@ -132,13 +132,18 @@ class HTTPSOAPWrapper(object):
         
         start = datetime.utcnow()
         
+        def zato_pre_request_hook(hook_data, *args, **kwargs):
+            entry = '{} (UTC) {} {}\n'.format(datetime.utcnow().isoformat(), 
+                hook_data['request'].method, hook_data['request'].url)
+            verbose.write(entry)
+        
         # .. invoke the other end ..
-        r = self.session.request(self.config['ping_method'], self.config['address'], 
-                auth=self.requests_auth, prefetch=True,
-                config={'verbose':verbose}, headers=self._create_headers(cid, {}))
+        response = self.session.request(self.config['ping_method'], self.config['address'], 
+                auth=self.requests_auth, headers=self._create_headers(cid, {}),
+                hooks={'zato_pre_request':zato_pre_request_hook})
         
         # .. store additional info, get and close the stream.
-        verbose.write('Code: {}'.format(r.status_code))
+        verbose.write('Code: {}'.format(response.status_code))
         verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
         value = verbose.getvalue()
         verbose.close()
@@ -152,7 +157,7 @@ class HTTPSOAPWrapper(object):
         
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         return self.session.get(self.config['address'], params=params or {}, 
-            prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)
+            auth=self.requests_auth, headers=headers, *args, **kwargs)
     
     def _soap_data(self, data, headers):
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
@@ -182,6 +187,6 @@ class HTTPSOAPWrapper(object):
             data, headers = self._soap_data(data, headers)
 
         return self.session.post(self.config['address'], data=data, 
-            prefetch=prefetch, auth=self.requests_auth, headers=headers, *args, **kwargs)
+            auth=self.requests_auth, headers=headers, *args, **kwargs)
     
     send = post

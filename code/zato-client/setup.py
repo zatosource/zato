@@ -32,7 +32,7 @@ setup(
           'anyjson==0.3.3',
           'bunch==1.0.1',
           'lxml==3.0.1',
-          'requests==0.14.2',
+          'requests==1.2.3',
           'zato-common >=1.1,<1.2'
           ],
       
