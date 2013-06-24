@@ -110,6 +110,10 @@ ZATO_NONE = b'ZATO_NONE'
 # Default HTTP method outgoing connections use to ping resources
 DEFAULT_HTTP_PING_METHOD = 'HEAD'
 
+# Default size of an outgoing HTTP connection's pool (plain, SOAP, any). 
+# This is a per-outconn setting
+DEFAULT_HTTP_POOL_SIZE = 200
+
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 

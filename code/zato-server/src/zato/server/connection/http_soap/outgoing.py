@@ -31,7 +31,7 @@ class HTTPSOAPWrapper(object):
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.requests_module = requests_module or requests
-        self.session = self.requests_module.session()
+        self.session = self.requests_module.session(pool_maxsize=self.config['pool_size'])
         
         self._component_name = get_component_name()
         
