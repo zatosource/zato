@@ -155,8 +155,14 @@ class ServiceStore(InitializingObject):
             if os.path.exists(path):
                 os.remove(path)
         
-        mod = imp.load_source(mod_name, file_name)
-        self._visit_module(mod, is_internal, file_name)
+        try:
+            mod = imp.load_source(mod_name, file_name)
+        except Exception, e:
+            msg = 'Could not load source mod_name:[{}] file_name:[{}], e:[{}]'.format(
+                mod_name, file_name, format_exc(e))
+            logger.error(msg)
+        else:
+            self._visit_module(mod, is_internal, file_name)
         
     def import_services_from_directory(self, dir_name, base_dir, dist2):
         """ dir_name points to a directory. 
