@@ -196,17 +196,16 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
+        
         self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
             self.repo_location, self.fs_server_config.hot_deploy.work_dir))
+
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
-        self.hot_deploy_config.current_work_dir = os.path.normpath(os.path.join(
-            self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.current_work_dir))
-        self.hot_deploy_config.backup_work_dir = os.path.normpath(os.path.join(
-            self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.backup_work_dir))
-        self.hot_deploy_config.last_backup_work_dir = os.path.normpath(
-            os.path.join(
-                self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy.last_backup_work_dir))
+
+        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir'):
+            self.hot_deploy_config[name] = os.path.normpath(os.path.join(
+              self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
         
         is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
         
