@@ -155,9 +155,15 @@ class ServiceTestCase(TestCase):
     def _check_sio_request_input(self, instance, request_data):
         for k, v in request_data.iteritems():
             self.assertEquals(getattr(instance.request.input, k), v)
+
+        required_keys = set(instance.SimpleIO.input_required)
+        given_keys = set(request_data.keys())
+        diff = required_keys ^ given_keys 
+        self.assertFalse(diff, 'There should be no difference between required_keys {} and given_keys {}, diff {}'.format(
+            required_keys, given_keys, diff))
     
     def check_impl(self, service_class, request_data, response_data, response_elem, mock_data={}):
-        
+
         expected_keys = response_data.keys()
         expected_data = tuple(response_data for x in range(rand_int(10)))
         expected = Expected()

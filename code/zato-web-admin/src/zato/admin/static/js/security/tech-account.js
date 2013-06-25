@@ -13,6 +13,7 @@ $.fn.zato.data_table.TechAccount = new Class({
 
 $(document).ready(function() { 
 	$('#data-table').tablesorter(); 
+    $.fn.zato.data_table.password_required = true;
 	$.fn.zato.data_table.class_ = $.fn.zato.data_table.TechAccount;
 	$.fn.zato.data_table.new_row_func = $.fn.zato.security.tech_account.data_table.new_row;
 	$.fn.zato.data_table.parse();

@@ -21,7 +21,7 @@ class Echo(Service):
     def handle(self):
         self.response.payload = self.request.raw_request
 
-class InputLogger(AdminService):
+class InputLogger(Service):
     """ Writes out all input data to server logs.
     """
     def handle(self):

@@ -67,6 +67,9 @@ class Ping2(Ping):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """
+    # Subclasses may wish to set it to False to special-case what they need to deal with 
+    password_required = True
+    
     class SimpleIO(AdminSIO):
         input_required = ('id', 'password1', 'password2')
 
@@ -74,21 +77,25 @@ class ChangePasswordBase(AdminService):
                 *args, **kwargs):
 
         with closing(self.odb.session()) as session:
+            password1 = self.request.input.get('password1', '')
+            password2 = self.request.input.get('password2', '')
+            
             try:
-                if not self.request.input.password1:
-                    raise Exception('Password must not be empty')
+                if self.password_required:
+                    if not password1:
+                        raise Exception('Password must not be empty')
 
-                if not self.request.input.password2:
-                    raise Exception('Password must be repeated')
+                    if not password2:
+                        raise Exception('Password must be repeated')
 
-                if self.request.input.password1 != self.request.input.password2:
+                if password1 != password2:
                     raise Exception('Passwords need to be the same')
 
                 auth = session.query(class_).\
                     filter(class_.id==self.request.input.id).\
                     one()
 
-                auth_func(auth, self.request.input.password1)
+                auth_func(auth, password1)
 
                 session.add(auth)
                 session.commit()

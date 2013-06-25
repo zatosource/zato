@@ -119,7 +119,7 @@ class ChangePasswordTestCase(ServiceTestCase):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_security_basic_auth_change_password_request')
         self.assertEquals(self.sio.response_elem, 'zato_security_basic_auth_change_password_response')
-        self.assertEquals(self.sio.input_required, ('id', 'password1', 'password2'))
+        self.assertEquals(self.sio.input_required, ('id',))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_required')

@@ -446,11 +446,17 @@ $.fn.zato.data_table.setup_change_password = function() {
         return false;
     });
 
-    $('#id_password1').attr('data-bvalidator', 'equalto[id_password2],required');
-    $('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
+	if($.fn.zato.data_table.password_required) {
+		$('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
+		$('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
 
-    $('#id_password2').attr('data-bvalidator', 'required');
-    $('#id_password2').attr('data-bvalidator-msg', 'This is a required field');
+        $('#id_password2').attr('data-bvalidator', 'required');
+        $('#id_password2').attr('data-bvalidator-msg', 'This is a required field');
+	}
+	else {
+		$('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
+		$('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
+	}
 
     change_password_form.bValidator();
 }
