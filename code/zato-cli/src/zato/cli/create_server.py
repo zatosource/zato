@@ -62,6 +62,7 @@ pickup_dir=../../pickup-dir
 work_dir=../../work
 backup_history=100
 backup_format=bztar
+delete_after_pick_up=True
 
 # These three are relative to work_dir
 current_work_dir=./hot-deploy/current

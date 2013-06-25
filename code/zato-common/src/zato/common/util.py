@@ -454,6 +454,10 @@ def visit_py_source_from_distribution(dir_name):
         package_dir = os.path.abspath(os.path.join(dir_name, package.replace('.', os.path.sep)))
         yield visit_py_source(package_dir)
 
+def _os_remove(path):
+    """ A helper function so it's easier to mock it in unittests.
+    """
+    return os.remove(path)
 
 def hot_deploy(parallel_server, file_name, path, delete_path=True):
     """ Hot-deploys a package if it looks like a Python module or an archive
@@ -473,7 +477,7 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
         parallel_server.notify_new_package(package_id)
         
         if delete_path:
-            os.remove(path)
+            _os_remove(path)
         
         return True
         
