@@ -77,7 +77,7 @@ class Create(_FTPService):
                 item.port = input.port
                 item.user = input.user
                 item.acct = input.acct
-                item.timeout = input.timeout
+                item.timeout = input.timeout or None
 
                 session.add(item)
                 session.commit()
@@ -127,7 +127,7 @@ class Edit(_FTPService):
                 item.port = input.port
                 item.user = input.user
                 item.acct = input.acct
-                item.timeout = input.timeout
+                item.timeout = input.timeout or None
                 
                 input.old_name = old_name
 
