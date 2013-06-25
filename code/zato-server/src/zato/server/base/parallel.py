@@ -24,6 +24,7 @@ from anyjson import dumps
 from bunch import Bunch
 
 # Paste
+from paste.util.converters import asbool
 from paste.util.multidict import MultiDict
 
 # Spring Python
@@ -203,10 +204,16 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
-        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir'):
-            self.hot_deploy_config[name] = os.path.normpath(os.path.join(
-              self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
-        
+        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
+
+            # New in 1.2
+            if name == 'delete_after_pick_up':
+                value = asbool(self.fs_server_config.hot_deploy.get(name, True))
+                self.hot_deploy_config[name] = value
+            else:
+                self.hot_deploy_config[name] = os.path.normpath(os.path.join(
+                  self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
+            
         is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
         
         broker_callbacks = {

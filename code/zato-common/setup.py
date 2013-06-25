@@ -32,7 +32,7 @@ setup(
           'bzr==2.5',
           'distutils2==1.0a4',
           'lxml==3.0.1',
-          'mock==0.8.0',
+          'mock==1.0.1',
           'nose==1.2.1',
           'pip==1.1',
           'python-dateutil==2.1',
