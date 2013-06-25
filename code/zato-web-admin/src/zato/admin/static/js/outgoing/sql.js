@@ -14,6 +14,7 @@ $.fn.zato.data_table.SQL = new Class({
 
 $(document).ready(function() {
     $('#data-table').tablesorter();
+    $.fn.zato.data_table.password_required = true;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SQL;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.sql.data_table.new_row;
     $.fn.zato.data_table.parse();

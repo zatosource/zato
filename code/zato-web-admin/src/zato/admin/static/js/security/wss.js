@@ -15,6 +15,7 @@ $.fn.zato.data_table.WSS = new Class({
 
 $(document).ready(function() { 
 	$('#data-table').tablesorter(); 
+    $.fn.zato.data_table.password_required = true;
 	$.fn.zato.data_table.class_ = $.fn.zato.data_table.WSS;
 	$.fn.zato.data_table.new_row_func = $.fn.zato.security.wss.data_table.new_row;
 	$.fn.zato.data_table.parse();

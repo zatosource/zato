@@ -132,9 +132,12 @@ class Edit(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """
+    password_required = False
+    
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_security_basic_auth_change_password_request'
         response_elem = 'zato_security_basic_auth_change_password_response'
+        input_required = ('id',)
     
     def handle(self):
         def _auth(instance, password):

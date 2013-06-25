@@ -78,12 +78,10 @@ class ChangePasswordBaseTestCase(ServiceTestCase):
     def setUp(self):
         self.service_class = ChangePasswordBase
         self.sio = self.service_class.SimpleIO
+        self.mock_data = {}
     
     def get_request_data(self):
         return {'id':rand_int(), 'password1':rand_string(), 'password2':rand_string()}
-    
-    def get_response_data(self):
-        return Bunch()    
     
     def test_sio(self):
         self.assertEquals(self.sio.input_required, ('id', 'password1', 'password2'))
@@ -95,3 +93,30 @@ class ChangePasswordBaseTestCase(ServiceTestCase):
         
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.change-password-base')
+
+    def test_password_not_given(self):
+        
+        class MyChangePasswordNotRequired(self.service_class):
+            class SimpleIO(object):
+                input_required = ('id',)
+                
+            def handle(self):
+                pass
+            
+        class MyChangePasswordRequired(self.service_class):
+            class SimpleIO(object):
+                input_required = ('id', 'password1', 'password2')
+                
+            def handle(self):
+                pass
+            
+        request1 = {'id':rand_int()}
+        response_data1 = {}
+        
+        self.check_impl(MyChangePasswordNotRequired, request1, response_data1, 'ignored')
+        
+        password1 = password2 = rand_string()
+        request2 = {'id':rand_int(), 'password1':password1, 'password2':password2}
+        response_data2 = {}
+        
+        self.check_impl(MyChangePasswordRequired, request2, response_data2, 'ignored')

@@ -164,7 +164,7 @@ class SecurityBase(Base):
     # It's nullable because TechnicalAccount doesn't use usernames
     username = Column(String(200), nullable=True) 
     
-    password = Column(String(64), nullable=False)
+    password = Column(String(64), nullable=True)
     password_type = Column(String(45), nullable=True)
     is_active = Column(Boolean(), nullable=False)
     sec_type = Column(String(45), nullable=False)
