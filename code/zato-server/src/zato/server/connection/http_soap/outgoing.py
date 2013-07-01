@@ -39,7 +39,7 @@ class HTTPSOAPWrapper(object):
         self.soap['1.1'] = {}
         self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
         self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="http://schemas.xmlsoap.org/soap/envelope/">
   {header}
   <s11:Body>{data}</s11:Body>
 </s11:Envelope>"""
@@ -56,7 +56,7 @@ class HTTPSOAPWrapper(object):
         self.soap['1.2'] = {}
         self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
         self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="http://www.w3.org/2003/05/soap-envelope/">
   {header}
   <s12:Body></s12:Body>
 </s12:Envelope>"""
