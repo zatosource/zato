@@ -49,7 +49,7 @@ class CheckConfig(ManageCommand):
             self.logger.info('SQL ODB connection OK')
         
         kvdb_config = Bunch(dict(server_conf['kvdb'].items()))
-        kvdb = KVDB(None, kvdb_config, cm.encrypt)
+        kvdb = KVDB(None, kvdb_config, cm.decrypt)
         kvdb.init()
         
         kvdb.conn.info()
