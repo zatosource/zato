@@ -284,11 +284,13 @@ class _Client(object):
             max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
         self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session()
-        self.session.auth = auth
         self.to_bunch = to_bunch
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr
         self.logger = logger or mod_logger
+        
+        if not self.session.auth:
+            self.session.auth = auth
         
     def inner_invoke(self, request, response_class, async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
