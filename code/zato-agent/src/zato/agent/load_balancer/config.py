@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # It's something Zato can understood and treat accordingly if such a token is
 # found on any HAProxy configuration file's line.
-zato_item_token =  "# ZATO "
+zato_item_token = "# ZATO "
 
 # PyParsing grammar for config values.
 
@@ -108,8 +108,8 @@ def string_from_config(config, config_template):
         # given a string representing an integer and we need to translate it
         # back to a format understood by HAProxy, so that '1' translates into 'nolog' etc.
 
-        "frontend front_http_plain:option log-http-requests":
-            ("option {value}", dict(value=http_log[int(config["frontend"]["front_http_plain"]["log_http_requests"])][0])),
+        "frontend front_http_plain:option log-http-requests":                                                               # noqa
+          ("option {value}", dict(value=http_log[int(config["frontend"]["front_http_plain"]["log_http_requests"])][0])), # noqa
     }
 
     new_config = []

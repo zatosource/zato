@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, json, shutil, uuid
+import os, json, uuid
 from copy import deepcopy
 from random import getrandbits
 from traceback import format_exc
@@ -19,7 +19,7 @@ from django.core.management import call_command
 
 # Zato
 # TODO: There really shouldn't be any direct dependency between zato-cli and zato-web-admin
-from zato.admin.zato_settings import update_globals 
+from zato.admin.zato_settings import update_globals
 
 from zato.cli import get_tech_account_opts, common_logging_conf_contents, common_odb_opts, ZatoCommand
 from zato.common.defaults import web_admin_host, web_admin_port
@@ -137,7 +137,8 @@ class Create(ZatoCommand):
         call_command('loaddata', initial_data_json_path, verbosity=0)
         
         try:
-            call_command('createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
+            call_command(
+                'createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
                 last_name='admin-last-name', email='admin@invalid.example.com')
             admin_created = True
 

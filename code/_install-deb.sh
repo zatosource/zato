@@ -11,15 +11,7 @@ function symlink_py {
     ln -s `python -c 'import '${1}', os.path, sys; sys.stdout.write(os.path.dirname('${1}'.__file__))'` $CURDIR/zato_extra_paths
 }
 
-rm -rf $CURDIR/bin
-rm -rf $CURDIR/develop-eggs
-rm -rf $CURDIR/downloads
-rm -rf $CURDIR/eggs
-rm -rf $CURDIR/include
-rm -rf $CURDIR/.installed.cfg
-rm -rf $CURDIR/lib
-rm -rf $CURDIR/parts
-rm -rf $CURDIR/zato_extra_paths
+bash $CURDIR/clean.sh
 
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.

@@ -16,7 +16,7 @@ from bzrlib.lazy_import import lazy_import
 
 lazy_import(globals(), """
     # quicli
-    import os, shutil, uuid
+    import os, uuid
     
 """)
 
@@ -87,7 +87,7 @@ frontend front_http_plain
     monitor-uri /zato-lb-alive # ZATO frontend front_http_plain:monitor-uri
 """
 
-default_backend="""
+default_backend = """
     server http_plain--server1 127.0.0.1:{server01_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server1
     server http_plain--server2 127.0.0.1:{server02_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server2
 """
@@ -105,30 +105,29 @@ class Create(ZatoCommand):
 
     def __init__(self, args):
         super(Create, self).__init__(args)
-        self.target_dir = os.path.abspath(args.path)
+        self.target_dir = os.path.abspath(args.path) # noqa
 
     def execute(self, args, use_default_backend=False, server02_port=None, show_output=True):
+        os.mkdir(os.path.join(self.target_dir, 'config')) # noqa
+        os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon')) # noqa
+        os.mkdir(os.path.join(self.target_dir, 'logs')) # noqa
         
-        os.mkdir(os.path.join(self.target_dir, 'config'))
-        os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon'))
-        os.mkdir(os.path.join(self.target_dir, 'logs'))
-        
-        repo_dir = os.path.join(self.target_dir, 'config', 'repo')
-        os.mkdir(repo_dir)
+        repo_dir = os.path.join(self.target_dir, 'config', 'repo') # noqa
+        os.mkdir(repo_dir) # noqa
 
-        log_path = os.path.abspath(os.path.join(repo_dir, '..', '..', 'logs', 'lb-agent.log'))
-        stats_socket = os.path.join(self.target_dir, 'haproxy-stat.sock')
+        log_path = os.path.abspath(os.path.join(repo_dir, '..', '..', 'logs', 'lb-agent.log')) # noqa
+        stats_socket = os.path.join(self.target_dir, 'haproxy-stat.sock') # noqa
 
-        open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config_template)
-        open(os.path.join(repo_dir, 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path)))
+        open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config_template) # noqa
+        open(os.path.join(repo_dir, 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path))) # noqa
         
         if use_default_backend:
             backend = default_backend.format(server01_port=http_plain_server_port, server02_port=server02_port)
         else:
             backend = '\n# ZATO default_backend_empty'
 
-        zato_config = zato_config_template.format(stats_socket=stats_socket, stats_password=uuid.uuid4().hex, default_backend=backend)
-        open(os.path.join(repo_dir, 'zato.config'), 'w').write(zato_config)
+        zato_config = zato_config_template.format(stats_socket=stats_socket, stats_password=uuid.uuid4().hex, default_backend=backend) # noqa
+        open(os.path.join(repo_dir, 'zato.config'), 'w').write(zato_config) # noqa
         self.copy_lb_crypto(repo_dir, args)
         
         # Initial info

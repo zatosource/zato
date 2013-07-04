@@ -24,5 +24,5 @@ class ComponentVersion(ZatoCommand):
     file_needed = ZATO_INFO_FILE
 
     def execute(self, args):
-        info = json.load(open(os.path.join(args.path, self.file_needed)))
+        info = json.load(open(os.path.join(args.path, self.file_needed))) # noqa
         self.logger.info(info['version'])

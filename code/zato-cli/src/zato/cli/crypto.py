@@ -17,7 +17,7 @@ import anyjson
 # Zato
 from zato.cli import ManageCommand, ZatoCommand
 from zato.common.crypto import CryptoManager
-from zato.common.util import decrypt, encrypt, get_config
+from zato.common.util import get_config
 
 class Encrypt(ZatoCommand):
     """ Encrypts secrets using a public key
@@ -53,7 +53,8 @@ class UpdateCrypto(ManageCommand):
         {'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates in PEM"},
     ]
     
-    def _update_crypto(self, args, copy_crypto_func, update_secrets=False, load_secrets_func=None,
+    def _update_crypto(
+            self, args, copy_crypto_func, update_secrets=False, load_secrets_func=None,
             store_secrets_func=None, conf_file_name=None, priv_key_name=None, pub_key_name=None, secret_names=[]):
         
         repo_dir = os.path.join(os.path.abspath(os.path.join(self.original_dir, args.path)), 'config', 'repo')
@@ -94,7 +95,8 @@ class UpdateCrypto(ManageCommand):
                 conf[name] = crypto_manager.encrypt(secrets[name])
             open(conf_location, 'w').write(anyjson.dumps(conf))
                 
-        self._update_crypto(args, self.copy_web_admin_crypto, True, load_secrets, store_secrets, 'web-admin.conf',
+        self._update_crypto(
+            args, self.copy_web_admin_crypto, True, load_secrets, store_secrets, 'web-admin.conf',
             'web-admin-priv-key.pem', 'web-admin-pub-key.pem', ['DATABASE_PASSWORD', 'TECH_ACCOUNT_PASSWORD'])
 
     def _on_server(self, args):
@@ -116,5 +118,6 @@ class UpdateCrypto(ManageCommand):
             conf.filename = conf_location
             conf.write()
         
-        self._update_crypto(args, self.copy_server_crypto, True, load_secrets, store_secrets, 'server.conf',
+        self._update_crypto(
+            args, self.copy_server_crypto, True, load_secrets, store_secrets, 'server.conf',
             'zato-server-priv-key.pem', 'zato-server-pub-key.pem', ['odb:password', 'kvdb:password'])

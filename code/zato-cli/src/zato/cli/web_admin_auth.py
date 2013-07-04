@@ -35,6 +35,7 @@ class UpdatePassword(_WebAdminAuthCommand):
     opts = [
         {'name': 'username', 'help': 'Username to change the password of'},
     ]
+    
     def execute(self, args):
         self._prepare(args)
         

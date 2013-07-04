@@ -38,7 +38,7 @@ lazy_import(globals(), """
 
 ZATO_INFO_FILE = b'.zato-info'
 
-_opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES)
+_opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES) # noqa
 _opts_odb_host = 'Operational database host'
 _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
@@ -62,13 +62,13 @@ default_ca_name = 'Sample CA'
 default_common_name = 'localhost'
 
 common_odb_opts = [
-        {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES},
-        {'name':'odb_host', 'help':_opts_odb_host},
-        {'name':'odb_port', 'help':_opts_odb_port},
-        {'name':'odb_user', 'help':_opts_odb_user},
-        {'name':'odb_db_name', 'help':_opts_odb_db_name},
-        {'name':'--postgresql_schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
-        {'name':'--odb_password', 'help':'ODB database password'},
+    {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES}, # noqa
+    {'name':'odb_host', 'help':_opts_odb_host},
+    {'name':'odb_port', 'help':_opts_odb_port},
+    {'name':'odb_user', 'help':_opts_odb_user},
+    {'name':'odb_db_name', 'help':_opts_odb_db_name},
+    {'name':'--postgresql_schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
+    {'name':'--odb_password', 'help':'ODB database password'},
 ]
 
 common_ca_create_opts = [
@@ -217,21 +217,21 @@ class ZatoCommand(object):
         
     def reset_logger(self, args, reload_=False):
         if reload_:
-            logging.shutdown()
-            reload(logging)
+            logging.shutdown() # noqa
+            reload(logging) # noqa
         
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        self.logger = logging.getLogger(self.__class__.__name__) # noqa
+        self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO) # noqa
         self.logger.handlers[:] = []
         
-        console_handler = logging.StreamHandler()
-        console_formatter = logging.Formatter('%(message)s')
+        console_handler = logging.StreamHandler() # noqa
+        console_formatter = logging.Formatter('%(message)s') # noqa
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
         
         if args.store_log:
-            verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now()))
-            verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now())) # noqa
+            verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # noqa
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
         
@@ -261,25 +261,25 @@ class ZatoCommand(object):
 
     def _get_now(self, time_=None):
         if not time_:
-            time_ = time.gmtime()
+            time_ = time.gmtime() # noqa
 
-        return time.strftime('%Y-%m-%d_%H-%M-%S', time_)
+        return time.strftime('%Y-%m-%d_%H-%M-%S', time_) # noqa
 
     def _get_user_host(self):
         return getuser() + '@' + gethostname()
     
     def store_initial_info(self, target_dir, component):
-        info = {'version': common.version_raw,
+        info = {'version': common.version_raw, # noqa
                 'created_user_host': self._get_user_host(),
-                'created_ts': datetime.utcnow().isoformat(),
+                'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component
-            }
+                }
         open(os.path.join(target_dir, ZATO_INFO_FILE), 'wb').write(json.dumps(info))
 
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
         """
-        now = util.fs_safe_now()
+        now = util.fs_safe_now() # noqa
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
         
@@ -296,12 +296,13 @@ class ZatoCommand(object):
             file_name=os.path.abspath(file_name)))
 
     def _get_engine(self, args):
-        engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
-                        password=args.odb_password, host=args.odb_host, db_name=args.odb_db_name)
-        return sqlalchemy.create_engine(engine_url)
+        engine_url = odb.engine_def.format( # noqa
+            engine=args.odb_type, username=args.odb_user,
+            password=args.odb_password, host=args.odb_host, db_name=args.odb_db_name)
+        return sqlalchemy.create_engine(engine_url) # noqa
 
     def _get_session(self, engine):
-        Session = orm.sessionmaker()
+        Session = orm.sessionmaker() # noqa
         Session.configure(bind=engine)
         return Session()
 
@@ -333,10 +334,10 @@ class ZatoCommand(object):
                     # before we got to this point and it's OK to skip it.
                     continue
                 else:
-                    msg = ('Directory {} is not empty, please re-run the command ' +
-                          'in an empty directory').format(work_dir)
+                    msg = ('Directory {} is not empty, please re-run the command ' + # noqa
+                          'in an empty directory').format(work_dir) # noqa
                     self.logger.info(msg)
-                    sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY)
+                    sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY) # noqa
 
         # Do we need the directory to contain any specific files?
         if self.file_needed:
@@ -344,7 +345,7 @@ class ZatoCommand(object):
             if not os.path.exists(full_path):
                 msg = 'Could not find file {}'.format(full_path)
                 self.logger.info(msg)
-                sys.exit(self.SYS_ERROR.FILE_MISSING)
+                sys.exit(self.SYS_ERROR.FILE_MISSING) # noqa
         
         check_password = []
         for opt_dict in self.opts:
@@ -355,7 +356,7 @@ class ZatoCommand(object):
         if check_password:
             args = self._check_passwords(args, check_password)
             
-        sys.exit(self.execute(args))
+        sys.exit(self.execute(args)) # noqa
 
     def _copy_lb_server_crypto(self, repo_dir, args, middle_part):
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
@@ -431,7 +432,7 @@ class CACreateCommand(ZatoCommand):
         template_args['common_name'] = self._get_arg(args, 'common_name', default_ca_name)
         template_args['target_dir'] = self.target_dir
 
-        f = tempfile.NamedTemporaryFile()
+        f = tempfile.NamedTemporaryFile() # noqa
         f.write(openssl_template.format(**template_args))
         f.flush()
 
@@ -531,7 +532,7 @@ class ManageCommand(ZatoCommand):
     
     _on_web_admin = _on_server = _on_lb
 
-    def _zdaemon_start(self, contents_template,  zdaemon_conf_name,
+    def _zdaemon_start(self, contents_template, zdaemon_conf_name,
                        socket_prefix, logfile_path_prefix, program):
 
         zdaemon_conf_name = os.path.join(self.config_dir, 'zdaemon', zdaemon_conf_name)
@@ -542,8 +543,8 @@ class ManageCommand(ZatoCommand):
         logfile_path = logfile_path_prefix + '.log'
         logfile_path = os.path.join(self.component_dir, 'logs', logfile_path)
 
-        conf = contents_template.format(program=program,
-            socket_name=socket_name, logfile_path=logfile_path)
+        conf = contents_template.format(
+            program=program, socket_name=socket_name, logfile_path=logfile_path)
 
         open(zdaemon_conf_name, 'w').write(conf)
         self._execute_zdaemon_command(['zdaemon', '-C', zdaemon_conf_name, 'start'])
@@ -551,7 +552,7 @@ class ManageCommand(ZatoCommand):
     def _zdaemon_command(self, zdaemon_command, zdaemon_config_pattern=['config', 'zdaemon', 'zdaemon*.conf']):
 
         conf_files = os.path.join(self.component_dir, *zdaemon_config_pattern)
-        conf_files = sorted(glob.iglob(conf_files))
+        conf_files = sorted(glob.iglob(conf_files)) # noqa
 
         prefix = os.path.join(self.component_dir, 'config', 'zdaemon', 'zdaemon')
         ports_pids = {}
@@ -567,7 +568,7 @@ class ManageCommand(ZatoCommand):
         return ports_pids
 
     def _execute_zdaemon_command(self, command_list):
-        p = subprocess.Popen(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE) # noqa
         p.wait()
 
         if p.returncode is None:
@@ -601,9 +602,10 @@ class ManageCommand(ZatoCommand):
         found = self.command_files & listing
 
         if not found:
-            msg = """Directory {} doesn't seem to belong to a Zato component. Expected one of the following files to exist {}""".format(self.component_dir, sorted(self.command_files))
+            msg = """Directory {} doesn't seem to belong to a Zato component. Expected one of the following files to exist {}""".format(
+                self.component_dir, sorted(self.command_files))
             self.logger.info(msg)
-            sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT)
+            sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
 
         found = list(found)[0]
         json_data = json.load(open(os.path.join(self.component_dir, found)))

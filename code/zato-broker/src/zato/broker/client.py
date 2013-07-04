@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, time
+import logging, time
 from threading import Thread
 
 # anyjson
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 REMOTE_END_CLOSED_SOCKET = 'Socket closed on remote end'
 NEEDS_TMP_KEY = [v for k,v in TOPICS.items() if k in(
-    MESSAGE_TYPE.TO_PARALLEL_ANY, 
+    MESSAGE_TYPE.TO_PARALLEL_ANY,
 )]
 
 class _ClientThread(Thread):
@@ -59,7 +59,7 @@ class _ClientThread(Thread):
             except KeyboardInterrupt:
                 self.keep_running = False
             except redis.ConnectionError, e:
-                if e.message != REMOTE_END_CLOSED_SOCKET: # Hm, there's no error code, only the message
+                if e.message != REMOTE_END_CLOSED_SOCKET:  # Hm, there's no error code, only the message
                     raise
                 msg = 'Caught [{}], will quit now'.format(REMOTE_END_CLOSED_SOCKET)
                 logger.info(msg)
@@ -85,16 +85,16 @@ class BrokerClient(Thread):
     2) to all the servers/connectors/all connectors of a certain type (e.g. only AMQP ones)
     3) to one of the parallel servers
     
-    1) and 2) are straightforward, a message is being published on a topic, 
-       off which it is read by broker client(s). 
+    1) and 2) are straightforward, a message is being published on a topic,
+       off which it is read by broker client(s).
     
     3) needs more work - the actual message is added to Redis and what is really
        being published is a Redis key it's been stored under. The first client
-       to read it will be the one to handle it. 
+       to read it will be the one to handle it.
        
        Yup, it means the messages are sent across to all of the clients
        and the winning one is the one that picked up the Redis message; it's not
-       that bad as it may seem, there will be at most as many clients as there 
+       that bad as it may seem, there will be at most as many clients as there
        are servers in the cluster and truth to be told, Zero MQ < 3.x also would
        do client-side PUB/SUB filtering and it did scale nicely.
     """
@@ -132,7 +132,7 @@ class BrokerClient(Thread):
         key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
         
         self.kvdb.conn.set(key, str(msg))
-        self.kvdb.conn.expire(key, expiration) # In seconds
+        self.kvdb.conn.expire(key, expiration)  # In seconds
         
         self.pub_client.publish(topic, broker_msg)
         
@@ -149,13 +149,13 @@ class BrokerClient(Thread):
                 try:
                     self.kvdb.conn.rename(msg.data, tmp_key)
                 except redis.ResponseError, e:
-                    if e.message != 'ERR no such key': # Doh, I hope Redis guys don't change it out of a sudden :/
+                    if e.message != 'ERR no such key':  # Doh, I hope Redis guys don't change it out of a sudden :/
                         raise
                     else:
                         payload = None
                 else:
                     payload = self.kvdb.conn.get(tmp_key)
-                    self.kvdb.conn.delete(tmp_key) # Note that it would've expired anyway
+                    self.kvdb.conn.delete(tmp_key)  # Note that it would've expired anyway
                     if not payload:
                         logger.warning('No KVDB payload for key [{}] (already expired?)'.format(tmp_key))
                     else:

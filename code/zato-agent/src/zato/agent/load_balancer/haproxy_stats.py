@@ -40,7 +40,7 @@ class HAProxyStats(object):
             client.connect(self.socket_name)
             client.send(command + '\n')
 
-            while time() <=  end:
+            while time() <= end:
                 data = client.recv(4096)
                 if data:
                     buff.write(data)

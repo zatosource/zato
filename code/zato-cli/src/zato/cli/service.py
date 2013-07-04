@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 from contextlib import closing
 
-# anyjson
-import anyjson
-
 # Bunch
 from bunch import Bunch
 
@@ -23,7 +20,7 @@ from zato.cli import ZatoCommand, ZATO_INFO_FILE
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
 from zato.common import BROKER, DATA_FORMAT
 from zato.common.crypto import CryptoManager
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Server, Service
+from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Server
 from zato.common.util import get_config
         
 class Invoke(ZatoCommand):
@@ -35,12 +32,14 @@ class Invoke(ZatoCommand):
         {'name':'path', 'help':'Path in the file-system to a server the service is deployed on'},
         {'name':'name', 'help':'Name of the service to invoke'},
         {'name':'--payload', 'help':'Payload to invoke the service with'},
-        {'name':'--headers', 'help':'Additional HTTP headers the service invoker will receive in format of header-name=header-value; header2-name=header2-value'},
+        {'name':'--headers',
+         'help':'Additional HTTP headers the service invoker will receive in format of header-name=header-value; header2-name=header2-value'},
         {'name':'--channel', 'help':'Channel the service will be invoked through', 'default':'invoke'},
         {'name':'--data-format', 'help':"Payload's data format", 'default': 'json'},
         {'name':'--transport', 'help':'Transport to invoke the service over'},
         {'name':'--url-path', 'help':'URL path zato.service.invoke is exposed on', 'default':'/zato/admin/invoke'},
-        {'name':'--max-cid-repr', 'help':'How many characters of each end of a CID to print out in verbose mode, defaults to {}, use {} to print the whole of it'.format(
+        {'name':'--max-cid-repr',
+         'help':'How many characters of each end of a CID to print out in verbose mode, defaults to {}, use {} to print the whole of it'.format(
             DEFAULT_MAX_CID_REPR, CID_NO_CLIP), 'default':DEFAULT_MAX_CID_REPR},
         {'name':'--max-response-repr', 'help':'How many characters of a response to print out in verbose mode, defaults to {}'.format(
             DEFAULT_MAX_RESPONSE_REPR), 'default':DEFAULT_MAX_RESPONSE_REPR},
@@ -94,7 +93,8 @@ class Invoke(ZatoCommand):
                 k, v = pair.strip().split('=', 1)
                 headers[k] = v
                     
-        client = AnyServiceInvoker('http://{}'.format(config.main.gunicorn_bind), args.url_path, auth,
+        client = AnyServiceInvoker(
+            'http://{}'.format(config.main.gunicorn_bind), args.url_path, auth,
             max_response_repr=int(args.max_response_repr), max_cid_repr=int(args.max_cid_repr))
         
         # Prevents attempts to convert/escape XML into JSON

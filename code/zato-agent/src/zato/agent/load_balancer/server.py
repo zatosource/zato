@@ -43,7 +43,7 @@ for version, commands in haproxy_stats.items():
     haproxy_commands.update(commands)
 
 # We'll wait up to that many seconds for HAProxy to validate the config file.
-HAPROXY_VALIDATE_TIMEOUT=0.3
+HAPROXY_VALIDATE_TIMEOUT = 0.3
 
 class LoadBalancerAgent(SSLServer):
     def __init__(self, repo_dir):
@@ -71,16 +71,17 @@ class LoadBalancerAgent(SSLServer):
         
         RepoManager(self.repo_dir).ensure_repo_consistency()
 
-        super(LoadBalancerAgent, self).__init__(host=self.json_config['host'],
-                port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
-                ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
-                verify_fields=self.verify_fields)
+        super(LoadBalancerAgent, self).__init__(
+            host=self.json_config['host'],
+            port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
+            ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
+            verify_fields=self.verify_fields)
         
     def _popen(self, command, timeout, timeout_msg, rc_non_zero_msg, common_msg=''):
         """ Runs a command in background and returns its return_code, stdout and stderr.
         stdout and stderr will be None if return code = 0
         """
-        stdout, stderr = None, None 
+        stdout, stderr = None, None
         
         # Run the command
         p = Popen(command, stdout=PIPE, stderr=PIPE)
@@ -137,7 +138,7 @@ class LoadBalancerAgent(SSLServer):
                 public_name = item.split(public_method_prefix)[1]
                 attr = getattr(self, item)
                 msg = "Registering [{attr}] under public name [{public_name}]"
-                logger.info(msg.format(attr=attr, public_name=public_name)) # TODO: Add logging config
+                logger.info(msg.format(attr=attr, public_name=public_name))  # TODO: Add logging config
                 self.register_function(attr, public_name)
                 
     def _read_config_string(self):
@@ -268,7 +269,7 @@ class LoadBalancerAgent(SSLServer):
         
         def _dict(access_type, state, server_name):
             return {
-                'access_type':access_type, 
+                'access_type':access_type,
                 'state':state,
                 'address': '{}:{}'.format(backend_config[server_name]['address'], backend_config[server_name]['port'])
             }
@@ -433,7 +434,7 @@ class LoadBalancerAgent(SSLServer):
         else:
             try:
                 code = conn.getcode()
-                if code  == httplib.OK:
+                if code == httplib.OK:
                     return ZATO_OK
                 else:
                     msg = "Could not open URL [{url}], HTTP code:[{code}]".format(url=url, code=code)
@@ -445,6 +446,6 @@ class LoadBalancerAgent(SSLServer):
     def _lb_agent_get_work_config(self):
         """ Return the agent's basic configuration.
         """
-        return {"work_dir":self.work_dir, "haproxy_command":self.haproxy_command,
-                "keyfile":self.keyfile, "certfile":self.certfile,
-               "ca_certs":self.ca_certs, "verify_fields":self.verify_fields}
+        return {"work_dir":self.work_dir, "haproxy_command":self.haproxy_command, # noqa
+                "keyfile":self.keyfile, "certfile":self.certfile,                 # noqa
+               "ca_certs":self.ca_certs, "verify_fields":self.verify_fields}      # noqa

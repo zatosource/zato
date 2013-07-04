@@ -11,15 +11,7 @@ function symlink_py {
     ln -s $(brew --prefix)/lib/python2.7/site-packages/${1} $CURDIR/zato_extra_paths
 }
 
-rm -rf $CURDIR/bin
-rm -rf $CURDIR/develop-eggs
-rm -rf $CURDIR/downloads
-rm -rf $CURDIR/eggs
-rm -rf $CURDIR/include
-rm -rf $CURDIR/.installed.cfg
-rm -rf $CURDIR/lib
-rm -rf $CURDIR/parts
-rm -rf $CURDIR/zato_extra_paths
+bash $CURDIR/clean.sh
 
 mkdir $CURDIR/zato_extra_paths
 
