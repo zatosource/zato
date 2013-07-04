@@ -9,12 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from random import choice, randint
+from random import choice, randint, random
 from unittest import TestCase
 from uuid import uuid4
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import loads
 
 # Bunch
 from bunch import Bunch
@@ -121,7 +121,8 @@ class ServiceTestCase(TestCase):
             'bool_parameter_prefixes': SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES,
         }
         
-        class_.update(instance, channel, FakeServer(), None, worker_store, new_cid(), request_data, request_data, 
+        class_.update(
+            instance, channel, FakeServer(), None, worker_store, new_cid(), request_data, request_data,
             simple_io_config=simple_io_config, data_format=SIMPLE_IO.FORMAT.JSON, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
@@ -156,26 +157,31 @@ class ServiceTestCase(TestCase):
         for k, v in request_data.iteritems():
             self.assertEquals(getattr(instance.request.input, k), v)
 
-        required_keys = set(instance.SimpleIO.input_required)
+        sio_keys = set(getattr(instance.SimpleIO, 'input_required', []))
+        sio_keys.update(set(getattr(instance.SimpleIO, 'input_optional', [])))
         given_keys = set(request_data.keys())
-        diff = required_keys ^ given_keys 
-        self.assertFalse(diff, 'There should be no difference between required_keys {} and given_keys {}, diff {}'.format(
-            required_keys, given_keys, diff))
+        
+        diff = sio_keys ^ given_keys
+        self.assertFalse(diff, 'There should be no difference between sio_keys {} and given_keys {}, diff {}'.format(
+            sio_keys, given_keys, diff))
     
     def check_impl(self, service_class, request_data, response_data, response_elem, mock_data={}):
 
-        expected_keys = response_data.keys()
-        expected_data = tuple(response_data for x in range(rand_int(10)))
-        expected = Expected()
+        expected_data = sorted(response_data.items())
         
-        instance = self.invoke(service_class, request_data, expected, mock_data)
-        if not isinstance(instance.response.payload, basestring):
-            loads(instance.response.payload.getvalue())[response_elem] # Raises KeyError if 'response_elem' doesn't match
-        
+        instance = self.invoke(service_class, request_data, None, mock_data)
         self._check_sio_request_input(instance, request_data)
+        
+        if response_data:
+            if not isinstance(instance.response.payload, basestring):
+                response = loads(instance.response.payload.getvalue())[response_elem] # Raises KeyError if 'response_elem' doesn't match
+            else:
+                response = loads(instance.response.payload)[response_elem]
+                
+            self.assertEqual(sorted(response.items()), expected_data)
     
-    def check_impl_list(self, service_class, item_class, request_data, 
-        response_data, request_elem, response_elem, mock_data={}):
+    def check_impl_list(self, service_class, item_class, request_data, # noqa
+            response_data, request_elem, response_elem, mock_data={}): # noqa
         
         expected_keys = response_data.keys()
         expected_data = tuple(response_data for x in range(rand_int(10)))
