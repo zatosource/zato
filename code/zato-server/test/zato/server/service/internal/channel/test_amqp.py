@@ -142,10 +142,10 @@ class EditTestCase(_Base):
     
     def get_request_data(self):
         return {'id': self.id, 'cluster_id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'queue':rand_string(), 
-             'consumer_tag_prefix':rand_string(), 'def_id':self.def_id, 'data_format':rand_string()}
+             'consumer_tag_prefix':rand_string(), 'def_id':self.def_id, 'service':rand_string(), 'data_format':rand_string()}
     
     def get_response_data(self):
-        return Bunch({'id':rand_int(), 'name':self.name})
+        return Bunch({'id':self.id, 'name':self.name})
     
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_channel_amqp_edit_request')
