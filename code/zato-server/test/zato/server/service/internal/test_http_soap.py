@@ -14,7 +14,6 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
-from zato.server.service import Boolean, Integer, UTC
 from zato.server.service.internal.http_soap import GetList, Create, Edit, Delete, Ping
 
 ################################################################################
@@ -60,14 +59,13 @@ class CreateTestCase(ServiceTestCase):
     
     def get_request_data(self):
         return ({'cluster_id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'connection':rand_string(),
-                 'transport':rabd_string(), 'is_internal':rand_bool(), 'url_path':rand_string(), 'service':rand_string(),
-                 'security_id':rand_id(), 'method':rand_string(), 'soap_action':rand_string(), 'soap_version':rand_string(),
+                 'transport':rand_string(), 'is_internal':rand_bool(), 'url_path':rand_string(), 'service':rand_string(),
+                 'security_id':rand_int(), 'method':rand_string(), 'soap_action':rand_string(), 'soap_version':rand_string(),
                  'data_format':rand_string(), 'host':rand_string()}
                 )
         
     def get_response_data(self):
         return Bunch({'id':rand_int(), 'name':rand_string()})        
-    
     
     def test_sio(self):
         
@@ -94,14 +92,13 @@ class EditTestCase(ServiceTestCase):
     
     def get_request_data(self):
         return ({'cluster_id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'connection':rand_string(),
-                 'transport':rabd_string(), 'url_path':rand_string(), 'service':rand_string(), 'security':rand_string(),
-                 'security_id':rand_id(), 'method':rand_string(), 'soap_action':rand_string(), 'soap_version':rand_string(),
+                 'transport':rand_string(), 'url_path':rand_string(), 'service':rand_string(), 'security':rand_string(),
+                 'security_id':rand_int(), 'method':rand_string(), 'soap_action':rand_string(), 'soap_version':rand_string(),
                  'data_format':rand_string(), 'host':rand_string()}
                 )
         
     def get_response_data(self):
         return Bunch({'id':rand_int(), 'name':rand_string(), })          
-    
     
     def test_sio(self):        
         self.assertEquals(self.sio.request_elem, 'zato_http_soap_edit_request')

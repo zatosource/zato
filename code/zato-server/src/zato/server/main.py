@@ -16,9 +16,8 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import glob, os, sys
+import os, sys
 import logging.config
-from threading import currentThread
 
 # gunicorn
 from gunicorn.app.base import Application
@@ -27,10 +26,8 @@ from gunicorn.app.base import Application
 import psycopg2
 
 # Zato
-from zato.common import KVDB
 from zato.common.repo import RepoManager
 from zato.common.util import clear_locks, get_app_context, get_config, get_crypto_manager, TRACE1
-from zato.server.pickup import get_pickup
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, config_main, *args, **kwargs):

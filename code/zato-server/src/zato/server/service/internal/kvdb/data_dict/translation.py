@@ -93,7 +93,6 @@ class _CreateEdit(DataDictService):
         value1 = self.request.input.value1
         system2 = self.request.input.system2
         key2 = self.request.input.key2
-        value2 = self.request.input.value2
         
         item_ids = self._get_item_ids()
         hash_name = self._name(system1, key1, value1, system2, key2)

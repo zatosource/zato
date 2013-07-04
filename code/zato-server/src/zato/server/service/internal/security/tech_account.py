@@ -159,6 +159,7 @@ class ChangePassword(ChangePasswordBase):
     
     def handle(self):
         salt = uuid4().hex
+        
         def _auth(instance, password):
             instance.password = tech_account_password(password, salt)
             instance.salt = salt

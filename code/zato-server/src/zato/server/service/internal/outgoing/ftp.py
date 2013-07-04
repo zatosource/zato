@@ -182,7 +182,7 @@ class ChangePassword(ChangePasswordBase):
         response_elem = 'zato_outgoing_ftp_change_password_response'
     
     def handle(self):
-        with closing(self.odb.session()) as session:
-            def _auth(instance, password):
-                instance.password = password
-            self._handle(OutgoingFTP, _auth, OUTGOING.FTP_CHANGE_PASSWORD)
+        def _auth(instance, password):
+            instance.password = password
+            
+        self._handle(OutgoingFTP, _auth, OUTGOING.FTP_CHANGE_PASSWORD)

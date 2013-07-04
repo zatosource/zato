@@ -17,12 +17,8 @@ from gevent import sleep
 # gevent_inotifyx
 import gevent_inotifyx as inotifyx
 
-# Spring Python
-from springpython.context import ApplicationContextAware
-
 # Zato
-from zato.common.util import hot_deploy
-from zato.server.pickup import BasePickup, BasePickupEventProcessor
+from zato.server.pickup import BasePickupEventProcessor
 
 __all__ = ['Pickup', 'PickupEventProcessor']
 
@@ -41,7 +37,7 @@ class Pickup(object):
 
     def watch(self):
         fd = inotifyx.init()
-        wd = inotifyx.add_watch(fd, self.pickup_dir, inotifyx.constants['IN_CLOSE_WRITE'])
+        inotifyx.add_watch(fd, self.pickup_dir, inotifyx.constants['IN_CLOSE_WRITE'])
         
         while self.keep_running:
             try:
@@ -51,7 +47,7 @@ class Pickup(object):
 
                 sleep(0.1)
             except KeyboardInterrupt:
-                keep_running = False
+                self.keep_running = False
 
         os.close(fd)
 

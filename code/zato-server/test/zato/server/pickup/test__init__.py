@@ -19,9 +19,6 @@ from bunch import Bunch
 # Mock
 from mock import Mock
 
-# Nose
-from nose.tools import eq_
-
 # Zato
 from zato.common import util
 from zato.common.test import rand_int

@@ -110,7 +110,6 @@ class CreateTestCase(ServiceTestCase):
     def get_response_data(self):
         return Bunch({'id':rand_int(), 'name':rand_string()})        
     
-    
     def test_sio(self):
         
         self.assertEquals(self.sio.request_elem, 'zato_definition_jms_wmq_create_request')

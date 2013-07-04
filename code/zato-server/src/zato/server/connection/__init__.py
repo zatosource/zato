@@ -14,7 +14,7 @@ from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
 # stdlib
-import errno, os, sys, time
+import errno, os, time
 from datetime import datetime
 from subprocess import Popen
 from traceback import format_exc
@@ -229,4 +229,3 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     _env.update(zato_env)
     
     Popen(program, close_fds=True, shell=True, env=_env)
-    

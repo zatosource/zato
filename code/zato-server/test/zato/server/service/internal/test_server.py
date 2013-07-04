@@ -13,8 +13,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
-from zato.server.service import Boolean, Integer, UTC
+from zato.common.test import rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal.server import Edit, Delete, GetByID
 
 ################################################################################
@@ -33,7 +32,6 @@ class EditestCase(ServiceTestCase):
         return Bunch({'id':rand_int(), 'cluste_id':rand_int(), 'name':rand_string(), 'host':rand_string(),
                       'bind_host':rand_string(), 'bind_port':rand_string(), 'last_join_status':rand_string(),
                       'last_join_mod_status':rand_string(), 'up_status':rand_string(), 'up_mod_date':rand_string()})        
-    
     
     def test_sio(self):
         
@@ -66,7 +64,6 @@ class GetByIDTestCase(ServiceTestCase):
         return Bunch({'id':rand_int(), 'cluste_id':rand_int(), 'name':rand_string(), 'host':rand_string(),
                       'bind_host':rand_string(), 'bind_port':rand_string(), 'last_join_status':rand_string(),
                       'last_join_mod_status':rand_string(), 'up_status':rand_string(), 'up_mod_date':rand_string()})          
-    
     
     def test_sio(self):
         

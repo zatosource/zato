@@ -9,11 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import asyncore, logging, os, time
+import logging, os, time
 from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, responses
-from threading import currentThread, Thread
-from time import sleep
+from threading import Thread
 from traceback import format_exc
 from uuid import uuid4
 
@@ -37,7 +36,7 @@ from retools.lock import Lock
 from zato.broker.client import BrokerClient
 from zato.common import KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, ZMQ_CONNECTOR
-from zato.common.util import clear_locks, new_cid
+from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -262,8 +261,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
             
             if self.singleton_server.become_cluster_wide(
-                self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
-                server.id, server.cluster_id, True):
+                    self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
+                    server.id, server.cluster_id, True):
                 self.init_connectors()
                 
                 for(_, name, is_active, job_type, start_date, extra, service_name, _,
@@ -274,7 +273,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                             'job_type':job_type, 'start_date':start_date, 
                             'extra':extra, 'service':service_name, 'weeks':weeks, 
                             'days':days, 'hours':hours, 'minutes':minutes, 
-                            'seconds':seconds,  'repeats':repeats, 
+                            'seconds':seconds, 'repeats':repeats,
                             'cron_definition':cron_definition})
                         self.singleton_server.scheduler.create_edit('create', job_data)
                 

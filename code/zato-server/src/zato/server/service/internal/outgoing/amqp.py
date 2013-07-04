@@ -139,7 +139,6 @@ class Edit(_AMQPService):
             
             try:
                 item = session.query(OutgoingAMQP).filter_by(id=input.id).one()
-                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.def_id = input.def_id

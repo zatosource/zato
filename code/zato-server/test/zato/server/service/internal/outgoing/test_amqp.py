@@ -91,7 +91,7 @@ class EditTestCase(ServiceTestCase):
         self.sio = self.service_class.SimpleIO
     
     def get_request_data(self):
-        return {'id':rand_int(), 'cluster_id':rand_int(), 'name':rand_string(),  'is_active':rand_bool(),  'def_id':rand_int(),
+        return {'id':rand_int(), 'cluster_id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'def_id':rand_int(),
                 'delivery_mode':rand_string(),'priority':rand_int(), 'content_type':rand_string(), 'content_encoding':rand_string(),
                 'expiration':rand_int(), 'user_id':rand_string(), 'app_id':rand_string()}
     

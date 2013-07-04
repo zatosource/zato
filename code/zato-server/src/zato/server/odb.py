@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, threading
+import logging
 from contextlib import closing
 from datetime import datetime, timedelta
 from traceback import format_exc
@@ -29,8 +29,8 @@ from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
      DeploymentStatus, HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
     channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, \
-    def_jms_wmq, def_jms_wmq_list, basic_auth_list,  http_soap_list, http_soap_security_list, \
-    internal_channel_list, job_list,  out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
+    def_jms_wmq, def_jms_wmq_list, basic_auth_list, http_soap_list, http_soap_security_list, \
+    internal_channel_list, job_list, out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
     out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, wss_list
 from zato.common.util import current_host, security_def_type, TRACE1
 from zato.server.connection.sql import SessionWrapper
@@ -63,7 +63,7 @@ class ODBManager(SessionWrapper):
                    one()
             self.cluster = self.server.cluster
             return self.server
-        except Exception, e:
+        except Exception:
             msg = 'Could not find the server in the ODB, token:[{0}]'.format(
                 self.token)
             logger.error(msg)
@@ -75,8 +75,8 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             server = session.query(Server).\
-            filter(Server.token==token).\
-            one()
+                filter(Server.token==token).\
+                one()
 
             server.up_status = status
             server.up_mod_date = datetime.utcnow()
@@ -183,7 +183,7 @@ class ODBManager(SessionWrapper):
     def drop_deployed_services(self, server_id):
         """ Removes all the deployed services from a server.
         """
-        services = self._session.query(DeployedService).\
+        self._session.query(DeployedService).\
             filter(DeployedService.server_id==server_id).\
             delete()
         self._session.commit()

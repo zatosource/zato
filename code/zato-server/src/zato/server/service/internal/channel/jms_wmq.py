@@ -42,7 +42,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_create_request'
         response_elem = 'zato_channel_jms_wmq_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'service')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
 
@@ -103,7 +103,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_edit_request'
         response_elem = 'zato_channel_jms_wmq_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'service')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
 

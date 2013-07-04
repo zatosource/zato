@@ -177,7 +177,7 @@ def run_connector():
     repo_location = os.environ['ZATO_REPO_LOCATION']
     item_id = os.environ[ENV_ITEM_NAME]
     
-    connector = OutgoingConnector(repo_location, item_id)
+    OutgoingConnector(repo_location, item_id)
     
     logger = logging.getLogger(__name__)
     logger.debug('Starting ZeroMQ outgoing, repo_location [{0}], item_id [{1}]'.format(

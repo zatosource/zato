@@ -14,7 +14,6 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
-from zato.server.service import Integer
 from zato.server.service.internal.outgoing.zmq import GetList, Create, Edit, Delete
 
 ##############################################################################
@@ -84,7 +83,7 @@ class EditTestCase(ServiceTestCase):
         self.sio = self.service_class.SimpleIO
     
     def get_request_data(self):
-        return {'id':rand_int(), 'cluste_id':rand_string(), 'name':rand_string(), 'is_active':rand_bool(), 'address':rand_inr(), 'socket_type':rand_string()}
+        return {'id':rand_int(), 'cluster_id':rand_string(), 'name':rand_string(), 'is_active':rand_bool(), 'address':rand_int(), 'socket_type':rand_string()}
     
     def get_response_data(self):
         return Bunch({'id':rand_int(), 'name':self.name})

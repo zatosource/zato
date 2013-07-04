@@ -33,10 +33,8 @@ from paste.util.converters import asbool
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SCHEDULER_JOB_TYPE, \
-     SIMPLE_IO, ZatoException, zato_namespace, ZATO_NONE, ZATO_OK, zato_path
+from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
-from zato.common.odb.model import Base
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
@@ -732,6 +730,7 @@ class Service(object):
                         func()
                     except Exception, e:
                         self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
+
         def call_handle():
             try:
                 getattr(self, '{}_handle'.format(prefix))()

@@ -14,7 +14,6 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
-from zato.server.service import Boolean, Integer
 from zato.server.service.internal.security.basic_auth import GetList, Create, Edit, ChangePassword, Delete
 
 ################################################################################
@@ -86,7 +85,6 @@ class EditTestCase(ServiceTestCase):
         
     def get_response_data(self):
         return Bunch({'id':rand_int(), 'name':rand_string()})        
-    
     
     def test_sio(self):
         

@@ -9,18 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os
+import logging
 from time import sleep
-
-# Spring Python
-from springpython.context import ApplicationContextAware
 
 # watchdog
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 
 # Zato
-from zato.common.util import hot_deploy
 from zato.server.pickup import BasePickup, BasePickupEventProcessor
 
 logger = logging.getLogger(__name__)

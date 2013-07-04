@@ -25,7 +25,6 @@ from nose.tools import eq_
 from zato.common import SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_OK
 from zato.common.util import new_cid
 from zato.server.connection.http_soap import channel
-from zato.server.service import Service
 from zato.server.service.internal import AdminService, Service
 
 # Tokyo

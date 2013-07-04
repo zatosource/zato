@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import multikeysort, translation_name
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 
 class DataDictService(AdminService):
     def __init__(self, *args, **kwargs):

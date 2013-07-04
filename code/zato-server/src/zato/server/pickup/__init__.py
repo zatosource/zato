@@ -9,13 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os
+import logging, os
 
 # Spring Python
 from springpython.context import ApplicationContextAware
 
 # Zato
-from zato.common.util import hot_deploy
+from zato.common.util import hot_deploy, is_archive_file, is_python_file
+
+logger = logging.getLogger(__name__)
 
 class BasePickupEventProcessor(ApplicationContextAware):
     def __init__(self, pickup_dir=None, server=None, *args, **kwargs):
@@ -31,7 +33,7 @@ class BasePickupEventProcessor(ApplicationContextAware):
 
     def hot_deploy(self, file_name):
         return hot_deploy(
-            self.server.parallel_server, file_name, 
+            self.server.parallel_server, file_name,
             os.path.abspath(os.path.join(self.pickup_dir, file_name)),
             self.server.parallel_server.hot_deploy_config.delete_after_pick_up)
     

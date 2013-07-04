@@ -13,7 +13,6 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.odb.model import ConnDefAMQP
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal.definition.amqp import GetList, GetByID, Create, Edit, Delete, ChangePassword
 
@@ -60,7 +59,7 @@ class GetByIDTestCase(ServiceTestCase):
         return {'id':self.id, 'cluster_id':self.cluster_id}   
     
     def get_response_data(self):
-        return Bunch ({'id':rand_int(), 'name':self.name, 'host':rand_string(), 'port':rand_int(), 
+        return Bunch({'id':rand_int(), 'name':self.name, 'host':rand_string(), 'port':rand_int(), 
              'vhost':rand_string(),'username':rand_string(),
              'frame_max':rand_int(),'heartbeat':rand_int()})
     

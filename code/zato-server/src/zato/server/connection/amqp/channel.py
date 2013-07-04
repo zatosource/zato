@@ -118,13 +118,6 @@ class ConsumingConnector(BaseAMQPConnector):
             if self.logger.isEnabledFor(TRACE1):
                 self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
-        
-    def _stop_amqp_connection(self):
-        """ Stops the given AMQP consumer. The method must be called from a method 
-        that holds onto all AMQP-related RLocks.
-        """
-        if self.channel_amqp.get('consumer'):
-            self.channel_amqp.consumer.close()
                             
     def _recreate_consumer(self):
         """ (Re-)creates an AMQP consumer and updates the related attributes so 
@@ -210,7 +203,7 @@ def run_connector():
     def_id = os.environ['ZATO_CONNECTOR_DEF_ID']
     item_id = os.environ[ENV_ITEM_NAME]
     
-    connector = ConsumingConnector(repo_location, def_id, item_id)
+    ConsumingConnector(repo_location, def_id, item_id)
     
     logger = logging.getLogger(__name__)
     logger.debug('Starting AMQP consuming connector, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(

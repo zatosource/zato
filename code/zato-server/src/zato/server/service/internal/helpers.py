@@ -8,12 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from logging import INFO
-
 # Zato
 from zato.server.service import Service
-from zato.server.service.internal import AdminService
 
 class Echo(Service):
     """ Copies request over to response.
@@ -29,4 +25,3 @@ class InputLogger(Service):
     
     def finalize_handle(self):
         self.log_input()
-
