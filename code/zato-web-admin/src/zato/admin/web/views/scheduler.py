@@ -30,16 +30,13 @@ from django.template.response import TemplateResponse
 # pytz
 from pytz import UTC
 
-# Validate
-from validate import is_boolean
-
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, Delete as _Delete
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
-from zato.common import SCHEDULER_JOB_TYPE, zato_path, ZatoException
+from zato.common import SCHEDULER_JOB_TYPE, ZatoException
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint, TRACE1
 
@@ -308,8 +305,8 @@ def index(req):
                     elif job_type == SCHEDULER_JOB_TYPE.INTERVAL_BASED:
                         definition_text = _interval_based_job_def(req.zato.user_profile,
                             _get_start_date(job_elem.start_date),
-                                job_elem.repeats, job_elem.weeks, job_elem.days,
-                                job_elem.hours, job_elem.minutes, job_elem.seconds)
+                            job_elem.repeats, job_elem.weeks, job_elem.days,
+                            job_elem.hours, job_elem.minutes, job_elem.seconds)
                         
                         weeks = job_elem.weeks or ''
                         days = job_elem.days or ''
@@ -324,7 +321,7 @@ def index(req):
                         
                     elif job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
                         cron_definition = job_elem.cron_definition or ''
-                        definition_text=_cron_style_job_def(req.zato.user_profile, start_date,  cron_definition)
+                        definition_text=_cron_style_job_def(req.zato.user_profile, start_date, cron_definition)
                         
                         cs_job = CronStyleJob(None, None, cron_definition)
                         job.cron_style = cs_job

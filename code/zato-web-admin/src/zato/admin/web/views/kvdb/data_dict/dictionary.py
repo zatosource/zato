@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import logging
-
 # Zato
 from zato.admin.web.forms.kvdb.data_dict.dictionary import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
@@ -37,6 +34,7 @@ class Index(_Index):
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
+
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('system', 'key', 'value')
         output_required = ('id',)

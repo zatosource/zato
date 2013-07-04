@@ -14,9 +14,6 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# Validate
-from validate import is_boolean
-
 # anyjson
 from anyjson import dumps
 
@@ -25,9 +22,8 @@ from zato.admin.settings import engine_friendly_name
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import Delete as _Delete, method_allowed
 from zato.common.odb.model import SQLConnectionPool
-from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +67,7 @@ def index(req):
     if req.zato.cluster_id and req.method == 'GET':
         for item in req.zato.client.invoke('zato.outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id}):
 
-            _item =  SQLConnectionPool()
+            _item = SQLConnectionPool()
             
             for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size'):
                 value = getattr(item, name)
@@ -116,7 +112,7 @@ def edit(req):
     try:
         request = _get_edit_create_message(req.POST, 'edit-')
         engine = request['engine']
-        response = req.zato.client.invoke('zato.outgoing.sql.edit', request)
+        req.zato.client.invoke('zato.outgoing.sql.edit', request)
 
         return _edit_create_response('updated', req.POST['id'], req.POST['edit-name'], engine, req.zato.cluster.id)
 

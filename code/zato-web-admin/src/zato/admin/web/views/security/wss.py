@@ -17,14 +17,11 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# Validate
-from validate import is_boolean
-
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.wss import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed
-from zato.common import zato_path, ZATO_WSS_PASSWORD_TYPES
+from zato.common import ZATO_WSS_PASSWORD_TYPES
 from zato.common.odb.model import WSSDefinition
 
 logger = logging.getLogger(__name__)

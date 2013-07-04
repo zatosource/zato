@@ -38,6 +38,7 @@ class Index(_Index):
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
+    
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'address', 'socket_type', 'sub_key', 'service', 'data_format')
         output_required = ('id', 'name')

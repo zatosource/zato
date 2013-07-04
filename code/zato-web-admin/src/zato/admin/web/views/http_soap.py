@@ -16,9 +16,6 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# Validate
-from validate import is_boolean
-
 # anyjson
 from anyjson import dumps
 
@@ -26,7 +23,7 @@ from anyjson import dumps
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import method_allowed
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, SECURITY_TYPES, \
-     SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, URL_TYPE, ZatoException, ZATO_NONE, zato_path
+     SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 

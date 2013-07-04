@@ -20,10 +20,8 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.web.forms.channel.jms_wmq import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, get_definition_list, \
-     Index as _Index, method_allowed
+from zato.admin.web.views import Delete as _Delete, get_definition_list, Index as _Index, method_allowed
 from zato.common.odb.model import ChannelWMQ
-from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
         
@@ -89,7 +87,7 @@ def create(req):
 @method_allowed('POST')
 def edit(req):
     try:
-        response = req.zato.client.invoke('zato.channel.jms-wmq.edit', _get_edit_create_message(req.POST, 'edit-'))
+        req.zato.client.invoke('zato.channel.jms-wmq.edit', _get_edit_create_message(req.POST, 'edit-'))
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'], req.POST['cluster_id'], req.POST['edit-def_id'])
     except Exception, e:
         msg = 'Could not update the JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))

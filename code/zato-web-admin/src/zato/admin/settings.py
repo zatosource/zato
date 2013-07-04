@@ -15,15 +15,15 @@ from sqlalchemy import create_engine
 
 # Zato
 from zato.common.odb import engine_def
-from zato.common.util import decrypt, TRACE1
-from zato_settings import *
+from zato.common.util import TRACE1
+from zato_settings import * # noqa
 
 if 'DEBUG' not in globals():
     DEBUG = os.environ.get('ZATO_WEB_ADMIN_DEBUG', False)
 
 if DEBUG:
     try:
-        from debug_settings import *
+        from debug_settings import * # noqa
     except ImportError:
         pass
 

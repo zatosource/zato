@@ -43,7 +43,7 @@ from pytz import timezone, utc
 from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.stats import MaintenanceForm, NForm, SettingsForm
 from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
-from zato.common import DEFAULT_STATS_SETTINGS, StatsElem, zato_path
+from zato.common import DEFAULT_STATS_SETTINGS, StatsElem
 from zato.common.util import from_local_to_utc, make_repr, now, utcnow
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ class DateInfo(object):
 # A mapping a job type, its name and the execution interval unit
 job_mappings = {
     JobAttrFormMapping('zato.stats.process-raw-times', 
-        [JobAttrForm('raw_times', 'seconds'),  JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
+        [JobAttrForm('raw_times', 'seconds'), JobAttrForm('raw_times_batch', {'extra':'max_batch_size'})]),
     JobAttrFormMapping('zato.stats.aggregate-by-minute', [JobAttrForm('per_minute_aggr', 'seconds')]),
     }
 

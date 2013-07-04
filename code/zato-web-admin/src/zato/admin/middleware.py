@@ -105,7 +105,7 @@ class ZatoMiddleware(object):
         if not req.user.is_anonymous():
             try:
                 user_profile = UserProfile.objects.get(user=req.user)
-            except UserProfile.DoesNotExist, e:
+            except UserProfile.DoesNotExist:
                 user_profile = UserProfile(user=req.user)
                 user_profile.save()
             req.zato.user_profile = user_profile
