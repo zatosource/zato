@@ -35,6 +35,7 @@ class ChangePasswordForm(forms.Form):
 
 class DataFormatForm(forms.Form):
     data_format = forms.ChoiceField(widget=forms.Select())
+    
     def __init__(self, *args, **kwargs):
         super(DataFormatForm, self).__init__(*args, **kwargs)
         self.fields['data_format'].choices = []
@@ -44,4 +45,4 @@ class DataFormatForm(forms.Form):
                 self.fields['data_format'].choices.append([name.lower(), name])
                 
 class UploadForm(forms.Form):
-    file  = forms.FileField(widget=forms.FileInput(attrs={'size':'70'}))
+    file = forms.FileField(widget=forms.FileInput(attrs={'size':'70'}))

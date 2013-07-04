@@ -32,5 +32,3 @@ class CreateForm(forms.Form):
     
 class EditForm(CreateForm):
     pass
-
-    

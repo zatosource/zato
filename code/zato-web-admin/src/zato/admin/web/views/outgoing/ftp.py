@@ -40,6 +40,7 @@ class Index(_Index):
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
+
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
         output_required = ('id', 'name')

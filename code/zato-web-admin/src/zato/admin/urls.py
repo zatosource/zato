@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
-from django.conf.urls.defaults import *
+from django.conf.urls.defaults import * # noqa
 from django.contrib.auth.views import login
 
 # Zato
@@ -43,7 +43,6 @@ urlpatterns = patterns('',
 
     # Clusters
     url(r'^zato/cluster/$', cluster.index, name='cluster'),
-    url(r'^zato/cluster/create/$', cluster.create, name='cluster-create'),
     url(r'^zato/cluster/edit/$', cluster.edit, name='cluster-edit'),
     url(r'^zato/cluster/delete/(?P<id>.*)/$', cluster.delete, name='cluster-delete'),
     url(r'^zato/cluster/servers-state/(?P<cluster_id>.*)$', cluster.get_servers_state, name='cluster-servers-state'),

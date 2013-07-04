@@ -15,14 +15,10 @@ from traceback import format_exc
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 
-# Validate
-from validate import is_boolean
-
 # Zato
-from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.tech_account import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Index as _Index, method_allowed
 from zato.common.odb.model import TechnicalAccount
 
 logger = logging.getLogger(__name__)

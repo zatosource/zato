@@ -20,7 +20,6 @@ except ImportError:
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
 # Zato
@@ -40,7 +39,7 @@ def _haproxy_alive(client):
     """
     haproxy_alive = {}
     try:
-        is_alive = client.is_haproxy_alive()
+        client.is_haproxy_alive()
     except Exception, e:
         haproxy_alive["status"] = False
         haproxy_alive["error"] = format_exc(e)
@@ -58,7 +57,7 @@ def _haproxy_stat_config(client=None, lb_config=None):
     # Stats URI is optional
     try:
         stats_uri = lb_config["defaults"]["stats_uri"]
-    except KeyError, e:
+    except KeyError:
         return None, None
     else:
         stats_port = lb_config["frontend"]["front_http_plain"]["bind"]["port"]
@@ -169,9 +168,9 @@ def manage(req, cluster_id):
                 if not name in backends:
                     backends[name] = {}
                 backends[name][backend_type] = {}
-                backends[name][backend_type]['address']  = lb_config['backend'][backend_type][name]['address']
-                backends[name][backend_type]['port']  = lb_config['backend'][backend_type][name]['port']
-                backends[name][backend_type]['extra']  = lb_config['backend'][backend_type][name]['extra']
+                backends[name][backend_type]['address'] = lb_config['backend'][backend_type][name]['address']
+                backends[name][backend_type]['port'] = lb_config['backend'][backend_type][name]['port']
+                backends[name][backend_type]['extra'] = lb_config['backend'][backend_type][name]['extra']
 
     backends = OrderedDict(sorted(backends.items(), key=lambda t: t[0]))
     form = ManageLoadBalancerForm(initial=form_data)

@@ -32,4 +32,3 @@ class CreateForm(DataFormatForm):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    

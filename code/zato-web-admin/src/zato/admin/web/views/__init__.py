@@ -26,7 +26,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.common import ZatoException, zato_path
+from zato.common import ZatoException
 
 logger = logging.getLogger(__name__)
 
@@ -213,9 +213,7 @@ class Index(_BaseView):
             self.item = None
     
             return_data = {'cluster_id':self.cluster_id}
-            
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
-            zato_path_needed = 'item_list.item' if output_repeated else 'item'
             
             if self.service_name and self.cluster_id:
                 response = self.invoke_admin_service()
@@ -261,7 +259,6 @@ class CreateEdit(_BaseView):
                 'cluster_id': self.cluster_id
             }
             input_dict.update(initial_input_dict)
-    
             
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 input_dict[name] = self.req.POST.get(self.form_prefix + name)

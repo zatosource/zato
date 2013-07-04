@@ -45,7 +45,7 @@ from validate import is_boolean
 from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import SIMPLE_IO, SourceInfo, ZATO_NONE, zato_path
+from zato.common import SourceInfo, ZATO_NONE
 from zato.common.odb.model import Service
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class SlowResponse(object):
         self.req_ts = req_ts
         self.resp_ts = resp_ts
         self.proc_time = proc_time
-        self.req  = req
+        self.req = req
         self.resp = resp
         self.req_html = req_html 
         self.resp_html = resp_html
@@ -77,7 +77,7 @@ def known_data_format(data):
     try:
         etree.fromstring(data)
         data_format = 'xml'
-    except etree.XMLSyntaxError, e:
+    except etree.XMLSyntaxError:
         try:
             loads(data)
             data_format = 'json'
@@ -203,8 +203,8 @@ def overview(req, service_name):
             service = Service()
             
             for name in('id', 'name', 'is_active', 'impl_name', 'is_internal', 
-                'usage', 'time_last', 'time_min_all_time', 'time_max_all_time', 
-                'time_mean_all_time'):
+                  'usage', 'time_last', 'time_min_all_time', 'time_max_all_time', 
+                  'time_mean_all_time'):
 
                 value = getattr(response.data, name)
                 if name in('is_active', 'is_internal'):

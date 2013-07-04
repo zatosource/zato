@@ -21,7 +21,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.kvdb.data_dict.translation import CreateForm, EditForm, TranslateForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import ZATO_NONE, zato_path
+from zato.common import ZATO_NONE
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class Index(_Index):
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
+    
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)

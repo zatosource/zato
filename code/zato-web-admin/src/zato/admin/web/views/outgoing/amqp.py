@@ -24,7 +24,6 @@ from zato.admin.web.forms.outgoing.amqp import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, \
      Index as _Index, method_allowed
 from zato.common.odb.model import OutgoingAMQP
-from zato.common import zato_path
 
 logger = logging.getLogger(__name__)
         
@@ -104,7 +103,7 @@ def create(req):
 def edit(req):
     try:
         request = _get_edit_create_message(req.POST, 'edit-')
-        response = req.zato.client.invoke('zato.outgoing.amqp.edit', request)
+        req.zato.client.invoke('zato.outgoing.amqp.edit', request)
         delivery_mode_text = delivery_friendly_name[int(req.POST['edit-delivery_mode'])]
 
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],

@@ -180,10 +180,6 @@ def index(req):
     return TemplateResponse(req, 'zato/cluster/index.html', return_data)
 
 @method_allowed('POST')
-def create(req):
-    return _create_edit(req, 'created', Cluster(), CreateClusterForm)
-
-@method_allowed('POST')
 def edit(req):
     return _create_edit(req, 'updated', 
         req.zato.odb.query(Cluster).filter_by(id=req.POST['id']).one(), EditClusterForm, 'edit')
