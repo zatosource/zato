@@ -67,7 +67,7 @@ class ServiceStore(InitializingObject):
             hook()
         except Exception:
             msg = 'Error while invoking [%s] on service [%s] ' \
-                ' e:[%s]' % (hook_name, service_name, format_exc())
+                ' e:[%s]' % (hook_name, object_, format_exc())
             logger.error(msg)
 
     def new_instance(self, class_name):
@@ -242,7 +242,6 @@ class ServiceStore(InitializingObject):
                         
                         si = self._get_source_code_info(mod)
                         
-                        last_mod = datetime.fromtimestamp(getmtime(mod.__file__))
                         service_id, is_active, slow_threshold = self.odb.add_service(
                             name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
                         
