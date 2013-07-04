@@ -255,7 +255,7 @@ def run_connector():
     def_id = os.environ['ZATO_CONNECTOR_DEF_ID']
     item_id = os.environ[ENV_ITEM_NAME]
     
-    connector = OutgoingConnector(repo_location, def_id, item_id)
+    OutgoingConnector(repo_location, def_id, item_id)
     
     logger = logging.getLogger(__name__)
     logger.debug('Starting JMS WebSphere MQ outgoing, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(

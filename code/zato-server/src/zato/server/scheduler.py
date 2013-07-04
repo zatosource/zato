@@ -120,7 +120,7 @@ class Scheduler(object):
         max_runs = job_data.repeats if job_data.get('repeats') else None
         
         self._sched.add_interval_job(self._on_job_execution, 
-            weeks, days, hours, minutes,  seconds, start_date, 
+            weeks, days, hours, minutes, seconds, start_date, 
             [job_data.name, job_data.service, job_data.extra, broker_msg_type,
                SCHEDULER_JOB_TYPE.INTERVAL_BASED], name=job_data.name, max_runs=max_runs)
         
@@ -182,27 +182,3 @@ class Scheduler(object):
                 break
         else:
             logger.warn('Job [{0}] is not scheduled, could not execute it'.format(job_data.name))
-        
-if __name__ == '__main__':
-    from bunch import Bunch
-    job_data1 = Bunch(
-        {"name": "zzz", 
-         "service": "zato.server.service.internal.Ping", 
-         "extra": "aabbcc", 
-         "job_type": 
-         "cron_style", 
-         "cron_definition": "* * * * *", 
-         "is_active": True, 
-         "action": "1000", 
-         "start_date": "2011-10-14 22:36:00"}
-    )
-    
-    job_data2 = Bunch({'name':'zzz'})
-    
-    s = Scheduler()
-    s.create(job_data1)
-    #s.delete(job_data2)
-    s.execute(job_data2)
-    
-    import time
-    time.sleep(100)

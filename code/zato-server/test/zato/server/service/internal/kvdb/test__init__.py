@@ -43,4 +43,3 @@ class ExecuteCommandTestCase(ServiceTestCase):
         
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.kvdb.remote-command.execute')
-

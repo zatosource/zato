@@ -47,7 +47,8 @@ class _CreateEdit(DataDictService):
             if match and match.group() == name:
                 continue
             else:
-                msg = "System and key may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(name, self.NAME_PATTERN)
+                msg = "System and key may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(
+                    name, self.NAME_PATTERN)
                 raise ZatoException(self.cid, msg)
         
         for item in self._get_dict_items():
@@ -194,4 +195,3 @@ class GetLastID(AdminService):
         
     def handle(self):
         self.response.payload.value = self.server.kvdb.conn.get(KVDB.DICTIONARY_ITEM_ID) or ''
-

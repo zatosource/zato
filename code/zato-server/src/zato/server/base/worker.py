@@ -9,11 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, socket, traceback
+import logging, os
 from copy import deepcopy
 from errno import ENOENT
-from thread import start_new_thread
-from threading import local, RLock
+from threading import RLock
 from time import sleep
 from traceback import format_exc
 from uuid import uuid4
@@ -35,8 +34,8 @@ from paste.util.multidict import MultiDict
 
 # Zato
 from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import code_to_name, MESSAGE_TYPE, STATS
-from zato.common.util import new_cid, pairwise, payload_from_request, security_def_type, TRACE1
+from zato.common.broker_message import code_to_name, STATS
+from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import PlainHTTPHandler, RequestDispatcher, SOAPHandler

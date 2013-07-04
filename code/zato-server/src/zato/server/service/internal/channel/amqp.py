@@ -140,7 +140,6 @@ class Edit(_AMQPService):
             
             try:
                 item = session.query(ChannelAMQP).filter_by(id=input.id).one()
-                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.queue = input.queue

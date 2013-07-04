@@ -82,4 +82,3 @@ class GetByNameTestCase(ServiceTestCase):
         eq_(response.impl_name, expected_impl_name)
         eq_(response.is_internal, expected_is_internal)
         eq_(response.usage, 0)
-

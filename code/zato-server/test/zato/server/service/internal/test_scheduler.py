@@ -13,8 +13,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
-from zato.server.service import Boolean, Integer, UTC
+from zato.common.test import rand_bool, rand_datetime, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal.scheduler import GetList, GetByName, Create, Edit, Delete, Execute
 
 ################################################################################
@@ -96,8 +95,7 @@ class CreateTestCase(ServiceTestCase):
                 )
         
     def get_response_data(self):
-        return Bunch({'id':rand_int(), 'name':rand_string(), 'cron_definition':rand_string() })        
-    
+        return Bunch({'id':rand_int(), 'name':rand_string(), 'cron_definition':rand_string()})        
     
     def test_sio(self):
         
@@ -124,14 +122,13 @@ class EditTestCase(ServiceTestCase):
     
     def get_request_data(self):
         return ({'cluster_id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'job_type':rand_string(),
-                 'service':rabd_string(), 'start_date':rand_datetime(), 'id':rand_int(), 'extra':rand_string(),
+                 'service':rand_string(), 'start_date':rand_datetime(), 'id':rand_int(), 'extra':rand_string(),
                  'weeks':rand_int(), 'days':rand_int(), 'hours':rand_int(), 'minutes':rand_int(),
                  'seconds':rand_int(), 'repeats':rand_int(), 'cron_definition':rand_string()}
                 )
         
     def get_response_data(self):
-        return Bunch({'id':rand_int(), 'name':rand_string(), 'cron_definition':rand_string() })        
-    
+        return Bunch({'id':rand_int(), 'name':rand_string(), 'cron_definition':rand_string()})
     
     def test_sio(self):
         
@@ -200,4 +197,3 @@ class ExecuteTestCase(ServiceTestCase):
         
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.scheduler.job.execute')
-

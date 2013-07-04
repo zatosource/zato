@@ -13,7 +13,6 @@ import imp, inspect, logging, os
 from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
-from os.path import getmtime
 from traceback import format_exc
 from uuid import uuid4
 
@@ -28,7 +27,8 @@ try:
     from yaml import CDumper  # Looks awkward but
     Dumper = CDumper          # it's to make import checkers happy
 except ImportError:
-    from yaml import Dumper
+    from yaml import Dumper   # ditto
+    Dumper = Dumper
     
 # Spring Python
 from springpython.context import InitializingObject

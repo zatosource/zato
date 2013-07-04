@@ -62,12 +62,12 @@ class SingletonServer(BrokerMessageReceiver):
         processes.
         """
         base_job_data = Bunch({
-                'weeks': None, 'days': None, 
-                'hours': None, 'minutes': None, 
-                'seconds': connector_server_keep_alive_job_time, 
-                'repeats': None, 
-                'extra': 'server_id:{};cluster_id:{}'.format(server_id, cluster_id),
-                })
+            'weeks': None, 'days': None, 
+            'hours': None, 'minutes': None, 
+            'seconds': connector_server_keep_alive_job_time, 
+            'repeats': None, 
+            'extra': 'server_id:{};cluster_id:{}'.format(server_id, cluster_id),
+        })
         job_data = None
         
         if self.parallel_server.odb.become_cluster_wide(connector_server_grace_time):
@@ -116,4 +116,3 @@ class SingletonServer(BrokerMessageReceiver):
         
     def on_broker_msg_SINGLETON_CLOSE(self, msg, *ignored_args):
         self.broker_client.close()
-        

@@ -206,4 +206,3 @@ class ZatoContext(PythonConfig):
              'service':'zato.stats.summary.create-summary-by-year'},
 
         ]
-

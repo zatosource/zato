@@ -13,7 +13,6 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.odb.model import ChannelWMQ, Service
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal.channel.jms_wmq import Create, Edit, Delete, GetList
 
@@ -94,7 +93,7 @@ class EditTestCase(ServiceTestCase):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_channel_jms_wmq_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_jms_wmq_edit_response')
-        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue',  'service'))
+        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'service'))
         self.assertEquals(self.sio.input_optional, ('data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)

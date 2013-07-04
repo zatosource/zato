@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime
 from random import choice, randint, random
 from unittest import TestCase
 from uuid import uuid4
@@ -31,6 +32,9 @@ from zato.common.util import new_cid
 
 def rand_bool():
     return choice((True, False))
+
+def rand_datetime():
+    return datetime.utcnow().isoformat() # Random in the sense of not repeating
 
 def rand_int(start=1, stop=100):
     return randint(start, stop)

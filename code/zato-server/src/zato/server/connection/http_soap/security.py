@@ -97,9 +97,8 @@ class Security(object):
         
         for header in zato_headers:
             if not headers.get(header, None):
-                error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, "
-                      "headers:[{}]]").\
-                        format(cid, header, path_info, headers)
+                error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, headers:[{}]]").\
+                    format(cid, header, path_info, headers)
                 logger.error(error_msg)
                 raise Unauthorized(cid, error_msg, 'zato-tech-acc')
 

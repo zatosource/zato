@@ -41,8 +41,8 @@ class _HTTPSOAPService(object):
         if security_id:
             
             security = session.query(SecurityBase.name, SecurityBase.sec_type).\
-            filter(SecurityBase.id==security_id).\
-            one()
+                filter(SecurityBase.id==security_id).\
+                one()
             
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.                

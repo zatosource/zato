@@ -23,7 +23,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import CHANNEL, SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
-from zato.common.util import payload_from_request, security_def_type, TRACE1
+from zato.common.util import security_def_type, TRACE1
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
      NotFound, Unauthorized
 from zato.server.service.internal import AdminService
@@ -34,7 +34,7 @@ _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses
 _status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 _status_unauthorized = b'{} {}'.format(UNAUTHORIZED, responses[UNAUTHORIZED])
 
-soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>"""
+soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
 
 zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
   <soap:Body>{data}</soap:Body>
@@ -152,7 +152,6 @@ class RequestDispatcher(object):
                 if isinstance(e, ClientHTTPError):
                     response = e.msg
                     status_code = e.status
-                    reason = e.reason
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
@@ -236,7 +235,7 @@ class _BaseMessageHandler(object):
             logger.log(TRACE1, '[{0}] service_store.services:[{1}]'.format(cid, buff.getvalue()))
             buff.close()
             
-        service_data = self.server.service_store.service_data(service_info.impl_name)
+        self.server.service_store.service_data(service_info.impl_name) # TODO - check if this call is needed at all?
         
         return service_info
     

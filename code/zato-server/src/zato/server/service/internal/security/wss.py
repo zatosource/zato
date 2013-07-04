@@ -66,9 +66,10 @@ class Create(AdminService):
             password = uuid4().hex
     
             try:
-                wss = WSSDefinition(None, input.name, input.is_active, input.username, 
-                    password, input.password_type, input.reject_empty_nonce_creat, 
-                    input.reject_stale_tokens, input.reject_expiry_limit, input.nonce_freshness_time, 
+                wss = WSSDefinition(
+                    None, input.name, input.is_active, input.username,
+                    password, input.password_type, input.reject_empty_nonce_creat,
+                    input.reject_stale_tokens, input.reject_expiry_limit, input.nonce_freshness_time,
                     cluster)
                 
                 session.add(wss)
@@ -79,7 +80,7 @@ class Create(AdminService):
                 self.logger.error(msg)
                 session.rollback()
                 
-                raise 
+                raise
             else:
                 input.action = SECURITY.WSS_CREATE
                 input.password = password
@@ -95,7 +96,8 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_wss_edit_request'
         response_elem = 'zato_security_wss_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 
+        input_required = (
+            'id', 'cluster_id', 'name', 'is_active', 'username',
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             Integer('reject_expiry_limit'), Integer('nonce_freshness_time'))
         output_required = ('id', 'name')
@@ -133,7 +135,7 @@ class Edit(AdminService):
                 self.logger.error(msg)
                 session.rollback()
                 
-                raise 
+                raise
             else:
                 input.action = SECURITY.WSS_EDIT
                 input.old_name = old_name

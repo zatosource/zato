@@ -30,4 +30,3 @@ def store(kvdb, name, **data):
         
     kvdb.conn.lpush(key, data)
     kvdb.conn.ltrim(key, 0, 99) # TODO: This should be configurable
-

@@ -28,7 +28,7 @@ from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
      DeployedService, HTTPSOAP, Server, Service
-from zato.common.odb.query import service, service_list
+from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO
@@ -221,9 +221,9 @@ class GetChannelList(AdminService):
                 filter(class_.service_id == self.request.input.id)
             
             if self.request.input.channel_type == 'soap':
-                q = q.filter(class_.soap_version != None)
+                q = q.filter(class_.soap_version != None) # noqa
             elif self.request.input.channel_type == 'plain_http':
-                q = q.filter(class_.soap_version == None)
+                q = q.filter(class_.soap_version == None) # noqa
             
             self.response.payload[:] = q.all()
             
@@ -478,7 +478,7 @@ class UploadPackage(AdminService):
             tf.write(self.request.input.payload.decode('base64'))
             tf.flush()
 
-            success = hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
+            hot_deploy(self.server, self.request.input.payload_name, tf.name, False)
             
 class _SlowResponseService(AdminService):
     def get_data(self):
@@ -498,7 +498,7 @@ class _SlowResponseService(AdminService):
                 
             if cid_needed and cid_needed == item['cid']:
                 for name in('req', 'resp'):
-                    elem[name] = item.get(name, '')#.encode('base64')
+                    elem[name] = item.get(name, '')
                     
             data.append(elem)
 
@@ -537,4 +537,3 @@ class GetSlowResponse(_SlowResponseService):
         data = self.get_data()
         if data:
             self.response.payload = data[0]
-

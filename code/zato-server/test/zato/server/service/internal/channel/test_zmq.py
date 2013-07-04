@@ -13,7 +13,6 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.odb.model import ChannelZMQ, Service
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal.channel.zmq import Create, Edit, Delete, GetList
 

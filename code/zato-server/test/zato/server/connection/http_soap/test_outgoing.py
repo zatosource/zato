@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from unittest import TestCase
-from uuid import uuid4
 
 # bunch
 from bunch import Bunch
@@ -58,7 +57,6 @@ class PingTestCase(TestCase):
         
         ping_method = requests_module.session_obj.request_args[0]
         eq_(expected_ping_method, ping_method)
-
 
     def test_pool_size(self):
         """ https://github.com/zatosource/zato/issues/77 (outconn HTTP/SOAP pool size)

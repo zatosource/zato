@@ -32,7 +32,6 @@ from scipy import stats as sp_stats
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
 from zato.server.service import Integer, UTC
-from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.stats import BaseAggregatingService, STATS_KEYS, StatsReturningService, \
     stop_excluding_rrset
 
@@ -77,7 +76,7 @@ class SummarySlice(object):
     def __repr__(self):
         return '<{} at {} slice_type:[{}], start:[{}], stop:[{}], total_seconds:[{}]>'.format(
             self.__class__.__name__, hex(id(self)), self.slice_type, self.start.isoformat(), 
-                self.stop.isoformat(), self.total_seconds)
+            self.stop.isoformat(), self.total_seconds)
     
 class SliceStats(object):
     """ A wrapper for combining statistics and how many seconds they represent.
@@ -517,7 +516,7 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         # that start lives farther in the past.
         if by_mins and delta.total_minutes < self.MINIMUM_DIFFERENCE:
             raise ValueError(
-                'stop and start must be at least [{}] minutes apart, start must be '\
+                'stop and start must be at least [{}] minutes apart, start must be '
                 'farther in past; start:[{}], stop:[{}]'.format(
                    self.MINIMUM_DIFFERENCE, orig_start, orig_stop))
                    
@@ -548,24 +547,8 @@ class GetSummaryByRange(StatsReturningService, BaseSummarizingService):
         """
         all_services_stats = Bunch({'usage':0, 'time':0, 'mean':0})
         total_seconds = 0.0
-        
         merged_stats_elems = {}
-        
-        merged_template = {
-         'usage_perc_all_services': 0.0, 
-         'all_services_time': 0, 
-         'time_perc_all_services': 0.0, 
-         'min_resp_time': 0.0, 
-         'service_name': None, 
-         'max_resp_time': 0.0, 
-         'rate': 0.0, 
-         'mean_all_services': 0.0, 
-         'all_services_usage': 0, 
-         'time': 0, 
-         'usage': 0, 
-         'mean': 0.0
-        }
-        
+
         for slice in slices:
 
             seen_repeated_stats = False

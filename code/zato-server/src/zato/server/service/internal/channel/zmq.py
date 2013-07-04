@@ -127,7 +127,6 @@ class Edit(AdminService):
             
             try:
                 item = session.query(ChannelZMQ).filter_by(id=input.id).one()
-                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.address = input.address

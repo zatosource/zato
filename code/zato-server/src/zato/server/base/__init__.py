@@ -13,9 +13,8 @@ import logging
 from traceback import format_exc
 
 # Zato
-from zato.broker.client import BrokerClient
 from zato.common import ZATO_NONE
-from zato.common.broker_message import code_to_name, TOPICS
+from zato.common.broker_message import code_to_name
 from zato.common.util import new_cid
 
 logger = logging.getLogger(__name__)
