@@ -16,7 +16,7 @@ from uuid import uuid4
 from anyjson import dumps, loads
 
 # lxml
-from lxml import etree, objectify
+from lxml import etree
 
 # nose
 from nose.tools import eq_
@@ -26,7 +26,7 @@ from zato.common import common_namespaces, ZATO_OK
 from zato.common.test import rand_bool, rand_int, rand_object, rand_string
 from zato.common.util import new_cid
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, _Client, JSONClient, JSONSIOClient, \
-     RawDataClient, _Response, SOAPClient, SOAPSIOClient,  _StructuredResponse, XMLClient
+     RawDataClient, _Response, SOAPClient, SOAPSIOClient, _StructuredResponse, XMLClient
 
 # ##############################################################################
 
@@ -63,7 +63,8 @@ class _Base(TestCase):
     def get_client(self, response):
         self.session.response = response
         
-        return self.client_class(self.url, self.auth, self.path, self.session,
+        return self.client_class(
+            self.url, self.auth, self.path, self.session,
             self.to_bunch, self.max_response_repr, self.max_cid_repr)
 
 # ##############################################################################

@@ -27,8 +27,8 @@ from lxml import objectify
 import requests
 
 # Zato
-from zato.common import BROKER, soap_doc, soap_body_path, soap_data_path, soap_data_xpath, \
-     soap_fault_xpath, ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, \
+from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpath, \
+     ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, \
      ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
 from zato.common.log_message import CID_LENGTH
 
@@ -138,8 +138,6 @@ class SOAPResponse(XMLResponse):
     path, xpath = soap_data_path, soap_data_xpath
     
     def init(self):
-        #self.ok ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
-        
         if self.set_data():
             self.set_has_data()
     
@@ -188,7 +186,7 @@ class JSONSIOResponse(_Response):
                 if self.to_bunch:
                     self.data = bunchify(self.data)
                     
-    def set_data(self, payload, _ignored):  
+    def set_data(self, payload, _ignored):
         self.data = payload
         return True
     
@@ -232,7 +230,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
                 self.inner_service_response = payload['response'].decode('base64')
                 try:
                     data = loads(self.inner_service_response)
-                except ValueError, e:
+                except ValueError:
                     # Not a JSON response
                     self.data = self.inner_service_response
                 else:
@@ -248,13 +246,13 @@ class ServiceInvokeResponse(JSONSIOResponse):
             else:
                 try:
                     data = loads(response)
-                except ValueError, e:
+                except ValueError:
                     # Not a JSON response
                     self.data = response
                 else:
                     self.data = data
 
-            return True 
+            return True
 
 # ##############################################################################
                         
@@ -280,8 +278,8 @@ class RawDataResponse(_Response):
 class _Client(object):
     """ A base class of convenience clients for invoking Zato services from other Python applications.
     """
-    def __init__(self, address, path, auth=None, session=None, to_bunch=False, 
-            max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
+    def __init__(self, address, path, auth=None, session=None, to_bunch=False,
+                 max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
         self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session()
         self.to_bunch = to_bunch
@@ -296,13 +294,14 @@ class _Client(object):
         """ Actually invokes a service through HTTP and returns its response.
         """
         raw_response = self.session.post(self.service_address, request, headers=headers)
-        response = response_class(raw_response, self.to_bunch, self.max_response_repr,
+        response = response_class(
+            raw_response, self.to_bunch, self.max_response_repr,
             self.max_cid_repr, self.logger, output_repeated)
             
         if self.logger.isEnabledFor(logging.DEBUG):
-            msg = ('request:[{}]\nresponse_class:[{}]\nasync:[{}]\nheaders:[{}]\n'
-                  'text:[{}]\ndata:[{}]').format(request,
-                response_class, async, headers, raw_response.text, response.data)
+            msg = ('request:[{}]\nresponse_class:[{}]\nasync:[{}]\nheaders:[{}]\n' # noqa
+                  'text:[{}]\ndata:[{}]').format(
+                      request, response_class, async, headers, raw_response.text, response.data)
             self.logger.debug(msg)
             
         return response
@@ -355,9 +354,9 @@ class AnyServiceInvoker(_Client):
             return value.isoformat()
         raise TypeError('Cannot serialize [{}]'.format(value))
         
-    def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json', 
-            transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
-            to_json=True, output_repeated=ZATO_NOT_GIVEN):
+    def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
+                transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
+                to_json=True, output_repeated=ZATO_NOT_GIVEN):
             
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')
@@ -369,10 +368,10 @@ class AnyServiceInvoker(_Client):
             payload = dumps(payload, default=self.json_default_handler)
 
         id_, value = ('name', name) if name else ('id', id)
-        request = { id_: value, 'payload': payload.encode('base64'),
-            'channel': channel, 'data_format': data_format, 'transport': transport,
-            'async': async, 'expiration':expiration
-            }
+        request = {id_: value, 'payload': payload.encode('base64'),
+                   'channel': channel, 'data_format': data_format, 'transport': transport,
+                   'async': async, 'expiration':expiration
+                   }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, async, headers, output_repeated)
         

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class CryptoManager(object):
     """ Responsible for management of the server's crypto material.
     """
-    def __init__(self, priv_key_location=None, pub_key_location=None, 
+    def __init__(self, priv_key_location=None, pub_key_location=None,
                  priv_key=None, pub_key=None):
         
         self.priv_key_location = priv_key_location

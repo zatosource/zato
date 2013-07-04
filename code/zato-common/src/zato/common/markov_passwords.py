@@ -315,7 +315,6 @@ Elements of the sample that are not a valid state are ignored.
             for current, next_counts in counts.iteritems()
         )
         
-
     def next(self, state):
         """
 Choose at random and return a next state from a current state,

@@ -18,4 +18,4 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 CID_LENGTH = 40
 
 NULL_LMC = '0000.0000'
-NULL_CID = 'K' + '0' * (CID_LENGTH-1)
+NULL_CID = 'K' + '0' * (CID_LENGTH - 1)

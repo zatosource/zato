@@ -18,7 +18,6 @@ from traceback import format_exc
 
 # lxml
 from lxml import etree
-from lxml import objectify
 from lxml.objectify import ObjectPath as _ObjectPath
 
 # Bunch
@@ -36,10 +35,10 @@ wsu_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecur
 
 common_namespaces = {
     'soapenv':soapenv_namespace,
-    'wsse':wsse_namespace, 
+    'wsse':wsse_namespace,
     'wsu':wsu_namespace,
     'zato':zato_namespace
-    }
+}
 
 soap_doc = Template("""<soap:Envelope xmlns:soap='%s'><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv_namespace)
 
@@ -110,7 +109,7 @@ ZATO_NONE = b'ZATO_NONE'
 # Default HTTP method outgoing connections use to ping resources
 DEFAULT_HTTP_PING_METHOD = 'HEAD'
 
-# Default size of an outgoing HTTP connection's pool (plain, SOAP, any). 
+# Default size of an outgoing HTTP connection's pool (plain, SOAP, any).
 # This is a per-outconn setting
 DEFAULT_HTTP_POOL_SIZE = 200
 
@@ -131,7 +130,7 @@ ZATO_WSS_PASSWORD_TYPES = {
 ZATO_FIELD_OPERATORS = {
     'is-equal-to': '==',
     'is-not-equal-to': '!=',
-    }
+}
 
 ZMQ_OUTGOING_TYPES = ('PUSH',)
 ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
@@ -190,7 +189,7 @@ class KVDB:
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
     DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id' # ID of the last created dictionary ID, always increasing.
 
-    LOCK_PREFIX = 'zato:lock:'    
+    LOCK_PREFIX = 'zato:lock:'
     
     LOCK_SERVER_PREFIX = '{}server:'.format(LOCK_PREFIX)
     LOCK_SERVER_ALREADY_DEPLOYED = '{}already-deployed:'.format(LOCK_SERVER_PREFIX)
@@ -241,7 +240,7 @@ class BROKER:
 
 #
 # Version
-# 
+#
 
 major = 1
 minor = 1
@@ -325,8 +324,7 @@ class NoDistributionFound(ZatoException):
     or directory but they don't contain a proper Distutils2 distribution.
     """
     def __init__(self, path):
-        super(NoDistributionFound, self).__init__(None, 
-            'No Disutils distribution in path:[{}]'.format(path))
+        super(NoDistributionFound, self).__init__(None, 'No Disutils distribution in path:[{}]'.format(path))
         
 class Inactive(ZatoException):
     """ Raised when an attempt was made to use an inactive resource, such
@@ -347,7 +345,7 @@ class SourceInfo(object):
         self.server_name = None
 
 class StatsElem(object):
-    """ A single element of a statistics query result concerning a particular service. 
+    """ A single element of a statistics query result concerning a particular service.
     All values make sense only within the time interval of the original query, e.g. a 'min_resp_time'
     may be 18 ms in this element because it represents statistics regarding, say,
     the last hour yet in a different period the 'min_resp_time' may be a completely
@@ -359,8 +357,8 @@ class StatsElem(object):
     mean - an arithmetical average of all the mean response times  (in ms)
     rate - usage rate in requests/s (up to 1 decimal point)
     time - time spent by this service on processing the messages (in ms)
-    usage_trend - a CSV list of values representing the service usage 
-    usage_trend_int - a list of integers representing the service usage 
+    usage_trend - a CSV list of values representing the service usage
+    usage_trend_int - a list of integers representing the service usage
     mean_trend - a CSV list of values representing mean response times (in ms)
     mean_trend_int - a list of integers representing mean response times (in ms)
     min_resp_time - minimum service response time (in ms)
@@ -370,7 +368,7 @@ class StatsElem(object):
     mean_all_services - an arithmetical average of all the mean response times  of all services (in ms)
     usage_perc_all_services - this service's usage as a percentage of all_services_usage (up to 2 decimal points)
     time_perc_all_services - this service's share as a percentage of all_services_time (up to 2 decimal points)
-    expected_time_elems - an OrderedDict of all the time slots mapped to a mean time and rate 
+    expected_time_elems - an OrderedDict of all the time slots mapped to a mean time and rate
     temp_rate - a temporary place for keeping request rates, needed to get a weighted mean of uneven execution periods
     temp_mean - just like temp_rate but for mean response times
     temp_mean_count - how many periods containing a mean rate there were

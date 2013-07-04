@@ -10,11 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os, random, re, sys
-from base64 import b64encode
 from cStringIO import StringIO
 from datetime import datetime
 from glob import glob
-from hashlib import sha1, sha256
+from hashlib import sha256
 from importlib import import_module
 from itertools import ifilter, izip, izip_longest, tee
 from operator import itemgetter
@@ -66,7 +65,7 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, SIMPLE_IO, soap_body_path, \
+from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, soap_body_path, \
     soap_body_xpath, ZatoException
 from zato.common.crypto import CryptoManager
 
@@ -182,7 +181,7 @@ class ColorFormatter(logging.Formatter):
         logging.Formatter.__init__(self, msg)
         self.use_color = use_color
 
-    def formatter_msg(self, msg, use_color = True):
+    def formatter_msg(self, msg, use_color=True):
         if use_color:
             msg = msg.replace("$RESET", self.RESET_SEQ).replace("$BOLD", self.BOLD_SEQ)
         else:
@@ -230,8 +229,8 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list="repr_to_avo
             buff.write(" ")
             buff.write("%r:[%r]" % (attr, attr_obj))
 
-    out = _repr_template.safe_substitute(class_name=_object.__class__.__name__,
-                            mem_loc=hex(id(_object)), attrs=buff.getvalue())
+    out = _repr_template.safe_substitute(
+        class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
     buff.close()
 
     return out
@@ -258,15 +257,16 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
     if sys.version_info >= (2, 7):
         class Python27CompatTransport(SSLClientTransport):
             def make_connection(self, host):
-                return CAValidatingHTTPSConnection(host, strict=self.strict, ca_certs=self.ca_certs,
-                        keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
-                        ssl_version=self.ssl_version, timeout=self.timeout)
+                return CAValidatingHTTPSConnection(
+                    host, strict=self.strict, ca_certs=self.ca_certs,
+                    keyfile=self.keyfile, certfile=self.certfile, cert_reqs=self.cert_reqs,
+                    ssl_version=self.ssl_version, timeout=self.timeout)
         transport = Python27CompatTransport
     else:
         transport = None
     
-    return LoadBalancerAgentClient(agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file,
-                                transport=transport, timeout=timeout)
+    return LoadBalancerAgentClient(
+        agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
 
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
@@ -350,15 +350,15 @@ def deployment_info(method, object_, timestamp, fs_location, remote_host='', rem
     onto a server, where from and when it was.
     """
     return {
-            'method': method,
-            'object': object_,
-            'timestamp': timestamp,
-            'fs_location':fs_location,
-            'remote_host': remote_host,
-            'remote_user': remote_user,
-            'current_host': current_host(),
-            'current_user': get_current_user(),
-        }
+        'method': method,
+        'object': object_,
+        'timestamp': timestamp,
+        'fs_location':fs_location,
+        'remote_host': remote_host,
+        'remote_user': remote_user,
+        'current_host': current_host(),
+        'current_user': get_current_user(),
+    }
 
 def get_body_payload(body):
     body_children_count = body[0].countchildren()
@@ -437,7 +437,6 @@ def visit_py_source(dir_name):
 def visit_py_source_from_distribution(dir_name):
     """ Yields all the Python source modules from a Distutils2 distribution.
     """
-    abs_dir = os.path.abspath(dir_name)
     path = os.path.join(dir_name, 'setup.cfg')
     if not os.path.exists(path):
         msg = "Could not find setup.cfg in [{}], path:[{}] doesn't exist".format(dir_name, path)
@@ -470,8 +469,8 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
         di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
 
         # Insert the package into the DB ..
-        package_id = parallel_server.odb.hot_deploy(now, di, file_name, 
-            open(path, 'rb').read(), parallel_server.id)
+        package_id = parallel_server.odb.hot_deploy(
+            now, di, file_name, open(path, 'rb').read(), parallel_server.id)
 
         # .. and notify all the servers they're to pick up a delivery
         parallel_server.notify_new_package(package_id)
@@ -488,6 +487,7 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
 # As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
 def multikeysort(items, columns):
     comparers = [((itemgetter(col[1:].strip()), -1) if col.startswith('-') else (itemgetter(col.strip()), 1)) for col in columns]
+    
     def comparer(left, right):
         for fn, mult in comparers:
             result = cmp(fn(left), fn(right))
@@ -579,7 +579,7 @@ def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
     
 # Inspired by http://stackoverflow.com/a/9283563
 def uncamelify(s, separator='-', elem_func=unicode.lower):
-    """ Converts a CamelCaseName into a more readable one, e.g. 
+    """ Converts a CamelCaseName into a more readable one, e.g.
     will turn ILikeToReadWSDLDocsNotReallyNOPENotMeQ into
     i-like-to-read-wsdl-docs-not-really-nope-not-me-q or a similar one,
     depending on the value of separator and elem_func.

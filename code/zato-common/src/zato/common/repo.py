@@ -15,7 +15,6 @@ import logging, os, socket
 import bzrlib
 from bzrlib.branch import Branch
 from bzrlib.bzrdir import BzrDir
-from bzrlib.errors import NoWhoami
 from bzrlib.workingtree import WorkingTree
 
 # Zato
@@ -38,7 +37,7 @@ class RepoManager(object):
 
         try:
             BzrDir.open(self.repo_location)
-        except bzrlib.errors.NotBranchError, e:
+        except bzrlib.errors.NotBranchError:
             logger.info('Location [{}] is not a Bazaar branch. Will turn it into one.'.format(self.repo_location))
             BzrDir.create_branch_convenience(self.repo_location)
             
