@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, shutil, uuid
+import os, uuid
 from copy import deepcopy
 from datetime import datetime
 from multiprocessing import cpu_count
@@ -72,7 +72,7 @@ last_backup_work_dir=./hot-deploy/backup/last
 [singleton]
 initial_sleep_time=500
 
-# If a server doesn't update its keep alive data in 
+# If a server doesn't update its keep alive data in
 # connector_server_keep_alive_job_time * grace_time_multiplier seconds
 # it will be considered down and another server from the cluster will assume
 # the control of connectors
@@ -102,7 +102,7 @@ service_sources_contents = """# Visit https://zato.io/docs for more information.
 
 # All paths are relative to server root so that, for instance,
 # ./my-services will resolve to /opt/zato/server1/my-services if a server has been
-# installed into /opt/zato/server1 
+# installed into /opt/zato/server1
 
 # List your service sources below, each on a separate line.
 
@@ -162,8 +162,8 @@ class Create(ZatoCommand):
         session = self._get_session(engine)
         
         cluster = session.query(Cluster).\
-                   filter(Cluster.name == args.cluster_name).\
-                   first()
+            filter(Cluster.name == args.cluster_name).\
+            first()
         
         if not cluster:
             msg = "Cluster [{}] doesn't exist in the ODB".format(args.cluster_name)
@@ -215,19 +215,19 @@ class Create(ZatoCommand):
                 server_conf_template.format(
                     port=port,
                     gunicorn_workers=cpu_count(),
-                    odb_db_name=args.odb_db_name, 
-                    odb_engine=args.odb_type, 
+                    odb_db_name=args.odb_db_name,
+                    odb_engine=args.odb_type,
                     odb_host=args.odb_host,
-                    odb_password=encrypt(args.odb_password, pub_key), 
-                    odb_pool_size=default_odb_pool_size, 
-                    odb_user=args.odb_user, 
-                    token=self.token, 
+                    odb_password=encrypt(args.odb_password, pub_key),
+                    odb_pool_size=default_odb_pool_size,
+                    odb_user=args.odb_user,
+                    token=self.token,
                     kvdb_host=args.kvdb_host,
-                    kvdb_port=args.kvdb_port, 
+                    kvdb_port=args.kvdb_port,
                     kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else '',
-                    initial_cluster_name=args.cluster_name, 
-                    initial_server_name=args.server_name, 
-                    ))
+                    initial_cluster_name=args.cluster_name,
+                    initial_server_name=args.server_name,
+                ))
             server_conf.close()
             
             if show_output:

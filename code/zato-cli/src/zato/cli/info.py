@@ -54,7 +54,7 @@ class Info(ManageCommand):
             'master_proc_name': None,
             'master_proc_create_time': None,
             'master_proc_create_time_utc': None,
-            'master_proc_username': None,            
+            'master_proc_username': None,
             'master_proc_workers_no': None,
             'master_proc_workers_pids': None,
         }
@@ -78,7 +78,6 @@ class Info(ManageCommand):
             
             for pid in workers_pids:
                 worker = Process(pid)
-                worker_memory_percent = worker.get_memory_percent()
                 out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker.create_time).isoformat()
                 out['worker_{}_create_time_utc'.format(pid)] = datetime.fromtimestamp(worker.create_time, UTC).isoformat()
                 out['worker_{}_connections'.format(pid)] = worker.get_connections()
@@ -95,7 +94,7 @@ class Info(ManageCommand):
             table.set_cols_width(cols_width)
             
             # Use text ('t') instead of auto so that boolean values don't get converted into ints
-            table.set_cols_dtype(['t', 't']) 
+            table.set_cols_dtype(['t', 't'])
             
             rows = [['Key', 'Value']]
             rows.extend(sorted(out.items()))
@@ -104,5 +103,4 @@ class Info(ManageCommand):
             
             self.logger.info(table.draw())
         
-
     _on_lb = _on_web_admin = _on_server

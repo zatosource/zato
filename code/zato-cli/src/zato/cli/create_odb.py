@@ -13,9 +13,6 @@ from datetime import datetime
 from getpass import getuser
 from socket import gethostname
 
-# SQLAlchemy
-from sqlalchemy.exc import ProgrammingError
-
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import VERSION
@@ -33,9 +30,10 @@ class Create(ZatoCommand):
         if engine.dialect.has_table(engine.connect(), 'install_state'):
             if show_output:
                 version = session.query(ZatoInstallState.version).one().version
-                msg = ('The ODB (v. {}) already exists, not creating it. ' +
-                      "Use the 'zato delete odb' command first if you'd like to start afresh and "+
-                      'recreate all ODB objects.').format(version)
+                msg = (
+                    'The ODB (v. {}) already exists, not creating it. ' +
+                    "Use the 'zato delete odb' command first if you'd like to start afresh and " +
+                    'recreate all ODB objects.').format(version)
                 self.logger.error(msg)
             
             return self.SYS_ERROR.ODB_EXISTS

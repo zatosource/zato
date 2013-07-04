@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import argparse, time
+import argparse
 
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
@@ -40,7 +40,8 @@ def get_parser():
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument('--store-log', help='Whether to store an execution log', action='store_true')
     base_parser.add_argument('--verbose', help='Show verbose output', action='store_true')
-    base_parser.add_argument('--store-config', 
+    base_parser.add_argument(
+        '--store-config',
         help='Whether to store config options in a file for a later use', action='store_true')
     
     parser = argparse.ArgumentParser(prog='zato')
@@ -76,27 +77,29 @@ def get_parser():
     ca_create_web_admin.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_web_admin, ca_create_web_admin_mod.Create.opts)
 
-    # 
+    #
     # check-config
     #
-    check_config = subs.add_parser('check-config',
-        description='Checks config of a Zato component (currently limited to servers only)', 
+    check_config = subs.add_parser(
+        'check-config',
+        description='Checks config of a Zato component (currently limited to servers only)',
         parents=[base_parser])
     check_config.set_defaults(command='check_config')
     check_config.add_argument('path', help='Path to a Zato component')
     add_opts(check_config, check_config_mod.CheckConfig.opts)
 
-    # 
+    #
     # component-version
     #
-    component_version = subs.add_parser('component-version',
-        description='Shows the version of a Zato component installed in a given directory', 
+    component_version = subs.add_parser(
+        'component-version',
+        description='Shows the version of a Zato component installed in a given directory',
         parents=[base_parser])
     component_version.set_defaults(command='component_version')
     component_version.add_argument('path', help='Path to a Zato component')
     add_opts(component_version, component_version_mod.ComponentVersion.opts)
     
-    # 
+    #
     # create
     #
     create = subs.add_parser('create', description='Creates new Zato components')
@@ -181,7 +184,7 @@ def get_parser():
     quickstart_create.set_defaults(command='quickstart_create')
     add_opts(quickstart_create, quickstart_mod.Create.opts)
     
-    # 
+    #
     # service
     #
     service = subs.add_parser('service', description='Commands related to the management of Zato services')

@@ -9,17 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, uuid, subprocess, tempfile
-
-# bzrlib
-from bzrlib.lazy_import import lazy_import
-
-lazy_import(globals(), """
-    # quicli
-    from quicli import progress
-    
-""")
-
+import os, uuid, tempfile
 
 # Zato
 from zato.cli import ca_defaults, default_ca_name, ZatoCommand
@@ -96,10 +86,10 @@ class Create(ZatoCommand):
     """
     opts = [
         {'name':'--organization', 'help':'CA organization name (defaults to {organization})'.format(**ca_defaults)},
-        {'name':'--organizational-unit', 
+        {'name':'--organizational-unit',
             'help':'CA organizational unit name (defaults to {default})'.format(default=default_ca_name)},
         {'name':'--locality', 'help':'CA locality name (defaults to {locality})'.format(**ca_defaults)},
-        {'name':'--state-or-province', 
+        {'name':'--state-or-province',
             'help':'CA state or province name (defaults to {state_or_province})'.format(**ca_defaults)},
         {'name':'--country', 'help':'CA country (defaults to {country})'.format(**ca_defaults)},
         {'name':'--common-name', 'help':'CA common name (defaults to {default})'.format(default=default_ca_name)},

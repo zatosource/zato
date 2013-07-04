@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, random, stat, sys
+import os, random, stat
 from copy import deepcopy
 from itertools import count
 from uuid import uuid4
@@ -22,7 +22,7 @@ from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agen
      ca_create_web_admin, create_cluster, create_lb, create_odb, create_server, create_web_admin, ZatoCommand
 from zato.common.defaults import http_plain_server_port
 from zato.common.markov_passwords import generate_password
-from zato.common.util import get_zato_command, make_repr
+from zato.common.util import make_repr
 
 random.seed()
 
@@ -30,7 +30,7 @@ random.seed()
 script_dir = """SOURCE="${BASH_SOURCE[0]}"
 BASE_DIR="$( dirname "$SOURCE" )"
 while [ -h "$SOURCE" ]
-do 
+do
   SOURCE="$(readlink "$SOURCE")"
   [[ $SOURCE != /* ]] && SOURCE="$BASE_DIR/$SOURCE"
   BASE_DIR="$( cd -P "$( dirname "$SOURCE"  )" && pwd )"
@@ -78,7 +78,7 @@ cd $BASE_DIR
 echo Zato quickstart environment started
 echo Visit https://zato.io/support for more information and support options
 exit 0
-""" 
+"""
 
 zato_qs_stop_template = """#!/bin/bash
 
@@ -118,7 +118,7 @@ cd $BASE_DIR
 
 $BASE_DIR/zato-qs-stop.sh
 $BASE_DIR/zato-qs-start.sh
-""" 
+"""
 
 
 class CryptoMaterialLocation(object):
@@ -176,9 +176,9 @@ class Create(ZatoCommand):
         """ Quickly creates Zato components
         1) CA and crypto material
         2) ODB
-        3) ODB initial data 
-        4) server1 
-        5) server2 
+        3) ODB initial data
+        4) server1
+        5) server2
         6) load-balancer
         7) Web admin
         8) Scripts
@@ -257,7 +257,7 @@ class Create(ZatoCommand):
         self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
         
         #
-        # 4) server1 
+        # 4) server1
         # 5) server2
         #
         for key in server_names:
@@ -291,7 +291,7 @@ class Create(ZatoCommand):
         
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
-        server2_port = next_port.next()-1 
+        server2_port = next_port.next() - 1
         
         create_lb.Create(create_lb_args).execute(create_lb_args, True, server2_port, False)
         self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))

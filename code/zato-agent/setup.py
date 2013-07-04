@@ -6,6 +6,8 @@ Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+# flake8: noqa
+
 from setuptools import setup, find_packages
 
 version = '1.1'
