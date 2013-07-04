@@ -8,8 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
 # Zato
 from zato.common.util import make_repr
+
+logger = getLogger(__name__)
 
 # Statistics commands understood by HAproxy 1.3.x and newer. Note that the
 # command numbers must be consecutively increasing across HAProxy versions.

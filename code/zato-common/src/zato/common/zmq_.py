@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-""" 
+"""
 Objects useful when implementing ZeroMQ clients. Written without any dependecies
 on other partf of Zato code base so they can be re-used outside of the Zato project.
 """
@@ -25,13 +25,13 @@ import zmq
 logger = logging.getLogger(__name__)
 
 class ZMQPullSub(object):
-    """ A ZeroMQ client which pulls and subscribe to messages. Runs in a background 
+    """ A ZeroMQ client which pulls and subscribe to messages. Runs in a background
     thread and invokes the handler on each incoming message.
     """
     
-    def __init__(self, name, zmq_context, broker_push_client_pull, broker_pub_client_sub, 
-                 on_pull_handler=None,  pull_handler_args=None,
-                 on_sub_handler=None,  sub_handler_args=None, sub_key=b'', keep_running=True):
+    def __init__(self, name, zmq_context, broker_push_client_pull, broker_pub_client_sub,
+                 on_pull_handler=None, pull_handler_args=None,
+                 on_sub_handler=None, sub_handler_args=None, sub_key=b'', keep_running=True):
         self.name = name
         self.zmq_context = zmq_context
         self.broker_push_client_pull = broker_push_client_pull
@@ -148,7 +148,7 @@ class ZMQPush(object):
         self.name = name
         self.zmq_context = zmq_context
         self.address = address
-        self.socket_type = zmq.PUSH 
+        self.socket_type = zmq.PUSH
         
         logger.debug('Starting PUSH [{0}/{1}]'.format(self.name, self.address))
 
@@ -196,15 +196,17 @@ class ZMQClient(object):
         return '<{0} at {1} name:[{2}] broker_push_client_pull:[{3}] '\
                'client_push_broker_pull:[{4}] broker_pub_client_sub:[{5}] '\
                'on_pull_handler:[{6}] pull_handler_args:[{7}] on_sub_handler:[{8}] '\
-               'sub_handler_args:[{9}] sub_key:[{10}]'.format(self.__class__.__name__,
-                    hex(id(self)), self.name, self.broker_push_client_pull,
-                    self.client_push_broker_pull, self.broker_pub_client_sub,
-                    self.on_pull_handler, self.pull_handler_args,
-                    self.on_sub_handler, self.sub_handler_args, self.sub_key)
+               'sub_handler_args:[{9}] sub_key:[{10}]'.format(
+                   self.__class__.__name__,
+                   hex(id(self)), self.name, self.broker_push_client_pull,
+                   self.client_push_broker_pull, self.broker_pub_client_sub,
+                   self.on_pull_handler, self.pull_handler_args,
+                   self.on_sub_handler, self.sub_handler_args, self.sub_key)
             
     def init(self):
         if self.broker_pub_client_sub or self.broker_push_client_pull:
-            self._pull_sub = ZMQPullSub(self.name, self.zmq_context, self.broker_push_client_pull, 
+            self._pull_sub = ZMQPullSub(
+                self.name, self.zmq_context, self.broker_push_client_pull,
                 self.broker_pub_client_sub, self.on_pull_handler, self.pull_handler_args,
                 self.on_sub_handler, self.sub_handler_args, self.sub_key)
         

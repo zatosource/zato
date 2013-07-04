@@ -71,11 +71,11 @@ def drop_all(engine):
     for table in [name for (name,) in engine.execute(text(table_sql))]:
         try:
             engine.execute(text('DROP TABLE %s CASCADE' % table))
-        except SQLError, e:
+        except Exception, e:
             print(e)
 
     for seq in [name for (name,) in engine.execute(text(sequence_sql))]:
         try:
             engine.execute(text('DROP SEQUENCE %s CASCADE' % seq))
-        except SQLError, e:
+        except Exception, e:
             print(e)
