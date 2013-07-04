@@ -278,7 +278,7 @@ class WorkerStore(BrokerMessageReceiver):
     def tech_acc_get(self, name):
         """ Returns the configuration of the technical account of the given name.
         """
-        self.request_dispatcher.security.tech_acc_get(msg, *args)
+        self.request_dispatcher.security.tech_acc_get(name)
 
     def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
@@ -305,7 +305,7 @@ class WorkerStore(BrokerMessageReceiver):
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
         """
-        self.request_dispatcher.security.wss_get(msg, *args)
+        self.request_dispatcher.security.wss_get(name)
 
     def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
