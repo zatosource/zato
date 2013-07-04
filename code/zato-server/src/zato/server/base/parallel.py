@@ -104,7 +104,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Any exception at this point must be our fault
         except Exception, e:
             tb = format_exc(e)
-            status = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
+            wsgi_environ['zato.http.response.status'] = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
             error_msg = b'[{0}] Exception caught [{1}]'.format(cid, tb)
             logger.error(error_msg)
             payload = error_msg
