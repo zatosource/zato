@@ -1,0 +1,24 @@
+--- requests/packages/urllib3/connectionpool.py.orig	2013-07-07 20:21:06.803561777 +0200
++++ requests/packages/urllib3/connectionpool.py	2013-07-07 20:21:38.943721143 +0200
+@@ -164,18 +164,18 @@
+ 
+     scheme = 'http'
+ 
+-    def __init__(self, host, port=None, strict=False, timeout=None, maxsize=1,
++    def __init__(self, host, port=None, strict=False, timeout=None, maxsize=600,
+                  block=False, headers=None):
+         super(HTTPConnectionPool, self).__init__(host, port)
+ 
+         self.strict = strict
+         self.timeout = timeout
+-        self.pool = self.QueueCls(maxsize)
++        self.pool = self.QueueCls(600)
+         self.block = block
+         self.headers = headers or {}
+ 
+         # Fill the queue up so that doing get() on it will block properly
+-        for _ in xrange(maxsize):
++        for _ in xrange(600):
+             self.pool.put(None)
+ 
+         # These are mostly for testing and debugging purposes.
