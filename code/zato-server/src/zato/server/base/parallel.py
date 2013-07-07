@@ -224,7 +224,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             broker_callbacks[TOPICS[MESSAGE_TYPE.TO_SINGLETON]] = self.on_broker_msg_singleton
         
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks)
-        self.broker_client.start()
         
         if is_first:
             
