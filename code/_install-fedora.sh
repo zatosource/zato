@@ -22,7 +22,7 @@ rm -rf $CURDIR/parts
 rm -rf $CURDIR/zato_extra_paths
 
 sudo yum install git bzr gcc-gfortran haproxy \
-    gcc-c++ rubygem-sass atlas-devel atlas blas-devel  \
+    gcc-c++ atlas-devel atlas blas-devel  \
     libevent-devel libgfortran lapack-devel lapack \
     libpqxx-devel libyaml-devel libxml2-devel libxslt-devel suitesparse \
     openssl python-devel m2crypto numpy python-pip \
