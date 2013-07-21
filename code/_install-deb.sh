@@ -18,7 +18,7 @@ bash $CURDIR/clean.sh
 sudo apt-get update
 
 sudo apt-get install git bzr gfortran haproxy  \
-    ruby-sass libatlas-dev libatlas3gf-base libblas3gf \
+    libatlas-dev libatlas3gf-base libblas3gf \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
     libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack5.4.0 \
     openssl python2.7-dev python-m2crypto python-numpy python-pip \
