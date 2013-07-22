@@ -53,11 +53,12 @@ def BrokerClient(kvdb, client_type, topic_callbacks):
             
             # We're in a new thread and we can initialize the KVDB connection now.
             self.kvdb.init()
-            self.keep_running = True
     
             if self.pubsub == 'sub':
                 self.client = self.kvdb.pubsub()
                 self.client.subscribe(self.topic_callbacks.keys())
+                self.keep_running = True
+                
                 try:
                     while self.keep_running:
                         for msg in self.client.listen():
@@ -71,6 +72,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks):
                     logger.info(msg)
             else:
                 self.client = self.kvdb
+                self.keep_running = True
                 
         def publish(self, topic, msg):
             if logger.isEnabledFor(TRACE1):
