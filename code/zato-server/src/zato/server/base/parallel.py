@@ -34,8 +34,8 @@ from retools.lock import Lock
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common import KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, ZMQ_CONNECTOR
+from zato.common import CHANNEL, KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.util import new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
@@ -193,7 +193,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             name = name.strip()
             if name and not name.startswith('#'):
                 self.service_sources.append(name)
-        
+                
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
         
@@ -247,9 +247,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             # Let the scheduler fully initialize
             self.singleton_server.scheduler.wait_for_init()
             self.singleton_server.server_id = server.id
-    
+            
+        return is_first
+                        
     def _after_init_accepted(self, server, deployment_key):
-        
+
         if self.singleton_server:
 
             # Let's see if we can become a connector server, the one to start all
@@ -258,12 +260,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.fs_server_config.singleton.connector_server_keep_alive_job_time)
             self.connector_server_grace_time = int(
                 self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
-            
+
             if self.singleton_server.become_cluster_wide(
                     self.connector_server_keep_alive_job_time, self.connector_server_grace_time, 
                     server.id, server.cluster_id, True):
                 self.init_connectors()
-                
+
                 for(_, name, is_active, job_type, start_date, extra, service_name, _,
                     _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
                         in self.odb.get_job_list(server.cluster.id):
@@ -464,6 +466,49 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token
+        
+    def _startup_service_payload_from_path(self, name, value, repo_location):
+        """ Reads payload from a local file. Abstracted out to ease in testing.
+        """
+        orig_path = value.replace('file://', '')
+        if not os.path.isabs(orig_path):
+            path = os.path.normpath(os.path.join(repo_location, orig_path))
+        else:
+            path = orig_path
+            
+        try:
+            payload = open(path).read()
+        except Exception, e:
+            msg = 'Could not open payload path:[{}] [{}], skipping startup service:[{}], e:[{}]'.format(
+                orig_path, path, name, format_exc(e))
+            logger.warn(msg)
+        else:
+            return payload
+        
+    def invoke_startup_services(self):
+        """ We are the first worker and we know we have a broker client and all the other config ready
+        so we can publish the request to execute startup services. In the worst
+        case the requests will get back to us but it's also possible that other 
+        workers are already running. In short, there is no guarantee that any
+        server or worker in particular will receive the requests, only that there
+        will be exactly one.
+        """
+        for name, payload in self.fs_server_config.get('startup_services', {}).items():
+            if payload.startswith('file://'):
+                payload = self._startup_service_payload_from_path(name, payload, self.repo_location)
+                if not payload:
+                    continue
+
+            cid = new_cid()
+                
+            msg = {}
+            msg['action'] = SERVICE.PUBLISH
+            msg['service'] = name
+            msg['payload'] = payload
+            msg['cid'] = cid
+            msg['channel'] = CHANNEL.STARTUP_SERVICE
+                
+            self.broker_client.invoke_async(msg)
     
     @staticmethod
     def post_fork(arbiter, worker):
@@ -486,7 +531,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id
 
-        parallel_server._after_init_common(server, arbiter.zato_deployment_key)
+        is_first = parallel_server._after_init_common(server, arbiter.zato_deployment_key)
         
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
@@ -500,6 +545,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             
         parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
             parallel_server.host, parallel_server.port)
+        
+        if is_first:
+            parallel_server.invoke_startup_services()
         
     @staticmethod
     def on_starting(arbiter):
