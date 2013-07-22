@@ -234,6 +234,7 @@ class CHANNEL:
     JMS_WMQ = 'jms-wmq'
     SCHEDULER = 'scheduler'
     ZMQ = 'zmq'
+    STARTUP_SERVICE = 'startup-service'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds

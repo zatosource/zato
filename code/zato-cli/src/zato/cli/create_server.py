@@ -96,6 +96,9 @@ db=0
 socket_timeout=
 charset=
 errors=
+
+[startup_services]
+zato.helpers.input-logger=Sample payload for a startup service
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
