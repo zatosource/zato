@@ -20,8 +20,9 @@ from bunch import Bunch
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
+from zato.common import INVOCATION_TARGET
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
-from zato.common.util import TRACE1
+from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 
@@ -31,13 +32,16 @@ class WMQFacade(object):
     """ A WebSphere MQ facade for services so they aren't aware that sending WMQ
     messages actually requires us to use the Zato broker underneath.
     """
-    def __init__(self, broker_client):
+    def __init__(self, broker_client, delivery_store):
         self.broker_client = broker_client # A Zato broker client
+        self.delivery_store = delivery_store
     
     def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            *args, **kwargs):
+            expire_after=None, check_after=None, retry_repeats=None, retry_seconds=None, tx_id=None, *args, **kwargs):
         """ Puts a message on a WebSphere MQ queue.
         """
+        tx_id = tx_id or new_cid()
+        
         params = {}
         params['action'] = OUTGOING.JMS_WMQ_SEND
         params['name'] = out_name
@@ -47,10 +51,18 @@ class WMQFacade(object):
         params['expiration'] = expiration
         params['priority'] = priority
         params['max_chars_printed'] = max_chars_printed
+        params['tx_id'] = tx_id
         params['args'] = args
         params['kwargs'] = kwargs
         
+        if retry_repeats:
+            self.delivery_store.store(INVOCATION_TARGET.WMQ, out_name, tx_id, params, expire_after, check_after, retry_repeats, retry_seconds)
+        
         self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL)
+        
+    def deliver(self, *args, **kwargs):
+        
+        return self.send(*args, **kwargs)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing

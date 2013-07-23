@@ -199,6 +199,8 @@ class KVDB:
     LOCK_PACKAGE_UPLOADING = '{}uploading:'.format(LOCK_PACKAGE_PREFIX)
     LOCK_PACKAGE_ALREADY_UPLOADED = '{}already-uploaded:'.format(LOCK_PACKAGE_PREFIX)
     
+    LOCK_DELIVERY = '{}delivery:'.format(LOCK_PREFIX)
+    
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'
     
@@ -220,6 +222,10 @@ class KVDB:
     
     REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
     RESP_SLOW = 'zato:resp:slow:'
+    
+    DELIVERY_PREFIX = 'zato:delivery:'
+    DELIVERY_BY_TARGET_TYPE_PREFIX = '{}by-target-type:'.format(DELIVERY_PREFIX)
+    DELIVERY_IN_DOUBT_PREFIX = '{}in-doubt:'.format(DELIVERY_PREFIX)
 
 class SCHEDULER_JOB_TYPE:
     ONE_TIME = 'one_time'
@@ -235,6 +241,12 @@ class CHANNEL:
     SCHEDULER = 'scheduler'
     ZMQ = 'zmq'
     STARTUP_SERVICE = 'startup-service'
+    
+class INVOCATION_TARGET:
+    AMQP = 'amqp'
+    SERVICE = 'service'
+    WMQ = 'wmq'
+    ZMQ = 'zmq'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
