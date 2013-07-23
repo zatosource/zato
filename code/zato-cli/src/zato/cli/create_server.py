@@ -86,6 +86,7 @@ context_class=zato.server.spring_context.ZatoContext
 internal_services_may_be_deleted=False
 initial_cluster_name = {initial_cluster_name}
 initial_server_name = {initial_server_name}
+delivery_lock_timeout = 2
 
 [kvdb]
 host={kvdb_host}

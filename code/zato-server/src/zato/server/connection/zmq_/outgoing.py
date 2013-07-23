@@ -27,8 +27,9 @@ class ZMQFacade(object):
     """ A ZeroMQ facade for services so they aren't aware that sending ZMQ
     messages actually requires us to use the Zato broker underneath.
     """
-    def __init__(self, broker_client):
+    def __init__(self, broker_client, delivery_store):
         self.broker_client = broker_client # A Zato broker client
+        self.delivery_store = delivery_store
     
     def send(self, msg, out_name, *args, **kwargs):
         """ Puts a message on a ZeroMQ socket.

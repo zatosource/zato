@@ -87,6 +87,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.deployment_lock_timeout = None
         self.app_context = None
         self.has_gevent = None
+        self.delivery_store = None
         
         # The main config store
         self.config = ConfigStore()
@@ -545,6 +546,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             
         parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
             parallel_server.host, parallel_server.port)
+        
+        parallel_server.delivery_store = parallel_server.app_context.get_object('delivery_store')
+        parallel_server.delivery_store.delivery_lock_timeout = float(parallel_server.fs_server_config.misc.delivery_lock_timeout)
         
         if is_first:
             parallel_server.invoke_startup_services()

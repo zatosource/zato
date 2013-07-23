@@ -14,6 +14,7 @@ from springpython.config import Object, PythonConfig
 # Zato
 from zato.common import DEFAULT_STATS_SETTINGS, SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import CryptoManager
+from zato.common.delivery import DeliveryStore
 from zato.common.kvdb import KVDB
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
@@ -99,6 +100,13 @@ class ZatoContext(PythonConfig):
     @Object
     def connection_http_soap_security(self):
         return ConnectionHTTPSOAPSecurity()
+    
+    # #######################################################
+    # Delivery store
+    
+    @Object
+    def delivery_store(self):
+        return DeliveryStore(self.kvdb())
 
     # #######################################################
     # SQL

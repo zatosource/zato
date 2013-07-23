@@ -549,9 +549,9 @@ class Service(object):
         
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
         
-        out_amqp = PublisherFacade(self.broker_client)
-        out_jms_wmq = WMQFacade(self.broker_client)
-        out_zmq = ZMQFacade(self.broker_client)
+        out_amqp = PublisherFacade(self.broker_client, self.server.delivery_store)
+        out_jms_wmq = WMQFacade(self.broker_client, self.server.delivery_store)
+        out_zmq = ZMQFacade(self.broker_client, self.server.delivery_store)
         out_sql = self.worker_store.sql_pool_store
 
         out_ftp, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
