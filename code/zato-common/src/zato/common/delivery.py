@@ -34,7 +34,7 @@ class DeliveryStore(object):
         
 # ##############################################################################
         
-    def store(self, target_type, target, tx_id, payload, expire_after, check_after, retry_repeats, retry_seconds):
+    def store_check(self, target_type, target, tx_id, payload, expire_after, check_after, retry_repeats, retry_seconds):
         if not(check_after and retry_repeats and retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
                 check_after, retry_repeats, retry_seconds)
@@ -49,10 +49,13 @@ class DeliveryStore(object):
             'check_after': check_after,
             'retry_repeats':retry_repeats,
             'retry_seconds':retry_seconds,
-            'retries_so_far':0,
-            'retry_list':[],
-            'last_retry_time_utc':None,
-            'next_retry_time_utc':None,
+            'attempts_so_far':0,
+            'failed_attempt_list':[],
+            'last_attempt_time_start_utc':None,
+            'last_attempt_time_end_utc':None,
+            'last_attempt_total':None,
+            'planned_next_retry_time_utc':None,
+            'actual_next_retry_time_utc':None,
             'creation_time_utc': now,
             'last_updated_utc': now,
             'confirmed': False,
@@ -79,12 +82,11 @@ class DeliveryStore(object):
             'Created delivery key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
             payload_key, expire_after, check_after, retry_repeats, retry_seconds)
         
-        check_func = getattr(self, 'check_{}'.format(target_type))
-        spawn_later(check_after, check_func, payload_key, by_target_type_key, tx_id)
+        spawn_later(check_after, self.check_target, payload_key, target_type, by_target_type_key, tx_id)
 
 # ##############################################################################
 
-    def check_wmq(self, payload_key, by_target_type_key, tx_id):
+    def check_target(self, payload_key, target_type, by_target_type_key, tx_id):
         self.logger.info('Checking [%s] (WebSphere MQ)', payload_key)
         
         now = datetime.utcnow().isoformat()
@@ -93,7 +95,10 @@ class DeliveryStore(object):
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
             payload = self.kvdb.conn.hgetall(payload_key)
             
-            if int(payload['send_side_count']) > int(payload['confirm_side_count']):
+            send_side_count = int(payload['send_side_count'])
+            confirm_side_count = int(payload['confirm_side_count'])
+            
+            if send_side_count > confirm_side_count:
                 
                 # We're in a retry function and apparently the target has not replied yet.
                 # We cannot retry just like that because we don't know what happened to target,
@@ -101,8 +106,8 @@ class DeliveryStore(object):
                 # In any case, we can't invoke it again. We are in doubt as to what has happened.
                 payload['in_doubt'] = True
                 payload['in_doubt_created_at_utc'] = now
-                payload['in_doubt_created_send_side_count'] = payload['send_side_count']
-                payload['in_doubt_created_confirm_side_count'] = payload['confirm_side_count']
+                payload['in_doubt_created_send_side_count'] = send_side_count
+                payload['in_doubt_created_confirm_side_count'] = confirm_side_count
                 
                 with self.kvdb.conn.pipeline() as p:
                     
@@ -112,15 +117,28 @@ class DeliveryStore(object):
                     # that was to be delivered. So we add an in-doubt context and remove any 
                     # other information regarding this tx_id from other places.
                     in_doubt_key = '{}:{}'.format(KVDB.DELIVERY_IN_DOUBT_PREFIX, target_type)
+
+                    data = {
+                        'payload': dumps(payload),
+                        'overtime_info': None # This is populated by target if it doesn't make it in the expected time
+                    }
                     
-                    p.hset(in_doubt_key, payload_key, dumps(payload))
+                    p.hset(in_doubt_key, payload_key, data)
                     p.delete(payload_key)
-                    p.srem(by_target_type_key)
+                    p.srem(by_target_type_key, payload_key)
                     
                     p.execute()
                     
-                msg = 'tx_id:[{}] is in-doubt, details stored in [{}]/[{}]'.format(tx_id, in_doubt_key, payload_key)
-                self.logger.warn(msg)
+                msg = 'tx_id:[{}] is in-doubt, details stored in [{}] under key [{}] (send/confirm {}/{})'.format(
+                    tx_id, in_doubt_key, payload_key, send_side_count, confirm_side_count)
+                #self.logger.warn(msg)
+                
+            else:
+                # The target has confirmed the invocation in an expected time so we
+                # now need to check if it was successful. If it was, this is where it ends.
+                # If it wasn't, we'll try it again as it was originally configured
+                # unless it was the last retry.
+                pass
 
 # ##############################################################################
         
