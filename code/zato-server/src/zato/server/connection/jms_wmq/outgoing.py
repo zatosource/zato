@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os
+from datetime import datetime
 from threading import RLock, Thread
 from traceback import format_exc
 
@@ -37,11 +38,12 @@ class WMQFacade(object):
         self.delivery_store = delivery_store
     
     def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            expire_after=None, check_after=None, retry_repeats=None, retry_seconds=None, tx_id=None, *args, **kwargs):
+            confirm_delivery=None, expire_after=None, check_after=None, retry_repeats=None, retry_seconds=None, tx_id=None, *args, **kwargs):
         """ Puts a message on a WebSphere MQ queue.
         """
         tx_id = tx_id or new_cid()
-        
+
+        # Common parameters
         params = {}
         params['action'] = OUTGOING.JMS_WMQ_SEND
         params['name'] = out_name
@@ -51,18 +53,19 @@ class WMQFacade(object):
         params['expiration'] = expiration
         params['priority'] = priority
         params['max_chars_printed'] = max_chars_printed
+        
+        # Confirmed delivery
         params['tx_id'] = tx_id
+        params['confirm_delivery'] = confirm_delivery
+        
+        # Any extra arguments
         params['args'] = args
         params['kwargs'] = kwargs
         
-        if retry_repeats:
-            self.delivery_store.store(INVOCATION_TARGET.WMQ, out_name, tx_id, params, expire_after, check_after, retry_repeats, retry_seconds)
+        if confirm_delivery:
+            self.delivery_store.store_check(INVOCATION_TARGET.WMQ, out_name, tx_id, params, expire_after, check_after, retry_repeats, retry_seconds)
         
         self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL)
-        
-    def deliver(self, *args, **kwargs):
-        
-        return self.send(*args, **kwargs)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -71,8 +74,8 @@ class WMQFacade(object):
         return self
 
 class OutgoingConnection(BaseJMSWMQConnection):
-    def __init__(self, factory, out_name):
-        super(OutgoingConnection, self).__init__(factory, out_name)
+    def __init__(self, factory, out_name, delivery_store):
+        super(OutgoingConnection, self).__init__(factory, out_name, delivery_store)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.jms_template = JmsTemplate(self.factory)
         
@@ -81,7 +84,7 @@ class OutgoingConnection(BaseJMSWMQConnection):
         from pymqi import MQMIError
         
         self.MQMIError = MQMIError
-        self.dont_reconnect_errors = (MQRC_UNKNOWN_OBJECT_NAME, )
+        self.dont_reconnect_errors = (MQRC_UNKNOWN_OBJECT_NAME,)
         
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         jms_msg = TextMessage()
@@ -97,9 +100,19 @@ class OutgoingConnection(BaseJMSWMQConnection):
         jms_msg.max_chars_printed = msg.get('max_chars_printed') or default_max_chars_printed
         
         queue = str(msg['queue'])
+        confirm_delivery = msg.get('confirm_delivery')
+        
+        print(333, msg)
         
         try:
-            self.jms_template.send(jms_msg, queue)
+            start = datetime.utcnow()
+            #self.jms_template.send(jms_msg, queue)
+            import time
+            time.sleep(0.1)
+            
+            if confirm_delivery:
+                self.confirm_ok(msg, start, datetime.utcnow())
+                
         except Exception, e:
             
             if isinstance(e, self.MQMIError) and e.reason in self.dont_reconnect_errors:
@@ -114,6 +127,9 @@ class OutgoingConnection(BaseJMSWMQConnection):
                     self.start()
                 else:
                     raise
+                
+    def confirm_ok(self, msg, start, end):
+        self.logger.warn((msg, start, end))
 
 class OutgoingConnector(BaseJMSWMQConnector):
     """ An outgoing connector started as a subprocess. Each connection to a queue manager
@@ -199,7 +215,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
     def _sender(self, factory):
         """ Starts the outgoing connection in a new thread and returns it.
         """
-        sender = OutgoingConnection(factory, self.out.name)
+        sender = OutgoingConnection(factory, self.out.name, self.delivery_store)
         t = Thread(target=sender._run)
         t.start()
         

@@ -28,6 +28,7 @@ from bunch import Bunch
 # Zato
 from zato.broker.thread_client import BrokerClient
 from zato.common import ZATO_ODB_POOL_NAME
+from zato.common.delivery import DeliveryStore
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, TRACE1
 from zato.server.base import BrokerMessageReceiver
@@ -37,7 +38,8 @@ class BaseConnection(object):
     connectors. Implements the (re-)connection logic and leaves all the particular
     details related to messaging to subclasses.
     """
-    def __init__(self):
+    def __init__(self, delivery_store=None):
+        self.delivery_store = delivery_store
         self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
             errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
         self.reconnect_exceptions = ()
@@ -171,6 +173,9 @@ class BaseConnector(BrokerMessageReceiver):
         self.kvdb.config = fs_server_config.kvdb
         self.kvdb.decrypt_func = self.odb.crypto_manager.decrypt
         self.kvdb.init()
+        
+        # Delivery store
+        self.delivery_store = DeliveryStore(self.kvdb)
         
         # Broker client
         self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
