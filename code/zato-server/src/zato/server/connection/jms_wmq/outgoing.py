@@ -14,6 +14,9 @@ from datetime import datetime
 from threading import RLock, Thread
 from traceback import format_exc
 
+# anyjson
+from anyjson import dumps
+
 # Bunch
 from bunch import Bunch
 
@@ -41,7 +44,8 @@ class WMQFacade(object):
         self.delivery_store = delivery_store
     
     def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            confirm_delivery=None, expire_after=None, check_after=None, retry_repeats=None, retry_seconds=None, tx_id=None, *args, **kwargs):
+            confirm_delivery=None, expire_after=None, expire_arch_after=None, check_after=None, retry_repeats=None,
+            retry_seconds=None, tx_id=None, *args, **kwargs):
         """ Puts a message on a WebSphere MQ queue.
         """
         tx_id = tx_id or new_cid()
@@ -66,7 +70,9 @@ class WMQFacade(object):
         params['kwargs'] = kwargs
         
         if confirm_delivery:
-            self.delivery_store.store_check(INVOCATION_TARGET.WMQ, out_name, tx_id, params, expire_after, check_after, retry_repeats, retry_seconds)
+            self.delivery_store.store_check(
+                INVOCATION_TARGET.WMQ, out_name, tx_id, params, expire_after,
+                expire_arch_after, check_after, retry_repeats, retry_seconds)
         
         self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL)
         
@@ -107,15 +113,21 @@ class OutgoingConnection(BaseJMSWMQConnection):
         
         try:
             start = datetime.utcnow()
-            #self.jms_template.send(jms_msg, queue)
-            import time
-            time.sleep(0.1)
+            self.jms_template.send(jms_msg, queue)
             
             if confirm_delivery:
-                self.delivery_store.confirm(INVOCATION_TARGET.WMQ, self.name, msg, start, datetime.utcnow())
+                delivered_to = dumps({
+                    'name': self.name,
+                    'details': {
+                        'conn_info':self.factory.get_connection_info(),
+                        'queue': queue
+                    }
+                })
+                
+                self.delivery_store.on_target_ok(
+                    INVOCATION_TARGET.WMQ, self.name, msg, start, datetime.utcnow(), delivered_to)
                 
         except Exception, e:
-            
             if isinstance(e, self.MQMIError) and e.reason in self.dont_reconnect_errors:
                 self.logger.warn('Caught [{}/{}] while sending the message [{}]'.format(e.reason, e.errorAsString(), jms_msg))
             else:
