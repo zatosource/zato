@@ -68,11 +68,28 @@ class FakeBrokerClient(object):
         raise NotImplementedError()
 
 class FakeKVDB(object):
+
     class FakeConn(object):
+        def __init__(self):
+            self.setnx_args = None
+            self.setnx_return_value = True
+            self.expire_args = None
+            self.delete_args = None
+            
         def return_none(self, *ignored_args, **ignored_kwargs):
             return None
         
         get = hget = return_none
+        
+        def setnx(self, *args):
+            self.setnx_args = args
+            return self.setnx_return_value
+        
+        def expire(self, *args):
+            self.expire_args = args
+            
+        def delete(self, args):
+            self.delete_args = args
         
     def __init__(self):
         self.conn = self.FakeConn()
