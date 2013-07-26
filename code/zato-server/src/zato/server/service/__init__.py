@@ -730,7 +730,7 @@ class Service(object):
         timeout - how long (in seconds) we will wait to acquire the lock before giving up and raising LockTimeout
         backend - a Redis connection object, defaults to self.kvdb.conn
         """
-        name = name or self.name
+        name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
         backend = backend or self.kvdb.conn
         return Lock(name, expires, timeout, backend, self._on_lock_timeout(name, expires, timeout, backend))
     
