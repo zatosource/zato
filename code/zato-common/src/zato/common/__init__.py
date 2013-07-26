@@ -333,6 +333,19 @@ class Inactive(ZatoException):
     """
     def __init__(self, name):
         super(Inactive, self).__init__(None, '[{}] is inactive'.format(name))
+        
+class LockTimeout(ZatoException):
+    """ Raised when a distributed lock could not be obtained.
+    """
+    def __init__(self, cid, name, expires, timeout, backend, inner_msg):
+        msg = 'Could not obtain lock:[{}], expires:[{}], timeout:[{}], backend:[{}], inner_msg:[{}]'.format(
+            name, expires, timeout, backend, inner_msg)
+        super(LockTimeout, self).__init__(cid, msg)
+        self.name = name
+        self.expires = expires
+        self.timeout = timeout
+        self.backend = backend
+        self.inner_msg = inner_msg
     
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.
