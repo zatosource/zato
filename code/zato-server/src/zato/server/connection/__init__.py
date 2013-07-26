@@ -38,7 +38,8 @@ class BaseConnection(object):
     connectors. Implements the (re-)connection logic and leaves all the particular
     details related to messaging to subclasses.
     """
-    def __init__(self, delivery_store=None):
+    def __init__(self, kvdb=None, delivery_store=None):
+        self.kvdb = kvdb
         self.delivery_store = delivery_store
         self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
             errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
@@ -175,7 +176,7 @@ class BaseConnector(BrokerMessageReceiver):
         self.kvdb.init()
         
         # Delivery store
-        self.delivery_store = DeliveryStore(self.kvdb)
+        self.delivery_store = DeliveryStore(self.kvdb, float(fs_server_config.misc.delivery_lock_timeout))
         
         # Broker client
         self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
