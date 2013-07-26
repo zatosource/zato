@@ -29,11 +29,14 @@ from lxml.objectify import deannotate, Element, ElementMaker
 # Paste
 from paste.util.converters import asbool
 
+# retools
+from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
+
 # SQLAlchemy
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK
+from zato.common import BROKER, CHANNEL, KVDB, LockTimeout, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
@@ -713,6 +716,23 @@ class Service(object):
         incoming requests.
         """
         raise NotImplementedError('Should be overridden by subclasses')
+    
+    def _on_lock_timeout(self, name, expires, timeout, backend):
+        def inner(inner_msg):
+            raise LockTimeout(self.cid, name, expires, timeout, backend, inner_msg)
+        return inner
+    
+    def lock(self, name=None, expires=20, timeout=0, backend=None):
+        """ Creates a Redis-backed distributed lock.
+        
+        name - defaults to self.name effectively making access to this service serialized
+        expires - defaults to 20 seconds and is the max time the lock will be held
+        timeout - how long (in seconds) we will wait to acquire the lock before giving up and raising LockTimeout
+        backend - a Redis connection object, defaults to self.kvdb.conn
+        """
+        name = name or self.name
+        backend = backend or self.kvdb.conn
+        return Lock(name, expires, timeout, backend, self._on_lock_timeout(name, expires, timeout, backend))
     
 ################################################################################
 
