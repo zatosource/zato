@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import getLogger
 
 # anyjson
@@ -37,8 +37,11 @@ class DeliveryStore(object):
 
     def get_payload_key(self, target_type, target, tx_id):
         return ''.join((KVDB.DELIVERY_PREFIX, target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
+    
+    def get_archive_key(self, target_type, target, tx_id):
+        return ''.join((KVDB.DELIVERY_ARCHIVE_PREFIX, target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
         
-    def store_check(self, target_type, target, tx_id, payload, expire_after, check_after, retry_repeats, retry_seconds):
+    def store_check(self, target_type, target, tx_id, payload, expire_after, expire_arch_after, check_after, retry_repeats, retry_seconds):
         if not(check_after and retry_repeats and retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
                 check_after, retry_repeats, retry_seconds)
@@ -51,6 +54,9 @@ class DeliveryStore(object):
         payload_value = {
             'tx_id':tx_id,
             'payload':payload,
+            'target_type': target_type,
+            'target': target,
+            'expire_arch_after': expire_arch_after,
             'check_after': check_after,
             'retry_repeats':retry_repeats,
             'retry_seconds':retry_seconds,
@@ -64,12 +70,14 @@ class DeliveryStore(object):
             'creation_time_utc': now,
             'last_updated_utc': now,
             'confirmed': False,
-            'send_side_count': 1,
-            'confirm_side_count': 0,
+            'target_ok': False,
+            'delivered_to': None,
+            'source_count': 1,
+            'target_count': 0,
             'in_doubt':False,
             'in_doubt_created_at_utc':None,
-            'in_doubt_created_send_side_count':None,
-            'in_doubt_created_confirm_side_count':None
+            'in_doubt_created_source_count':None,
+            'in_doubt_created_target_count':None
         }
         
         by_target_type_key = '{}:{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, target_type)
@@ -87,12 +95,12 @@ class DeliveryStore(object):
             'Created delivery key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
             payload_key, expire_after, check_after, retry_repeats, retry_seconds)
         
-        spawn_later(check_after, self.check_target, payload_key, target_type, by_target_type_key, tx_id)
+        spawn_later(check_after, self.check_target, payload_key, target_type, target, by_target_type_key, tx_id)
 
 # ##############################################################################
 
-    def check_target(self, payload_key, target_type, by_target_type_key, tx_id):
-        self.logger.info('Checking target [%s]' , payload_key)
+    def check_target(self, payload_key, target_type, target, by_target_type_key, tx_id):
+        self.logger.debug('Checking target [%s]' , payload_key)
         
         now = datetime.utcnow().isoformat()
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, tx_id)
@@ -100,10 +108,10 @@ class DeliveryStore(object):
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
             payload = self.kvdb.conn.hgetall(payload_key)
             
-            send_side_count = int(payload['send_side_count'])
-            confirm_side_count = int(payload['confirm_side_count'])
+            source_count = int(payload['source_count'])
+            target_count = int(payload['target_count'])
             
-            if send_side_count > confirm_side_count:
+            if source_count > target_count:
                 
                 # We're in a retry function and apparently the target has not replied yet.
                 # We cannot retry just like that because we don't know what happened to target,
@@ -111,8 +119,8 @@ class DeliveryStore(object):
                 # In any case, we can't invoke it again. We are in doubt as to what has happened.
                 payload['in_doubt'] = True
                 payload['in_doubt_created_at_utc'] = now
-                payload['in_doubt_created_send_side_count'] = send_side_count
-                payload['in_doubt_created_confirm_side_count'] = confirm_side_count
+                payload['in_doubt_created_source_count'] = source_count
+                payload['in_doubt_created_target_count'] = target_count
                 
                 with self.kvdb.conn.pipeline() as p:
                     
@@ -135,20 +143,37 @@ class DeliveryStore(object):
                     
                     p.execute()
                     
-                msg = 'tx_id:[{}] is in-doubt, details stored in [{}] under key [{}] (send/confirm {}/{})'.format(
-                    tx_id, in_doubt_key, payload_key, send_side_count, confirm_side_count)
-                #self.logger.warn(msg)
+                msg = 'tx_id:[{}] is in-doubt, details stored in hash [{}] under key [{}] (send/confirm {}/{})'.format(
+                    tx_id, in_doubt_key, payload_key, source_count, target_count)
+                self.logger.warn(msg)
                 
             else:
                 # The target has confirmed the invocation in an expected time so we
-                # now need to check if it was successful. If it was, this is where it ends.
-                # If it wasn't, we'll try it again as it was originally configured
-                # unless it was the last retry.
-                pass
+                # now need to check if it was successful. If it was, this is where it ends,
+                # we move the payload to the archive and that's it. If it wasn't, we'll try again
+                # as it was originally configured unless it was the last retry.
+                if payload['target_ok']:
+                    now = datetime.utcnow()
+                    expire_arch_after = int(payload['expire_arch_after'])
+                    expires_arch_date = now + timedelta(seconds=expire_arch_after)
+                    
+                    arch_key = self.get_archive_key(target_type, target, tx_id)
+                    payload['confirmed'] = True
+                    payload['last_updated_utc'] = now.isoformat()
+                    
+                    with self.kvdb.conn.pipeline() as p:
+                        p.hmset(arch_key, payload)
+                        p.expire(arch_key, expire_arch_after)
+                        p.delete(payload_key)
+                        p.execute()
+                        
+                    msg = 'Confirmed delivery:[{}], payload moved to archive:[{}], expires in {}s ({} UTC)'.format(
+                        payload_key, arch_key, expire_arch_after, expires_arch_date)
+                    self.logger.info(msg)
 
 # ##############################################################################
         
-    def confirm(self, target_type, target, payload, start, end):
+    def on_target_ok(self, target_type, target, payload, start, end, delivered_to):
         now = datetime.utcnow().isoformat()
         tx_id = payload['tx_id']
         payload_key = self.get_payload_key(target_type, target, tx_id)
@@ -165,10 +190,13 @@ class DeliveryStore(object):
             payload['last_attempt_time_end_utc'] = end.isoformat()
             payload['last_attempt_total_time'] = total_time
             payload['last_updated_utc'] = now
-            payload['confirmed'] = True
-            payload['confirm_side_count'] = int(payload['attempts_made']) + 1
+            payload['target_ok'] = True
+            payload['delivered_to'] = delivered_to
+            payload['target_count'] = int(payload['attempts_made']) + 1
             
-            self.logger.info('Confirmed delivery [{}] in {} after {} attempt(s)'.format(
+            self.kvdb.conn.hmset(payload_key, payload)
+            
+            self.logger.info('Delivery target OK [{}] in {} after {} attempt(s)'.format(
                 payload_key, total_time, attempts_made))
             
             if self.logger.isEnabledFor(TRACE1):
