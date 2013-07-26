@@ -18,7 +18,7 @@ from uuid import uuid4
 from nose.tools import eq_
 
 # Zato
-from zato.common import CHANNEL, LockTimeout, SCHEDULER_JOB_TYPE
+from zato.common import CHANNEL, KVDB, LockTimeout, SCHEDULER_JOB_TYPE
 from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
 from zato.server.service import Service
 
@@ -117,8 +117,8 @@ class TestLock(ServiceTestCase):
         instance = DummyService()
         instance.handle()
         
-        eq_(my_kvdb.conn.delete_args, lock_name)
-        eq_(my_kvdb.conn.expire_args, (lock_name, expires))
+        eq_(my_kvdb.conn.delete_args, KVDB.LOCK_SERVICE_PREFIX + lock_name)
+        eq_(my_kvdb.conn.expire_args, (KVDB.LOCK_SERVICE_PREFIX + lock_name, expires))
         
         # First arg is the lock_name that can ne checked directly but the other
         # one is the expiration time that we can check only approximately,
@@ -126,7 +126,7 @@ class TestLock(ServiceTestCase):
         # time allowed for execution of DummyService's invoke method which is
         # way more than needed but let's use 3 to be on the safe side when the
         # test is run on a very slow system.
-        eq_(my_kvdb.conn.setnx_args[0], lock_name)
+        eq_(my_kvdb.conn.setnx_args[0], KVDB.LOCK_SERVICE_PREFIX + lock_name)
         expires_approx = time() + expires
         self.assertAlmostEquals(my_kvdb.conn.setnx_args[1], expires_approx, delta=3)
         
@@ -152,7 +152,7 @@ class TestLock(ServiceTestCase):
         try:
             instance.handle()
         except LockTimeout, e:
-            eq_(e.name, lock_name)
+            eq_(e.name, KVDB.LOCK_SERVICE_PREFIX + lock_name)
             eq_(e.expires, expires)
             eq_(e.timeout, timeout)
             eq_(e.backend is my_kvdb.conn, True)
