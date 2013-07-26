@@ -200,6 +200,7 @@ class KVDB:
     LOCK_PACKAGE_ALREADY_UPLOADED = '{}already-uploaded:'.format(LOCK_PACKAGE_PREFIX)
     
     LOCK_DELIVERY = '{}delivery:'.format(LOCK_PREFIX)
+    LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
     
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'
