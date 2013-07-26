@@ -25,7 +25,7 @@ from zato.server.service import Service
 # ##############################################################################
 
 class HooksTestCase(ServiceTestCase):
-    def xtest_hooks(self):
+    def test_hooks(self):
         
         class MyJob(Service):
             def handle(self):
@@ -55,7 +55,7 @@ class HooksTestCase(ServiceTestCase):
             eq_(instance.environ['{}_called'.format(name)], True)
 
 class TestLogInputOutput(ServiceTestCase):
-    def xtest_log_input_output(self):
+    def test_log_input_output(self):
         
         class MyLogger(object):
             def __init__(self):
@@ -98,7 +98,7 @@ class TestLogInputOutput(ServiceTestCase):
 
 
 class TestLock(ServiceTestCase):
-    def xtest_lock_ok(self):
+    def test_lock_ok(self):
         """ Succesfully grab a service lock.
         """ 
         my_kvdb = FakeKVDB()
