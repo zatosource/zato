@@ -17,11 +17,14 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# retools
+from retools.lock import Lock
+
 # Spring Python
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
-from zato.common import INVOCATION_TARGET
+from zato.common import INVOCATION_TARGET, KVDB
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
@@ -74,8 +77,8 @@ class WMQFacade(object):
         return self
 
 class OutgoingConnection(BaseJMSWMQConnection):
-    def __init__(self, factory, out_name, delivery_store):
-        super(OutgoingConnection, self).__init__(factory, out_name, delivery_store)
+    def __init__(self, factory, name, kvdb, delivery_store):
+        super(OutgoingConnection, self).__init__(factory, name, kvdb, delivery_store)
         self.logger = logging.getLogger(self.__class__.__name__)
         self.jms_template = JmsTemplate(self.factory)
         
@@ -102,8 +105,6 @@ class OutgoingConnection(BaseJMSWMQConnection):
         queue = str(msg['queue'])
         confirm_delivery = msg.get('confirm_delivery')
         
-        print(333, msg)
-        
         try:
             start = datetime.utcnow()
             #self.jms_template.send(jms_msg, queue)
@@ -111,7 +112,7 @@ class OutgoingConnection(BaseJMSWMQConnection):
             time.sleep(0.1)
             
             if confirm_delivery:
-                self.confirm_ok(msg, start, datetime.utcnow())
+                self.delivery_store.confirm(INVOCATION_TARGET.WMQ, self.name, msg, start, datetime.utcnow())
                 
         except Exception, e:
             
@@ -128,9 +129,6 @@ class OutgoingConnection(BaseJMSWMQConnection):
                 else:
                     raise
                 
-    def confirm_ok(self, msg, start, end):
-        self.logger.warn((msg, start, end))
-
 class OutgoingConnector(BaseJMSWMQConnector):
     """ An outgoing connector started as a subprocess. Each connection to a queue manager
     gets its own connector.
@@ -215,7 +213,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
     def _sender(self, factory):
         """ Starts the outgoing connection in a new thread and returns it.
         """
-        sender = OutgoingConnection(factory, self.out.name, self.delivery_store)
+        sender = OutgoingConnection(factory, self.out.name, self.kvdb, self.delivery_store)
         t = Thread(target=sender._run)
         t.start()
         
