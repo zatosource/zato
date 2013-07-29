@@ -175,12 +175,12 @@ class BaseConnector(BrokerMessageReceiver):
         self.kvdb.decrypt_func = self.odb.crypto_manager.decrypt
         self.kvdb.init()
         
-        # Delivery store
-        self.delivery_store = DeliveryStore(self.kvdb, float(fs_server_config.misc.delivery_lock_timeout))
-        
         # Broker client
         self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
         self.broker_client.start()
+        
+        # Delivery store
+        self.delivery_store = DeliveryStore(self.kvdb, self.broker_client, float(fs_server_config.misc.delivery_lock_timeout))
         
         # ODB
         self.odb_config = Bunch()
