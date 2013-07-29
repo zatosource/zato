@@ -227,7 +227,8 @@ class KVDB:
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_TYPE_PREFIX = '{}by-target-type:'.format(DELIVERY_PREFIX)
     DELIVERY_IN_DOUBT_PREFIX = '{}in-doubt:'.format(DELIVERY_PREFIX)
-    DELIVERY_ARCHIVE_PREFIX = '{}arch:'.format(DELIVERY_PREFIX)
+    DELIVERY_ARCHIVE_SUCCESS_PREFIX = '{}arch-succes:'.format(DELIVERY_PREFIX)
+    DELIVERY_ARCHIVE_FAILED_PREFIX = '{}arch-failed:'.format(DELIVERY_PREFIX)
 
 class SCHEDULER_JOB_TYPE:
     ONE_TIME = 'one_time'
@@ -236,6 +237,7 @@ class SCHEDULER_JOB_TYPE:
     
 class CHANNEL:
     AMQP = 'amqp'
+    DELIVERY = 'delivery' # New in 1.2
     HTTP_SOAP = 'http-soap'
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'

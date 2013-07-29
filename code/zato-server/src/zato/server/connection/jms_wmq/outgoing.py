@@ -29,6 +29,7 @@ from springpython.jms.core import JmsTemplate, TextMessage
 # Zato
 from zato.common import INVOCATION_TARGET, KVDB
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
+from zato.common.delivery import DeliveryItem
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
@@ -44,11 +45,10 @@ class WMQFacade(object):
         self.delivery_store = delivery_store
     
     def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            confirm_delivery=None, expire_after=None, expire_arch_after=None, check_after=None, retry_repeats=None,
-            retry_seconds=None, tx_id=None, *args, **kwargs):
+            delivery=None, *args, **kwargs):
         """ Puts a message on a WebSphere MQ queue.
         """
-        tx_id = tx_id or new_cid()
+        delivery.tx_id = delivery.tx_id or new_cid()
 
         # Common parameters
         params = {}
@@ -62,19 +62,29 @@ class WMQFacade(object):
         params['max_chars_printed'] = max_chars_printed
         
         # Confirmed delivery
-        params['tx_id'] = tx_id
-        params['confirm_delivery'] = confirm_delivery
+        if delivery:
+            params['confirm_delivery'] = True
+            params['tx_id'] = delivery.tx_id
         
         # Any extra arguments
         params['args'] = args
         params['kwargs'] = kwargs
         
-        if confirm_delivery:
-            self.delivery_store.store_check(
-                INVOCATION_TARGET.WMQ, out_name, tx_id, params, expire_after,
-                expire_arch_after, check_after, retry_repeats, retry_seconds)
+        invoke_func = self.broker_client.publish
+        invoke_args = params
+        invoke_kwargs = {'msg_type':MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL}
         
-        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL)
+        if delivery:
+            delivery.target_type = INVOCATION_TARGET.WMQ
+            delivery.target = out_name
+            delivery.payload = params
+            delivery.invoke_func = invoke_func
+            delivery.invoke_args = invoke_args
+            delivery.invoke_kwargs = invoke_kwargs
+            
+            self.delivery_store.store_check(delivery)
+        
+        invoke_func(invoke_args, **invoke_kwargs)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -95,6 +105,24 @@ class OutgoingConnection(BaseJMSWMQConnection):
         self.MQMIError = MQMIError
         self.dont_reconnect_errors = (MQRC_UNKNOWN_OBJECT_NAME,)
         
+    def maybe_on_target_delivery(self, msg, start, end, target_ok, queue, inner_exc=None, needs_reconnect=None):
+        if msg.get('confirm_delivery'):
+            target_self_info = dumps({
+                'name': self.name,
+                'details': {
+                    'conn_info':self.factory.get_connection_info(),
+                    'queue': queue
+                }
+            })
+            
+            exc_info = {
+                'inner_exc': inner_exc,
+                'needs_reconnect': needs_reconnect
+            }
+            
+            self.delivery_store.on_target_completed(
+                INVOCATION_TARGET.WMQ, self.name, msg, start, end, target_ok, target_self_info, exc_info)
+        
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         jms_msg = TextMessage()
         jms_msg.text = msg.get('body')
@@ -109,29 +137,21 @@ class OutgoingConnection(BaseJMSWMQConnection):
         jms_msg.max_chars_printed = msg.get('max_chars_printed') or default_max_chars_printed
         
         queue = str(msg['queue'])
-        confirm_delivery = msg.get('confirm_delivery')
         
         try:
             start = datetime.utcnow()
             self.jms_template.send(jms_msg, queue)
-            
-            if confirm_delivery:
-                delivered_to = dumps({
-                    'name': self.name,
-                    'details': {
-                        'conn_info':self.factory.get_connection_info(),
-                        'queue': queue
-                    }
-                })
-                
-                self.delivery_store.on_target_ok(
-                    INVOCATION_TARGET.WMQ, self.name, msg, start, datetime.utcnow(), delivered_to)
+            self.maybe_on_target_delivery(msg, start, datetime.utcnow(), True, queue)
                 
         except Exception, e:
             if isinstance(e, self.MQMIError) and e.reason in self.dont_reconnect_errors:
-                self.logger.warn('Caught [{}/{}] while sending the message [{}]'.format(e.reason, e.errorAsString(), jms_msg))
+                self.logger.warn(
+                    'Caught [{}/{}] while sending the message [{}] (not reconnecting)'.format(e.reason, e.errorAsString(), jms_msg))
+                self.maybe_on_target_delivery(msg, start, datetime.utcnow(), False, queue, format_exc(e), False)
+                
             else:
-                self.logger.warn('Caught [{}] while sending the message [{}]'.format(format_exc(e), jms_msg))
+                self.logger.warn('Caught [{}] while sending the message [{}] (reconnecting)'.format(format_exc(e), jms_msg))
+                self.maybe_on_target_delivery(msg, start, datetime.utcnow(), False, queue, format_exc(e), True)
                 
                 if self._keep_connecting(e):
                     self.close()
