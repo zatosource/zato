@@ -50,7 +50,7 @@ class DeliveryItem(object):
         self.invoke_kwargs = None
         self.payload_key = None
         self.by_target_type_key = None
-        self.on_delivery_success = ['zato.helpers.input-logger']
+        self.on_delivery_success = []
         self.on_delivery_failed = []
 
 class DeliveryStore(object):
