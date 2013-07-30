@@ -147,7 +147,7 @@ class DeliveryStore(object):
                     }
                     
                     p.hset(in_doubt_key, item.payload_key, data)
-                    p.delete(payload_key)
+                    p.delete(item.payload_key)
                     p.srem(item.by_target_type_key, item.payload_key)
                     
                     p.execute()
