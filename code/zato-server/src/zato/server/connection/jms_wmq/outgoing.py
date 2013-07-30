@@ -29,7 +29,7 @@ from springpython.jms.core import JmsTemplate, TextMessage
 # Zato
 from zato.common import INVOCATION_TARGET, KVDB
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
-from zato.common.delivery import DeliveryItem
+from zato.common.model import DeliveryItem
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
@@ -75,7 +75,7 @@ class WMQFacade(object):
         invoke_kwargs = {'msg_type':MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL}
         
         if delivery:
-            delivery.target_type = INVOCATION_TARGET.WMQ
+            delivery.target_type = INVOCATION_TARGET.OUTCONN_WMQ
             delivery.target = out_name
             delivery.payload = params
             delivery.invoke_func = invoke_func
@@ -121,7 +121,7 @@ class OutgoingConnection(BaseJMSWMQConnection):
             }
             
             self.delivery_store.on_target_completed(
-                INVOCATION_TARGET.WMQ, self.name, msg, start, end, target_ok, target_self_info, exc_info)
+                INVOCATION_TARGET.OUTCONN_WMQ, self.name, msg, start, end, target_ok, target_self_info, exc_info)
         
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         jms_msg = TextMessage()
