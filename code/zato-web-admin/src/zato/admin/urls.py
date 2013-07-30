@@ -26,6 +26,7 @@ from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
+from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
 
@@ -92,6 +93,15 @@ urlpatterns = patterns('',
     url(r'^zato/service/slow-response/details/(?P<cid>.*)/(?P<service_name>.*)/$', 
         service.slow_response_details, name='service-slow-response-details'),
     url(r'^zato/service/slow-response/(?P<service_name>.*)/$', service.slow_response, name='service-slow-response'),
+
+    # Patterns ..
+    
+    # Delivery
+    url(r'^zato/pattern/delivery/$', pattern_delivery.Index(), name=pattern_delivery.Index.url_name),
+    url(r'^zato/pattern/delivery/create/$', pattern_delivery.Create(), name=pattern_delivery.Create.url_name),
+    url(r'^zato/pattern/delivery/edit/$', pattern_delivery.Edit(), name=pattern_delivery.Edit.url_name),
+    url(r'^zato/pattern/delivery/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', 
+        pattern_delivery.Delete(), name=pattern_delivery.Delete.url_name),
 
     # Security..
 

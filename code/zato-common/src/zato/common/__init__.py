@@ -245,12 +245,15 @@ class CHANNEL:
     SCHEDULER = 'scheduler'
     ZMQ = 'zmq'
     STARTUP_SERVICE = 'startup-service'
-    
+
 class INVOCATION_TARGET:
-    AMQP = 'amqp'
+    CHANNEL_AMQP = 'channel-amqp'
+    CHANNEL_WMQ = 'channel-wmq'
+    CHANNEL_ZMQ = 'channel-zmq'
+    OUTCONN_AMQP = 'outconn-amqp'
+    OUTCONN_WMQ = 'outconn-wmq'
+    OUTCONN_ZMQ = 'outconn-zmq'
     SERVICE = 'service'
-    WMQ = 'wmq'
-    ZMQ = 'zmq'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds

@@ -27,31 +27,8 @@ from retools.lock import Lock
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, KVDB
 from zato.common.broker_message import SERVICE
+from zato.common.model import DeliveryItem
 from zato.common.util import new_cid, TRACE1
-
-class DeliveryItem(object):
-    """ A container for config pieces regarding a particular delivery effort so they
-    don't have to passed around individually.
-    """
-    def __init__(self):
-        self.target_type = None
-        self.target = None
-        self.tx_id = None
-        self.payload = None
-        self.expire_after = None
-        self.expire_arch_success_after = None
-        self.expire_arch_failed_after = None
-        self.special_case_weekends = False
-        self.check_after = None
-        self.retry_repeats = None
-        self.retry_seconds = None
-        self.invoke_func = None
-        self.invoke_args = None
-        self.invoke_kwargs = None
-        self.payload_key = None
-        self.by_target_type_key = None
-        self.on_delivery_success = []
-        self.on_delivery_failed = []
 
 class DeliveryStore(object):
     """ Stores messages in a persistent storage until they are confirmed to have been delivered.
