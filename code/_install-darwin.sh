@@ -27,8 +27,8 @@ brew install git
 brew install swig
 brew install python
 
-pip install --upgrade distribute
-pip install --upgrade virtualenv
+pip install distribute==0.6.49
+pip install virtualenv==1.9.1
 
 pip install nose
 pip install m2crypto

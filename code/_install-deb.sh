@@ -38,8 +38,8 @@ symlink_py 'M2Crypto'
 symlink_py 'numpy'
 symlink_py 'scipy'
 
-sudo pip install --upgrade distribute
-sudo pip install --upgrade virtualenv
+sudo pip install distribute==0.6.49
+sudo pip install virtualenv==1.9.1
 
 virtualenv .
 
