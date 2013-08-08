@@ -214,7 +214,9 @@ class Create(ZatoCommand):
             setattr(cluster, name, getattr(args, name))
         session.add(cluster)
         
-        admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke', args.admin_invoke_password, cluster)
+        # TODO: getattrs below should be squared away - one of the attrs should win
+        #       and the other one should be get ridden of.
+        admin_invoke_sec = HTTPBasicAuth(None, 'admin.invoke', True, 'admin.invoke', 'Zato admin invoke', getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), cluster)
         session.add(admin_invoke_sec)
         
         pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', uuid4().hex, cluster)
