@@ -48,7 +48,7 @@ class DeliveryStore(object):
         return ''.join((KVDB.DELIVERY_ARCHIVE_SUCCESS_PREFIX if target_ok else KVDB.DELIVERY_ARCHIVE_FAILED_PREFIX, 
                         target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
         
-    def store_check(self, item):
+    def register(self, item):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
                 item.check_after, item.retry_repeats, item.retry_seconds)

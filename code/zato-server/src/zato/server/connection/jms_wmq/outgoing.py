@@ -82,7 +82,7 @@ class WMQFacade(object):
             delivery.invoke_args = invoke_args
             delivery.invoke_kwargs = invoke_kwargs
             
-            self.delivery_store.store_check(delivery)
+            self.delivery_store.register(delivery)
         
         invoke_func(invoke_args, **invoke_kwargs)
         
