@@ -59,13 +59,12 @@
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
 {% else %}
+    {% include "zato/user-message.html" %}
 
-    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
-
-{% include "zato/choose-cluster.html" with page_prompt="Show definitions"%}
+    {% include "zato/choose-cluster.html" with page_prompt="Show definitions"%}
 
 
-    {% if cluster_id %}
+    {% if cluster_id and target_type%}
         <div class='page_prompt'>
             <a href="javascript:$.fn.zato.pattern.delivery.create()">Create a new guaranteed delivery definition</a>
         </div>
@@ -78,7 +77,6 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">Type</a></th>
                         <th><a href="#">Target</a></th>
                         <th><a href="#">Short def.</a></th>
                         <th><a href="#">Total</a></th>
@@ -295,8 +293,14 @@
                 </form>
             </div>
         </div>
-
-    {% endif %}
+        
+    {% else %}
+    
+        <p class="big-notice">
+            Please select both cluster and target type
+        </p>
+    
+    {% endif %} {% comment %}cluster_id and target_type{% endcomment %}
 
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}

@@ -175,6 +175,8 @@ class Index(_BaseView):
         super(Index, self).__init__()
         self.items = []
         self.item = None
+        self.user_message = None
+        self.user_message_class = 'failure'
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
@@ -222,9 +224,13 @@ class Index(_BaseView):
                         self._handle_item_list(response.data)
                     else:
                         self._handle_item(response.data)
+                else:
+                    self.user_message = response.details
     
             return_data['items'] = self.items
             return_data['item'] = self.item
+            return_data['user_message'] = self.user_message
+            return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
             return_data['choose_cluster_form'] = req.zato.choose_cluster_form
             

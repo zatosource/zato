@@ -154,36 +154,55 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
-class DATA_FORMAT:
+class NotGiven(object):
+    pass # A marker for lazily-initialized attributes
+
+class Attrs(type):
+    """ A container for class attributes that can be queried for an existence
+    of an attribute using the .has class-method.
+    """
+    attrs = NotGiven
+
+    @classmethod
+    def has(cls, attr):
+        if cls.attrs is NotGiven:
+            cls.attrs = []
+            for cls_attr in dir(cls):
+                if cls_attr == cls_attr.upper():
+                    cls.attrs.append(getattr(cls, cls_attr))
+                    
+        return attr in cls.attrs
+
+class DATA_FORMAT(Attrs):
     XML = 'xml'
     JSON = 'json'
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
-    class FORMAT:
+    class FORMAT(Attrs):
         XML = DATA_FORMAT.XML
         JSON = DATA_FORMAT.JSON
         
     class INT_PARAMETERS:
         VALUES = ['id']
-        SUFFIXES = ['_id', '_size', '_timeout']
+        SUFFIXES = ['_id', '_count', '_size', '_timeout']
         
     class BOOL_PARAMETERS:
         SUFFIXES = ['is_', 'needs_', 'should_']
         
-class DEPLOYMENT_STATUS:
+class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'
     AWAITING_DEPLOYMENT = 'awaiting-deployment'
     IGNORED = 'ignored'
     
-class SERVER_JOIN_STATUS:
+class SERVER_JOIN_STATUS(Attrs):
     ACCEPTED = 'accepted'
     
-class SERVER_UP_STATUS:
+class SERVER_UP_STATUS(Attrs):
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'
     
-class KVDB:
+class KVDB(Attrs):
     SEPARATOR = ':::'
     
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
@@ -231,12 +250,12 @@ class KVDB:
     DELIVERY_ARCHIVE_SUCCESS_PREFIX = '{}arch-succes:'.format(DELIVERY_PREFIX)
     DELIVERY_ARCHIVE_FAILED_PREFIX = '{}arch-failed:'.format(DELIVERY_PREFIX)
 
-class SCHEDULER_JOB_TYPE:
+class SCHEDULER_JOB_TYPE(Attrs):
     ONE_TIME = 'one_time'
     INTERVAL_BASED = 'interval_based'
     CRON_STYLE = 'cron_style'
     
-class CHANNEL:
+class CHANNEL(Attrs):
     AMQP = 'amqp'
     DELIVERY = 'delivery' # New in 1.2
     HTTP_SOAP = 'http-soap'
@@ -247,7 +266,7 @@ class CHANNEL:
     ZMQ = 'zmq'
     STARTUP_SERVICE = 'startup-service'
 
-class INVOCATION_TARGET:
+class INVOCATION_TARGET(Attrs):
     CHANNEL_AMQP = 'channel-amqp'
     CHANNEL_WMQ = 'channel-wmq'
     CHANNEL_ZMQ = 'channel-zmq'
@@ -255,6 +274,12 @@ class INVOCATION_TARGET:
     OUTCONN_WMQ = 'outconn-wmq'
     OUTCONN_ZMQ = 'outconn-zmq'
     SERVICE = 'service'
+    
+class DELIVERY_STATE(Attrs):
+    IN_DOUBT = 'in-doubt'
+    IN_PROGRESS = 'in-progress'
+    COMPLETED = 'completed'
+    UNKNOWN = 'unknown'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds

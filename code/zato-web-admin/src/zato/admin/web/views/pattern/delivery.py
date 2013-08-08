@@ -26,8 +26,9 @@ class Index(_Index):
     output_class = DeliveryItem
     
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('zz',)
+        input_required = ('cluster_id', 'target_type')
+        output_required = ('name', 'target', 'short_def', 'total_count', 
+            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
         output_repeated = True
         
     def handle(self):
@@ -35,6 +36,7 @@ class Index(_Index):
             'delivery_target_form': DeliveryTargetForm(self.req.GET),
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
+            'target_type': self.req.GET.get('target_type'),
         }
 
 class _CreateEdit(CreateEdit):

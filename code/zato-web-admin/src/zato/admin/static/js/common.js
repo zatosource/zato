@@ -73,6 +73,7 @@ $.namespace('zato.outgoing.ftp');
 $.namespace('zato.outgoing.jms_wmq');
 $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.zmq');
+$.namespace('zato.pattern.delivery');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
