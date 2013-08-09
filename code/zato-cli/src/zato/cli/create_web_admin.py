@@ -112,7 +112,7 @@ class Create(ZatoCommand):
             'SITE_ID': getrandbits(20),
             'SECRET_KEY': encrypt(uuid.uuid4().hex, pub_key),
             'ADMIN_INVOKE_NAME':'admin.invoke',
-            'ADMIN_INVOKE_PASSWORD':encrypt(args.admin_invoke_password, pub_key),
+            'ADMIN_INVOKE_PASSWORD':encrypt(getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), pub_key),
         }
         
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/web-admin.log'))
