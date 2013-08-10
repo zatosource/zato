@@ -86,6 +86,7 @@ class ZatoMiddleware(object):
         # defined in app's settings.py
         req.zato = Bunch()
         req.zato.odb = SASession()
+        req.zato.args = Bunch() # Arguments read from URL
 
         resolved_kwargs = resolve(req.path).kwargs
         req.zato.id = resolved_kwargs.get('id')

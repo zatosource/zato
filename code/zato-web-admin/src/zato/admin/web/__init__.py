@@ -57,7 +57,7 @@ TIME_FORMATS = {
 }
 
 def last_hour_start_stop(now):
-    """ Returns a ISO-8601 formatted pair of start/stop timestamps representing
+    """ Returns an ISO-8601 formatted pair of start/stop timestamps representing
     now-1 hour and now.
     """
     return (now + relativedelta(minutes=-60)).isoformat(), now.isoformat()

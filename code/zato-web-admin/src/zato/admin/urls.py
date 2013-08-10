@@ -102,6 +102,10 @@ urlpatterns = patterns('',
     url(r'^zato/pattern/delivery/edit/$', pattern_delivery.Edit(), name=pattern_delivery.Edit.url_name),
     url(r'^zato/pattern/delivery/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', 
         pattern_delivery.Delete(), name=pattern_delivery.Delete.url_name),
+    url(r'^zato/pattern/delivery/details/in-doubt/(?P<name>.*)/(?P<tx_id>.*)/(?P<target_type>.*)/(?P<cluster_id>.*)/$', 
+        pattern_delivery.DetailsInDoubt(), name=pattern_delivery.DetailsInDoubt.url_name),
+    url(r'^zato/pattern/delivery/list/(?P<state>.*)/(?P<name>.*)/(?P<target_type>.*)/(?P<cluster_id>.*)/$', 
+        pattern_delivery.InstanceList(), name=pattern_delivery.InstanceList.url_name),
 
     # Security..
 

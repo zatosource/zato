@@ -41,12 +41,20 @@ class DeliveryStore(object):
         
 # ##############################################################################
 
+    def get_anonymous_name(self, item):
+        return 'anon-{}-{}-{}-{}-{}-{}-{}-{}'.format(
+            item.target_type, item.target, item.retry_repeats, item.retry_seconds, item.check_after,
+            item.expire_after, item.expire_arch_success_after, item.expire_arch_failed_after)
+
     def get_payload_key(self, target_type, target, tx_id):
         return ''.join((KVDB.DELIVERY_PREFIX, target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
     
     def get_archive_key(self, target_type, target, target_ok, tx_id):
         return ''.join((KVDB.DELIVERY_ARCHIVE_SUCCESS_PREFIX if target_ok else KVDB.DELIVERY_ARCHIVE_FAILED_PREFIX, 
                         target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
+    
+    def get_in_doubt_key(self, name):
+        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_PREFIX, name)
         
     def register(self, item):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
@@ -57,12 +65,14 @@ class DeliveryStore(object):
 
         now = datetime.utcnow().isoformat()
 
+        item.name = item.name or self.get_anonymous_name(item)
         item.payload_key = self.get_payload_key(item.target_type, item.target, item.tx_id)
         payload_value = {
             'tx_id':item.tx_id,
             'payload':item.payload,
-            'target_type': item.target_type,
+            'name': item.name,
             'target': item.target,
+            'target_type': item.target_type,
             'expire_arch_success_after': item.expire_arch_success_after,
             'expire_arch_failed_after': item.expire_arch_failed_after,
             'expires_arch_time_utc': None,
@@ -90,12 +100,12 @@ class DeliveryStore(object):
         }
         
         item.by_target_type_key = '{}{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, item.target_type)
-        item.by_target_instance_key = '{}{}'.format(KVDB.DELIVERY_BY_TARGET_INSTANCE_PREFIX, item.target_type)
+        item.uq_by_target_type_key = '{}{}'.format(KVDB.DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX, item.target_type)
         
         with self.kvdb.conn.pipeline() as p:
-            p.sadd(item.by_target_instance_key, item.payload_key)
             p.hmset(item.payload_key, payload_value)
-            p.hmset(item.by_target_type_key, {'target':item.target, 'last_updated_utc':now})
+            p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
+            p.sadd(item.uq_by_target_type_key, item.payload_key)
     
             if item.expire_after:
                 p.expire(item.payload_key, item.expire_after)
@@ -103,15 +113,15 @@ class DeliveryStore(object):
             p.execute()
         
         self.logger.info(
-            'Created delivery key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
-            item.payload_key, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
+            'Created delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
+            item.name, item.payload_key, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
 
         self.spawn_check_target(item)
 
 # ##############################################################################
 
     def check_target(self, item):
-        self.logger.debug('Checking target [%s]', item.payload_key)
+        self.logger.debug('Checking name/target [%s]/[%s]', item.name, item.payload_key)
         
         now = datetime.utcnow().isoformat()
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.tx_id)
@@ -119,7 +129,7 @@ class DeliveryStore(object):
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
             payload = self.kvdb.conn.hgetall(item.payload_key)
             
-            self.kvdb.conn.hmset(item.by_target_type_key, {'target':item.target, 'last_updated_utc':now})
+            self.kvdb.conn.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
             
             source_count = int(payload['source_count'])
             target_count = int(payload['target_count'])
@@ -137,29 +147,31 @@ class DeliveryStore(object):
                 
                 with self.kvdb.conn.pipeline() as p:
                     
+                    # We add an in-doubt context and remove any 
+                    # other information regarding this tx_id from other places.
+                    
                     # There's a separate in-doubt key for each type of target so each outgoing
                     # connection or wrapper has its own key. The key stores a hashmap whose
                     # keys are concrete deliveries that are in doubt and values are payload
-                    # that was to be delivered. So we add an in-doubt context and remove any 
-                    # other information regarding this tx_id from other places.
-                    in_doubt_key = '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_PREFIX, item.target_type)
+                    # that was to be delivered. 
+                    
+                    in_doubt_key = self.get_in_doubt_key(item.name)
 
-                    data = {
-                        'payload': dumps(payload),
+                    data = dumps({
+                        'payload': payload,
                         'overtime_info': None # This is populated by target if it doesn't make it in the expected time
                                               # but still manages to confirm /something/ at all (but we still treat it as in-doubt).
-                    }
+                    })
                     
                     p.hset(in_doubt_key, item.payload_key, data)
-                    p.hmset(item.by_target_type_key, {'target':item.target, 'last_updated_utc':now})
+                    p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
                     p.delete(item.payload_key)
-                    p.srem(item.by_target_instance_key, item.payload_key)
+                    p.srem(item.uq_by_target_type_key, item.payload_key)
                     
                     p.execute()
                     
-                msg = 'tx_id:[{}] is in-doubt, details stored in hash [{}] under key [{}] (send/confirm {}/{})'.format(
-                    item.tx_id, in_doubt_key, item.payload_key, source_count, target_count)
-                self.logger.warn(msg)
+                msg = 'tx_id:[%s] (%s) is in-doubt, details stored in hash [%s] under key [%s] (send/confirm %s/%s)'
+                self.logger.warn(msg, item.tx_id, item.name, in_doubt_key, item.payload_key, source_count, target_count)
                 
             else:
                 # The target has confirmed the invocation in an expected time so we
@@ -189,8 +201,8 @@ class DeliveryStore(object):
                     if attempts_made < retry_repeats:
                         self.spawn_invoke_func(item.invoke_func, item.invoke_args, item.invoke_kwargs)
                         self.spawn_check_target(item)
-                        self.logger.info('Delivery attempt failed ({}/{}) [{}], needs_reconnect:[{}], inner_exc:[{}]'.format(
-                            attempts_made, retry_repeats, item.payload_key, needs_reconnect, inner_exc))
+                        self.logger.info('Delivery attempt failed (%s/%s) [%s] (%s), needs_reconnect:[%s], inner_exc:[%s]',
+                            attempts_made, retry_repeats, item.payload_key, item.name, needs_reconnect, inner_exc)
 
                     # Nope, that was the last attempt.
                     else:
@@ -217,7 +229,7 @@ class DeliveryStore(object):
         payload['expires_arch_time_utc'] = expires_arch_time.isoformat()
         
         with self.kvdb.conn.pipeline() as p:
-            p.hmset(item.by_target_type_key, {'target':item.target, 'last_updated_utc':now})
+            p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
             p.hmset(arch_key, payload)
             p.expire(arch_key, expire_arch_after)
             p.delete(item.payload_key)
@@ -287,3 +299,26 @@ class DeliveryStore(object):
                 self.logger.log(TRACE1, payload)
 
 # ##############################################################################
+
+    def get_by_target_type(self, target_type):
+        """ Returns delivery names and basic information for a given target type.
+        """
+        return self.kvdb.conn.hgetall('{}{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, target_type))
+    
+    def get_counts(self, name):
+        """ Returns counters for a given delivery by its name. Does not hold onto
+        any locks so the results are precise yet may be off by the time caller receives them.
+        """
+        in_progress_count = 0
+        in_doubt_count = self.kvdb.conn.hlen(self.get_in_doubt_key(name))
+        arch_success_count = 0
+        arch_failed_count = 0
+        
+        return in_progress_count, in_doubt_count, arch_success_count, arch_failed_count
+    
+    def get_in_doubt_instance_list(self, name):
+        for _, context in self.kvdb.conn.hgetall(self.get_in_doubt_key(name)).items():
+            payload = loads(context)['payload']
+            yield {
+                'tx_id': payload['tx_id']
+            }

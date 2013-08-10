@@ -498,6 +498,7 @@ class Service(object):
         self.transport = None
         self.wsgi_environ = None
         self.job_type = None
+        self.delivery_store = None
         self.environ = {}
         self.request = Request(self.logger)
         self.response = Response(self.logger)
@@ -890,6 +891,7 @@ class Service(object):
         service.wsgi_environ = wsgi_environ
         service.job_type = job_type
         service.translate = server.kvdb.translate
+        service.delivery_store = server.delivery_store
         
         if init:
             service._init()
