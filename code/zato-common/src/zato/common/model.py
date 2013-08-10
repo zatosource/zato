@@ -15,8 +15,9 @@ class DeliveryItem(object):
     """ A container for config pieces regarding a particular delivery effort.
     """
     def __init__(self):
-        self.target_type = None
+        self.name = None
         self.target = None
+        self.target_type = None
         self.tx_id = None
         self.payload = None
         self.expire_after = None
@@ -31,6 +32,8 @@ class DeliveryItem(object):
         self.invoke_kwargs = None
         self.payload_key = None
         self.by_target_type_key = None
-        self.by_target_instance_key = None
+        self.uq_by_target_type_key = None
         self.on_delivery_success = []
         self.on_delivery_failed = []
+        self.last_updated_utc = None
+        self.last_updated = None # In current user's timezone

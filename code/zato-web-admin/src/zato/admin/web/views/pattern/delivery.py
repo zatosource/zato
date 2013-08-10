@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.model import DeliveryItem
@@ -27,9 +28,14 @@ class Index(_Index):
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'target_type')
-        output_required = ('name', 'target', 'short_def', 'total_count', 
-            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
+        output_required = ('name', 'target', 'target_type', 'short_def', 'total_count', 
+            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count',
+            'last_updated_utc')
         output_repeated = True
+        
+    def on_before_append_item(self, item):
+        item.last_updated = from_utc_to_user(item.last_updated_utc + '+00:00', self.req.zato.user_profile)
+        return item
         
     def handle(self):
         return {
@@ -62,3 +68,22 @@ class Delete(_Delete):
     url_name = 'pattern-delivery-delete'
     error_message = 'Could not delete delivery'
     service_name = 'zato.pattern.delivery.delete'
+
+class InstanceList(_Index):
+    method_allowed = 'GET'
+    url_name = 'pattern-delivery-instance-list'
+    template = 'zato/pattern/delivery/instance-list.html'
+    service_name = 'zato.pattern.delivery.get-instance-list'
+    output_class = DeliveryItem
+    
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('name', 'target_type', 'state')
+        output_required = ('name', 'target_type', 'state')
+        output_repeated = True
+        
+    def handle(self):
+        return {}
+
+class DetailsInDoubt(_Delete):
+    url_name = 'pattern-delivery-details-in-doubt'
+    service_name = 'zato.pattern.delivery.get-details-in-doubt'

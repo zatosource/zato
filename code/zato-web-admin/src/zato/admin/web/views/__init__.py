@@ -160,6 +160,8 @@ class _BaseView(object):
         
     def __call__(self, req, *args, **kwargs):
         self.req = req
+        for k, v in kwargs.items():
+            self.req.zato.args[k] = v
         self.cluster_id = None
         self.fetch_cluster_id()
 
@@ -175,15 +177,27 @@ class Index(_BaseView):
         super(Index, self).__init__()
         self.items = []
         self.item = None
+        self.clear_user_message()
+        
+    def clear_user_message(self):
         self.user_message = None
         self.user_message_class = 'failure'
+        
+    def can_invoke_admin_service(self):
+        """ Returns a boolean flag indicating that we know what service to invoke,
+        what cluster on and all the required parameters were given in GET request.
+        cluster_id doesn't have to be in GET, 'cluster' will suffice.
+        """
+        input_elems = self.req.GET.keys() + self.req.zato.args.keys()
+        return self.service_name and self.cluster_id and not(
+            any(True for elem in self.SimpleIO.input_required if elem != 'cluster_id' and elem not in input_elems))
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             input_dict = {'cluster_id':self.cluster_id}
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name != 'cluster_id':
-                    input_dict[name] = self.req.GET.get(name)
+                    input_dict[name] = self.req.GET.get(name) or self.req.zato.args.get(name)
                 
             return self.req.zato.client.invoke(self.service_name, input_dict)
     
@@ -200,7 +214,10 @@ class Index(_BaseView):
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
-            self.items.append(item)
+            self.items.append(self.on_before_append_item(item))
+
+    def on_before_append_item(self, item):
+        return item
     
     def _handle_item(self, item):
         pass
@@ -209,6 +226,8 @@ class Index(_BaseView):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
+        self.clear_user_message()
+        
         try:
             super(Index, self).__call__(req, *args, **kwargs)
             del self.items[:]
@@ -217,7 +236,7 @@ class Index(_BaseView):
             return_data = {'cluster_id':self.cluster_id}
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
             
-            if self.service_name and self.cluster_id:
+            if self.can_invoke_admin_service():
                 response = self.invoke_admin_service()
                 if response.ok:
                     if output_repeated:
@@ -226,7 +245,10 @@ class Index(_BaseView):
                         self._handle_item(response.data)
                 else:
                     self.user_message = response.details
+            else:
+                logger.debug('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
     
+            return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
             return_data['user_message'] = self.user_message

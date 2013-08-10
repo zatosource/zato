@@ -16,8 +16,9 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.DeliveryItem;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pattern.delivery.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'target', 'short_def', 'total_count', 
-            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count']);
+    $.fn.zato.data_table.setup_forms(['name', 'target', 'target_type', 'short_def', 'total_count', 
+            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count',
+            'last_updated']);
 })
 
 
