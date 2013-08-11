@@ -246,7 +246,7 @@ class Index(_BaseView):
                 else:
                     self.user_message = response.details
             else:
-                logger.debug('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
+                logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
     
             return_data['req'] = self.req
             return_data['items'] = self.items

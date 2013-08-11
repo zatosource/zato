@@ -154,6 +154,9 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
+DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 25
+MAX_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 1000
+
 class NotGiven(object):
     pass # A marker for lazily-initialized attributes
 
@@ -246,7 +249,8 @@ class KVDB(Attrs):
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_TYPE_PREFIX = '{}by-target-type:'.format(DELIVERY_PREFIX)
     DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX = '{}uq-by-target-type:'.format(DELIVERY_PREFIX)
-    DELIVERY_IN_DOUBT_PREFIX = '{}in-doubt:'.format(DELIVERY_PREFIX)
+    DELIVERY_IN_DOUBT_DETAILS_PREFIX = '{}in-doubt:details:'.format(DELIVERY_PREFIX)
+    DELIVERY_IN_DOUBT_LIST_PREFIX = '{}in-doubt:list:'.format(DELIVERY_PREFIX)
     DELIVERY_ARCHIVE_SUCCESS_PREFIX = '{}arch-succes:'.format(DELIVERY_PREFIX)
     DELIVERY_ARCHIVE_FAILED_PREFIX = '{}arch-failed:'.format(DELIVERY_PREFIX)
 

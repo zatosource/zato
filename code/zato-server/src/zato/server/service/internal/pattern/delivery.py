@@ -10,9 +10,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # anyjson
 from anyjson import loads
+from traceback import format_exc
 
 # Zato
-from zato.common import DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
+from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -63,29 +64,36 @@ class GetList(_DeliveryService):
             
         self.response.payload[:] = self.get_data(target_type)
         
-class GetInstanceList(_DeliveryService):
-    """ For a given delivery name, its state and target type, returns a list of instances of that delivery.
+class InDoubtGetInstanceList(_DeliveryService):
+    """ For a given delivery name, return all instances that are in-doubt.
     """
+    name = 'zato.pattern.delivery.in-doubt.get-instance-list'
+    
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_pattern_delivery_get_instance_list_request'
-        response_elem = 'zato_pattern_delivery_get_instance_list_response'
-        input_required = ('name', 'target_type', 'state')
-        output_required = ('name', 'target_type', AsIs('tx_id'))
+        request_elem = 'zato_pattern_delivery_in_doubt_get_instance_list_request'
+        response_elem = 'zato_pattern_delivery_in_doubt_get_instance_list_response'
+        input_required = ('name', 'target_type')
+        input_optional = ('start', 'stop', 'batch_no', 'batch_size')
+        output_required = ('name', 'target_type', AsIs('tx_id'), 'creation_time_utc', 'in_doubt_created_at_utc', 
+            'source_count', 'target_count', 'retry_repeats', 'check_after', 'retry_seconds')
         
     def handle(self):
-        target_type = self.request.input.target_type
-        state = self.request.input.state
+        try:
+            batch_size = self.request.input.get('batch_size')
+            batch_size = int(batch_size) or DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
+        except(TypeError, ValueError), e:
+            self.logger.debug('Invalid batch_size in:[%s], e:[%s]', batch_size, format_exc(e))
+            batch_size = DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
+            
         
-        self._validate_input_dict(
-            ('target_type', target_type, INVOCATION_TARGET),
-            ('state', state, DELIVERY_STATE),)
+            
+        self.response.payload[:] = self.get_data(batch_size)
         
-        func_name = '_on_{}'.format(state.replace('-', '_'))
-        self.response.payload[:] = getattr(self, func_name)(self.request.input.name, target_type)
-        
-    def _on_in_doubt(self, name, target_type):
-        for item in self.delivery_store.get_in_doubt_instance_list(name):
-            item['name'] = name
-            item['target_type'] = target_type
+    def get_data(self, batch_size):
+        for item in self.delivery_store.get_in_doubt_instance_list(
+                self.request.input.name, self.request.input.get('start'), 
+                self.request.input.get('stop'),batch_size):
+            item['name'] = self.request.input.name
+            item['target_type'] = self.request.input.target_type
             
             yield item
