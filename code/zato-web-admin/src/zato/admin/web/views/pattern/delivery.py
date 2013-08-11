@@ -13,8 +13,8 @@ import logging
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format
 from zato.common.model import DeliveryItem
 
 logger = logging.getLogger(__name__)
@@ -69,21 +69,36 @@ class Delete(_Delete):
     error_message = 'Could not delete delivery'
     service_name = 'zato.pattern.delivery.delete'
 
-class InstanceList(_Index):
+# ##############################################################################
+
+class InDoubtInstanceList(_Index):
     method_allowed = 'GET'
-    url_name = 'pattern-delivery-instance-list'
-    template = 'zato/pattern/delivery/instance-list.html'
-    service_name = 'zato.pattern.delivery.get-instance-list'
+    url_name = 'pattern-delivery-in-doubt-instance-list'
+    template = 'zato/pattern/delivery/in-doubt/instance-list.html'
+    service_name = 'zato.pattern.delivery.in-doubt.get-instance-list'
     output_class = DeliveryItem
     
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('name', 'target_type', 'state')
-        output_required = ('name', 'target_type', 'state')
+        input_required = ('name', 'target_type')
+        input_optional = ('start', 'stop', 'batch_size')
+        output_required = ('name', 'target_type', 'tx_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
+            'source_count', 'target_count', 'retry_repeats', 'check_after', 'retry_seconds')
         output_repeated = True
         
+    def on_before_append_item(self, item):
+        item.creation_time = from_utc_to_user(item.creation_time_utc + '+00:00', self.req.zato.user_profile)
+        item.in_doubt_created_at = from_utc_to_user(item.in_doubt_created_at_utc + '+00:00', self.req.zato.user_profile)
+        return item
+        
     def handle(self):
-        return {}
+        out = {
+            'form': InstanceListForm(initial=self.req.GET),
+        }
+        out.update(get_js_dt_format(self.req.zato.user_profile))
+        return out
 
-class DetailsInDoubt(_Delete):
+class InDoubtDetails(_Delete):
     url_name = 'pattern-delivery-details-in-doubt'
-    service_name = 'zato.pattern.delivery.get-details-in-doubt'
+    service_name = 'zato.pattern.delivery.in-doubt.get-details'
+    
+# ##############################################################################

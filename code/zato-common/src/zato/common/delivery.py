@@ -9,11 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import csv
 from datetime import datetime, timedelta
 from logging import getLogger
 
 # anyjson
 from anyjson import dumps, loads
+
+# Django
+from django.core.paginator import Paginator
 
 # gevent
 from gevent import sleep, spawn_later
@@ -29,6 +33,42 @@ from zato.common import CHANNEL, DATA_FORMAT, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.model import DeliveryItem
 from zato.common.util import new_cid, TRACE1
+
+# ##############################################################################
+
+_in_doubt_member_keys = 'creation_time_utc', 'in_doubt_created_at_utc', 'source_count', 'target_count', \
+    'check_after', 'retry_repeats', 'retry_seconds', 'tx_id'
+
+def in_doubt_member_from_payload(payload):
+    return KVDB.SEPARATOR.join(payload[key] for key in _in_doubt_member_keys)
+
+def in_doubt_info_from_member(member):
+    return dict(zip(_in_doubt_member_keys, member.split(KVDB.SEPARATOR)))
+
+# ##############################################################################
+
+class _ZSetObjectList(object):
+    """ Sorted set-backed list of results to paginate.
+    """
+    def __init__(self, conn, key, score_min, score_max):
+        self.conn = conn
+        self.key = key
+        self.score_min = score_min
+        self.score_max = score_max
+        
+    def __getslice__(self, start, stop):
+        return self.conn.zrange(self.key, start, stop)
+        
+    def count(self):
+        return self.conn.zcard(self.key)
+
+class RedisPaginator(Paginator):
+    def __init__(self, conn, key, per_page, orphans=0, allow_empty_first_page=True, score_min=None, score_max=None, source_type='zset'):
+        if source_type != 'zset':
+            raise ValueError('Only sorted sets (zset) are supported for now')
+        
+        object_list = _ZSetObjectList(conn, key, score_min, score_max)
+        super(RedisPaginator, self).__init__(object_list, per_page, orphans, allow_empty_first_page)
 
 class DeliveryStore(object):
     """ Stores messages in a persistent storage until they are confirmed to have been delivered.
@@ -53,8 +93,11 @@ class DeliveryStore(object):
         return ''.join((KVDB.DELIVERY_ARCHIVE_SUCCESS_PREFIX if target_ok else KVDB.DELIVERY_ARCHIVE_FAILED_PREFIX, 
                         target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
     
-    def get_in_doubt_key(self, name):
-        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_PREFIX, name)
+    def get_in_doubt_details_key(self, name):
+        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_DETAILS_PREFIX, name)
+    
+    def get_in_doubt_list_key(self, name):
+        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_LIST_PREFIX, name)
         
     def register(self, item):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
@@ -123,7 +166,9 @@ class DeliveryStore(object):
     def check_target(self, item):
         self.logger.debug('Checking name/target [%s]/[%s]', item.name, item.payload_key)
         
-        now = datetime.utcnow().isoformat()
+        epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
+        now_dt = datetime.utcnow()
+        now = now_dt.isoformat()
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.tx_id)
         
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
@@ -155,7 +200,8 @@ class DeliveryStore(object):
                     # keys are concrete deliveries that are in doubt and values are payload
                     # that was to be delivered. 
                     
-                    in_doubt_key = self.get_in_doubt_key(item.name)
+                    in_doubt_details_key = self.get_in_doubt_details_key(item.name)
+                    in_doubt_list_key = self.get_in_doubt_list_key(item.name)
 
                     data = dumps({
                         'payload': payload,
@@ -163,7 +209,11 @@ class DeliveryStore(object):
                                               # but still manages to confirm /something/ at all (but we still treat it as in-doubt).
                     })
                     
-                    p.hset(in_doubt_key, item.payload_key, data)
+                    # Score is the same as in_doubt_created_at_utc but in seconds since epoch start (as float)
+                    score = (now_dt - epoch).total_seconds()
+                    
+                    p.hset(in_doubt_details_key, item.payload_key, data)
+                    p.zadd(in_doubt_list_key, score, in_doubt_member_from_payload(payload))
                     p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
                     p.delete(item.payload_key)
                     p.srem(item.uq_by_target_type_key, item.payload_key)
@@ -171,7 +221,7 @@ class DeliveryStore(object):
                     p.execute()
                     
                 msg = 'tx_id:[%s] (%s) is in-doubt, details stored in hash [%s] under key [%s] (send/confirm %s/%s)'
-                self.logger.warn(msg, item.tx_id, item.name, in_doubt_key, item.payload_key, source_count, target_count)
+                self.logger.warn(msg, item.tx_id, item.name, in_doubt_details_key, item.payload_key, source_count, target_count)
                 
             else:
                 # The target has confirmed the invocation in an expected time so we
@@ -310,15 +360,21 @@ class DeliveryStore(object):
         any locks so the results are precise yet may be off by the time caller receives them.
         """
         in_progress_count = 0
-        in_doubt_count = self.kvdb.conn.hlen(self.get_in_doubt_key(name))
+        in_doubt_count = self.kvdb.conn.zcard(self.get_in_doubt_list_key(name))
         arch_success_count = 0
         arch_failed_count = 0
         
         return in_progress_count, in_doubt_count, arch_success_count, arch_failed_count
     
-    def get_in_doubt_instance_list(self, name):
-        for _, context in self.kvdb.conn.hgetall(self.get_in_doubt_key(name)).items():
-            payload = loads(context)['payload']
-            yield {
-                'tx_id': payload['tx_id']
-            }
+    def get_in_doubt_instance_list(self, name, start, stop, batch_size):
+        
+        p = RedisPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size-1)
+        print(3333333, p.count, p.num_pages, p.page_range)
+        p1 = p.page(1)
+        print(1111111, p1.object_list)
+        p2 = p.page(2)
+        print(2222222, p2.object_list)
+
+        # Substract 1 from batch_sizebecause Redis counts from 0
+        for member in self.kvdb.conn.zrange(self.get_in_doubt_list_key(name), 0, batch_size-1):
+            yield in_doubt_info_from_member(member)

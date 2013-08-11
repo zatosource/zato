@@ -35,5 +35,15 @@ class DeliveryItem(object):
         self.uq_by_target_type_key = None
         self.on_delivery_success = []
         self.on_delivery_failed = []
+        
+        self.source_count = None
+        self.target_count = None
+        
+        self.creation_time_utc = None
+        self.creation_time = None # In current user's timezone
+        
+        self.in_doubt_created_at_utc = None
+        self.in_doubt_created_at = None # In current user's timezone
+        
         self.last_updated_utc = None
         self.last_updated = None # In current user's timezone

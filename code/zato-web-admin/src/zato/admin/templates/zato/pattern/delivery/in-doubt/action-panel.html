@@ -1,0 +1,15 @@
+<div style="text-align:left;padding:10px;font-size:small">
+  <form action="." method="get" style="display:inline-block;">
+    <span class="form_hint">From: </span> {{ form.start }}
+    <span class="form_hint">To: </span> {{ form.stop }}
+    <span class="form_hint">Page max: </span> {{ form.batch_size }}
+    <button id="show_instance_list" name="show_instance_list" type="submit">Show</button>
+  </form>
+  |
+  &larr; <a href="#">Previous</a>
+  <a href="#">Next</a> &rarr; 
+  |
+  <a href="#">Resubmit all</a> 
+  |
+  <a href="#">Delete all</a> 
+</div>
