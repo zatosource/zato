@@ -14,7 +14,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import INITIAL_CHOICES_DICT
-from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, INVOCATION_TARGET
+from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_NO, DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, INVOCATION_TARGET
 
 _targets = {
     INVOCATION_TARGET.CHANNEL_AMQP: 'Channel - AMQP',
@@ -45,6 +45,8 @@ class EditForm(forms.Form):
 class InstanceListForm(forms.Form):
     """ List of delivery instances.
     """
+    tx_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:330px; height:19px'}))
     start = forms.CharField(widget=forms.TextInput(attrs={'style':'width:150px; height:19px'}))
     stop = forms.CharField(widget=forms.TextInput(attrs={'style':'width:150px; height:19px'}))
+    current_batch = forms.CharField(initial=DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_NO, widget=forms.TextInput(attrs={'style':'width:50px; height:19px'}))
     batch_size = forms.CharField(initial=DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, widget=forms.TextInput(attrs={'style':'width:50px; height:19px'}))

@@ -1,15 +1,31 @@
 <div style="text-align:left;padding:10px;font-size:small">
   <form action="." method="get" style="display:inline-block;">
+    <span class="form_hint">Tx: </span> {{ form.tx_id }}
+    |
     <span class="form_hint">From: </span> {{ form.start }}
     <span class="form_hint">To: </span> {{ form.stop }}
-    <span class="form_hint">Page max: </span> {{ form.batch_size }}
+    <span class="form_hint">Page # </span> {{ form.current_batch }} / {{ num_batches }}
+    <span class="form_hint">of</span>
+    {{ total_results }}
+    <span class="form_hint">items</span>
+    | 
+    <span class="form_hint">Max on page: </span> {{ form.batch_size }}
     <button id="show_instance_list" name="show_instance_list" type="submit">Show</button>
   </form>
+  
   |
-  &larr; <a href="#">Previous</a>
-  <a href="#">Next</a> &rarr; 
-  |
+  {% if has_previous %}
+    {% include "zato/pattern/delivery/in-doubt/prev-page.html" %}
+  {% endif %}
+  
+  {% if has_next %}
+    {% include "zato/pattern/delivery/in-doubt/next-page.html" %}
+  {% endif %}
+  
+  <hr/>
+  <div style="text-align:right">
   <a href="#">Resubmit all</a> 
   |
   <a href="#">Delete all</a> 
+  </div>
 </div>

@@ -16,9 +16,6 @@ from logging import getLogger
 # anyjson
 from anyjson import dumps, loads
 
-# Django
-from django.core.paginator import Paginator
-
 # gevent
 from gevent import sleep, spawn_later
 
@@ -33,6 +30,7 @@ from zato.common import CHANNEL, DATA_FORMAT, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.model import DeliveryItem
 from zato.common.util import new_cid, TRACE1
+from zato.redis_paginator import ZSetPaginator
 
 # ##############################################################################
 
@@ -46,29 +44,6 @@ def in_doubt_info_from_member(member):
     return dict(zip(_in_doubt_member_keys, member.split(KVDB.SEPARATOR)))
 
 # ##############################################################################
-
-class _ZSetObjectList(object):
-    """ Sorted set-backed list of results to paginate.
-    """
-    def __init__(self, conn, key, score_min, score_max):
-        self.conn = conn
-        self.key = key
-        self.score_min = score_min
-        self.score_max = score_max
-        
-    def __getslice__(self, start, stop):
-        return self.conn.zrange(self.key, start, stop)
-        
-    def count(self):
-        return self.conn.zcard(self.key)
-
-class RedisPaginator(Paginator):
-    def __init__(self, conn, key, per_page, orphans=0, allow_empty_first_page=True, score_min=None, score_max=None, source_type='zset'):
-        if source_type != 'zset':
-            raise ValueError('Only sorted sets (zset) are supported for now')
-        
-        object_list = _ZSetObjectList(conn, key, score_min, score_max)
-        super(RedisPaginator, self).__init__(object_list, per_page, orphans, allow_empty_first_page)
 
 class DeliveryStore(object):
     """ Stores messages in a persistent storage until they are confirmed to have been delivered.
@@ -350,6 +325,22 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
+    def get_batch_info(self, name, batch_size, current_batch, score_min, score_max):
+        """ Returns information regarding how given set of data will be split into
+        smaller batches given maximum number of items on a single batch and min/max member score
+        of the set. Also returns information regarding a current batch - whether it has prev/next batches.
+        """
+        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size)
+        current = p.page(current_batch)
+        return {
+            'total_results': p.count,
+            'num_batches': p.num_pages,
+            'has_previous': current.has_previous(),
+            'has_next': current.has_next(),
+            'next_batch_number': current.next_page_number(),
+            'previous_batch_number': current.previous_page_number(),
+        }
+
     def get_by_target_type(self, target_type):
         """ Returns delivery names and basic information for a given target type.
         """
@@ -366,15 +357,11 @@ class DeliveryStore(object):
         
         return in_progress_count, in_doubt_count, arch_success_count, arch_failed_count
     
-    def get_in_doubt_instance_list(self, name, start, stop, batch_size):
-        
-        p = RedisPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size-1)
-        print(3333333, p.count, p.num_pages, p.page_range)
-        p1 = p.page(1)
-        print(1111111, p1.object_list)
-        p2 = p.page(2)
-        print(2222222, p2.object_list)
+    def get_in_doubt_instance_list(self, name, batch_size, current_batch, start, stop):
+        """ Returns a page from a list list of in-doubt delivery tasks.
+        """
+        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size)
+        current = p.page(current_batch)
 
-        # Substract 1 from batch_sizebecause Redis counts from 0
-        for member in self.kvdb.conn.zrange(self.get_in_doubt_list_key(name), 0, batch_size-1):
+        for member in current.object_list:
             yield in_doubt_info_from_member(member)
