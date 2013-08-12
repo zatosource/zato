@@ -65,6 +65,8 @@ class ValueConverter(object):
             if value and value is not None: # Can be a 0
                 if isinstance(param, Boolean):
                     value = asbool(value)
+                elif isinstance(param, CSV):
+                    value = value.split(',')
                 elif isinstance(param, Integer):
                     value = int(value)
                 elif isinstance(param, Unicode):
@@ -76,9 +78,12 @@ class ValueConverter(object):
                         if any(param_name==elem for elem in self.int_parameters) or \
                            any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
                             value = int(value)
-                    
+                            
                 if date_time_format and isinstance(value, datetime):
                     value = value.strftime(date_time_format)
+                    
+            if isinstance(param, CSV) and not value:
+                value = []
                 
             return value
         except Exception, e:
@@ -106,6 +111,10 @@ class AsIs(ForceType):
 class Boolean(ForceType):
     """ Gets transformed into a bool object.
     """ 
+
+class CSV(ForceType):
+    """ Gets transformed into an int object.
+    """
 
 class Integer(ForceType):
     """ Gets transformed into an int object.
