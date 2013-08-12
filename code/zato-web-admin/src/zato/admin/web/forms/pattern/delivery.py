@@ -45,7 +45,6 @@ class EditForm(forms.Form):
 class InstanceListForm(forms.Form):
     """ List of delivery instances.
     """
-    tx_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:330px; height:19px'}))
     start = forms.CharField(widget=forms.TextInput(attrs={'style':'width:150px; height:19px'}))
     stop = forms.CharField(widget=forms.TextInput(attrs={'style':'width:150px; height:19px'}))
     current_batch = forms.CharField(initial=DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_NO, widget=forms.TextInput(attrs={'style':'width:50px; height:19px'}))

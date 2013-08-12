@@ -183,6 +183,12 @@ class Index(_BaseView):
         self.input = Bunch()
         self.clear_user_message()
         
+    def on_before_append_item(self, item):
+        return item
+    
+    def on_after_set_input(self):
+        return item
+        
     def clear_user_message(self):
         self.user_message = None
         self.user_message_class = 'failure'
@@ -192,6 +198,8 @@ class Index(_BaseView):
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
             if name != 'cluster_id':
                 self.input[name] = self.req.GET.get(name) or self.req.zato.args.get(name)
+                
+        self.on_after_set_input()
         
     def can_invoke_admin_service(self):
         """ Returns a boolean flag indicating that we know what service to invoke,
@@ -221,9 +229,6 @@ class Index(_BaseView):
                     setattr(item, name, value)
             self.items.append(self.on_before_append_item(item))
 
-    def on_before_append_item(self, item):
-        return item
-    
     def _handle_item(self, item):
         pass
     

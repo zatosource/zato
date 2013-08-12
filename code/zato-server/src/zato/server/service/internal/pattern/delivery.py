@@ -12,13 +12,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from anyjson import loads
 from traceback import format_exc
 
+# datetutil
+from dateutil.parser import parse
+
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
+from zato.common.util import datetime_to_seconds
 from zato.server.service import AsIs, Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
 class _DeliveryService(AdminService):
-        
+    """ Base class with code common to multiple guaranteed delivery-related services.
+    """
     def _validate_input_dict(self, *validation_info):
         """ Checks that input belongs is one of allowed values.
         """
@@ -41,6 +46,14 @@ class _DeliveryService(AdminService):
             batch_size = DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
             
         return batch_size
+    
+    def _timestamp_to_score(self, key):
+        """ Converts an input timestamp into a Redis score.
+        """
+        if self.request.input.get(key):
+            return datetime_to_seconds(parse(self.request.input[key]))
+        else:
+            return '{}inf'.format('-' if key == 'start' else '+')
             
 class GetBatchInfo(_DeliveryService):
     """ Returns info on how a given batch of data kept as a sorted set in Redis,
@@ -72,6 +85,12 @@ class GetList(_DeliveryService):
         input_required = ('cluster_id', 'target_type')
         output_required = ('name', 'last_updated_utc', 'target', 'target_type', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
+
+    def handle(self):
+        target_type = self.request.input.target_type
+        self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
+            
+        self.response.payload[:] = self.get_data(target_type)
         
     def get_data(self, target_type):
         for name, base_target_info in self.delivery_store.get_by_target_type(target_type).items():
@@ -90,12 +109,6 @@ class GetList(_DeliveryService):
                 'arch_success_count':arch_success_count,
                 'arch_failed_count':arch_failed_count
             }
-
-    def handle(self):
-        target_type = self.request.input.target_type
-        self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
-            
-        self.response.payload[:] = self.get_data(target_type)
         
 class InDoubtGetInstanceList(_DeliveryService):
     """ For a given delivery name, return all instances that are in-doubt.
@@ -114,9 +127,13 @@ class InDoubtGetInstanceList(_DeliveryService):
         self.response.payload[:] = self.get_data(self._batch_size_from_input())
         
     def get_data(self, batch_size):
+        score_min = self._timestamp_to_score('start')
+        score_max = self._timestamp_to_score('stop')
+        
         for item in self.delivery_store.get_in_doubt_instance_list(
-                self.request.input.name, batch_size, self.request.input.current_batch,
-                self.request.input.get('start'), self.request.input.get('stop')):
+                self.request.input.name, batch_size, self.request.input.get('current_batch') or 1,
+                score_min, score_max):
+            
             item['name'] = self.request.input.name
             item['target_type'] = self.request.input.target_type
             

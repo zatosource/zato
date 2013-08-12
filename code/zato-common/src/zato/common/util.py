@@ -77,6 +77,8 @@ logging.addLevelName(TRACE1, "TRACE1")
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
 _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
 
+_epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
+
 random.seed()
 
 ################################################################################
@@ -536,6 +538,8 @@ def from_utc_to_local(dt, tz_name):
     dt = local_tz.normalize(dt.astimezone(local_tz))
     return dt
 
+# ##############################################################################
+
 def _utcnow():
     """ See zato.common.util.utcnow for docstring.
     """
@@ -557,6 +561,13 @@ def now(tz=None):
     out and return their own timestamps at will.
     """
     return _now(tz)
+
+def datetime_to_seconds(dt):
+    """ Converts a datetime object to a number of seconds since UNIX epoch.
+    """
+    return (dt - _epoch).total_seconds()
+
+# ##############################################################################
 
 def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
     """ Clears out any KVDB locks held by Zato servers.

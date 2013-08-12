@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.admin.web import from_utc_to_user
+from zato.admin.web import from_utc_to_user, from_user_to_utc
 from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format
 from zato.common.model import DeliveryItem
@@ -89,11 +89,14 @@ class InDoubtInstanceList(_Index):
         item.creation_time = from_utc_to_user(item.creation_time_utc + '+00:00', self.req.zato.user_profile)
         item.in_doubt_created_at = from_utc_to_user(item.in_doubt_created_at_utc + '+00:00', self.req.zato.user_profile)
         return item
+    
+    def on_after_set_input(self):
+        for name in('start', 'stop'):
+            if self.input.get(name):
+                self.input[name] = from_user_to_utc(self.input[name], self.req.zato.user_profile)
         
     def handle(self):
-        out = {
-            'form': InstanceListForm(initial=self.req.GET),
-        }
+        out = {'form': InstanceListForm(initial=self.req.GET)}
         out.update(get_js_dt_format(self.req.zato.user_profile))
 
         service = 'zato.pattern.delivery.get-batch-info'
