@@ -88,6 +88,13 @@
         
         </tbody>
     </table>
+
+{% if total_results %}
+    <br/>
+    {% include "zato/pattern/delivery/in-doubt/action-panel.html" %}
+    <br/>
+{% endif %}
+    
 </div>
 
 <form>
@@ -96,8 +103,7 @@
     <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
 </form>
 
-{% include "zato/pattern/delivery/in-doubt/action-panel.html" %}
-<br/>
+
 
 
 {% endblock %}

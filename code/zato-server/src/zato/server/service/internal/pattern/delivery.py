@@ -14,7 +14,7 @@ from traceback import format_exc
 
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
 class _DeliveryService(AdminService):
@@ -29,6 +29,39 @@ class _DeliveryService(AdminService):
                 
                 self.logger.warn(log_msg)
                 raise ZatoException(self.cid, msg)
+            
+    def _batch_size_from_input(self):
+        """ Returns a batch size taking into account handling of invalid input values.
+        """
+        try:
+            batch_size = self.request.input.get('batch_size')
+            batch_size = int(batch_size) or DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
+        except(TypeError, ValueError), e:
+            self.logger.debug('Invalid batch_size in:[%s], e:[%s]', batch_size, format_exc(e))
+            batch_size = DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
+            
+        return batch_size
+            
+class GetBatchInfo(_DeliveryService):
+    """ Returns info on how a given batch of data kept as a sorted set in Redis,
+    such as in-doubt deliveries.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_get_batch_info_request'
+        response_elem = 'zato_pattern_delivery_get_batch_info_response'
+        input_required = ('name',)
+        input_optional = (Integer('current_batch'), Integer('batch_size'), 'start', 'stop')
+        output_required = (Integer('total_results'), Integer('num_batches'), Boolean('has_previous'),
+                           Boolean('has_next'), Integer('next_batch_number'), Integer('previous_batch_number'))
+        
+    def handle(self):
+        batch_size = self._batch_size_from_input()
+        current_batch = self.request.input.get('current_batch') or 1
+        score_min = self.request.input.get('score_min') or '-inf'
+        score_max = self.request.input.get('score_max') or '+inf'
+        
+        self.response.payload = self.delivery_store.get_batch_info(
+            self.request.input.name, batch_size, current_batch, score_min, score_max)
 
 class GetList(_DeliveryService):
     """ For a given target type, returns a list of existing deliveries regardless of their states.
@@ -73,26 +106,17 @@ class InDoubtGetInstanceList(_DeliveryService):
         request_elem = 'zato_pattern_delivery_in_doubt_get_instance_list_request'
         response_elem = 'zato_pattern_delivery_in_doubt_get_instance_list_response'
         input_required = ('name', 'target_type')
-        input_optional = ('start', 'stop', 'batch_no', 'batch_size')
+        input_optional = ('start', 'stop', Integer('current_batch'), Integer('batch_size'))
         output_required = ('name', 'target_type', AsIs('tx_id'), 'creation_time_utc', 'in_doubt_created_at_utc', 
             'source_count', 'target_count', 'retry_repeats', 'check_after', 'retry_seconds')
         
     def handle(self):
-        try:
-            batch_size = self.request.input.get('batch_size')
-            batch_size = int(batch_size) or DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
-        except(TypeError, ValueError), e:
-            self.logger.debug('Invalid batch_size in:[%s], e:[%s]', batch_size, format_exc(e))
-            batch_size = DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
-            
-        
-            
-        self.response.payload[:] = self.get_data(batch_size)
+        self.response.payload[:] = self.get_data(self._batch_size_from_input())
         
     def get_data(self, batch_size):
         for item in self.delivery_store.get_in_doubt_instance_list(
-                self.request.input.name, self.request.input.get('start'), 
-                self.request.input.get('stop'),batch_size):
+                self.request.input.name, batch_size, self.request.input.current_batch,
+                self.request.input.get('start'), self.request.input.get('stop')):
             item['name'] = self.request.input.name
             item['target_type'] = self.request.input.target_type
             

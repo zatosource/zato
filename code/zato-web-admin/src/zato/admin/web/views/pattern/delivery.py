@@ -80,7 +80,7 @@ class InDoubtInstanceList(_Index):
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('name', 'target_type')
-        input_optional = ('start', 'stop', 'batch_size')
+        input_optional = ('start', 'stop', 'batch_size', 'current_batch')
         output_required = ('name', 'target_type', 'tx_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
             'source_count', 'target_count', 'retry_repeats', 'check_after', 'retry_seconds')
         output_repeated = True
@@ -95,6 +95,13 @@ class InDoubtInstanceList(_Index):
             'form': InstanceListForm(initial=self.req.GET),
         }
         out.update(get_js_dt_format(self.req.zato.user_profile))
+
+        service = 'zato.pattern.delivery.get-batch-info'
+        req = {key:self.input[key] for key in ('name', 'batch_size', 'current_batch', 'start', 'stop') if self.input.get(key)}
+        response = self.req.zato.client.invoke(service, req)
+        
+        out.update(response.data)
+        
         return out
 
 class InDoubtDetails(_Delete):

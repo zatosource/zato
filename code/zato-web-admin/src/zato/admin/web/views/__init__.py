@@ -17,6 +17,9 @@ from traceback import format_exc
 # anyjson
 from json import dumps
 
+# bunch
+from bunch import Bunch
+
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -177,11 +180,18 @@ class Index(_BaseView):
         super(Index, self).__init__()
         self.items = []
         self.item = None
+        self.input = Bunch()
         self.clear_user_message()
         
     def clear_user_message(self):
         self.user_message = None
         self.user_message_class = 'failure'
+        
+    def set_input(self):
+        self.input.update({'cluster_id':self.cluster_id})
+        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+            if name != 'cluster_id':
+                self.input[name] = self.req.GET.get(name) or self.req.zato.args.get(name)
         
     def can_invoke_admin_service(self):
         """ Returns a boolean flag indicating that we know what service to invoke,
@@ -194,12 +204,7 @@ class Index(_BaseView):
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
-            input_dict = {'cluster_id':self.cluster_id}
-            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
-                if name != 'cluster_id':
-                    input_dict[name] = self.req.GET.get(name) or self.req.zato.args.get(name)
-                
-            return self.req.zato.client.invoke(self.service_name, input_dict)
+            return self.req.zato.client.invoke(self.service_name, self.input)
     
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
@@ -232,6 +237,7 @@ class Index(_BaseView):
             super(Index, self).__call__(req, *args, **kwargs)
             del self.items[:]
             self.item = None
+            self.set_input()
     
             return_data = {'cluster_id':self.cluster_id}
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
