@@ -18,7 +18,7 @@ from dateutil.parser import parse
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
 from zato.common.util import datetime_to_seconds
-from zato.server.service import AsIs, Boolean, Integer
+from zato.server.service import AsIs, Boolean, CSV, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
 class _DeliveryService(AdminService):
@@ -138,3 +138,17 @@ class InDoubtGetInstanceList(_DeliveryService):
             item['target_type'] = self.request.input.target_type
             
             yield item
+
+class Resubmit(_DeliveryService):
+    """ For a given delivery name, return all instances that are in-doubt.
+    """
+    name = 'zato.pattern.delivery.in-doubt.resubmit'
+    
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_in_doubt_resubmit_request'
+        response_elem = 'zato_pattern_delivery_in_doubt_resubmit_response'
+        input_required = ('name', CSV('tx_id'), 'target_type',)
+            
+    def handle(self):
+        for item in self.request.input.tx_id:
+            print(333333333, item)

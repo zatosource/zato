@@ -108,6 +108,9 @@ urlpatterns = patterns('',
     
     url(r'^zato/pattern/delivery/in-doubt/instance-list/(?P<name>.*)/(?P<target_type>.*)/(?P<cluster_id>.*)/$', 
         pattern_delivery.InDoubtInstanceList(), name=pattern_delivery.InDoubtInstanceList.url_name),
+    
+    url(r'^zato/pattern/delivery/in-doubt/resubmit/(?P<name>.*)/(?P<target_type>.*)/(?P<tx_id>.*)/(?P<cluster_id>.*)/$', 
+        pattern_delivery.Resubmit(), name=pattern_delivery.Resubmit.url_name),
 
     # Security..
 

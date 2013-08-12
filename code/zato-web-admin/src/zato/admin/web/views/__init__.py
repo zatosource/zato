@@ -141,6 +141,17 @@ def change_password(req, service_name, field1='password1', field2='password2', s
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
+    form_prefix = ''
+    
+    def on_before_append_item(self, item):
+        return item
+    
+    def on_after_set_input(self):
+        pass
+        
+    def clear_user_message(self):
+        self.user_message = None
+        self.user_message_class = 'failure'
     
     class SimpleIO:
         input_required = []
@@ -167,6 +178,15 @@ class _BaseView(object):
             self.req.zato.args[k] = v
         self.cluster_id = None
         self.fetch_cluster_id()
+        
+    def set_input(self):
+        self.input.update({'cluster_id':self.cluster_id})
+        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+            if name != 'cluster_id':
+                self.input[name] = self.req.GET.get(self.form_prefix + name) or \
+                    self.req.POST.get(self.form_prefix + name) or self.req.zato.args.get(self.form_prefix + name)
+                
+        self.on_after_set_input()
 
 class Index(_BaseView):
     """ A base class upon which other index views are based.
@@ -178,28 +198,10 @@ class Index(_BaseView):
     
     def __init__(self):
         super(Index, self).__init__()
+        self.input = Bunch()
         self.items = []
         self.item = None
-        self.input = Bunch()
         self.clear_user_message()
-        
-    def on_before_append_item(self, item):
-        return item
-    
-    def on_after_set_input(self):
-        pass
-        
-    def clear_user_message(self):
-        self.user_message = None
-        self.user_message_class = 'failure'
-        
-    def set_input(self):
-        self.input.update({'cluster_id':self.cluster_id})
-        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
-            if name != 'cluster_id':
-                self.input[name] = self.req.GET.get(name) or self.req.zato.args.get(name)
-                
-        self.on_after_set_input()
         
     def can_invoke_admin_service(self):
         """ Returns a boolean flag indicating that we know what service to invoke,
@@ -282,17 +284,22 @@ class Index(_BaseView):
 class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
-    form_prefix = ''
     
     def __init__(self):
+        super(CreateEdit, self).__init__()
+        self.input = Bunch()
         self.input_dict = {}
     
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
+        self.clear_user_message()
+        
         try:
             super(CreateEdit, self).__call__(req, *args, **kwargs)
+            self.set_input()
+            
             input_dict = {
                 'id': self.req.POST.get('id'),
                 'cluster_id': self.cluster_id
@@ -300,7 +307,7 @@ class CreateEdit(_BaseView):
             input_dict.update(initial_input_dict)
             
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
-                input_dict[name] = self.req.POST.get(self.form_prefix + name)
+                input_dict[name] = self.input.get(self.form_prefix + name)
                 
             self.input_dict.update(input_dict)
 

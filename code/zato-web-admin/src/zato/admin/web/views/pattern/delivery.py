@@ -49,12 +49,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('zz',)
-        output_required = ('id',)
+        input_required = []
+        output_required = []
         
-    def success_message(self, item):
-        return 'Successfully {0} delivery definition [{1}]'.format(self.verb, item.name)
-
 class Create(_CreateEdit):
     url_name = 'pattern-delivery-create'
     service_name = 'zato.pattern.delivery.create'
@@ -107,8 +104,18 @@ class InDoubtInstanceList(_Index):
         
         return out
 
-class InDoubtDetails(_Delete):
+class InDoubtDetails(_Index):
     url_name = 'pattern-delivery-details-in-doubt'
     service_name = 'zato.pattern.delivery.in-doubt.get-details'
+
+class Resubmit(_CreateEdit):
+    url_name = 'pattern-delivery-details-in-doubt-resubmit'
+    service_name = 'zato.pattern.delivery.in-doubt.resubmit'
+    
+    class SimpleIO(_CreateEdit.SimpleIO):
+        input_required = ('name', 'tx_id', 'target_type')
+        
+    def success_message(self, item):
+        return 'Successfully resubmitted Tx [{}]'.format(self.input['tx_id'])
     
 # ##############################################################################

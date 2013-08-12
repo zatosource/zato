@@ -21,13 +21,14 @@
   {% if has_next %}
     {% include "zato/pattern/delivery/in-doubt/next-page.html" %}
   {% else %}
-    <span style="color:#666;font-size:12px">Next</span></a>
+    <span style="color:#666;font-size:12px">Next</span>
   {% endif %}
   
   <hr/>
   <div style="text-align:right">
-  <a href="#">Resubmit all</a> 
+  <span style="color:#666;font-size:12px">On this page:</span>
+  <a href="#">resubmit all</a> 
   |
-  <a href="#">Delete all</a> 
+  <a href="#">delete all</a> 
   </div>
 </div>
