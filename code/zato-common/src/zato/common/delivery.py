@@ -29,7 +29,7 @@ from retools.lock import Lock
 from zato.common import CHANNEL, DATA_FORMAT, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.model import DeliveryItem
-from zato.common.util import new_cid, TRACE1
+from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator
 
 # ##############################################################################
@@ -141,7 +141,6 @@ class DeliveryStore(object):
     def check_target(self, item):
         self.logger.debug('Checking name/target [%s]/[%s]', item.name, item.payload_key)
         
-        epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
         now_dt = datetime.utcnow()
         now = now_dt.isoformat()
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.tx_id)
@@ -185,7 +184,7 @@ class DeliveryStore(object):
                     })
                     
                     # Score is the same as in_doubt_created_at_utc but in seconds since epoch start (as float)
-                    score = (now_dt - epoch).total_seconds()
+                    score = datetime_to_seconds(now_dt)
                     
                     p.hset(in_doubt_details_key, item.payload_key, data)
                     p.zadd(in_doubt_list_key, score, in_doubt_member_from_payload(payload))
@@ -357,10 +356,10 @@ class DeliveryStore(object):
         
         return in_progress_count, in_doubt_count, arch_success_count, arch_failed_count
     
-    def get_in_doubt_instance_list(self, name, batch_size, current_batch, start, stop):
-        """ Returns a page from a list list of in-doubt delivery tasks.
+    def get_in_doubt_instance_list(self, name, batch_size, current_batch, score_min, score_max):
+        """ Returns a page from a list of in-doubt delivery tasks.
         """
-        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size)
+        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size, score_min=score_min, score_max=score_max)
         current = p.page(current_batch)
 
         for member in current.object_list:
