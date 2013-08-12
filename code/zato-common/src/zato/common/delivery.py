@@ -329,7 +329,7 @@ class DeliveryStore(object):
         smaller batches given maximum number of items on a single batch and min/max member score
         of the set. Also returns information regarding a current batch - whether it has prev/next batches.
         """
-        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size)
+        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size, score_min=score_min, score_max=score_max)
         current = p.page(current_batch)
         return {
             'total_results': p.count,

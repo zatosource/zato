@@ -187,7 +187,7 @@ class Index(_BaseView):
         return item
     
     def on_after_set_input(self):
-        return item
+        pass
         
     def clear_user_message(self):
         self.user_message = None

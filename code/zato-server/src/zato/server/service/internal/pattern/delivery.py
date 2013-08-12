@@ -70,8 +70,8 @@ class GetBatchInfo(_DeliveryService):
     def handle(self):
         batch_size = self._batch_size_from_input()
         current_batch = self.request.input.get('current_batch') or 1
-        score_min = self.request.input.get('score_min') or '-inf'
-        score_max = self.request.input.get('score_max') or '+inf'
+        score_min = self._timestamp_to_score('start')
+        score_max = self._timestamp_to_score('stop')
         
         self.response.payload = self.delivery_store.get_batch_info(
             self.request.input.name, batch_size, current_batch, score_min, score_max)
