@@ -34,7 +34,40 @@ $(document).ready(function() {
     })
 })
 
+$.fn.zato.pattern.delivery.in_doubt.resubmit_all = function(cluster_id) {
+    var _callback = function(data, status) {
+        var success = status == 'success';
+        var msg;
+		if(success) {
+		    msg = $.parseJSON(data.responseText)["message"];
+		}
+		else {
+			msg = data.responseText;
+		}
+        $.fn.zato.user_message(success, msg);
+		//$.fn.zato.data_table.row_updated(tx_id);
+    }
+	
+	var data = {};
+	var tx_id;
+	$("td[class^='ignore item_id_']").each(function(idx, item) {
+		tx_id = $(item).text();
+		data[tx_id] = tx_id;
+	});
+	
+    $.ajax({
+        type: 'POST',
+        url: String.format('/zato/pattern/delivery/in-doubt/resubmit-many/{0}/', cluster_id),
+        data: data,
+		dataType: 'json',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        complete: _callback
+    });
+	
+}
+
 $.fn.zato.pattern.delivery.in_doubt.resubmit = function(tx_id, cluster_id) {
+
     var _callback = function(data, status) {
         var success = status == 'success';
         var msg;

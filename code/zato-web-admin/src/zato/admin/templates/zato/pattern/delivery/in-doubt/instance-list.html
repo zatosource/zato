@@ -33,6 +33,7 @@
             'retry_seconds',
             '_edit',
             '_delete',
+            'id',
         ]
     }
     </script>
@@ -79,11 +80,12 @@
                 <td>{{ item.retry_repeats }}</td>
                 <td>{{ item.retry_seconds }}</td>
                 <td><a href="javascript:$.fn.zato.pattern.delivery.in_doubt.resubmit('{{ item.tx_id }}', '{{ cluster_id }}')">Resubmit</a></td>
+                <td class='ignore item_id_{{ item.tx_id }}'>{{ item.tx_id }}</td>
             </tr>
         {% endfor %}
         {% else %}
             <tr class='ignore'>
-                <td colspan='23'>No results</td>
+                <td colspan='11'>No results</td>
             </tr>
         {% endif %}
         
