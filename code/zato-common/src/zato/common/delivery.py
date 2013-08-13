@@ -73,8 +73,11 @@ class DeliveryStore(object):
     
     def get_in_doubt_list_key(self, name):
         return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_LIST_PREFIX, name)
-        
-    def register(self, item):
+    
+    def get_in_doubt_list_idx_key(self, name):
+        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_LIST_IDX_PREFIX, name)
+    
+    def register(self, item, is_resubmit=False, pipeline=None):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
                 item.check_after, item.retry_repeats, item.retry_seconds)
@@ -85,9 +88,10 @@ class DeliveryStore(object):
 
         item.name = item.name or self.get_anonymous_name(item)
         item.payload_key = self.get_payload_key(item.target_type, item.target, item.tx_id)
+
         payload_value = {
             'tx_id':item.tx_id,
-            'payload':item.payload,
+            'payload':dumps(item.payload),
             'name': item.name,
             'target': item.target,
             'target_type': item.target_type,
@@ -113,6 +117,7 @@ class DeliveryStore(object):
             'in_doubt_created_at_utc':None,
             'in_doubt_created_source_count':None,
             'in_doubt_created_target_count':None,
+            'in_doubt_history':dumps(item.in_doubt_history or []),
             'on_delivery_success': dumps(item.on_delivery_success),
             'on_delivery_failed': dumps(item.on_delivery_failed),
         }
@@ -120,19 +125,21 @@ class DeliveryStore(object):
         item.by_target_type_key = '{}{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, item.target_type)
         item.uq_by_target_type_key = '{}{}'.format(KVDB.DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX, item.target_type)
         
-        with self.kvdb.conn.pipeline() as p:
+        p = pipeline or self.kvdb.conn.pipeline()
+        with p:
             p.hmset(item.payload_key, payload_value)
             p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
             p.sadd(item.uq_by_target_type_key, item.payload_key)
     
             if item.expire_after:
                 p.expire(item.payload_key, item.expire_after)
-                
+            
             p.execute()
         
         self.logger.info(
-            'Created delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
-            item.name, item.payload_key, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
+            '%s delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
+            ('Resubmitted' if is_resubmit else 'Submitted'), item.name, item.payload_key,
+            item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
 
         self.spawn_check_target(item)
 
@@ -176,6 +183,7 @@ class DeliveryStore(object):
                     
                     in_doubt_details_key = self.get_in_doubt_details_key(item.name)
                     in_doubt_list_key = self.get_in_doubt_list_key(item.name)
+                    in_doubt_list_idx_key = self.get_in_doubt_list_idx_key(item.name)
 
                     data = dumps({
                         'payload': payload,
@@ -185,9 +193,12 @@ class DeliveryStore(object):
                     
                     # Score is the same as in_doubt_created_at_utc but in seconds since epoch start (as float)
                     score = datetime_to_seconds(now_dt)
+                    in_doubt_member = in_doubt_member_from_payload(payload)
                     
                     p.hset(in_doubt_details_key, item.payload_key, data)
-                    p.zadd(in_doubt_list_key, score, in_doubt_member_from_payload(payload))
+                    p.zadd(in_doubt_list_key, score, in_doubt_member)
+                    p.hset(in_doubt_list_idx_key, item.tx_id, in_doubt_member)
+                    
                     p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
                     p.delete(item.payload_key)
                     p.srem(item.uq_by_target_type_key, item.payload_key)
@@ -324,6 +335,30 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
+    def resubmit(self, name, target_type, target, tx_id_list):
+        """ Resubmits given each task from the list.
+        """ 
+        in_doubt_list_idx_key = self.get_in_doubt_list_idx_key(name)
+        with self.kvdb.conn.pipeline() as p:
+            for tx_id in tx_id_list:
+                in_doubt_member = self.kvdb.conn.hget(in_doubt_list_idx_key, tx_id)
+                in_doubt_details_key = self.get_in_doubt_details_key(name)
+                payload_key = self.get_payload_key(target_type, target, tx_id)
+                in_doubt_details = self.kvdb.conn.hmget(in_doubt_details_key, payload_key)[0]
+                
+                if not in_doubt_details:
+                    msg = 'Could not resubmit [{}], payload under [{}] are missing'.format(tx_id, in_doubt_details_key)
+                    raise Exception(msg)
+                else:
+                    payload = loads(in_doubt_details)['payload']
+                    item = DeliveryItem.from_in_doubt_payload(payload)
+                    
+                    p.hdel(in_doubt_details_key, payload_key)
+                    p.zrem(self.get_in_doubt_list_key(item.name), in_doubt_member)
+                    p.hdel(in_doubt_list_idx_key, tx_id)
+                    
+                    self.register(item, True, p)
+                
     def get_batch_info(self, name, batch_size, current_batch, score_min, score_max):
         """ Returns information regarding how given set of data will be split into
         smaller batches given maximum number of items on a single batch and min/max member score

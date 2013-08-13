@@ -86,10 +86,10 @@
                         <td>{{ item.target }}</td>
                         <td>{{ item.short_def }}</td>
                         <td>{{ item.total_count }}</td>
-                        <td>{{ item.in_progress_count }} {% if item.in_progress_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type cluster_id %}">(list)</a>{% endif %}</td>
-                        <td>{{ item.in_doubt_count }} {% if item.in_doubt_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type cluster_id %}">(list)</a>{% endif %}</td>
-                        <td>{{ item.arch_success_count }} {% if item.arch_success_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type cluster_id %}">(list)</a>{% endif %}</td>
-                        <td>{{ item.arch_failed_count }} {% if item.arch_failed_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type cluster_id %}">(list)</a>{% endif %}</td>
+                        <td>{{ item.in_progress_count }} {% if item.in_progress_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type item.target cluster_id %}">(list)</a>{% endif %}</td>
+                        <td>{{ item.in_doubt_count }} {% if item.in_doubt_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type item.target cluster_id %}">(list)</a>{% endif %}</td>
+                        <td>{{ item.arch_success_count }} {% if item.arch_success_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type item.target cluster_id %}">(list)</a>{% endif %}</td>
+                        <td>{{ item.arch_failed_count }} {% if item.arch_failed_count %}<a href="{% url pattern-delivery-in-doubt-instance-list item.name item.target_type item.target cluster_id %}">(list)</a>{% endif %}</td>
                         <td>{{ item.last_updated }}</td>
                         <td><a href="javascript:$.fn.zato.pattern.delivery.edit('{{ item.name }}', '{{ item.target_type }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pattern.delivery.delete_('{{ item.name }}', '{{ item.target_type }}')">Delete</a></td>
