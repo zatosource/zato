@@ -71,14 +71,14 @@
             <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.tx_id }}'>
                 <td class='numbering'>&nbsp;</td>
                 <td class="impexp"><input type="checkbox" /></td>
-                <td><a href="{% url pattern-delivery-details-in-doubt item.name item.tx_id item.target_type cluster_id %}">{{ item.tx_id }}</a></td>
+                <td><a href="{% url pattern-delivery-details-in-doubt item.name item.tx_id item.target_type item.target cluster_id %}">{{ item.tx_id }}</a></td>
                 <td>{{ item.creation_time }}</td>
                 <td>{{ item.in_doubt_created_at }}</td>
                 <td>{{ item.source_count }}/{{ item.target_count }}</td>
                 <td>{{ item.check_after }}</td>
                 <td>{{ item.retry_repeats }}</td>
                 <td>{{ item.retry_seconds }}</td>
-                <td><a href="javascript:$.fn.zato.pattern.delivery.in_doubt.resubmit('{{ item.name }}', '{{ req.zato.args.target_type }}', '{{ item.tx_id }}', '{{ cluster_id }}')">Resubmit</a></td>
+                <td><a href="javascript:$.fn.zato.pattern.delivery.in_doubt.resubmit('{{ item.name }}', '{{ req.zato.args.target_type }}', '{{ req.zato.args.target }}', '{{ item.tx_id }}', '{{ cluster_id }}')">Resubmit</a></td>
             </tr>
         {% endfor %}
         {% else %}
