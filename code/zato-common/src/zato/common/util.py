@@ -214,22 +214,17 @@ def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
 
     return attrs
 
-def make_repr(_object, ignore_double_underscore=True, to_avoid_list="repr_to_avoid", sort=True):
-    """ Makes a nice string representation of an object, suitable for logging
-    purposes.
+def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avoid', sort=True):
+    """ Makes a nice string representation of an object, suitable for logging purposes.
     """
     attrs = object_attrs(_object, ignore_double_underscore, to_avoid_list, sort)
     buff = StringIO()
 
     for attr in attrs:
-
-        #if logger.isEnabledFor(TRACE1):
-        #    logger.log(TRACE1, "attr:[%s]" % attr)
-
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
-            buff.write(" ")
-            buff.write("%r:[%r]" % (attr, attr_obj))
+            buff.write(' ')
+            buff.write('%r:[%r]' % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
