@@ -10,11 +10,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from traceback import format_exc
+
+# anyjson
+from anyjson import dumps
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web import from_utc_to_user, from_user_to_utc
 from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format, method_allowed
 from zato.common.model import DeliveryItem
 
 logger = logging.getLogger(__name__)
@@ -117,5 +124,24 @@ class Resubmit(_CreateEdit):
         
     def success_message(self, item):
         return 'Successfully resubmitted Tx [{}]'.format(self.input['tx_id'])
+    
+@method_allowed('POST')
+def resubmit_many(req, cluster_id):
+    """ Resubmits one or more delivery tasks.
+    """
+    try:
+        input_dict = {
+            'tx_id': ','.join(req.POST.values())
+        }
+        response = req.zato.client.invoke('zato.pattern.delivery.in-doubt.resubmit', input_dict)
+        if response.ok:
+            return HttpResponse(dumps({'message': 'zzz'}))
+        else:
+            raise Exception(response.details)
+
+    except Exception, e:
+        msg = 'Could not resubmit tasks, e:[{e}]'.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
     
 # ##############################################################################

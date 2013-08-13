@@ -150,4 +150,7 @@ class Resubmit(_DeliveryService):
         input_required = (CSV('tx_id'), 'should_ignore_missing')
             
     def handle(self):
-        self.delivery_store.resubmit(self.request.input.tx_id, self.request.input.should_ignore_missing)
+        if not self.request.input.tx_id:
+            self.logger.warn('No tasks received to resubmit, tx_id: %s', self.request.input.tx_id)
+        else:
+            self.delivery_store.resubmit(self.request.input.tx_id, self.request.input.should_ignore_missing)
