@@ -73,6 +73,14 @@ class DeliveryStore(object):
     
     def get_in_doubt_list_key(self, name):
         return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_LIST_PREFIX, name)
+    
+    def _register_redis(self, p, item, payload_value, now):
+        p.hmset(item.payload_key, payload_value)
+        p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
+        p.sadd(item.uq_by_target_type_key, item.payload_key)
+
+        if item.expire_after:
+            p.expire(item.payload_key, item.expire_after)
 
     def register(self, item, is_resubmit=False, pipeline=None):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
@@ -80,7 +88,7 @@ class DeliveryStore(object):
                 item.check_after, item.retry_repeats, item.retry_seconds)
             self.logger.error(msg)
             raise Exception(msg)
-
+        
         now = datetime.utcnow().isoformat()
 
         item.name = item.name or self.get_anonymous_name(item)
@@ -123,15 +131,17 @@ class DeliveryStore(object):
         item.uq_by_target_type_key = '{}{}'.format(KVDB.DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX, item.target_type)
         
         p = pipeline or self.kvdb.conn.pipeline()
-        with p:
-            p.hmset(item.payload_key, payload_value)
-            p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
-            p.sadd(item.uq_by_target_type_key, item.payload_key)
-    
-            if item.expire_after:
-                p.expire(item.payload_key, item.expire_after)
-            
+        
+        # We cannot use 'with' if pipeline was provided by the caller because the caller
+        # is expected to already use it and we cannot have a clash which basically makes
+        # the server grind to a halt.
+        if pipeline:
+            self._register_redis(p, item, payload_value, now)
             p.execute()
+        else:
+            with p:
+                self._register_redis(p, item, payload_value, now)
+                p.execute()
         
         self.logger.info(
             '%s delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
@@ -342,11 +352,11 @@ class DeliveryStore(object):
                     
             if missing:
                 noun = 'task' if len(missing) == 1 else 'tasks'
-                msg = 'Could not find {} {} in {} {}'.format(noun, len(missing), KVDB.DELIVERY_IN_DOUBT_LIST_IDX, missing)
+                msg = 'Could not find {} {} in {} {}'.format(len(missing), noun, KVDB.DELIVERY_IN_DOUBT_LIST_IDX, missing)
                 raise ValueError(msg)
             
-        with self.kvdb.conn.pipeline() as p:
-            for tx_id in tx_id_list:
+        for tx_id in tx_id_list:
+            with self.kvdb.conn.pipeline() as p:
                 in_doubt_member = self.kvdb.conn.hget(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
                 in_doubt_info = in_doubt_info_from_member(in_doubt_member)
                 in_doubt_details_key = self.get_in_doubt_details_key(in_doubt_info['name'])
@@ -354,7 +364,7 @@ class DeliveryStore(object):
                 in_doubt_details = self.kvdb.conn.hmget(in_doubt_details_key, payload_key)[0]
                 
                 if not in_doubt_details:
-                    msg = 'Could not resubmit [{}], payload under [{}] are missing'.format(tx_id, in_doubt_details_key)
+                    msg = 'Could not resubmit [{}], payload under [{}] is missing'.format(tx_id, in_doubt_details_key)
                     raise Exception(msg)
                 else:
                     payload = loads(in_doubt_details)['payload']
