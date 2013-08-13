@@ -334,6 +334,17 @@ class DeliveryStore(object):
     def resubmit(self, tx_id_list, ignore_missing):
         """ Resubmits given each task from the list.
         """ 
+        if not ignore_missing:
+            missing = []
+            for tx_id in tx_id_list:
+                if not self.kvdb.conn.hexists(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id):
+                    missing.append(tx_id)
+                    
+            if missing:
+                noun = 'task' if len(missing) == 1 else 'tasks'
+                msg = 'Could not find {} {} in {} {}'.format(noun, len(missing), KVDB.DELIVERY_IN_DOUBT_LIST_IDX, missing)
+                raise ValueError(msg)
+            
         with self.kvdb.conn.pipeline() as p:
             for tx_id in tx_id_list:
                 in_doubt_member = self.kvdb.conn.hget(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
