@@ -34,8 +34,8 @@ from zato.redis_paginator import ZSetPaginator
 
 # ##############################################################################
 
-_in_doubt_member_keys = 'creation_time_utc', 'in_doubt_created_at_utc', 'source_count', 'target_count', \
-    'check_after', 'retry_repeats', 'retry_seconds', 'tx_id'
+_in_doubt_member_keys = 'creation_time_utc', 'in_doubt_created_at_utc', 'name', 'target', 'target_type', \
+    'source_count', 'target_count', 'check_after', 'retry_repeats', 'retry_seconds', 'tx_id'
 
 def in_doubt_member_from_payload(payload):
     return KVDB.SEPARATOR.join(payload[key] for key in _in_doubt_member_keys)
@@ -73,10 +73,7 @@ class DeliveryStore(object):
     
     def get_in_doubt_list_key(self, name):
         return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_LIST_PREFIX, name)
-    
-    def get_in_doubt_list_idx_key(self, name):
-        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_LIST_IDX_PREFIX, name)
-    
+
     def register(self, item, is_resubmit=False, pipeline=None):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
@@ -183,7 +180,6 @@ class DeliveryStore(object):
                     
                     in_doubt_details_key = self.get_in_doubt_details_key(item.name)
                     in_doubt_list_key = self.get_in_doubt_list_key(item.name)
-                    in_doubt_list_idx_key = self.get_in_doubt_list_idx_key(item.name)
 
                     data = dumps({
                         'payload': payload,
@@ -197,7 +193,7 @@ class DeliveryStore(object):
                     
                     p.hset(in_doubt_details_key, item.payload_key, data)
                     p.zadd(in_doubt_list_key, score, in_doubt_member)
-                    p.hset(in_doubt_list_idx_key, item.tx_id, in_doubt_member)
+                    p.hset(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, item.tx_id, in_doubt_member)
                     
                     p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
                     p.delete(item.payload_key)
@@ -335,15 +331,15 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-    def resubmit(self, name, target_type, target, tx_id_list):
+    def resubmit(self, tx_id_list, ignore_missing):
         """ Resubmits given each task from the list.
         """ 
-        in_doubt_list_idx_key = self.get_in_doubt_list_idx_key(name)
         with self.kvdb.conn.pipeline() as p:
             for tx_id in tx_id_list:
-                in_doubt_member = self.kvdb.conn.hget(in_doubt_list_idx_key, tx_id)
-                in_doubt_details_key = self.get_in_doubt_details_key(name)
-                payload_key = self.get_payload_key(target_type, target, tx_id)
+                in_doubt_member = self.kvdb.conn.hget(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
+                in_doubt_info = in_doubt_info_from_member(in_doubt_member)
+                in_doubt_details_key = self.get_in_doubt_details_key(in_doubt_info['name'])
+                payload_key = self.get_payload_key(in_doubt_info['target_type'], in_doubt_info['target'], tx_id)
                 in_doubt_details = self.kvdb.conn.hmget(in_doubt_details_key, payload_key)[0]
                 
                 if not in_doubt_details:
@@ -355,7 +351,7 @@ class DeliveryStore(object):
                     
                     p.hdel(in_doubt_details_key, payload_key)
                     p.zrem(self.get_in_doubt_list_key(item.name), in_doubt_member)
-                    p.hdel(in_doubt_list_idx_key, tx_id)
+                    p.hdel(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
                     
                     self.register(item, True, p)
                 

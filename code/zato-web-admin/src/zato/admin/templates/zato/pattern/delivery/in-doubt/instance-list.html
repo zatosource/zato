@@ -78,7 +78,7 @@
                 <td>{{ item.check_after }}</td>
                 <td>{{ item.retry_repeats }}</td>
                 <td>{{ item.retry_seconds }}</td>
-                <td><a href="javascript:$.fn.zato.pattern.delivery.in_doubt.resubmit('{{ item.name }}', '{{ req.zato.args.target_type }}', '{{ req.zato.args.target }}', '{{ item.tx_id }}', '{{ cluster_id }}')">Resubmit</a></td>
+                <td><a href="javascript:$.fn.zato.pattern.delivery.in_doubt.resubmit('{{ item.tx_id }}', '{{ cluster_id }}')">Resubmit</a></td>
             </tr>
         {% endfor %}
         {% else %}

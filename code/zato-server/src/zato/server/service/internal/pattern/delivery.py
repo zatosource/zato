@@ -147,9 +147,7 @@ class Resubmit(_DeliveryService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_in_doubt_resubmit_request'
         response_elem = 'zato_pattern_delivery_in_doubt_resubmit_response'
-        input_required = ('name', CSV('tx_id'), 'target_type', 'target', 'should_ignore_missing')
+        input_required = (CSV('tx_id'), 'should_ignore_missing')
             
     def handle(self):
-        self.delivery_store.resubmit(
-            self.request.input.name, self.request.input.target_type, 
-            self.request.input.target, self.request.input.tx_id)
+        self.delivery_store.resubmit(self.request.input.tx_id, self.request.input.should_ignore_missing)

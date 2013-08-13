@@ -251,8 +251,8 @@ class KVDB(Attrs):
     DELIVERY_BY_TARGET_TYPE_PREFIX = '{}by-target-type:'.format(DELIVERY_PREFIX)
     DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX = '{}uq-by-target-type:'.format(DELIVERY_PREFIX)
     DELIVERY_IN_DOUBT_DETAILS_PREFIX = '{}in-doubt:details:'.format(DELIVERY_PREFIX)
+    DELIVERY_IN_DOUBT_LIST_IDX = '{}in-doubt:list-idx:'
     DELIVERY_IN_DOUBT_LIST_PREFIX = '{}in-doubt:list:'.format(DELIVERY_PREFIX)
-    DELIVERY_IN_DOUBT_LIST_IDX_PREFIX = '{}in-doubt:list-idx:'.format(DELIVERY_PREFIX)
     DELIVERY_ARCHIVE_SUCCESS_PREFIX = '{}arch-succes:'.format(DELIVERY_PREFIX)
     DELIVERY_ARCHIVE_FAILED_PREFIX = '{}arch-failed:'.format(DELIVERY_PREFIX)
 
