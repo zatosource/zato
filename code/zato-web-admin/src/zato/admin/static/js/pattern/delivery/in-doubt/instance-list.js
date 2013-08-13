@@ -34,7 +34,7 @@ $(document).ready(function() {
     })
 })
 
-$.fn.zato.pattern.delivery.in_doubt.resubmit = function(name, target_type, target, tx_id, cluster_id) {
+$.fn.zato.pattern.delivery.in_doubt.resubmit = function(tx_id, cluster_id) {
     var _callback = function(data, status) {
         var success = status == 'success';
         var msg;
@@ -47,10 +47,10 @@ $.fn.zato.pattern.delivery.in_doubt.resubmit = function(name, target_type, targe
         $.fn.zato.user_message(success, msg);
 		$.fn.zato.data_table.row_updated(tx_id);
     }
-
+	
     $.ajax({
         type: 'POST',
-        url: String.format('/zato/pattern/delivery/in-doubt/resubmit/{0}/{1}/{2}/{3}/{4}/', name, target_type, target, tx_id, cluster_id),
+        url: String.format('/zato/pattern/delivery/in-doubt/resubmit/{0}/{1}/', tx_id, cluster_id),
         data: '',
 		dataType: 'json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},

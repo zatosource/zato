@@ -113,7 +113,7 @@ class Resubmit(_CreateEdit):
     service_name = 'zato.pattern.delivery.in-doubt.resubmit'
     
     class SimpleIO(_CreateEdit.SimpleIO):
-        input_required = ('name', 'tx_id', 'target_type', 'target')
+        input_required = ('tx_id',)
         
     def success_message(self, item):
         return 'Successfully resubmitted Tx [{}]'.format(self.input['tx_id'])
