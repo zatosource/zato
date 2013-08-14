@@ -114,6 +114,9 @@ urlpatterns = patterns('',
     
     url(r'^zato/pattern/delivery/in-doubt/resubmit-many/(?P<cluster_id>.*)/$', 
         pattern_delivery.resubmit_many, name='pattern-delivery-details-in-doubt-resubmit-many'),
+    
+    url(r'^zato/pattern/delivery/in-doubt/delete-many/(?P<cluster_id>.*)/$', 
+        pattern_delivery.delete_many, name='pattern-delivery-details-in-doubt-delete-many'),
 
     # Security..
 

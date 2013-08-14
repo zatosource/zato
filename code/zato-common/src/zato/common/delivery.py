@@ -11,13 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import csv
 from datetime import datetime, timedelta
+from json import dumps, loads
 from logging import getLogger
-
-# anyjson
-from anyjson import dumps, loads
 
 # gevent
 from gevent import sleep, spawn_later
+
+# memory_profiler
+#from memory_profiler import profile
 
 # Paste
 from paste.util.converters import asbool
@@ -76,13 +77,13 @@ class DeliveryStore(object):
     
     def _register_redis(self, p, item, payload_value, now):
         p.hmset(item.payload_key, payload_value)
-        p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
+        p.hmset(item.by_target_type_key, {item.name: KVDB.SEPARATOR.join((item.target, now))})
         p.sadd(item.uq_by_target_type_key, item.payload_key)
 
         if item.expire_after:
             p.expire(item.payload_key, item.expire_after)
 
-    def register(self, item, is_resubmit=False, pipeline=None):
+    def register(self, item, is_resubmit=False, in_doubt_details_key=None, payload_key=None, in_doubt_list_key=None, in_doubt_member=None):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
                 item.check_after, item.retry_repeats, item.retry_seconds)
@@ -123,25 +124,22 @@ class DeliveryStore(object):
             'in_doubt_created_source_count':None,
             'in_doubt_created_target_count':None,
             'in_doubt_history':dumps(item.in_doubt_history or []),
-            'on_delivery_success': dumps(item.on_delivery_success),
-            'on_delivery_failed': dumps(item.on_delivery_failed),
+            'on_delivery_success':dumps(item.on_delivery_success),
+            'on_delivery_failed':dumps(item.on_delivery_failed),
         }
         
         item.by_target_type_key = '{}{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, item.target_type)
         item.uq_by_target_type_key = '{}{}'.format(KVDB.DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX, item.target_type)
-        
-        p = pipeline or self.kvdb.conn.pipeline()
-        
-        # We cannot use 'with' if pipeline was provided by the caller because the caller
-        # is expected to already use it and we cannot have a clash which basically makes
-        # the server grind to a halt.
-        if pipeline:
+
+        with self.kvdb.conn.pipeline() as p:
             self._register_redis(p, item, payload_value, now)
+            
+            if is_resubmit:
+                p.hdel(in_doubt_details_key, payload_key)
+                p.zrem(in_doubt_list_key, in_doubt_member)
+                p.hdel(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, item.tx_id)
+            
             p.execute()
-        else:
-            with p:
-                self._register_redis(p, item, payload_value, now)
-                p.execute()
         
         self.logger.info(
             '%s delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
@@ -151,6 +149,47 @@ class DeliveryStore(object):
         self.spawn_check_target(item)
 
 # ##############################################################################
+
+    def _on_check_in_doubt(self, item, payload, now, now_dt, source_count, target_count):
+        
+        # We're already in a retry function and apparently the target has not replied yet.
+        # We cannot retry just like that because we don't know what happened to target,
+        # maybe it crashed or maybe it still hangs and will complete its jobs in a moment.
+        # In any case, we can't invoke it again. We are in doubt as to what has happened.
+        payload['in_doubt'] = True
+        payload['in_doubt_created_at_utc'] = now
+        payload['in_doubt_created_source_count'] = source_count
+        payload['in_doubt_created_target_count'] = target_count
+        
+        with self.kvdb.conn.pipeline() as p:
+            
+            # We add an in-doubt context and remove any 
+            # other information regarding this tx_id from other places.
+            
+            # There's a separate in-doubt key for each type of target so each outgoing
+            # connection or wrapper has its own key. The key stores a hashmap whose
+            # keys are concrete deliveries that are in doubt and values are payload
+            # that was to be delivered. 
+            
+            in_doubt_details_key = self.get_in_doubt_details_key(item.name)
+            in_doubt_list_key = self.get_in_doubt_list_key(item.name)
+
+            # Score is the same as in_doubt_created_at_utc but in seconds since epoch start (as float)
+            score = datetime_to_seconds(now_dt)
+            in_doubt_member = in_doubt_member_from_payload(payload)
+            
+            p.hset(in_doubt_details_key, item.payload_key, dumps(payload))
+            p.zadd(in_doubt_list_key, score, in_doubt_member)
+            p.hset(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, item.tx_id, in_doubt_member)
+            
+            p.hmset(item.by_target_type_key, {item.name: KVDB.SEPARATOR.join((item.target, now))})
+            p.delete(item.payload_key)
+            p.srem(item.uq_by_target_type_key, item.payload_key)
+            
+            p.execute()
+            
+        msg = 'tx_id:[%s] (%s) is in-doubt, details stored in hash [%s] under key [%s] (send/confirm %s/%s)'
+        self.logger.warn(msg, item.tx_id, item.name, in_doubt_details_key, item.payload_key, source_count, target_count)            
 
     def check_target(self, item):
         self.logger.debug('Checking name/target [%s]/[%s]', item.name, item.payload_key)
@@ -162,57 +201,15 @@ class DeliveryStore(object):
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
             payload = self.kvdb.conn.hgetall(item.payload_key)
             
-            self.kvdb.conn.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
+            self.kvdb.conn.hmset(item.by_target_type_key, {item.name:KVDB.SEPARATOR.join((item.target, now))})
             
             source_count = int(payload['source_count'])
             target_count = int(payload['target_count'])
             
             if source_count > target_count:
                 
-                # We're already in a retry function and apparently the target has not replied yet.
-                # We cannot retry just like that because we don't know what happened to target,
-                # maybe it crashed or maybe it still hangs and will complete its jobs in a moment.
-                # In any case, we can't invoke it again. We are in doubt as to what has happened.
-                payload['in_doubt'] = True
-                payload['in_doubt_created_at_utc'] = now
-                payload['in_doubt_created_source_count'] = source_count
-                payload['in_doubt_created_target_count'] = target_count
-                
-                with self.kvdb.conn.pipeline() as p:
-                    
-                    # We add an in-doubt context and remove any 
-                    # other information regarding this tx_id from other places.
-                    
-                    # There's a separate in-doubt key for each type of target so each outgoing
-                    # connection or wrapper has its own key. The key stores a hashmap whose
-                    # keys are concrete deliveries that are in doubt and values are payload
-                    # that was to be delivered. 
-                    
-                    in_doubt_details_key = self.get_in_doubt_details_key(item.name)
-                    in_doubt_list_key = self.get_in_doubt_list_key(item.name)
-
-                    data = dumps({
-                        'payload': payload,
-                        'overtime_info': None # This is populated by target if it doesn't make it in the expected time
-                                              # but still manages to confirm /something/ at all (but we still treat it as in-doubt).
-                    })
-                    
-                    # Score is the same as in_doubt_created_at_utc but in seconds since epoch start (as float)
-                    score = datetime_to_seconds(now_dt)
-                    in_doubt_member = in_doubt_member_from_payload(payload)
-                    
-                    p.hset(in_doubt_details_key, item.payload_key, data)
-                    p.zadd(in_doubt_list_key, score, in_doubt_member)
-                    p.hset(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, item.tx_id, in_doubt_member)
-                    
-                    p.hmset(item.by_target_type_key, {item.name: dumps({'target':item.target, 'last_updated_utc':now})})
-                    p.delete(item.payload_key)
-                    p.srem(item.uq_by_target_type_key, item.payload_key)
-                    
-                    p.execute()
-                    
-                msg = 'tx_id:[%s] (%s) is in-doubt, details stored in hash [%s] under key [%s] (send/confirm %s/%s)'
-                self.logger.warn(msg, item.tx_id, item.name, in_doubt_details_key, item.payload_key, source_count, target_count)
+                # STATE - in-doubt
+                self._on_check_in_doubt(item, payload, now, now_dt, source_count, target_count)
                 
             else:
                 # The target has confirmed the invocation in an expected time so we
@@ -341,40 +338,26 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-    def resubmit(self, tx_id_list, ignore_missing):
+    def resubmit(self, tx_id, ignore_missing):
         """ Resubmits given each task from the list.
         """ 
-        if not ignore_missing:
-            missing = []
-            for tx_id in tx_id_list:
-                if not self.kvdb.conn.hexists(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id):
-                    missing.append(tx_id)
-                    
-            if missing:
-                noun = 'task' if len(missing) == 1 else 'tasks'
-                msg = 'Could not find {} {} in {} {}'.format(len(missing), noun, KVDB.DELIVERY_IN_DOUBT_LIST_IDX, missing)
-                raise ValueError(msg)
-            
-        for tx_id in tx_id_list:
-            with self.kvdb.conn.pipeline() as p:
-                in_doubt_member = self.kvdb.conn.hget(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
-                in_doubt_info = in_doubt_info_from_member(in_doubt_member)
-                in_doubt_details_key = self.get_in_doubt_details_key(in_doubt_info['name'])
-                payload_key = self.get_payload_key(in_doubt_info['target_type'], in_doubt_info['target'], tx_id)
-                in_doubt_details = self.kvdb.conn.hmget(in_doubt_details_key, payload_key)[0]
-                
-                if not in_doubt_details:
-                    msg = 'Could not resubmit [{}], payload under [{}] is missing'.format(tx_id, in_doubt_details_key)
-                    raise Exception(msg)
-                else:
-                    payload = loads(in_doubt_details)['payload']
-                    item = DeliveryItem.from_in_doubt_payload(payload)
-                    
-                    p.hdel(in_doubt_details_key, payload_key)
-                    p.zrem(self.get_in_doubt_list_key(item.name), in_doubt_member)
-                    p.hdel(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
-                    
-                    self.register(item, True, p)
+        if not self.kvdb.conn.hexists(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id):
+            msg = 'Could not find task {} in {}'.format(tx_id, KVDB.DELIVERY_IN_DOUBT_LIST_IDX)
+            raise ValueError(msg)
+        
+        in_doubt_member = self.kvdb.conn.hget(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
+        in_doubt_info = in_doubt_info_from_member(in_doubt_member)
+        
+        in_doubt_details_key = self.get_in_doubt_details_key(in_doubt_info['name'])
+        payload_key = self.get_payload_key(in_doubt_info['target_type'], in_doubt_info['target'], tx_id)
+        
+        in_doubt_details = self.kvdb.conn.hmget(in_doubt_details_key, payload_key)[0]
+        if not in_doubt_details:
+            msg = 'Could not resubmit [{}], payload under [{}] is missing'.format(tx_id, in_doubt_details_key)
+            raise Exception(msg)
+        else:
+            item = DeliveryItem.from_in_doubt_payload(loads(in_doubt_details))
+            self.register(item, True, in_doubt_details_key, payload_key, self.get_in_doubt_list_key(item.name), in_doubt_member)
                 
     def get_batch_info(self, name, batch_size, current_batch, score_min, score_max):
         """ Returns information regarding how given set of data will be split into

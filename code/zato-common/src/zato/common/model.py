@@ -12,10 +12,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # regardless if they're backed by an SQL database or not.
 
 # stdlib
+from json import loads
 from logging import getLogger
 
-# anyjson
-from anyjson import loads
+# memory_profiler
+from memory_profiler import profile
 
 # Zato
 from zato.common.util import make_repr
@@ -38,7 +39,7 @@ _key_func_dict = {
     'failed_attempt_list': loads,
     'on_delivery_success': loads,
     'on_delivery_failed': loads,
-    'in_doubt_history': loads,
+    #'in_doubt_history': loads,
 }
 
 class DeliveryItem(object):
@@ -74,7 +75,6 @@ class DeliveryItem(object):
         
         self.in_doubt_created_at_utc = None
         self.in_doubt_created_at = None # In current user's timezone
-        self.in_doubt_history = []
         
         self.last_updated_utc = None
         self.last_updated = None # In current user's timezone
@@ -83,16 +83,20 @@ class DeliveryItem(object):
         return make_repr(self)
 
     @staticmethod
+    @profile
     def from_in_doubt_payload(payload):
         """ Creates a new delivery item out of previous in-doubt data.
         """
         item = DeliveryItem()
         for key, func in _key_func_dict.items():
-            value = payload[key]
+            try:
+                value = payload[key]
+            except TypeError:
+                raise KeyError('[{}] [{}] [{}]'.format(key, type(payload), payload))
+            
             if func:
                 value = func(value)
             setattr(item, key, value)
-        item.in_doubt_history.append(payload)
         
         logger.debug('Returning item %r', item)
         

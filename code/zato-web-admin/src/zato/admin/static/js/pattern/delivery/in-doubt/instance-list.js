@@ -34,7 +34,15 @@ $(document).ready(function() {
     })
 })
 
-$.fn.zato.pattern.delivery.in_doubt.resubmit_all = function(cluster_id) {
+$.fn.zato.pattern.delivery.in_doubt._update_all = function(cluster_id, url_pattern) {
+
+	var tx_data = {};
+	var tx_id;
+	$("td[class^='ignore item_id_']").each(function(idx, item) {
+		tx_id = $(item).text();
+		tx_data[tx_id] = tx_id;
+	});
+
     var _callback = function(data, status) {
         var success = status == 'success';
         var msg;
@@ -45,25 +53,28 @@ $.fn.zato.pattern.delivery.in_doubt.resubmit_all = function(cluster_id) {
 			msg = data.responseText;
 		}
         $.fn.zato.user_message(success, msg);
-		//$.fn.zato.data_table.row_updated(tx_id);
+		
+		for(tx_id in tx_data) {
+			$.fn.zato.data_table.row_updated(tx_id);
+		}
     }
-	
-	var data = {};
-	var tx_id;
-	$("td[class^='ignore item_id_']").each(function(idx, item) {
-		tx_id = $(item).text();
-		data[tx_id] = tx_id;
-	});
 	
     $.ajax({
         type: 'POST',
-        url: String.format('/zato/pattern/delivery/in-doubt/resubmit-many/{0}/', cluster_id),
-        data: data,
+        url: String.format(url_pattern, cluster_id),
+        data: tx_data,
 		dataType: 'json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
         complete: _callback
     });
-	
+}
+
+$.fn.zato.pattern.delivery.in_doubt.resubmit_all = function(cluster_id) {
+	$.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/in-doubt/resubmit-many/{0}/');
+}
+
+$.fn.zato.pattern.delivery.in_doubt.delete_all = function(cluster_id) {
+	$.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/in-doubt/delete-many/{0}/');
 }
 
 $.fn.zato.pattern.delivery.in_doubt.resubmit = function(tx_id, cluster_id) {
