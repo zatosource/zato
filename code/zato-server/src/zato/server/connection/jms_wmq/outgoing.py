@@ -77,7 +77,7 @@ class WMQFacade(object):
         if delivery:
             delivery.target_type = INVOCATION_TARGET.OUTCONN_WMQ
             delivery.target = out_name
-            delivery.payload = params
+            delivery.business_payload = params
             delivery.invoke_func = invoke_func
             delivery.invoke_args = invoke_args
             delivery.invoke_kwargs = invoke_kwargs

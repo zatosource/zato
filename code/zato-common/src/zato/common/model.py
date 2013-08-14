@@ -28,6 +28,8 @@ _key_func_dict = {
     'name': None,
     'target': None,
     'target_type': None,
+    'on_delivery_success': None,
+    'on_delivery_failed': None,
     
     'expire_arch_success_after': int,
     'expire_arch_failed_after': int,
@@ -35,10 +37,8 @@ _key_func_dict = {
     'retry_repeats': int,
     'retry_seconds': int,
     
-    'payload': loads,
-    'failed_attempt_list': loads,
-    'on_delivery_success': loads,
-    'on_delivery_failed': loads,
+    #'business_payload': loads,
+    #'failed_attempt_list': loads,
     #'in_doubt_history': loads,
 }
 
@@ -50,7 +50,7 @@ class DeliveryItem(object):
         self.target = None
         self.target_type = None
         self.tx_id = None
-        self.payload = None
+        self.business_payload = None
         self.expire_after = None
         self.expire_arch_success_after = None
         self.expire_arch_failed_after = None
@@ -61,11 +61,12 @@ class DeliveryItem(object):
         self.invoke_func = None
         self.invoke_args = None
         self.invoke_kwargs = None
+        self.delivery_key = None
         self.payload_key = None
         self.by_target_type_key = None
         self.uq_by_target_type_key = None
-        self.on_delivery_success = []
-        self.on_delivery_failed = []
+        self.on_delivery_success = None
+        self.on_delivery_failed = None
         
         self.source_count = None
         self.target_count = None
@@ -83,8 +84,8 @@ class DeliveryItem(object):
         return make_repr(self)
 
     @staticmethod
-    @profile
-    def from_in_doubt_payload(payload):
+    #@profile
+    def from_in_doubt_delivery(payload):
         """ Creates a new delivery item out of previous in-doubt data.
         """
         item = DeliveryItem()

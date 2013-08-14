@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import gc
-
 # anyjson
 from traceback import format_exc
 
@@ -153,11 +150,8 @@ class Resubmit(_DeliveryService):
         response_elem = 'zato_pattern_delivery_in_doubt_resubmit_response'
         input_required = (AsIs('tx_id'), 'should_ignore_missing')
             
-    #@profile
     def handle(self):
         if not self.request.input.tx_id:
             self.logger.warn('No task received to resubmit, tx_id: %s', self.request.input.tx_id)
         else:
             self.delivery_store.resubmit(self.request.input.tx_id, self.request.input.should_ignore_missing)
-            self.logger.warn(gc.get_count())
-
