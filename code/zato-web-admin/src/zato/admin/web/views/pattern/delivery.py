@@ -124,24 +124,37 @@ class Resubmit(_CreateEdit):
         
     def success_message(self, item):
         return 'Successfully resubmitted Tx [{}]'.format(self.input['tx_id'])
+
+def _update_many(req, cluster_id, service, success_msg, failure_msg):
+    """ A common function for either resubmitting or deleting one or more tasks.
+    """
+    try:
+        for tx_id in req.POST.values():
+            input_dict = {'tx_id':tx_id}
+            response = req.zato.client.invoke(service, input_dict)
+            
+            if not response.ok:
+                raise Exception(response.details)
+        
+        return HttpResponse(dumps({'message':success_msg}))
+
+    except Exception, e:
+        msg = '{}, e:[{}]'.format(failure_msg, format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
     
 @method_allowed('POST')
 def resubmit_many(req, cluster_id):
     """ Resubmits one or more delivery tasks.
     """
-    try:
-        input_dict = {
-            'tx_id': ','.join(req.POST.values())
-        }
-        response = req.zato.client.invoke('zato.pattern.delivery.in-doubt.resubmit', input_dict)
-        if response.ok:
-            return HttpResponse(dumps({'message': 'zzz'}))
-        else:
-            raise Exception(response.details)
+    return _update_many(req, cluster_id, 'zato.pattern.delivery.in-doubt.resubmit',
+        'Tasks resubmitted successfully', 'Could not resubmit tasks')
 
-    except Exception, e:
-        msg = 'Could not resubmit tasks, e:[{e}]'.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+@method_allowed('POST')
+def delete_many(req, cluster_id):
+    """ Resubmits one or more delivery tasks.
+    """
+    return _update_many(req, cluster_id, 'zato.pattern.delivery.in-doubt.delete',
+        'Tasks deleted successfully', 'Could not delete tasks')
     
 # ##############################################################################

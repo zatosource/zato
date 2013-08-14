@@ -8,12 +8,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+import gc
+
 # anyjson
-from anyjson import loads
 from traceback import format_exc
 
 # datetutil
 from dateutil.parser import parse
+
+from memory_profiler import profile
 
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
@@ -94,14 +98,14 @@ class GetList(_DeliveryService):
         
     def get_data(self, target_type):
         for name, base_target_info in self.delivery_store.get_by_target_type(target_type).items():
-            base_target_info = loads(base_target_info)
+            target, last_updated_utc = base_target_info.split(KVDB.SEPARATOR)
             in_progress_count, in_doubt_count, arch_success_count, arch_failed_count = self.delivery_store.get_counts(name)
 
             yield {
                 'name': name,
-                'target':base_target_info['target'],
+                'target':target,
                 'target_type': target_type,
-                'last_updated_utc':base_target_info['last_updated_utc'],
+                'last_updated_utc':last_updated_utc,
                 'short_def':'todo',
                 'total_count':in_progress_count + in_doubt_count + arch_success_count + arch_failed_count,
                 'in_progress_count':in_progress_count,
@@ -140,17 +144,20 @@ class InDoubtGetInstanceList(_DeliveryService):
             yield item
 
 class Resubmit(_DeliveryService):
-    """ Resubmits one or more delivery tasks.
+    """ Resubmits a delivery task.
     """
     name = 'zato.pattern.delivery.in-doubt.resubmit'
     
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_in_doubt_resubmit_request'
         response_elem = 'zato_pattern_delivery_in_doubt_resubmit_response'
-        input_required = (CSV('tx_id'), 'should_ignore_missing')
+        input_required = (AsIs('tx_id'), 'should_ignore_missing')
             
+    #@profile
     def handle(self):
         if not self.request.input.tx_id:
-            self.logger.warn('No tasks received to resubmit, tx_id: %s', self.request.input.tx_id)
+            self.logger.warn('No task received to resubmit, tx_id: %s', self.request.input.tx_id)
         else:
             self.delivery_store.resubmit(self.request.input.tx_id, self.request.input.should_ignore_missing)
+            self.logger.warn(gc.get_count())
+
