@@ -37,6 +37,7 @@ class Pickup(object):
 
     def watch(self):
         fd = inotifyx.init()
+        logger.info('before .add_watch {}'.format(self.pickup_dir))
         inotifyx.add_watch(fd, self.pickup_dir, inotifyx.constants['IN_CLOSE_WRITE'])
         
         while self.keep_running:
