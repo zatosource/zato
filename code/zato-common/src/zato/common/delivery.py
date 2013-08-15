@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import csv
+from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps, loads
 from logging import getLogger
@@ -49,9 +50,10 @@ def in_doubt_info_from_member(member):
 class DeliveryStore(object):
     """ Stores messages in a persistent storage until they are confirmed to have been delivered.
     """
-    def __init__(self, kvdb=None, broker_client=None, delivery_lock_timeout=None):
+    def __init__(self, kvdb=None, broker_client=None, odb=None, delivery_lock_timeout=None):
         self.kvdb = kvdb
         self.broker_client = broker_client
+        self.odb = odb
         self.delivery_lock_timeout = delivery_lock_timeout
         self.logger = getLogger(self.__class__.__name__)
         
@@ -80,12 +82,14 @@ class DeliveryStore(object):
     
     def _register_redis(self, p, item, delivery_value, now):
         p.hmset(item.delivery_key, delivery_value)
+        p.set(item.payload_key, item.business_payload)
+        
         p.hmset(item.by_target_type_key, {item.name: KVDB.SEPARATOR.join((item.target, now))})
         p.sadd(item.uq_by_target_type_key, item.delivery_key)
-        p.set(item.payload_key, item.business_payload)
 
         if item.expire_after:
             p.expire(item.delivery_key, item.expire_after)
+            p.expire(item.payload_key, item.expire_after)
 
     def register(self, item, is_resubmit=False, in_doubt_details_key=None, delivery_key=None, in_doubt_list_key=None, in_doubt_member=None):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
@@ -192,6 +196,12 @@ class DeliveryStore(object):
             
         msg = 'tx_id:[%s] (%s) is in-doubt, details stored in hash [%s] under key [%s] (send/confirm %s/%s)'
         self.logger.warn(msg, item.tx_id, item.name, in_doubt_details_key, item.delivery_key, source_count, target_count)            
+        
+    def _move_payload_to_odb(self, item, business_payload):
+        """ Moves business payload to ODB and deletes it from Redis.
+        """
+        with closing(self.odb.session()) as session:
+            self.kvdb.conn.delete(item.payload_key)
 
     def check_target(self, item):
         self.logger.debug('Checking name/target [%s]/[%s]', item.name, item.delivery_key)
@@ -201,19 +211,18 @@ class DeliveryStore(object):
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.tx_id)
         
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
-            business_payload = self.kvdb.conn.get(item.payload_key)
-
-            # Store business payload in ODB here
-            # TODO
-            
-            self.kvdb.conn.delete(item.payload_key)
             
             delivery = self.kvdb.conn.hgetall(item.delivery_key)
-            
-            self.kvdb.conn.hmset(item.by_target_type_key, {item.name:KVDB.SEPARATOR.join((item.target, now))})
-            
             source_count = int(delivery['source_count'])
             target_count = int(delivery['target_count'])
+            
+            # Move delivery payload first time we are called. It's OK if the payload
+            # doesn't exist in Redis anymore - it was moved to ODB the previous time.
+            business_payload = self.kvdb.conn.get(item.payload_key)
+            if business_payload:
+                self._move_payload_to_odb(item, business_payload, now)
+            
+            self.kvdb.conn.hmset(item.by_target_type_key, {item.name:KVDB.SEPARATOR.join((item.target, now))})
             
             if source_count > target_count:
                 
@@ -267,7 +276,6 @@ class DeliveryStore(object):
         expires_arch_time = now + timedelta(seconds=expire_arch_after)
         
         arch_key = self.get_archive_key(item.target_type, item.target, target_ok, item.tx_id)
-        delivery['confirmed'] = True
         delivery['expires_arch_time_utc'] = expires_arch_time.isoformat()
         
         with self.kvdb.conn.pipeline() as p:
@@ -278,10 +286,12 @@ class DeliveryStore(object):
             p.execute()
             
         if target_ok:
+            delivery['confirmed'] = True
             msg_prefix = 'Confirmed delivery'
             log_func = self.logger.info
             callback_list = item.on_delivery_success
         else:
+            delivery['confirmed'] = False
             msg_prefix = 'Delivery failed'
             log_func = self.logger.warn
             callback_list = item.on_delivery_failed.split(KVDB.SEPARATOR)

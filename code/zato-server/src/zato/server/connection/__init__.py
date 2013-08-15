@@ -179,9 +179,6 @@ class BaseConnector(BrokerMessageReceiver):
         self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
         self.broker_client.start()
         
-        # Delivery store
-        self.delivery_store = DeliveryStore(self.kvdb, self.broker_client, float(fs_server_config.misc.delivery_lock_timeout))
-        
         # ODB
         self.odb_config = Bunch()
         self.odb_config.db_name = config_odb.db_name
@@ -192,6 +189,7 @@ class BaseConnector(BrokerMessageReceiver):
         self.odb_config.password = self.odb.crypto_manager.decrypt(config_odb.password)
         self.odb_config.pool_size = config_odb.pool_size
         self.odb_config.username = config_odb.username
+        
         self.odb_config.is_odb = True
         
         self.sql_pool_store = app_context.get_object('sql_pool_store')
@@ -199,6 +197,9 @@ class BaseConnector(BrokerMessageReceiver):
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         
         self._setup_odb()
+        
+        # Delivery store
+        self.delivery_store = DeliveryStore(self.kvdb, self.broker_client, self.odb, float(fs_server_config.misc.delivery_lock_timeout))
         
 def setup_logging():
     logging.addLevelName('TRACE1', TRACE1)

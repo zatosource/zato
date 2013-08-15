@@ -895,3 +895,45 @@ class DeploymentStatus(Base):
         self.server_id = server_id
         self.status = status
         self.status_change_time = status_change_time
+
+
+################################################################################
+
+class DeliveryDefinition(Base):
+    """ A guaranteed delivery's definition.
+    """
+    __tablename__ = 'delivery_def'
+    
+    id = Column(Integer, Sequence('deliv_def_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    
+    target_type = Column(String(200), nullable=False)
+    target_id = Column(String(200), nullable=False)
+    
+    expire_after = Column(Integer, nullable=False)
+    expire_arch_succ_after = Column(Integer, nullable=False)
+    expire_arch_fail_after = Column(Integer, nullable=False)
+    check_after = Column(Integer, nullable=False)
+    retry_repeats = Column(Integer, nullable=False)
+    retry_seconds = Column(Integer, nullable=False)
+
+class DeliveryPayload(Base):
+    """ A guaranteed delivery's payload.
+    """
+    __tablename__ = 'delivery_payload'
+    
+    id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
+    task_id = Column(String(64), unique=True, nullable=False)
+    creation_time = Column(DateTime(), nullable=False)
+    payload = Column(LargeBinary(5000000), nullable=False)
+    
+class DeliveryHistory(Base):
+    """ A guaranteed delivery's history.
+    """
+    __tablename__ = 'delivery_history'
+    
+    id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
+    task_id = Column(String(64), nullable=False)
+    entry_type = Column(String(64), nullable=False)
+    entry_time = Column(DateTime(), nullable=False)
+    entry_ctx = Column(LargeBinary(100000), nullable=False)
