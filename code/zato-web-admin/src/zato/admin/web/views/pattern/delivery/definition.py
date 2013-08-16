@@ -59,7 +59,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = []
+        input_required = ['name', 'target', 'target_type', 'expire_after',
+            'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
+            'retry_repeats', 'retry_seconds']
         output_required = []
         
 class Create(_CreateEdit):

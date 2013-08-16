@@ -21,11 +21,19 @@ from memory_profiler import profile
 
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
-from zato.common.odb.model import DeliveryDefinitionBase
-from zato.common.odb.query import delivery_definition_list
+from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ
+from zato.common.odb.query import delivery_definition_list, out_jms_wmq_by_name
 from zato.common.util import datetime_to_seconds
 from zato.server.service import AsIs, Boolean, CSV, Integer
 from zato.server.service.internal import AdminService, AdminSIO
+
+_target_query = {
+    INVOCATION_TARGET.OUTCONN_WMQ: out_jms_wmq_by_name
+}
+
+_target_def_class = {
+    INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
+}
 
 class _DeliveryService(AdminService):
     """ Base class with code common to multiple guaranteed delivery-related services.
@@ -75,7 +83,7 @@ class GetList(_DeliveryService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session, self.request.input.cluster_id, target_type)
 
-class Create(AdminService):
+class Create(_DeliveryService):
     """ Creates a new delivery definition.
     """
     class SimpleIO(AdminSIO):
@@ -88,45 +96,50 @@ class Create(AdminService):
         
         
     def handle(self):
+        target_type = self.request.input.target_type
+        self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
+        
         with closing(self.odb.session()) as session:
             input = self.request.input
+            self._check_def_name(session, input)
             
-            # Both raise an Exception if a check fails
-            self._check_def_name(input)
-            self._check_target_name(input)
-            
-            target_class = self._get_target_class(input)
+            target_query = _target_query[target_type]
+            target = target_query(session, input.cluster_id, input.target)
+            if not target:
+                raise Exception('Target [{}] ({}) does not exist on this cluster'.format(
+                    input.target, input.target_type))
+                
+            target_def_class = _target_class[target_type]
             
             try:
-                item = target_class()
+                #item = target_def_class()
                 
-                session.add(item)
-                session.commit()
+                #session.add(item)
+                #session.commit()
                 
-                self.response.payload.id = item.id
-                self.response.payload.name = item.name
+                #self.response.payload.id = item.id
+                #self.response.payload.name = item.name
+                
+                pass
                 
             except Exception, e:
-                msg = 'Could not create the definition, e:[{e}]'.format(e=format_exc(e))
+                msg = 'Could not create the definition, e:[{}]'.format(format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
             
-    def _check_def_name(self, input):
-        
-        # Let's see if we already have a definition of that name before committing
-        # any stuff into the database.
+    def _check_def_name(self, session, input):
+        """ Let's see if we already have a definition of that name before committing
+        any stuff into the database.
+        """
         existing_one = session.query(DeliveryDefinitionBase.id).\
             filter(DeliveryDefinitionBase.cluster_id==input.cluster_id).\
             filter(DeliveryDefinitionBase.name==input.name).\
             first()
         
         if existing_one:
-            raise Exception('Definition [{0}] already exists on this cluster'.format(input.name))
-        
-    def _check_target_name(self, input):
-        pass
+            raise Exception('Definition [{}] already exists on this cluster'.format(input.name))
     
     def _get_short_def(self, input):
         pass
