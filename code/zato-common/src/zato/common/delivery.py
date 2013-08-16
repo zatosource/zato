@@ -30,20 +30,9 @@ from retools.lock import Lock
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, KVDB
 from zato.common.broker_message import SERVICE
-from zato.common.model import DeliveryItem
 from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator
 
-# ##############################################################################
-
-_in_doubt_member_keys = 'creation_time_utc', 'in_doubt_created_at_utc', 'name', 'target', 'target_type', \
-    'source_count', 'target_count', 'check_after', 'retry_repeats', 'retry_seconds', 'tx_id'
-
-def in_doubt_member_from_delivery(delivery):
-    return KVDB.SEPARATOR.join(delivery[key] for key in _in_doubt_member_keys)
-
-def in_doubt_info_from_member(member):
-    return dict(zip(_in_doubt_member_keys, member.split(KVDB.SEPARATOR)))
 
 # ##############################################################################
 
@@ -59,143 +48,31 @@ class DeliveryStore(object):
         
 # ##############################################################################
 
-    def get_anonymous_name(self, item):
-        return 'anon-{}-{}-{}-{}-{}-{}-{}-{}'.format(
-            item.target_type, item.target, item.retry_repeats, item.retry_seconds, item.check_after,
-            item.expire_after, item.expire_arch_success_after, item.expire_arch_failed_after)
-
-    def get_delivery_key(self, target_type, target, tx_id):
-        return ''.join((KVDB.DELIVERY_PREFIX, target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
-    
-    def get_payload_key(self, target_type, target, tx_id):
-        return ''.join((KVDB.DELIVERY_PAYLOAD_PREFIX, target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
-    
-    def get_archive_key(self, target_type, target, target_ok, tx_id):
-        return ''.join((KVDB.DELIVERY_ARCHIVE_SUCCESS_PREFIX if target_ok else KVDB.DELIVERY_ARCHIVE_FAILED_PREFIX, 
-                        target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
-    
-    def get_in_doubt_details_key(self, name):
-        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_DETAILS_PREFIX, name)
-    
-    def get_in_doubt_list_key(self, name):
-        return '{}{}'.format(KVDB.DELIVERY_IN_DOUBT_LIST_PREFIX, name)
-    
-    def _register_redis(self, p, item, delivery_value, now):
-        p.hmset(item.delivery_key, delivery_value)
-        p.set(item.payload_key, item.business_payload)
-        
-        p.hmset(item.by_target_type_key, {item.name: KVDB.SEPARATOR.join((item.target, now))})
-        p.sadd(item.uq_by_target_type_key, item.delivery_key)
-
-        if item.expire_after:
-            p.expire(item.delivery_key, item.expire_after)
-            p.expire(item.payload_key, item.expire_after)
-
-    def register(self, item, is_resubmit=False, in_doubt_details_key=None, delivery_key=None, in_doubt_list_key=None, in_doubt_member=None):
+    def _validate_register(self, item):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
                 item.check_after, item.retry_repeats, item.retry_seconds)
             self.logger.error(msg)
-            raise Exception(msg)
+            raise ValueError(msg)
         
-        now = datetime.utcnow().isoformat()
+    def register(self, item):
+        self._validate_register(item)
 
-        item.name = item.name or self.get_anonymous_name(item)
-        item.delivery_key = self.get_delivery_key(item.target_type, item.target, item.tx_id)
-        item.payload_key = self.get_payload_key(item.target_type, item.target, item.tx_id)
-
-        delivery_value = {
-            'tx_id':item.tx_id,
-            'name': item.name,
-            'target': item.target,
-            'target_type': item.target_type,
-            'expire_arch_success_after': item.expire_arch_success_after,
-            'expire_arch_failed_after': item.expire_arch_failed_after,
-            'expires_arch_time_utc': None,
-            'check_after': item.check_after,
-            'retry_repeats':item.retry_repeats,
-            'retry_seconds':item.retry_seconds,
-            'attempts_made':0,
-            'last_attempt_time_start_utc':None,
-            'last_attempt_time_end_utc':None,
-            'last_attempt_total_time':None,
-            'creation_time_utc': now,
-            'last_updated_utc': now,
-            'confirmed': False,
-            'target_ok': False,
-            'target_self_info': None,
-            'source_count': 1,
-            'target_count': 0,
-            'in_doubt':False,
-            'in_doubt_created_at_utc':None,
-            'in_doubt_created_source_count':None,
-            'in_doubt_created_target_count':None,
-            #'in_doubt_history':dumps(item.in_doubt_history or []),
-            'on_delivery_success':KVDB.SEPARATOR.join(item.on_delivery_success or []),
-            'on_delivery_failed':KVDB.SEPARATOR.join(item.on_delivery_failed or []),
-        }
-        
-        item.by_target_type_key = '{}{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, item.target_type)
-        item.uq_by_target_type_key = '{}{}'.format(KVDB.DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX, item.target_type)
-
-        with self.kvdb.conn.pipeline() as p:
-            self._register_redis(p, item, delivery_value, now)
-            
-            if is_resubmit:
-                p.hdel(in_doubt_details_key, delivery_key)
-                p.zrem(in_doubt_list_key, in_doubt_member)
-                p.hdel(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, item.tx_id)
-            
-            p.execute()
-        
         self.logger.info(
-            '%s delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
-            ('Resubmitted' if is_resubmit else 'Submitted'), item.name, item.delivery_key,
+            'Submitted delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
+            item.name, item.delivery_key,
             item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
 
         self.spawn_check_target(item)
 
 # ##############################################################################
 
-    def _on_check_in_doubt(self, item, delivery, now, now_dt, source_count, target_count):
-        
-        # We're already in a retry function and apparently the target has not replied yet.
-        # We cannot retry just like that because we don't know what happened to target,
-        # maybe it crashed or maybe it still hangs and will complete its jobs in a moment.
-        # In any case, we can't invoke it again. We are in doubt as to what has happened.
-        delivery['in_doubt'] = True
-        delivery['in_doubt_created_at_utc'] = now
-        delivery['in_doubt_created_source_count'] = source_count
-        delivery['in_doubt_created_target_count'] = target_count
-        
-        with self.kvdb.conn.pipeline() as p:
-            
-            # We add an in-doubt context and remove any 
-            # other information regarding this tx_id from other places.
-            
-            # There's a separate in-doubt key for each type of target so each outgoing
-            # connection or wrapper has its own key. The key stores a hashmap whose
-            # keys are concrete deliveries that are in doubt and values are delivery
-            # that was to be delivered. 
-            in_doubt_details_key = self.get_in_doubt_details_key(item.name)
-            in_doubt_list_key = self.get_in_doubt_list_key(item.name)
+#def get_definition_list(
 
-            # Score is the same as in_doubt_created_at_utc but in seconds since epoch start (as float)
-            score = datetime_to_seconds(now_dt)
-            in_doubt_member = in_doubt_member_from_delivery(delivery)
-            
-            p.hset(in_doubt_details_key, item.delivery_key, dumps(delivery))
-            p.zadd(in_doubt_list_key, score, in_doubt_member)
-            p.hset(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, item.tx_id, in_doubt_member)
-            
-            p.hmset(item.by_target_type_key, {item.name: KVDB.SEPARATOR.join((item.target, now))})
-            p.delete(item.delivery_key)
-            p.srem(item.uq_by_target_type_key, item.delivery_key)
-            
-            p.execute()
-            
-        msg = 'tx_id:[%s] (%s) is in-doubt, details stored in hash [%s] under key [%s] (send/confirm %s/%s)'
-        self.logger.warn(msg, item.tx_id, item.name, in_doubt_details_key, item.delivery_key, source_count, target_count)            
+
+'''
+    def _on_in_doubt(self, item, delivery, now, now_dt, source_count, target_count):
+        pass
         
     def _move_payload_to_odb(self, item, business_payload):
         """ Moves business payload to ODB and deletes it from Redis.
@@ -210,34 +87,22 @@ class DeliveryStore(object):
         now = now_dt.isoformat()
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.tx_id)
         
+        attempts_made = int(delivery['attempts_made'])
+        retry_repeats = int(delivery['retry_repeats'])
+        
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
-            
-            delivery = self.kvdb.conn.hgetall(item.delivery_key)
-            source_count = int(delivery['source_count'])
-            target_count = int(delivery['target_count'])
-            
-            # Move delivery payload first time we are called. It's OK if the payload
-            # doesn't exist in Redis anymore - it was moved to ODB the previous time.
-            business_payload = self.kvdb.conn.get(item.payload_key)
-            if business_payload:
-                self._move_payload_to_odb(item, business_payload, now)
-            
-            self.kvdb.conn.hmset(item.by_target_type_key, {item.name:KVDB.SEPARATOR.join((item.target, now))})
-            
+
             if source_count > target_count:
                 
                 # STATE - in-doubt
-                self._on_check_in_doubt(item, delivery, now, now_dt, source_count, target_count)
+                self._on_in_doubt(item, delivery, now, now_dt, source_count, target_count)
                 
             else:
                 # The target has confirmed the invocation in an expected time so we
                 # now need to check if it was successful. If it was, this is where it ends,
                 # we move the delivery to the archive and that's it. If it wasn't, we'll try again
                 # as it was originally configured unless it was the last retry.
-                
-                # This is common regardless of whether we had a success or not
-                target_ok = asbool(delivery['target_ok'])
-                delivery['last_updated_utc'] = now.isoformat()
+
                 
                 # All good, we can stop now.
                 if target_ok:
@@ -245,15 +110,9 @@ class DeliveryStore(object):
                     
                 # Not so good, we know there was an error.
                 else:
-                    attempts_made = int(delivery['attempts_made'])
-                    retry_repeats = int(delivery['retry_repeats'])
-                    
                     # Can we try again?
                     if attempts_made < retry_repeats:
-                        self.spawn_invoke_func(item.invoke_func, item.invoke_args, item.invoke_kwargs)
-                        self.spawn_check_target(item)
-                        self.logger.info('Delivery attempt failed (%s/%s) [%s] (%s)',
-                            attempts_made, retry_repeats, item.delivery_key, item.name)
+                        self.retry()
 
                     # Nope, that was the last attempt.
                     else:
@@ -271,20 +130,7 @@ class DeliveryStore(object):
         spawn_later(item.check_after, self.check_target, item)
         
     def finish_delivery(self, target_ok, delivery, now, item):
-        expire_arch_after_key = 'expire_arch_success_after' if target_ok else 'expire_arch_failed_after'
-        expire_arch_after = int(delivery[expire_arch_after_key])
-        expires_arch_time = now + timedelta(seconds=expire_arch_after)
         
-        arch_key = self.get_archive_key(item.target_type, item.target, target_ok, item.tx_id)
-        delivery['expires_arch_time_utc'] = expires_arch_time.isoformat()
-        
-        with self.kvdb.conn.pipeline() as p:
-            p.hmset(item.by_target_type_key, {item.name:KVDB.SEPARATOR.join((item.target, now))})
-            p.hmset(arch_key, delivery)
-            p.expire(arch_key, expire_arch_after)
-            p.delete(item.delivery_key)
-            p.execute()
-            
         if target_ok:
             delivery['confirmed'] = True
             msg_prefix = 'Confirmed delivery'
@@ -392,6 +238,8 @@ class DeliveryStore(object):
             'next_batch_number': current.next_page_number(),
             'previous_batch_number': current.previous_page_number(),
         }
+    
+# ##############################################################################
 
     def get_by_target_type(self, target_type):
         """ Returns delivery names and basic information for a given target type.
@@ -417,3 +265,4 @@ class DeliveryStore(object):
 
         for member in current.object_list:
             yield in_doubt_info_from_member(member)
+'''

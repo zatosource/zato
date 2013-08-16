@@ -16,6 +16,8 @@ from django import forms
 from zato.admin.web.forms import INITIAL_CHOICES_DICT
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_NO, DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, INVOCATION_TARGET
 
+# It's a pity these have to be repeated here in addition to what is in zato.admin.web
+# but here the names are shorter.
 _targets = {
     INVOCATION_TARGET.CHANNEL_AMQP: 'Channel - AMQP',
     INVOCATION_TARGET.CHANNEL_WMQ: 'Channel - WebSphere MQ',
@@ -37,9 +39,18 @@ class DeliveryTargetForm(forms.Form):
             self.fields['target_type'].choices.append([id, name])
             
 class CreateForm(forms.Form):
-    pass
+    name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    target = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    
+    check_after = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:18%'}))
+    retry_repeats = forms.CharField(initial=5, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
+    retry_seconds = forms.CharField(initial=600, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:18%'}))
+    
+    expire_after = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:18%'}))
+    expire_arch_succ_after = forms.CharField(initial=72, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
+    expire_arch_fail_after = forms.CharField(initial=168, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
 
-class EditForm(forms.Form):
+class EditForm(CreateForm):
     pass
 
 class InstanceListForm(forms.Form):
