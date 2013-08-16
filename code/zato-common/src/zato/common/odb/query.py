@@ -224,11 +224,18 @@ def _out_jms_wmq(session, cluster_id):
         order_by(OutgoingWMQ.name)
 
 def out_jms_wmq(session, cluster_id, id):
-    """ An outgoing JMS WebSphere MQ connection.
+    """ An outgoing JMS WebSphere MQ connection (by ID).
     """
     return _out_jms_wmq(session, cluster_id).\
         filter(OutgoingWMQ.id==id).\
         one()
+
+def out_jms_wmq_by_name(session, cluster_id, name):
+    """ An outgoing JMS WebSphere MQ connection (by name).
+    """
+    return _out_jms_wmq(session, cluster_id).\
+        filter(OutgoingWMQ.name==name).\
+        first()
 
 @needs_columns
 def out_jms_wmq_list(session, cluster_id, needs_columns=False):
