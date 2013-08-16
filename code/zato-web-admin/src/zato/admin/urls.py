@@ -26,7 +26,7 @@ from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
-from zato.admin.web.views.pattern import delivery as pattern_delivery
+from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
 
@@ -97,26 +97,10 @@ urlpatterns = patterns('',
     # Patterns ..
     
     # Delivery
-    url(r'^zato/pattern/delivery/$', pattern_delivery.Index(), name=pattern_delivery.Index.url_name),
-    url(r'^zato/pattern/delivery/create/$', pattern_delivery.Create(), name=pattern_delivery.Create.url_name),
-    url(r'^zato/pattern/delivery/edit/$', pattern_delivery.Edit(), name=pattern_delivery.Edit.url_name),
-    url(r'^zato/pattern/delivery/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', 
-        pattern_delivery.Delete(), name=pattern_delivery.Delete.url_name),
-    
-    url(r'^zato/pattern/delivery/in-doubt/details/(?P<name>.*)/(?P<tx_id>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', 
-        pattern_delivery.InDoubtDetails(), name=pattern_delivery.InDoubtDetails.url_name),
-    
-    url(r'^zato/pattern/delivery/in-doubt/instance-list/(?P<name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', 
-        pattern_delivery.InDoubtInstanceList(), name=pattern_delivery.InDoubtInstanceList.url_name),
-    
-    url(r'^zato/pattern/delivery/in-doubt/resubmit/(?P<tx_id>.*)/(?P<cluster_id>.*)/$', 
-        pattern_delivery.Resubmit(), name=pattern_delivery.Resubmit.url_name),
-    
-    url(r'^zato/pattern/delivery/in-doubt/resubmit-many/(?P<cluster_id>.*)/$', 
-        pattern_delivery.resubmit_many, name='pattern-delivery-details-in-doubt-resubmit-many'),
-    
-    url(r'^zato/pattern/delivery/in-doubt/delete-many/(?P<cluster_id>.*)/$', 
-        pattern_delivery.delete_many, name='pattern-delivery-details-in-doubt-delete-many'),
+    url(r'^zato/pattern/delivery/definition/$', pattern_delivery_def.Index(), name=pattern_delivery_def.Index.url_name),
+    url(r'^zato/pattern/delivery/definition/create/$', pattern_delivery_def.Create(), name=pattern_delivery_def.Create.url_name),
+    url(r'^zato/pattern/delivery/definition/delete/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Delete.url_name),
+    url(r'^zato/pattern/delivery/definition/edit/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Edit.url_name),
 
     # Security..
 

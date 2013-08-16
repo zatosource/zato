@@ -899,13 +899,15 @@ class DeploymentStatus(Base):
 
 ################################################################################
 
-class DeliveryDefinition(Base):
-    """ A guaranteed delivery's definition.
+class DeliveryDefinitionBase(Base):
+    """ A guaranteed delivery's definition (base class).
     """
-    __tablename__ = 'delivery_def'
+    __tablename__ = 'delivery_def_base'
+    __mapper_args__ = {'polymorphic_on': 'target_type'}
     
     id = Column(Integer, Sequence('deliv_def_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+    short_def = Column(String(200), nullable=False)
     
     target_type = Column(String(200), nullable=False)
     target_id = Column(String(200), nullable=False)
@@ -916,6 +918,35 @@ class DeliveryDefinition(Base):
     check_after = Column(Integer, nullable=False)
     retry_repeats = Column(Integer, nullable=False)
     retry_seconds = Column(Integer, nullable=False)
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('delivery_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    
+class DeliveryDefinitionOutconnWMQ(DeliveryDefinitionBase):
+    """ A guaranteed delivery's definition (outgoing WebSphere MQ connections).
+    """
+    __tablename__ = 'delivery_def_out_wmq'
+    __mapper_args__ = {'polymorphic_identity': 'out_wmq'}
+    
+    id = Column(Integer, ForeignKey('delivery_def_base.id'), primary_key=True)
+    out_wmq_id = Column(Integer, ForeignKey('out_wmq.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+
+    def __init__(self, out_wmq_id=None):
+        self.id = id
+        self.out_wmq_id = out_wmq_id
+    
+class Delivery(Base):
+    """ A guaranteed delivery.
+    """
+    __tablename__ = 'delivery'
+    
+    id = Column(Integer, Sequence('deliv_seq'), primary_key=True)
+    task_id = Column(String(64), unique=True, nullable=False)
+    name = Column(String(200), nullable=False)
+    
+    delivery_def_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    state = Column(String(200), nullable=False)
 
 class DeliveryPayload(Base):
     """ A guaranteed delivery's payload.
@@ -926,6 +957,7 @@ class DeliveryPayload(Base):
     task_id = Column(String(64), unique=True, nullable=False)
     creation_time = Column(DateTime(), nullable=False)
     payload = Column(LargeBinary(5000000), nullable=False)
+    delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     
 class DeliveryHistory(Base):
     """ A guaranteed delivery's history.
@@ -936,4 +968,5 @@ class DeliveryHistory(Base):
     task_id = Column(String(64), nullable=False)
     entry_type = Column(String(64), nullable=False)
     entry_time = Column(DateTime(), nullable=False)
-    entry_ctx = Column(LargeBinary(100000), nullable=False)
+    entry_ctx = Column(LargeBinary(1000000), nullable=False)
+    delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)

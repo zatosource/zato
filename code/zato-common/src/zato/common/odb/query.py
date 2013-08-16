@@ -18,7 +18,8 @@ from sqlalchemy.sql.expression import case
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE
 from zato.common.odb.model import(
     ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster,
-    ConnDefAMQP, ConnDefWMQ, CronStyleJob, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob,
+    ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ,
+    Delivery, DeliveryHistory, DeliveryPayload, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob,
     Job, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ,
     SecurityBase, Service, SQLConnectionPool, TechnicalAccount, WSSDefinition)
 
@@ -462,5 +463,19 @@ def service_list(session, cluster_id, needs_columns=False):
     """ All services.
     """
     return _service(session, cluster_id)
+
+# ##############################################################################
+
+def _delivery_definition(session, cluster_id):
+    return session.query(DeliveryDefinitionBase).\
+        filter(Cluster.id==DeliveryDefinitionBase.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(DeliveryDefinitionBase.name)
+
+def delivery_definition_list(session, cluster_id, target_type):
+    """ Returns a list of delivery definitions for a given target type.
+    """
+    return _delivery_definition(session, cluster_id).\
+        filter(DeliveryDefinitionBase.target_type==target_type)
 
 # ##############################################################################

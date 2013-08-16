@@ -332,7 +332,7 @@ class ODBManager(SessionWrapper):
             session.add(cluster)
             session.commit()
             
-    def add_deployed_service(self, deployment_time, details, service, source_info):
+    def add_delivery(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
         dp = DeliveryPayload

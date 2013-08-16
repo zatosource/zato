@@ -19,7 +19,7 @@ from anyjson import dumps
 from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
-from zato.admin.web import from_utc_to_user, from_user_to_utc
+from zato.admin.web import from_utc_to_user, from_user_to_utc, TARGET_TYPE_HUMAN
 from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format, method_allowed
 from zato.common.model import DeliveryItem
@@ -30,14 +30,15 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pattern-delivery'
     template = 'zato/pattern/delivery/index.html'
-    service_name = 'zato.pattern.delivery.get-list'
+    service_name = 'zato.pattern.delivery.definition.get-list'
     output_class = DeliveryItem
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'target_type')
-        output_required = ('name', 'target', 'target_type', 'short_def', 'total_count', 
-            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count',
-            'last_updated_utc')
+        output_required = ('name', 'last_updated_utc', 'target', 'target_type', 
+            'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
+            'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
+            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
         output_repeated = True
         
     def on_before_append_item(self, item):
@@ -45,11 +46,13 @@ class Index(_Index):
         return item
         
     def handle(self):
+        target_type = self.req.GET.get('target_type')
         return {
             'delivery_target_form': DeliveryTargetForm(self.req.GET),
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
-            'target_type': self.req.GET.get('target_type'),
+            'target_type': target_type,
+            'target_type_human': TARGET_TYPE_HUMAN[target_type] if target_type else '',
         }
 
 class _CreateEdit(CreateEdit):
@@ -61,17 +64,17 @@ class _CreateEdit(CreateEdit):
         
 class Create(_CreateEdit):
     url_name = 'pattern-delivery-create'
-    service_name = 'zato.pattern.delivery.create'
+    service_name = 'zato.pattern.delivery.definition.create'
     
 class Edit(_CreateEdit):
     url_name = 'pattern-delivery-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.pattern.delivery.edit'
+    service_name = 'zato.pattern.delivery.definition.edit'
 
 class Delete(_Delete):
     url_name = 'pattern-delivery-delete'
     error_message = 'Could not delete delivery'
-    service_name = 'zato.pattern.delivery.delete'
+    service_name = 'zato.pattern.delivery.definition.delete'
 
 # ##############################################################################
 
