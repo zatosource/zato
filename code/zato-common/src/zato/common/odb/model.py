@@ -19,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import SCHEDULER_JOB_TYPE
+from zato.common import INVOCATION_TARGET, SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -910,7 +910,6 @@ class DeliveryDefinitionBase(Base):
     short_def = Column(String(200), nullable=False)
     
     target_type = Column(String(200), nullable=False)
-    target_id = Column(String(200), nullable=False)
     
     expire_after = Column(Integer, nullable=False)
     expire_arch_succ_after = Column(Integer, nullable=False)
@@ -922,19 +921,18 @@ class DeliveryDefinitionBase(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('delivery_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    
 class DeliveryDefinitionOutconnWMQ(DeliveryDefinitionBase):
     """ A guaranteed delivery's definition (outgoing WebSphere MQ connections).
     """
     __tablename__ = 'delivery_def_out_wmq'
-    __mapper_args__ = {'polymorphic_identity': 'out_wmq'}
+    __mapper_args__ = {'polymorphic_identity': INVOCATION_TARGET.OUTCONN_WMQ}
     
     id = Column(Integer, ForeignKey('delivery_def_base.id'), primary_key=True)
-    out_wmq_id = Column(Integer, ForeignKey('out_wmq.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    target_id = Column(Integer, ForeignKey('out_wmq.id', ondelete='CASCADE'), nullable=False, primary_key=False)
 
-    def __init__(self, out_wmq_id=None):
+    def __init__(self, id=None, target_id=None):
         self.id = id
-        self.out_wmq_id = out_wmq_id
+        self.target_id = target_id
     
 class Delivery(Base):
     """ A guaranteed delivery.

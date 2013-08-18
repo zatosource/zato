@@ -33,6 +33,14 @@ from zato.common.broker_message import SERVICE
 from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator
 
+NULL_BASIC_DATA = {
+    'last_updated_utc':None,
+    'total_count':0,
+    'in_progress_count':0, 
+    'in_doubt_count':0,
+    'arch_success_count':0,
+    'arch_failed_count':0
+}
 
 # ##############################################################################
 
@@ -67,7 +75,13 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-#def get_definition_list(
+    def get_target_basic_data(self, name):
+        """ Returns counters for a given delivery by its name along with info when the delivery
+        was last time used. Does not hold onto any locks so the results are precise
+        yet may be off by the time caller receives them.
+        """
+        return self.kvdb.conn.hgetall('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name)) or NULL_BASIC_DATA
+        
 
 
 '''

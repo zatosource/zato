@@ -22,12 +22,16 @@ from memory_profiler import profile
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
 from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ
-from zato.common.odb.query import delivery_definition_list, out_jms_wmq_by_name
+from zato.common.odb.query import delivery_definition_list, out_jms_wmq, out_jms_wmq_by_name
 from zato.common.util import datetime_to_seconds
 from zato.server.service import AsIs, Boolean, CSV, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
-_target_query = {
+_target_query_by_id = {
+    INVOCATION_TARGET.OUTCONN_WMQ: out_jms_wmq
+}
+
+_target_query_by_name = {
     INVOCATION_TARGET.OUTCONN_WMQ: out_jms_wmq_by_name
 }
 
@@ -68,13 +72,25 @@ class GetList(_DeliveryService):
         request_elem = 'zato_pattern_delivery_definition_get_list_request'
         response_elem = 'zato_pattern_delivery_definition_get_list_response'
         input_required = ('cluster_id', 'target_type')
-        output_required = ('name', 'last_updated_utc', 'target', 'target_type', 
+        output_required = ('name', 'target', 'target_type', 
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
+        output_optional = ('last_updated_utc',)
 
     def get_data(self, session, cluster_id, target_type):
-        return delivery_definition_list(session, cluster_id, target_type)
+        for item in delivery_definition_list(session, cluster_id, target_type):
+            
+            target_query = _target_query_by_id[target_type]
+            target = target_query(session, cluster_id, item.target_id)
+            item.target = target.name
+            
+            basic_data = self.delivery_store.get_target_basic_data(target.name)
+            for name in ('last_updated_utc', 'total_count', 'in_progress_count', 
+                             'in_doubt_count', 'arch_success_count', 'arch_failed_count'):
+                setattr(item, name, basic_data[name])
+            
+            yield item
 
     def handle(self):
         target_type = self.request.input.target_type
@@ -103,24 +119,34 @@ class Create(_DeliveryService):
             input = self.request.input
             self._check_def_name(session, input)
             
-            target_query = _target_query[target_type]
+            target_query = _target_query_by_name[target_type]
             target = target_query(session, input.cluster_id, input.target)
             if not target:
                 raise Exception('Target [{}] ({}) does not exist on this cluster'.format(
                     input.target, input.target_type))
                 
-            target_def_class = _target_class[target_type]
+            target_def_class = _target_def_class[target_type]
             
             try:
-                #item = target_def_class()
+                item = target_def_class()
+                item.target_id = target.id
+                item.short_def = '{}-{}-{}'.format(input.check_after, input.retry_repeats, input.retry_seconds)
                 
-                #session.add(item)
-                #session.commit()
+                item.name = input.name
+                item.target_type = input.target_type
+                item.expire_after = input.expire_after
+                item.expire_arch_succ_after = input.expire_arch_succ_after
+                item.expire_arch_fail_after = input.expire_arch_fail_after
+                item.check_after = input.check_after
+                item.retry_repeats = input.retry_repeats
+                item.retry_seconds = input.retry_seconds
+                item.cluster_id = input.cluster_id
                 
-                #self.response.payload.id = item.id
-                #self.response.payload.name = item.name
+                session.add(item)
+                session.commit()
                 
-                pass
+                self.response.payload.id = item.id
+                self.response.payload.name = item.name
                 
             except Exception, e:
                 msg = 'Could not create the definition, e:[{}]'.format(format_exc(e))
@@ -140,6 +166,3 @@ class Create(_DeliveryService):
         
         if existing_one:
             raise Exception('Definition [{}] already exists on this cluster'.format(input.name))
-    
-    def _get_short_def(self, input):
-        pass

@@ -27,6 +27,7 @@ from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
+from zato.admin.web.views.pattern.delivery import in_doubt as pattern_delivery_in_doubt
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
 
@@ -101,6 +102,8 @@ urlpatterns = patterns('',
     url(r'^zato/pattern/delivery/definition/create/$', pattern_delivery_def.Create(), name=pattern_delivery_def.Create.url_name),
     url(r'^zato/pattern/delivery/definition/delete/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Delete.url_name),
     url(r'^zato/pattern/delivery/definition/edit/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Edit.url_name),
+    
+    url(r'^zato/pattern/delivery/in-doubt/(?P<name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Index(), name=pattern_delivery_in_doubt.Index.url_name),
 
     # Security..
 
