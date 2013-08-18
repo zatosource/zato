@@ -249,6 +249,7 @@ class KVDB(Attrs):
     
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
+    DELIVERY_DELETED_PREFIX = '{}deleted:'.format(DELIVERY_PREFIX)
     
     '''
     DELIVERY_PAYLOAD_PREFIX = '{}payload:'.format(DELIVERY_PREFIX)
