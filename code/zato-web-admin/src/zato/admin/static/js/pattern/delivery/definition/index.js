@@ -3,8 +3,10 @@
 
 $.fn.zato.data_table.DeliveryItem = new Class({
     toString: function() {
-        var s = '<DeliveryItem name:{1}>';
-        return String.format(s, this.name ? this.name : '(none)');
+        var s = '<DeliveryItem id:{0}, name:{1}>';
+        return String.format(s, this.id ? this.id : '(none)',
+                                 this.name ? this.name : '(none)'
+                             );
     }
 });
 
@@ -54,6 +56,6 @@ $.fn.zato.pattern.delivery.data_table.new_row = function(item, data, include_tr)
 $.fn.zato.pattern.delivery.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Guaranteed delivery definition [{0}] deleted',
-        'Are you sure you want to delete the guaranteed delivery definition [{0}]?',
+        'Are you sure you want to delete the guaranteed delivery definition [{0}]<br/>along with any in-progress tasks?',
         true);
 }

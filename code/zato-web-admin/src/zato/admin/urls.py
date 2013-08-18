@@ -100,7 +100,7 @@ urlpatterns = patterns('',
     # Delivery
     url(r'^zato/pattern/delivery/definition/$', pattern_delivery_def.Index(), name=pattern_delivery_def.Index.url_name),
     url(r'^zato/pattern/delivery/definition/create/$', pattern_delivery_def.Create(), name=pattern_delivery_def.Create.url_name),
-    url(r'^zato/pattern/delivery/definition/delete/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Delete.url_name),
+    url(r'^zato/pattern/delivery/definition/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', pattern_delivery_def.Delete(), name=pattern_delivery_def.Delete.url_name),
     url(r'^zato/pattern/delivery/definition/edit/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Edit.url_name),
     
     url(r'^zato/pattern/delivery/in-doubt/(?P<name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Index(), name=pattern_delivery_in_doubt.Index.url_name),

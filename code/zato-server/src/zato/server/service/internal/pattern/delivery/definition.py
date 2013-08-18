@@ -188,8 +188,8 @@ class Delete(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                item = session.DeliveryDefinitionBase(DeliveryDefinitionBase).\
-                    filter(ChannelAMQP.id==self.request.input.id).\
+                item = session.query(DeliveryDefinitionBase).\
+                    filter(DeliveryDefinitionBase.id==self.request.input.id).\
                     one()
                 
                 item_name = item.name
