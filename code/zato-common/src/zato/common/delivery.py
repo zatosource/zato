@@ -81,6 +81,13 @@ class DeliveryStore(object):
         yet may be off by the time caller receives them.
         """
         return self.kvdb.conn.hgetall('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name)) or NULL_BASIC_DATA
+    
+    def set_deleted(self, name, is_deleted):
+        """ Sets a boolean flag indicating whether a definition has been deleted.
+        Any new instances of check_target consult this flag to see whether they should
+        keep running.
+        """
+        self.kvdb.conn.set('{}{}'.format(KVDB.DELIVERY_DELETED_PREFIX, name), is_deleted)
         
 
 

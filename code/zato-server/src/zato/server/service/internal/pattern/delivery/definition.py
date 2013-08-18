@@ -72,7 +72,7 @@ class GetList(_DeliveryService):
         request_elem = 'zato_pattern_delivery_definition_get_list_request'
         response_elem = 'zato_pattern_delivery_definition_get_list_response'
         input_required = ('cluster_id', 'target_type')
-        output_required = ('name', 'target', 'target_type', 
+        output_required = ('id', 'name', 'target', 'target_type', 
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
@@ -83,14 +83,22 @@ class GetList(_DeliveryService):
             
             target_query = _target_query_by_id[target_type]
             target = target_query(session, cluster_id, item.target_id)
-            item.target = target.name
+           
+            out = {
+                'target': target.name,
+                'target_type': target_type
+            }
+            
+            for name in ('id', 'name', 'expire_after', 'expire_arch_succ_after', 
+                  'expire_arch_fail_after', 'check_after', 'retry_repeats', 'retry_seconds', 'short_def'):
+                out[name] = getattr(item, name)
             
             basic_data = self.delivery_store.get_target_basic_data(target.name)
             for name in ('last_updated_utc', 'total_count', 'in_progress_count', 
                              'in_doubt_count', 'arch_success_count', 'arch_failed_count'):
-                setattr(item, name, basic_data[name])
+                out[name] = basic_data[name]
             
-            yield item
+            yield out
 
     def handle(self):
         target_type = self.request.input.target_type
@@ -145,6 +153,8 @@ class Create(_DeliveryService):
                 session.add(item)
                 session.commit()
                 
+                self.delivery_store.set_deleted(item.name, False)
+                
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
                 
@@ -166,3 +176,32 @@ class Create(_DeliveryService):
         
         if existing_one:
             raise Exception('Definition [{}] already exists on this cluster'.format(input.name))
+
+class Delete(AdminService):
+    """ Deletes a guaranteed delivery definition.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_definition_delete_request'
+        response_elem = 'zato_pattern_delivery_definition_delete_response'
+        input_required = ('id',)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            try:
+                item = session.DeliveryDefinitionBase(DeliveryDefinitionBase).\
+                    filter(ChannelAMQP.id==self.request.input.id).\
+                    one()
+                
+                item_name = item.name
+                
+                session.delete(item)
+                session.commit()
+                
+                self.delivery_store.set_deleted(item_name, True)
+
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not delete the definition, e:[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+                
+                raise

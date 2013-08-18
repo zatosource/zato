@@ -35,7 +35,7 @@ class Index(_Index):
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'target_type')
-        output_required = ('name', 'last_updated_utc', 'target', 'target_type', 
+        output_required = ('id', 'name', 'last_updated_utc', 'target', 'target_type', 
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')

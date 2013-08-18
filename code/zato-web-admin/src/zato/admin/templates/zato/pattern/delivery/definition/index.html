@@ -40,6 +40,7 @@
             'expire_arch_fail_after',
             '_edit',
             '_delete',
+            'id',
         ]
     }
     </script>
@@ -80,6 +81,7 @@
                         <th><a href="#">Last updated</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -97,13 +99,14 @@
                         <td>{{ item.arch_success_count }} <a href="{% url pattern-delivery-in-doubt-index item.name item.target_type item.target cluster_id %}">(list)</a></td>
                         <td>{{ item.arch_failed_count }} <a href="{% url pattern-delivery-in-doubt-index item.name item.target_type item.target cluster_id %}">(list)</a></td>
                         <td>{% if item.last_updated %}{{ item.last_updated }}{% else %}<span class="form_hint">(Never)</a>{% endif %}</td>
-                        <td><a href="javascript:$.fn.zato.pattern.delivery.edit('{{ item.name }}', '{{ item.target_type }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.pattern.delivery.delete_('{{ item.name }}', '{{ item.target_type }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.pattern.delivery.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.pattern.delivery.delete_('{{ item.id }}')">Delete</a></td>
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='13'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
