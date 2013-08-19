@@ -15,6 +15,9 @@ from datetime import datetime, timedelta
 from json import dumps, loads
 from logging import getLogger
 
+# Bunch
+from bunch import Bunch
+
 # gevent
 from gevent import sleep, spawn_later
 
@@ -28,8 +31,10 @@ from paste.util.converters import asbool
 from retools.lock import Lock
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, KVDB
+from zato.common import CHANNEL, DATA_FORMAT, INVOCATION_TARGET, KVDB
 from zato.common.broker_message import SERVICE
+from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ
+from zato.common.odb.query import out_jms_wmq
 from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator
 
@@ -41,6 +46,26 @@ NULL_BASIC_DATA = {
     'arch_success_count':0,
     'arch_failed_count':0
 }
+
+_target_query_by_id = {
+    INVOCATION_TARGET.OUTCONN_WMQ: out_jms_wmq
+}
+
+_target_def_class = {
+    INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
+}
+
+def _item_from_odb(def_base, target, task_id):
+    return Bunch({
+        'task_id': task_id,
+        'def_name': def_base.name,
+        'target': target,
+        'target_type': def_base.target_type,
+        'expire_after': def_base.expire_after,
+        'check_after': def_base.check_after,
+        'retry_repeats': def_base.retry_repeats,
+        'retry_seconds': def_base.retry_seconds,
+    })
 
 # ##############################################################################
 
@@ -67,9 +92,8 @@ class DeliveryStore(object):
         self._validate_register(item)
 
         self.logger.info(
-            'Submitted delivery for:[%s], key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
-            item.name, item.delivery_key,
-            item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
+          'Submitted delivery [%s] for target:[%s] (%s/%s), expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
+            item.task_id, item.target, item.def_name, item.target_type, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
 
         self.spawn_check_target(item)
 
@@ -95,8 +119,30 @@ class DeliveryStore(object):
         perhaps change their schedule.
         """
         self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'updated', is_updated)
-        
 
+# ##############################################################################
+
+    def deliver(self, cluster_id, def_name, request, task_id):
+        """ A public method to be invoked by services for delivering a request to a target
+        through a definition.
+        """
+        with closing(self.odb.session()) as session:
+            def_base = session.query(DeliveryDefinitionBase).\
+                filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
+                filter(DeliveryDefinitionBase.name==def_name).\
+                    first()
+            
+            if not def_base:
+                msg = 'Guaranteed delivery definition [{}] does not exist'.format(def_name)
+                self.logger.warn(msg)
+                raise ValueError(msg)
+            
+            target_def_class = _target_def_class[def_base.target_type]
+            definition = session.query(target_def_class).\
+                filter(target_def_class.id==def_base.id).\
+                one()
+            
+            self.register(_item_from_odb(def_base, definition.target.name, task_id))
 
 '''
     def _on_in_doubt(self, item, delivery, now, now_dt, source_count, target_count):
