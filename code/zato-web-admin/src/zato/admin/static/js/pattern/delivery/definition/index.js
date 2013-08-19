@@ -45,6 +45,17 @@ $.fn.zato.pattern.delivery.data_table.new_row = function(item, data, include_tr)
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', item.target);
+    row += String.format('<td>{0}</td>', data.short_def);
+    row += String.format('<td>{0}</td>', '0');
+    row += String.format('<td>0 <a href="../in-progress/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>0 <a href="../in-doubt/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>0 <a href="../arch-success/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>0 <a href="../arch-failed/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td><span class="form_hint">{0}</span></td>', '(Never)');
+    row += String.format('<td><a href="javascript:$.fn.zato.pattern.delivery.edit(\'{0}\')">Edit</a></td>', item.id);
+    row += String.format('<td><a href="javascript:$.fn.zato.pattern.delivery.delete_(\'{0}\')">Delete</a></td>', item.id);
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
 
     if(include_tr) {
         row += '</tr>';
