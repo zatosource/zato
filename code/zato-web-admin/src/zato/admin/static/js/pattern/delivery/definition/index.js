@@ -3,9 +3,12 @@
 
 $.fn.zato.data_table.DeliveryItem = new Class({
     toString: function() {
-        var s = '<DeliveryItem id:{0}, name:{1}>';
+        var s = '<DeliveryItem id:{0}, name:{1}, check_after:{2}, retry_repeats:{3}, retry_seconds:{4}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                 this.name ? this.name : '(none)'
+                                 this.name ? this.name : '(none)',
+                                 this.check_after ? this.check_after : '(none)',
+                                 this.retry_repeats ? this.retry_repeats : '(none)',
+                                 this.retry_seconds ? this.retry_seconds : '(none)'
                              );
     }
 });
@@ -48,10 +51,10 @@ $.fn.zato.pattern.delivery.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', item.target);
     row += String.format('<td>{0}</td>', data.short_def);
     row += String.format('<td>{0}</td>', '0');
-    row += String.format('<td>0 <a href="../in-progress/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
-    row += String.format('<td>0 <a href="../in-doubt/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
-    row += String.format('<td>0 <a href="../arch-success/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
-    row += String.format('<td>0 <a href="../arch-failed/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>n/a <a href="../in-progress/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>n/a <a href="../in-doubt/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>n/a <a href="../arch-success/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>n/a <a href="../arch-failed/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
     row += String.format('<td><span class="form_hint">{0}</span></td>', '(Never)');
     row += String.format('<td><a href="javascript:$.fn.zato.pattern.delivery.edit(\'{0}\')">Edit</a></td>', item.id);
     row += String.format('<td><a href="javascript:$.fn.zato.pattern.delivery.delete_(\'{0}\')">Delete</a></td>', item.id);

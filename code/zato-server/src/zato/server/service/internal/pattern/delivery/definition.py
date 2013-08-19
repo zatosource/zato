@@ -39,9 +39,13 @@ _target_def_class = {
     INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
 
+# ##############################################################################
+
 class _DeliveryService(AdminService):
     """ Base class with code common to multiple guaranteed delivery-related services.
     """
+    _is_edit = None
+    
     def _validate_input_dict(self, *validation_info):
         """ Checks that input belongs is one of allowed values.
         """
@@ -75,6 +79,25 @@ class _DeliveryService(AdminService):
             batch_size = DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
             
         return batch_size
+    
+            
+    def _check_def_name(self, session, input):
+        """ Let's see if we already have a definition of that name before committing
+        any stuff into the database.
+        """
+        q = session.query(DeliveryDefinitionBase.id).\
+            filter(DeliveryDefinitionBase.cluster_id==input.cluster_id).\
+            filter(DeliveryDefinitionBase.name==input.name)
+        
+        if self._is_edit:
+            q = q.filter(DeliveryDefinitionBase.id!=input.id)
+            
+        existing_one = q.first()
+        
+        if existing_one:
+            raise Exception('Definition [{}] already exists on this cluster'.format(input.name))
+        
+# ##############################################################################
     
 class GetList(_DeliveryService):
     """ Returns a list of delivery definitions for a given target type on a cluster.
@@ -118,9 +141,13 @@ class GetList(_DeliveryService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session, self.request.input.cluster_id, target_type)
 
-class Create(_DeliveryService):
-    """ Creates a new delivery definition.
+# ##############################################################################
+
+class _CreateEdit(_DeliveryService):
+    """ A common class for both Create and Edit actions.
     """
+    _error_msg = None
+    
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_definition_create_request'
         response_elem = 'zato_pattern_delivery_definition_create_response'
@@ -129,13 +156,16 @@ class Create(_DeliveryService):
             'retry_repeats', 'retry_seconds',)
         output_required = ('id', 'name')
         
+    def _get_item(self, session, target_def_class, input):
+        raise NotImplementedError('Should be defined by subclasses')
         
     def handle(self):
-        target_type = self.request.input.target_type
-        self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
-        self._validate_times()
-        
         with closing(self.odb.session()) as session:
+            
+            target_type = self.request.input.target_type
+            self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
+            self._validate_times()
+        
             input = self.request.input
             self._check_def_name(session, input)
             
@@ -148,7 +178,8 @@ class Create(_DeliveryService):
             target_def_class = _target_def_class[target_type]
             
             try:
-                item = target_def_class()
+                item = self._get_item(session, target_def_class, input)
+                        
                 item.target_id = target.id
                 item.short_def = '{}-{}-{}'.format(input.check_after, input.retry_repeats, input.retry_seconds)
                 
@@ -166,28 +197,48 @@ class Create(_DeliveryService):
                 session.commit()
                 
                 self.delivery_store.set_deleted(item.name, False)
+
+                if self._is_edit:
+                    self.delivery_store.set_deleted(item.name, True)
                 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
                 
             except Exception, e:
-                msg = 'Could not create the definition, e:[{}]'.format(format_exc(e))
+                msg = self._error_msg.format(format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
                 
                 raise 
-            
-    def _check_def_name(self, session, input):
-        """ Let's see if we already have a definition of that name before committing
-        any stuff into the database.
-        """
-        existing_one = session.query(DeliveryDefinitionBase.id).\
-            filter(DeliveryDefinitionBase.cluster_id==input.cluster_id).\
-            filter(DeliveryDefinitionBase.name==input.name).\
-            first()
+
+# ##############################################################################
+
+class Create(_CreateEdit):
+    """ Creates a new delivery definition.
+    """
+    _is_edit = False
+    _error_msg = 'Could not create the definition, e:[{}]'
         
-        if existing_one:
-            raise Exception('Definition [{}] already exists on this cluster'.format(input.name))
+    def _get_item(self, _ignored1, target_def_class, _ignored2):
+        return target_def_class()
+
+# ##############################################################################
+
+class Edit(_CreateEdit):
+    """ Updates an existing delivery definition.
+    """
+    _is_edit = True
+    _error_msg = 'Could not update the definition, e:[{}]'
+    
+    class SimpleIO(_CreateEdit.SimpleIO):
+        input_required = ('id',) + _CreateEdit.SimpleIO.input_required
+        
+    def _get_item(self, session, target_def_class, input):
+        return session.query(target_def_class).\
+            filter(target_def_class.id==input.id).\
+            one()
+
+# ##############################################################################
 
 class Delete(AdminService):
     """ Deletes a guaranteed delivery definition.
@@ -217,3 +268,5 @@ class Delete(AdminService):
                 self.logger.error(msg)
                 
                 raise
+
+# ##############################################################################
