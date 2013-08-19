@@ -80,20 +80,15 @@ class _DeliveryService(AdminService):
             
         return batch_size
     
-            
     def _check_def_name(self, session, input):
         """ Let's see if we already have a definition of that name before committing
         any stuff into the database.
         """
-        q = session.query(DeliveryDefinitionBase.id).\
+        existing_one = session.query(DeliveryDefinitionBase.id).\
             filter(DeliveryDefinitionBase.cluster_id==input.cluster_id).\
-            filter(DeliveryDefinitionBase.name==input.name)
-        
-        if self._is_edit:
-            q = q.filter(DeliveryDefinitionBase.id!=input.id)
+            filter(DeliveryDefinitionBase.name==input.name).\
+            first()
             
-        existing_one = q.first()
-        
         if existing_one:
             raise Exception('Definition [{}] already exists on this cluster'.format(input.name))
         
@@ -151,10 +146,10 @@ class _CreateEdit(_DeliveryService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_definition_create_request'
         response_elem = 'zato_pattern_delivery_definition_create_response'
-        input_required = ('cluster_id', 'name', 'target', 'target_type', 'expire_after', 
+        input_required = ('cluster_id', 'target', 'target_type', 'expire_after', 
             'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds',)
-        output_required = ('id', 'name')
+        output_required = ('id',)
         
     def _get_item(self, session, target_def_class, input):
         raise NotImplementedError('Should be defined by subclasses')
@@ -167,7 +162,9 @@ class _CreateEdit(_DeliveryService):
             self._validate_times()
         
             input = self.request.input
-            self._check_def_name(session, input)
+            
+            if not self._is_edit:
+                self._check_def_name(session, input)
             
             target_query = _target_query_by_name[target_type]
             target = target_query(session, input.cluster_id, input.target)
@@ -182,8 +179,10 @@ class _CreateEdit(_DeliveryService):
                         
                 item.target_id = target.id
                 item.short_def = '{}-{}-{}'.format(input.check_after, input.retry_repeats, input.retry_seconds)
-                
-                item.name = input.name
+            
+                if not self._is_edit:
+                    item.name = input.name
+                    
                 item.target_type = input.target_type
                 item.expire_after = input.expire_after
                 item.expire_arch_succ_after = input.expire_arch_succ_after
@@ -218,6 +217,9 @@ class Create(_CreateEdit):
     """
     _is_edit = False
     _error_msg = 'Could not create the definition, e:[{}]'
+    
+    class SimpleIO(_CreateEdit.SimpleIO):
+        input_required = ('name',) + _CreateEdit.SimpleIO.input_required
         
     def _get_item(self, _ignored1, target_def_class, _ignored2):
         return target_def_class()

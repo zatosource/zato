@@ -65,9 +65,9 @@ class _CreateEdit(CreateEdit):
             'retry_repeats', 'retry_seconds']
         output_required = ['id', 'name', 'target', 'short_def']
         
-        
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         self.set_input(req)
+        initial_return_data['name'] = self.input.name
         initial_return_data['target'] = self.input.target
         initial_return_data['short_def'] = '{}-{}-{}'.format(
             self.input.check_after, self.input.retry_repeats, self.input.retry_seconds)

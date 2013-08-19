@@ -33,6 +33,9 @@ $.fn.zato.pattern.delivery.create = function() {
 }
 
 $.fn.zato.pattern.delivery.edit = function(id) {
+    var instance = $.fn.zato.data_table.data[id];
+    $('#item_name').text(instance.name);
+    $('#id_edit-name').text(instance.name);
     $.fn.zato.data_table._create_edit('edit', 'Update the guaranteed delivery definition', id);
 }
 
@@ -47,7 +50,7 @@ $.fn.zato.pattern.delivery.data_table.new_row = function(item, data, include_tr)
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', data.name);
     row += String.format('<td>{0}</td>', item.target);
     row += String.format('<td>{0}</td>', data.short_def);
     row += String.format('<td>{0}</td>', '0');
