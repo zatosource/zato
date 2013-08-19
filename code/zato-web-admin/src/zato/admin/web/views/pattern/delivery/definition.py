@@ -65,17 +65,18 @@ class _CreateEdit(CreateEdit):
             'retry_repeats', 'retry_seconds']
         output_required = ['id', 'name', 'target', 'short_def']
         
-class Create(_CreateEdit):
-    url_name = 'pattern-delivery-create'
-    service_name = 'zato.pattern.delivery.definition.create'
-    
+        
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         self.set_input(req)
         initial_return_data['target'] = self.input.target
         initial_return_data['short_def'] = '{}-{}-{}'.format(
             self.input.check_after, self.input.retry_repeats, self.input.retry_seconds)
         
-        return super(Create, self).__call__(req, initial_input_dict, initial_return_data, args, kwargs)
+        return super(_CreateEdit, self).__call__(req, initial_input_dict, initial_return_data, args, kwargs)
+        
+class Create(_CreateEdit):
+    url_name = 'pattern-delivery-create'
+    service_name = 'zato.pattern.delivery.definition.create'
     
     def success_message(self, item):
         return 'Definition [{}] created successfully'.format(item.name)
@@ -84,6 +85,9 @@ class Edit(_CreateEdit):
     url_name = 'pattern-delivery-edit'
     form_prefix = 'edit-'
     service_name = 'zato.pattern.delivery.definition.edit'
+    
+    def success_message(self, item):
+        return 'Definition [{}] updated successfully'.format(item.name)
 
 class Delete(_Delete):
     url_name = 'pattern-delivery-delete'

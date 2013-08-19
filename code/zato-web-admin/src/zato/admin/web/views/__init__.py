@@ -184,8 +184,9 @@ class _BaseView(object):
         self.input.update({'cluster_id':self.cluster_id})
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
             if name != 'cluster_id':
-                self.input[name] = req.GET.get(self.form_prefix + name) or \
+                value =  req.GET.get(self.form_prefix + name) or \
                     req.POST.get(self.form_prefix + name) or req.zato.args.get(self.form_prefix + name)
+                self.input[name] = value
                 
         self.on_after_set_input()
 
@@ -308,7 +309,7 @@ class CreateEdit(_BaseView):
             input_dict.update(initial_input_dict)
             
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
-                input_dict[name] = self.input.get(self.form_prefix + name)
+                input_dict[name] = self.input.get(name)
                 
             self.input_dict.update(input_dict)
 

@@ -87,7 +87,14 @@ class DeliveryStore(object):
         Any new instances of check_target consult this flag to see whether they should
         keep running.
         """
-        self.kvdb.conn.set('{}{}'.format(KVDB.DELIVERY_DELETED_PREFIX, name), is_deleted)
+        self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'deleted', is_deleted)
+        
+    def set_updated(self, name, is_updated):
+        """ Sets a boolean flag indicating whether a definition has been updated.
+        Any new instances of check_target consult this flag to see whether they should
+        perhaps change their schedule.
+        """
+        self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'updated', is_updated)
         
 
 
