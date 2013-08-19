@@ -929,6 +929,7 @@ class DeliveryDefinitionOutconnWMQ(DeliveryDefinitionBase):
     
     id = Column(Integer, ForeignKey('delivery_def_base.id'), primary_key=True)
     target_id = Column(Integer, ForeignKey('out_wmq.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    target = relationship(OutgoingWMQ, backref=backref('delivery_def_list', order_by=target_id, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, target_id=None):
         self.id = id

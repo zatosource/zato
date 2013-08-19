@@ -605,6 +605,8 @@ class Service(object):
             
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=None,
             transport=None, serialize=False, as_bunch=False):
+        """ Invokes a service synchronously by its implementation name (full dotted Python name).
+        """
             
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
@@ -617,14 +619,19 @@ class Service(object):
             self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch)
         
     def invoke(self, name, *args, **kwargs):
+        """ Invokes a service synchronously by its name.
+        """
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
         
     def invoke_by_id(self, service_id, *args, **kwargs):
+        """ Invokes a service synchronously by its ID.
+        """
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None, 
             transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False):
-            
+        """ Invokes a service asynchronously by its name.
+        """
         if to_json_string:
             payload = dumps(payload)
             
@@ -642,6 +649,14 @@ class Service(object):
         self.broker_client.invoke_async(msg, expiration=expiration)
         
         return cid
+    
+    def deliver(self, def_name, request, task_id=None):
+        """ Delivers a payload using the guaranteed delivery mechanism.
+        """
+        task_id = task_id or new_cid()
+        self.delivery_store.deliver(self.server.cluster_id, def_name, request, task_id)
+        
+        return task_id
             
     def pre_handle(self):
         """ An internal method run just before the service sets to process the payload.
