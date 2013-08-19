@@ -53,6 +53,17 @@ class _DeliveryService(AdminService):
                 self.logger.warn(log_msg)
                 raise ZatoException(self.cid, msg)
             
+    def _validate_times(self):
+        """ Checks whether times specified constitute at least one second.
+        """
+        for name in ('expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after',
+                'retry_repeats', 'retry_seconds'):
+            value = int(self.request.input[name])
+            if value < 1:
+                msg = '[{}] should be at least 1 instead of [{}]'.format(name, self.request.input[name])
+                self.logger.warn(msg)
+                raise ValueError(msg)
+            
     def _batch_size_from_input(self):
         """ Returns a batch size taking into account handling of invalid input values.
         """
@@ -122,6 +133,7 @@ class Create(_DeliveryService):
     def handle(self):
         target_type = self.request.input.target_type
         self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
+        self._validate_times()
         
         with closing(self.odb.session()) as session:
             input = self.request.input
