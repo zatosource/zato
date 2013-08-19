@@ -179,12 +179,13 @@ class _BaseView(object):
         self.cluster_id = None
         self.fetch_cluster_id()
         
-    def set_input(self):
+    def set_input(self, req=None):
+        req = req or self.req
         self.input.update({'cluster_id':self.cluster_id})
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
             if name != 'cluster_id':
-                self.input[name] = self.req.GET.get(self.form_prefix + name) or \
-                    self.req.POST.get(self.form_prefix + name) or self.req.zato.args.get(self.form_prefix + name)
+                self.input[name] = req.GET.get(self.form_prefix + name) or \
+                    req.POST.get(self.form_prefix + name) or req.zato.args.get(self.form_prefix + name)
                 
         self.on_after_set_input()
 
@@ -317,16 +318,17 @@ class CreateEdit(_BaseView):
                     'message': self.success_message(response.data)
                     }
                 return_data.update(initial_return_data)
-    
+                
                 for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
-                    value = getattr(response.data, name, None)
-                    if value:
-                        if isinstance(value, basestring):
-                            value = value.encode('utf-8')
-                        else:
-                            value = str(value)
-                            
-                    return_data[name] = value
+                    if name not in initial_return_data:
+                        value = getattr(response.data, name, None)
+                        if value:
+                            if isinstance(value, basestring):
+                                value = value.encode('utf-8')
+                            else:
+                                value = str(value)
+                        return_data[name] = value
+                    
                 return HttpResponse(dumps(return_data), mimetype='application/javascript')
             else:
                 msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)
