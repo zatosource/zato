@@ -49,7 +49,9 @@ class CreateForm(forms.Form):
     expire_after = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:18%'}))
     expire_arch_succ_after = forms.CharField(initial=72, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
     expire_arch_fail_after = forms.CharField(initial=168, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
-
+    
+    callback_list = forms.CharField(widget=forms.Textarea(attrs={'rows':7}), required=False)
+    
 class EditForm(CreateForm):
     pass
 

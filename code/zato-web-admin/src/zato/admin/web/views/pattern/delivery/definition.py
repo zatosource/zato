@@ -20,7 +20,7 @@ from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web import from_utc_to_user, from_user_to_utc, TARGET_TYPE_HUMAN
-from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
+from zato.admin.web.forms.pattern.delivery.definition import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format, method_allowed
 from zato.common.model import DeliveryItem
 
@@ -35,7 +35,7 @@ class Index(_Index):
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'target_type')
-        output_required = ('id', 'name', 'last_updated_utc', 'target', 'target_type', 
+        output_required = ('id', 'name', 'callback_list', 'last_updated_utc', 'target', 'target_type', 
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
@@ -62,11 +62,12 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ['name', 'target', 'target_type', 'expire_after',
             'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
-            'retry_repeats', 'retry_seconds']
+            'retry_repeats', 'retry_seconds', 'callback_list']
         output_required = ['id', 'name', 'target', 'short_def']
         
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         self.set_input(req)
+        initial_input_dict['callback_list'] = ','.join(elem for elem in self.input.get('callback_list', '').split())
         initial_return_data['name'] = self.input.name
         initial_return_data['target'] = self.input.target
         initial_return_data['short_def'] = '{}-{}-{}'.format(

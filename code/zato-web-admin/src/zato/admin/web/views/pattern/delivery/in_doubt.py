@@ -14,7 +14,7 @@ from traceback import format_exc
 
 # Zato
 from zato.admin.web import from_utc_to_user, from_user_to_utc, TARGET_TYPE_HUMAN
-from zato.admin.web.forms.pattern.delivery import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
+from zato.admin.web.forms.pattern.delivery.definition import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format, method_allowed
 from zato.common.model import DeliveryItem
 

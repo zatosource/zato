@@ -896,7 +896,6 @@ class DeploymentStatus(Base):
         self.status = status
         self.status_change_time = status_change_time
 
-
 ################################################################################
 
 class DeliveryDefinitionBase(Base):
@@ -910,6 +909,7 @@ class DeliveryDefinitionBase(Base):
     short_def = Column(String(200), nullable=False)
     
     target_type = Column(String(200), nullable=False)
+    callback_list = Column(LargeBinary(10000), nullable=True)
     
     expire_after = Column(Integer, nullable=False)
     expire_arch_succ_after = Column(Integer, nullable=False)
@@ -946,11 +946,13 @@ class Delivery(Base):
     creation_time = Column(DateTime(), nullable=False)
     name = Column(String(200), nullable=False)
     
+    state = Column(String(200), nullable=False)
+    
     source_count = Column(Integer, nullable=False, default=1)
     target_count = Column(Integer, nullable=False, default=0)
     
     delivery_def_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    state = Column(String(200), nullable=False)
+    delivery_def = relationship(DeliveryDefinitionBase, backref=backref('delivery_list', order_by=creation_time, cascade='all, delete, delete-orphan'))
 
 class DeliveryPayload(Base):
     """ A guaranteed delivery's payload.
