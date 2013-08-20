@@ -21,7 +21,7 @@ from memory_profiler import profile
 
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
-from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ
+from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ, to_json
 from zato.common.odb.query import delivery_definition_list, out_jms_wmq, out_jms_wmq_by_name
 from zato.common.util import datetime_to_seconds
 from zato.server.service import AsIs, Boolean, CSV, Integer
@@ -149,7 +149,8 @@ class _CreateEdit(_DeliveryService):
         input_required = ('cluster_id', 'target', 'target_type', 'expire_after', 
             'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds',)
-        output_required = ('id',)
+        input_optional = ('callback_list',)
+        output_required = ('id', 'name')
         
     def _get_item(self, session, target_def_class, input):
         raise NotImplementedError('Should be defined by subclasses')
@@ -191,6 +192,9 @@ class _CreateEdit(_DeliveryService):
                 item.retry_repeats = input.retry_repeats
                 item.retry_seconds = input.retry_seconds
                 item.cluster_id = input.cluster_id
+                item.callback_list = input.callback_list.encode('utf-8')
+                
+                self.logger.error(to_json(item))
                 
                 session.add(item)
                 session.commit()

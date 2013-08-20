@@ -14,6 +14,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps, loads
 from logging import getLogger
+from traceback import format_exc
 
 # Bunch
 from bunch import Bunch
@@ -34,7 +35,7 @@ from retools.lock import Lock
 from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_HISTORY_ENTRY, DELIVERY_STATE, INVOCATION_TARGET, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
-     DeliveryHistory, DeliveryPayload
+     DeliveryHistory, DeliveryPayload, to_json
 from zato.common.odb.query import out_jms_wmq
 from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator
@@ -137,6 +138,41 @@ class DeliveryStore(object):
         """
         spawn_later(item.check_after, self.check_target, item)
         
+    def _invoke_callbacks(self, item, delivery, target_ok, in_doubt):
+        """ Asynchronously notifies all callback services of the outcome of the target's invocation.
+        """
+        callback_list = delivery.delivery_def.callback_list
+        callback_list = callback_list.split(',') or []
+        
+        payload = dumps({
+            'target_ok': target_ok,
+            'in_doubt': in_doubt,
+            'task_id': delivery.task_id,
+            'payload': item.payload,
+            'target': item.target,
+            'target_type': item.target_type,
+        })
+
+        for service in callback_list:
+        
+            broker_msg = {}
+            broker_msg['action'] = SERVICE.PUBLISH
+            broker_msg['task_id'] = delivery.task_id
+            broker_msg['channel'] = CHANNEL.DELIVERY
+            broker_msg['data_format'] = DATA_FORMAT.JSON
+            broker_msg['service'] = service
+            broker_msg['payload'] = payload
+            broker_msg['cid'] = new_cid()
+            
+            try:
+                self.broker_client.invoke_async(broker_msg)
+            except Exception, e:
+                msg = 'Could not invoke callback:[%s], task_id:[%s], e:[%s]'.format(
+                    service, delivery.task_id, format_exc(e))
+                self.logger.warn(msg)
+        
+# ##############################################################################
+        
     def _on_in_doubt(self, item, delivery, now):
         """ Delivery enteres an in-doubt state.
         """
@@ -156,8 +192,27 @@ class DeliveryStore(object):
             
             session.commit()
             
+            self._invoke_callbacks(item, delivery, False, True)
+            
             msg = 'Delivery [%s] is in-doubt now (source/target %s/%s)'
             self.logger.warn(msg, item.log_name, delivery.source_count, delivery.target_count)
+            
+    def finish_delivery(self, target_ok, delivery, now_dt, item):
+        """ Called after running out of attempts to deliver the payload.
+        """
+        if target_ok:
+            msg_prefix = 'Confirmed delivery'
+            log_func = self.logger.info
+        else:
+            msg_prefix = 'Delivery failed'
+            log_func = self.logger.warn
+            
+        msg = '{} after {}/{} attempts, archive expires in {}s ({} UTC)'.format(
+            msg_prefix, delivery.source_count, delivery.delivery_def.retry_repeats, 'zzz', 'aaa')
+        
+        log_func(msg)
+                
+# ##############################################################################
         
     def check_target(self, item):
         self.logger.debug('Checking name/target/task_id [%s]', item.log_name)
@@ -173,12 +228,24 @@ class DeliveryStore(object):
         delivery = self.get_delivery(item.task_id)
         
         with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
-            
+
+            # Target did not reply at all hence we're entering in-doubt
             if delivery.source_count > delivery.target_count:
                 self._on_in_doubt(item, delivery, now)
-            
+                
+            else:
+                # The target has confirmed the invocation in an expected time so we
+                # now need to check if it was successful. If it was, this is where it ends,
+                # it wasn't, we'll try again as it was originally configured unless
+                # it was the last retry.
+                
+                target_ok = delivery.state == DELIVERY_STATE.TARGET_OK
+                
+                # All good, we can stop now.
+                if target_ok:
+                    self.finish_delivery(delivery, target_ok, now_dt, item)
+                
             '''
-
             if source_count > target_count:
                 # STATE - in-doubt
                 self._on_in_doubt(item, delivery, now, now_dt, source_count, target_count)

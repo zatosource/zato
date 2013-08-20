@@ -299,6 +299,8 @@ class DELIVERY_STATE(Attrs):
     IN_PROGRESS = 'in-progress'
     COMPLETED = 'completed'
     UNKNOWN = 'unknown'
+    TARGET_OK = 'target-ok'
+    TARGET_FAILURE = 'target-failure'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
