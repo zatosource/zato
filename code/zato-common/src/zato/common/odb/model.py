@@ -941,8 +941,13 @@ class Delivery(Base):
     __tablename__ = 'delivery'
     
     id = Column(Integer, Sequence('deliv_seq'), primary_key=True)
-    task_id = Column(String(64), unique=True, nullable=False)
+    task_id = Column(String(64), unique=True, nullable=False, index=True)
+    
+    creation_time = Column(DateTime(), nullable=False)
     name = Column(String(200), nullable=False)
+    
+    source_count = Column(Integer, nullable=False, default=1)
+    target_count = Column(Integer, nullable=False, default=0)
     
     delivery_def_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     state = Column(String(200), nullable=False)
@@ -953,10 +958,13 @@ class DeliveryPayload(Base):
     __tablename__ = 'delivery_payload'
     
     id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
-    task_id = Column(String(64), unique=True, nullable=False)
+    task_id = Column(String(64), unique=True, nullable=False, index=True)
+    
     creation_time = Column(DateTime(), nullable=False)
     payload = Column(LargeBinary(5000000), nullable=False)
+    
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    delivery = relationship(Delivery, backref=backref('payload', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
     
 class DeliveryHistory(Base):
     """ A guaranteed delivery's history.
@@ -964,8 +972,11 @@ class DeliveryHistory(Base):
     __tablename__ = 'delivery_history'
     
     id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
-    task_id = Column(String(64), nullable=False)
+    task_id = Column(String(64), nullable=False, index=True)
+    
     entry_type = Column(String(64), nullable=False)
     entry_time = Column(DateTime(), nullable=False)
     entry_ctx = Column(LargeBinary(1000000), nullable=False)
+    
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    delivery = relationship(Delivery, backref=backref('history_list', order_by=entry_time, cascade='all, delete, delete-orphan'))

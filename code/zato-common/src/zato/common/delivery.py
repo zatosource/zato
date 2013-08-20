@@ -31,9 +31,10 @@ from paste.util.converters import asbool
 from retools.lock import Lock
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, INVOCATION_TARGET, KVDB
+from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_HISTORY_ENTRY, DELIVERY_STATE, INVOCATION_TARGET, KVDB
 from zato.common.broker_message import SERVICE
-from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ
+from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
+     DeliveryHistory, DeliveryPayload
 from zato.common.odb.query import out_jms_wmq
 from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator
@@ -55,16 +56,19 @@ _target_def_class = {
     INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
 
-def _item_from_odb(def_base, target, task_id):
+def _item_from_api(delivery_def_base, target, task_id, payload):
     return Bunch({
         'task_id': task_id,
-        'def_name': def_base.name,
+        'def_id': delivery_def_base.id,
+        'def_name': delivery_def_base.name,
         'target': target,
-        'target_type': def_base.target_type,
-        'expire_after': def_base.expire_after,
-        'check_after': def_base.check_after,
-        'retry_repeats': def_base.retry_repeats,
-        'retry_seconds': def_base.retry_seconds,
+        'target_type': delivery_def_base.target_type,
+        'expire_after': delivery_def_base.expire_after,
+        'check_after': delivery_def_base.check_after,
+        'retry_repeats': delivery_def_base.retry_repeats,
+        'retry_seconds': delivery_def_base.retry_seconds,
+        'payload': payload,
+        'log_name': '{}/{}/{}'.format(delivery_def_base.name, target, task_id),
     })
 
 # ##############################################################################
@@ -90,12 +94,125 @@ class DeliveryStore(object):
         
     def register(self, item):
         self._validate_register(item)
+        now = datetime.utcnow()
+        
+        with closing(self.odb.session()) as session:
+            
+            delivery = Delivery()
+            delivery.task_id = item.task_id
+            delivery.creation_time = now
+            delivery.name = '{}/{}/{}'.format(item.def_name, item.target, item.target_type)
+            delivery.delivery_def_id = item.def_id
+            delivery.state = DELIVERY_STATE.IN_PROGRESS
+            
+            payload = DeliveryPayload()
+            payload.task_id = item.task_id
+            payload.creation_time = now
+            payload.payload = item.payload
+            payload.delivery = delivery
+            
+            history = DeliveryHistory()
+            history.task_id = item.task_id
+            history.entry_type = DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE
+            history.entry_time = now
+            history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
+            history.delivery = delivery
+            
+            session.add(delivery)
+            session.add(payload)
+            session.add(history)
+            
+            session.commit()
 
         self.logger.info(
           'Submitted delivery [%s] for target:[%s] (%s/%s), expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
             item.task_id, item.target, item.def_name, item.target_type, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
 
         self.spawn_check_target(item)
+
+# ##############################################################################
+        
+    def spawn_check_target(self, item):
+        """ Spawns a greenlet that checks whether the target replied and acts accordingly.
+        """
+        spawn_later(item.check_after, self.check_target, item)
+        
+    def _on_in_doubt(self, item, delivery, now):
+        """ Delivery enteres an in-doubt state.
+        """
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(delivery)
+            delivery.state = DELIVERY_STATE.IN_DOUBT
+            
+            history = DeliveryHistory()
+            history.task_id = delivery.task_id
+            history.entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_IN_DOUBT
+            history.entry_time = now
+            history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
+            history.delivery = delivery
+            
+            session.add(delivery)
+            session.add(history)
+            
+            session.commit()
+            
+            msg = 'Delivery [%s] is in-doubt now (source/target %s/%s)'
+            self.logger.warn(msg, item.log_name, delivery.source_count, delivery.target_count)
+        
+    def check_target(self, item):
+        self.logger.debug('Checking name/target/task_id [%s]', item.log_name)
+        
+        if self.is_deleted(item.def_name):
+            self.logger.info('Stopping [%s] (is_deleted->True)', item.log_name)
+            return
+        
+        now_dt = datetime.utcnow()
+        now = now_dt.isoformat()
+        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.task_id)
+        
+        delivery = self.get_delivery(item.task_id)
+        
+        with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
+            
+            if delivery.source_count > delivery.target_count:
+                self._on_in_doubt(item, delivery, now)
+            
+            '''
+
+            if source_count > target_count:
+                # STATE - in-doubt
+                self._on_in_doubt(item, delivery, now, now_dt, source_count, target_count)
+                
+            else:
+                # The target has confirmed the invocation in an expected time so we
+                # now need to check if it was successful. If it was, this is where it ends,
+                # we move the delivery to the archive and that's it. If it wasn't, we'll try again
+                # as it was originally configured unless it was the last retry.
+
+                # All good, we can stop now.
+                if target_ok:
+                    self.finish_delivery(target_ok, delivery, now, item)
+                    
+                # Not so good, we know there was an error.
+                else:
+                    # Can we try again?
+                    if attempts_made < retry_repeats:
+                        self.retry()
+
+                    # Nope, that was the last attempt.
+                    else:
+                        self.finish_delivery(target_ok, delivery, now, item)
+                        '''
+
+# ##############################################################################
+
+    def get_delivery(self, task_id):
+        with closing(self.odb.session()) as session:
+            delivery = session.query(Delivery).\
+                filter(Delivery.task_id==task_id).\
+                one()
+            
+        return delivery
 
 # ##############################################################################
 
@@ -113,6 +230,12 @@ class DeliveryStore(object):
         """
         self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'deleted', is_deleted)
         
+    def is_deleted(self, name):
+        """ Returns a boolean flag indicating whether a given definition has been deleted in between
+        a delivery's executions.
+        """
+        return not self.kvdb.conn.hget('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'deleted')
+        
     def set_updated(self, name, is_updated):
         """ Sets a boolean flag indicating whether a definition has been updated.
         Any new instances of check_target consult this flag to see whether they should
@@ -122,27 +245,29 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-    def deliver(self, cluster_id, def_name, request, task_id):
-        """ A public method to be invoked by services for delivering a request to a target
+    def deliver(self, cluster_id, def_name, payload, task_id):
+        """ A public method to be invoked by services for delivering payload to a target
         through a definition.
         """
         with closing(self.odb.session()) as session:
-            def_base = session.query(DeliveryDefinitionBase).\
+            delivery_def_base = session.query(DeliveryDefinitionBase).\
                 filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
                 filter(DeliveryDefinitionBase.name==def_name).\
                     first()
             
-            if not def_base:
+            if not delivery_def_base:
                 msg = 'Guaranteed delivery definition [{}] does not exist'.format(def_name)
                 self.logger.warn(msg)
                 raise ValueError(msg)
             
-            target_def_class = _target_def_class[def_base.target_type]
+            target_def_class = _target_def_class[delivery_def_base.target_type]
             definition = session.query(target_def_class).\
-                filter(target_def_class.id==def_base.id).\
+                filter(target_def_class.id==delivery_def_base.id).\
                 one()
             
-            self.register(_item_from_odb(def_base, definition.target.name, task_id))
+            target = definition.target.name
+            
+        self.register(_item_from_api(delivery_def_base, target, task_id, payload))
 
 '''
     def _on_in_doubt(self, item, delivery, now, now_dt, source_count, target_count):
