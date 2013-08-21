@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os, random, re, sys
+from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
 from glob import glob
@@ -25,6 +26,7 @@ from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
 from threading import current_thread
+from traceback import format_exc
 
 # packaging/Distutils2
 try:
@@ -63,11 +65,16 @@ from springpython.context import ApplicationContext
 from springpython.remoting.http import CAValidatingHTTPSConnection
 from springpython.remoting.xmlrpc import SSLClientTransport
 
+# SQLAlchemy
+from sqlalchemy.exc import IntegrityError
+
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, soap_body_path, \
-    soap_body_xpath, ZatoException
+from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, scheduler_date_time_format, \
+     soap_body_path, soap_body_xpath, ZatoException
 from zato.common.crypto import CryptoManager
+from zato.common.odb.model import IntervalBasedJob, Job, Service
+from zato.common.odb.query import _service as _service
 
 logger = logging.getLogger(__name__)
 
@@ -600,3 +607,40 @@ def get_component_name(prefix='parallel'):
 
 def dotted_getattr(o, path):
     return reduce(getattr, path.split('.'), o)
+
+
+def get_service_by_name(session, cluster_id, name):
+    logger.debug('Looking for name:[{}] in cluster_id:[{}]'.format(name, cluster_id))
+    return _service(session, cluster_id).\
+           filter(Service.name==name).\
+           one()
+
+def add_startup_jobs(cluster_id, odb, stats_jobs):
+    """ Adds one of the interval jobs to the ODB. Note that it isn't being added
+    directly to the scheduler because we want users to be able to fine-tune the job's
+    settings.
+    """
+    with closing(odb.session()) as session:
+        for item in stats_jobs:
+            
+            try:
+                service_id = get_service_by_name(session, cluster_id, item['service'])[0]
+                
+                now = datetime.utcnow().strftime(scheduler_date_time_format)
+                job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
+                          cluster_id=cluster_id, service_id=service_id)
+                          
+                kwargs = {}
+                for name in('seconds', 'minutes'):
+                    if name in item:
+                        kwargs[name] = item[name]
+                        
+                ib_job = IntervalBasedJob(None, job, **kwargs)
+                
+                session.add(job)
+                session.add(ib_job)
+                session.commit()
+            except IntegrityError, e:
+                session.rollback()
+                msg = 'Caught an IntegrityError, carrying on anyway, e:[{}]]'.format(format_exc(e))
+                logger.debug(msg)

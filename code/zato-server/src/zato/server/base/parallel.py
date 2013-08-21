@@ -36,7 +36,7 @@ from retools.lock import Lock
 from zato.broker.client import BrokerClient
 from zato.common import CHANNEL, KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
-from zato.common.util import new_cid
+from zato.common.util import add_startup_jobs, new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -47,7 +47,6 @@ from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_o
 from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
 from zato.server.connection.zmq_.outgoing import start_connector as zmq_outgoing_start_connector
 from zato.server.pickup import get_pickup
-from zato.server.stats import add_stats_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.name = None
         self.cluster_id = None
         self.kvdb = None
-        self.stats_jobs = None
+        self.startup_jobs = None
         self.worker_store = None
         self.deployment_lock_expires = None
         self.deployment_lock_timeout = None
@@ -133,7 +132,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.service_sources, self.base_dir)
             
             # Add the statistics-related scheduler jobs to the ODB
-            add_stats_jobs(self.cluster_id, self.odb, self.stats_jobs)
+            add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs)
             
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED, 

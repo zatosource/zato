@@ -946,7 +946,7 @@ class Delivery(Base):
     creation_time = Column(DateTime(), nullable=False)
     name = Column(String(200), nullable=False)
     
-    state = Column(String(200), nullable=False)
+    state = Column(String(200), nullable=False, index=True)
     
     source_count = Column(Integer, nullable=False, default=1)
     target_count = Column(Integer, nullable=False, default=0)
@@ -977,7 +977,7 @@ class DeliveryHistory(Base):
     task_id = Column(String(64), nullable=False, index=True)
     
     entry_type = Column(String(64), nullable=False)
-    entry_time = Column(DateTime(), nullable=False)
+    entry_time = Column(DateTime(), nullable=False, index=True)
     entry_ctx = Column(LargeBinary(1000000), nullable=False)
     
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)

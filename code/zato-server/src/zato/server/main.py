@@ -98,7 +98,7 @@ def run(base_dir):
     parallel_server.repo_location = repo_location
     parallel_server.base_dir = base_dir
     parallel_server.fs_server_config = config
-    parallel_server.stats_jobs = app_context.get_object('stats_jobs')
+    parallel_server.startup_jobs = app_context.get_object('startup_jobs')
     parallel_server.app_context = app_context
 
     # Remove all locks possibly left over by previous server instances

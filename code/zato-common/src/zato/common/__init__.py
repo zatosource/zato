@@ -298,12 +298,19 @@ class DELIVERY_HISTORY_ENTRY(Attrs):
     
 class DELIVERY_STATE(Attrs):
     IN_DOUBT = 'in-doubt'
-    IN_PROGRESS = 'in-progress'
-    CONFIRMED = 'completed'
+    IN_PROGRESS_STARTED = 'in-progress'
+    IN_PROGRESS_TARGET_OK = 'in-progress-target-ok'
+    IN_PROGRESS_TARGET_FAILURE = 'in-progress-target-failure'
+    CONFIRMED = 'confirmed'
     FAILED = 'failed'
     UNKNOWN = 'unknown'
-    TARGET_OK = 'target-ok'
-    TARGET_FAILURE = 'target-failure'
+    
+class DELIVERY_COUNTERS(Attrs):
+    IN_DOUBT = DELIVERY_STATE.IN_DOUBT
+    IN_PROGRESS = 'in-progress'
+    CONFIRMED = DELIVERY_STATE.CONFIRMED
+    FAILED = DELIVERY_STATE.FAILED
+    TOTAL = 'total'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
