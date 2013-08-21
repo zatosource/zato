@@ -40,11 +40,11 @@ from zato.redis_paginator import ZSetPaginator
 
 NULL_BASIC_DATA = {
     'last_updated_utc':None,
-    'total_count':0,
-    'in_progress_count':0, 
-    'in_doubt_count':0,
-    'arch_success_count':0,
-    'arch_failed_count':0
+    DELIVERY_COUNTERS.TOTAL:0,
+    DELIVERY_COUNTERS.IN_PROGRESS:0, 
+    DELIVERY_COUNTERS.IN_DOUBT:0,
+    DELIVERY_COUNTERS.CONFIRMED:0,
+    DELIVERY_COUNTERS.FAILED:0
 }
 
 _target_query_by_id = {

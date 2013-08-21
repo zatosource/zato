@@ -306,11 +306,11 @@ class DELIVERY_STATE(Attrs):
     UNKNOWN = 'unknown'
     
 class DELIVERY_COUNTERS(Attrs):
-    IN_DOUBT = DELIVERY_STATE.IN_DOUBT
-    IN_PROGRESS = 'in-progress'
-    CONFIRMED = DELIVERY_STATE.CONFIRMED
-    FAILED = DELIVERY_STATE.FAILED
-    TOTAL = 'total'
+    IN_DOUBT = 'in_doubt_count'
+    IN_PROGRESS = 'in_progress_count'
+    CONFIRMED = 'confirmed_count'
+    FAILED = 'failed_count'
+    TOTAL = 'total_count'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
