@@ -57,7 +57,12 @@ _target_def_class = {
     INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
 
-def _item_from_api(delivery_def_base, target, task_id, payload):
+LOCK_TIMEOUT = 0.2
+RETRY_SLEEP = 5
+
+def _item_from_api(delivery_def_base, target, payload, task_id, invoke_func, args, kwargs):
+    """ Creates an invocation context. 
+    """
     return Bunch({
         'task_id': task_id,
         'def_id': delivery_def_base.id,
@@ -69,6 +74,9 @@ def _item_from_api(delivery_def_base, target, task_id, payload):
         'retry_repeats': delivery_def_base.retry_repeats,
         'retry_seconds': delivery_def_base.retry_seconds,
         'payload': payload,
+        'invoke_func': invoke_func,
+        'args': dumps(args),
+        'kwargs': dumps(kwargs),
         'log_name': '{}/{}/{}'.format(delivery_def_base.name, target, task_id),
     })
 
@@ -86,6 +94,16 @@ class DeliveryStore(object):
         
 # ##############################################################################
 
+    def _history_sent_from_source(self, delivery, item, now):
+        history = DeliveryHistory()
+        history.task_id = item.task_id
+        history.entry_type = DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE
+        history.entry_time = now
+        history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
+        history.delivery = delivery
+        
+        return history
+
     def _validate_register(self, item):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
@@ -93,10 +111,24 @@ class DeliveryStore(object):
             self.logger.error(msg)
             raise ValueError(msg)
         
-    def register(self, item):
-        self._validate_register(item)
+    def _invoke_delivery_service(self, item):
+        """ Invokes the target via a delivery service. 
+        """
+        delivery_req = {}
+        for name in('task_id', 'payload', 'target', 'target_type', 'args', 'kwargs'):
+            delivery_req[name] = item[name]
+            
+        item.invoke_func('zato.pattern.delivery.dispatch', delivery_req)
+        
+    def register_invoke_schedule(self, item):
+        """ Registers the task, invokes target and schedules a check to find out if the invocation was OK.
+        """
         now = datetime.utcnow()
         
+        # Sanity check - did we get everything that was needed?
+        self._validate_register(item)
+        
+        # First, save everything in the ODB
         with closing(self.odb.session()) as session:
             
             delivery = Delivery()
@@ -112,31 +144,28 @@ class DeliveryStore(object):
             payload.payload = item.payload
             payload.delivery = delivery
             
-            history = DeliveryHistory()
-            history.task_id = item.task_id
-            history.entry_type = DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE
-            history.entry_time = now
-            history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
-            history.delivery = delivery
-            
             session.add(delivery)
             session.add(payload)
-            session.add(history)
+            session.add(self._history_sent_from_source(delivery, item, now))
             
             session.commit()
-
+            
         self.logger.info(
-          'Submitted delivery [%s] for target:[%s] (%s/%s), expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
+          'Submitting delivery [%s] for target:[%s] (%s/%s), expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
             item.task_id, item.target, item.def_name, item.target_type, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
+        
+        # Invoke the target now that things are in the ODB
+        self._invoke_delivery_service(item)
 
-        self.spawn_check_target(item)
+        # Spawn a greenlet to check whether target confirmed delivery
+        self.spawn_check_target(item, item.check_after)
 
 # ##############################################################################
         
-    def spawn_check_target(self, item):
+    def spawn_check_target(self, item, check_after):
         """ Spawns a greenlet that checks whether the target replied and acts accordingly.
         """
-        spawn_later(item.check_after, self.check_target, item)
+        spawn_later(check_after, self.check_target, item)
         
     def _invoke_callbacks(self, item, delivery, target_ok, in_doubt):
         """ Asynchronously notifies all callback services of the outcome of the target's invocation.
@@ -154,22 +183,22 @@ class DeliveryStore(object):
         })
 
         for service in callback_list:
-        
-            broker_msg = {}
-            broker_msg['action'] = SERVICE.PUBLISH
-            broker_msg['task_id'] = delivery.task_id
-            broker_msg['channel'] = CHANNEL.DELIVERY
-            broker_msg['data_format'] = DATA_FORMAT.JSON
-            broker_msg['service'] = service
-            broker_msg['payload'] = payload
-            broker_msg['cid'] = new_cid()
-            
-            try:
-                self.broker_client.invoke_async(broker_msg)
-            except Exception, e:
-                msg = 'Could not invoke callback:[%s], task_id:[%s], e:[%s]'.format(
-                    service, delivery.task_id, format_exc(e))
-                self.logger.warn(msg)
+            if service:
+                broker_msg = {}
+                broker_msg['action'] = SERVICE.PUBLISH
+                broker_msg['task_id'] = delivery.task_id
+                broker_msg['channel'] = CHANNEL.DELIVERY
+                broker_msg['data_format'] = DATA_FORMAT.JSON
+                broker_msg['service'] = service
+                broker_msg['payload'] = payload
+                broker_msg['cid'] = new_cid()
+                
+                try:
+                    self.broker_client.invoke_async(broker_msg)
+                except Exception, e:
+                    msg = 'Could not invoke callback:[%s], task_id:[%s], e:[%s]'.format(
+                        service, delivery.task_id, format_exc(e))
+                    self.logger.warn(msg)
         
 # ##############################################################################
         
@@ -194,23 +223,68 @@ class DeliveryStore(object):
             
             self._invoke_callbacks(item, delivery, False, True)
             
-            msg = 'Delivery [%s] is in-doubt now (source/target %s/%s)'
+            msg = 'Delivery [%s] is in-doubt (source/target %s/%s)'
             self.logger.warn(msg, item.log_name, delivery.source_count, delivery.target_count)
             
-    def finish_delivery(self, target_ok, delivery, now_dt, item):
+    def finish_delivery(self, delivery, target_ok, now_dt, item):
         """ Called after running out of attempts to deliver the payload.
         """
-        if target_ok:
-            msg_prefix = 'Confirmed delivery'
-            log_func = self.logger.info
-        else:
-            msg_prefix = 'Delivery failed'
-            log_func = self.logger.warn
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(delivery)
             
-        msg = '{} after {}/{} attempts, archive expires in {}s ({} UTC)'.format(
-            msg_prefix, delivery.source_count, delivery.delivery_def.retry_repeats, 'zzz', 'aaa')
+            if target_ok:
+                msg_prefix = 'Confirmed delivery'
+                log_func = self.logger.info
+                expires = delivery.delivery_def.expire_arch_succ_after
+                delivery_state = DELIVERY_STATE.CONFIRMED
+                history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_CONFIRMED
+            else:
+                msg_prefix = 'Delivery failed'
+                log_func = self.logger.warn
+                expires = delivery.delivery_def.expire_arch_fail_after
+                delivery_state = DELIVERY_STATE.FAILED
+                history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_FAILED
+                
+            delivery.state = delivery_state
+                
+            history = DeliveryHistory()
+            history.task_id = delivery.task_id
+            history.entry_type = history_entry_type
+            history.entry_time = now_dt
+            history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
+            history.delivery = delivery
+            
+            session.add(delivery)
+            session.add(history)
+            
+            session.commit()
+                
+            msg = '{} [{}] after {}/{} attempts, archive expires in {} hour(s) ({} UTC)'.format(
+                msg_prefix, item.log_name, delivery.source_count, delivery.delivery_def.retry_repeats, 
+                expires, now_dt + timedelta(hours=expires))
+            
+            log_func(msg)
+            
+    def retry(self, delivery, item):
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(delivery)
+            delivery.source_count += 1
+
+            # This is needed as a separate thing because we want to sleep a bit
+            # and there's no need to keep the session open in that time.
+            source_count = delivery.source_count
+            
+            session.add(delivery)
+            session.add(self._history_sent_from_source(delivery, item, datetime.utcnow()))
+            session.commit()
+            
+            # Sleep a constant time so we're sure any locks related to that task are released
+            sleep(RETRY_SLEEP)
+            
+        self.logger.info('Retrying delivery [%s] (%s/%s)', item.log_name, source_count, item.retry_repeats)
         
-        log_func(msg)
+        self._invoke_delivery_service(item)
+        self.spawn_check_target(item, item.retry_seconds)
                 
 # ##############################################################################
         
@@ -227,7 +301,7 @@ class DeliveryStore(object):
         
         delivery = self.get_delivery(item.task_id)
         
-        with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
+        with Lock(lock_name, self.delivery_lock_timeout, LOCK_TIMEOUT, self.kvdb.conn):
 
             # Target did not reply at all hence we're entering in-doubt
             if delivery.source_count > delivery.target_count:
@@ -244,32 +318,16 @@ class DeliveryStore(object):
                 # All good, we can stop now.
                 if target_ok:
                     self.finish_delivery(delivery, target_ok, now_dt, item)
-                
-            '''
-            if source_count > target_count:
-                # STATE - in-doubt
-                self._on_in_doubt(item, delivery, now, now_dt, source_count, target_count)
-                
-            else:
-                # The target has confirmed the invocation in an expected time so we
-                # now need to check if it was successful. If it was, this is where it ends,
-                # we move the delivery to the archive and that's it. If it wasn't, we'll try again
-                # as it was originally configured unless it was the last retry.
-
-                # All good, we can stop now.
-                if target_ok:
-                    self.finish_delivery(target_ok, delivery, now, item)
                     
                 # Not so good, we know there was an error.
                 else:
                     # Can we try again?
-                    if attempts_made < retry_repeats:
-                        self.retry()
+                    if delivery.source_count < item.retry_repeats:
+                        self.retry(delivery, item)
 
                     # Nope, that was the last attempt.
                     else:
-                        self.finish_delivery(target_ok, delivery, now, item)
-                        '''
+                        self.finish_delivery(delivery, target_ok, now_dt, item)
 
 # ##############################################################################
 
@@ -312,7 +370,7 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-    def deliver(self, cluster_id, def_name, payload, task_id):
+    def deliver(self, cluster_id, def_name, payload, task_id, invoke_func, *args, **kwargs):
         """ A public method to be invoked by services for delivering payload to a target
         through a definition.
         """
@@ -334,7 +392,38 @@ class DeliveryStore(object):
             
             target = definition.target.name
             
-        self.register(_item_from_api(delivery_def_base, target, task_id, payload))
+        self.register_invoke_schedule(_item_from_api(delivery_def_base, target, payload, task_id, invoke_func, args, kwargs))
+
+# ##############################################################################
+        
+    def on_target_completed(self, target_type, target, delivery, start, end, target_ok, target_self_info, err_info=None):
+        now = datetime.utcnow().isoformat()
+        task_id = delivery['task_id']
+        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, task_id)
+        total_time = str(end - start)
+        
+        with Lock(lock_name, self.delivery_lock_timeout, LOCK_TIMEOUT, self.kvdb.conn):
+            entry_ctx = dumps({
+                'target_self_info': target_self_info,
+                'total_time': total_time
+            })
+            
+            with closing(self.odb.session()) as session:
+                delivery = self.get_delivery(task_id)
+                delivery.state = DELIVERY_STATE.TARGET_OK if target_ok else DELIVERY_STATE.TARGET_FAILURE
+                delivery.target_count += 1
+                
+                history = DeliveryHistory()
+                history.task_id = task_id
+                history.entry_type = DELIVERY_HISTORY_ENTRY.TARGET_OK if target_ok else DELIVERY_HISTORY_ENTRY.TARGET_FAILURE
+                history.entry_time = now
+                history.entry_ctx = entry_ctx
+                history.delivery = delivery
+                
+                session.add(delivery)
+                session.add(history)
+                
+                session.commit()
 
 '''
     def _on_in_doubt(self, item, delivery, now, now_dt, source_count, target_count):

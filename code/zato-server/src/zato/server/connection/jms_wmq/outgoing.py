@@ -45,11 +45,10 @@ class WMQFacade(object):
         self.delivery_store = delivery_store
     
     def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            delivery=None, *args, **kwargs):
+            task_id=None, *args, **kwargs):
         """ Puts a message on a WebSphere MQ queue.
         """
-        delivery.tx_id = delivery.tx_id or new_cid()
-
+        
         # Common parameters
         params = {}
         params['action'] = OUTGOING.JMS_WMQ_SEND
@@ -62,29 +61,15 @@ class WMQFacade(object):
         params['max_chars_printed'] = max_chars_printed
         
         # Confirmed delivery
-        if delivery:
+        if task_id:
             params['confirm_delivery'] = True
-            params['tx_id'] = delivery.tx_id
+            params['task_id'] = task_id
         
         # Any extra arguments
         params['args'] = args
         params['kwargs'] = kwargs
-        
-        invoke_func = self.broker_client.publish
-        invoke_args = params
-        invoke_kwargs = {'msg_type':MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL}
-        
-        if delivery:
-            delivery.target_type = INVOCATION_TARGET.OUTCONN_WMQ
-            delivery.target = out_name
-            delivery.business_payload = params
-            delivery.invoke_func = invoke_func
-            delivery.invoke_args = invoke_args
-            delivery.invoke_kwargs = invoke_kwargs
-            
-            self.delivery_store.register(delivery)
-        
-        invoke_func(invoke_args, **invoke_kwargs)
+
+        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
