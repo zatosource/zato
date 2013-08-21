@@ -364,6 +364,7 @@ class DeliveryStore(object):
         Any new instances of check_target consult this flag to see whether they should
         perhaps change their schedule.
         """
+        # ZZZ: TODO TODO - this is set but then nothing checks it anywhere later on 
         self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'updated', is_updated)
         
     def update_counters(self, name, in_progress, in_doubt, confirmed, failed):
@@ -374,7 +375,8 @@ class DeliveryStore(object):
             DELIVERY_COUNTERS.IN_DOUBT: in_doubt,
             DELIVERY_COUNTERS.CONFIRMED: confirmed,
             DELIVERY_COUNTERS.FAILED: failed,
-            DELIVERY_COUNTERS.TOTAL: in_progress + in_doubt + confirmed + failed
+            DELIVERY_COUNTERS.TOTAL: in_progress + in_doubt + confirmed + failed,
+            'last_updated_utc': datetime.utcnow().isoformat(),
         }
         
         self.kvdb.conn.hmset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), counters)
