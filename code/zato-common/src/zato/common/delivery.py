@@ -22,9 +22,6 @@ from bunch import Bunch
 # gevent
 from gevent import sleep, spawn_later
 
-# memory_profiler
-from memory_profiler import profile
-
 # Paste
 from paste.util.converters import asbool
 
@@ -32,7 +29,8 @@ from paste.util.converters import asbool
 from retools.lock import Lock
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_HISTORY_ENTRY, DELIVERY_STATE, INVOCATION_TARGET, KVDB
+from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_COUNTERS, DELIVERY_HISTORY_ENTRY, \
+     DELIVERY_STATE, INVOCATION_TARGET, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
      DeliveryHistory, DeliveryPayload, to_json
@@ -136,7 +134,7 @@ class DeliveryStore(object):
             delivery.creation_time = now
             delivery.name = '{}/{}/{}'.format(item.def_name, item.target, item.target_type)
             delivery.delivery_def_id = item.def_id
-            delivery.state = DELIVERY_STATE.IN_PROGRESS
+            delivery.state = DELIVERY_STATE.IN_PROGRESS_STARTED
             
             payload = DeliveryPayload()
             payload.task_id = item.task_id
@@ -313,7 +311,7 @@ class DeliveryStore(object):
                 # it wasn't, we'll try again as it was originally configured unless
                 # it was the last retry.
                 
-                target_ok = delivery.state == DELIVERY_STATE.TARGET_OK
+                target_ok = delivery.state == DELIVERY_STATE.IN_PROGRESS_TARGET_OK
                 
                 # All good, we can stop now.
                 if target_ok:
@@ -367,6 +365,28 @@ class DeliveryStore(object):
         perhaps change their schedule.
         """
         self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'updated', is_updated)
+        
+    def update_counters(self, name, in_progress, in_doubt, confirmed, failed):
+        """ Updates counters of a given delivery definition.
+        """
+        counters = {
+            DELIVERY_COUNTERS.IN_PROGRESS: in_progress,
+            DELIVERY_COUNTERS.IN_DOUBT: in_doubt,
+            DELIVERY_COUNTERS.CONFIRMED: confirmed,
+            DELIVERY_COUNTERS.FAILED: failed,
+            DELIVERY_COUNTERS.TOTAL: in_progress + in_doubt + confirmed + failed
+        }
+        
+        self.kvdb.conn.hmset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), counters)
+        
+    def get_counters(self, name):
+        """ Returns usage counters for a given delivery definition.
+        """
+        keys = [DELIVERY_COUNTERS.IN_PROGRESS, DELIVERY_COUNTERS.IN_DOUBT, DELIVERY_COUNTERS.CONFIRMED,
+                     DELIVERY_COUNTERS.FAILED, DELIVERY_COUNTERS.TOTAL]
+        values = self.kvdb.conn.hmget('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), keys)
+        
+        return dict(zip(keys, values))
 
 # ##############################################################################
 
@@ -410,7 +430,7 @@ class DeliveryStore(object):
             
             with closing(self.odb.session()) as session:
                 delivery = self.get_delivery(task_id)
-                delivery.state = DELIVERY_STATE.TARGET_OK if target_ok else DELIVERY_STATE.TARGET_FAILURE
+                delivery.state = DELIVERY_STATE.IN_PROGRESS_TARGET_OK if target_ok else DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE
                 delivery.target_count += 1
                 
                 history = DeliveryHistory()
@@ -424,200 +444,3 @@ class DeliveryStore(object):
                 session.add(history)
                 
                 session.commit()
-
-'''
-    def _on_in_doubt(self, item, delivery, now, now_dt, source_count, target_count):
-        pass
-        
-    def _move_payload_to_odb(self, item, business_payload):
-        """ Moves business payload to ODB and deletes it from Redis.
-        """
-        with closing(self.odb.session()) as session:
-            self.kvdb.conn.delete(item.payload_key)
-
-    def check_target(self, item):
-        self.logger.debug('Checking name/target [%s]/[%s]', item.name, item.delivery_key)
-        
-        now_dt = datetime.utcnow()
-        now = now_dt.isoformat()
-        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.tx_id)
-        
-        attempts_made = int(delivery['attempts_made'])
-        retry_repeats = int(delivery['retry_repeats'])
-        
-        with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
-
-            if source_count > target_count:
-                
-                # STATE - in-doubt
-                self._on_in_doubt(item, delivery, now, now_dt, source_count, target_count)
-                
-            else:
-                # The target has confirmed the invocation in an expected time so we
-                # now need to check if it was successful. If it was, this is where it ends,
-                # we move the delivery to the archive and that's it. If it wasn't, we'll try again
-                # as it was originally configured unless it was the last retry.
-
-                
-                # All good, we can stop now.
-                if target_ok:
-                    self.finish_delivery(target_ok, delivery, now, item)
-                    
-                # Not so good, we know there was an error.
-                else:
-                    # Can we try again?
-                    if attempts_made < retry_repeats:
-                        self.retry()
-
-                    # Nope, that was the last attempt.
-                    else:
-                        self.finish_delivery(target_ok, delivery, now, item)
-                    
-    def spawn_invoke_func(self, invoke_func, invoke_args, invoke_kwargs):
-        """ Spawns a greenlet that invokes a target after a short delay - we want to sleep a bit
-        so whoever called us has a chance to release a delivery lock.
-        """
-        spawn_later(0.1, invoke_func, invoke_args, **invoke_kwargs)
-        
-    def spawn_check_target(self, item):
-        """ Spawns a greenlet that checks whether the target replied and acts accordingly.
-        """
-        spawn_later(item.check_after, self.check_target, item)
-        
-    def finish_delivery(self, target_ok, delivery, now, item):
-        
-        if target_ok:
-            delivery['confirmed'] = True
-            msg_prefix = 'Confirmed delivery'
-            log_func = self.logger.info
-            callback_list = item.on_delivery_success
-        else:
-            delivery['confirmed'] = False
-            msg_prefix = 'Delivery failed'
-            log_func = self.logger.warn
-            callback_list = item.on_delivery_failed.split(KVDB.SEPARATOR)
-            
-        msg = '{} after {}/{} attempts, [{}], delivery moved to archive:[{}], expires in {}s ({} UTC)'.format(
-            msg_prefix, delivery['attempts_made'], delivery['retry_repeats'], item.delivery_key, 
-            arch_key, expire_arch_after, expires_arch_time)
-        log_func(msg)
-        
-        cid = new_cid()
-            
-        if callback_list:
-            broker_msg = {}
-            broker_msg['action'] = SERVICE.PUBLISH
-            broker_msg['delivery'] = delivery
-            broker_msg['channel'] = CHANNEL.DELIVERY
-            broker_msg['data_format'] = DATA_FORMAT.JSON
-            
-            for service in callback_list:
-                broker_msg['service'] = service
-                broker_msg['cid'] = new_cid()
-                self.broker_client.invoke_async(broker_msg)
-                    
-# ##############################################################################
-        
-    def on_target_completed(self, target_type, target, delivery, start, end, target_ok, target_self_info, err_info=None):
-        now = datetime.utcnow().isoformat()
-        tx_id = delivery['tx_id']
-        delivery_key = self.get_delivery_key(target_type, target, tx_id)
-        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, tx_id)
-        total_time = str(end - start)
-        
-        with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
-
-            delivery = self.kvdb.conn.hgetall(delivery_key)
-            attempts_made = int(delivery['attempts_made']) + 1
-                        
-            delivery['attempts_made'] = attempts_made
-            delivery['last_attempt_time_start_utc'] = start.isoformat()
-            delivery['last_attempt_time_end_utc'] = end.isoformat()
-            delivery['last_attempt_total_time'] = total_time
-            delivery['last_updated_utc'] = now
-            delivery['target_ok'] = target_ok
-            delivery['target_self_info'] = target_self_info
-            delivery['target_count'] = int(delivery['attempts_made']) + 1
-            
-            if target_ok:
-                self.logger.info('Delivery target OK [{}] in {} after {} attempt(s)'.format(delivery_key, total_time, attempts_made))
-            else:
-                #failed_attempt_list = loads(delivery['failed_attempt_list'])
-                #failed_attempt_list.append(err_info)
-                #delivery['failed_attempt_list'] = dumps(failed_attempt_list)
-                # 
-                # TODO - notify_failure
-                #
-                pass
-
-            self.kvdb.conn.hmset(delivery_key, delivery)            
-                
-            if self.logger.isEnabledFor(TRACE1):
-                self.logger.log(TRACE1, delivery)
-
-# ##############################################################################
-
-    def resubmit(self, tx_id, ignore_missing):
-        """ Resubmits given each task from the list.
-        """ 
-        if not self.kvdb.conn.hexists(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id):
-            msg = 'Could not find task {} in {}'.format(tx_id, KVDB.DELIVERY_IN_DOUBT_LIST_IDX)
-            raise ValueError(msg)
-        
-        in_doubt_member = self.kvdb.conn.hget(KVDB.DELIVERY_IN_DOUBT_LIST_IDX, tx_id)
-        in_doubt_info = in_doubt_info_from_member(in_doubt_member)
-        
-        in_doubt_details_key = self.get_in_doubt_details_key(in_doubt_info['name'])
-        delivery_key = self.get_delivery_key(in_doubt_info['target_type'], in_doubt_info['target'], tx_id)
-        
-        in_doubt_details = self.kvdb.conn.hmget(in_doubt_details_key, delivery_key)[0]
-        if not in_doubt_details:
-            msg = 'Could not resubmit [{}], delivery under [{}] is missing'.format(tx_id, in_doubt_details_key)
-            raise Exception(msg)
-        else:
-            item = DeliveryItem.from_in_doubt_delivery(loads(in_doubt_details))
-            self.register(item, True, in_doubt_details_key, delivery_key, self.get_in_doubt_list_key(item.name), in_doubt_member)
-                
-    def get_batch_info(self, name, batch_size, current_batch, score_min, score_max):
-        """ Returns information regarding how given set of data will be split into
-        smaller batches given maximum number of items on a single batch and min/max member score
-        of the set. Also returns information regarding a current batch - whether it has prev/next batches.
-        """
-        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size, score_min=score_min, score_max=score_max)
-        current = p.page(current_batch)
-        return {
-            'total_results': p.count,
-            'num_batches': p.num_pages,
-            'has_previous': current.has_previous(),
-            'has_next': current.has_next(),
-            'next_batch_number': current.next_page_number(),
-            'previous_batch_number': current.previous_page_number(),
-        }
-    
-# ##############################################################################
-
-    def get_by_target_type(self, target_type):
-        """ Returns delivery names and basic information for a given target type.
-        """
-        return self.kvdb.conn.hgetall('{}{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, target_type))
-    
-    def get_counts(self, name):
-        """ Returns counters for a given delivery by its name. Does not hold onto
-        any locks so the results are precise yet may be off by the time caller receives them.
-        """
-        in_progress_count = 0
-        in_doubt_count = self.kvdb.conn.zcard(self.get_in_doubt_list_key(name))
-        arch_success_count = 0
-        arch_failed_count = 0
-        
-        return in_progress_count, in_doubt_count, arch_success_count, arch_failed_count
-    
-    def get_in_doubt_instance_list(self, name, batch_size, current_batch, score_min, score_max):
-        """ Returns a page from a list of in-doubt delivery tasks.
-        """
-        p = ZSetPaginator(self.kvdb.conn, self.get_in_doubt_list_key(name), batch_size, score_min=score_min, score_max=score_max)
-        current = p.page(current_batch)
-
-        for member in current.object_list:
-            yield in_doubt_info_from_member(member)
-'''

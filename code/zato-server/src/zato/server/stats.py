@@ -12,56 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from contextlib import closing
 from datetime import datetime
-from traceback import format_exc
 
 # dateutil
 from dateutil.rrule import MINUTELY, rrule
 
-# SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-
 # Zato
 from zato.common import KVDB, scheduler_date_time_format
 from zato.common.odb.model import Job, IntervalBasedJob, Service
-from zato.common.odb.query import _service as _service
 
 logger = logging.getLogger(__name__)
-
-def _get_service_by_name(session, cluster_id, name):
-    logger.debug('Looking for name:[{}] in cluster_id:[{}]'.format(name, cluster_id))
-    return _service(session, cluster_id).\
-           filter(Service.name==name).\
-           one()
-
-def add_stats_jobs(cluster_id, odb, stats_jobs):
-    """ Adds one of the interval jobs to the ODB. Note that it isn't being added
-    directly to the scheduler because we want users to be able to fine-tune the job's
-    settings.
-    """
-    with closing(odb.session()) as session:
-        for item in stats_jobs:
-            
-            try:
-                service_id = _get_service_by_name(session, cluster_id, item['service'])[0]
-                
-                now = datetime.utcnow().strftime(scheduler_date_time_format)
-                job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
-                          cluster_id=cluster_id, service_id=service_id)
-                          
-                kwargs = {}
-                for name in('seconds', 'minutes'):
-                    if name in item:
-                        kwargs[name] = item[name]
-                        
-                ib_job = IntervalBasedJob(None, job, **kwargs)
-                
-                session.add(job)
-                session.add(ib_job)
-                session.commit()
-            except IntegrityError, e:
-                session.rollback()
-                msg = 'Caught an IntegrityError, carrying on anyway, e:[{}]]'.format(format_exc(e))
-                logger.debug(msg)
                 
 class MaintenanceTool(object):
     """ A tool for performing maintenance-related tasks, such as deleting the statistics.

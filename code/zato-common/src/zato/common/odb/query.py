@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from functools import wraps
 
 # SQLAlchemy
+from sqlalchemy import func
 from sqlalchemy.sql.expression import case
 
 # Zato
@@ -479,10 +480,22 @@ def _delivery_definition(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(DeliveryDefinitionBase.name)
 
-def delivery_definition_list(session, cluster_id, target_type):
+def delivery_definition_list(session, cluster_id, target_type=None):
     """ Returns a list of delivery definitions for a given target type.
     """
-    return _delivery_definition(session, cluster_id).\
-        filter(DeliveryDefinitionBase.target_type==target_type)
+    def_list = _delivery_definition(session, cluster_id)
+    
+    if target_type:
+        def_list = def_list.\
+            filter(DeliveryDefinitionBase.target_type==target_type)
+        
+    return def_list
+
+# ##############################################################################
+
+def delivery_count_by_state(session, def_id):
+    return session.query(Delivery.state, func.count(Delivery.state)).\
+        filter(Delivery.delivery_def_id==def_id).\
+        group_by(Delivery.state)
 
 # ##############################################################################
