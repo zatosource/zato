@@ -103,7 +103,7 @@ class GetList(_DeliveryService):
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'confirmed_count', 'failed_count')
-        output_optional = ('last_updated_utc',)
+        output_optional = ('last_updated_utc', 'callback_list')
 
     def get_data(self, session, cluster_id, target_type):
         for item in delivery_definition_list(session, cluster_id, target_type):
@@ -117,8 +117,9 @@ class GetList(_DeliveryService):
             }
             
             for name in ('id', 'name', 'expire_after', 'expire_arch_succ_after', 
-                  'expire_arch_fail_after', 'check_after', 'retry_repeats', 'retry_seconds', 'short_def'):
-                out[name] = getattr(item, name)
+                  'expire_arch_fail_after', 'check_after', 'retry_repeats', 'retry_seconds', 'short_def',
+                  'callback_list'):
+                out[name] = getattr(item, name, None)
             
             basic_data = self.delivery_store.get_target_basic_data(item.name)
             for name in ('last_updated_utc', 'total_count', 'in_progress_count', 
