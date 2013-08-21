@@ -63,8 +63,6 @@ class UpdateDeliveryCounters(AdminService):
             counters.get(DELIVERY_STATE.CONFIRMED, 0),
             counters.get(DELIVERY_STATE.FAILED, 0))
         
-        self.invoke(GetCounters.get_name(), {'def_name': self.request.input.def_name})
-
 class UpdateCounters(AdminService):
     """ Asynchronously invokes a services to update counters for each delivery definition in the ODB.
     """

@@ -22,7 +22,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pattern.delivery.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'target', 'target_type', 'short_def', 'total_count', 
-            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count',
+            'in_progress_count', 'in_doubt_count', 'confirmed_count', 'failed_count',
             'last_updated', 'check_after', 'retry_repeats', 'retry_seconds', 'expire_after',
             'expire_arch_succ_after', 'expire_arch_fail_after']);
 })

@@ -38,7 +38,7 @@ class Index(_Index):
         output_required = ('id', 'name', 'callback_list', 'last_updated_utc', 'target', 'target_type', 
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
-            'in_progress_count', 'in_doubt_count', 'arch_success_count', 'arch_failed_count')
+            'in_progress_count', 'in_doubt_count', 'confirmed_count', 'failed_count')
         output_repeated = True
         
     def on_before_append_item(self, item):
