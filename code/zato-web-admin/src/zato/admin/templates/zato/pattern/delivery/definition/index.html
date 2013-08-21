@@ -41,6 +41,7 @@
             'expire_after',
             'expire_arch_succ_after',
             'expire_arch_fail_after',
+            'callback_list',
         ]
     }
     </script>
@@ -93,6 +94,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -119,6 +121,7 @@
                         <td class='ignore'>{{ item.expire_after }}</td>
                         <td class='ignore'>{{ item.expire_arch_succ_after }}</td>
                         <td class='ignore'>{{ item.expire_arch_fail_after }}</td>
+                        <td class='ignore'>{{ item.callback_list }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
