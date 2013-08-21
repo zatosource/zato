@@ -287,17 +287,20 @@ class INVOCATION_TARGET(Attrs):
     SERVICE = 'service'
 
 class DELIVERY_HISTORY_ENTRY(Attrs):
-    SENT_FROM_SOURCE = b'sent-from-source'
-    CONFIRMED_BY_TARGET = b'confirmed-by-target'
     ENTERED_IN_DOUBT = b'entered-in-doubt'
     ENTERED_IN_PROGRESS = b'entered-in-progress'
     ENTERED_CONFIRMED = b'entered-confirmed'
+    ENTERED_FAILED = b'entered-failed'
     NONE = b'(None)'
+    SENT_FROM_SOURCE = b'sent-from-source'
+    TARGET_OK = b'target-ok'
+    TARGET_FAILURE = b'target-failure'
     
 class DELIVERY_STATE(Attrs):
     IN_DOUBT = 'in-doubt'
     IN_PROGRESS = 'in-progress'
-    COMPLETED = 'completed'
+    CONFIRMED = 'completed'
+    FAILED = 'failed'
     UNKNOWN = 'unknown'
     TARGET_OK = 'target-ok'
     TARGET_FAILURE = 'target-failure'

@@ -67,7 +67,7 @@ class _CreateEdit(CreateEdit):
         
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         self.set_input(req)
-        initial_input_dict['callback_list'] = ','.join(elem for elem in self.input.get('callback_list', '').split())
+        initial_input_dict['callback_list'] = ','.join(elem for elem in (self.input.get('callback_list', None) or '').split())
         initial_return_data['name'] = self.input.name
         initial_return_data['target'] = self.input.target
         initial_return_data['short_def'] = '{}-{}-{}'.format(

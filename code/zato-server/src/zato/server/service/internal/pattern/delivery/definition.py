@@ -17,8 +17,6 @@ from traceback import format_exc
 # datetutil
 from dateutil.parser import parse
 
-from memory_profiler import profile
-
 # Zato
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
 from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ, to_json
@@ -193,8 +191,6 @@ class _CreateEdit(_DeliveryService):
                 item.retry_seconds = input.retry_seconds
                 item.cluster_id = input.cluster_id
                 item.callback_list = input.callback_list.encode('utf-8')
-                
-                self.logger.error(to_json(item))
                 
                 session.add(item)
                 session.commit()

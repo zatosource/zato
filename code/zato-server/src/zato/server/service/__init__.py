@@ -634,9 +634,9 @@ class Service(object):
         """
         if to_json_string:
             payload = dumps(payload)
-            
+
         cid = new_cid()
-            
+
         msg = {}
         msg['action'] = SERVICE.PUBLISH
         msg['service'] = name
@@ -645,16 +645,17 @@ class Service(object):
         msg['channel'] = channel
         msg['data_format'] = data_format
         msg['transport'] = transport
-        
+
         self.broker_client.invoke_async(msg, expiration=expiration)
-        
+
         return cid
-    
-    def deliver(self, def_name, request, task_id=None):
-        """ Delivers a payload using the guaranteed delivery mechanism.
+
+    def deliver(self, def_name, payload, task_id=None, *args, **kwargs):
+        """ Uses guaranteed delivery to send payload using a delivery definition known by def_name.
+        *args and **kwargs will be passed directly as-is to the target behind the def_name.
         """
         task_id = task_id or new_cid()
-        self.delivery_store.deliver(self.server.cluster_id, def_name, request, task_id)
+        self.delivery_store.deliver(self.server.cluster_id, def_name, payload, task_id, self.invoke, *args, **kwargs)
         
         return task_id
             
@@ -789,8 +790,8 @@ class Service(object):
             call_handle()
             call_job_hooks()
             
-    @staticmethod
-    def before_add_to_store(logger):
+    @classmethod
+    def before_add_to_store(cls, logger):
         """ Invoked right before the class is added to the service store.
         """
         return True

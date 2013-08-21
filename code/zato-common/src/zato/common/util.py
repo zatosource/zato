@@ -597,3 +597,6 @@ def get_component_name(prefix='parallel'):
     to trace which Zato component issued it.
     """
     return '{}/{}/{}/{}'.format(prefix, current_host(), os.getpid(), current_thread().name)
+
+def dotted_getattr(o, path):
+    return reduce(getattr, path.split('.'), o)
