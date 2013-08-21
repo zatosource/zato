@@ -197,7 +197,7 @@
                         <tr>
                             <td colspan="2">
                                 <hr/>
-                                Delivery callback services <span class="form_hint">(each in its own line)</span>
+                                Delivery callback services <span class="form_hint">(each on its own line)</span>
                             </td>
                         </tr>
                         
@@ -280,6 +280,19 @@
                             <td>
                                 {{ edit_form.expire_arch_fail_after }}
                                 <span class="form_hint">(default: 168 hours = 1 week)</span>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan="2">
+                                <hr/>
+                                Delivery callback services <span class="form_hint">(each on its own line)</span>
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                            <td colspan="2">
+                                {{ edit_form.callback_list }}
                             </td>
                         </tr>
     
