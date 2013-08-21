@@ -42,7 +42,7 @@ class Index(_Index):
         output_repeated = True
         
     def on_before_append_item(self, item):
-        if item.last_updated:
+        if item.last_updated_utc:
             item.last_updated = from_utc_to_user(item.last_updated_utc + '+00:00', self.req.zato.user_profile)
         return item
         
