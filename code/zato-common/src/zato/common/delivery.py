@@ -29,8 +29,8 @@ from paste.util.converters import asbool
 from retools.lock import Lock
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_COUNTERS, DELIVERY_HISTORY_ENTRY, \
-     DELIVERY_STATE, INVOCATION_TARGET, KVDB
+from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_CALLBACK_INVOKER, DELIVERY_COUNTERS, \
+     DELIVERY_HISTORY_ENTRY, DELIVERY_STATE, INVOCATION_TARGET, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
      DeliveryHistory, DeliveryPayload, to_json
@@ -165,7 +165,7 @@ class DeliveryStore(object):
         """
         spawn_later(check_after, self.check_target, item)
         
-    def _invoke_callbacks(self, item, delivery, target_ok, in_doubt):
+    def _invoke_callbacks(self, target, target_type, delivery, target_ok, in_doubt, invoker):
         """ Asynchronously notifies all callback services of the outcome of the target's invocation.
         """
         callback_list = delivery.delivery_def.callback_list
@@ -175,9 +175,9 @@ class DeliveryStore(object):
             'target_ok': target_ok,
             'in_doubt': in_doubt,
             'task_id': delivery.task_id,
-            'payload': item.payload,
-            'target': item.target,
-            'target_type': item.target_type,
+            'target': target,
+            'target_type': target_type,
+            'invoker': invoker
         })
 
         for service in callback_list:
@@ -219,7 +219,7 @@ class DeliveryStore(object):
             
             session.commit()
             
-            self._invoke_callbacks(item, delivery, False, True)
+            self._invoke_callbacks(item.target, item.target_type, delivery, False, True, DELIVERY_CALLBACK_INVOKER.SOURCE)
             
             msg = 'Delivery [%s] is in-doubt (source/target %s/%s)'
             self.logger.warn(msg, item.log_name, delivery.source_count, delivery.target_count)
@@ -256,6 +256,8 @@ class DeliveryStore(object):
             session.add(history)
             
             session.commit()
+            
+            self._invoke_callbacks(item.target, item.target_type, delivery, target_ok, False, DELIVERY_CALLBACK_INVOKER.SOURCE)
                 
             msg = '{} [{}] after {}/{} attempts, archive expires in {} hour(s) ({} UTC)'.format(
                 msg_prefix, item.log_name, delivery.source_count, delivery.delivery_def.retry_repeats, 
@@ -446,3 +448,5 @@ class DeliveryStore(object):
                 session.add(history)
                 
                 session.commit()
+                
+                self._invoke_callbacks(target, target_type, delivery, target_ok, False, DELIVERY_CALLBACK_INVOKER.TARGET)

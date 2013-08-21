@@ -312,6 +312,10 @@ class DELIVERY_COUNTERS(Attrs):
     FAILED = 'failed_count'
     TOTAL = 'total_count'
     
+class DELIVERY_CALLBACK_INVOKER(Attrs):
+    SOURCE = 'source'
+    TARGET = 'target'
+    
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
 
