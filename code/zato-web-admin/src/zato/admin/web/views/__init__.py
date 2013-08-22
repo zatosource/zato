@@ -141,6 +141,7 @@ def change_password(req, service_name, field1='password1', field2='password2', s
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
+    async_invoke = False
     form_prefix = ''
     
     def on_before_append_item(self, item):
@@ -216,7 +217,8 @@ class Index(_BaseView):
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
-            return self.req.zato.client.invoke(self.service_name, self.input)
+            func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
+            return func(self.service_name, self.input)
     
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received

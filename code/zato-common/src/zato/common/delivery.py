@@ -505,3 +505,10 @@ class DeliveryStore(object):
                 self.logger.error(out)
                     
                 yield out
+
+# ##############################################################################
+
+    def resubmit(self, task_id, ignore_missing):
+        """ Resubmits a task by its ID.
+        """
+        delivery = self.get_delivery(task_id)
