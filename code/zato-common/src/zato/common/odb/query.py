@@ -498,4 +498,21 @@ def delivery_count_by_state(session, def_id):
         filter(Delivery.definition_id==def_id).\
         group_by(Delivery.state)
 
+def delivery_list(session, cluster_id, def_name, state, date_from=None, date_to=None):
+    return session.query(
+        DeliveryDefinitionBase.name.label('def_name'),
+        DeliveryDefinitionBase.target_type,
+        Delivery.task_id,
+        Delivery.creation_time.label('creation_time_utc'),
+        Delivery.creation_time.label('in_doubt_created_at_utc'),
+        Delivery.source_count,
+        Delivery.target_count,
+        DeliveryDefinitionBase.retry_repeats,
+        DeliveryDefinitionBase.check_after,
+        DeliveryDefinitionBase.retry_seconds).\
+        filter(DeliveryDefinitionBase.id==Delivery.definition_id).\
+        filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
+        filter(DeliveryDefinitionBase.name==def_name).\
+        filter(Delivery.state==state)
+
 # ##############################################################################
