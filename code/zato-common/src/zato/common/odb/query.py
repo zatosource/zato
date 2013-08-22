@@ -514,7 +514,8 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
         filter(DeliveryDefinitionBase.id==Delivery.definition_id).\
         filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
         filter(DeliveryDefinitionBase.name==def_name).\
-        filter(Delivery.state==state)
+        filter(Delivery.state==state).\
+        order_by(Delivery.last_used.desc())
     
     if start:
         q = q.filter(Delivery.last_used >= start)
