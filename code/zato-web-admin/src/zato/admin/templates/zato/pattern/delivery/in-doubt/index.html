@@ -31,6 +31,7 @@
             'check_after',
             'retry_repeats',
             'retry_seconds',
+            'resubmit_count',
             '_edit',
             '_delete',
             'id',
@@ -62,6 +63,7 @@
                 <th><a href="#">Check after</a></th>
                 <th><a href="#">Retry repeats</a></th>
                 <th><a href="#">Retry seconds</a></th>
+                <th><a href="#">Resubmit count</a></th>
                 <th>&nbsp;</th>
         </thead>
 
@@ -78,6 +80,7 @@
                 <td>{{ item.check_after }}</td>
                 <td>{{ item.retry_repeats }}</td>
                 <td>{{ item.retry_seconds }}</td>
+                <td>{{ item.resubmit_count }}</td>
                 <td><a href="javascript:$.fn.zato.pattern.delivery.in_doubt.resubmit('{{ item.task_id }}', '{{ cluster_id }}')">Resubmit</a></td>
                 <td class='ignore item_id_{{ item.task_id }}'>{{ item.task_id }}</td>
             </tr>

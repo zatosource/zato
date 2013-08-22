@@ -55,7 +55,7 @@ _target_def_class = {
 }
 
 IN_DOUBT_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
-            'source_count', 'target_count', 'retry_repeats', 'check_after', 'retry_seconds')
+            'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
 
 LOCK_TIMEOUT = 0.2
 RETRY_SLEEP = 5
@@ -120,7 +120,7 @@ class DeliveryStore(object):
             
         item.invoke_func('zato.pattern.delivery.dispatch', delivery_req)
         
-    def register_invoke_schedule(self, item):
+    def register_invoke_schedule(self, item, is_resubmit=False):
         """ Registers the task, invokes target and schedules a check to find out if the invocation was OK.
         """
         now = datetime.utcnow()
@@ -131,36 +131,48 @@ class DeliveryStore(object):
         # First, save everything in the ODB
         with closing(self.odb.session()) as session:
             
-            delivery = Delivery()
-            delivery.task_id = item.task_id
-            delivery.creation_time = now
-            delivery.name = '{}/{}/{}'.format(item.def_name, item.target, item.target_type)
-            delivery.definition_id = item.def_id
-            delivery.state = DELIVERY_STATE.IN_PROGRESS_STARTED
-            
-            payload = DeliveryPayload()
-            payload.task_id = item.task_id
-            payload.creation_time = now
-            payload.payload = item.payload
-            payload.delivery = delivery
-            
-            session.add(delivery)
-            session.add(payload)
-            session.add(self._history_sent_from_source(delivery, item, now))
+            if is_resubmit:
+                delivery = session.merge(self.get_delivery(item.task_id))
+                delivery.state = DELIVERY_STATE.IN_PROGRESS_RESUBMITTED
+                delivery.resubmit_count += 1
+                delivery.last_used = now
 
-            # Flush the session so the newly created delivery's definition can be reached ..
-            session.flush()
-            
-            # .. update time the delivery was last used ..
-            delivery.last_used = now
-            delivery.definition.last_used = now
+            else:
+                delivery = Delivery()
+                delivery.task_id = item.task_id
+                delivery.name = '{}/{}/{}'.format(item.def_name, item.target, item.target_type)
+                delivery.creation_time = now
+                delivery.args = item.args
+                delivery.kwargs = item.kwargs
+                delivery.state = DELIVERY_STATE.IN_PROGRESS_STARTED
+                delivery.definition_id = item.def_id
+                
+                payload = DeliveryPayload()
+                payload.task_id = item.task_id
+                payload.creation_time = now
+                payload.payload = item.payload
+                payload.delivery = delivery
+                
+                session.add(delivery)
+                session.add(payload)
+                session.add(self._history_sent_from_source(delivery, item, now))
+    
+                # Flush the session so the newly created delivery's definition can be reached ..
+                session.flush()
+                
+                # .. update time the delivery was last used ..
+                delivery.last_used = now
+                delivery.definition.last_used = now
+                
+            resubmit_count = delivery.resubmit_count
             
             # .. and commit the whole transaction.
             session.commit()
             
         self.logger.info(
-          'Submitting delivery [%s] for target:[%s] (%s/%s), expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
-            item.task_id, item.target, item.def_name, item.target_type, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
+          'Submitting delivery [%s] for target:[%s] (%s/%s), resubmit:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
+            item.task_id, item.target, item.def_name, item.target_type, resubmit_count, 
+            item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
         
         # Invoke the target now that things are in the ODB
         self._invoke_delivery_service(item)
@@ -410,9 +422,8 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-    def deliver(self, cluster_id, def_name, payload, task_id, invoke_func, *args, **kwargs):
-        """ A public method to be invoked by services for delivering payload to a target
-        through a definition.
+    def deliver(self, cluster_id, def_name, payload, task_id, invoke_func, is_resubmit=False, *args, **kwargs):
+        """ A public method to be invoked by services for delivering payload to target through a definition.
         """
         with closing(self.odb.session()) as session:
             delivery_def_base = session.query(DeliveryDefinitionBase).\
@@ -432,7 +443,9 @@ class DeliveryStore(object):
             
             target = definition.target.name
             
-        self.register_invoke_schedule(_item_from_api(delivery_def_base, target, payload, task_id, invoke_func, args, kwargs))
+        self.register_invoke_schedule(
+            _item_from_api(delivery_def_base, target, payload, task_id, invoke_func, args, kwargs),
+            is_resubmit)
 
 # ##############################################################################
         

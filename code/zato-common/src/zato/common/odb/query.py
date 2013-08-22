@@ -507,6 +507,7 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
         Delivery.last_used.label('in_doubt_created_at_utc'),
         Delivery.source_count,
         Delivery.target_count,
+        Delivery.resubmit_count,
         DeliveryDefinitionBase.retry_repeats,
         DeliveryDefinitionBase.check_after,
         DeliveryDefinitionBase.retry_seconds).\

@@ -128,7 +128,11 @@ class Resubmit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_resubmit_request'
         response_elem = 'zato_pattern_delivery_resubmit_response'
-        input_required = (AsIs('task_id'), 'should_ignore_missing')
+        input_required = (AsIs('task_id'),)
 
     def handle(self):
-        self.delivery_store.resubmit(self.request.input.task_id, self.request.input.should_ignore_missing)
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
+            kwargs = loads(delivery.kwargs)
+            kwargs['is_resubmit'] = True
+            self.deliver(delivery.definition.name, delivery.payload.payload, delivery.task_id, *loads(delivery.args), **kwargs)
