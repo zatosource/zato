@@ -231,7 +231,6 @@ class Index(_BaseView):
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
-                print(3344, msg_item, name, value)
             self.items.append(self.on_before_append_item(item))
 
     def _handle_item(self, item):
@@ -256,7 +255,7 @@ class Index(_BaseView):
                 response = self.invoke_admin_service()
                 if response.ok:
                     if output_repeated:
-                        self._handle_item_list(response.data.response)
+                        self._handle_item_list(response.data)
                     else:
                         self._handle_item(response.data)
                 else:

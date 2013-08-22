@@ -64,7 +64,7 @@ class Index(_Index):
         response = self.req.zato.client.invoke(service, req)
 
         if response.ok:
-            out.update(response.data.response)
+            out.update(response.data)
         else:
             logger.warn(response.details)
         

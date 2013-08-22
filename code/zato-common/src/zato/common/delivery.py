@@ -152,6 +152,7 @@ class DeliveryStore(object):
             session.flush()
             
             # .. update time the delivery was last used ..
+            delivery.last_used = now
             delivery.definition.last_used = now
             
             # .. and commit the whole transaction.
@@ -215,6 +216,7 @@ class DeliveryStore(object):
         with closing(self.odb.session()) as session:
             delivery = session.merge(delivery)
             delivery.state = DELIVERY_STATE.IN_DOUBT
+            delivery.last_used = now
             delivery.definition.last_used = now
             
             history = DeliveryHistory()
@@ -254,6 +256,7 @@ class DeliveryStore(object):
                 history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_FAILED
                 
             delivery.state = delivery_state
+            delivery.last_used = now_dt
             delivery.definition.last_used = now_dt
                 
             history = DeliveryHistory()
@@ -279,6 +282,7 @@ class DeliveryStore(object):
     def retry(self, delivery, item, now):
         with closing(self.odb.session()) as session:
             delivery = session.merge(delivery)
+            delivery.last_used = now
             delivery.definition.last_used = now
             delivery.source_count += 1
 
@@ -447,6 +451,7 @@ class DeliveryStore(object):
             with closing(self.odb.session()) as session:
                 delivery = self.get_delivery(task_id)
                 delivery.state = DELIVERY_STATE.IN_PROGRESS_TARGET_OK if target_ok else DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE
+                delivery.last_used = now
                 delivery.definition.last_used = now
                 delivery.target_count += 1
                 
@@ -467,7 +472,7 @@ class DeliveryStore(object):
 # ##############################################################################
 
     def _get_page(self, session, cluster_id, params):
-        return Page(delivery_list(session, cluster_id, params.def_name, DELIVERY_STATE.IN_DOUBT),
+        return Page(delivery_list(session, cluster_id, params.def_name, DELIVERY_STATE.IN_DOUBT, params.start, params.stop),
              page=params.current_batch,
              items_per_page=params.batch_size)
 
