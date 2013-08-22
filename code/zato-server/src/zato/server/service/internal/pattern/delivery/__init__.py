@@ -15,7 +15,7 @@ from zato.common import DATA_FORMAT, DELIVERY_STATE, INVOCATION_TARGET
 from zato.common.odb.query import delivery_count_by_state, delivery_definition_list
 from zato.common.util import dotted_getattr
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 
 dispatch_dict = {
     INVOCATION_TARGET.OUTCONN_AMQP: 'outgoing.amqp.send',
@@ -29,7 +29,7 @@ dispatch_dict = {
 class Dispatch(AdminService):
     """ Dispatches a guaranteed delivery to a concrete target.
     """
-    class SimpleIO(object):
+    class SimpleIO(AdminSIO):
         input_required = (AsIs('task_id'), 'payload', 'target', 'target_type', 'args', 'kwargs')
 
     def handle(self):
@@ -47,7 +47,7 @@ class Dispatch(AdminService):
 class UpdateDeliveryCounters(AdminService):
     """ Update counters of a delivery definition given on input.
     """
-    class SimpleIO(object):
+    class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_update_delivery_counters_request'
         response_elem = 'zato_pattern_delivery_update_delivery_counters_response'
         input_required = ('def_id', 'def_name')
@@ -83,7 +83,7 @@ class UpdateCounters(AdminService):
 class GetCounters(AdminService):
     """ Returns usage counters for a given delivery definition.
     """
-    class SimpleIO(object):
+    class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_get_counters_request'
         response_elem = 'zato_pattern_delivery_get_counters_response'
         input_required = ('def_name',)
@@ -106,7 +106,7 @@ class GetBatchInfo(AdminService):
     """ Returns pagination information for instances of a given delivery definition
     in a specified state and between from/to dates.
     """
-    class SimpleIO(object):
+    class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_get_batch_info_request'
         response_elem = 'zato_pattern_delivery_get_batch_info_response'
         input_required = ('def_name',)
@@ -119,3 +119,16 @@ class GetBatchInfo(AdminService):
         input['current_batch'] = input['current_batch'] or 1
         
         self.response.payload = self.delivery_store.get_batch_info(self.server.cluster_id, input)
+
+# ##############################################################################
+
+class Resubmit(AdminService):
+    """ Resubmits a delivery task.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_resubmit_request'
+        response_elem = 'zato_pattern_delivery_resubmit_response'
+        input_required = (AsIs('task_id'), 'should_ignore_missing')
+
+    def handle(self):
+        self.delivery_store.resubmit(self.request.input.task_id, self.request.input.should_ignore_missing)

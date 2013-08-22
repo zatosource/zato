@@ -10,7 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
 from traceback import format_exc
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web import from_utc_to_user, from_user_to_utc, TARGET_TYPE_HUMAN
@@ -76,13 +80,14 @@ class InDoubtDetails(_Index):
 
 class Resubmit(_CreateEdit):
     url_name = 'pattern-delivery-details-in-doubt-resubmit'
-    service_name = 'zato.pattern.delivery.in-doubt.resubmit'
+    service_name = 'zato.pattern.delivery.resubmit'
+    async_invoke = True
     
     class SimpleIO(_CreateEdit.SimpleIO):
         input_required = ('task_id',)
         
     def success_message(self, item):
-        return 'Successfully resubmitted Tx [{}]'.format(self.input['task_id'])
+        return 'Request to resubmit task [{}] sent successfully, check server logs for details'.format(self.input['task_id'])
 
 def _update_many(req, cluster_id, service, success_msg, failure_msg):
     """ A common function for either resubmitting or deleting one or more tasks.
@@ -90,7 +95,7 @@ def _update_many(req, cluster_id, service, success_msg, failure_msg):
     try:
         for task_id in req.POST.values():
             input_dict = {'task_id':task_id}
-            response = req.zato.client.invoke(service, input_dict)
+            response = req.zato.client.invoke_async(service, input_dict)
             
             if not response.ok:
                 raise Exception(response.details)
@@ -106,14 +111,14 @@ def _update_many(req, cluster_id, service, success_msg, failure_msg):
 def resubmit_many(req, cluster_id):
     """ Resubmits one or more delivery tasks.
     """
-    return _update_many(req, cluster_id, 'zato.pattern.delivery.in-doubt.resubmit',
-        'Tasks resubmitted successfully', 'Could not resubmit tasks')
+    return _update_many(req, cluster_id, 'zato.pattern.delivery.resubmit',
+        'Request sent successfully, check server logs for details', 'Could not resubmit tasks')
 
 @method_allowed('POST')
 def delete_many(req, cluster_id):
     """ Resubmits one or more delivery tasks.
     """
-    return _update_many(req, cluster_id, 'zato.pattern.delivery.in-doubt.delete',
+    return _update_many(req, cluster_id, 'zato.pattern.delivery.delete',
         'Tasks deleted successfully', 'Could not delete tasks')
     
 # ##############################################################################
