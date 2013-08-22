@@ -41,7 +41,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato"><a href="{% url pattern-delivery %}?cluster={{ cluster_id }}&amp;target_type={{ req.zato.args.target_type }}">Guaranteed delivery</a> : {{ req.zato.args.name }} : in-doubt</h2>
+<h2 class="zato"><a href="{% url pattern-delivery %}?cluster={{ cluster_id }}&amp;target_type={{ req.zato.args.target_type }}">Guaranteed delivery</a> : {{ req.zato.args.def_name }} : in-doubt</h2>
 
 {% include "zato/user-message.html" %}
 
