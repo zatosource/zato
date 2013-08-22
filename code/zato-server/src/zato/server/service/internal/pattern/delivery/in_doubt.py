@@ -28,7 +28,7 @@ class GetList(AdminService):
 
     def handle(self):
         input = self.request.input
-        input['batch_size'] = input['batch_size'] or 100
+        input['batch_size'] = input['batch_size'] or 25
         input['current_batch'] = input['current_batch'] or 1
         
         self.response.payload[:] = self.delivery_store.get_in_doubt_instance_list(self.server.cluster_id, input)

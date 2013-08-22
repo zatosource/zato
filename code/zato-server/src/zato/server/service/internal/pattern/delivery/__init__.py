@@ -114,4 +114,8 @@ class GetBatchInfo(AdminService):
         output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
 
     def handle(self):
-        self.response.payload = self.delivery_store.get_batch_info(self.server.cluster_id, self.request.input)
+        input = self.request.input
+        input['batch_size'] = input['batch_size'] or 25
+        input['current_batch'] = input['current_batch'] or 1
+        
+        self.response.payload = self.delivery_store.get_batch_info(self.server.cluster_id, input)
