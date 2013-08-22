@@ -16,6 +16,7 @@ from traceback import format_exc
 from zato.admin.web import from_utc_to_user, from_user_to_utc, TARGET_TYPE_HUMAN
 from zato.admin.web.forms.pattern.delivery.definition import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format, method_allowed
+from zato.common import DELIVERY_STATE
 from zato.common.model import DeliveryItem
 
 logger = logging.getLogger(__name__)
@@ -37,9 +38,9 @@ class Index(_Index):
     output_class = DeliveryItem
     
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('name', 'target_type')
-        input_optional = ('start', 'stop', 'batch_size', 'current_batch')
-        output_required = ('name', 'target_type', 'tx_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
+        input_required = ('def_name',)
+        input_optional = ('batch_size', 'current_batch', 'start', 'stop',)
+        output_required = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
             'source_count', 'target_count', 'retry_repeats', 'check_after', 'retry_seconds')
         output_repeated = True
         
@@ -58,10 +59,14 @@ class Index(_Index):
         out.update(get_js_dt_format(self.req.zato.user_profile))
 
         service = 'zato.pattern.delivery.get-batch-info'
-        req = {key:self.input[key] for key in ('name', 'batch_size', 'current_batch', 'start', 'stop') if self.input.get(key)}
+        req = {key:self.input[key] for key in ('def_name', 'batch_size', 'current_batch', 'start', 'stop') if self.input.get(key)}
+        req['state'] = DELIVERY_STATE.IN_DOUBT
         response = self.req.zato.client.invoke(service, req)
-        
-        out.update(response.data)
+
+        if response.ok:
+            out.update(response.data.response)
+        else:
+            logger.warn(response.details)
         
         return out
 
@@ -74,17 +79,17 @@ class Resubmit(_CreateEdit):
     service_name = 'zato.pattern.delivery.in-doubt.resubmit'
     
     class SimpleIO(_CreateEdit.SimpleIO):
-        input_required = ('tx_id',)
+        input_required = ('task_id',)
         
     def success_message(self, item):
-        return 'Successfully resubmitted Tx [{}]'.format(self.input['tx_id'])
+        return 'Successfully resubmitted Tx [{}]'.format(self.input['task_id'])
 
 def _update_many(req, cluster_id, service, success_msg, failure_msg):
     """ A common function for either resubmitting or deleting one or more tasks.
     """
     try:
-        for tx_id in req.POST.values():
-            input_dict = {'tx_id':tx_id}
+        for task_id in req.POST.values():
+            input_dict = {'task_id':task_id}
             response = req.zato.client.invoke(service, input_dict)
             
             if not response.ok:

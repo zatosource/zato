@@ -103,7 +103,8 @@ urlpatterns = patterns('',
     url(r'^zato/pattern/delivery/definition/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', pattern_delivery_def.Delete(), name=pattern_delivery_def.Delete.url_name),
     url(r'^zato/pattern/delivery/definition/edit/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Edit.url_name),
     
-    url(r'^zato/pattern/delivery/in-doubt/(?P<name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Index(), name=pattern_delivery_in_doubt.Index.url_name),
+    url(r'^zato/pattern/delivery/in-doubt/(?P<def_name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Index(), name=pattern_delivery_in_doubt.Index.url_name),
+    url(r'^zato/pattern/delivery/in-doubt/details/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.InDoubtDetails(), name=pattern_delivery_in_doubt.InDoubtDetails.url_name),
 
     # Security..
 

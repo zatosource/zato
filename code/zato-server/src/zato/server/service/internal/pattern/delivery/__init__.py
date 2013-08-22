@@ -24,6 +24,8 @@ dispatch_dict = {
     INVOCATION_TARGET.SERVICE: 'invoke'
 }
 
+# ##############################################################################
+
 class Dispatch(AdminService):
     """ Dispatches a guaranteed delivery to a concrete target.
     """
@@ -40,10 +42,14 @@ class Dispatch(AdminService):
             **loads(self.request.input.kwargs)
         )
 
+# ##############################################################################
+
 class UpdateDeliveryCounters(AdminService):
     """ Update counters of a delivery definition given on input.
     """
     class SimpleIO(object):
+        request_elem = 'zato_pattern_delivery_update_delivery_counters_request'
+        response_elem = 'zato_pattern_delivery_update_delivery_counters_response'
         input_required = ('def_id', 'def_name')
         
     def handle(self):
@@ -78,6 +84,8 @@ class GetCounters(AdminService):
     """ Returns usage counters for a given delivery definition.
     """
     class SimpleIO(object):
+        request_elem = 'zato_pattern_delivery_get_counters_request'
+        response_elem = 'zato_pattern_delivery_get_counters_response'
         input_required = ('def_name',)
         output_required = ('total', 'in_progress', 'in_doubt', 'confirmed', 'failed')
 
@@ -91,3 +99,19 @@ class GetCounters(AdminService):
         del counters['in-progress']
         
         self.response.payload = counters
+
+# ##############################################################################
+
+class GetBatchInfo(AdminService):
+    """ Returns pagination information for instances of a given delivery definition
+    in a specified state and between from/to dates.
+    """
+    class SimpleIO(object):
+        request_elem = 'zato_pattern_delivery_get_batch_info_request'
+        response_elem = 'zato_pattern_delivery_get_batch_info_response'
+        input_required = ('def_name',)
+        input_optional = ('batch_size', 'current_batch', 'start', 'stop')
+        output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
+
+    def handle(self):
+        self.response.payload = self.delivery_store.get_batch_info(self.server.cluster_id, self.request.input)

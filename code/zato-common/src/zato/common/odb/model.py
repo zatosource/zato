@@ -905,7 +905,7 @@ class DeliveryDefinitionBase(Base):
     __mapper_args__ = {'polymorphic_on': 'target_type'}
     
     id = Column(Integer, Sequence('deliv_def_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
+    name = Column(String(200), nullable=False, index=True)
     short_def = Column(String(200), nullable=False)
     last_used = Column(DateTime(), nullable=True)
     
@@ -946,6 +946,7 @@ class Delivery(Base):
 
     name = Column(String(200), nullable=False)    
     creation_time = Column(DateTime(), nullable=False)
+    last_used = Column(DateTime(), nullable=True)
     
     state = Column(String(200), nullable=False, index=True)
     

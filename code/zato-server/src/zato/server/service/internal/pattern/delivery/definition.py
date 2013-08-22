@@ -147,8 +147,6 @@ class _CreateEdit(_DeliveryService):
     _error_msg = None
     
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_pattern_delivery_definition_create_request'
-        response_elem = 'zato_pattern_delivery_definition_create_response'
         input_required = ('cluster_id', 'target', 'target_type', 'expire_after', 
             'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds',)
@@ -224,6 +222,8 @@ class Create(_CreateEdit):
     _error_msg = 'Could not create the definition, e:[{}]'
     
     class SimpleIO(_CreateEdit.SimpleIO):
+        request_elem = 'zato_pattern_delivery_definition_create_request'
+        response_elem = 'zato_pattern_delivery_definition_create_response'
         input_required = ('name',) + _CreateEdit.SimpleIO.input_required
         
     def _get_item(self, _ignored1, target_def_class, _ignored2):
@@ -238,6 +238,8 @@ class Edit(_CreateEdit):
     _error_msg = 'Could not update the definition, e:[{}]'
     
     class SimpleIO(_CreateEdit.SimpleIO):
+        request_elem = 'zato_pattern_delivery_definition_edit_request'
+        response_elem = 'zato_pattern_delivery_definition_edit_response'
         input_required = ('id',) + _CreateEdit.SimpleIO.input_required
         
     def _get_item(self, session, target_def_class, input):
