@@ -35,18 +35,22 @@ class Index(_Index):
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'target_type')
-        output_required = ('id', 'name', 'callback_list', 'last_updated_utc', 'target', 'target_type', 
+        output_required = ('id', 'name', 'callback_list', 'last_updated_utc', 'last_used_utc', 'target', 'target_type', 
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'confirmed_count', 'failed_count')
         output_repeated = True
         
     def on_before_append_item(self, item):
-        if item.callback_list:
+        if getattr(item, 'callback_list', None):
             item.callback_list = '\n'.join(item.callback_list.split(','))
             
-        if item.last_updated_utc:
-            item.last_updated = from_utc_to_user(item.last_updated_utc + '+00:00', self.req.zato.user_profile)
+        for name_utc in('last_updated_utc', 'last_used_utc'):
+            value = getattr(item, name_utc, None)
+            if value:
+                name = name_utc.replace('_utc', '')
+                setattr(item, name, from_utc_to_user(value + '+00:00', self.req.zato.user_profile))
+            
         return item
         
     def handle(self):

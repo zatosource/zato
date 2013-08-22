@@ -22,7 +22,7 @@ from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STAT
 from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ, to_json
 from zato.common.odb.query import delivery_definition_list, out_jms_wmq, out_jms_wmq_by_name
 from zato.common.util import datetime_to_seconds
-from zato.server.service import AsIs, Boolean, CSV, Integer
+from zato.server.service import AsIs, Boolean, CSV, Integer, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 
 _target_query_by_id = {
@@ -103,7 +103,7 @@ class GetList(_DeliveryService):
             'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
             'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
             'in_progress_count', 'in_doubt_count', 'confirmed_count', 'failed_count')
-        output_optional = ('last_updated_utc', 'callback_list')
+        output_optional = (UTC('last_updated_utc'), UTC('last_used_utc'), 'callback_list')
 
     def get_data(self, session, cluster_id, target_type):
         for item in delivery_definition_list(session, cluster_id, target_type):
@@ -118,8 +118,12 @@ class GetList(_DeliveryService):
             
             for name in ('id', 'name', 'expire_after', 'expire_arch_succ_after', 
                   'expire_arch_fail_after', 'check_after', 'retry_repeats', 'retry_seconds', 'short_def',
-                  'callback_list'):
+                  'callback_list', 'last_used_utc'):
                 out[name] = getattr(item, name, None)
+                
+            last_used = getattr(item, 'last_used', None)
+            if last_used:
+                out['last_used_utc'] = last_used.isoformat()
             
             basic_data = self.delivery_store.get_target_basic_data(item.name)
             for name in ('last_updated_utc', 'total_count', 'in_progress_count', 

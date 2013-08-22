@@ -907,6 +907,7 @@ class DeliveryDefinitionBase(Base):
     id = Column(Integer, Sequence('deliv_def_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     short_def = Column(String(200), nullable=False)
+    last_used = Column(DateTime(), nullable=True)
     
     target_type = Column(String(200), nullable=False)
     callback_list = Column(LargeBinary(10000), nullable=True)
@@ -942,17 +943,17 @@ class Delivery(Base):
     
     id = Column(Integer, Sequence('deliv_seq'), primary_key=True)
     task_id = Column(String(64), unique=True, nullable=False, index=True)
-    
+
+    name = Column(String(200), nullable=False)    
     creation_time = Column(DateTime(), nullable=False)
-    name = Column(String(200), nullable=False)
     
     state = Column(String(200), nullable=False, index=True)
     
     source_count = Column(Integer, nullable=False, default=1)
     target_count = Column(Integer, nullable=False, default=0)
     
-    delivery_def_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    delivery_def = relationship(DeliveryDefinitionBase, backref=backref('delivery_list', order_by=creation_time, cascade='all, delete, delete-orphan'))
+    definition_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    definition = relationship(DeliveryDefinitionBase, backref=backref('delivery_list', order_by=creation_time, cascade='all, delete, delete-orphan'))
 
 class DeliveryPayload(Base):
     """ A guaranteed delivery's payload.
