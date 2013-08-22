@@ -27,4 +27,8 @@ class GetList(AdminService):
         output_repeated = True
 
     def handle(self):
-        self.response.payload[:] = self.delivery_store.get_in_doubt_instance_list(self.server.cluster_id, self.request.input)
+        input = self.request.input
+        input['batch_size'] = input['batch_size'] or 100
+        input['current_batch'] = input['current_batch'] or 1
+        
+        self.response.payload[:] = self.delivery_store.get_in_doubt_instance_list(self.server.cluster_id, input)
