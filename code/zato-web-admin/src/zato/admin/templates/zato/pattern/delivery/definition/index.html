@@ -32,6 +32,7 @@
             'arch_success_count',
             'arch_failed_count',
             'last_updated',
+            'last_used',
             '_edit',
             '_delete',
             'id',
@@ -79,7 +80,8 @@
                         <th><a href="#">In-doubt</a></th>
                         <th><a href="#">Arch. success</a></th>
                         <th><a href="#">Arch. failed</a></th>
-                        <th><a href="#">Last updated</a></th>
+                        <th><a href="#">Counters updated</a></th>
+                        <th><a href="#">Last used</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -112,6 +114,7 @@
                         <td>{{ item.confirmed_count }} <a href="{% url pattern-delivery-in-doubt-index item.name item.target_type item.target cluster_id %}">(list)</a></td>
                         <td>{{ item.failed_count }} <a href="{% url pattern-delivery-in-doubt-index item.name item.target_type item.target cluster_id %}">(list)</a></td>
                         <td>{% if item.last_updated %}{{ item.last_updated }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
+                        <td>{% if item.last_used %}{{ item.last_used }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
                         <td><a href="javascript:$.fn.zato.pattern.delivery.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pattern.delivery.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

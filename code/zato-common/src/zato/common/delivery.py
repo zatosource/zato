@@ -133,7 +133,7 @@ class DeliveryStore(object):
             delivery.task_id = item.task_id
             delivery.creation_time = now
             delivery.name = '{}/{}/{}'.format(item.def_name, item.target, item.target_type)
-            delivery.delivery_def_id = item.def_id
+            delivery.definition_id = item.def_id
             delivery.state = DELIVERY_STATE.IN_PROGRESS_STARTED
             
             payload = DeliveryPayload()
@@ -145,7 +145,14 @@ class DeliveryStore(object):
             session.add(delivery)
             session.add(payload)
             session.add(self._history_sent_from_source(delivery, item, now))
+
+            # Flush the session so the newly created delivery's definition can be reached ..
+            session.flush()
             
+            # .. update time the delivery was last used ..
+            delivery.definition.last_used = now
+            
+            # .. and commit the whole transaction.
             session.commit()
             
         self.logger.info(
@@ -168,7 +175,7 @@ class DeliveryStore(object):
     def _invoke_callbacks(self, target, target_type, delivery, target_ok, in_doubt, invoker):
         """ Asynchronously notifies all callback services of the outcome of the target's invocation.
         """
-        callback_list = delivery.delivery_def.callback_list
+        callback_list = delivery.definition.callback_list
         callback_list = callback_list.split(',') or []
         
         payload = dumps({
@@ -206,6 +213,7 @@ class DeliveryStore(object):
         with closing(self.odb.session()) as session:
             delivery = session.merge(delivery)
             delivery.state = DELIVERY_STATE.IN_DOUBT
+            delivery.definition.last_used = now
             
             history = DeliveryHistory()
             history.task_id = delivery.task_id
@@ -233,17 +241,18 @@ class DeliveryStore(object):
             if target_ok:
                 msg_prefix = 'Confirmed delivery'
                 log_func = self.logger.info
-                expires = delivery.delivery_def.expire_arch_succ_after
+                expires = delivery.definition.expire_arch_succ_after
                 delivery_state = DELIVERY_STATE.CONFIRMED
                 history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_CONFIRMED
             else:
                 msg_prefix = 'Delivery failed'
                 log_func = self.logger.warn
-                expires = delivery.delivery_def.expire_arch_fail_after
+                expires = delivery.definition.expire_arch_fail_after
                 delivery_state = DELIVERY_STATE.FAILED
                 history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_FAILED
                 
             delivery.state = delivery_state
+            delivery.definition.last_used = now_dt
                 
             history = DeliveryHistory()
             history.task_id = delivery.task_id
@@ -260,14 +269,15 @@ class DeliveryStore(object):
             self._invoke_callbacks(item.target, item.target_type, delivery, target_ok, False, DELIVERY_CALLBACK_INVOKER.SOURCE)
                 
             msg = '{} [{}] after {}/{} attempts, archive expires in {} hour(s) ({} UTC)'.format(
-                msg_prefix, item.log_name, delivery.source_count, delivery.delivery_def.retry_repeats, 
+                msg_prefix, item.log_name, delivery.source_count, delivery.definition.retry_repeats, 
                 expires, now_dt + timedelta(hours=expires))
             
             log_func(msg)
             
-    def retry(self, delivery, item):
+    def retry(self, delivery, item, now):
         with closing(self.odb.session()) as session:
             delivery = session.merge(delivery)
+            delivery.definition.last_used = now
             delivery.source_count += 1
 
             # This is needed as a separate thing because we want to sleep a bit
@@ -323,7 +333,7 @@ class DeliveryStore(object):
                 else:
                     # Can we try again?
                     if delivery.source_count < item.retry_repeats:
-                        self.retry(delivery, item)
+                        self.retry(delivery, item, now)
 
                     # Nope, that was the last attempt.
                     else:
@@ -435,6 +445,7 @@ class DeliveryStore(object):
             with closing(self.odb.session()) as session:
                 delivery = self.get_delivery(task_id)
                 delivery.state = DELIVERY_STATE.IN_PROGRESS_TARGET_OK if target_ok else DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE
+                delivery.definition.last_used = now
                 delivery.target_count += 1
                 
                 history = DeliveryHistory()

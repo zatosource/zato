@@ -495,7 +495,7 @@ def delivery_definition_list(session, cluster_id, target_type=None):
 
 def delivery_count_by_state(session, def_id):
     return session.query(Delivery.state, func.count(Delivery.state)).\
-        filter(Delivery.delivery_def_id==def_id).\
+        filter(Delivery.definition_id==def_id).\
         group_by(Delivery.state)
 
 # ##############################################################################
