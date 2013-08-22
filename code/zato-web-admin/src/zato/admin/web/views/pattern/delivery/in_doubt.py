@@ -45,7 +45,7 @@ class Index(_Index):
         input_required = ('def_name',)
         input_optional = ('batch_size', 'current_batch', 'start', 'stop',)
         output_required = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
-            'source_count', 'target_count', 'retry_repeats', 'check_after', 'retry_seconds')
+            'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
         output_repeated = True
         
     def on_before_append_item(self, item):

@@ -946,7 +946,12 @@ class Delivery(Base):
 
     name = Column(String(200), nullable=False)    
     creation_time = Column(DateTime(), nullable=False)
+    
+    args = Column(LargeBinary(1000000), nullable=True)
+    kwargs = Column(LargeBinary(1000000), nullable=True)
+    
     last_used = Column(DateTime(), nullable=True)
+    resubmit_count = Column(Integer, nullable=False, default=0)
     
     state = Column(String(200), nullable=False, index=True)
     

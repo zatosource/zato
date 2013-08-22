@@ -655,7 +655,7 @@ class Service(object):
         *args and **kwargs will be passed directly as-is to the target behind the def_name.
         """
         task_id = task_id or new_cid()
-        self.delivery_store.deliver(self.server.cluster_id, def_name, payload, task_id, self.invoke, *args, **kwargs)
+        self.delivery_store.deliver(self.server.cluster_id, def_name, payload, task_id, self.invoke, kwargs.pop('is_resubmit', False), *args, **kwargs)
         
         return task_id
             
