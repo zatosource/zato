@@ -106,7 +106,9 @@ urlpatterns = patterns('',
     url(r'^zato/pattern/delivery/in-doubt/(?P<def_name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Index(), name=pattern_delivery_in_doubt.Index.url_name),
     url(r'^zato/pattern/delivery/in-doubt/details/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.InDoubtDetails(), name=pattern_delivery_in_doubt.InDoubtDetails.url_name),
     url(r'^zato/pattern/delivery/in-doubt/resubmit-many/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.resubmit_many, name='pattern-delivery-details-in-doubt-resubmit-many'),
+    url(r'^zato/pattern/delivery/in-doubt/delete-many/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.delete_many, name='pattern-delivery-details-in-doubt-delete-many'),
     url(r'^zato/pattern/delivery/in-doubt/resubmit/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Resubmit(), name=pattern_delivery_in_doubt.Resubmit.url_name),
+    url(r'^zato/pattern/delivery/in-doubt/delete/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Delete(), name=pattern_delivery_in_doubt.Delete.url_name),
 
     # Security..
 

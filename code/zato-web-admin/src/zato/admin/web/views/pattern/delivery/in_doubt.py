@@ -89,6 +89,17 @@ class Resubmit(_CreateEdit):
     def success_message(self, item):
         return 'Request to resubmit task [{}] sent successfully, check server logs for details'.format(self.input['task_id'])
 
+class Delete(_CreateEdit):
+    url_name = 'pattern-delivery-details-in-doubt-delete'
+    service_name = 'zato.pattern.delivery.delete'
+    async_invoke = True
+    
+    class SimpleIO(_CreateEdit.SimpleIO):
+        input_required = ('task_id',)
+        
+    def success_message(self, item):
+        return 'Request to delete task [{}] sent successfully, check server logs for details'.format(self.input['task_id'])
+
 def _update_many(req, cluster_id, service, success_msg, failure_msg):
     """ A common function for either resubmitting or deleting one or more tasks.
     """
