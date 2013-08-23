@@ -28,6 +28,9 @@ from paste.util.converters import asbool
 # retools
 from retools.lock import Lock
 
+# SQLAlchemy
+from sqlalchemy.orm.query import orm_exc
+
 # WebHelpers
 from webhelpers.paginate import Page
 
@@ -320,14 +323,19 @@ class DeliveryStore(object):
         self.logger.debug('Checking name/target/task_id [%s]', item.log_name)
         
         if self.is_deleted(item.def_name):
-            self.logger.info('Stopping [%s] (is_deleted->True)', item.log_name)
+            self.logger.info('Stopping [%s] (definition.is_deleted->True)', item.log_name)
             return
         
         now_dt = datetime.utcnow()
         now = now_dt.isoformat()
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.task_id)
         
-        delivery = self.get_delivery(item.task_id)
+        try:
+            delivery = self.get_delivery(item.task_id)
+        except orm_exc.NoResultFound, e:
+            # Apparently the delivery was deleted since the last time we were scheduled to run
+            self.logger.info('Stopping [%s] (NoResultFound->True)', item.log_name)
+            return
         
         with Lock(lock_name, self.delivery_lock_timeout, LOCK_TIMEOUT, self.kvdb.conn):
 
