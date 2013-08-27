@@ -179,7 +179,7 @@ class GetHistoryList(AdminService):
         
         # 0:00:00
         if '.' not in delta:
-            return delta
+            return delta + '.00'
         
         delta = delta.rstrip('0')
         split = delta.split('.')

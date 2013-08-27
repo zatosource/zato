@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from hashlib import sha1, sha256
 from json import dumps, loads
 
 # Zato
@@ -44,10 +45,13 @@ class GetDetails(AdminService):
         input_optional = ('batch_size', 'current_batch', 'start', 'stop')
         output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'in_doubt_created_at_utc', 
             'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
-        output_optional = ('payload', 'args', 'kwargs', 'target')
+        output_optional = ('payload', 'args', 'kwargs', 'target', 'payload_sha1', 'payload_sha256')
         output_repeated = True
 
     def handle(self):
         with closing(self.odb.session()) as session:
             instance = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
             self.response.payload = self.delivery_store.get_delivery_instance(self.request.input.task_id, instance.definition.__class__)
+            if self.response.payload.payload:
+                self.response.payload.payload_sha1 = sha1(self.response.payload.payload).hexdigest()
+                self.response.payload.payload_sha256 = sha256(self.response.payload.payload).hexdigest()

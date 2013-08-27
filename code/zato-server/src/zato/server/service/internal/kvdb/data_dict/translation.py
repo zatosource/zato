@@ -13,7 +13,7 @@ from hashlib import sha1, sha256
 
 # Zato
 from zato.common import KVDB, ZatoException
-from zato.common.util import grouper, multikeysort
+from zato.common.util import hexlify, multikeysort
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
@@ -168,7 +168,7 @@ class Translate(AdminService):
         if result:
             self.response.payload.value2 = result.decode('utf-8')
             self.response.payload.repr = repr(result)
-            self.response.payload.hex = ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, result.encode('hex'))])
+            self.response.payload.hex = hexlify(result)
             self.response.payload.sha1 = sha1(result).hexdigest()
             self.response.payload.sha256 = sha256(result).hexdigest()
 
