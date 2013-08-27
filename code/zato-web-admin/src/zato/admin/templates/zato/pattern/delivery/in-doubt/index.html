@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Guaranteed delivery{% endblock %}
+{% block html_title %}In-doubt{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -73,7 +73,7 @@
             <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.task_id }}'>
                 <td class='numbering'>&nbsp;</td>
                 <td class="impexp"><input type="checkbox" /></td>
-                <td><a href="{% url pattern-delivery-details-in-doubt item.task_id cluster_id %}">{{ item.task_id }}</a></td>
+                <td><a href="{% url pattern-delivery-in-doubt-details item.task_id cluster_id %}">{{ item.task_id }}</a></td>
                 <td>{{ item.creation_time }}</td>
                 <td>{{ item.in_doubt_created_at }}</td>
                 <td>{{ item.source_count }}/{{ item.target_count }}</td>

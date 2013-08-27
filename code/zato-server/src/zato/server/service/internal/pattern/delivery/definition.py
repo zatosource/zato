@@ -24,6 +24,7 @@ from zato.common.odb.query import delivery_definition_list, out_jms_wmq, out_jms
 from zato.common.util import datetime_to_seconds
 from zato.server.service import AsIs, Boolean, CSV, Integer, UTC
 from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal.pattern.delivery import target_def_class
 
 _target_query_by_id = {
     INVOCATION_TARGET.OUTCONN_WMQ: out_jms_wmq
@@ -31,10 +32,6 @@ _target_query_by_id = {
 
 _target_query_by_name = {
     INVOCATION_TARGET.OUTCONN_WMQ: out_jms_wmq_by_name
-}
-
-_target_def_class = {
-    INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
 
 # ##############################################################################
@@ -174,10 +171,8 @@ class _CreateEdit(_DeliveryService):
                 raise Exception('Target [{}] ({}) does not exist on this cluster'.format(
                     input.target, input.target_type))
                 
-            target_def_class = _target_def_class[target_type]
-            
             try:
-                item = self._get_item(session, target_def_class, input)
+                item = self._get_item(session, target_def_class[target_type], input)
                         
                 item.target_id = target.id
                 item.short_def = '{}-{}-{}'.format(input.check_after, input.retry_repeats, input.retry_seconds)

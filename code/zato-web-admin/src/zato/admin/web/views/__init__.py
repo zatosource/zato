@@ -282,7 +282,7 @@ class Index(_BaseView):
         except Exception, e:
             return HttpResponseServerError(format_exc(e))
 
-    def handle(self, req, *args, **kwargs):
+    def handle(self, req=None, *args, **kwargs):
         raise NotImplementedError('Must be overloaded by a subclass')
     
 class CreateEdit(_BaseView):
@@ -332,7 +332,7 @@ class CreateEdit(_BaseView):
                             else:
                                 value = str(value)
                         return_data[name] = value
-                    
+                        
                 return HttpResponse(dumps(return_data), mimetype='application/javascript')
             else:
                 msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)

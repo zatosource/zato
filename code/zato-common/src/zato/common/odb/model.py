@@ -986,6 +986,7 @@ class DeliveryHistory(Base):
     entry_type = Column(String(64), nullable=False)
     entry_time = Column(DateTime(), nullable=False, index=True)
     entry_ctx = Column(LargeBinary(1000000), nullable=False)
+    resubmit_count = Column(Integer, nullable=False, default=0) # Copy of delivery.resubmit_count so it's known for each history entry
     
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     delivery = relationship(Delivery, backref=backref('history_list', order_by=entry_time, cascade='all, delete, delete-orphan'))

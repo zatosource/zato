@@ -525,4 +525,36 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
         
     return q
 
+def delivery(session, task_id, target_def_class):
+    return session.query(
+        target_def_class.name.label('def_name'),
+        target_def_class.target_type,
+        Delivery.task_id,
+        Delivery.creation_time.label('creation_time_utc'),
+        Delivery.last_used.label('in_doubt_created_at_utc'),
+        Delivery.source_count,
+        Delivery.target_count,
+        Delivery.resubmit_count,
+        target_def_class.retry_repeats,
+        target_def_class.check_after,
+        target_def_class.retry_seconds,
+        DeliveryPayload.payload,
+        Delivery.args,
+        Delivery.kwargs,
+        target_def_class.target,
+        ).\
+        filter(target_def_class.id==Delivery.definition_id).\
+        filter(Delivery.task_id==task_id).\
+        filter(DeliveryPayload.task_id==Delivery.task_id)
+
+@needs_columns
+def delivery_history_list(session, task_id, needs_columns=True):
+    return session.query(
+        DeliveryHistory.entry_type,
+        DeliveryHistory.entry_time,
+        DeliveryHistory.entry_ctx,
+        DeliveryHistory.resubmit_count).\
+        filter(DeliveryHistory.task_id==task_id).\
+        order_by(DeliveryHistory.entry_time.desc())
+
 # ##############################################################################
