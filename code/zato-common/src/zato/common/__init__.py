@@ -293,6 +293,7 @@ class DELIVERY_HISTORY_ENTRY(Attrs):
     ENTERED_FAILED = b'entered-failed'
     NONE = b'(None)'
     SENT_FROM_SOURCE = b'sent-from-source'
+    SENT_FROM_SOURCE_RESUBMIT = b'sent-from-source-resubmit'
     TARGET_OK = b'target-ok'
     TARGET_FAILURE = b'target-failure'
     

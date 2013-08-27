@@ -1,0 +1,184 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}In-doubt details{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block extra_js %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pattern/delivery/in-doubt/details.js"></script>
+
+    <script>
+    </script>
+
+{% endblock %}
+
+{% block content %}
+<h2 class="zato"><a href="{% url pattern-delivery %}?cluster={{ cluster_id }}&amp;target_type={{ req.zato.args.target_type }}">Guaranteed delivery</a> : {{ req.zato.args.def_name }} : in-doubt</h2>
+
+{% include "zato/user-message.html" %}
+
+<div id="markup">
+    <table id="data-table">
+        <tr>
+            <td style="text-align:right" colspan="2">
+                <form action="" method="post" id="lb-validate-save">
+                    <button id="delete1" name="delete1" type="submit">Delete</button>
+                    &nbsp;|&nbsp;
+                    <button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>
+                </form>
+            </td>
+        </tr>
+        
+        <tr>
+            <td colspan="2">
+                <hr/>
+            </td>
+        </tr>
+        <tr>
+            <td class='inline_header' colspan="2">Overview</td>
+        </tr>
+        <tr>
+            <td>
+                <div class="item-details-body">
+                    <table style="width:100%">
+                        <tr>
+                            <td style="width:15%">
+                                <table style="width:100%" >
+                                    <tr>
+                                        <td class="inline_header">Task</td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ item.task_id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="inline_header">Definition/target</td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ item.def_name }}/{{ item.target }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="inline_header">Created/in-doubt since</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            {{ item.creation_time }}
+                                            <br/>
+                                            {{ item.in_doubt_created_at }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class='inline_header'>Source/target count</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            {{ item.source_count}}/{{ item.target_count }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class='inline_header'>Check after/retry repeats/retry seconds/resubmit #</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            {{ item.check_after }}/{{ item.retry_repeats }}/{{ item.retry_seconds }}/{{ item.resubmit_count }}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+
+                            <td>
+                                <table style="width:100%">
+                                    <tr>
+                                        <td class='inline_header'>History</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <table style="width:100%;border-spacing:2px">
+                                                <tr>
+                                                    <td class="inline_header" style="width:5%">RS#</td>
+                                                    <td class="inline_header" style="width:15%">TS</td>
+                                                    <td class="inline_header" style="width:15%">Δ</td>
+                                                    <td class="inline_header" style="width:15%">State</td>
+                                                    <td class="inline_header" style="width:50%">Ctx</td>
+                                                </tr>
+                                                {% for item in history %}
+                                                    <tr>
+                                                        <td>{{ item.resubmit_count }}</td>
+                                                        <td>{{ item.entry_time }}</td>
+                                                        <td>{{ item.delta }}</td>
+                                                        <td>{{ item.entry_type }}</td>
+                                                        <td>{{ item.entry_ctx }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div> <!-- class="item-details-body" -->
+            </td>
+        </tr>
+        
+        <tr>
+            <td class='inline_header' colspan="2">Args</td>
+        </tr>
+        <tr>
+            <td>
+            </td>
+        </tr>
+        
+        <tr>
+            <td class='inline_header' colspan="2">Kwargs</td>
+        </tr>
+        <tr>
+            <td>
+            </td>
+        </tr>
+        
+        <tr>
+            <td class='inline_header' colspan="2">Payload</td>
+        </tr>
+        <tr>
+            <td>
+            </td>
+        </tr>
+        
+        <tr>
+            <td class='inline_header' colspan="2">Payload in hex</td>
+        </tr>
+        <tr>
+            <td>
+            </td>
+        </tr>
+        
+        <tr>
+            <td colspan="2">
+                <hr/>
+            </td>
+        </tr>
+        
+        <tr>
+            <td style="text-align:right" colspan="2">
+                <form action="" method="post" id="lb-validate-save">
+                    <button id="delete1" name="delete1" type="submit">Delete</button>
+                    &nbsp;|&nbsp;
+                    <button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>
+                </form>
+            </td>
+        </tr>
+        </tr>
+        
+    </table>
+</div>
+
+
+{% endblock %}

@@ -40,7 +40,7 @@ from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_CALLBACK_INVOKER, DELIVER
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
      DeliveryHistory, DeliveryPayload, to_json
-from zato.common.odb.query import delivery_list
+from zato.common.odb.query import delivery, delivery_list
 from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator
 
@@ -59,6 +59,8 @@ _target_def_class = {
 
 IN_DOUBT_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
             'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
+
+PAYLOAD_KEYS = IN_DOUBT_KEYS + ('payload', 'args', 'kwargs', 'target')
 
 LOCK_TIMEOUT = 0.2
 RETRY_SLEEP = 5
@@ -97,13 +99,14 @@ class DeliveryStore(object):
         
 # ##############################################################################
 
-    def _history_sent_from_source(self, delivery, item, now):
+    def _history_from_source(self, delivery, item, now, entry_type):
         history = DeliveryHistory()
         history.task_id = item.task_id
-        history.entry_type = DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE
+        history.entry_type = entry_type
         history.entry_time = now
         history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
         history.delivery = delivery
+        history.resubmit_count = delivery.resubmit_count
         
         return history
 
@@ -139,7 +142,9 @@ class DeliveryStore(object):
                 delivery.state = DELIVERY_STATE.IN_PROGRESS_RESUBMITTED
                 delivery.resubmit_count += 1
                 delivery.last_used = now
-
+                
+                session.add(self._history_from_source(delivery, item, now, DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE_RESUBMIT))
+                
             else:
                 delivery = Delivery()
                 delivery.task_id = item.task_id
@@ -158,7 +163,7 @@ class DeliveryStore(object):
                 
                 session.add(delivery)
                 session.add(payload)
-                session.add(self._history_sent_from_source(delivery, item, now))
+                session.add(self._history_from_source(delivery, item, now, DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE))
     
                 # Flush the session so the newly created delivery's definition can be reached ..
                 session.flush()
@@ -240,6 +245,7 @@ class DeliveryStore(object):
             history.entry_time = now
             history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
             history.delivery = delivery
+            history.resubmit_count = delivery.resubmit_count
             
             session.add(delivery)
             session.add(history)
@@ -280,6 +286,7 @@ class DeliveryStore(object):
             history.entry_time = now_dt
             history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
             history.delivery = delivery
+            history.resubmit_count = delivery.resubmit_count
             
             session.add(delivery)
             session.add(history)
@@ -482,6 +489,7 @@ class DeliveryStore(object):
                 history.entry_time = now
                 history.entry_ctx = entry_ctx
                 history.delivery = delivery
+                history.resubmit_count = delivery.resubmit_count
                 
                 session.add(delivery)
                 session.add(history)
@@ -526,10 +534,17 @@ class DeliveryStore(object):
                 self.logger.error(out)
                     
                 yield out
+                
+    def get_delivery_instance(self, task_id, target_def_class):
+        """ Returns an instance by its task's ID.
+        """
+        with closing(self.odb.session()) as session:
+            out = delivery(session, task_id, target_def_class).\
+                   one()
+            out = dict(zip(PAYLOAD_KEYS, out))
+            for name in('creation_time_utc', 'in_doubt_created_at_utc'):
+                out[name] = out[name].isoformat()
+                
+            return out
 
 # ##############################################################################
-
-    def resubmit(self, task_id, ignore_missing):
-        """ Resubmits a task by its ID.
-        """
-        delivery = self.get_delivery(task_id)

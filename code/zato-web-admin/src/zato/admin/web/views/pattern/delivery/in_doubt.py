@@ -25,6 +25,12 @@ from zato.common.model import DeliveryItem
 
 logger = logging.getLogger(__name__)
 
+def _drop_utc(item, req):
+    item.creation_time = from_utc_to_user(item.creation_time_utc + '+00:00', req.zato.user_profile)
+    item.in_doubt_created_at = from_utc_to_user(item.in_doubt_created_at_utc + '+00:00', req.zato.user_profile)
+    
+    return item
+
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
@@ -49,9 +55,7 @@ class Index(_Index):
         output_repeated = True
         
     def on_before_append_item(self, item):
-        item.creation_time = from_utc_to_user(item.creation_time_utc + '+00:00', self.req.zato.user_profile)
-        item.in_doubt_created_at = from_utc_to_user(item.in_doubt_created_at_utc + '+00:00', self.req.zato.user_profile)
-        return item
+        return _drop_utc(item, self.req)
     
     def on_after_set_input(self):
         for name in('start', 'stop'):
@@ -75,8 +79,35 @@ class Index(_Index):
         return out
 
 class InDoubtDetails(_Index):
-    url_name = 'pattern-delivery-details-in-doubt'
+    url_name = 'pattern-delivery-in-doubt-details'
+    template = 'zato/pattern/delivery/in-doubt/details.html'
     service_name = 'zato.pattern.delivery.in-doubt.get-details'
+    output_class = DeliveryItem
+    
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('task_id',)
+        output_required = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
+                    'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
+        output_optional = ('payload', 'args', 'kwargs')
+        output_repeated = False
+        
+    def _handle_item(self, item):
+        self.item = _drop_utc(item, self.req)
+    
+    def handle(self):
+        
+        out = {}
+        service = 'zato.pattern.delivery.get-history-list'
+        req = {'task_id': self.input['task_id']}
+        response = self.req.zato.client.invoke(service, req)
+
+        if response.ok:
+            for item in response.data:
+                item.entry_time = from_utc_to_user(item.entry_time + '+00:00', self.req.zato.user_profile)
+                
+            return {'history': response.data}
+        else:
+            logger.warn(response.details)
 
 class Resubmit(_CreateEdit):
     url_name = 'pattern-delivery-details-in-doubt-resubmit'

@@ -8,11 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
+from datetime import timedelta
 from json import dumps, loads
 
 # Zato
 from zato.common import DATA_FORMAT, DELIVERY_STATE, INVOCATION_TARGET
-from zato.common.odb.query import delivery_count_by_state, delivery_definition_list
+from zato.common.odb.model import DeliveryDefinitionOutconnWMQ
+from zato.common.odb.query import delivery_count_by_state, delivery_definition_list, \
+     delivery_history_list
 from zato.common.util import dotted_getattr
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
@@ -22,6 +25,10 @@ dispatch_dict = {
     INVOCATION_TARGET.OUTCONN_WMQ: 'outgoing.jms_wmq.send',
     INVOCATION_TARGET.OUTCONN_ZMQ: 'outgoing.zmq.send',
     INVOCATION_TARGET.SERVICE: 'invoke'
+}
+
+target_def_class = {
+    INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
 
 # ##############################################################################
@@ -152,3 +159,47 @@ class Delete(AdminService):
             delivery = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
             session.delete(delivery)
             session.commit()
+
+# ##############################################################################
+
+class GetHistoryList(AdminService):
+    """ Returns a delivery's history log.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_get_history_list_request'
+        response_elem = 'zato_pattern_delivery_get_history_list_response'
+        input_required = (AsIs('task_id'),)
+        output_required = ('entry_type', 'entry_time', 'entry_ctx', 'resubmit_count', 'delta')
+        output_repeated = True
+        
+    def _get_delta(self, start, stop):
+        delta = stop - start
+        fract = round(float('0.{}'.format(delta.microseconds)), 2)
+        delta = str(timedelta(days=delta.days, seconds=delta.seconds + fract))
+        
+        # 0:00:00
+        if '.' not in delta:
+            return delta
+        
+        delta = delta.rstrip('0')
+        split = delta.split('.')
+        
+        # 0:05:56.4
+        if len(split[1]) == 1: 
+            return delta + '0'
+        
+        # 0:41:48.14
+        return delta
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            creation_time = session.merge(self.delivery_store.get_delivery(self.request.input.task_id)).creation_time
+            
+            history = list(delivery_history_list(session, self.request.input.task_id))
+            columns = [elem.name for elem in history.pop()]
+            for item in history:
+                for elem in item:
+                    elem = dict(zip(columns, elem))
+                    elem['delta'] = self._get_delta(creation_time, elem['entry_time'])
+                    elem['entry_time'] = elem['entry_time'].isoformat()
+                    self.response.payload.append(elem)
