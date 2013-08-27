@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
+from json import dumps, loads
 from traceback import format_exc
 
 # Django
@@ -88,11 +88,13 @@ class InDoubtDetails(_Index):
         input_required = ('task_id',)
         output_required = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
                     'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
-        output_optional = ('payload', 'args', 'kwargs')
+        output_optional = ('payload', 'args', 'kwargs', 'payload_sha1', 'payload_sha256')
         output_repeated = False
         
     def _handle_item(self, item):
         self.item = _drop_utc(item, self.req)
+        self.item.args = '\n'.join('{}'.format(elem) for elem in loads(self.item.args))
+        self.item.kwargs = '\n'.join('{}={}'.format(k,v) for k, v in loads(self.item.kwargs).items())
     
     def handle(self):
         

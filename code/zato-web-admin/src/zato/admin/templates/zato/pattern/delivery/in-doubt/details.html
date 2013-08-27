@@ -21,7 +21,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato"><a href="{% url pattern-delivery %}?cluster={{ cluster_id }}&amp;target_type={{ req.zato.args.target_type }}">Guaranteed delivery</a> : {{ req.zato.args.def_name }} : in-doubt</h2>
+<h2 class="zato"><a href="{% url pattern-delivery %}?cluster={{ cluster_id }}&amp;target_type={{ item.target_type }}">Guaranteed delivery</a> : {{ item.task_id }} : in-doubt</h2>
 
 {% include "zato/user-message.html" %}
 
@@ -29,7 +29,7 @@
     <table id="data-table">
         <tr>
             <td style="text-align:right" colspan="2">
-                <form action="" method="post" id="lb-validate-save">
+                <form action="." method="post" id="lb-delete-resubmit1">
                     <button id="delete1" name="delete1" type="submit">Delete</button>
                     &nbsp;|&nbsp;
                     <button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>
@@ -38,7 +38,7 @@
         </tr>
         
         <tr>
-            <td colspan="2">
+            <td colspan="2" style="padding-top:0px">
                 <hr/>
             </td>
         </tr>
@@ -83,7 +83,7 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class='inline_header'>Check after/retry repeats/retry seconds/resubmit #</td>
+                                        <td class='inline_header'>Check after/retry repeats/retry seconds/RS#</td>
                                     </tr>
                                     <tr>
                                         <td>
@@ -104,7 +104,7 @@
                                                 <tr>
                                                     <td class="inline_header" style="width:5%">RS#</td>
                                                     <td class="inline_header" style="width:15%">TS</td>
-                                                    <td class="inline_header" style="width:15%">Δ</td>
+                                                    <td class="inline_header" style="width:15%">Delta</td>
                                                     <td class="inline_header" style="width:15%">State</td>
                                                     <td class="inline_header" style="width:50%">Ctx</td>
                                                 </tr>
@@ -126,20 +126,6 @@
                     </table>
                 </div> <!-- class="item-details-body" -->
             </td>
-        </tr>
-        
-        <tr>
-            <td class='inline_header' colspan="2">Args</td>
-        </tr>
-        <tr>
-            <td>
-            </td>
-        </tr>
-        
-        <tr>
-            <td class='inline_header' colspan="2">Kwargs</td>
-        </tr>
-        <tr>
             <td>
             </td>
         </tr>
@@ -148,16 +134,41 @@
             <td class='inline_header' colspan="2">Payload</td>
         </tr>
         <tr>
-            <td>
+            <td colspan="2">
+                <textarea id="payload" style="width:100%; height:520px">{{ item.payload }}</textarea>
             </td>
         </tr>
         
         <tr>
-            <td class='inline_header' colspan="2">Payload in hex</td>
+            <td class='inline_header' colspan="2">Args</td>
         </tr>
         <tr>
-            <td>
+            <td colspan="2">
+                <textarea id="args" style="width:100%; height:120px">{{ item.args }}</textarea>
             </td>
+        </tr>
+        
+        <tr>
+            <td class='inline_header' colspan="2">Kwargs</td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <textarea id="kwargs" style="width:100%; height:120px">{{ item.kwargs }}</textarea>
+            </td>
+        </tr>
+        
+        <tr>
+            <td class='inline_header' colspan="2">Payload SHA1</td>
+        </tr>
+        <tr>
+            <td colspan="2">{{ item.payload_sha1 }}</td>
+        </tr>
+        
+        <tr>
+            <td class='inline_header' colspan="2">Payload SHA256</td>
+        </tr>
+        <tr>
+            <td colspan="2">{{ item.payload_sha256 }}</td>
         </tr>
         
         <tr>
@@ -167,14 +178,13 @@
         </tr>
         
         <tr>
-            <td style="text-align:right" colspan="2">
-                <form action="" method="post" id="lb-validate-save">
-                    <button id="delete1" name="delete1" type="submit">Delete</button>
+            <td style="text-align:right;padding-top:0px" colspan="2">
+                <form action="." method="post" id="lb-delete-resubmit2">
+                    <button id="delete2" name="delete2" type="submit">Delete</button>
                     &nbsp;|&nbsp;
-                    <button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>
+                    <button id="resubmit2" name="resubmit2" type="submit">Resubmit</button>
                 </form>
             </td>
-        </tr>
         </tr>
         
     </table>
