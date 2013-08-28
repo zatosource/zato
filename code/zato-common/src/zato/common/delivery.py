@@ -58,7 +58,7 @@ _target_def_class = {
 }
 
 IN_DOUBT_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
-            'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
+            'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
 
 PAYLOAD_KEYS = IN_DOUBT_KEYS + ('payload', 'args', 'kwargs', 'target')
 
@@ -530,8 +530,6 @@ class DeliveryStore(object):
                 out = dict(zip(IN_DOUBT_KEYS, values))
                 for name in('creation_time_utc', 'in_doubt_created_at_utc'):
                     out[name] = out[name].isoformat()
-                    
-                self.logger.error(out)
                     
                 yield out
                 
