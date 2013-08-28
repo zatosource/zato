@@ -28,7 +28,10 @@
 <div id="markup">
     <table id="data-table">
         <tr>
-            <td style="text-align:right" colspan="2">
+            <td style="vertical-align:bottom">
+                {{ item.task_id }}
+            </td>
+            <td style="padding-bottom:0px;text-align:right">
                 <form action="." method="post" id="lb-delete-resubmit1">
                     <button id="delete1" name="delete1" type="submit">Delete</button>
                     &nbsp;|&nbsp;
@@ -46,18 +49,12 @@
             <td class='inline_header' colspan="2">Overview</td>
         </tr>
         <tr>
-            <td>
-                <div class="item-details-body">
+            <td colspan="2">
+                <div class="item-details-body" style="width:100%">
                     <table style="width:100%">
                         <tr>
-                            <td style="width:15%">
+                            <td style="width:30%">
                                 <table style="width:100%" >
-                                    <tr>
-                                        <td class="inline_header">Task</td>
-                                    </tr>
-                                    <tr>
-                                        <td>{{ item.task_id }}</td>
-                                    </tr>
                                     <tr>
                                         <td class="inline_header">Definition/target</td>
                                     </tr>
@@ -125,8 +122,6 @@
                         </tr>
                     </table>
                 </div> <!-- class="item-details-body" -->
-            </td>
-            <td>
             </td>
         </tr>
         
