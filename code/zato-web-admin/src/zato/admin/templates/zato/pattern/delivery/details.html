@@ -29,11 +29,9 @@
                 {{ item.task_id }}
             </td>
             <td style="padding-bottom:0px;text-align:right">
-                <form action="." method="post" id="lb-delete-resubmit1">
-                    <button id="delete1" name="delete1" type="submit">Delete</button>
-                    &nbsp;|&nbsp;
-                    <button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>
-                </form>
+                <button id="delete1" name="delete1" type="submit">Delete</button>
+                &nbsp;|&nbsp;
+                <button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>
             </td>
         </tr>
         
@@ -171,16 +169,17 @@
         
         <tr>
             <td style="text-align:right;padding-top:0px" colspan="2">
-                <form action="." method="post" id="lb-delete-resubmit2">
-                    <button id="delete2" name="delete2" type="submit">Delete</button>
-                    &nbsp;|&nbsp;
-                    <button id="resubmit2" name="resubmit2" type="submit">Resubmit</button>
-                </form>
+                <button id="delete2" name="delete2" type="submit">Delete</button>
+                &nbsp;|&nbsp;
+                <button id="resubmit2" name="resubmit2" type="submit">Resubmit</button>
             </td>
         </tr>
         
     </table>
 </div>
+
+<input type="hidden" name="task_id" id="task_id" value="{{ item.task_id }}" />
+<input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
 
 
 {% endblock %}
