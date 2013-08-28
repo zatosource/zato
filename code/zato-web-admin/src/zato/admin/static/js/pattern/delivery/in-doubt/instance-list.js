@@ -70,11 +70,11 @@ $.fn.zato.pattern.delivery.in_doubt._update_all = function(cluster_id, url_patte
 }
 
 $.fn.zato.pattern.delivery.in_doubt.resubmit_all = function(cluster_id) {
-	$.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/in-doubt/resubmit-many/{0}/');
+	$.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/resubmit-many/{0}/');
 }
 
 $.fn.zato.pattern.delivery.in_doubt.delete_all = function(cluster_id) {
-	$.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/in-doubt/delete-many/{0}/');
+	$.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/delete-many/{0}/');
 }
 
 $.fn.zato.pattern.delivery.in_doubt.resubmit = function(tx_id, cluster_id) {
@@ -94,7 +94,7 @@ $.fn.zato.pattern.delivery.in_doubt.resubmit = function(tx_id, cluster_id) {
 	
     $.ajax({
         type: 'POST',
-        url: String.format('/zato/pattern/delivery/in-doubt/resubmit/{0}/{1}/', tx_id, cluster_id),
+        url: String.format('/zato/pattern/delivery/resubmit/{0}/{1}/', tx_id, cluster_id),
         data: '',
 		dataType: 'json',
         headers: {'X-CSRFToken': $.cookie('csrftoken')},
