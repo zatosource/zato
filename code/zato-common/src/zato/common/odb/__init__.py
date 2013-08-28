@@ -24,7 +24,7 @@ WMQ_DEFAULT_PRIORITY = 5
 # ODB version
 VERSION = 1
 
-SUPPORTED_DB_TYPES = (b'oracle', b'postgresql')
+SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql')
 
 engine_def = '{engine}://{username}:{password}@{host}/{db_name}'
 
@@ -40,6 +40,7 @@ ping_queries = {
     'postgresql': 'SELECT 1',
 }
 
+
 def create_pool(crypto_manager, engine_params):
     engine_params = copy.deepcopy(engine_params)
     engine_params['password'] = str(crypto_manager.decrypt(engine_params['password']))
@@ -54,17 +55,18 @@ def create_pool(crypto_manager, engine_params):
 
     return session
 
+
 # Taken from http://www.siafoo.net/snippet/85
 # Licensed under BSD2 - http://opensource.org/licenses/bsd-license.php
 def drop_all(engine):
     """ Drops all tables and sequences (but not VIEWS) from a Postgres database
     """
 
-    sequence_sql="""SELECT sequence_name FROM information_schema.sequences
+    sequence_sql = """SELECT sequence_name FROM information_schema.sequences
                     WHERE sequence_schema='public'
                  """
 
-    table_sql="""SELECT table_name FROM information_schema.tables
+    table_sql = """SELECT table_name FROM information_schema.tables
                  WHERE table_schema='public' AND table_type != 'VIEW' AND table_name NOT LIKE 'pg_ts_%%'
               """
 
