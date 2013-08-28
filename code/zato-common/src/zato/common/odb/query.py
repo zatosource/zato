@@ -508,6 +508,7 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
         Delivery.source_count,
         Delivery.target_count,
         Delivery.resubmit_count,
+        Delivery.state,
         DeliveryDefinitionBase.retry_repeats,
         DeliveryDefinitionBase.check_after,
         DeliveryDefinitionBase.retry_seconds).\
@@ -535,6 +536,7 @@ def delivery(session, task_id, target_def_class):
         Delivery.source_count,
         Delivery.target_count,
         Delivery.resubmit_count,
+        Delivery.state,
         target_def_class.retry_repeats,
         target_def_class.check_after,
         target_def_class.retry_seconds,
