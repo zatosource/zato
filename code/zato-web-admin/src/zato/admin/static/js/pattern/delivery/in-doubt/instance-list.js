@@ -74,7 +74,12 @@ $.fn.zato.pattern.delivery.in_doubt.resubmit_all = function(cluster_id) {
 }
 
 $.fn.zato.pattern.delivery.in_doubt.delete_all = function(cluster_id) {
-	$.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/delete-many/{0}/');
+    var callback = function(ok) {
+        if(ok) {
+		    $.fn.zato.pattern.delivery.in_doubt._update_all(cluster_id, '/zato/pattern/delivery/delete-many/{0}/');
+		}
+	};
+	jConfirm('Are you sure you want to delete all tasks from this page?', 'Please confirm', callback);	
 }
 
 $.fn.zato.pattern.delivery.in_doubt.resubmit = function(tx_id, cluster_id) {
