@@ -45,7 +45,7 @@ def update_globals(config, base_dir='.'):
 engine_friendly_name = {
     'postgresql': 'PostgreSQL',
     'oracle': 'Oracle',
-    'mysql': 'MySQL',
+    'mysql+pymysql': 'MySQL',
 
     # These are not supported /yet/.
     #'mssql': 'MS SQL Server',
@@ -58,7 +58,7 @@ engine_friendly_name = {
 odb_engine_friendly_name = {
     'postgresql': 'PostgreSQL',
     'oracle': 'Oracle',
-    'mysql': 'MySQL',
+    'mysql+pymysql': 'MySQL',
 }
 
 django_sqlalchemy_engine = {
