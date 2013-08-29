@@ -143,9 +143,9 @@ class Resubmit(AdminService):
         with closing(self.odb.session()) as session:
             delivery = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
 
-            payload = loads(self.request.input.payload) if 'payload' in self.request.input else delivery.payload.payload
-            args = self.request.input.args if 'args' in self.request.input else delivery.args
-            kwargs = self.request.input.kwargs if 'kwargs' in self.request.input else delivery.kwargs
+            payload = loads(self.request.input.payload) if self.request.input.get('payload') else delivery.payload.payload
+            args = self.request.input.args if self.request.input.get('args') else delivery.args
+            kwargs = self.request.input.kwargs if self.request.input.get('kwargs') else delivery.kwargs
 
             kwargs = loads(kwargs)
             kwargs['is_resubmit'] = True
