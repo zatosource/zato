@@ -142,6 +142,9 @@ class DeliveryStore(object):
                 delivery.state = DELIVERY_STATE.IN_PROGRESS_RESUBMITTED
                 delivery.resubmit_count += 1
                 delivery.last_used = now
+                delivery.args = item.args
+                delivery.kwargs = item.kwargs
+                delivery.payload.payload = item.payload
                 
                 session.add(self._history_from_source(delivery, item, now, DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE_RESUBMIT))
                 

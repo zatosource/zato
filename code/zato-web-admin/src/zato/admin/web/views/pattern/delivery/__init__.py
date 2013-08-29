@@ -75,6 +75,20 @@ class Resubmit(CreateEdit):
     
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('task_id',)
+        input_optional = ('payload', 'args', 'kwargs')
+        
+    def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
+        
+        initial_input_dict['payload'] = dumps(req.POST.get('payload', None))
+        initial_input_dict['args'] = dumps([elem for elem in req.POST.get('args', '').split('\n')])
+        
+        initial_input_dict['kwargs'] = {}
+        for elem in req.POST.get('kwargs', '').split('\n'):
+            k, v = elem.split('=')
+            initial_input_dict['kwargs'][k] = v
+        initial_input_dict['kwargs'] = dumps(initial_input_dict['kwargs'])
+        
+        return super(Resubmit, self).__call__(req, initial_input_dict, initial_return_data, *args, **kwargs)
         
     def success_message(self, item):
         return 'Request to resubmit task [{}] sent successfully, check server logs for details'.format(self.input['task_id'])
