@@ -137,13 +137,20 @@ class Resubmit(AdminService):
         request_elem = 'zato_pattern_delivery_resubmit_request'
         response_elem = 'zato_pattern_delivery_resubmit_response'
         input_required = (AsIs('task_id'),)
+        input_optional = ('payload', 'args', 'kwargs')
 
     def handle(self):
         with closing(self.odb.session()) as session:
             delivery = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
-            kwargs = loads(delivery.kwargs)
+
+            payload = loads(self.request.input.payload) if 'payload' in self.request.input else delivery.payload.payload
+            args = self.request.input.args if 'args' in self.request.input else delivery.args
+            kwargs = self.request.input.kwargs if 'kwargs' in self.request.input else delivery.kwargs
+
+            kwargs = loads(kwargs)
             kwargs['is_resubmit'] = True
-            self.deliver(delivery.definition.name, delivery.payload.payload, delivery.task_id, *loads(delivery.args), **kwargs)
+
+            self.deliver(delivery.definition.name, payload.encode('utf-8'), self.request.input.task_id, *loads(args), **kwargs)
 
 # ##############################################################################
 
