@@ -35,7 +35,12 @@ $.fn.zato.pattern.delivery.in_doubt.resubmit = function() {
 }
 
 $.fn.zato.pattern.delivery.in_doubt.delete_ = function() {
-	$.fn.zato.pattern.delivery.in_doubt._update("delete");
+    var callback = function(ok) {
+        if(ok) {
+		    $.fn.zato.pattern.delivery.in_doubt._update("delete");
+		}
+	};
+	jConfirm('Are you sure you want to delete the task?', 'Please confirm', callback);	
 }
 
 $(document).ready(function() { 
