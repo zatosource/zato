@@ -291,6 +291,7 @@ class DELIVERY_HISTORY_ENTRY(Attrs):
     ENTERED_IN_PROGRESS = b'entered-in-progress'
     ENTERED_CONFIRMED = b'entered-confirmed'
     ENTERED_FAILED = b'entered-failed'
+    ENTERED_RETRY = b'entered-retry'
     NONE = b'(None)'
     SENT_FROM_SOURCE = b'sent-from-source'
     SENT_FROM_SOURCE_RESUBMIT = b'sent-from-source-resubmit'

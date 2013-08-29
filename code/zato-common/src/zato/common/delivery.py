@@ -311,12 +311,12 @@ class DeliveryStore(object):
             delivery.definition.last_used = now
             delivery.source_count += 1
 
-            # This is needed as a separate thing because we want to sleep a bit
-            # and there's no need to keep the session open in that time.
+            # 'source_count' is needed outside of the 'with' statement because
+            # we want to sleep a bit and there's no need to keep the session open in that time.
             source_count = delivery.source_count
             
             session.add(delivery)
-            session.add(self._history_sent_from_source(delivery, item, datetime.utcnow()))
+            session.add(self._history_from_source(delivery, item, datetime.utcnow(), DELIVERY_HISTORY_ENTRY.ENTERED_RETRY))
             session.commit()
             
             # Sleep a constant time so we're sure any locks related to that task are released
@@ -480,7 +480,7 @@ class DeliveryStore(object):
             })
             
             with closing(self.odb.session()) as session:
-                delivery = self.get_delivery(task_id)
+                delivery = session.merge(self.get_delivery(task_id))
                 delivery.state = DELIVERY_STATE.IN_PROGRESS_TARGET_OK if target_ok else DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE
                 delivery.last_used = now
                 delivery.definition.last_used = now
