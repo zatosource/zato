@@ -24,10 +24,12 @@ __all__ = ['Pickup', 'PickupEventProcessor']
 
 logger = logging.getLogger(__name__)
 
+
 class PickupEventProcessor(BasePickupEventProcessor):
     def process(self, event):
         logger.debug('IN_MODIFY event.name:[{}], event:[{}]'.format(event.name, event))
         self.hot_deploy(event.name)
+
 
 class Pickup(object):
     def __init__(self, pickup_dir=None, pickup_event_processor=None):
@@ -37,7 +39,7 @@ class Pickup(object):
 
     def watch(self):
         fd = inotifyx.init()
-        inotifyx.add_watch(fd, self.pickup_dir, inotifyx.constants['IN_CLOSE_WRITE'])
+        inotifyx.add_watch(fd, self.pickup_dir, inotifyx.IN_CLOSE_WRITE | inotifyx.IN_MOVE)
         
         while self.keep_running:
             try:

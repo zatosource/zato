@@ -19,7 +19,8 @@ SSL_KEY_FILE = './config/repo/web-admin-priv-key.pem'
 SSL_CERT_FILE = './config/repo/web-admin-cert.pem'
 SSL_CA_CERTS = './config/repo/web-admin-ca-certs.pem'
 
-LB_AGENT_CONNECT_TIMEOUT=500 # In milliseconds
+LB_AGENT_CONNECT_TIMEOUT = 500  # In milliseconds
+
 
 def update_globals(config, base_dir='.'):
     globals()['DATABASES'] = {'default': {}}
@@ -44,9 +45,9 @@ def update_globals(config, base_dir='.'):
 engine_friendly_name = {
     'postgresql': 'PostgreSQL',
     'oracle': 'Oracle',
-    
+    'mysql+pymysql': 'MySQL',
+
     # These are not supported /yet/.
-    #'mysql': 'MySQL',
     #'mssql': 'MS SQL Server',
     #'access': 'MS Access',
     #'firebird': 'Firebird',
@@ -57,17 +58,17 @@ engine_friendly_name = {
 odb_engine_friendly_name = {
     'postgresql': 'PostgreSQL',
     'oracle': 'Oracle',
-    #'mysql': 'MySQL',
+    'mysql+pymysql': 'MySQL',
 }
 
 django_sqlalchemy_engine = {
     'postgresql': 'postgresql_psycopg2',
-    #'mysql':'mysql',
-    'oracle':'oracle',
-    'dummy':'dummy'
+    'mysql': 'mysql',
+    'oracle': 'oracle',
+    'dummy': 'dummy'
 }
 
-sqlalchemy_django_engine = dict((v,k) for k,v in django_sqlalchemy_engine.items())
+sqlalchemy_django_engine = dict((v, k) for k, v in django_sqlalchemy_engine.items())
 
 # Maps job types as they are used by servers into UI friendly names.
 job_type_friendly_names = {
@@ -79,6 +80,6 @@ job_type_friendly_names = {
 
 # Maps AMQP delivery modes to UI-friendly names
 delivery_friendly_name = {
-    1:'Non-persistent',
-    2:'Persistent',
+    1: 'Non-persistent',
+    2: 'Persistent',
 }

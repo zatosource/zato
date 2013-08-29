@@ -8,6 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Patch for pymysql under django ORM
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+except ImportError:
+    pass
+
 from django.core.management import execute_manager
 try:
     import settings # Assumed to be in the same directory.
