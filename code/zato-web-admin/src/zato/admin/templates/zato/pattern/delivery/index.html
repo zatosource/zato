@@ -4,6 +4,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/slideout.css">
 {% endblock %}
 
 {% block extra_js %}
@@ -16,6 +17,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.ui.timepicker.addon.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pattern/delivery/look-up-task.js"></script>
     <script type="text/javascript" src="/static/js/pattern/delivery/index.js"></script>
 
     <script>
@@ -93,6 +95,8 @@
         
         </tbody>
     </table>
+    
+    {% include "zato/pattern/delivery/look-up-task.html" %}
 
 {% if total_results %}
     <br/>
@@ -106,6 +110,7 @@
     <input type="hidden" id="js_date_format" value="{{ js_date_format }}" />
     <input type="hidden" id="js_time_format" value="{{ js_time_format }}" />
     <input type="hidden" id="js_ampm" value="{{ js_ampm }}" />
+    <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
 </form>
 
 

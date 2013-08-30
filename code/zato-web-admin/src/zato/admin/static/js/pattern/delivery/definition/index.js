@@ -25,6 +25,10 @@ $(document).ready(function() {
             'in_progress_count', 'in_doubt_count', 'confirmed_count', 'failed_count',
             'last_updated', 'last_used', 'check_after', 'retry_repeats', 'retry_seconds', 'expire_after',
             'expire_arch_succ_after', 'expire_arch_fail_after']);
+
+    $("#look-up-task").click($.fn.zato.pattern.look_up_task);
+    $("#look-up-form").submit($.fn.zato.pattern.look_up_task);
+
 })
 
 

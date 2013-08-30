@@ -62,8 +62,12 @@ class Details(_Index):
         req = {'task_id': self.input['task_id']}
         response = self.req.zato.client.invoke(service, req)
         
-        out['show_resubmit_button'] = self.item.state in([DELIVERY_STATE.IN_DOUBT, DELIVERY_STATE.CONFIRMED, DELIVERY_STATE.FAILED])
-        out['show_update_button'] = not out['show_resubmit_button']
+        if self.item:
+            out['has_item'] = True
+            out['show_resubmit_button'] = self.item.state in([DELIVERY_STATE.IN_DOUBT, DELIVERY_STATE.CONFIRMED, DELIVERY_STATE.FAILED])
+            out['show_update_button'] = not out['show_resubmit_button']
+        else:
+            out['has_item'] = False
 
         if response.ok:
             for item in response.data:
