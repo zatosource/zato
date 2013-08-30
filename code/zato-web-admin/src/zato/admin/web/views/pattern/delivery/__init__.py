@@ -176,9 +176,6 @@ class Index(_Index):
         req = {key:self.input[key] for key in ('def_name', 'batch_size', 'current_batch', 'start', 'stop', 'state') if self.input.get(key)}
         response = self.req.zato.client.invoke(service, req)
         
-        logger.error(self.input)
-        logger.error(req)
-
         if response.ok:
             out.update(response.data)
         else:
