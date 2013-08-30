@@ -16,7 +16,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.DeliveryItem;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pattern.delivery.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'target_type', 'tx_id', 'created', 'in_doubt_created_at', 
+    $.fn.zato.data_table.setup_forms(['name', 'target_type', 'tx_id', 'created', 'last_used', 
             'source_count', 'target_count', 'check_after', 'retry_repeats', 'retry_seconds']);
             
     $.each(['start', 'stop'], function(ignored, suffix) {

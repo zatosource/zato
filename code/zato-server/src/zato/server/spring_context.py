@@ -68,7 +68,6 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.zmq',
             'zato.server.service.internal.pattern.delivery',
             'zato.server.service.internal.pattern.delivery.definition',
-            'zato.server.service.internal.pattern.delivery.in_doubt',
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.security',
             'zato.server.service.internal.security.basic_auth',

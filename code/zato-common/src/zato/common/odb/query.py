@@ -504,7 +504,7 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
         DeliveryDefinitionBase.target_type,
         Delivery.task_id,
         Delivery.creation_time.label('creation_time_utc'),
-        Delivery.last_used.label('in_doubt_created_at_utc'),
+        Delivery.last_used.label('last_used_utc'),
         Delivery.source_count,
         Delivery.target_count,
         Delivery.resubmit_count,
@@ -515,7 +515,7 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
         filter(DeliveryDefinitionBase.id==Delivery.definition_id).\
         filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
         filter(DeliveryDefinitionBase.name==def_name).\
-        filter(Delivery.state==state).\
+        filter(Delivery.state.in_(state)).\
         order_by(Delivery.last_used.desc())
     
     if start:
@@ -532,7 +532,7 @@ def delivery(session, task_id, target_def_class):
         target_def_class.target_type,
         Delivery.task_id,
         Delivery.creation_time.label('creation_time_utc'),
-        Delivery.last_used.label('in_doubt_created_at_utc'),
+        Delivery.last_used.label('last_used_utc'),
         Delivery.source_count,
         Delivery.target_count,
         Delivery.resubmit_count,

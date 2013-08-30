@@ -17,7 +17,7 @@ from zato.common import DATA_FORMAT, DELIVERY_STATE, INVOCATION_TARGET
 from zato.common.odb.model import DeliveryDefinitionOutconnWMQ
 from zato.common.odb.query import delivery_count_by_state, delivery_definition_list, \
      delivery_history_list
-from zato.common.util import dotted_getattr
+from zato.common.util import dotted_getattr, validate_input_dict
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -31,6 +31,14 @@ dispatch_dict = {
 target_def_class = {
     INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
+
+class _Base(AdminService):
+    def _validate_get_state(self, input):
+        if input.state != DELIVERY_STATE.IN_PROGRESS_ANY:
+            validate_input_dict(('state', input.state, DELIVERY_STATE))
+            return [input.state]
+        else:
+            return [DELIVERY_STATE.IN_PROGRESS_STARTED, DELIVERY_STATE.IN_PROGRESS_TARGET_OK, DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE]
 
 # ##############################################################################
 
@@ -110,23 +118,25 @@ class GetCounters(AdminService):
 
 # ##############################################################################
 
-class GetBatchInfo(AdminService):
+class GetBatchInfo(_Base):
     """ Returns pagination information for instances of a given delivery definition
     in a specified state and between from/to dates.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_get_batch_info_request'
         response_elem = 'zato_pattern_delivery_get_batch_info_response'
-        input_required = ('def_name',)
+        input_required = ('def_name', 'state')
         input_optional = ('batch_size', 'current_batch', 'start', 'stop')
         output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
 
     def handle(self):
         input = self.request.input
+        state = self._validate_get_state(input)
+        
         input['batch_size'] = input['batch_size'] or 25
         input['current_batch'] = input['current_batch'] or 1
         
-        self.response.payload = self.delivery_store.get_batch_info(self.server.cluster_id, input)
+        self.response.payload = self.delivery_store.get_batch_info(self.server.cluster_id, input, state)
 
 # ##############################################################################
 
@@ -151,22 +161,6 @@ class Resubmit(AdminService):
             kwargs['is_resubmit'] = True
 
             self.deliver(delivery.definition.name, payload.encode('utf-8'), self.request.input.task_id, *loads(args), **kwargs)
-
-# ##############################################################################
-
-class Delete(AdminService):
-    """ Deletes a delivery task.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pattern_delivery_delete_request'
-        response_elem = 'zato_pattern_delivery_delete_response'
-        input_required = (AsIs('task_id'),)
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            delivery = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
-            session.delete(delivery)
-            session.commit()
 
 # ##############################################################################
 
@@ -221,7 +215,7 @@ class GetDetails(AdminService):
         request_elem = 'zato_pattern_delivery_in_doubt_get_list_request'
         response_elem = 'zato_pattern_delivery_in_doubt_get_list_response'
         input_required = (AsIs('task_id'),)
-        output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'in_doubt_created_at_utc', 
+        output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'last_used_utc', 
             'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
         output_optional = ('payload', 'args', 'kwargs', 'target', 'payload_sha1', 'payload_sha256')
         output_repeated = True
@@ -233,3 +227,43 @@ class GetDetails(AdminService):
             if self.response.payload.payload:
                 self.response.payload.payload_sha1 = sha1(self.response.payload.payload).hexdigest()
                 self.response.payload.payload_sha256 = sha256(self.response.payload.payload).hexdigest()
+
+# ##############################################################################
+
+class GetList(_Base):
+    """ Returns a batch of instances that are in the in-doubt state.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_in_doubt_get_list_request'
+        response_elem = 'zato_pattern_delivery_in_doubt_get_list_response'
+        input_required = ('def_name', 'state')
+        input_optional = ('batch_size', 'current_batch', 'start', 'stop',)
+        output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'last_used_utc', 
+            'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
+        output_repeated = True
+
+    def handle(self):
+        input = self.request.input
+        state = self._validate_get_state(input)
+        input['batch_size'] = input['batch_size'] or 25
+        input['current_batch'] = input['current_batch'] or 1
+        
+        self.response.payload[:] = self.delivery_store.get_delivery_instance_list(self.server.cluster_id, input, state)
+
+# ##############################################################################
+    
+class Delete(AdminService):
+    """ Deletes a delivery task.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_delete_request'
+        response_elem = 'zato_pattern_delivery_delete_response'
+        input_required = (AsIs('task_id'),)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
+            session.delete(delivery)
+            session.commit()
+            
+# ##############################################################################
