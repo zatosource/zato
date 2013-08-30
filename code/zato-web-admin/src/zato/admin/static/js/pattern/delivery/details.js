@@ -1,5 +1,5 @@
 
-$.fn.zato.pattern.delivery.in_doubt._update = function(action) {
+$.fn.zato.pattern.delivery._update = function(action) {
 
     var _callback = function(data, status) {
         var success = status == "success";
@@ -14,7 +14,7 @@ $.fn.zato.pattern.delivery.in_doubt._update = function(action) {
     }
 	
 	var data = {};
-	if(action == "resubmit") {
+	if(action != "delete") {
 		data["payload"] = $("#payload").val();
 		data["args"] = $("#args").val();
 		data["kwargs"] = $("#kwargs").val();
@@ -30,23 +30,30 @@ $.fn.zato.pattern.delivery.in_doubt._update = function(action) {
     });
 }
 
-$.fn.zato.pattern.delivery.in_doubt.resubmit = function() {
-	$.fn.zato.pattern.delivery.in_doubt._update("resubmit");
+$.fn.zato.pattern.delivery.resubmit = function() {
+	$.fn.zato.pattern.delivery._update("resubmit");
 }
 
-$.fn.zato.pattern.delivery.in_doubt.delete_ = function() {
+$.fn.zato.pattern.delivery.edit = function() {
+	$.fn.zato.pattern.delivery._update("edit");
+}
+
+$.fn.zato.pattern.delivery.delete_ = function() {
     var callback = function(ok) {
         if(ok) {
-		    $.fn.zato.pattern.delivery.in_doubt._update("delete");
+		    $.fn.zato.pattern.delivery._update("delete");
 		}
 	};
 	jConfirm('Are you sure you want to delete the task?', 'Please confirm', callback);	
 }
 
 $(document).ready(function() { 
-    $("#resubmit1").click($.fn.zato.pattern.delivery.in_doubt.resubmit);
-	$("#resubmit2").click($.fn.zato.pattern.delivery.in_doubt.resubmit);
+    $("#resubmit1").click($.fn.zato.pattern.delivery.resubmit);
+	$("#resubmit2").click($.fn.zato.pattern.delivery.resubmit);
 	
-    $("#delete1").click($.fn.zato.pattern.delivery.in_doubt.delete_);
-	$("#delete2").click($.fn.zato.pattern.delivery.in_doubt.delete_);
+    $("#delete1").click($.fn.zato.pattern.delivery.delete_);
+	$("#delete2").click($.fn.zato.pattern.delivery.delete_);
+	
+    $("#update1").click($.fn.zato.pattern.delivery.edit);
+	$("#update2").click($.fn.zato.pattern.delivery.edit);
 })

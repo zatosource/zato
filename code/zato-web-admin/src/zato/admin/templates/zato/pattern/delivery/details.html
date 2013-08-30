@@ -29,9 +29,10 @@
                 {{ item.task_id }}
             </td>
             <td style="padding-bottom:0px;text-align:right">
-                <button id="delete1" name="delete1" type="submit">Delete</button>
+                {% if show_resubmit_button %}<button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>{% endif %}
+                {% if show_update_button %}<button id="update1" name="update1" type="submit">Update</button>{% endif %}
                 &nbsp;|&nbsp;
-                <button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>
+                <button id="delete1" name="delete1" type="submit">Delete</button>
             </td>
         </tr>
         
@@ -169,9 +170,10 @@
         
         <tr>
             <td style="text-align:right;padding-top:0px" colspan="2">
-                <button id="delete2" name="delete2" type="submit">Delete</button>
+                {% if show_resubmit_button %}<button id="resubmit1" name="resubmit1" type="submit">Resubmit</button>{% endif %}
+                {% if show_update_button %}<button id="update2" name="update2" type="submit">Update</button>{% endif %}
                 &nbsp;|&nbsp;
-                <button id="resubmit2" name="resubmit2" type="submit">Resubmit</button>
+                <button id="delete2" name="delete2" type="submit">Delete</button>
             </td>
         </tr>
         

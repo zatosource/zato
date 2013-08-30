@@ -103,6 +103,7 @@ urlpatterns = patterns('',
     url(r'^zato/pattern/delivery/delete/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery.Delete(), name=pattern_delivery.Delete.url_name),
     url(r'^zato/pattern/delivery/delete-many/(?P<cluster_id>.*)/$', pattern_delivery.delete_many, name='pattern-delivery-delete-many'),
     url(r'^zato/pattern/delivery/details/(?P<task_id>.*)/$', pattern_delivery.Details(), name=pattern_delivery.Details.url_name),
+    url(r'^zato/pattern/delivery/edit/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery.Edit(), name=pattern_delivery.Edit.url_name),
     url(r'^zato/pattern/delivery/resubmit/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery.Resubmit(), name=pattern_delivery.Resubmit.url_name),
     url(r'^zato/pattern/delivery/resubmit-many/(?P<cluster_id>.*)/$', pattern_delivery.resubmit_many, name='pattern-delivery-resubmit-many'),
     

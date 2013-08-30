@@ -54,10 +54,10 @@ $.fn.zato.pattern.delivery.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', item.target);
     row += String.format('<td>{0}</td>', data.short_def);
     row += String.format('<td>{0}</td>', '0');
-    row += String.format('<td>n/a <a href="../in-progress/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
-    row += String.format('<td>n/a <a href="../in-doubt/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
-    row += String.format('<td>n/a <a href="../arch-success/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
-    row += String.format('<td>n/a <a href="../arch-failed/{0}/{1}/{2}/{3}/">(list)</a></td>', item.name, item.target_type, item.target, item.id);
+    row += String.format('<td>n/a <a href="../{0}/{1}/{2}/{3}/{4}/">(list)</a></td>', item.name, item.target_type, item.target, 'in-progress-any', item.id);
+    row += String.format('<td>n/a <a href="../{0}/{1}/{2}/{3}/{4}/">(list)</a></td>', item.name, item.target_type, item.target, 'in-doubt', item.id);
+    row += String.format('<td>n/a <a href="../{0}/{1}/{2}/{3}/{4}/">(list)</a></td>', item.name, item.target_type, item.target, 'confirmed', item.id);
+    row += String.format('<td>n/a <a href="../{0}/{1}/{2}/{3}/{4}/">(list)</a></td>', item.name, item.target_type, item.target, 'failed', item.id);
     row += String.format('<td><span class="form_hint">{0}</span></td>', 'n/a');
     row += String.format('<td><span class="form_hint">{0}</span></td>', 'n/a');
     row += String.format('<td><a href="javascript:$.fn.zato.pattern.delivery.edit(\'{0}\')">Edit</a></td>', item.id);

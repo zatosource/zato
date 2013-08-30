@@ -267,3 +267,20 @@ class Delete(AdminService):
             session.commit()
             
 # ##############################################################################
+
+class Edit(AdminService):
+    """ Updates a delivery task.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_edit_request'
+        response_elem = 'zato_pattern_delivery_edit_response'
+        input_required = (AsIs('task_id'),)
+        input_optional = ('payload', 'args', 'kwargs')
+
+    def handle(self):
+        self.delivery_store.update_delivery(self.request.input.task_id,
+            self.request.input.get('payload', '').encode('utf-8'),
+            self.request.input.get('args', '').encode('utf-8'),
+            self.request.input.get('kwargs', '').encode('utf-8'))
+
+# ##############################################################################

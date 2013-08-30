@@ -61,21 +61,26 @@ class Details(_Index):
         service = 'zato.pattern.delivery.get-history-list'
         req = {'task_id': self.input['task_id']}
         response = self.req.zato.client.invoke(service, req)
+        
+        out['show_resubmit_button'] = self.item.state in([DELIVERY_STATE.IN_DOUBT, DELIVERY_STATE.CONFIRMED, DELIVERY_STATE.FAILED])
+        out['show_update_button'] = not out['show_resubmit_button']
 
         if response.ok:
             for item in response.data:
                 item.entry_time = from_utc_to_user(item.entry_time + '+00:00', self.req.zato.user_profile)
-                
-            return {'history': response.data}
+            out['history'] = response.data
         else:
             logger.warn(response.details)
+            
+        return out
 
 # ##############################################################################
 
-class Resubmit(CreateEdit):
+class _Update(CreateEdit):
     url_name = 'pattern-delivery-resubmit'
     service_name = 'zato.pattern.delivery.resubmit'
     async_invoke = True
+    action_verb = None
     
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('task_id',)
@@ -83,7 +88,7 @@ class Resubmit(CreateEdit):
         
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         
-        initial_input_dict['payload'] = dumps(req.POST.get('payload', None))
+        initial_input_dict['payload'] = req.POST.get('payload', None)
         initial_input_dict['args'] = dumps([elem for elem in req.POST.get('args', '').split('\n')])
         
         initial_input_dict['kwargs'] = {}
@@ -92,10 +97,20 @@ class Resubmit(CreateEdit):
             initial_input_dict['kwargs'][k] = v
         initial_input_dict['kwargs'] = dumps(initial_input_dict['kwargs'])
         
-        return super(Resubmit, self).__call__(req, initial_input_dict, initial_return_data, *args, **kwargs)
+        return super(_Update, self).__call__(req, initial_input_dict, initial_return_data, *args, **kwargs)
         
     def success_message(self, item):
-        return 'Request to resubmit task [{}] sent successfully, check server logs for details'.format(self.input['task_id'])
+        return 'Request to {} task [{}] sent successfully, check server logs for details'.format(self.action_verb, self.input['task_id'])
+
+class Resubmit(_Update):
+    url_name = 'pattern-delivery-resubmit'
+    service_name = 'zato.pattern.delivery.resubmit'
+    action_verb = 'resubmit'
+    
+class Edit(_Update):
+    url_name = 'pattern-delivery-edit'
+    service_name = 'zato.pattern.delivery.edit'
+    action_verb = 'update'
     
 # ##############################################################################
 
