@@ -21,7 +21,7 @@ from dateutil.parser import parse
 from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
 from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ, to_json
 from zato.common.odb.query import delivery_definition_list, out_jms_wmq, out_jms_wmq_by_name
-from zato.common.util import datetime_to_seconds
+from zato.common.util import datetime_to_seconds, validate_input_dict
 from zato.server.service import AsIs, Boolean, CSV, Integer, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pattern.delivery import target_def_class
@@ -40,17 +40,6 @@ class _DeliveryService(AdminService):
     """ Base class with code common to multiple guaranteed delivery-related services.
     """
     _is_edit = None
-    
-    def _validate_input_dict(self, *validation_info):
-        """ Checks that input belongs is one of allowed values.
-        """
-        for key_name, key, source in validation_info:
-            if not source.has(key):
-                msg = 'Invalid {}:[{}]'.format(key_name, key)
-                log_msg = '{} (attrs: {})'.format(msg, source.attrs)
-                
-                self.logger.warn(log_msg)
-                raise ZatoException(self.cid, msg)
             
     def _validate_times(self):
         """ Checks whether times specified constitute at least one second.
@@ -131,7 +120,7 @@ class GetList(_DeliveryService):
 
     def handle(self):
         target_type = self.request.input.target_type
-        self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
+        validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
         
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session, self.request.input.cluster_id, target_type)
@@ -157,7 +146,7 @@ class _CreateEdit(_DeliveryService):
         with closing(self.odb.session()) as session:
             
             target_type = self.request.input.target_type
-            self._validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
+            validate_input_dict(('target_type', target_type, INVOCATION_TARGET))
             self._validate_times()
         
             input = self.request.input

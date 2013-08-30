@@ -28,7 +28,6 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
-from zato.admin.web.views.pattern.delivery import in_doubt as pattern_delivery_in_doubt
 from zato.admin.web.views.security import basic_auth, tech_account, wss
 
 
@@ -99,19 +98,19 @@ urlpatterns = patterns('',
     # Patterns ..
     
     # Delivery
-    url(r'^zato/pattern/delivery/details/(?P<task_id>.*)/$', pattern_delivery.Details(), name=pattern_delivery.Details.url_name),
-    url(r'^zato/pattern/delivery/resubmit-many/(?P<cluster_id>.*)/$', pattern_delivery.resubmit_many, name='pattern-delivery-resubmit-many'),
-    url(r'^zato/pattern/delivery/delete-many/(?P<cluster_id>.*)/$', pattern_delivery.delete_many, name='pattern-delivery-delete-many'),
-    url(r'^zato/pattern/delivery/resubmit/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery.Resubmit(), name=pattern_delivery.Resubmit.url_name),
+
+    url(r'^zato/pattern/delivery/(?P<def_name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<state>.*)/(?P<cluster_id>.*)/$', pattern_delivery.Index(), name=pattern_delivery.Index.url_name),
     url(r'^zato/pattern/delivery/delete/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery.Delete(), name=pattern_delivery.Delete.url_name),
+    url(r'^zato/pattern/delivery/delete-many/(?P<cluster_id>.*)/$', pattern_delivery.delete_many, name='pattern-delivery-delete-many'),
+    url(r'^zato/pattern/delivery/details/(?P<task_id>.*)/$', pattern_delivery.Details(), name=pattern_delivery.Details.url_name),
+    url(r'^zato/pattern/delivery/resubmit/(?P<task_id>.*)/(?P<cluster_id>.*)/$', pattern_delivery.Resubmit(), name=pattern_delivery.Resubmit.url_name),
+    url(r'^zato/pattern/delivery/resubmit-many/(?P<cluster_id>.*)/$', pattern_delivery.resubmit_many, name='pattern-delivery-resubmit-many'),
     
     url(r'^zato/pattern/delivery/definition/$', pattern_delivery_def.Index(), name=pattern_delivery_def.Index.url_name),
     url(r'^zato/pattern/delivery/definition/create/$', pattern_delivery_def.Create(), name=pattern_delivery_def.Create.url_name),
     url(r'^zato/pattern/delivery/definition/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', pattern_delivery_def.Delete(), name=pattern_delivery_def.Delete.url_name),
     url(r'^zato/pattern/delivery/definition/edit/$', pattern_delivery_def.Edit(), name=pattern_delivery_def.Edit.url_name),
     
-    url(r'^zato/pattern/delivery/in-doubt/(?P<def_name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<cluster_id>.*)/$', pattern_delivery_in_doubt.Index(), name=pattern_delivery_in_doubt.Index.url_name),
-
     # Security..
 
     # .. HTTP Basic Auth

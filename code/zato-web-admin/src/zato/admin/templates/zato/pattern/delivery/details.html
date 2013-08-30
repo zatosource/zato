@@ -63,7 +63,7 @@
                                         <td>
                                             {{ item.creation_time }}
                                             <br/>
-                                            {{ item.in_doubt_created_at }}
+                                            {% ifequal item.state 'in-doubt' %}{{ item.last_used }}{% else %}<span class="form_hint">n/a</a>{% endifequal %}
                                         </td>
                                     </tr>
                                     <tr>

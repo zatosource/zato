@@ -13,13 +13,13 @@
   
   |
   {% if has_previous %}
-    {% include "zato/pattern/delivery/in-doubt/prev-page.html" %}
+    {% include "zato/pattern/delivery/prev-page.html" %}
   {% else %}
     <span style="color:#666;font-size:12px">Previous</span>
   {% endif %}
   
   {% if has_next %}
-    {% include "zato/pattern/delivery/in-doubt/next-page.html" %}
+    {% include "zato/pattern/delivery/next-page.html" %}
   {% else %}
     <span style="color:#666;font-size:12px">Next</span>
   {% endif %}

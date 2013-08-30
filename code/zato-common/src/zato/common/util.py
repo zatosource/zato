@@ -649,3 +649,14 @@ def hexlify(item):
     """ Returns a nice hex version of a string given on input.
     """
     return ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, item.encode('hex'))])
+
+def validate_input_dict(cid, *validation_info):
+    """ Checks that input belongs is one of allowed values.
+    """
+    for key_name, key, source in validation_info:
+        if not source.has(key):
+            msg = 'Invalid {}:[{}]'.format(key_name, key)
+            log_msg = '{} (attrs: {})'.format(msg, source.attrs)
+            
+            logger.warn(log_msg)
+            raise ZatoException(cid, msg)

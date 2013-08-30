@@ -25,11 +25,15 @@ from zato.common.model import DeliveryItem
 
 logger = logging.getLogger(__name__)
 
+# ##############################################################################
+
 def _drop_utc(item, req):
     item.creation_time = from_utc_to_user(item.creation_time_utc + '+00:00', req.zato.user_profile)
-    item.in_doubt_created_at = from_utc_to_user(item.in_doubt_created_at_utc + '+00:00', req.zato.user_profile)
+    item.last_used = from_utc_to_user(item.last_used_utc + '+00:00', req.zato.user_profile)
     
     return item
+
+# ##############################################################################
 
 class Details(_Index):
     url_name = 'pattern-delivery-details'
@@ -39,7 +43,7 @@ class Details(_Index):
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('task_id',)
-        output_required = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
+        output_required = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'last_used_utc', 
                     'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
         output_optional = ('payload', 'args', 'kwargs', 'payload_sha1', 'payload_sha256')
         output_repeated = False
@@ -92,6 +96,8 @@ class Resubmit(CreateEdit):
         
     def success_message(self, item):
         return 'Request to resubmit task [{}] sent successfully, check server logs for details'.format(self.input['task_id'])
+    
+# ##############################################################################
 
 class Delete(CreateEdit):
     url_name = 'pattern-delivery-delete'
@@ -103,6 +109,8 @@ class Delete(CreateEdit):
         
     def success_message(self, item):
         return 'Request to delete task [{}] sent successfully, check server logs for details'.format(self.input['task_id'])
+    
+# ##############################################################################
 
 def _update_many(req, cluster_id, service, success_msg, failure_msg):
     """ A common function for either resubmitting or deleting one or more tasks.
@@ -135,5 +143,47 @@ def delete_many(req, cluster_id):
     """
     return _update_many(req, cluster_id, 'zato.pattern.delivery.delete',
         'Tasks deleted successfully', 'Could not delete tasks')
+    
+# ##############################################################################
+
+class Index(_Index):
+    method_allowed = 'GET'
+    url_name = 'pattern-delivery-index'
+    template = 'zato/pattern/delivery/index.html'
+    service_name = 'zato.pattern.delivery.get-list'
+    output_class = DeliveryItem
+    
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('def_name',)
+        input_optional = ('batch_size', 'current_batch', 'start', 'stop', 'state')
+        output_required = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'last_used_utc', 
+            'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
+        output_repeated = True
+        
+    def on_before_append_item(self, item):
+        return _drop_utc(item, self.req)
+    
+    def on_after_set_input(self):
+        for name in('start', 'stop'):
+            if self.input.get(name):
+                self.input[name] = from_user_to_utc(self.input[name], self.req.zato.user_profile)
+        
+    def handle(self):
+        out = {'form': InstanceListForm(initial=self.req.GET)}
+        out.update(get_js_dt_format(self.req.zato.user_profile))
+        
+        service = 'zato.pattern.delivery.get-batch-info'
+        req = {key:self.input[key] for key in ('def_name', 'batch_size', 'current_batch', 'start', 'stop', 'state') if self.input.get(key)}
+        response = self.req.zato.client.invoke(service, req)
+        
+        logger.error(self.input)
+        logger.error(req)
+
+        if response.ok:
+            out.update(response.data)
+        else:
+            logger.warn(response.details)
+        
+        return out
     
 # ##############################################################################

@@ -57,7 +57,7 @@ _target_def_class = {
     INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
 
-IN_DOUBT_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'in_doubt_created_at_utc', 
+IN_DOUBT_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'last_used_utc', 
             'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
 
 PAYLOAD_KEYS = IN_DOUBT_KEYS + ('payload', 'args', 'kwargs', 'target')
@@ -503,18 +503,18 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-    def _get_page(self, session, cluster_id, params):
-        return Page(delivery_list(session, cluster_id, params.def_name, DELIVERY_STATE.IN_DOUBT, params.start, params.stop),
+    def _get_page(self, session, cluster_id, params, state):
+        return Page(delivery_list(session, cluster_id, params.def_name, state, params.start, params.stop),
              page=params.current_batch,
              items_per_page=params.batch_size)
 
-    def get_batch_info(self, cluster_id, params):
+    def get_batch_info(self, cluster_id, params, state):
         """ Returns information regarding how given set of data will be split into
         smaller batches given maximum number of items on a single batch and min/max member score
         of the set. Also returns information regarding a current batch - whether it has prev/next batches.
         """
         with closing(self.odb.session()) as session:
-            page = self._get_page(session, cluster_id, params)
+            page = self._get_page(session, cluster_id, params, state)
             return {
                 'total_results': page.item_count,
                 'num_batches': page.page_count,
@@ -524,14 +524,14 @@ class DeliveryStore(object):
                 'previous_batch_number': page.previous_page,
             }
 
-    def get_in_doubt_instance_list(self, cluster_id, params):
+    def get_delivery_instance_list(self, cluster_id, params, state):
         """ Returns a batch of instances that are in the in-doubt state.
         """
         with closing(self.odb.session()) as session:
-            page = self._get_page(session, cluster_id, params)
+            page = self._get_page(session, cluster_id, params, state)
             for values in page.items:
                 out = dict(zip(IN_DOUBT_KEYS, values))
-                for name in('creation_time_utc', 'in_doubt_created_at_utc'):
+                for name in('creation_time_utc', 'last_used_utc'):
                     out[name] = out[name].isoformat()
                     
                 yield out
@@ -543,7 +543,7 @@ class DeliveryStore(object):
             out = delivery(session, task_id, target_def_class).\
                    one()
             out = dict(zip(PAYLOAD_KEYS, out))
-            for name in('creation_time_utc', 'in_doubt_created_at_utc'):
+            for name in('creation_time_utc', 'last_used_utc'):
                 out[name] = out[name].isoformat()
                 
             return out

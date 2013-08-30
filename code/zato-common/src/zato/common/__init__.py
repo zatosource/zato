@@ -301,6 +301,7 @@ class DELIVERY_HISTORY_ENTRY(Attrs):
 class DELIVERY_STATE(Attrs):
     IN_DOUBT = 'in-doubt'
     IN_PROGRESS_RESUBMITTED = 'in-progress-resubmitted'
+    IN_PROGRESS_ANY = 'in-progress-any' # A wrapper for all in-progress-* states
     IN_PROGRESS_STARTED = 'in-progress'
     IN_PROGRESS_TARGET_OK = 'in-progress-target-ok'
     IN_PROGRESS_TARGET_FAILURE = 'in-progress-target-failure'
