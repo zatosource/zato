@@ -212,8 +212,21 @@ class Index(_BaseView):
         cluster_id doesn't have to be in GET, 'cluster' will suffice.
         """
         input_elems = self.req.GET.keys() + self.req.zato.args.keys()
-        return self.service_name and self.cluster_id and not(
-            any(True for elem in self.SimpleIO.input_required if elem != 'cluster_id' and elem not in input_elems))
+        
+        if not(self.service_name and self.cluster_id):
+            return False
+        
+        for elem in self.SimpleIO.input_required:
+            if elem == 'cluster_id':
+                continue
+            if not elem in input_elems:
+                return False
+            value = self.req.GET.get(elem)
+            if not value:
+                value = self.req.zato.args.get(elem)
+                if not value:
+                    return False
+        return True
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
