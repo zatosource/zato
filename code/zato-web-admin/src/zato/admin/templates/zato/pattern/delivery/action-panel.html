@@ -27,8 +27,8 @@
   <hr/>
   <div style="text-align:right">
   <span style="color:#666;font-size:12px">On this page:</span>
-  <a href="javascript:$.fn.zato.pattern.delivery.in_doubt.resubmit_all('{{ cluster_id }}')">resubmit all</a> 
-  |
-  <a href="javascript:$.fn.zato.pattern.delivery.in_doubt.delete_all('{{ cluster_id }}')">delete all</a> 
+  {% ifequal req.zato.args.state 'in-doubt' %}<a href="javascript:$.fn.zato.pattern.delivery.resubmit_all('{{ cluster_id }}')">resubmit all</a> 
+  |{% endifequal %}
+  <a href="javascript:$.fn.zato.pattern.delivery.delete_all('{{ cluster_id }}')">delete all</a> 
   </div>
 </div>

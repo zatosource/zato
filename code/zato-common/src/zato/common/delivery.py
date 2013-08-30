@@ -13,7 +13,7 @@ import csv
 from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps, loads
-from logging import getLogger
+from logging import getLogger, DEBUG
 from traceback import format_exc
 
 # Bunch
@@ -57,10 +57,10 @@ _target_def_class = {
     INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
 }
 
-IN_DOUBT_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'last_used_utc', 
+DELIVERY_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'last_used_utc', 
             'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
 
-PAYLOAD_KEYS = IN_DOUBT_KEYS + ('payload', 'args', 'kwargs', 'target')
+PAYLOAD_KEYS = DELIVERY_KEYS + ('payload', 'args', 'kwargs', 'target')
 
 LOCK_TIMEOUT = 0.2
 RETRY_SLEEP = 5
@@ -340,12 +340,19 @@ class DeliveryStore(object):
         now = now_dt.isoformat()
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.task_id)
         
-        try:
-            delivery = self.get_delivery(item.task_id)
-        except orm_exc.NoResultFound, e:
-            # Apparently the delivery was deleted since the last time we were scheduled to run
-            self.logger.info('Stopping [%s] (NoResultFound->True)', item.log_name)
-            return
+        with closing(self.odb.session()) as session:
+            try:
+                delivery = session.merge(self.get_delivery(item.task_id))
+                payload = delivery.payload.payload
+            except orm_exc.NoResultFound, e:
+                # Apparently the delivery was deleted since the last time we were scheduled to run
+                self.logger.info('Stopping [%s] (NoResultFound->True)', item.log_name)
+                return
+        
+        # Fetch new values because it's possible they have been changed since the last time we were invoked
+        item['payload'] = payload
+        item['args'] = delivery.args
+        item['kwargs'] = delivery.kwargs
         
         with Lock(lock_name, self.delivery_lock_timeout, LOCK_TIMEOUT, self.kvdb.conn):
 
@@ -530,7 +537,7 @@ class DeliveryStore(object):
         with closing(self.odb.session()) as session:
             page = self._get_page(session, cluster_id, params, state)
             for values in page.items:
-                out = dict(zip(IN_DOUBT_KEYS, values))
+                out = dict(zip(DELIVERY_KEYS, values))
                 for name in('creation_time_utc', 'last_used_utc'):
                     out[name] = out[name].isoformat()
                     
@@ -547,5 +554,44 @@ class DeliveryStore(object):
                 out[name] = out[name].isoformat()
                 
             return out
+
+# ##############################################################################
+
+    def update_delivery(self, task_id, payload, args, kwargs):
+        with closing(self.odb.session()) as session:
+            now = datetime.utcnow().isoformat()
+            delivery = session.merge(self.get_delivery(task_id))
+            
+            old_payload = delivery.payload.payload
+            old_args = delivery.args
+            old_kwargs = delivery.kwargs
+            
+            delivery.payload.payload = payload
+            delivery.args = args
+            delivery.kwargs = kwargs
+            
+            delivery.definition.last_used = now
+            delivery.target_count += 1
+            
+            entry_ctx = dumps({
+                'old_payload': old_payload,
+                'old_args': old_args,
+                'old_kwargs': old_kwargs,
+                })
+            
+            history = DeliveryHistory()
+            history.task_id = task_id
+            history.entry_type = DELIVERY_HISTORY_ENTRY.UPDATED
+            history.entry_time = now
+            history.entry_ctx = entry_ctx
+            history.delivery = delivery
+            history.resubmit_count = delivery.resubmit_count
+            
+            session.add(delivery)
+            session.add(history)
+            
+            session.commit()
+            
+            self.logger.info('Updated delivery [%s], history.id [%s]', task_id, history.id)
 
 # ##############################################################################

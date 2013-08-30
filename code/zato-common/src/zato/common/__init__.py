@@ -297,6 +297,7 @@ class DELIVERY_HISTORY_ENTRY(Attrs):
     SENT_FROM_SOURCE_RESUBMIT = b'sent-from-source-resubmit'
     TARGET_OK = b'target-ok'
     TARGET_FAILURE = b'target-failure'
+    UPDATED = b'updated'
     
 class DELIVERY_STATE(Attrs):
     IN_DOUBT = 'in-doubt'
