@@ -4,6 +4,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/slideout.css">
 {% endblock %}
 
 {% block extra_js %}
@@ -14,6 +15,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
+	<script type="text/javascript" src="/static/js/pattern/delivery/look-up-task.js"></script>
     <script type="text/javascript" src="/static/js/pattern/delivery/definition/index.js"></script>
 
 
@@ -316,6 +318,9 @@
                 </form>
             </div>
         </div>
+        
+	<input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
+	{% include "zato/pattern/delivery/look-up-task.html" %}
 
         
     {% else %}

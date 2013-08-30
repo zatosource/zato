@@ -56,4 +56,7 @@ $(document).ready(function() {
 	
     $("#update1").click($.fn.zato.pattern.delivery.edit);
 	$("#update2").click($.fn.zato.pattern.delivery.edit);
+	
+	$("#look-up-task").click($.fn.zato.pattern.look_up_task);
+	$("#look-up-form").submit($.fn.zato.pattern.look_up_task);
 })

@@ -32,6 +32,9 @@ $(document).ready(function() {
 		);
 
     })
+	
+	$("#look-up-task").click($.fn.zato.pattern.look_up_task);
+	$("#look-up-form").submit($.fn.zato.pattern.look_up_task);
 })
 
 $.fn.zato.pattern.delivery._update_all = function(cluster_id, url_pattern) {
