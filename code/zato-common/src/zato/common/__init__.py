@@ -223,6 +223,8 @@ class KVDB(Attrs):
     LOCK_PACKAGE_ALREADY_UPLOADED = '{}already-uploaded:'.format(LOCK_PACKAGE_PREFIX)
     
     LOCK_DELIVERY = '{}delivery:'.format(LOCK_PREFIX)
+    LOCK_DELIVERY_AUTO_RESUBMIT = '{}auto-resubmit:'.format(LOCK_DELIVERY)
+    
     LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
     
     TRANSLATION = 'zato:kvdb:data-dict:translation'
@@ -249,17 +251,6 @@ class KVDB(Attrs):
     
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
-    
-    '''
-    DELIVERY_PAYLOAD_PREFIX = '{}payload:'.format(DELIVERY_PREFIX)
-    DELIVERY_BY_TARGET_TYPE_PREFIX = '{}by-target-type:'.format(DELIVERY_PREFIX)
-    DELIVERY_UNIQUE_BY_TARGET_TYPE_PREFIX = '{}uq-by-target-type:'.format(DELIVERY_PREFIX)
-    DELIVERY_IN_DOUBT_DETAILS_PREFIX = '{}in-doubt:details:'.format(DELIVERY_PREFIX)
-    DELIVERY_IN_DOUBT_LIST_IDX = '{}in-doubt:list-idx'.format(DELIVERY_PREFIX)
-    DELIVERY_IN_DOUBT_LIST_PREFIX = '{}in-doubt:list:'.format(DELIVERY_PREFIX)
-    DELIVERY_ARCHIVE_SUCCESS_PREFIX = '{}arch-succes:'.format(DELIVERY_PREFIX)
-    DELIVERY_ARCHIVE_FAILED_PREFIX = '{}arch-failed:'.format(DELIVERY_PREFIX)
-    '''
 
 class SCHEDULER_JOB_TYPE(Attrs):
     ONE_TIME = 'one_time'
@@ -295,14 +286,16 @@ class DELIVERY_HISTORY_ENTRY(Attrs):
     NONE = b'(None)'
     SENT_FROM_SOURCE = b'sent-from-source'
     SENT_FROM_SOURCE_RESUBMIT = b'sent-from-source-resubmit'
+    SENT_FROM_SOURCE_RESUBMIT_AUTO = b'sent-from-source-resubmit-auto'
     TARGET_OK = b'target-ok'
     TARGET_FAILURE = b'target-failure'
     UPDATED = b'updated'
     
 class DELIVERY_STATE(Attrs):
     IN_DOUBT = 'in-doubt'
-    IN_PROGRESS_RESUBMITTED = 'in-progress-resubmitted'
     IN_PROGRESS_ANY = 'in-progress-any' # A wrapper for all in-progress-* states
+    IN_PROGRESS_RESUBMITTED = 'in-progress-resubmitted'
+    IN_PROGRESS_RESUBMITTED_AUTO = 'in-progress-resubmitted-auto'
     IN_PROGRESS_STARTED = 'in-progress'
     IN_PROGRESS_TARGET_OK = 'in-progress-target-ok'
     IN_PROGRESS_TARGET_FAILURE = 'in-progress-target-failure'
