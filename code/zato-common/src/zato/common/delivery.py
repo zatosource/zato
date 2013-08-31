@@ -14,6 +14,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps, loads
 from logging import getLogger, DEBUG
+from sys import maxint
 from traceback import format_exc
 
 # Bunch
@@ -60,7 +61,8 @@ _target_def_class = {
 DELIVERY_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'last_used_utc', 
             'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
 
-PAYLOAD_KEYS = DELIVERY_KEYS + ('payload', 'args', 'kwargs', 'target')
+PAYLOAD_KEYS = DELIVERY_KEYS + ('payload', 'args', 'kwargs')
+PAYLOAD_ALL_KEYS = PAYLOAD_KEYS + ('target',)
 
 LOCK_TIMEOUT = 0.2
 RETRY_SLEEP = 5
@@ -126,27 +128,30 @@ class DeliveryStore(object):
             
         item.invoke_func('zato.pattern.delivery.dispatch', delivery_req)
         
-    def register_invoke_schedule(self, item, is_resubmit=False):
+    def register_invoke_schedule(self, item, is_resubmit=False, is_auto=False):
         """ Registers the task, invokes target and schedules a check to find out if the invocation was OK.
         """
         now = datetime.utcnow()
         
         # Sanity check - did we get everything that was needed?
         self._validate_register(item)
-        
+
         # First, save everything in the ODB
         with closing(self.odb.session()) as session:
             
             if is_resubmit:
                 delivery = session.merge(self.get_delivery(item.task_id))
-                delivery.state = DELIVERY_STATE.IN_PROGRESS_RESUBMITTED
+                delivery.state = DELIVERY_STATE.IN_PROGRESS_RESUBMITTED_AUTO if is_auto else DELIVERY_STATE.IN_PROGRESS_RESUBMITTED
                 delivery.resubmit_count += 1
                 delivery.last_used = now
                 delivery.args = item.args
                 delivery.kwargs = item.kwargs
                 delivery.payload.payload = item.payload
                 
-                session.add(self._history_from_source(delivery, item, now, DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE_RESUBMIT))
+                session.add(
+                    self._history_from_source(
+                        delivery, item, now, 
+                        DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE_RESUBMIT_AUTO if is_auto else DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE_RESUBMIT))
                 
             else:
                 delivery = Delivery()
@@ -278,7 +283,7 @@ class DeliveryStore(object):
                 expires = delivery.definition.expire_arch_fail_after
                 delivery_state = DELIVERY_STATE.FAILED
                 history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_FAILED
-                
+            
             delivery.state = delivery_state
             delivery.last_used = now_dt
             delivery.definition.last_used = now_dt
@@ -439,7 +444,7 @@ class DeliveryStore(object):
 
 # ##############################################################################
 
-    def deliver(self, cluster_id, def_name, payload, task_id, invoke_func, is_resubmit=False, *args, **kwargs):
+    def deliver(self, cluster_id, def_name, payload, task_id, invoke_func, is_resubmit=False, is_auto=False, *args, **kwargs):
         """ A public method to be invoked by services for delivering payload to target through a definition.
         """
         with closing(self.odb.session()) as session:
@@ -462,7 +467,7 @@ class DeliveryStore(object):
             
         self.register_invoke_schedule(
             _item_from_api(delivery_def_base, target, payload, task_id, invoke_func, args, kwargs),
-            is_resubmit)
+            is_resubmit, is_auto)
 
 # ##############################################################################
         
@@ -503,7 +508,7 @@ class DeliveryStore(object):
 # ##############################################################################
 
     def _get_page(self, session, cluster_id, params, state):
-        return Page(delivery_list(session, cluster_id, params.def_name, state, params.start, params.stop),
+        return Page(delivery_list(session, cluster_id, params.def_name, state, params.start, params.stop, params.get('needs_payload', False)),
              page=params.current_batch,
              items_per_page=params.batch_size)
 
@@ -529,7 +534,7 @@ class DeliveryStore(object):
         with closing(self.odb.session()) as session:
             page = self._get_page(session, cluster_id, params, state)
             for values in page.items:
-                out = dict(zip(DELIVERY_KEYS, values))
+                out = dict(zip((PAYLOAD_KEYS if params.get('needs_payload') else DELIVERY_KEYS), values))
                 for name in('creation_time_utc', 'last_used_utc'):
                     out[name] = out[name].isoformat()
                     
@@ -541,7 +546,7 @@ class DeliveryStore(object):
         with closing(self.odb.session()) as session:
             out = delivery(session, task_id, target_def_class).\
                    one()
-            out = dict(zip(PAYLOAD_KEYS, out))
+            out = dict(zip(PAYLOAD_ALL_KEYS, out))
             for name in('creation_time_utc', 'last_used_utc'):
                 out[name] = out[name].isoformat()
                 
@@ -587,3 +592,20 @@ class DeliveryStore(object):
             self.logger.info('Updated delivery [%s], history.id [%s]', task_id, history.id)
 
 # ##############################################################################
+
+    def get_delivery_list_for_auto_resubmit(self, cluster_id, def_name, stop):
+        params = Bunch({
+            'def_name': def_name,
+            'start': None,
+            'stop': stop,
+            'current_batch': 1,
+            'batch_size': maxint,
+            'needs_payload': True,
+        })
+        for item in self.get_delivery_instance_list(
+                cluster_id, params, [DELIVERY_STATE.IN_PROGRESS_STARTED, 
+                                      DELIVERY_STATE.IN_PROGRESS_RESUBMITTED,
+                                      DELIVERY_STATE.IN_PROGRESS_RESUBMITTED_AUTO,
+                                      DELIVERY_STATE.IN_PROGRESS_TARGET_OK, 
+                                      DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE]):
+            yield item

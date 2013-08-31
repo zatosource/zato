@@ -655,7 +655,11 @@ class Service(object):
         *args and **kwargs will be passed directly as-is to the target behind the def_name.
         """
         task_id = task_id or new_cid()
-        self.delivery_store.deliver(self.server.cluster_id, def_name, payload, task_id, self.invoke, kwargs.pop('is_resubmit', False), *args, **kwargs)
+        self.delivery_store.deliver(
+            self.server.cluster_id, def_name, payload, task_id, self.invoke, 
+            kwargs.pop('is_resubmit', False), 
+            kwargs.pop('is_auto', False), 
+            *args, **kwargs)
         
         return task_id
             
@@ -758,7 +762,7 @@ class Service(object):
         """
         name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
         backend = backend or self.kvdb.conn
-        return Lock(name, expires, timeout, backend, self._on_lock_timeout(name, expires, timeout, backend))
+        return Lock(name, expires, timeout, backend)
     
 ################################################################################
 

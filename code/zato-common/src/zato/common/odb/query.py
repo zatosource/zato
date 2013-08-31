@@ -498,8 +498,8 @@ def delivery_count_by_state(session, def_id):
         filter(Delivery.definition_id==def_id).\
         group_by(Delivery.state)
 
-def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
-    q = session.query(
+def delivery_list(session, cluster_id, def_name, state, start=None, stop=None, needs_payload=False):
+    columns = [
         DeliveryDefinitionBase.name.label('def_name'),
         DeliveryDefinitionBase.target_type,
         Delivery.task_id,
@@ -511,12 +511,20 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
         Delivery.state,
         DeliveryDefinitionBase.retry_repeats,
         DeliveryDefinitionBase.check_after,
-        DeliveryDefinitionBase.retry_seconds).\
+        DeliveryDefinitionBase.retry_seconds
+    ]
+    
+    if needs_payload:
+        columns.extend([DeliveryPayload.payload, Delivery.args, Delivery.kwargs])
+    
+    q = session.query(*columns).\
         filter(DeliveryDefinitionBase.id==Delivery.definition_id).\
         filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
         filter(DeliveryDefinitionBase.name==def_name).\
-        filter(Delivery.state.in_(state)).\
-        order_by(Delivery.last_used.desc())
+        filter(Delivery.state.in_(state))
+
+    if needs_payload:
+        q = q.filter(DeliveryPayload.task_id==Delivery.task_id)
     
     if start:
         q = q.filter(Delivery.last_used >= start)
@@ -524,6 +532,8 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None):
     if stop:
         q = q.filter(Delivery.last_used <= stop)
         
+    q = q.order_by(Delivery.last_used.desc())
+
     return q
 
 def delivery(session, task_id, target_def_class):

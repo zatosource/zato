@@ -8,17 +8,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 from contextlib import closing
-from datetime import timedelta
+from datetime import datetime, timedelta
 from hashlib import sha1, sha256
 from json import dumps, loads
 
 # Zato
-from zato.common import DATA_FORMAT, DELIVERY_STATE, INVOCATION_TARGET
-from zato.common.odb.model import DeliveryDefinitionOutconnWMQ
+from zato.common import DATA_FORMAT, DELIVERY_STATE, INVOCATION_TARGET, KVDB
+from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ
 from zato.common.odb.query import delivery_count_by_state, delivery_definition_list, \
      delivery_history_list
 from zato.common.util import dotted_getattr, validate_input_dict
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
 dispatch_dict = {
@@ -282,5 +282,46 @@ class Edit(AdminService):
             self.request.input.get('payload', '').encode('utf-8'),
             self.request.input.get('args', '').encode('utf-8'),
             self.request.input.get('kwargs', '').encode('utf-8'))
+
+# ##############################################################################
+
+class AutoResubmit(AdminService):
+    """ Dispatches as many async requests for auto-resubmitting delivery tasks
+    as there are delivery definitions.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pattern_delivery_edit_request'
+        response_elem = 'zato_pattern_delivery_edit_response'
+        input_required = ('def_id', 'def_name', Integer('retry_seconds'))
+    
+    def handle(self):
+        now = datetime.utcnow()
+        stop = now - timedelta(seconds=4*self.request.input.retry_seconds) # TODO: Make it configurable
+        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY_AUTO_RESUBMIT, self.request.input.def_name)
+        
+        with self.lock(lock_name, 90):  # TODO: Make it configurable
+            for item in self.delivery_store.get_delivery_list_for_auto_resubmit(self.server.cluster_id, self.request.input.def_name, stop):
+                
+                kwargs = loads(item['kwargs'])
+                kwargs['is_resubmit'] = True
+                kwargs['is_auto'] = True
+                
+                self.deliver(
+                    item['def_name'], item['payload'], item['task_id'], *loads(item['args']), **kwargs)
+    
+class DispatchAutoResubmit(AdminService):
+    """ Dispatches as many async requests for auto-resubmitting delivery tasks
+    as there are delivery definitions.
+    """
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            for def_id, def_name, retry_seconds in session.query(
+                DeliveryDefinitionBase.id, 
+                DeliveryDefinitionBase.name,
+                DeliveryDefinitionBase.retry_seconds,)\
+                .all():
+                self.invoke_async(
+                    AutoResubmit.get_name(), 
+                        {'def_id':def_id, 'def_name':def_name, 'retry_seconds':retry_seconds})
 
 # ##############################################################################
