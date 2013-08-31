@@ -414,14 +414,6 @@ class DeliveryStore(object):
         """
         return not self.kvdb.conn.hget('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'deleted')
         
-    def set_updated(self, name, is_updated):
-        """ Sets a boolean flag indicating whether a definition has been updated.
-        Any new instances of check_target consult this flag to see whether they should
-        perhaps change their schedule.
-        """
-        # ZZZ: TODO TODO - this is set but then nothing checks it anywhere later on 
-        self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'updated', is_updated)
-        
     def update_counters(self, name, in_progress, in_doubt, confirmed, failed):
         """ Updates counters of a given delivery definition.
         """
