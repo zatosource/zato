@@ -359,7 +359,7 @@ class Service(Base):
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
     id = Column(Integer, Sequence('service_id_seq'), primary_key=True)
-    name = Column(String(2000), nullable=False)
+    name = Column(String(300), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     impl_name = Column(String(2000), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
