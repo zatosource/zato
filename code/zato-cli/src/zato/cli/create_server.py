@@ -100,6 +100,17 @@ errors=
 
 [startup_services]
 zato.helpers.input-logger=Sample payload for a startup service
+
+[profiler]
+enabled=False
+profiler_dir=profiler
+log_filename=profiler.log
+cachegrind_filename=cachegrind.out
+discard_first_request=True
+flush_at_shutdown=True
+url_path=/zato-profiler
+unwind=False
+
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
@@ -118,7 +129,7 @@ service_sources_contents = """# Visit https://zato.io/docs for more information.
 
 default_odb_pool_size = 1
 
-directories = ('config', 'config/repo', 'config/zdaemon', 'pickup-dir', 'logs', 'work',
+directories = ('config', 'config/repo', 'config/zdaemon', 'logs', 'pickup-dir', 'profiler', 'work',
                'work/hot-deploy', 'work/hot-deploy/current', 'work/hot-deploy/backup', 'work/hot-deploy/backup/last')
 files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
          'config/repo/service-sources.txt':service_sources_contents}

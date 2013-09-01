@@ -22,6 +22,9 @@ import logging.config
 # gunicorn
 from gunicorn.app.base import Application
 
+# Paste
+from paste.util.converters import asbool
+
 # psycopg2
 import psycopg2
 
@@ -110,17 +113,16 @@ def run(base_dir):
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
     
-    
-    '''
-    parallel_server.on_wsgi_request = ProfileMiddleware(
-                   parallel_server.on_wsgi_request,
-                   log_filename='/home/dsuch/tmp/prof/bar.log',
-                   cachegrind_filename='/home/dsuch/tmp/prof/cachegrind.out.bar',
-                   discard_first_request=True,
-                   flush_at_shutdown=True,
-                   path='/__profile__',
-                   unwind=False,
-                  )'''
+    if asbool(config.profiler.enabled):
+        profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
+        parallel_server.on_wsgi_request = ProfileMiddleware(
+            parallel_server.on_wsgi_request,
+            log_filename = os.path.join(profiler_dir, config.profiler.log_filename),
+            cachegrind_filename = os.path.join(profiler_dir, config.profiler.cachegrind_filename),
+            discard_first_request = config.profiler.discard_first_request,
+            flush_at_shutdown = config.profiler.flush_at_shutdown,
+            path = config.profiler.url_path,
+            unwind = config.profiler.unwind)
 
     # Run the app at last
     zato_gunicorn_app.run()
