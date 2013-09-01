@@ -25,6 +25,9 @@ from gunicorn.app.base import Application
 # psycopg2
 import psycopg2
 
+# Repoze
+from repoze.profile import ProfileMiddleware
+
 # Zato
 from zato.common.repo import RepoManager
 from zato.common.util import clear_locks, get_app_context, get_config, get_crypto_manager, TRACE1
@@ -106,6 +109,18 @@ def run(base_dir):
         
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
+    
+    
+    '''
+    parallel_server.on_wsgi_request = ProfileMiddleware(
+                   parallel_server.on_wsgi_request,
+                   log_filename='/home/dsuch/tmp/prof/bar.log',
+                   cachegrind_filename='/home/dsuch/tmp/prof/cachegrind.out.bar',
+                   discard_first_request=True,
+                   flush_at_shutdown=True,
+                   path='/__profile__',
+                   unwind=False,
+                  )'''
 
     # Run the app at last
     zato_gunicorn_app.run()
