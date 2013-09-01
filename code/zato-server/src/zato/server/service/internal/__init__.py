@@ -30,12 +30,13 @@ class AdminService(Service):
         super(AdminService, self).__init__()
         
     def before_handle(self):
-        request = self.request.input.toDict()
-        for k, v in request.items():
-            if 'password' in k:
-                request[k] = '*****'
-
-        self.logger.info('cid:[{}], name:[{}], SIO request:[{}]'.format(self.cid, self.name, request))
+        if self.logger.isEnabledFor(logging.INFO):
+            request = dict(self.request.input)
+            for k, v in request.items():
+                if 'password' in k:
+                    request[k] = '*****'
+    
+            self.logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
         
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
