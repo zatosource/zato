@@ -36,6 +36,7 @@ ping_queries = {
     'informix': 'SELECT 1 FROM systables WHERE tabid=1',
     'mssql': 'SELECT 1',
     'mysql': 'SELECT 1+1',
+    'mysql+pymysql': 'SELECT 1+1',
     'oracle': 'SELECT 1 FROM dual',
     'postgresql': 'SELECT 1',
 }
