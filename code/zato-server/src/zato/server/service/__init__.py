@@ -766,33 +766,33 @@ class Service(object):
     
 ################################################################################
 
-    def call_hooks(self, prefix):
-        def call_job_hooks():
-            if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
-                try:
-                    getattr(self, '{}_job'.format(prefix))()
-                except Exception, e:
-                    self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
-                else:
-                    try:
-                        func_name = '{}_{}_job'.format(prefix, self.job_type)
-                        func = getattr(self, func_name)
-                        func()
-                    except Exception, e:
-                        self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
-
-        def call_handle():
+    def call_job_hooks(self, prefix):
+        if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
             try:
-                getattr(self, '{}_handle'.format(prefix))()
+                getattr(self, '{}_job'.format(prefix))()
             except Exception, e:
-                self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
-                
+                self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
+            else:
+                try:
+                    func_name = '{}_{}_job'.format(prefix, self.job_type)
+                    func = getattr(self, func_name)
+                    func()
+                except Exception, e:
+                    self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
+
+    def call_handle(self, prefix):
+        try:
+            getattr(self, '{}_handle'.format(prefix))()
+        except Exception, e:
+            self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
+
+    def call_hooks(self, prefix):
         if prefix == 'before':
-            call_job_hooks()
-            call_handle()
+            self.call_job_hooks(prefix)
+            self.call_handle(prefix)
         else:
-            call_handle()
-            call_job_hooks()
+            self.call_handle(prefix)
+            self.call_job_hooks(prefix)
             
     @classmethod
     def before_add_to_store(cls, logger):
