@@ -101,3 +101,18 @@ Examples:
                 self.logger.debug('Zato web admin started in {0}'.format(self.component_dir))
             else:
                 self.logger.info('OK')
+
+    def _on_custom_program(self, *ignored):
+
+        zdaemon_conf_name = 'zdaemon-custom.conf'
+        socket_prefix = 'custom-program'
+        program = '{} -m zato.admin.main'.format(get_executable())
+        logfile_path_prefix = 'zdaemon-custom'
+
+        self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
+
+        if self.show_output:
+            if self.verbose:
+                self.logger.debug('Zato custom program started in {0}'.format(self.component_dir))
+            else:
+                self.logger.info('OK')

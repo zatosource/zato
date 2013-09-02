@@ -203,6 +203,7 @@ class ZatoCommand(object):
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SERVER = _ComponentName('SERVER', 'Server')
         WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Web admin')
+        CUSTOM = _ComponentName('CUSTOM', 'Custom program')
 
     def __init__(self, args):
         self.original_dir = os.getcwd()
@@ -523,6 +524,7 @@ class ManageCommand(ZatoCommand):
             self.COMPONENTS.LOAD_BALANCER.code: self._on_lb,
             self.COMPONENTS.SERVER.code: self._on_server,
             self.COMPONENTS.WEB_ADMIN.code: self._on_web_admin,
+            self.COMPONENTS.CUSTOM.comde: self._on_custom_program,
         }
 
     command_files = set([ZATO_INFO_FILE])
