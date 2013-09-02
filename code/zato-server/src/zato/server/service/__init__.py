@@ -65,6 +65,8 @@ class ValueConverter(object):
             if value and value is not None: # Can be a 0
                 if isinstance(param, Boolean):
                     value = asbool(value)
+                elif isinstance(param, CSV):
+                    value = value.split(',')
                 elif isinstance(param, Integer):
                     value = int(value)
                 elif isinstance(param, Unicode):
@@ -76,9 +78,12 @@ class ValueConverter(object):
                         if any(param_name==elem for elem in self.int_parameters) or \
                            any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
                             value = int(value)
-                    
+                            
                 if date_time_format and isinstance(value, datetime):
                     value = value.strftime(date_time_format)
+                    
+            if isinstance(param, CSV) and not value:
+                value = []
                 
             return value
         except Exception, e:
@@ -106,6 +111,10 @@ class AsIs(ForceType):
 class Boolean(ForceType):
     """ Gets transformed into a bool object.
     """ 
+
+class CSV(ForceType):
+    """ Gets transformed into an int object.
+    """
 
 class Integer(ForceType):
     """ Gets transformed into an int object.
@@ -498,6 +507,7 @@ class Service(object):
         self.transport = None
         self.wsgi_environ = None
         self.job_type = None
+        self.delivery_store = None
         self.environ = {}
         self.request = Request(self.logger)
         self.response = Response(self.logger)
@@ -595,6 +605,8 @@ class Service(object):
             
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=None,
             transport=None, serialize=False, as_bunch=False):
+        """ Invokes a service synchronously by its implementation name (full dotted Python name).
+        """
             
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
@@ -607,19 +619,24 @@ class Service(object):
             self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch)
         
     def invoke(self, name, *args, **kwargs):
+        """ Invokes a service synchronously by its name.
+        """
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
         
     def invoke_by_id(self, service_id, *args, **kwargs):
+        """ Invokes a service synchronously by its ID.
+        """
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
         
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None, 
             transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False):
-            
+        """ Invokes a service asynchronously by its name.
+        """
         if to_json_string:
             payload = dumps(payload)
-            
+
         cid = new_cid()
-            
+
         msg = {}
         msg['action'] = SERVICE.PUBLISH
         msg['service'] = name
@@ -628,10 +645,23 @@ class Service(object):
         msg['channel'] = channel
         msg['data_format'] = data_format
         msg['transport'] = transport
-        
+
         self.broker_client.invoke_async(msg, expiration=expiration)
-        
+
         return cid
+
+    def deliver(self, def_name, payload, task_id=None, *args, **kwargs):
+        """ Uses guaranteed delivery to send payload using a delivery definition known by def_name.
+        *args and **kwargs will be passed directly as-is to the target behind the def_name.
+        """
+        task_id = task_id or new_cid()
+        self.delivery_store.deliver(
+            self.server.cluster_id, def_name, payload, task_id, self.invoke, 
+            kwargs.pop('is_resubmit', False), 
+            kwargs.pop('is_auto', False), 
+            *args, **kwargs)
+        
+        return task_id
             
     def pre_handle(self):
         """ An internal method run just before the service sets to process the payload.
@@ -732,40 +762,40 @@ class Service(object):
         """
         name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
         backend = backend or self.kvdb.conn
-        return Lock(name, expires, timeout, backend, self._on_lock_timeout(name, expires, timeout, backend))
+        return Lock(name, expires, timeout, backend)
     
 ################################################################################
 
-    def call_hooks(self, prefix):
-        def call_job_hooks():
-            if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
-                try:
-                    getattr(self, '{}_job'.format(prefix))()
-                except Exception, e:
-                    self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
-                else:
-                    try:
-                        func_name = '{}_{}_job'.format(prefix, self.job_type)
-                        func = getattr(self, func_name)
-                        func()
-                    except Exception, e:
-                        self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
-
-        def call_handle():
+    def call_job_hooks(self, prefix):
+        if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
             try:
-                getattr(self, '{}_handle'.format(prefix))()
+                getattr(self, '{}_job'.format(prefix))()
             except Exception, e:
-                self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
-                
+                self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
+            else:
+                try:
+                    func_name = '{}_{}_job'.format(prefix, self.job_type)
+                    func = getattr(self, func_name)
+                    func()
+                except Exception, e:
+                    self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
+
+    def call_handle(self, prefix):
+        try:
+            getattr(self, '{}_handle'.format(prefix))()
+        except Exception, e:
+            self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
+
+    def call_hooks(self, prefix):
         if prefix == 'before':
-            call_job_hooks()
-            call_handle()
+            self.call_job_hooks(prefix)
+            self.call_handle(prefix)
         else:
-            call_handle()
-            call_job_hooks()
+            self.call_handle(prefix)
+            self.call_job_hooks(prefix)
             
-    @staticmethod
-    def before_add_to_store(logger):
+    @classmethod
+    def before_add_to_store(cls, logger):
         """ Invoked right before the class is added to the service store.
         """
         return True
@@ -890,6 +920,7 @@ class Service(object):
         service.wsgi_environ = wsgi_environ
         service.job_type = job_type
         service.translate = server.kvdb.translate
+        service.delivery_store = server.delivery_store
         
         if init:
             service._init()

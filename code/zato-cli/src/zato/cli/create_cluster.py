@@ -115,6 +115,12 @@ zato_services = {
     'zato.outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
     'zato.outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
     
+    # Patterns - delivery
+    'zato.pattern.delivery.definition.create':'zato.server.service.internal.pattern.delivery.definition.Create',
+    'zato.pattern.delivery.definition.delete':'zato.server.service.internal.pattern.delivery.definition.Delete',
+    'zato.pattern.delivery.definition.edit':'zato.server.service.internal.pattern.delivery.definition.Edit',
+    'zato.pattern.delivery.definition.get-list':'zato.server.service.internal.pattern.delivery.definition.GetList',
+    
     # Ping services are added in Create.add_ping_services
 
     # Scheduler

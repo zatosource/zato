@@ -1,9 +1,16 @@
     <div class="prompt">
     <form action="." method="get">
         {{ choose_cluster_form.cluster }}
+        
         {% if pattern_hint %}
             {{ choose_cluster_form.name_filter }}
         {% endif %}
+        
+        {% if delivery_target_form %}
+            Target type: 
+            {{ delivery_target_form.target_type }}
+        {% endif %}
+        
         <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
     </form>
     </div>

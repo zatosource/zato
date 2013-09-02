@@ -17,6 +17,9 @@ from traceback import format_exc
 # anyjson
 from json import dumps
 
+# bunch
+from bunch import Bunch
+
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
@@ -138,6 +141,18 @@ def change_password(req, service_name, field1='password1', field2='password2', s
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
+    async_invoke = False
+    form_prefix = ''
+    
+    def on_before_append_item(self, item):
+        return item
+    
+    def on_after_set_input(self):
+        pass
+        
+    def clear_user_message(self):
+        self.user_message = None
+        self.user_message_class = 'failure'
     
     class SimpleIO:
         input_required = []
@@ -160,8 +175,21 @@ class _BaseView(object):
         
     def __call__(self, req, *args, **kwargs):
         self.req = req
+        for k, v in kwargs.items():
+            self.req.zato.args[k] = v
         self.cluster_id = None
         self.fetch_cluster_id()
+        
+    def set_input(self, req=None):
+        req = req or self.req
+        self.input.update({'cluster_id':self.cluster_id})
+        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+            if name != 'cluster_id':
+                value =  req.GET.get(self.form_prefix + name) or \
+                    req.POST.get(self.form_prefix + name) or req.zato.args.get(self.form_prefix + name)
+                self.input[name] = value
+                
+        self.on_after_set_input()
 
 class Index(_BaseView):
     """ A base class upon which other index views are based.
@@ -173,17 +201,37 @@ class Index(_BaseView):
     
     def __init__(self):
         super(Index, self).__init__()
+        self.input = Bunch()
         self.items = []
         self.item = None
+        self.clear_user_message()
+        
+    def can_invoke_admin_service(self):
+        """ Returns a boolean flag indicating that we know what service to invoke,
+        what cluster on and all the required parameters were given in GET request.
+        cluster_id doesn't have to be in GET, 'cluster' will suffice.
+        """
+        input_elems = self.req.GET.keys() + self.req.zato.args.keys()
+        
+        if not(self.service_name and self.cluster_id):
+            return False
+        
+        for elem in self.SimpleIO.input_required:
+            if elem == 'cluster_id':
+                continue
+            if not elem in input_elems:
+                return False
+            value = self.req.GET.get(elem)
+            if not value:
+                value = self.req.zato.args.get(elem)
+                if not value:
+                    return False
+        return True
         
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
-            input_dict = {'cluster_id':self.cluster_id}
-            for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
-                if name != 'cluster_id':
-                    input_dict[name] = self.req.GET.get(name)
-                
-            return self.req.zato.client.invoke(self.service_name, input_dict)
+            func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
+            return func(self.service_name, self.input)
     
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
@@ -198,8 +246,8 @@ class Index(_BaseView):
                     value = getattr(value, 'text', '') or value
                 if value or value == 0:
                     setattr(item, name, value)
-            self.items.append(item)
-    
+            self.items.append(self.on_before_append_item(item))
+
     def _handle_item(self, item):
         pass
     
@@ -207,24 +255,34 @@ class Index(_BaseView):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
+        self.clear_user_message()
+        
         try:
             super(Index, self).__call__(req, *args, **kwargs)
             del self.items[:]
             self.item = None
+            self.set_input()
     
             return_data = {'cluster_id':self.cluster_id}
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
             
-            if self.service_name and self.cluster_id:
+            if self.can_invoke_admin_service():
                 response = self.invoke_admin_service()
                 if response.ok:
                     if output_repeated:
                         self._handle_item_list(response.data)
                     else:
                         self._handle_item(response.data)
+                else:
+                    self.user_message = response.details
+            else:
+                logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
     
+            return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
+            return_data['user_message'] = self.user_message
+            return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
             return_data['choose_cluster_form'] = req.zato.choose_cluster_form
             
@@ -237,23 +295,28 @@ class Index(_BaseView):
         except Exception, e:
             return HttpResponseServerError(format_exc(e))
 
-    def handle(self, req, *args, **kwargs):
+    def handle(self, req=None, *args, **kwargs):
         raise NotImplementedError('Must be overloaded by a subclass')
     
 class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
-    form_prefix = ''
     
     def __init__(self):
+        super(CreateEdit, self).__init__()
+        self.input = Bunch()
         self.input_dict = {}
     
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
+        self.clear_user_message()
+        
         try:
             super(CreateEdit, self).__call__(req, *args, **kwargs)
+            self.set_input()
+            
             input_dict = {
                 'id': self.req.POST.get('id'),
                 'cluster_id': self.cluster_id
@@ -261,7 +324,8 @@ class CreateEdit(_BaseView):
             input_dict.update(initial_input_dict)
             
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
-                input_dict[name] = self.req.POST.get(self.form_prefix + name)
+                if name not in input_dict:
+                    input_dict[name] = self.input.get(name)
                 
             self.input_dict.update(input_dict)
 
@@ -271,16 +335,17 @@ class CreateEdit(_BaseView):
                     'message': self.success_message(response.data)
                     }
                 return_data.update(initial_return_data)
-    
+                
                 for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
-                    value = getattr(response.data, name, None)
-                    if value:
-                        if isinstance(value, basestring):
-                            value = value.encode('utf-8')
-                        else:
-                            value = str(value)
-                            
-                    return_data[name] = value
+                    if name not in initial_return_data:
+                        value = getattr(response.data, name, None)
+                        if value:
+                            if isinstance(value, basestring):
+                                value = value.encode('utf-8')
+                            else:
+                                value = str(value)
+                        return_data[name] = value
+                        
                 return HttpResponse(dumps(return_data), mimetype='application/javascript')
             else:
                 msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)

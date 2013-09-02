@@ -29,7 +29,7 @@ from springpython.jms.core import JmsTemplate, TextMessage
 # Zato
 from zato.common import INVOCATION_TARGET, KVDB
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
-from zato.common.delivery import DeliveryItem
+from zato.common.model import DeliveryItem
 from zato.common.util import new_cid, TRACE1
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
@@ -45,46 +45,31 @@ class WMQFacade(object):
         self.delivery_store = delivery_store
     
     def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
-            delivery=None, *args, **kwargs):
+            task_id=None, *args, **kwargs):
         """ Puts a message on a WebSphere MQ queue.
         """
-        delivery.tx_id = delivery.tx_id or new_cid()
-
+        
         # Common parameters
         params = {}
         params['action'] = OUTGOING.JMS_WMQ_SEND
         params['name'] = out_name
         params['body'] = msg
         params['queue'] = queue
-        params['delivery_mode'] = delivery_mode
-        params['expiration'] = expiration
-        params['priority'] = priority
-        params['max_chars_printed'] = max_chars_printed
+        params['delivery_mode'] = int(delivery_mode)
+        params['expiration'] = int(expiration)
+        params['priority'] = int(priority)
+        params['max_chars_printed'] = int(max_chars_printed)
         
         # Confirmed delivery
-        if delivery:
+        if task_id:
             params['confirm_delivery'] = True
-            params['tx_id'] = delivery.tx_id
+            params['task_id'] = task_id
         
         # Any extra arguments
         params['args'] = args
         params['kwargs'] = kwargs
-        
-        invoke_func = self.broker_client.publish
-        invoke_args = params
-        invoke_kwargs = {'msg_type':MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL}
-        
-        if delivery:
-            delivery.target_type = INVOCATION_TARGET.WMQ
-            delivery.target = out_name
-            delivery.payload = params
-            delivery.invoke_func = invoke_func
-            delivery.invoke_args = invoke_args
-            delivery.invoke_kwargs = invoke_kwargs
-            
-            self.delivery_store.store_check(delivery)
-        
-        invoke_func(invoke_args, **invoke_kwargs)
+
+        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL)
         
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
@@ -121,7 +106,7 @@ class OutgoingConnection(BaseJMSWMQConnection):
             }
             
             self.delivery_store.on_target_completed(
-                INVOCATION_TARGET.WMQ, self.name, msg, start, end, target_ok, target_self_info, exc_info)
+                INVOCATION_TARGET.OUTCONN_WMQ, self.name, msg, start, end, target_ok, target_self_info, exc_info)
         
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         jms_msg = TextMessage()

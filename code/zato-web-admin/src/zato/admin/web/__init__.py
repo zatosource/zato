@@ -18,6 +18,7 @@ from dateutil.relativedelta import relativedelta
 from django.template.defaultfilters import date as django_date_filter
 
 # Zato
+from zato.common import INVOCATION_TARGET
 from zato.common.util import from_local_to_utc as _from_local_to_utc, from_utc_to_local as _from_utc_to_local
 
 logger = logging.getLogger(__name__)
@@ -56,8 +57,18 @@ TIME_FORMATS = {
     '24': 'H:i:s',
 }
 
+TARGET_TYPE_HUMAN = {
+    INVOCATION_TARGET.CHANNEL_AMQP: 'AMQP channel',
+    INVOCATION_TARGET.CHANNEL_WMQ: 'WebSphere MQ channel',
+    INVOCATION_TARGET.CHANNEL_ZMQ: 'ZeroMQ channel',
+    INVOCATION_TARGET.OUTCONN_AMQP: 'AMQP outgoing connection',
+    INVOCATION_TARGET.OUTCONN_WMQ: 'WebSphere MQ outgoing connection',
+    INVOCATION_TARGET.OUTCONN_ZMQ: 'ZeroMQ outgoing connection',
+    INVOCATION_TARGET.SERVICE: 'Service',
+}
+
 def last_hour_start_stop(now):
-    """ Returns a ISO-8601 formatted pair of start/stop timestamps representing
+    """ Returns an ISO-8601 formatted pair of start/stop timestamps representing
     now-1 hour and now.
     """
     return (now + relativedelta(minutes=-60)).isoformat(), now.isoformat()

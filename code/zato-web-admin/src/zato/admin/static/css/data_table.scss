@@ -4,7 +4,6 @@
     margin-left: 2%;
     border:1px solid #ccc;  
     font-size:12px;
-	margin-bottom:80px;
 	
 	counter-reset: data_table_counter;
 
@@ -106,8 +105,8 @@ div.ui-dialog {
     width:33em !important;
 }
 
-p.no-clusters {
-	background-color: $attention;
+p.big-notice {
+	background-color: $attention2;
 	width:50%;
 	margin:0 auto;
 	padding:20px;

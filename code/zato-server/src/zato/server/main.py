@@ -22,8 +22,14 @@ import logging.config
 # gunicorn
 from gunicorn.app.base import Application
 
+# Paste
+from paste.util.converters import asbool
+
 # psycopg2
 import psycopg2
+
+# Repoze
+from repoze.profile import ProfileMiddleware
 
 # Zato
 from zato.common.repo import RepoManager
@@ -98,7 +104,7 @@ def run(base_dir):
     parallel_server.repo_location = repo_location
     parallel_server.base_dir = base_dir
     parallel_server.fs_server_config = config
-    parallel_server.stats_jobs = app_context.get_object('stats_jobs')
+    parallel_server.startup_jobs = app_context.get_object('startup_jobs')
     parallel_server.app_context = app_context
 
     # Remove all locks possibly left over by previous server instances
@@ -106,6 +112,17 @@ def run(base_dir):
         
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
+    
+    if asbool(config.profiler.enabled):
+        profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
+        parallel_server.on_wsgi_request = ProfileMiddleware(
+            parallel_server.on_wsgi_request,
+            log_filename = os.path.join(profiler_dir, config.profiler.log_filename),
+            cachegrind_filename = os.path.join(profiler_dir, config.profiler.cachegrind_filename),
+            discard_first_request = config.profiler.discard_first_request,
+            flush_at_shutdown = config.profiler.flush_at_shutdown,
+            path = config.profiler.url_path,
+            unwind = config.profiler.unwind)
 
     # Run the app at last
     zato_gunicorn_app.run()

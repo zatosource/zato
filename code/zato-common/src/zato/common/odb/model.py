@@ -19,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import SCHEDULER_JOB_TYPE
+from zato.common import INVOCATION_TARGET, SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -895,3 +895,98 @@ class DeploymentStatus(Base):
         self.server_id = server_id
         self.status = status
         self.status_change_time = status_change_time
+
+################################################################################
+
+class DeliveryDefinitionBase(Base):
+    """ A guaranteed delivery's definition (base class).
+    """
+    __tablename__ = 'delivery_def_base'
+    __mapper_args__ = {'polymorphic_on': 'target_type'}
+    
+    id = Column(Integer, Sequence('deliv_def_seq'), primary_key=True)
+    name = Column(String(200), nullable=False, index=True)
+    short_def = Column(String(200), nullable=False)
+    last_used = Column(DateTime(), nullable=True)
+    
+    target_type = Column(String(200), nullable=False)
+    callback_list = Column(LargeBinary(10000), nullable=True)
+    
+    expire_after = Column(Integer, nullable=False)
+    expire_arch_succ_after = Column(Integer, nullable=False)
+    expire_arch_fail_after = Column(Integer, nullable=False)
+    check_after = Column(Integer, nullable=False)
+    retry_repeats = Column(Integer, nullable=False)
+    retry_seconds = Column(Integer, nullable=False)
+    
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('delivery_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+class DeliveryDefinitionOutconnWMQ(DeliveryDefinitionBase):
+    """ A guaranteed delivery's definition (outgoing WebSphere MQ connections).
+    """
+    __tablename__ = 'delivery_def_out_wmq'
+    __mapper_args__ = {'polymorphic_identity': INVOCATION_TARGET.OUTCONN_WMQ}
+    
+    id = Column(Integer, ForeignKey('delivery_def_base.id'), primary_key=True)
+    target_id = Column(Integer, ForeignKey('out_wmq.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    target = relationship(OutgoingWMQ, backref=backref('delivery_def_list', order_by=target_id, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, target_id=None):
+        self.id = id
+        self.target_id = target_id
+    
+class Delivery(Base):
+    """ A guaranteed delivery.
+    """
+    __tablename__ = 'delivery'
+    
+    id = Column(Integer, Sequence('deliv_seq'), primary_key=True)
+    task_id = Column(String(64), unique=True, nullable=False, index=True)
+
+    name = Column(String(200), nullable=False)    
+    creation_time = Column(DateTime(), nullable=False)
+    
+    args = Column(LargeBinary(1000000), nullable=True)
+    kwargs = Column(LargeBinary(1000000), nullable=True)
+    
+    last_used = Column(DateTime(), nullable=True)
+    resubmit_count = Column(Integer, nullable=False, default=0)
+    
+    state = Column(String(200), nullable=False, index=True)
+    
+    source_count = Column(Integer, nullable=False, default=1)
+    target_count = Column(Integer, nullable=False, default=0)
+    
+    definition_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    definition = relationship(DeliveryDefinitionBase, backref=backref('delivery_list', order_by=creation_time, cascade='all, delete, delete-orphan'))
+
+class DeliveryPayload(Base):
+    """ A guaranteed delivery's payload.
+    """
+    __tablename__ = 'delivery_payload'
+    
+    id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
+    task_id = Column(String(64), unique=True, nullable=False, index=True)
+    
+    creation_time = Column(DateTime(), nullable=False)
+    payload = Column(LargeBinary(5000000), nullable=False)
+    
+    delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    delivery = relationship(Delivery, backref=backref('payload', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
+    
+class DeliveryHistory(Base):
+    """ A guaranteed delivery's history.
+    """
+    __tablename__ = 'delivery_history'
+    
+    id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
+    task_id = Column(String(64), nullable=False, index=True)
+    
+    entry_type = Column(String(64), nullable=False)
+    entry_time = Column(DateTime(), nullable=False, index=True)
+    entry_ctx = Column(LargeBinary(6000000), nullable=False)
+    resubmit_count = Column(Integer, nullable=False, default=0) # Copy of delivery.resubmit_count so it's known for each history entry
+    
+    delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
+    delivery = relationship(Delivery, backref=backref('history_list', order_by=entry_time, cascade='all, delete, delete-orphan'))

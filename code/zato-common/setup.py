@@ -41,7 +41,7 @@ setup(
           'pytz==2012h',
           'pyzmq==2.2.0.1',
           'pyzmq-static==2.2',
-          'redis==2.4.13',
+          'redis==2.7.6',
           'springpython==1.3.0RC1',
           'urllib3==1.5',
           ],

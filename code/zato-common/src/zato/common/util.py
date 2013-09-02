@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os, random, re, sys
+from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
 from glob import glob
@@ -25,6 +26,7 @@ from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
 from threading import current_thread
+from traceback import format_exc
 
 # packaging/Distutils2
 try:
@@ -63,11 +65,16 @@ from springpython.context import ApplicationContext
 from springpython.remoting.http import CAValidatingHTTPSConnection
 from springpython.remoting.xmlrpc import SSLClientTransport
 
+# SQLAlchemy
+from sqlalchemy.exc import IntegrityError
+
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, soap_body_path, \
-    soap_body_xpath, ZatoException
+from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, scheduler_date_time_format, \
+     soap_body_path, soap_body_xpath, ZatoException
 from zato.common.crypto import CryptoManager
+from zato.common.odb.model import IntervalBasedJob, Job, Service
+from zato.common.odb.query import _service as _service
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +83,8 @@ logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
 _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
+
+_epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 
 random.seed()
 
@@ -212,22 +221,17 @@ def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
 
     return attrs
 
-def make_repr(_object, ignore_double_underscore=True, to_avoid_list="repr_to_avoid", sort=True):
-    """ Makes a nice string representation of an object, suitable for logging
-    purposes.
+def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avoid', sort=True):
+    """ Makes a nice string representation of an object, suitable for logging purposes.
     """
     attrs = object_attrs(_object, ignore_double_underscore, to_avoid_list, sort)
     buff = StringIO()
 
     for attr in attrs:
-
-        #if logger.isEnabledFor(TRACE1):
-        #    logger.log(TRACE1, "attr:[%s]" % attr)
-
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
-            buff.write(" ")
-            buff.write("%r:[%r]" % (attr, attr_obj))
+            buff.write(' ')
+            buff.write('%r:[%r]' % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
@@ -536,6 +540,8 @@ def from_utc_to_local(dt, tz_name):
     dt = local_tz.normalize(dt.astimezone(local_tz))
     return dt
 
+# ##############################################################################
+
 def _utcnow():
     """ See zato.common.util.utcnow for docstring.
     """
@@ -557,6 +563,13 @@ def now(tz=None):
     out and return their own timestamps at will.
     """
     return _now(tz)
+
+def datetime_to_seconds(dt):
+    """ Converts a datetime object to a number of seconds since UNIX epoch.
+    """
+    return (dt - _epoch).total_seconds()
+
+# ##############################################################################
 
 def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
     """ Clears out any KVDB locks held by Zato servers.
@@ -591,3 +604,59 @@ def get_component_name(prefix='parallel'):
     to trace which Zato component issued it.
     """
     return '{}/{}/{}/{}'.format(prefix, current_host(), os.getpid(), current_thread().name)
+
+def dotted_getattr(o, path):
+    return reduce(getattr, path.split('.'), o)
+
+
+def get_service_by_name(session, cluster_id, name):
+    logger.debug('Looking for name:[{}] in cluster_id:[{}]'.format(name, cluster_id))
+    return _service(session, cluster_id).\
+           filter(Service.name==name).\
+           one()
+
+def add_startup_jobs(cluster_id, odb, stats_jobs):
+    """ Adds one of the interval jobs to the ODB. Note that it isn't being added
+    directly to the scheduler because we want users to be able to fine-tune the job's
+    settings.
+    """
+    with closing(odb.session()) as session:
+        for item in stats_jobs:
+            
+            try:
+                service_id = get_service_by_name(session, cluster_id, item['service'])[0]
+                
+                now = datetime.utcnow().strftime(scheduler_date_time_format)
+                job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
+                          cluster_id=cluster_id, service_id=service_id)
+                          
+                kwargs = {}
+                for name in('seconds', 'minutes'):
+                    if name in item:
+                        kwargs[name] = item[name]
+                        
+                ib_job = IntervalBasedJob(None, job, **kwargs)
+                
+                session.add(job)
+                session.add(ib_job)
+                session.commit()
+            except IntegrityError, e:
+                session.rollback()
+                msg = 'Caught an IntegrityError, carrying on anyway, e:[{}]]'.format(format_exc(e))
+                logger.debug(msg)
+                
+def hexlify(item):
+    """ Returns a nice hex version of a string given on input.
+    """
+    return ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, item.encode('hex'))])
+
+def validate_input_dict(cid, *validation_info):
+    """ Checks that input belongs is one of allowed values.
+    """
+    for key_name, key, source in validation_info:
+        if not source.has(key):
+            msg = 'Invalid {}:[{}]'.format(key_name, key)
+            log_msg = '{} (attrs: {})'.format(msg, source.attrs)
+            
+            logger.warn(log_msg)
+            raise ZatoException(cid, msg)

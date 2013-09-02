@@ -14,7 +14,8 @@ from django import forms
 # Zato
 from zato.common import SIMPLE_IO
 
-INITIAL_CHOICES = ('', '----------')
+INITIAL_CHOICES_DICT = {'': '----------'}
+INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
 
 class ChooseClusterForm(forms.Form):
 

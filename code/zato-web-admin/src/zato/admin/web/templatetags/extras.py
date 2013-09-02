@@ -34,3 +34,12 @@ def bunchget(obj, args):
         return obj[attribute]
     
     return default
+
+# Taken from http://stackoverflow.com/a/16609498
+
+@register.simple_tag
+def url_replace(request, field, value):
+    dict_ = request.GET.copy()
+    dict_[field] = value
+
+    return dict_.urlencode()

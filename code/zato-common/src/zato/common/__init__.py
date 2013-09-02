@@ -154,36 +154,59 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
-class DATA_FORMAT:
+DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_NO = 1
+DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 25
+MAX_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 1000
+
+class NotGiven(object):
+    pass # A marker for lazily-initialized attributes
+
+class Attrs(type):
+    """ A container for class attributes that can be queried for an existence
+    of an attribute using the .has class-method.
+    """
+    attrs = NotGiven
+
+    @classmethod
+    def has(cls, attr):
+        if cls.attrs is NotGiven:
+            cls.attrs = []
+            for cls_attr in dir(cls):
+                if cls_attr == cls_attr.upper():
+                    cls.attrs.append(getattr(cls, cls_attr))
+                    
+        return attr in cls.attrs
+
+class DATA_FORMAT(Attrs):
     XML = 'xml'
     JSON = 'json'
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
-    class FORMAT:
+    class FORMAT(Attrs):
         XML = DATA_FORMAT.XML
         JSON = DATA_FORMAT.JSON
         
     class INT_PARAMETERS:
         VALUES = ['id']
-        SUFFIXES = ['_id', '_size', '_timeout']
+        SUFFIXES = ['_id', '_count', '_size', '_timeout']
         
     class BOOL_PARAMETERS:
         SUFFIXES = ['is_', 'needs_', 'should_']
         
-class DEPLOYMENT_STATUS:
+class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'
     AWAITING_DEPLOYMENT = 'awaiting-deployment'
     IGNORED = 'ignored'
     
-class SERVER_JOIN_STATUS:
+class SERVER_JOIN_STATUS(Attrs):
     ACCEPTED = 'accepted'
     
-class SERVER_UP_STATUS:
+class SERVER_UP_STATUS(Attrs):
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'
     
-class KVDB:
+class KVDB(Attrs):
     SEPARATOR = ':::'
     
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
@@ -200,6 +223,8 @@ class KVDB:
     LOCK_PACKAGE_ALREADY_UPLOADED = '{}already-uploaded:'.format(LOCK_PACKAGE_PREFIX)
     
     LOCK_DELIVERY = '{}delivery:'.format(LOCK_PREFIX)
+    LOCK_DELIVERY_AUTO_RESUBMIT = '{}auto-resubmit:'.format(LOCK_DELIVERY)
+    
     LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
     
     TRANSLATION = 'zato:kvdb:data-dict:translation'
@@ -225,17 +250,14 @@ class KVDB:
     RESP_SLOW = 'zato:resp:slow:'
     
     DELIVERY_PREFIX = 'zato:delivery:'
-    DELIVERY_BY_TARGET_TYPE_PREFIX = '{}by-target-type:'.format(DELIVERY_PREFIX)
-    DELIVERY_IN_DOUBT_PREFIX = '{}in-doubt:'.format(DELIVERY_PREFIX)
-    DELIVERY_ARCHIVE_SUCCESS_PREFIX = '{}arch-succes:'.format(DELIVERY_PREFIX)
-    DELIVERY_ARCHIVE_FAILED_PREFIX = '{}arch-failed:'.format(DELIVERY_PREFIX)
+    DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
 
-class SCHEDULER_JOB_TYPE:
+class SCHEDULER_JOB_TYPE(Attrs):
     ONE_TIME = 'one_time'
     INTERVAL_BASED = 'interval_based'
     CRON_STYLE = 'cron_style'
     
-class CHANNEL:
+class CHANNEL(Attrs):
     AMQP = 'amqp'
     DELIVERY = 'delivery' # New in 1.2
     HTTP_SOAP = 'http-soap'
@@ -245,12 +267,52 @@ class CHANNEL:
     SCHEDULER = 'scheduler'
     ZMQ = 'zmq'
     STARTUP_SERVICE = 'startup-service'
-    
-class INVOCATION_TARGET:
-    AMQP = 'amqp'
+
+class INVOCATION_TARGET(Attrs):
+    CHANNEL_AMQP = 'channel-amqp'
+    CHANNEL_WMQ = 'channel-wmq'
+    CHANNEL_ZMQ = 'channel-zmq'
+    OUTCONN_AMQP = 'outconn-amqp'
+    OUTCONN_WMQ = 'outconn-wmq'
+    OUTCONN_ZMQ = 'outconn-zmq'
     SERVICE = 'service'
-    WMQ = 'wmq'
-    ZMQ = 'zmq'
+
+class DELIVERY_HISTORY_ENTRY(Attrs):
+    ENTERED_IN_DOUBT = b'entered-in-doubt'
+    ENTERED_IN_PROGRESS = b'entered-in-progress'
+    ENTERED_CONFIRMED = b'entered-confirmed'
+    ENTERED_FAILED = b'entered-failed'
+    ENTERED_RETRY = b'entered-retry'
+    NONE = b'(None)'
+    SENT_FROM_SOURCE = b'sent-from-source'
+    SENT_FROM_SOURCE_RESUBMIT = b'sent-from-source-resubmit'
+    SENT_FROM_SOURCE_RESUBMIT_AUTO = b'sent-from-source-resubmit-auto'
+    TARGET_OK = b'target-ok'
+    TARGET_FAILURE = b'target-failure'
+    UPDATED = b'updated'
+    
+class DELIVERY_STATE(Attrs):
+    IN_DOUBT = 'in-doubt'
+    IN_PROGRESS_ANY = 'in-progress-any' # A wrapper for all in-progress-* states
+    IN_PROGRESS_RESUBMITTED = 'in-progress-resubmitted'
+    IN_PROGRESS_RESUBMITTED_AUTO = 'in-progress-resubmitted-auto'
+    IN_PROGRESS_STARTED = 'in-progress'
+    IN_PROGRESS_TARGET_OK = 'in-progress-target-ok'
+    IN_PROGRESS_TARGET_FAILURE = 'in-progress-target-failure'
+    CONFIRMED = 'confirmed'
+    FAILED = 'failed'
+    UNKNOWN = 'unknown'
+    
+class DELIVERY_COUNTERS(Attrs):
+    IN_DOUBT = 'in_doubt_count'
+    IN_PROGRESS = 'in_progress_count'
+    CONFIRMED = 'confirmed_count'
+    FAILED = 'failed_count'
+    TOTAL = 'total_count'
+    
+class DELIVERY_CALLBACK_INVOKER(Attrs):
+    SOURCE = 'source'
+    TARGET = 'target'
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds

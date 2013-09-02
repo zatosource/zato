@@ -73,6 +73,8 @@ $.namespace('zato.outgoing.ftp');
 $.namespace('zato.outgoing.jms_wmq');
 $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.zmq');
+$.namespace('zato.pattern.delivery');
+$.namespace('zato.pattern.delivery.in_doubt');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
@@ -469,7 +471,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id) {
         var name_prefix = action + '-';
         var id_prefix = String.format('#id_{0}', name_prefix);
         var instance = $.fn.zato.data_table.data[id];
-        
+
         $.fn.zato.form.populate(form, instance, name_prefix, id_prefix);
     }
 

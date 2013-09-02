@@ -66,6 +66,8 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.jms_wmq',
             'zato.server.service.internal.outgoing.sql',
             'zato.server.service.internal.outgoing.zmq',
+            'zato.server.service.internal.pattern.delivery',
+            'zato.server.service.internal.pattern.delivery.definition',
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.security',
             'zato.server.service.internal.security.basic_auth',
@@ -183,7 +185,7 @@ class ZatoContext(PythonConfig):
         return Scheduler()
 
     @Object
-    def stats_jobs(self):
+    def startup_jobs(self):
         return [
             {'name': 'zato.stats.process-raw-times', 'seconds':90, 
              'service':'zato.stats.process-raw-times', 
@@ -212,5 +214,10 @@ class ZatoContext(PythonConfig):
             
             {'name': 'zato.stats.summary.create-summary-by-year', 'minutes':60,
              'service':'zato.stats.summary.create-summary-by-year'},
-
+            
+            {'name': 'zato.pattern.delivery.update-counters', 'seconds':30,
+             'service':'zato.pattern.delivery.update-counters'},
+            
+            {'name': 'zato.pattern.delivery.dispatch-auto-resubmit', 'seconds':300,
+             'service':'zato.pattern.delivery.dispatch-auto-resubmit'},
         ]

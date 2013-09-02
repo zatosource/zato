@@ -9,11 +9,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import csv
+from contextlib import closing
 from datetime import datetime, timedelta
-from logging import getLogger
+from json import dumps, loads
+from logging import getLogger, DEBUG
+from sys import maxint
+from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
+# Bunch
+from bunch import Bunch
 
 # gevent
 from gevent import sleep, spawn_later
@@ -24,286 +29,583 @@ from paste.util.converters import asbool
 # retools
 from retools.lock import Lock
 
-# Zato
-from zato.common import CHANNEL, DATA_FORMAT, KVDB
-from zato.common.broker_message import SERVICE
-from zato.common.util import new_cid, TRACE1
+# SQLAlchemy
+from sqlalchemy.orm.query import orm_exc
 
-class DeliveryItem(object):
-    """ A container for config pieces regarding a particular delivery effort so they
-    don't have to passed around individually.
+# WebHelpers
+from webhelpers.paginate import Page
+
+# Zato
+from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_CALLBACK_INVOKER, DELIVERY_COUNTERS, \
+     DELIVERY_HISTORY_ENTRY, DELIVERY_STATE, INVOCATION_TARGET, KVDB
+from zato.common.broker_message import SERVICE
+from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
+     DeliveryHistory, DeliveryPayload, to_json
+from zato.common.odb.query import delivery, delivery_list
+from zato.common.util import datetime_to_seconds, new_cid, TRACE1
+from zato.redis_paginator import ZSetPaginator
+
+NULL_BASIC_DATA = {
+    'last_updated_utc':None,
+    DELIVERY_COUNTERS.TOTAL:0,
+    DELIVERY_COUNTERS.IN_PROGRESS:0, 
+    DELIVERY_COUNTERS.IN_DOUBT:0,
+    DELIVERY_COUNTERS.CONFIRMED:0,
+    DELIVERY_COUNTERS.FAILED:0
+}
+
+_target_def_class = {
+    INVOCATION_TARGET.OUTCONN_WMQ: DeliveryDefinitionOutconnWMQ
+}
+
+DELIVERY_KEYS = ('def_name', 'target_type', 'task_id', 'creation_time_utc', 'last_used_utc', 
+            'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
+
+PAYLOAD_KEYS = DELIVERY_KEYS + ('payload', 'args', 'kwargs')
+PAYLOAD_ALL_KEYS = PAYLOAD_KEYS + ('target',)
+
+LOCK_TIMEOUT = 0.2
+RETRY_SLEEP = 5
+
+def _item_from_api(delivery_def_base, target, payload, task_id, invoke_func, args, kwargs):
+    """ Creates an invocation context. 
     """
-    def __init__(self):
-        self.target_type = None
-        self.target = None
-        self.tx_id = None
-        self.payload = None
-        self.expire_after = None
-        self.expire_arch_success_after = None
-        self.expire_arch_failed_after = None
-        self.special_case_weekends = False
-        self.check_after = None
-        self.retry_repeats = None
-        self.retry_seconds = None
-        self.invoke_func = None
-        self.invoke_args = None
-        self.invoke_kwargs = None
-        self.payload_key = None
-        self.by_target_type_key = None
-        self.on_delivery_success = ['zato.helpers.input-logger']
-        self.on_delivery_failed = []
+    return Bunch({
+        'task_id': task_id,
+        'def_id': delivery_def_base.id,
+        'def_name': delivery_def_base.name,
+        'target': target,
+        'target_type': delivery_def_base.target_type,
+        'expire_after': delivery_def_base.expire_after,
+        'check_after': delivery_def_base.check_after,
+        'retry_repeats': delivery_def_base.retry_repeats,
+        'retry_seconds': delivery_def_base.retry_seconds,
+        'payload': payload,
+        'invoke_func': invoke_func,
+        'args': dumps(args),
+        'kwargs': dumps(kwargs),
+        'log_name': '{}/{}/{}'.format(delivery_def_base.name, target, task_id),
+    })
+
+# ##############################################################################
 
 class DeliveryStore(object):
     """ Stores messages in a persistent storage until they are confirmed to have been delivered.
     """
-    def __init__(self, kvdb=None, broker_client=None, delivery_lock_timeout=None):
+    def __init__(self, kvdb=None, broker_client=None, odb=None, delivery_lock_timeout=None):
         self.kvdb = kvdb
         self.broker_client = broker_client
+        self.odb = odb
         self.delivery_lock_timeout = delivery_lock_timeout
         self.logger = getLogger(self.__class__.__name__)
         
 # ##############################################################################
 
-    def get_payload_key(self, target_type, target, tx_id):
-        return ''.join((KVDB.DELIVERY_PREFIX, target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
-    
-    def get_archive_key(self, target_type, target, target_ok, tx_id):
-        return ''.join((KVDB.DELIVERY_ARCHIVE_SUCCESS_PREFIX if target_ok else KVDB.DELIVERY_ARCHIVE_FAILED_PREFIX, 
-                        target_type, KVDB.SEPARATOR, target, KVDB.SEPARATOR, tx_id))
+    def _history_from_source(self, delivery, item, now, entry_type):
+        history = DeliveryHistory()
+        history.task_id = item.task_id
+        history.entry_type = entry_type
+        history.entry_time = now
+        history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
+        history.delivery = delivery
+        history.resubmit_count = delivery.resubmit_count
         
-    def store_check(self, item):
+        return history
+
+    def _validate_register(self, item):
         if not(item.check_after and item.retry_repeats and item.retry_seconds):
             msg = 'check_after:[{}], retry_repeats:[{}] and retry_seconds:[{}] are all required'.format(
                 item.check_after, item.retry_repeats, item.retry_seconds)
             self.logger.error(msg)
-            raise Exception(msg)
-
-        now = datetime.utcnow().isoformat()
-
-        item.payload_key = self.get_payload_key(item.target_type, item.target, item.tx_id)
-        payload_value = {
-            'tx_id':item.tx_id,
-            'payload':item.payload,
-            'target_type': item.target_type,
-            'target': item.target,
-            'expire_arch_success_after': item.expire_arch_success_after,
-            'expire_arch_failed_after': item.expire_arch_failed_after,
-            'expires_arch_time_utc': None,
-            'check_after': item.check_after,
-            'retry_repeats':item.retry_repeats,
-            'retry_seconds':item.retry_seconds,
-            'attempts_made':0,
-            'failed_attempt_list':dumps([]),
-            'last_attempt_time_start_utc':None,
-            'last_attempt_time_end_utc':None,
-            'last_attempt_total_time':None,
-            'creation_time_utc': now,
-            'last_updated_utc': now,
-            'confirmed': False,
-            'target_ok': False,
-            'target_self_info': None,
-            'source_count': 1,
-            'target_count': 0,
-            'in_doubt':False,
-            'in_doubt_created_at_utc':None,
-            'in_doubt_created_source_count':None,
-            'in_doubt_created_target_count':None,
-            'on_delivery_success': dumps(item.on_delivery_success),
-            'on_delivery_failed': dumps(item.on_delivery_failed),
-        }
+            raise ValueError(msg)
         
-        item.by_target_type_key = '{}:{}'.format(KVDB.DELIVERY_BY_TARGET_TYPE_PREFIX, item.target_type)
+    def _invoke_delivery_service(self, item):
+        """ Invokes the target via a delivery service. 
+        """
+        delivery_req = {}
+        for name in('task_id', 'payload', 'target', 'target_type', 'args', 'kwargs'):
+            delivery_req[name] = item[name]
+            
+        item.invoke_func('zato.pattern.delivery.dispatch', delivery_req)
         
-        with self.kvdb.conn.pipeline() as p:
-            p.hmset(item.payload_key, payload_value)
-            p.sadd(item.by_target_type_key, item.payload_key)
-    
-            if item.expire_after:
-                p.expire(item.payload_key, item.expire_after)
+    def register_invoke_schedule(self, item, is_resubmit=False, is_auto=False):
+        """ Registers the task, invokes target and schedules a check to find out if the invocation was OK.
+        """
+        now = datetime.utcnow()
+        
+        # Sanity check - did we get everything that was needed?
+        self._validate_register(item)
+
+        # First, save everything in the ODB
+        with closing(self.odb.session()) as session:
+            
+            if is_resubmit:
+                delivery = session.merge(self.get_delivery(item.task_id))
+                delivery.state = DELIVERY_STATE.IN_PROGRESS_RESUBMITTED_AUTO if is_auto else DELIVERY_STATE.IN_PROGRESS_RESUBMITTED
+                delivery.resubmit_count += 1
+                delivery.last_used = now
+                delivery.args = item.args
+                delivery.kwargs = item.kwargs
+                delivery.payload.payload = item.payload
                 
-            p.execute()
-        
+                session.add(
+                    self._history_from_source(
+                        delivery, item, now, 
+                        DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE_RESUBMIT_AUTO if is_auto else DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE_RESUBMIT))
+                
+            else:
+                delivery = Delivery()
+                delivery.task_id = item.task_id
+                delivery.name = '{}/{}/{}'.format(item.def_name, item.target, item.target_type)
+                delivery.creation_time = now
+                delivery.args = item.args
+                delivery.kwargs = item.kwargs
+                delivery.state = DELIVERY_STATE.IN_PROGRESS_STARTED
+                delivery.definition_id = item.def_id
+                
+                payload = DeliveryPayload()
+                payload.task_id = item.task_id
+                payload.creation_time = now
+                payload.payload = item.payload
+                payload.delivery = delivery
+                
+                session.add(delivery)
+                session.add(payload)
+                session.add(self._history_from_source(delivery, item, now, DELIVERY_HISTORY_ENTRY.SENT_FROM_SOURCE))
+    
+                # Flush the session so the newly created delivery's definition can be reached ..
+                session.flush()
+                
+                # .. update time the delivery was last used ..
+                delivery.last_used = now
+                delivery.definition.last_used = now
+                
+            resubmit_count = delivery.resubmit_count
+            
+            # .. and commit the whole transaction.
+            session.commit()
+            
         self.logger.info(
-            'Created delivery key:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
-            item.payload_key, item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
+          'Submitting delivery [%s] for target:[%s] (%s/%s), resubmit:[%s], expire_after:[%s], check_after:[%s], retry_repeats:[%s], retry_seconds:[%s]',
+            item.task_id, item.target, item.def_name, item.target_type, resubmit_count, 
+            item.expire_after, item.check_after, item.retry_repeats, item.retry_seconds)
+        
+        # Invoke the target now that things are in the ODB
+        self._invoke_delivery_service(item)
 
-        self.spawn_check_target(item)
+        # Spawn a greenlet to check whether target confirmed delivery
+        self.spawn_check_target(item, item.check_after)
 
 # ##############################################################################
+        
+    def spawn_check_target(self, item, check_after):
+        """ Spawns a greenlet that checks whether the target replied and acts accordingly.
+        """
+        spawn_later(check_after, self.check_target, item)
+        
+    def _invoke_callbacks(self, target, target_type, delivery, target_ok, in_doubt, invoker):
+        """ Asynchronously notifies all callback services of the outcome of the target's invocation.
+        """
+        callback_list = delivery.definition.callback_list
+        callback_list = callback_list.split(',') or []
+        
+        payload = dumps({
+            'target_ok': target_ok,
+            'in_doubt': in_doubt,
+            'task_id': delivery.task_id,
+            'target': target,
+            'target_type': target_type,
+            'invoker': invoker
+        })
 
+        for service in callback_list:
+            if service:
+                broker_msg = {}
+                broker_msg['action'] = SERVICE.PUBLISH
+                broker_msg['task_id'] = delivery.task_id
+                broker_msg['channel'] = CHANNEL.DELIVERY
+                broker_msg['data_format'] = DATA_FORMAT.JSON
+                broker_msg['service'] = service
+                broker_msg['payload'] = payload
+                broker_msg['cid'] = new_cid()
+                
+                try:
+                    self.broker_client.invoke_async(broker_msg)
+                except Exception, e:
+                    msg = 'Could not invoke callback:[%s], task_id:[%s], e:[%s]'.format(
+                        service, delivery.task_id, format_exc(e))
+                    self.logger.warn(msg)
+        
+# ##############################################################################
+        
+    def _on_in_doubt(self, item, delivery, now):
+        """ Delivery enteres an in-doubt state.
+        """
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(delivery)
+            delivery.state = DELIVERY_STATE.IN_DOUBT
+            delivery.last_used = now
+            delivery.definition.last_used = now
+            
+            history = DeliveryHistory()
+            history.task_id = delivery.task_id
+            history.entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_IN_DOUBT
+            history.entry_time = now
+            history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
+            history.delivery = delivery
+            history.resubmit_count = delivery.resubmit_count
+            
+            session.add(delivery)
+            session.add(history)
+            
+            session.commit()
+            
+            self._invoke_callbacks(item.target, item.target_type, delivery, False, True, DELIVERY_CALLBACK_INVOKER.SOURCE)
+            
+            msg = 'Delivery [%s] is in-doubt (source/target %s/%s)'
+            self.logger.warn(msg, item.log_name, delivery.source_count, delivery.target_count)
+            
+    def finish_delivery(self, delivery, target_ok, now_dt, item):
+        """ Called after running out of attempts to deliver the payload.
+        """
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(delivery)
+            
+            if target_ok:
+                msg_prefix = 'Confirmed delivery'
+                log_func = self.logger.info
+                expires = delivery.definition.expire_arch_succ_after
+                delivery_state = DELIVERY_STATE.CONFIRMED
+                history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_CONFIRMED
+            else:
+                msg_prefix = 'Delivery failed'
+                log_func = self.logger.warn
+                expires = delivery.definition.expire_arch_fail_after
+                delivery_state = DELIVERY_STATE.FAILED
+                history_entry_type = DELIVERY_HISTORY_ENTRY.ENTERED_FAILED
+            
+            delivery.state = delivery_state
+            delivery.last_used = now_dt
+            delivery.definition.last_used = now_dt
+                
+            history = DeliveryHistory()
+            history.task_id = delivery.task_id
+            history.entry_type = history_entry_type
+            history.entry_time = now_dt
+            history.entry_ctx = DELIVERY_HISTORY_ENTRY.NONE
+            history.delivery = delivery
+            history.resubmit_count = delivery.resubmit_count
+            
+            session.add(delivery)
+            session.add(history)
+            
+            session.commit()
+            
+            self._invoke_callbacks(item.target, item.target_type, delivery, target_ok, False, DELIVERY_CALLBACK_INVOKER.SOURCE)
+                
+            msg = '{} [{}] after {}/{} attempts, archive expires in {} hour(s) ({} UTC)'.format(
+                msg_prefix, item.log_name, delivery.source_count, delivery.definition.retry_repeats, 
+                expires, now_dt + timedelta(hours=expires))
+            
+            log_func(msg)
+            
+    def retry(self, delivery, item, now):
+        with closing(self.odb.session()) as session:
+            delivery = session.merge(delivery)
+            delivery.last_used = now
+            delivery.definition.last_used = now
+            delivery.source_count += 1
+
+            # 'source_count' is needed outside of the 'with' statement because
+            # we want to sleep a bit and there's no need to keep the session open in that time.
+            source_count = delivery.source_count
+            
+            session.add(delivery)
+            session.add(self._history_from_source(delivery, item, datetime.utcnow(), DELIVERY_HISTORY_ENTRY.ENTERED_RETRY))
+            session.commit()
+            
+            # Sleep a constant time so we're sure any locks related to that task are released
+            sleep(RETRY_SLEEP)
+            
+        self.logger.info('Retrying delivery [%s] (%s/%s)', item.log_name, source_count, item.retry_repeats)
+        
+        self._invoke_delivery_service(item)
+        self.spawn_check_target(item, item.retry_seconds)
+                
+# ##############################################################################
+        
     def check_target(self, item):
-        self.logger.debug('Checking target [%s]', item.payload_key)
+        self.logger.debug('Checking name/target/task_id [%s]', item.log_name)
         
-        now = datetime.utcnow().isoformat()
-        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.tx_id)
+        if self.is_deleted(item.def_name):
+            self.logger.info('Stopping [%s] (definition.is_deleted->True)', item.log_name)
+            return
         
-        with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
-            payload = self.kvdb.conn.hgetall(item.payload_key)
-            
-            source_count = int(payload['source_count'])
-            target_count = int(payload['target_count'])
-            
-            if source_count > target_count:
-                
-                # We're already in a retry function and apparently the target has not replied yet.
-                # We cannot retry just like that because we don't know what happened to target,
-                # maybe it crashed or maybe it still hangs and will complete its jobs in a moment.
-                # In any case, we can't invoke it again. We are in doubt as to what has happened.
-                payload['in_doubt'] = True
-                payload['in_doubt_created_at_utc'] = now
-                payload['in_doubt_created_source_count'] = source_count
-                payload['in_doubt_created_target_count'] = target_count
-                
-                with self.kvdb.conn.pipeline() as p:
-                    
-                    # There's a separate in-doubt key for each type of target so each outgoing
-                    # connection or wrapper has its own key. The key stores a hashmap whose
-                    # keys are concrete deliveries that are in doubt and values are payload
-                    # that was to be delivered. So we add an in-doubt context and remove any 
-                    # other information regarding this tx_id from other places.
-                    in_doubt_key = '{}:{}'.format(KVDB.DELIVERY_IN_DOUBT_PREFIX, item.target_type)
+        now_dt = datetime.utcnow()
+        now = now_dt.isoformat()
+        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, item.task_id)
+        
+        with closing(self.odb.session()) as session:
+            try:
+                delivery = session.merge(self.get_delivery(item.task_id))
+                payload = delivery.payload.payload
+            except orm_exc.NoResultFound, e:
+                # Apparently the delivery was deleted since the last time we were scheduled to run
+                self.logger.info('Stopping [%s] (NoResultFound->True)', item.log_name)
+                return
+        
+        # Fetch new values because it's possible they have been changed since the last time we were invoked
+        item['payload'] = payload
+        item['args'] = delivery.args
+        item['kwargs'] = delivery.kwargs
+        
+        with Lock(lock_name, self.delivery_lock_timeout, LOCK_TIMEOUT, self.kvdb.conn):
 
-                    data = {
-                        'payload': dumps(payload),
-                        'overtime_info': None # This is populated by target if it doesn't make it in the expected time
-                                              # but still manages to confirm /something/ at all (but we still treat it as in-doubt).
-                    }
-                    
-                    p.hset(in_doubt_key, item.payload_key, data)
-                    p.delete(payload_key)
-                    p.srem(item.by_target_type_key, item.payload_key)
-                    
-                    p.execute()
-                    
-                msg = 'tx_id:[{}] is in-doubt, details stored in hash [{}] under key [{}] (send/confirm {}/{})'.format(
-                    item.tx_id, in_doubt_key, item.payload_key, source_count, target_count)
-                self.logger.warn(msg)
+            # Target did not reply at all hence we're entering in-doubt
+            if delivery.source_count > delivery.target_count:
+                self._on_in_doubt(item, delivery, now)
                 
             else:
                 # The target has confirmed the invocation in an expected time so we
                 # now need to check if it was successful. If it was, this is where it ends,
-                # we move the payload to the archive and that's it. If it wasn't, we'll try again
-                # as it was originally configured unless it was the last retry.
+                # it wasn't, we'll try again as it was originally configured unless
+                # it was the last retry.
                 
-                # This is common regardless of whether we had a success or not
-                target_ok = asbool(payload['target_ok'])
-                now = datetime.utcnow()
-                payload['last_updated_utc'] = now.isoformat()
+                target_ok = delivery.state == DELIVERY_STATE.IN_PROGRESS_TARGET_OK
                 
                 # All good, we can stop now.
                 if target_ok:
-                    self.finish_delivery(target_ok, payload, now, item)
+                    self.finish_delivery(delivery, target_ok, now_dt, item)
                     
                 # Not so good, we know there was an error.
                 else:
-                    attempts_made = int(payload['attempts_made'])
-                    retry_repeats = int(payload['retry_repeats'])
-                    failed_attempt_list = loads(payload['failed_attempt_list'])
-                    
-                    fail_info = failed_attempt_list[attempts_made-1] # -1 because lists are indexed from 0
-                    needs_reconnect = fail_info.get('needs_reconnect')
-                    inner_exc = fail_info.get('inner_exc')
-                    
-                    keep_retrying = attempts_made < retry_repeats
-                    
                     # Can we try again?
-                    if keep_retrying:
-                        self.spawn_invoke_func(item.invoke_func, item.invoke_args, item.invoke_kwargs)
-                        self.spawn_check_target(item)
-                        self.logger.info('Delivery attempt failed ({}/{}) [{}], needs_reconnect:[{}], inner_exc:[{}]'.format(
-                            attempts_made, retry_repeats, item.payload_key, needs_reconnect, inner_exc))
+                    if delivery.source_count < item.retry_repeats:
+                        self.retry(delivery, item, now)
 
                     # Nope, that was the last attempt.
                     else:
-                        self.finish_delivery(target_ok, payload, now, item)
-                    
-    def spawn_invoke_func(self, invoke_func, invoke_args, invoke_kwargs):
-        """ Spawns a greenlet that invokes a target after a short delay - we want to sleep a bit
-        so whoever called us has a chance to release a delivery lock.
+                        self.finish_delivery(delivery, target_ok, now_dt, item)
+
+# ##############################################################################
+
+    def get_delivery(self, task_id):
+        with closing(self.odb.session()) as session:
+            delivery = session.query(Delivery).\
+                filter(Delivery.task_id==task_id).\
+                one()
+            
+        return delivery
+
+# ##############################################################################
+
+    def get_target_basic_data(self, name):
+        """ Returns counters for a given delivery by its name along with info when the delivery
+        was last time used. Does not hold onto any locks so the results are precise
+        yet may be off by the time caller receives them.
         """
-        spawn_later(0.1, invoke_func, invoke_args, **invoke_kwargs)
-        
-    def spawn_check_target(self, item):
-        """ Spawns a greenlet that checks whether the target replied and acts accordingly.
+        return self.kvdb.conn.hgetall('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name)) or NULL_BASIC_DATA
+    
+    def set_deleted(self, name, is_deleted):
+        """ Sets a boolean flag indicating whether a definition has been deleted.
+        Any new instances of check_target consult this flag to see whether they should
+        keep running.
         """
-        spawn_later(item.check_after, self.check_target, item)
+        self.kvdb.conn.hset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'deleted', is_deleted)
         
-    def finish_delivery(self, target_ok, payload, now, item):
-        expire_arch_after_key = 'expire_arch_success_after' if target_ok else 'expire_arch_failed_after'
-        expire_arch_after = int(payload[expire_arch_after_key])
-        expires_arch_time = now + timedelta(seconds=expire_arch_after)
+    def is_deleted(self, name):
+        """ Returns a boolean flag indicating whether a given definition has been deleted in between
+        a delivery's executions.
+        """
+        return not self.kvdb.conn.hget('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), 'deleted')
         
-        arch_key = self.get_archive_key(item.target_type, item.target, target_ok, item.tx_id)
-        payload['confirmed'] = True
-        payload['expires_arch_time_utc'] = expires_arch_time.isoformat()
+    def update_counters(self, name, in_progress, in_doubt, confirmed, failed):
+        """ Updates counters of a given delivery definition.
+        """
+        counters = {
+            DELIVERY_COUNTERS.IN_PROGRESS: in_progress,
+            DELIVERY_COUNTERS.IN_DOUBT: in_doubt,
+            DELIVERY_COUNTERS.CONFIRMED: confirmed,
+            DELIVERY_COUNTERS.FAILED: failed,
+            DELIVERY_COUNTERS.TOTAL: in_progress + in_doubt + confirmed + failed,
+            'last_updated_utc': datetime.utcnow().isoformat(),
+        }
         
-        with self.kvdb.conn.pipeline() as p:
-            p.hmset(arch_key, payload)
-            p.expire(arch_key, expire_arch_after)
-            p.delete(item.payload_key)
-            p.execute()
-            
-        if target_ok:
-            msg_prefix = 'Confirmed delivery'
-            log_func = self.logger.info
-            callback_list = item.on_delivery_success
-        else:
-            msg_prefix = 'Delivery failed'
-            log_func = self.logger.warn
-            callback_list = item.on_delivery_failed
-            
-        msg = '{} after {}/{} attempts, [{}], payload moved to archive:[{}], expires in {}s ({} UTC)'.format(
-            msg_prefix, payload['attempts_made'], payload['retry_repeats'], item.payload_key, 
-            arch_key, expire_arch_after, expires_arch_time)
-        log_func(msg)
+        self.kvdb.conn.hmset('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), counters)
         
-        cid = new_cid()
+    def get_counters(self, name):
+        """ Returns usage counters for a given delivery definition.
+        """
+        keys = [DELIVERY_COUNTERS.IN_PROGRESS, DELIVERY_COUNTERS.IN_DOUBT, DELIVERY_COUNTERS.CONFIRMED,
+                     DELIVERY_COUNTERS.FAILED, DELIVERY_COUNTERS.TOTAL]
+        values = self.kvdb.conn.hmget('{}{}'.format(KVDB.DELIVERY_BY_TARGET_PREFIX, name), keys)
+        
+        return dict(zip(keys, values))
+
+# ##############################################################################
+
+    def deliver(self, cluster_id, def_name, payload, task_id, invoke_func, is_resubmit=False, is_auto=False, *args, **kwargs):
+        """ A public method to be invoked by services for delivering payload to target through a definition.
+        """
+        with closing(self.odb.session()) as session:
+            delivery_def_base = session.query(DeliveryDefinitionBase).\
+                filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
+                filter(DeliveryDefinitionBase.name==def_name).\
+                    first()
             
-        if callback_list:
-            broker_msg = {}
-            broker_msg['action'] = SERVICE.PUBLISH
-            broker_msg['payload'] = payload
-            broker_msg['channel'] = CHANNEL.DELIVERY
-            broker_msg['data_format'] = DATA_FORMAT.JSON
+            if not delivery_def_base:
+                msg = 'Guaranteed delivery definition [{}] does not exist'.format(def_name)
+                self.logger.warn(msg)
+                raise ValueError(msg)
             
-            for service in callback_list:
-                broker_msg['service'] = service
-                broker_msg['cid'] = new_cid()
-                self.broker_client.invoke_async(broker_msg)
-                    
+            target_def_class = _target_def_class[delivery_def_base.target_type]
+            definition = session.query(target_def_class).\
+                filter(target_def_class.id==delivery_def_base.id).\
+                one()
+            
+            target = definition.target.name
+            
+        self.register_invoke_schedule(
+            _item_from_api(delivery_def_base, target, payload, task_id, invoke_func, args, kwargs),
+            is_resubmit, is_auto)
+
 # ##############################################################################
         
-    def on_target_completed(self, target_type, target, payload, start, end, target_ok, target_self_info, err_info=None):
+    def on_target_completed(self, target_type, target, delivery, start, end, target_ok, target_self_info, err_info=None):
         now = datetime.utcnow().isoformat()
-        tx_id = payload['tx_id']
-        payload_key = self.get_payload_key(target_type, target, tx_id)
-        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, tx_id)
+        task_id = delivery['task_id']
+        lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY, task_id)
         total_time = str(end - start)
         
-        with Lock(lock_name, self.delivery_lock_timeout, 0.2, self.kvdb.conn):
-
-            payload = self.kvdb.conn.hgetall(payload_key)
-            attempts_made = int(payload['attempts_made']) + 1
-                        
-            payload['attempts_made'] = attempts_made
-            payload['last_attempt_time_start_utc'] = start.isoformat()
-            payload['last_attempt_time_end_utc'] = end.isoformat()
-            payload['last_attempt_total_time'] = total_time
-            payload['last_updated_utc'] = now
-            payload['target_ok'] = target_ok
-            payload['target_self_info'] = target_self_info
-            payload['target_count'] = int(payload['attempts_made']) + 1
+        with Lock(lock_name, self.delivery_lock_timeout, LOCK_TIMEOUT, self.kvdb.conn):
+            entry_ctx = dumps({
+                'target_self_info': target_self_info,
+                'total_time': total_time
+            })
             
-            if target_ok:
-                self.logger.info('Delivery target OK [{}] in {} after {} attempt(s)'.format(payload_key, total_time, attempts_made))
-            else:
-                failed_attempt_list = loads(payload['failed_attempt_list'])
-                failed_attempt_list.append(err_info)
-                payload['failed_attempt_list'] = dumps(failed_attempt_list)
-
-            self.kvdb.conn.hmset(payload_key, payload)            
+            with closing(self.odb.session()) as session:
+                delivery = session.merge(self.get_delivery(task_id))
+                delivery.state = DELIVERY_STATE.IN_PROGRESS_TARGET_OK if target_ok else DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE
+                delivery.last_used = now
+                delivery.definition.last_used = now
+                delivery.target_count += 1
                 
-            if self.logger.isEnabledFor(TRACE1):
-                self.logger.log(TRACE1, payload)
+                history = DeliveryHistory()
+                history.task_id = task_id
+                history.entry_type = DELIVERY_HISTORY_ENTRY.TARGET_OK if target_ok else DELIVERY_HISTORY_ENTRY.TARGET_FAILURE
+                history.entry_time = now
+                history.entry_ctx = entry_ctx
+                history.delivery = delivery
+                history.resubmit_count = delivery.resubmit_count
+                
+                session.add(delivery)
+                session.add(history)
+                
+                session.commit()
+                
+                self._invoke_callbacks(target, target_type, delivery, target_ok, False, DELIVERY_CALLBACK_INVOKER.TARGET)
 
 # ##############################################################################
+
+    def _get_page(self, session, cluster_id, params, state):
+        return Page(delivery_list(session, cluster_id, params.def_name, state, params.start, params.stop, params.get('needs_payload', False)),
+             page=params.current_batch,
+             items_per_page=params.batch_size)
+
+    def get_batch_info(self, cluster_id, params, state):
+        """ Returns information regarding how given set of data will be split into
+        smaller batches given maximum number of items on a single batch and min/max member score
+        of the set. Also returns information regarding a current batch - whether it has prev/next batches.
+        """
+        with closing(self.odb.session()) as session:
+            page = self._get_page(session, cluster_id, params, state)
+            return {
+                'total_results': page.item_count,
+                'num_batches': page.page_count,
+                'has_previous': page.previous_page is not None,
+                'has_next': page.next_page is not None,
+                'next_batch_number': page.next_page,
+                'previous_batch_number': page.previous_page,
+            }
+
+    def get_delivery_instance_list(self, cluster_id, params, state):
+        """ Returns a batch of instances that are in the in-doubt state.
+        """
+        with closing(self.odb.session()) as session:
+            page = self._get_page(session, cluster_id, params, state)
+            for values in page.items:
+                out = dict(zip((PAYLOAD_KEYS if params.get('needs_payload') else DELIVERY_KEYS), values))
+                for name in('creation_time_utc', 'last_used_utc'):
+                    out[name] = out[name].isoformat()
+                    
+                yield out
+                
+    def get_delivery_instance(self, task_id, target_def_class):
+        """ Returns an instance by its task's ID.
+        """
+        with closing(self.odb.session()) as session:
+            out = delivery(session, task_id, target_def_class).\
+                   one()
+            out = dict(zip(PAYLOAD_ALL_KEYS, out))
+            for name in('creation_time_utc', 'last_used_utc'):
+                out[name] = out[name].isoformat()
+                
+            return out
+
+# ##############################################################################
+
+    def update_delivery(self, task_id, payload, args, kwargs):
+        with closing(self.odb.session()) as session:
+            now = datetime.utcnow().isoformat()
+            delivery = session.merge(self.get_delivery(task_id))
+            
+            old_payload = delivery.payload.payload
+            old_args = delivery.args
+            old_kwargs = delivery.kwargs
+            
+            delivery.payload.payload = payload
+            delivery.args = args
+            delivery.kwargs = kwargs
+            
+            delivery.definition.last_used = now
+            delivery.target_count += 1
+            
+            entry_ctx = dumps({
+                'old_payload': old_payload,
+                'old_args': old_args,
+                'old_kwargs': old_kwargs,
+                })
+            
+            history = DeliveryHistory()
+            history.task_id = task_id
+            history.entry_type = DELIVERY_HISTORY_ENTRY.UPDATED
+            history.entry_time = now
+            history.entry_ctx = entry_ctx
+            history.delivery = delivery
+            history.resubmit_count = delivery.resubmit_count
+            
+            session.add(delivery)
+            session.add(history)
+            
+            session.commit()
+            
+            self.logger.info('Updated delivery [%s], history.id [%s]', task_id, history.id)
+
+# ##############################################################################
+
+    def get_delivery_list_for_auto_resubmit(self, cluster_id, def_name, stop):
+        params = Bunch({
+            'def_name': def_name,
+            'start': None,
+            'stop': stop,
+            'current_batch': 1,
+            'batch_size': maxint,
+            'needs_payload': True,
+        })
+        for item in self.get_delivery_instance_list(
+                cluster_id, params, [DELIVERY_STATE.IN_PROGRESS_STARTED, 
+                                      DELIVERY_STATE.IN_PROGRESS_RESUBMITTED,
+                                      DELIVERY_STATE.IN_PROGRESS_RESUBMITTED_AUTO,
+                                      DELIVERY_STATE.IN_PROGRESS_TARGET_OK, 
+                                      DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE]):
+            yield item

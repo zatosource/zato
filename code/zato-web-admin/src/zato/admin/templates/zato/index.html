@@ -38,7 +38,6 @@
 {% endblock %}
 
 {% block body %}
-<body>
     <div>
         <div id="hd">
             <div id="console-header">&nbsp;<img src="/static/gfx/logo.png" alt="Zato samurai helmet logo" style="vertical-align:bottom"/><span id="logo">Zato</span>
@@ -55,7 +54,21 @@
             <div id="main-menu">
                 <ul class="sf-menu" >
                 <li><a href="{% url cluster %}">Clusters</a></li>
-                <li><a href="{% url service %}?cluster={{ cluster_id|default:'' }}">Services</a></li>
+                <li><span class="like-a">Services &darr;</span>
+                    <ul>
+                        <li><a href="{% url service %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
+                        <li>
+                            <span class="like-a">Patterns &rarr;</span>
+                            <ul>
+                                <!-- <li class='wide'><a href="?cluster={{ cluster_id|default:'' }}">Fan-out/fan-in</a></li> -->
+                                <li class='wide'><a href="{% url pattern-delivery %}?cluster={{ cluster_id|default:'' }}">Guaranteed delivery</a></li>
+                                <!-- <li class='wide'><a href="?cluster={{ cluster_id|default:'' }}">List invoke</a></li> -->
+                                <!-- <li class='wide'><a href="?cluster={{ cluster_id|default:'' }}">Serialize access</a></li> -->
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
                         <li><a href="{% url security-basic-auth %}?cluster={{ cluster_id|default:'' }}">HTTP Basic Auth</a></li>
