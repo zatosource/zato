@@ -106,7 +106,7 @@ Examples:
 
         zdaemon_conf_name = 'zdaemon-custom.conf'
         socket_prefix = 'custom-program'
-        program = '{} -m zato.admin.main'.format(get_executable())
+        program = '{} custom_start.py'.format(get_executable())
         logfile_path_prefix = 'zdaemon-custom'
 
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)

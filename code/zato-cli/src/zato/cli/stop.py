@@ -61,3 +61,6 @@ class Stop(ManageCommand):
 
     def _on_web_admin(self, *ignored):
         self._try_stop('No web admin running in {}', 'Stopped web admin in {}')
+
+    def _on_custom_program(self, *ignored):
+        self._try_stop('No custom program running in {}', 'Stopped custom program in {}')

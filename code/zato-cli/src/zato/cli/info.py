@@ -103,4 +103,4 @@ class Info(ManageCommand):
             
             self.logger.info(table.draw())
         
-    _on_lb = _on_web_admin = _on_server
+    _on_lb = _on_web_admin = _on_custom_program =_on_server
