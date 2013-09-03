@@ -61,4 +61,4 @@ class CheckConfig(ManageCommand):
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         self.logger.info('This command works with servers only')
         
-    _on_web_admin = _on_lb
+    _on_web_admin = _on_custom_program = _on_lb

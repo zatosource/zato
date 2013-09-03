@@ -524,7 +524,7 @@ class ManageCommand(ZatoCommand):
             self.COMPONENTS.LOAD_BALANCER.code: self._on_lb,
             self.COMPONENTS.SERVER.code: self._on_server,
             self.COMPONENTS.WEB_ADMIN.code: self._on_web_admin,
-            self.COMPONENTS.CUSTOM.comde: self._on_custom_program,
+            self.COMPONENTS.CUSTOM.code: self._on_custom_program,
         }
 
     command_files = set([ZATO_INFO_FILE])
