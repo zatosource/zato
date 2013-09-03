@@ -106,7 +106,7 @@ Examples:
 
         zdaemon_conf_name = 'zdaemon-custom.conf'
         socket_prefix = 'custom-program'
-        program = '{} custom_start.py'.format(get_executable())
+        program = 'python custom_start.py'
         logfile_path_prefix = 'zdaemon-custom'
 
         self._zdaemon_start(zdaemon_conf_name_contents, zdaemon_conf_name, socket_prefix, logfile_path_prefix, program)
