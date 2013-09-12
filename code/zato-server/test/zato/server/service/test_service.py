@@ -17,8 +17,11 @@ from uuid import uuid4
 # nose
 from nose.tools import eq_
 
+# retools
+from retools.lock import LockTimeout
+
 # Zato
-from zato.common import CHANNEL, KVDB, LockTimeout, SCHEDULER_JOB_TYPE
+from zato.common import CHANNEL, KVDB, SCHEDULER_JOB_TYPE
 from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
 from zato.server.service import Service
 
@@ -152,9 +155,6 @@ class TestLock(ServiceTestCase):
         try:
             instance.handle()
         except LockTimeout, e:
-            eq_(e.name, KVDB.LOCK_SERVICE_PREFIX + lock_name)
-            eq_(e.expires, expires)
-            eq_(e.timeout, timeout)
-            eq_(e.backend is my_kvdb.conn, True)
+            eq_(e.message, 'Timeout while waiting for lock')
         else:
             self.fail('LockTimeout not raised')
