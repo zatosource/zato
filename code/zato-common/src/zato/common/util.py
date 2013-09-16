@@ -51,9 +51,6 @@ from dateutil.parser import parse
 # lxml
 from lxml import objectify
 
-# M2Crypto
-from M2Crypto import RSA
-
 # pip
 from pip.download import is_archive_file, unpack_file_url
 
@@ -124,33 +121,29 @@ def pprint(obj):
 
     return value
 
-def encrypt(data, pub_key, padding=RSA.pkcs1_padding, b64=True):
-    """ Encrypt data using the given public key.
-    data - data to be encrypted
-    pub_key - public key to use (as a PEM string)
-    padding - padding to use, defaults to PKCS#1
-    b64 - should the encrypted data be BASE64-encoded before being returned, defaults to True
-    """
-    logger.debug('Using pub_key:[{}]'.format(pub_key))
-    
-    cm = CryptoManager(pub_key=pub_key)
-    cm.load_keys()
-    
-    return cm.encrypt(data, padding, b64)
-
-def decrypt(data, priv_key, padding=RSA.pkcs1_padding, b64=True):
-    """ Decrypts data using the given private key.
+def encrypt(data, priv_key, b64=True):
+    """ Encrypt data using a public key derived from the private key.
     data - data to be encrypted
     priv_key - private key to use (as a PEM string)
-    padding - padding to use, defaults to PKCS#1
-    b64 - should the data be BASE64-decoded before being decrypted, defaults to True
+    b64 - should the encrypted data be BASE64-encoded before being returned, defaults to True
     """
-    logger.debug('Using priv_key:[{}]'.format(priv_key))
     
     cm = CryptoManager(priv_key=priv_key)
     cm.load_keys()
     
-    return cm.decrypt(data, padding, b64)
+    return cm.encrypt(data, b64)
+
+def decrypt(data, priv_key, b64=True):
+    """ Decrypts data using the given private key.
+    data - data to be encrypted
+    priv_key - private key to use (as a PEM string)
+    b64 - should the data be BASE64-decoded before being decrypted, defaults to True
+    """
+    
+    cm = CryptoManager(priv_key=priv_key)
+    cm.load_keys()
+    
+    return cm.decrypt(data, b64)
 
 def get_executable():
     """ Returns the wrapper buildout uses for executing Zato commands. This has
@@ -321,17 +314,14 @@ def get_crypto_manager(repo_location, app_context, config, load_keys=True):
     crypto_manager = app_context.get_object('crypto_manager')
     
     priv_key_location = config['crypto']['priv_key_location']
-    pub_key_location = config['crypto']['pub_key_location']
     cert_location = config['crypto']['cert_location']
     ca_certs_location = config['crypto']['ca_certs_location']
     
     priv_key_location = absolutize_path(repo_location, priv_key_location)
-    pub_key_location = absolutize_path(repo_location, pub_key_location)
     cert_location = absolutize_path(repo_location, cert_location)
     ca_certs_location = absolutize_path(repo_location, ca_certs_location)
     
     crypto_manager.priv_key_location = priv_key_location
-    crypto_manager.pub_key_location = pub_key_location
     crypto_manager.cert_location = cert_location
     crypto_manager.ca_certs_location = ca_certs_location
     

@@ -103,7 +103,7 @@ class Create(ZatoCommand):
         password = password if password else generate_password()
         
         self.copy_web_admin_crypto(repo_dir, args)
-        pub_key = open(os.path.join(repo_dir, 'web-admin-pub-key.pem')).read()
+        priv_key = open(os.path.join(repo_dir, 'web-admin-priv-key.pem')).read()
         
         config = {
             'host': web_admin_host,
@@ -112,13 +112,13 @@ class Create(ZatoCommand):
             'log_config': 'logging.conf',
             'DATABASE_NAME': args.odb_db_name,
             'DATABASE_USER': args.odb_user,
-            'DATABASE_PASSWORD': encrypt(args.odb_password, pub_key),
+            'DATABASE_PASSWORD': encrypt(args.odb_password, priv_key),
             'DATABASE_HOST': args.odb_host,
             'DATABASE_PORT': args.odb_port,
             'SITE_ID': getrandbits(20),
-            'SECRET_KEY': encrypt(uuid.uuid4().hex, pub_key),
+            'SECRET_KEY': encrypt(uuid.uuid4().hex, priv_key),
             'ADMIN_INVOKE_NAME':'admin.invoke',
-            'ADMIN_INVOKE_PASSWORD':encrypt(getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), pub_key),
+            'ADMIN_INVOKE_PASSWORD':encrypt(getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), priv_key),
         }
         
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/web-admin.log'))
