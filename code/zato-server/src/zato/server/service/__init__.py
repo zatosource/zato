@@ -36,7 +36,7 @@ from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, LockTimeout, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK
+from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
@@ -746,11 +746,6 @@ class Service(object):
         incoming requests.
         """
         raise NotImplementedError('Should be overridden by subclasses')
-    
-    def _on_lock_timeout(self, name, expires, timeout, backend):
-        def inner(inner_msg):
-            raise LockTimeout(self.cid, name, expires, timeout, backend, inner_msg)
-        return inner
     
     def lock(self, name=None, expires=20, timeout=0, backend=None):
         """ Creates a Redis-backed distributed lock.
