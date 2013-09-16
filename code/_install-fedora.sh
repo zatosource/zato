@@ -17,12 +17,11 @@ sudo yum install git bzr gcc-gfortran haproxy \
     gcc-c++ atlas-devel atlas blas-devel  \
     libevent-devel libgfortran lapack-devel lapack \
     libpqxx-devel libyaml-devel libxml2-devel libxslt-devel suitesparse \
-    openssl python-devel m2crypto numpy python-pip \
+    openssl python-devel numpy python-pip \
     scipy python-zdaemon swig uuid-devel uuid
 
 mkdir $CURDIR/zato_extra_paths
 
-symlink_py 'M2Crypto'
 symlink_py 'numpy'
 symlink_py 'scipy'
 

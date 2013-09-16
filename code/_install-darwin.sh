@@ -23,7 +23,6 @@ pip install distribute==0.6.49
 pip install virtualenv==1.9.1
 
 pip install nose
-pip install m2crypto
 pip install zdaemon
 
 brew tap samueljohn/python
@@ -44,7 +43,6 @@ brew install libpqxx
 brew install samueljohn/python/numpy
 brew install scipy
 
-symlink_py 'M2Crypto'
 symlink_py 'scipy'
 symlink_py 'numpy'
 

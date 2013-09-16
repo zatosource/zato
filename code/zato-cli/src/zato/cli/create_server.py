@@ -135,7 +135,7 @@ files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path
          'config/repo/service-sources.txt':service_sources_contents}
 
 priv_key_location = './config/repo/config-priv.pem'
-pub_key_location = './config/repo/config-pub.pem'
+priv_key_location = './config/repo/config-pub.pem'
 
 class Create(ZatoCommand):
     """ Creates a new Zato server
@@ -146,7 +146,7 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
     
-    opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
+    opts.append({'name':'priv_key_path', 'help':"Path to the server's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
@@ -201,7 +201,7 @@ class Create(ZatoCommand):
     
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
             self.copy_server_crypto(repo_dir, args)
-            pub_key = open(os.path.join(repo_dir, 'zato-server-pub-key.pem')).read()
+            priv_key = open(os.path.join(repo_dir, 'zato-server-priv-key.pem')).read()
             
             if show_output:
                 self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
@@ -233,13 +233,13 @@ class Create(ZatoCommand):
                     odb_db_name=args.odb_db_name,
                     odb_engine=args.odb_type,
                     odb_host=args.odb_host,
-                    odb_password=encrypt(args.odb_password, pub_key),
+                    odb_password=encrypt(args.odb_password, priv_key),
                     odb_pool_size=default_odb_pool_size,
                     odb_user=args.odb_user,
                     token=self.token,
                     kvdb_host=args.kvdb_host,
                     kvdb_port=args.kvdb_port,
-                    kvdb_password=encrypt(args.kvdb_password, pub_key) if args.kvdb_password else '',
+                    kvdb_password=encrypt(args.kvdb_password, priv_key) if args.kvdb_password else '',
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
                 ))
