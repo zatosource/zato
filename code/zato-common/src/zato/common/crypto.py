@@ -69,12 +69,6 @@ class CryptoManager(object):
             return b64encode(encrypted)
 
         return encrypted
-    
-    def sign(self, data):
-        """ Signs the SHA256 hash of the data using a private key from the BASE64-encoded value.
-        """
-        signed = self.priv_key.sign(sha256(data).digest())
-        return b64encode(signed)
 
     def reset(self):
         """ Sets all the keys to None.
