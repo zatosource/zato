@@ -100,6 +100,7 @@ errors=
 
 [startup_services]
 zato.helpers.input-logger=Sample payload for a startup service
+zato.pattern.delivery.dispatch-auto-resubmit=
 
 [profiler]
 enabled=False
