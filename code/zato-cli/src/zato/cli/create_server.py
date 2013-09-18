@@ -102,6 +102,10 @@ errors=
 zato.helpers.input-logger=Sample payload for a startup service
 zato.pattern.delivery.dispatch-auto-resubmit=
 
+[patterns]
+delivery_auto_lock_timeout=90
+delivery_retry_threshold_multiplier=4
+
 [profiler]
 enabled=False
 profiler_dir=profiler

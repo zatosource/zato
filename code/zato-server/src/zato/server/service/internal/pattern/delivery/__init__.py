@@ -296,18 +296,19 @@ class AutoResubmit(AdminService):
     
     def handle(self):
         now = datetime.utcnow()
-        stop = now - timedelta(seconds=4*self.request.input.retry_seconds) # TODO: Make it configurable
+        multiplier = int(self.server.fs_server_config.patterns.delivery_retry_threshold_multiplier)
+        stop = now - timedelta(seconds=multiplier*self.request.input.retry_seconds)
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY_AUTO_RESUBMIT, self.request.input.def_name)
         
-        with self.lock(lock_name, 90):  # TODO: Make it configurable
+        timeout = int(self.server.fs_server_config.patterns.delivery_auto_lock_timeout)
+        with self.lock(lock_name, timeout):
             for item in self.delivery_store.get_delivery_list_for_auto_resubmit(self.server.cluster_id, self.request.input.def_name, stop):
                 
                 kwargs = loads(item['kwargs'])
                 kwargs['is_resubmit'] = True
                 kwargs['is_auto'] = True
                 
-                self.deliver(
-                    item['def_name'], item['payload'], item['task_id'], *loads(item['args']), **kwargs)
+                self.deliver(item['def_name'], item['payload'], item['task_id'], *loads(item['args']), **kwargs)
     
 class DispatchAutoResubmit(AdminService):
     """ Dispatches as many async requests for auto-resubmitting delivery tasks
