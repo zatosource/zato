@@ -40,7 +40,7 @@ from zato.common import CHANNEL, DATA_FORMAT, DELIVERY_CALLBACK_INVOKER, DELIVER
      DELIVERY_HISTORY_ENTRY, DELIVERY_STATE, INVOCATION_TARGET, KVDB
 from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
-     DeliveryHistory, DeliveryPayload, to_json
+     DeliveryHistory, DeliveryPayload
 from zato.common.odb.query import delivery, delivery_list
 from zato.common.util import datetime_to_seconds, new_cid, TRACE1
 from zato.redis_paginator import ZSetPaginator

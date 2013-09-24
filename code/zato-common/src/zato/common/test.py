@@ -26,8 +26,13 @@ from mock import MagicMock, Mock
 # nose
 from nose.tools import eq_
 
+# SQLAlchemy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 # Zato
 from zato.common import CHANNEL, SIMPLE_IO
+from zato.common.odb import model
 from zato.common.util import new_cid
 
 def rand_bool():
@@ -232,3 +237,14 @@ class ServiceTestCase(TestCase):
 
     def wrap_force_type(self, elem):
         return ForceTypeWrapper(elem)
+
+class ODBTestCase(TestCase):
+
+    def setUp(self):
+        engine = create_engine('sqlite:///:memory:')
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        model.Base.metadata.create_all(self.engine)
+        
+    def tearDown(self):
+        model.Base.metadata.drop_all(self.engine)
