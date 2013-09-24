@@ -30,8 +30,8 @@ command = oneOf((
     'HDEL', 'HEXISTS', 'HGET', 'HGETALL', 'HINCRBY', 'HKEYS', 'HLEN', 'HSETNX',
     'HVALS', 'INCR', 'INCRBY', 'INFO', 'KEYS', 'LLEN', 'LPOP', 'LPUSH', 'LPUSHX',
     'LRANGE', 'LREM', 'LSET', 'LTRIM', 'MGET', 'MSET', 'MSETNX', 'OBJECT', 'PERSIST',
-    'PEXPIRE', 'PEXPIREAT', 'PING', 'PSETEX', 'PTTL', 'RANDOMKEY', 'RENAME', 'RENAMENX',
-    'RESTORE', 'RPOP', 'SADD', 'SET', 'SMEMBERS', 'SREM', 'TIME', 'TTL', 'TYPE',
+    'PEXPIRE', 'PEXPIREAT', 'PING', 'PSETEX', 'PTTL', 'RANDOMKEY', 'RENAME', 'RENAMENX', 
+    'RESTORE', 'RPOP', 'SADD', 'SET', 'SISMEMBER', 'SMEMBERS', 'SREM', 'TIME', 'TTL', 'TYPE', 
     'ZADD', 'ZRANGE', 'ZREM'), caseless=True).setResultsName('command')
 parameters = (OneOrMore(quot + Word(alphanums + '-' + punctuation) + quot)).setResultsName('parameters')
 redis_grammar = quot + command + Optional(White().suppress() + parameters)
