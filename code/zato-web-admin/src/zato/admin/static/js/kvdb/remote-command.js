@@ -68,6 +68,7 @@ $.fn.zato.kvdb.CommandInfo = new Class({
         ['RPOP', 'RPOP key', 'Remove and get the last element in a list'],
         ['SADD', 'SADD key member [member ...]', 'Add one or more members to a set'],
         ['SET', 'SET key value', 'Set the string value of a key'],
+        ['SISMEMBER', ' SISMEMBER key member', 'Returns if member is a member of the set stored at key'],
         ['SMEMBERS', 'SMEMBERS key', 'Get all the members in a set'],
         ['SREM', 'SREM key member [member ...]', 'Remove one or more members from a set'],
         ['TIME', 'TIME', 'Return the current server time'],
