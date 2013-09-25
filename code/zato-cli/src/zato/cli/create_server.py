@@ -53,6 +53,7 @@ db_name={odb_db_name}
 engine={odb_engine}
 extra=
 host={odb_host}
+port={odb_port}
 password={odb_password}
 pool_size={odb_pool_size}
 username={odb_user}
@@ -217,6 +218,7 @@ class Create(ZatoCommand):
                     odb_db_name=args.odb_db_name, 
                     odb_engine=args.odb_type, 
                     odb_host=args.odb_host,
+                    odb_port=args.odb_port,
                     odb_password=encrypt(args.odb_password, pub_key), 
                     odb_pool_size=default_odb_pool_size, 
                     odb_user=args.odb_user, 

@@ -26,7 +26,7 @@ VERSION = 1
 
 SUPPORTED_DB_TYPES = (b'oracle', b'postgresql')
 
-engine_def = '{engine}://{username}:{password}@{host}/{db_name}'
+engine_def = '{engine}://{username}:{password}@{host}:{port}/{db_name}'
 
 # Queries to use in pinging the databases.
 ping_queries = {

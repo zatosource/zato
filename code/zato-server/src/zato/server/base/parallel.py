@@ -442,6 +442,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         odb_data.engine = parallel_server.odb_data['engine']
         odb_data.extra = parallel_server.odb_data['extra']
         odb_data.host = parallel_server.odb_data['host']
+        odb_data.port = parallel_server.odb_data['port']
         odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
         odb_data.pool_size = parallel_server.odb_data['pool_size']
         odb_data.username = parallel_server.odb_data['username']
