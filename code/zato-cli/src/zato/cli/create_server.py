@@ -240,7 +240,7 @@ class Create(ZatoCommand):
                     odb_engine=args.odb_type,
                     odb_host=args.odb_host,
                     odb_port=args.odb_port,
-                    odb_password=encrypt(args.odb_password, pub_key), 
+                    odb_password=encrypt(args.odb_password, priv_key), 
                     odb_pool_size=default_odb_pool_size, 
                     odb_user=args.odb_user, 
                     token=self.token, 
