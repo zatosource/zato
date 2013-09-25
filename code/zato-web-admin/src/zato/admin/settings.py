@@ -115,7 +115,8 @@ if 'DATABASES' in globals():
     # SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
     engine = create_engine(engine_def.format(engine=db_type, username=db_data['USER'],
-        password=db_data['PASSWORD'], host=db_data['HOST'], db_name=db_data['NAME']))
+        password=db_data['PASSWORD'], host=db_data['HOST'], port=db_data['PORT'],
+        db_name=db_data['NAME']))
     SASession.configure(bind=engine)
     
     TEMPLATE_DEBUG = True
