@@ -43,4 +43,22 @@ class ExecuteCommandTestCase(ServiceTestCase):
         
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.kvdb.remote-command.execute')
-
+        
+    def test_fixup_parameters(self):
+        params1 = ['mykey']
+        params2 = ['"mykey"']
+        params3 = ['mykey', '"myvalue"']
+        
+        service = self.service_class()
+        
+        # Pass-through
+        params = service._fixup_parameters(params1)
+        self.assertEquals(params, params1)
+        
+        # Single param
+        params = service._fixup_parameters(params2)
+        self.assertEquals(params[0], 'mykey')
+        
+        # Multiple params
+        params = service._fixup_parameters(params3)
+        self.assertEquals(params[-1], 'myvalue')

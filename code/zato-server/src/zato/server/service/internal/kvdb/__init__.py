@@ -27,6 +27,20 @@ class ExecuteCommand(AdminService):
         input_required = ('command',)
         output_required = ('result',)
         
+    def _fixup_parameters(self, parameters):
+        """ Fix up quotes so stuff like [SISMEMBER key member] and [SISMEMBER key "member"] is treated the same
+        (brackets used here for clarity only to separate commands).
+        """
+        if parameters:
+            has_one = len(parameters) == 1
+            first_elem_idx = 0 if has_one else 1
+
+            if parameters[first_elem_idx][0] == '"' and parameters[-1][-1] == '"':
+                parameters[first_elem_idx] = parameters[first_elem_idx][1:]
+                parameters[-1] = parameters[-1][:-1]
+                
+        return parameters
+        
     def handle(self):
         input_command = self.request.input.command or ''
         
@@ -40,6 +54,8 @@ class ExecuteCommand(AdminService):
             options = {}
             command = parse_result.command
             parameters = parse_result.parameters if parse_result.parameters else []
+
+            parameters = self._fixup_parameters(parameters)
             
             if command == 'CONFIG':
                 options['parse'] = parameters[0]
