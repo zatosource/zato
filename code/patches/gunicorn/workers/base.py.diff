@@ -1,13 +1,13 @@
---- gunicorn/workers/base.py.orig	2013-05-14 19:21:10.042711920 +0200
-+++ gunicorn/workers/base.py	2013-05-14 19:22:41.003162961 +0200
-@@ -125,6 +125,10 @@
+--- gunicorn/workers/base.py.orig	2013-09-25 14:13:23.077300653 +0200
++++ gunicorn/workers/base.py	2013-09-25 14:13:49.233430373 +0200
+@@ -133,6 +133,10 @@
          self.alive = False
  
      def handle_exit(self, sig, frame):
 +        # TODO: Instead of this workaround we need a custom subclass
 +        #       that will be calling .destroy (dsuch 2013-05-14T19:22:21.265700)
 +        self.app.zato_wsgi_app.destroy() 
-+        
++
          self.alive = False
          sys.exit(0)
  
