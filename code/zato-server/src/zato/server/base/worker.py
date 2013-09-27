@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os
+import logging, inspect, os, socket, traceback
 from copy import deepcopy
 from errno import ENOENT
 from threading import RLock
@@ -458,6 +458,9 @@ class WorkerStore(BrokerMessageReceiver):
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
         """
+        # Module this service is in so it can be removed from sys.modules
+        mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
+
         # Where to delete it from in the second step
         fs_location = self.server.service_store.services[msg.impl_name]['deployment_info']['fs_location']
         
@@ -478,6 +481,9 @@ class WorkerStore(BrokerMessageReceiver):
                 except OSError, e:
                     if e.errno != ENOENT:
                         raise
+        
+        # Makes it actually gets reimported next time it's redeployed
+        del sys.modules[mod.__name__]
                 
     def on_broker_msg_SERVICE_EDIT(self, msg, *args):
         for name in('is_active', 'slow_threshold'):
