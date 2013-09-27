@@ -18,7 +18,7 @@ from datetime import datetime
 import requests
 
 # Zato
-from zato.common import Inactive
+from zato.common import Inactive, URL_TYPE
 from zato.common.util import get_component_name, security_def_type
 
 logger = logging.getLogger(__name__)
@@ -112,6 +112,10 @@ class HTTPSOAPWrapper(object):
             'X-Zato-Component':self._component_name,
             'X-Zato-Msg-TS':datetime.utcnow().isoformat(),
             }
+
+        if self.config.get('transport') == URL_TYPE.SOAP:
+            headers['SOAPAction'] = self.config.get('soap_action')
+
         headers.update(user_headers)
         
         return headers
