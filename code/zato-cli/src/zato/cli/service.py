@@ -63,6 +63,7 @@ class Invoke(ZatoCommand):
         engine_args.odb_user = config.odb.username
         engine_args.odb_password = cm.decrypt(config.odb.password)
         engine_args.odb_host = config.odb.host
+        engine_args.odb_port = config.odb.port
         engine_args.odb_db_name = config.odb.db_name
         
         engine = self._get_engine(engine_args)
