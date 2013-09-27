@@ -45,7 +45,7 @@ from validate import is_boolean
 from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common import SIMPLE_IO, SourceInfo, ZATO_NONE, zato_path
+from zato.common import DATA_FORMAT, SourceInfo, ZATO_NONE
 from zato.common.odb.model import Service
 
 logger = logging.getLogger(__name__)
@@ -554,6 +554,7 @@ def invoke(req, name, cluster_id):
         input_dict = {}
         for attr in('payload', 'data_format', 'transport'):
             input_dict[attr] = req.POST.get(attr, '')
+        input_dict['to_json'] = True if input_dict.get('data_format') == DATA_FORMAT.JSON else False
         
         response = req.zato.client.invoke(name, **input_dict)
 
