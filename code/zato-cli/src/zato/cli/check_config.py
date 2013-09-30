@@ -39,7 +39,16 @@ class CheckConfig(ManageCommand):
         engine_params['extra'] = {}
         engine_params['pool_size'] = 1
         
-        query = ping_queries[engine_params['engine']]
+        # Ticket #35
+        engine = engine_params['engine']
+        port = engine_params.get('port')
+        
+        if not port:
+            port = 5432 if engine == 'postgresql' else 1521
+            
+        engine_params['port'] = port
+        
+        query = ping_queries[engine]
         
         session = create_pool(cm, engine_params)
         session.execute(query)
