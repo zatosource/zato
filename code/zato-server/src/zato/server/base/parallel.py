@@ -437,12 +437,26 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def get_config_odb_data(self, parallel_server):
         """ Returns configuration with regards to ODB data.
         """
+        #
+        # Ticket #35 Don't ignore odb_port when creating an ODB
+        # https://github.com/zatosource/zato/issues/35
+        #
+        # For earlier environments we need to assume the default port
+        # of PostgreSQL or Oracle.
+        #
+        
+        engine = parallel_server.odb_data['engine']
+        port = parallel_server.odb_data.get('port')
+        
+        if not port:
+            port = 5432 if engine == 'postgresql' else 1521
+        
         odb_data = Bunch()
         odb_data.db_name = parallel_server.odb_data['db_name']
-        odb_data.engine = parallel_server.odb_data['engine']
+        odb_data.engine = engine
         odb_data.extra = parallel_server.odb_data['extra']
         odb_data.host = parallel_server.odb_data['host']
-        odb_data.port = parallel_server.odb_data['port']
+        odb_data.port = port
         odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
         odb_data.pool_size = parallel_server.odb_data['pool_size']
         odb_data.username = parallel_server.odb_data['username']
