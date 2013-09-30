@@ -57,6 +57,14 @@ class Invoke(ZatoCommand):
         
         cm = CryptoManager(priv_key_location=priv_key_location)
         cm.load_keys()
+
+        # Ticket #35
+        port = config.odb.get('port')
+        
+        if not port:
+            port = 5432 if config.odb.engine == 'postgresql' else 1521
+            
+        config.odb['port'] = port
         
         engine_args = Bunch()
         engine_args.odb_type = config.odb.engine
