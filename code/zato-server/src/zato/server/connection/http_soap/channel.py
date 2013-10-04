@@ -205,7 +205,8 @@ class _BaseMessageHandler(object):
     
             # SOAP clients may send an empty header, i.e. SOAPAction: "",
             # as opposed to not sending the header at all.
-            soap_action = soap_action.lstrip('"').rstrip('"')
+            if soap_action == '""' or soap_action == "''":
+                soap_action = soap_action.lstrip('"').rstrip('"')
     
             if not soap_action:
                 raise BadRequest(cid, 'Client sent an empty SOAPAction header')
