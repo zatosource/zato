@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from setuptools import setup, find_packages
 
-version = '1.1.4'
+version = '1.2.1'
 
 long_description = description = 'Convenience Python client for Zato ESB and app server (https://zato.io)'
 
@@ -35,7 +35,7 @@ setup(
           'bunch==1.0.1',
           'lxml==3.0.1',
           'requests==1.2.3',
-          'zato-common >=1.1,<1.2'
+          'zato-common >=1.2,<1.3'
           ],
       
       keywords=('soa eai esb middleware messaging queueing asynchronous integration performance http zeromq framework events agile broker messaging server jms enterprise python middleware clustering amqp nosql websphere mq wmq mqseries ibm amqp zmq'),

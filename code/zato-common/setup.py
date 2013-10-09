@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from setuptools import setup, find_packages
 
-version = '1.1.1'
+version = '1.2.1'
 
 setup(
       name = 'zato-common',
@@ -35,7 +35,7 @@ setup(
           'distutils2==1.0a4',
           'lxml==3.0.1',
           'mock==1.0.1',
-          'nose==1.2.1',
+          'nose==1.3.0',
           'pip==1.1',
           'python-dateutil==2.1',
           'pytz==2012h',
