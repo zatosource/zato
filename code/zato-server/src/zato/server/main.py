@@ -112,8 +112,12 @@ def run(base_dir):
         
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
+
+
+    # This is new in 1.2 so is optional
+    profiler_enabled = config.get('profiler', {}).get('enabled', False)
     
-    if asbool(config.profiler.enabled):
+    if asbool(profiler_enabled):
         profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
         parallel_server.on_wsgi_request = ProfileMiddleware(
             parallel_server.on_wsgi_request,
