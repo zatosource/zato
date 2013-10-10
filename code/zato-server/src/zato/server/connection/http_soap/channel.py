@@ -99,7 +99,18 @@ class RequestDispatcher(object):
         
         # Let's return the message as-is if we didn't have any specific envelope
         # to use.
-        return msg        
+        return msg
+    
+    def _handle_quotes_soap_action(self, soap_action):
+        """ Make sure quotes around SOAP actions are ignored so these two
+        are equivalent:
+        - SOAPAction: "my.soap.action"
+        - SOAPAction: my.soap.action
+        """
+        if soap_action[0] == '"' and soap_action[-1] == '"':
+            soap_action = soap_action[1:-1]
+            
+        return soap_action
     
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
@@ -109,6 +120,10 @@ class RequestDispatcher(object):
         """
         path_info = wsgi_environ['PATH_INFO']
         soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')
+        
+        if soap_action:
+            soap_action = self._handle_quotes_soap_action(soap_action)
+            
         url_data = self.security.url_sec_get(path_info, soap_action)
         payload = wsgi_environ['wsgi.input'].read()
         
@@ -204,16 +219,7 @@ class _BaseMessageHandler(object):
             if not soap_action:
                 raise BadRequest(cid, 'Client did not send the SOAPAction header')
             
-            #
-            # Treat SOAP actions with quotes equivalent to no quotes,
-            # so these two are the same:
-            # 
-            # SOAPAction: "my.soap.action"
-            # SOAPAction: my.soap.action
-            #
-            
-            if soap_action[0] == '"' and soap_action[-1] == '"':
-                soap_action = soap_action[1:-1]
+            soap_action = self._handle_quotes_soap_action(soap_action)
 
             if not soap_action:
                 raise BadRequest(cid, 'Client sent an empty SOAPAction header')
