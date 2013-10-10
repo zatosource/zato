@@ -178,14 +178,27 @@ class BaseConnector(BrokerMessageReceiver):
         # Broker client
         self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
         self.broker_client.start()
+
+        # ODB        
         
-        # ODB
+        #
+        # Ticket #35 Don't ignore odb_port when creating an ODB
+        # https://github.com/zatosource/zato/issues/35
+        #
+        
+        engine = config_odb.engine
+        port = config_odb.get('port')
+        
+        if not port:
+            port = 5432 if engine == 'postgresql' else 1521
+        
         self.odb_config = Bunch()
         self.odb_config.db_name = config_odb.db_name
         self.odb_config.is_active = True
-        self.odb_config.engine = config_odb.engine
+        self.odb_config.engine = engine
         self.odb_config.extra = config_odb.extra
         self.odb_config.host = config_odb.host
+        self.odb_config.port = port
         self.odb_config.password = self.odb.crypto_manager.decrypt(config_odb.password)
         self.odb_config.pool_size = config_odb.pool_size
         self.odb_config.username = config_odb.username
