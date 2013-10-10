@@ -425,7 +425,7 @@ def decompress(archive, dir_name):
 def visit_py_source(dir_name):
     for pattern in('*.py', '*.pyw'):
         glob_path = os.path.join(dir_name, pattern)
-        for py_path in glob(glob_path):
+        for py_path in sorted(glob(glob_path)):
             yield py_path
 
 def visit_py_source_from_distribution(dir_name):
