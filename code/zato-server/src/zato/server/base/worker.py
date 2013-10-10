@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, inspect, os, socket, traceback
+import logging, inspect, os, socket, sys, traceback
 from copy import deepcopy
 from errno import ENOENT
 from thread import start_new_thread
