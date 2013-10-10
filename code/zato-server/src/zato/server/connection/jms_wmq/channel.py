@@ -140,7 +140,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
         self.channel.name = item.name
         self.channel.is_active = item.is_active
         self.channel.queue = str(item.queue)
-        self.channel.service = item.service_impl_name
+        self.channel.service = item.service_name
         self.channel.data_format = item.data_format
         self.channel.listener = None
             
@@ -199,7 +199,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 for attr in MESSAGE_ATTRS:
                     params[attr] = getattr(msg, attr, None)
                 
-                self.broker_client.async_invoke(params)
+                self.broker_client.invoke_async(params)
                 
     def on_broker_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
