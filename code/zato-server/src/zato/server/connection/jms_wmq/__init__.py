@@ -17,7 +17,7 @@ from zato.common.broker_message import DEFINITION, JMS_WMQ_CONNECTOR
 from zato.server.connection import BaseConnection, BaseConnector
 
 class BaseJMSWMQConnection(BaseConnection):
-    def __init__(self, factory, name, kvdb, delivery_store):
+    def __init__(self, factory, name, kvdb=None, delivery_store=None):
         super(BaseJMSWMQConnection, self).__init__(kvdb, delivery_store)
         self.factory = factory
         self.name = name
