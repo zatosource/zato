@@ -55,10 +55,10 @@ class WMQFacade(object):
         params['name'] = out_name
         params['body'] = msg
         params['queue'] = queue
-        params['delivery_mode'] = int(delivery_mode)
-        params['expiration'] = int(expiration)
-        params['priority'] = int(priority)
-        params['max_chars_printed'] = int(max_chars_printed)
+        params['delivery_mode'] = int(delivery_mode) if delivery_mode else None
+        params['expiration'] = int(expiration) if expiration else None
+        params['priority'] = int(priority) if priority else None
+        params['max_chars_printed'] = int(max_chars_printed) if max_chars_printed else None
         
         # Confirmed delivery
         if task_id:
