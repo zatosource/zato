@@ -341,11 +341,14 @@ class WorkerStore(BrokerMessageReceiver):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
+        # WSGI environment is the best place we have to store raw msg in
+        wsgi_environ = {'zato.request_ctx.async_msg':msg}
+        
         service = self.server.service_store.new_instance_by_name(msg.service)
         service.update_handle(self._set_service_response_data, service, msg.payload,
             channel, msg.get('data_format'), msg.get('transport'), self.server,
             self.broker_client, self, msg.cid, self.worker_config.simple_io,
-            job_type=msg.get('job_type'))
+            job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
 
 # ##############################################################################
 
