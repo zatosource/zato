@@ -73,17 +73,24 @@ class OutgoingConnection(BaseJMSWMQConnection):
         self.dont_reconnect_errors = (MQRC_UNKNOWN_OBJECT_NAME, )
         
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
+        
         jms_msg = TextMessage()
+        
+        # Common named arguments first
         jms_msg.text = msg.get('body')
-        jms_msg.jms_correlation_id = msg.get('jms_correlation_id')
-        jms_msg.jms_delivery_mode = msg.get('jms_delivery_mode') or default_delivery_mode
-        jms_msg.jms_destination = msg.get('jms_destination')
-        jms_msg.jms_expiration = int(msg.get('jms_expiration') or default_expiration)
-        jms_msg.jms_message_id = msg.get('jms_message_id')
-        jms_msg.jms_priority = msg.get('jms_priority') or default_priority
-        jms_msg.jms_redelivered = msg.get('jms_redelivered')
-        jms_msg.jms_timestamp = msg.get('jms_timestamp')
+        jms_msg.jms_expiration = int(msg.get('expiration') or default_expiration)
+        jms_msg.jms_delivery_mode = msg.get('delivery_mode') or default_delivery_mode
+        jms_msg.jms_priority = msg.get('priority') or default_priority
         jms_msg.max_chars_printed = msg.get('max_chars_printed') or default_max_chars_printed
+        
+        kwargs = msg.get('kwargs')
+        
+        # JMS-specific ones now
+        jms_msg.jms_destination = kwargs.get('jms_destination')
+        jms_msg.jms_correlation_id = str(kwargs.get('jms_correlation_id'))
+        jms_msg.jms_message_id = str(kwargs.get('jms_message_id'))
+        jms_msg.jms_redelivered = kwargs.get('jms_redelivered')
+        jms_msg.jms_timestamp = kwargs.get('jms_timestamp')
         
         queue = str(msg['queue'])
         
