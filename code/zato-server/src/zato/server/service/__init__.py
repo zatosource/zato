@@ -273,6 +273,19 @@ class Request(ValueConverter):
             if name == 'logger':
                 continue
             setattr(request, name, deepcopy(getattr(self, name)))
+            
+    
+    def bunchified(self):
+        """ Returns a bunchified (converted into bunch.Bunch) version of self.raw_request,
+        deep copied if it's a dict (or a subclass). Note that it makes to use this method
+        only with dicts or JSON input.
+        """
+        # We have a dict
+        if isinstance(self.raw_request, dict):
+            return bunchify(deepcopy(self.raw_request))
+        
+        # Must be a JSON input, raises exception when attempting to load it if it's not
+        return bunchify(loads(self.raw_request))
 
 # ##############################################################################
         
@@ -842,18 +855,6 @@ class Service(object):
         name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
         backend = backend or self.kvdb.conn
         return Lock(name, expires, timeout, backend)
-    
-    def bunchified_request(self):
-        """ Returns a bunchified (converted into bunch.Bunch) version of self.request.raw_request,
-        deep copied if it's a dict (or a subclass). Note that it makes to use
-        this method only with dicts or JSON input.
-        """
-        # We have a dict
-        if isinstance(self.request.raw_request, dict):
-            return bunchify(deepcopy(self.request.raw_request))
-        
-        # Must be a JSON input, raises exception when attempting to load it if it's not
-        return bunchify(loads(self.request.raw_request))
     
 # ##############################################################################
 
