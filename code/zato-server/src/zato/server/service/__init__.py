@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from copy import deepcopy
 from datetime import datetime
 from httplib import OK
 from itertools import chain
@@ -17,7 +18,10 @@ from sys import maxint
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps
+from anyjson import dumps, loads
+
+# Arrow
+import arrow
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -52,6 +56,8 @@ __all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
 ZATO_NO_DEFAULT_VALUE = 'ZATO_NO_DEFAULT_VALUE'
 
 logger = logging.getLogger(__name__)
+
+# ##############################################################################
 
 class ValueConverter(object):
     """ A class which knows how to convert values into the types defined in
@@ -92,6 +98,8 @@ class ValueConverter(object):
             logger.error(msg)
             
             raise ZatoException(msg=msg)
+
+# ##############################################################################
     
 class ForceType(object):
     """ Forces a SimpleIO element to use a specific data type.
@@ -131,6 +139,8 @@ class UTC(ForceType):
 class ServiceInput(Bunch):
     """ A Bunch holding the input to the service.
     """
+    
+# ##############################################################################
 
 class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
@@ -147,6 +157,8 @@ class Outgoing(object):
         self.sql = sql
         self.plain_http = plain_http
         self.soap = soap
+        
+# ##############################################################################
 
 class Request(ValueConverter):
     """ Wraps a service request and adds some useful meta-data.
@@ -250,7 +262,20 @@ class Request(ValueConverter):
                 self.logger.log(TRACE1, msg)
 
         return params
+    
+    def deepcopy(self):
+        """ Returns a deep copy of self.
+        """
+        request = Request(None)
+        request.logger = logging.getLogger(self.logger.getName())
+        
+        for name in Request.__slots__:
+            if name == 'logger':
+                continue
+            setattr(request, name, deepcopy(getattr(self, name)))
 
+# ##############################################################################
+        
 class Response(object):
     """ A response from the service's invocation.
     """
@@ -313,6 +338,8 @@ class Response(object):
         if required_list or optional_list:
             self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config, 
                                               response_elem, namespace)
+
+# ##############################################################################
             
 class SimpleIOPayload(ValueConverter):
     """ Produces the actual response - XML or JSON - out of the user-provided
@@ -489,6 +516,61 @@ class SimpleIOPayload(ValueConverter):
         else:
             return top
 
+# ##############################################################################
+
+class TimeUtil(object):
+    """ A thin layer around Arrow's date/time handling library customized for our needs.
+    Default format is always taken from ISO 8601 (so it's sorted lexicographically)
+    and default timezone is always UTC.
+    """
+    def __init__(self, kvdb):
+        self.kvdb = kvdb
+        
+    def get_format_from_kvdb(self, format):
+        """ Returns format stored under a key pointed to by 'format' or raises 
+        ValueError if the key is missing/has no value.
+        """
+        key = 'zato:date-format:{}'.format(format[5:])
+        format = self.kvdb.conn.get(key)
+        if not format:
+            msg = 'Key [{}] does not exist'.format(key)
+            logger.error(msg)
+            raise ValueError(msg)
+        
+        return format
+        
+    def utcnow(self, format='YYYY-MM-DD HH:mm:ss'):
+        """ Returns now in UTC formatted as given in 'format'.
+        """
+        return arrow.utcnow().format(format)
+    
+    def today(self, format='YYYY-MM-DD', tz='UTC'):
+        """ Returns current day in a given timezone.
+        """
+        now = arrow.utcnow()
+        
+        if tz != 'UTC':
+            now = now.to(tz)
+            
+        if format.startswith('zato:'):
+            format = self.get_format_from_kvdb(format)
+            
+        return now.format(format)
+    
+    def reformat(self, value, from_, to):
+        """ Reformats value from one datetime format to another, for instance
+        from 23-03-2013 to 03/23/13 (MM-DD-YYYY to DD/MM/YY).
+        """
+        if from_.startswith('zato:'):
+            from_ = self.get_format_from_kvdb(from_)
+            
+        if to.startswith('zato:'):
+            to = self.get_format_from_kvdb(to)
+            
+        return arrow.get(value, from_).format(to)
+        
+# ##############################################################################
+
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter 
     the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
@@ -519,6 +601,7 @@ class Service(object):
         self.slow_threshold = maxint # After how many ms to consider the response came too late
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
+        self.time = TimeUtil(None)
         
     @classmethod
     def get_name(class_):
@@ -559,6 +642,7 @@ class Service(object):
         """
         self.odb = self.worker_store.odb
         self.kvdb = self.worker_store.kvdb
+        self.time.kvdb = self.kvdb
         
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
         
@@ -759,7 +843,19 @@ class Service(object):
         backend = backend or self.kvdb.conn
         return Lock(name, expires, timeout, backend)
     
-################################################################################
+    def bunchified_request(self):
+        """ Returns a bunchified (converted into bunch.Bunch) version of self.request.raw_request,
+        deep copied if it's a dict (or a subclass). Note that it makes to use
+        this method only with dicts or JSON input.
+        """
+        # We have a dict
+        if isinstance(self.request.raw_request, dict):
+            return bunchify(deepcopy(self.request.raw_request))
+        
+        # Must be a JSON input, raises exception when attempting to load it if it's not
+        return bunchify(loads(self.request.raw_request))
+    
+# ##############################################################################
 
     def call_job_hooks(self, prefix):
         if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
@@ -853,7 +949,7 @@ class Service(object):
         """ Invoked right after the class has been added to the service store.
         """
         
-################################################################################
+# ##############################################################################
 
     def _log_input_output(self, user_msg, level, suppress_keys, is_response):
     
@@ -892,7 +988,7 @@ class Service(object):
     def log_output(self, user_msg='', level=logging.INFO, suppress_keys=('wsgi_environ',)):
         return self._log_input_output(user_msg, level, suppress_keys, True)
         
-################################################################################
+# ##############################################################################
         
     @staticmethod
     def update(service, channel, server, broker_client, worker_store, cid, payload,
@@ -919,3 +1015,5 @@ class Service(object):
         
         if init:
             service._init()
+
+# ##############################################################################
