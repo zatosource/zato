@@ -199,7 +199,11 @@ class ConsumingConnector(BaseJMSWMQConnector):
                 for attr in MESSAGE_ATTRS:
                     params[attr] = getattr(msg, attr, None)
                 
-                self.broker_client.invoke_async(params)
+                try:
+                    self.broker_client.invoke_async(params)
+                except Exception, e:
+                    msg = 'Could not invoke_async broker with params:[%s]'
+                    self.logger.warn(msg, params)
                 
     def on_broker_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
