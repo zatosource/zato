@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, time
+from traceback import format_exc
 
 # anyjson
 from anyjson import dumps, loads
@@ -131,15 +132,21 @@ def BrokerClient(kvdb, client_type, topic_callbacks):
             
         def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
             msg['msg_type'] = msg_type
-            msg = dumps(msg)
             
-            topic = TOPICS[msg_type]
-            key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
-            
-            self.kvdb.conn.set(key, str(msg))
-            self.kvdb.conn.expire(key, expiration)  # In seconds
-            
-            self.pub_client.publish(topic, broker_msg)
+            try:
+                msg = dumps(msg)
+            except Exception, e:
+                error_msg = 'JSON serialization failed for msg:[%r], e:[%s]'
+                logger.error(error_msg, msg, format_exc(e))
+                raise
+            else:
+                topic = TOPICS[msg_type]
+                key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
+                
+                self.kvdb.conn.set(key, str(msg))
+                self.kvdb.conn.expire(key, expiration)  # In seconds
+                
+                self.pub_client.publish(topic, broker_msg)
             
         def on_message(self, msg):
             if logger.isEnabledFor(logging.DEBUG):
