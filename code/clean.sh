@@ -15,6 +15,7 @@ rm -rf $CURDIR/eggs
 rm -rf $CURDIR/include
 rm -rf $CURDIR/.installed.cfg
 rm -rf $CURDIR/lib
+rm -rf $CURDIR/local
 rm -rf $CURDIR/parts
 rm -rf $CURDIR/zato_extra_paths
 
