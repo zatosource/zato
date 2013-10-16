@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, os
 from copy import deepcopy
 from threading import RLock, Thread
+from time import sleep
 from traceback import format_exc
 
 # Bunch
@@ -77,9 +78,10 @@ class ConsumingConnection(BaseJMSWMQConnection):
                 self.keep_connecting = True
                 self.start()
             except Exception, e:
-                log_msg = 'Caught an exception [{0}]'.format(format_exc(e))
-                self.logger.error(log_msg)
-                raise 
+                self.logger.error(
+                    'Caught an exception, sleeping for 5 seconds, self.queue:[%s], e:[%s]', 
+                    self.queue, format_exc(e))
+                sleep(5)
         
 class ConsumingConnector(BaseJMSWMQConnector):
     """ An AMQP consuming connector started as a subprocess. Each connection to an AMQP
