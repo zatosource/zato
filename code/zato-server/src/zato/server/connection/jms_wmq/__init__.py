@@ -56,8 +56,8 @@ class BaseJMSWMQConnector(BaseConnector):
             self.def_.cache_open_receive_queues,
             self.def_.use_shared_connections,
             ssl = self.def_.ssl,
-            ssl_cipher_spec = str(self.def_.ssl_cipher_spec) if self.def_.ssl_cipher_spec else None,
-            ssl_key_repository = str(self.def_.ssl_key_repository) if self.def_.ssl_key_repository else None,
+            ssl_cipher_spec = str(self.def_.ssl_cipher_spec) if self.def_.get('ssl_cipher_spec') else None,
+            ssl_key_repository = str(self.def_.ssl_key_repository) if self.def_.get('ssl_key_repository') else None,
             needs_mcd = self.def_.needs_mcd,
         )
     
