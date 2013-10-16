@@ -241,8 +241,8 @@ class ServiceTestCase(TestCase):
 class ODBTestCase(TestCase):
 
     def setUp(self):
-        engine = create_engine('sqlite:///:memory:')
-        Session = sessionmaker(bind=engine)
+        self.engine = create_engine('sqlite:///:memory:')
+        Session = sessionmaker(bind=self.engine)
         session = Session()
         model.Base.metadata.create_all(self.engine)
         
