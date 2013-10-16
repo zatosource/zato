@@ -19,3 +19,4 @@ rm -rf $CURDIR/local
 rm -rf $CURDIR/parts
 rm -rf $CURDIR/zato_extra_paths
 
+find $CURDIR -name \*.pyc -delete 
