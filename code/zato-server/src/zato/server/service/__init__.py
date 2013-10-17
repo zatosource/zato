@@ -239,8 +239,6 @@ class Request(ValueConverter):
             params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
             self.input.update(params)
 
-        logger.error(self.transport)
-            
         if self.transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
             self.http.init(self._wsgi_environ, self.raw_request)
             
