@@ -59,6 +59,8 @@ class Ping(AdminService):
         response_elem = 'zato_ping_response'
         
     def handle(self):
+        self.logger.error(self.request.http.POST)
+        self.logger.error(self.request.http.GET)
         self.response.payload.pong = 'zato'
     
 class Ping2(Ping):
