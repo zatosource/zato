@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import ast
 from logging import INFO
 from time import time
+from unittest import TestCase
 from uuid import uuid4
 
 # nose
@@ -23,7 +24,7 @@ from retools.lock import LockTimeout
 # Zato
 from zato.common import CHANNEL, KVDB, SCHEDULER_JOB_TYPE
 from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
-from zato.server.service import Service
+from zato.server.service import HTTPRequestData, Service
 
 # ##############################################################################
 
@@ -56,6 +57,8 @@ class HooksTestCase(ServiceTestCase):
         
         for name in('before_handle', 'before_job', 'before_one_time_job', 'after_handle', 'after_job', 'after_one_time_job'):
             eq_(instance.environ['{}_called'.format(name)], True)
+
+# ##############################################################################
 
 class TestLogInputOutput(ServiceTestCase):
     def test_log_input_output(self):
@@ -99,6 +102,7 @@ class TestLogInputOutput(ServiceTestCase):
                            'response.payload', 'slow_threshold', 'usage', 
                            'wsgi_environ', 'zato.http.response.headers'])
 
+# ##############################################################################
 
 class TestLock(ServiceTestCase):
     def test_lock_ok(self):
@@ -158,3 +162,31 @@ class TestLock(ServiceTestCase):
             eq_(e.message, 'Timeout while waiting for lock')
         else:
             self.fail('LockTimeout not raised')
+            
+# ##############################################################################
+
+class TestHTTPRequestData(TestCase):
+    def test_empty(self):
+        data = HTTPRequestData()
+        self.assertEquals(data.GET, None)
+        self.assertEquals(data.POST, None)
+        self.assertEquals(data.method, None)
+        
+    def test_non_empty(self):
+        get1, get2, get3, get4 = uuid4().hex, uuid4().hex, uuid4().hex, uuid4().hex
+        
+        # Note that 'a' in query string is given twice
+        wsgi_environ = {
+            'QUERY_STRING':'a={}&a={}&b={}&c={}'.format(get1, get2, get3, get4),
+            'REQUEST_METHOD': uuid4().hex
+        }
+        
+        post1, post2 = uuid4().hex, uuid4().hex
+        raw_request = 'post1={}&post2={}'.format(post1, post2)
+        
+        data = HTTPRequestData()
+        data.init(wsgi_environ, raw_request)
+        
+        self.assertEquals(data.method, wsgi_environ['REQUEST_METHOD'])
+        self.assertEquals(sorted(data.GET.items()), [('a', get2), ('b', get3), ('c', get4)])
+        self.assertEquals(sorted(data.POST.items()), [('post1', post1), ('post2', post2)])

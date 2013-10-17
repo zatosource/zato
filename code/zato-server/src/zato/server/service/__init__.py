@@ -26,6 +26,9 @@ import arrow
 # Bunch
 from bunch import Bunch, bunchify
 
+# Django
+from django.http import QueryDict
+
 # lxml
 from lxml import etree
 from lxml.objectify import deannotate, Element, ElementMaker
@@ -40,9 +43,10 @@ from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SIMPLE_IO, ZatoException, ZATO_NONE, ZATO_OK
+from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SIMPLE_IO, \
+     URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
-from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl, TRACE1
+from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -157,6 +161,26 @@ class Outgoing(object):
         self.sql = sql
         self.plain_http = plain_http
         self.soap = soap
+
+# ##############################################################################
+
+class HTTPRequestData(object):
+    """ Data regarding an HTTP request.
+    """
+    def __init__(self):
+        self.method = None
+        self.GET = None
+        self.POST = None
+        
+    def init(self, wsgi_environ, raw_request):
+        self.method = wsgi_environ.get('REQUEST_METHOD')
+        
+        # Note tht we always require UTF-8
+        self.GET = QueryDict(wsgi_environ.get('QUERY_STRING'), encoding='utf-8')
+        self.POST = QueryDict(raw_request, encoding='utf-8')
+        
+    def __repr__(self):
+        return make_repr(self)
         
 # ##############################################################################
 
@@ -165,9 +189,10 @@ class Request(ValueConverter):
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
                  'simple_io_config', 'bool_parameter_prefixes', 'int_parameters', 
-                 'int_parameter_suffixes', 'is_xml', 'data_format')
+                 'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
+                 '_wsgi_environ')
 
-    def __init__(self, logger, simple_io_config={}, data_format=None):
+    def __init__(self, logger, simple_io_config={}, data_format=None, transport=None):
         self.logger = logger
         self.payload = ''
         self.raw_request = ''
@@ -180,12 +205,18 @@ class Request(ValueConverter):
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
         self.is_xml = None
         self.data_format = data_format
+        self.transport = transport
+        self.http = HTTPRequestData()
+        self._wsgi_environ = None
 
-    def init(self, cid, io, data_format):
+    def init(self, cid, io, data_format, transport, wsgi_environ):
         """ Initializes the object with an invocation-specific data.
         """
         self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
         self.data_format = data_format
+        self.transport = transport
+        self._wsgi_environ = wsgi_environ
+        
         path_prefix = getattr(io, 'request_elem', 'request')
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
@@ -207,6 +238,11 @@ class Request(ValueConverter):
         if optional_list:
             params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
             self.input.update(params)
+
+        logger.error(self.transport)
+            
+        if self.transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
+            self.http.init(self._wsgi_environ, self.raw_request)
             
     def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
@@ -668,7 +704,7 @@ class Service(object):
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap)
         
         if hasattr(self, 'SimpleIO'):
-            self.request.init(self.cid, self.SimpleIO, self.data_format)
+            self.request.init(self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
     def set_response_data(self, service, **kwargs):
