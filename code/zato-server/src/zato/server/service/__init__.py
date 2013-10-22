@@ -614,7 +614,12 @@ class TimeUtil(object):
         if to.startswith('zato:'):
             to = self.get_format_from_kvdb(to)
             
-        return arrow.get(value, from_).format(to)
+        try:
+            return arrow.get(value, from_).format(to)
+        except Exception, e:
+            logger.error('Could not reformat value:[%s] from_:[%s] to:[%s]',
+                value, from_, to)
+            raise
         
 # ##############################################################################
 
