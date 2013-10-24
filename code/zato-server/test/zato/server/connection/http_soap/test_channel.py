@@ -27,6 +27,8 @@ from zato.common.util import new_cid
 from zato.server.connection.http_soap import channel
 from zato.server.service.internal import AdminService, Service
 
+# ##############################################################################
+
 # Tokyo
 NON_ASCII_STRING = '東京'
 
@@ -34,6 +36,8 @@ NS_MAP = {
     'zato': zato_namespace,
     'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
 }
+
+# ##############################################################################
 
 class DummyPayload(object):
     def __init__(self, value):
@@ -57,6 +61,11 @@ class DummyAdminService(DummyService, AdminService):
     class SimpleIO:
         response_elem = 'zzz'
         namespace = zato_namespace
+        
+class DummySecurity(object):
+    pass
+
+# ##############################################################################
 
 class MessageHandlingBase(TestCase):
     """ Base class for tests for functionality common to SOAP and plain HTTP messages.
@@ -96,6 +105,8 @@ class MessageHandlingBase(TestCase):
         bmh.set_payload(response, data_format, transport, service)
         
         return expected, service
+    
+# ##############################################################################
 
 class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
     
@@ -159,6 +170,8 @@ class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
         
     def test_no_payload_xml_soap(self):
         self._test_xml(URL_TYPE.SOAP, False)
+
+# ##############################################################################
         
 class TestSetPayloadNonAdminServiceTestCase(MessageHandlingBase):
     
@@ -171,3 +184,27 @@ class TestSetPayloadNonAdminServiceTestCase(MessageHandlingBase):
         payload = DummyPayload(uuid4().hex)
         ignored, service = self.get_data(None, None, '', payload=payload, service_class=DummyService)
         eq_(payload.value, service.response.payload)
+
+# ##############################################################################
+
+class TestRequestDispatcher(MessageHandlingBase):
+    def test_soap_quotes(self):
+        rd = channel.RequestDispatcher()
+        
+        soap_action = '"aaa"'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, 'aaa')
+        
+        soap_action = 'aaa"'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, 'aaa"')
+        
+        soap_action = '"aaa'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, '"aaa')
+        
+        soap_action = 'aaa'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, 'aaa')
+        
+# ##############################################################################
