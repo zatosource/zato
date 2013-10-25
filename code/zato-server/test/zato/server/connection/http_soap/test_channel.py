@@ -9,11 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from cStringIO import StringIO
 from unittest import TestCase
 from uuid import uuid4
 
 # anyjson
 from anyjson import loads
+
+# arrow
+import arrow
 
 # lxml
 from lxml import etree
@@ -63,7 +67,8 @@ class DummyAdminService(DummyService, AdminService):
         namespace = zato_namespace
         
 class DummySecurity(object):
-    pass
+    def url_sec_get(self, *ignored_args, **ignored_kwargs):
+        pass
 
 # ##############################################################################
 
@@ -206,5 +211,25 @@ class TestRequestDispatcher(MessageHandlingBase):
         soap_action = 'aaa'
         soap_action = rd._handle_quotes_soap_action(soap_action)
         self.assertEquals(soap_action, 'aaa')
+        
+    def test_dispatch_no_url_data(self):
+        rd = channel.RequestDispatcher()
+        rd.security = DummySecurity()
+        
+        cid = uuid4().hex
+        ts = arrow.now()
+        
+        path_info = uuid4().hex
+        wsgi_input = StringIO()
+        wsgi_input.write('zzz')
+        
+        wsgi_environ = {'PATH_INFO':path_info, 'wsgi.input': wsgi_input}
+        
+        response = rd.dispatch(cid, ts, wsgi_environ, None)
+        
+        self.assertEquals(wsgi_environ['zato.http.response.status'], '404 Not Found')
+        self.assertEquals(
+            response, "[{}] URL:[{}] or SOAP action:[{}] doesn't exist".format(
+                cid, path_info, ''))
         
 # ##############################################################################
