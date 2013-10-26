@@ -316,6 +316,9 @@ class DELIVERY_CALLBACK_INVOKER(Attrs):
     
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
+    
+class MISC:
+    SEPARATOR = ':::'
 
 #
 # Version

@@ -362,7 +362,7 @@ def _http_soap(session, cluster_id):
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),
-        Service.impl_name,
+        Service.impl_name.label('service_impl_name'),
         SecurityBase.name.label('security_name'),
         SecurityBase.username.label('username'),
         SecurityBase.password.label('password'),
