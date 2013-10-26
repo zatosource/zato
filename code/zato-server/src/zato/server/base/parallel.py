@@ -22,6 +22,9 @@ from anyjson import dumps
 # Bunch
 from bunch import Bunch
 
+# parse
+from parse import compile as parse_compile
+
 # Paste
 from paste.util.converters import asbool
 from paste.util.multidict import MultiDict
@@ -34,8 +37,10 @@ from retools.lock import Lock
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common import CHANNEL, KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
+from zato.common import CHANNEL, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
+     ZATO_ODB_POOL_NAME
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
+     JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.util import add_startup_jobs, new_cid
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
@@ -330,28 +335,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)
         
-        # Security configuration of HTTP URLs
-        #self.config.url_sec = self.odb.get_url_security(server.cluster.id)
-        
         # All the HTTP/SOAP channels.
-        http_soap = MultiDict()
+        http_soap = []
         for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
-            _info = Bunch()
-            _info[item.soap_action] = Bunch()
-            _info[item.soap_action].id = item.id
-            _info[item.soap_action].name = item.name
-            _info[item.soap_action].is_active = item.is_active
-            _info[item.soap_action].is_internal = item.is_internal
-            _info[item.soap_action].url_path = item.url_path
-            _info[item.soap_action].method = item.method
-            _info[item.soap_action].soap_version = item.soap_version
-            _info[item.soap_action].service_id = item.service_id
-            _info[item.soap_action].service_name = item.service_name
-            _info[item.soap_action].impl_name = item.impl_name
-            _info[item.soap_action].data_format = item.data_format
-            _info[item.soap_action].transport = item.transport
-            _info[item.soap_action].connection = item.connection
-            http_soap.add(item.url_path, _info)
+            
+            hs_item = Bunch()
+            for key in item.keys():
+                hs_item[key] = getattr(item, key)
+                
+            hs_item.match_target = '{}{}{}'.format(hs_item.soap_action, MISC.SEPARATOR, hs_item.url_path)
+            hs_item.match_target_compiled = parse_compile(hs_item.match_target)
+                
+            http_soap.append(hs_item)
             
         self.config.http_soap = http_soap
         

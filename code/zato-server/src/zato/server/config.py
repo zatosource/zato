@@ -156,7 +156,7 @@ class ConfigStore(object):
         # URL security
         self.url_sec = url_sec
         
-        # HTTP/out_soap channels
+        # HTTP channels
         self.http_soap = http_soap
         
         # Configuration for broker clients

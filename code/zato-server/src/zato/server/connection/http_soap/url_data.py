@@ -23,31 +23,25 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import URL_TYPE, ZATO_NONE
-from zato.common.util import security_def_type
+from zato.common import MISC, URL_TYPE, ZATO_NONE
+from zato.common.util import security_def_type, TRACE1
 from zato.server.connection.http_soap import Unauthorized
 
 logger = logging.getLogger(__name__)
 
-class Security(object):
-    """ Performs all the HTTP/SOAP-related security checks.
+class URLData(object):
+    """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, url_sec=None, basic_auth_config=None, tech_acc_config=None,
-                 wss_config=None):
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None,
+                 tech_acc_config=None, wss_config=None):
+        self.channel_data = channel_data
         self.url_sec = url_sec 
         self.basic_auth_config = basic_auth_config
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
         self.url_sec_lock = RLock()
         self._wss = WSSE()
-                 
-    def handle(self, cid, url_data, path_info, body, headers):
-        """ Calls other concrete security methods as appropriate.
-        """
-        sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.sec_type
-        
-        handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-        getattr(self, handler_name)(cid, sec_def, path_info, body, headers)
+        self._target_separator = MISC.SEPARATOR
 
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, headers):
         """ Performs the authentication using HTTP Basic Auth.
@@ -121,8 +115,29 @@ class Security(object):
             raise Unauthorized(cid, user_msg, 'zato-tech-acc')
         
 # ##############################################################################
-        
-    def url_sec_get(self, url, soap_action):
+
+    def match(self, url_path, soap_action):
+        """ Attemps to match the combination of SOAP Action and URL path against 
+        the list of HTTP channel targets.
+        """
+        target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
+        for item in self.channel_data:
+            if item.match_target_compiled.parse(target):
+                if logger.isEnabledFor(TRACE1):
+                    logger.log(TRACE1, 'Matched target:[%s] with:[%r]', target, item)
+                return item
+            
+    def check_security(self, cid, match, path_info, payload, wsgi_environ):
+        """ Authenticates and authorizes a given request. Returns None on success
+        or raises an exception otherwise.
+        """
+        sec = self.url_sec[match.match_target]
+        if sec.sec_def:
+            sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
+            handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
+            getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ)
+
+    def get(self, soap_action, url):
         """ Returns the security configuration of the given URL
         """
         with self.url_sec_lock:

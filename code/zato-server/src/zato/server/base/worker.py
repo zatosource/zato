@@ -38,9 +38,9 @@ from zato.common.broker_message import code_to_name, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
-from zato.server.connection.http_soap.channel import PlainHTTPHandler, RequestDispatcher, SOAPHandler
+from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
-from zato.server.connection.http_soap.security import Security as ConnectionHTTPSOAPSecurity
+from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.stats import MaintenanceTool
 
@@ -77,32 +77,19 @@ class WorkerStore(BrokerMessageReceiver):
         self.broker_client = None
         
     def init(self):
-        plain_http_config = MultiDict()
-        soap_config = MultiDict()
-        
-        dol = deepcopy(self.worker_config.http_soap).dict_of_lists()
-        
-        for url_path in dol:
-            for item in dol[url_path]:
-                for soap_action, channel_info in item.items():
-                    if channel_info['connection'] == 'channel':
-                        if channel_info.transport == 'plain_http':
-                            config = plain_http_config.setdefault(url_path, Bunch())
-                            config[soap_action] = deepcopy(channel_info)
-                        else:
-                            config = soap_config.setdefault(url_path, Bunch())
-                            config[soap_action] = deepcopy(channel_info)
-                
-        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
-        self.request_dispatcher.soap_handler = SOAPHandler(soap_config, self.server)
-        self.request_dispatcher.plain_http_handler = PlainHTTPHandler(plain_http_config, self.server)
         
         # Statistics maintenance
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
-        self.request_dispatcher.security = ConnectionHTTPSOAPSecurity(
+        # Request dispatcher - matches URLs, checks security and dispatches HTTP
+        # requests to services.
+        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
+        self.request_dispatcher.url_data = URLData(
+            deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.tech_acc, self.worker_config.wss)
+        
+        self.request_dispatcher.request_handler = RequestHandler(self.server)
         
         # Create all the expected connections
         self.init_sql()
