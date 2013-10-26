@@ -148,15 +148,13 @@ class RequestDispatcher(object):
 
                 # OK, no security exception at that point means we can finally
                 # invoke the service.
-                response = self.request_handler.handle(
-                    cid, url_match, wsgi_environ, payload, worker_store, 
-                    self.simple_io_config, path_info)
+                response = self.request_handler.handle(cid, url_match, wsgi_environ, 
+                    payload, worker_store, self.simple_io_config, path_info)
                 
                 # Got response from the service so we can construct response headers now
-                wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
-                wsgi_environ['zato.http.response.headers'].update(response.headers)
-                wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, responses[response.status_code])
+                self.add_response_headers(wsgi_environ, response)
 
+                # Return the payload to the client
                 return response.payload
 
             except Exception, e:
@@ -203,6 +201,13 @@ class RequestDispatcher(object):
             
             logger.error(response)
             return response
+        
+    def add_response_headers(self, wsgi_environ, response):
+        """ Adds HTTP response headers on a 200 OK.
+        """
+        wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
+        wsgi_environ['zato.http.response.headers'].update(response.headers)
+        wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, responses[response.status_code])
         
 # ##############################################################################
         
