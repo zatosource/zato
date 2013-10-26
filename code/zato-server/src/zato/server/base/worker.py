@@ -117,7 +117,7 @@ class WorkerStore(BrokerMessageReceiver):
         else:
             if security_name:
                 sec_type = config.sec_type
-                func = getattr(self.request_dispatcher.security, sec_type + '_get')
+                func = getattr(self.request_dispatcher.url_data, sec_type + '_get')
                 _sec_config = func(security_name).config
                 
         if logger.isEnabledFor(TRACE1):
@@ -183,7 +183,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ 
         with self.update_lock:
             # Channels
-            handler = getattr(self.request_dispatcher.security, 'on_broker_msg_' + action_name)
+            handler = getattr(self.request_dispatcher.url_data, 'on_broker_msg_' + action_name)
             handler(msg)
         
             for transport in('soap', 'plain_http'):
@@ -234,12 +234,12 @@ class WorkerStore(BrokerMessageReceiver):
         """ Returns the configuration of the HTTP Basic Auth security definition
         of the given name.
         """
-        self.request_dispatcher.security.basic_auth_get(name)
+        self.request_dispatcher.url_data.basic_auth_get(name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        self.request_dispatcher.security.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
@@ -264,39 +264,39 @@ class WorkerStore(BrokerMessageReceiver):
     def tech_acc_get(self, name):
         """ Returns the configuration of the technical account of the given name.
         """
-        self.request_dispatcher.security.tech_acc_get(name)
+        self.request_dispatcher.url_data.tech_acc_get(name)
 
     def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
-        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
-        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
-        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
         
     def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-        self.request_dispatcher.security.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
             
 # ##############################################################################
 
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
         """
-        self.request_dispatcher.security.wss_get(name)
+        self.request_dispatcher.url_data.wss_get(name)
 
     def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
-        self.request_dispatcher.security.on_broker_msg_SECURITY_WSS_CREATE(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_WSS_CREATE(msg, *args)
         
     def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
@@ -379,22 +379,12 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
-        # Security
-        self.request_dispatcher.security.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
-        
-        # A mapping between a URL and a service
-        handler = getattr(self.request_dispatcher, msg.transport + '_handler')
-        handler.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(msg, *args)
         
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
-        # Security
-        self.request_dispatcher.security.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
-        
-        # A mapping between a URL and a service
-        handler = getattr(self.request_dispatcher, msg.transport + '_handler')
-        handler.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
+        self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
 
 # ##############################################################################
 
