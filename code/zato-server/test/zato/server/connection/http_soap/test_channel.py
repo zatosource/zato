@@ -57,13 +57,26 @@ class DummyAdminService(DummyService, AdminService):
     class SimpleIO:
         response_elem = 'zzz'
         namespace = zato_namespace
+        
+class DummySecurity(object):
+    def url_sec_get(self, *ignored_args, **ignored_kwargs):
+        pass
+    
+class DummyURLData(object):
+    def __init__(self, match_return_value):
+        self.match_return_value = match_return_value
+        
+    def match(self, *ignored_args, **ignored_kwargs):
+        return self.match_return_value
+
+# ##############################################################################
 
 class MessageHandlingBase(TestCase):
     """ Base class for tests for functionality common to SOAP and plain HTTP messages.
     """
     def get_data(self, data_format, transport, add_string=NON_ASCII_STRING, needs_payload=True,
             payload='', service_class=DummyAdminService):
-        bmh = channel._BaseMessageHandler()
+        handler = channel.RequestHandler()
         
         expected = {
             'key': 'a' + uuid4().hex + add_string,
@@ -93,7 +106,7 @@ class MessageHandlingBase(TestCase):
         response = DummyResponse(payload, expected['result'], expected['details'])
         service = service_class(response, expected['cid'])
 
-        bmh.set_payload(response, data_format, transport, service)
+        handler.set_payload(response, data_format, transport, service)
         
         return expected, service
 
@@ -171,3 +184,47 @@ class TestSetPayloadNonAdminServiceTestCase(MessageHandlingBase):
         payload = DummyPayload(uuid4().hex)
         ignored, service = self.get_data(None, None, '', payload=payload, service_class=DummyService)
         eq_(payload.value, service.response.payload)
+
+# ##############################################################################
+
+class TestRequestDispatcher(MessageHandlingBase):
+    def test_soap_quotes(self):
+        rd = channel.RequestDispatcher()
+        
+        soap_action = '"aaa"'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, 'aaa')
+        
+        soap_action = 'aaa"'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, 'aaa"')
+        
+        soap_action = '"aaa'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, '"aaa')
+        
+        soap_action = 'aaa'
+        soap_action = rd._handle_quotes_soap_action(soap_action)
+        self.assertEquals(soap_action, 'aaa')
+        
+    def test_dispatch_no_url_data(self):
+        rd = channel.RequestDispatcher(DummyURLData(False))
+        rd.security = DummySecurity()
+        
+        cid = uuid4().hex
+        ts = arrow.now()
+        
+        path_info = uuid4().hex
+        wsgi_input = StringIO()
+        wsgi_input.write('zzz')
+        
+        wsgi_environ = {'PATH_INFO':path_info, 'wsgi.input': wsgi_input}
+        
+        response = rd.dispatch(cid, ts, wsgi_environ, None)
+        
+        self.assertEquals(wsgi_environ['zato.http.response.status'], '404 Not Found')
+        self.assertEquals(
+            response, "[{}] Unknown URL:[{}] or SOAP action:[{}]".format(
+                cid, path_info, ''))
+        
+# ##############################################################################
