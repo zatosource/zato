@@ -125,10 +125,11 @@ class URLData(object):
         """
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
         for item in self.channel_data:
-            if item.match_target_compiled.parse(target):
+            match = item.match_target_compiled.parse(target)
+            if match:
                 if logger.isEnabledFor(TRACE1):
                     logger.log(TRACE1, 'Matched target:[%s] with:[%r]', target, item)
-                return item
+                return match
             
     def check_security(self, cid, match, path_info, payload, wsgi_environ):
         """ Authenticates and authorizes a given request. Returns None on success
@@ -171,9 +172,6 @@ class URLData(object):
             self.channel_data.pop(match_idx)
 
     def _update_basic_auth(self, name, config):
-        if name in self.basic_auth_config:
-            self.basic_auth_config[name].clear()
-            
         self.basic_auth_config[name] = Bunch()
         self.basic_auth_config[name].config = config
 
@@ -216,9 +214,6 @@ class URLData(object):
 # ##############################################################################
 
     def _update_tech_acc(self, name, config):
-        if name in self.tech_acc_config:
-            self.tech_acc_config[name].clear()
-            
         self.tech_acc_config[name] = Bunch()
         self.tech_acc_config[name].config = config
 
@@ -256,7 +251,7 @@ class URLData(object):
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account (pun intended ;-))
-            self.tech_acc_config[msg.name]['password'] = msg.password
+            self.tech_acc_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.tech_account)
             
 # ##############################################################################
@@ -302,7 +297,7 @@ class URLData(object):
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account.
-            self.wss_config[msg.name]['password'] = msg.password
+            self.wss_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.wss)
             
 # ##############################################################################
