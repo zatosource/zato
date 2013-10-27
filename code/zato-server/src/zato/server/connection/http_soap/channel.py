@@ -84,7 +84,8 @@ def get_client_error_wrapper(transport, data_format):
 class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
-    def __init__(self, security=None, request_handler=None, simple_io_config=None):
+    def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None):
+        self.url_data = url_data
         self.security = security
         self.request_handler = request_handler
         self.simple_io_config = simple_io_config
