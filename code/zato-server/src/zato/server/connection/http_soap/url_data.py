@@ -355,7 +355,7 @@ class URLData(object):
         """ Deletes a channel, both its core data and the related security definition.
         """
         old_match_target = '{}{}{}'.format(
-            msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))        
+            msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))
         
         # In case of an internal error, we won't have the match all
         match_idx = ZATO_NONE
@@ -374,8 +374,6 @@ class URLData(object):
         """ Creates or updates an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
-            logger.debug('CHANNEL_HTTP_SOAP_CREATE_EDIT [%s]', msg)
-            
             # Only edits have 'old_name', creates don't. So for edits we delete
             # the channel and later recreate it while creates, obviously,
             # get to creation only.
