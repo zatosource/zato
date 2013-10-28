@@ -24,7 +24,7 @@ from paste.util.multidict import MultiDict
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, MISC, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
      DeploymentStatus, HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
@@ -100,7 +100,7 @@ class ODBManager(SessionWrapper):
             'wss': WSSDefinition
             }
 
-        result = MultiDict()
+        result = {}
 
         query = http_soap_security_list(self._session, cluster_id, connection)
         columns = Bunch()
@@ -110,15 +110,15 @@ class ODBManager(SessionWrapper):
             columns[c.name] = None
             
         for item in query.all():
+            target = '{}{}{}'.format(item.soap_action, MISC.SEPARATOR, item.url_path)
             
-            _info = Bunch()
-            _info[item.soap_action] = Bunch()
-            _info[item.soap_action].is_active = item.is_active
-            _info[item.soap_action].transport = item.transport
-            _info[item.soap_action].data_format = item.data_format
+            result[target] = Bunch()
+            result[target].is_active = item.is_active
+            result[target].transport = item.transport
+            result[target].data_format = item.data_format
 
             if item.security_id:
-                _info[item.soap_action].sec_def = Bunch()
+                result[target].sec_def = Bunch()
                 
                 # Will raise KeyError if the DB gets somehow misconfigured.
                 db_class = sec_type_db_class[item.sec_type]
@@ -128,28 +128,26 @@ class ODBManager(SessionWrapper):
                         one()
 
                 # Common things first
-                _info[item.soap_action].sec_def.name = sec_def.name    
-                _info[item.soap_action].sec_def.password = sec_def.password
-                _info[item.soap_action].sec_def.sec_type = item.sec_type
+                result[target].sec_def.name = sec_def.name    
+                result[target].sec_def.password = sec_def.password
+                result[target].sec_def.sec_type = item.sec_type
     
                 if item.sec_type == security_def_type.tech_account:
-                    _info[item.soap_action].sec_def.salt = sec_def.salt
+                    result[target].sec_def.salt = sec_def.salt
                 elif item.sec_type == security_def_type.basic_auth:
-                    _info[item.soap_action].sec_def.username = sec_def.username
-                    _info[item.soap_action].sec_def.password = sec_def.password
-                    _info[item.soap_action].sec_def.realm = sec_def.realm
+                    result[target].sec_def.username = sec_def.username
+                    result[target].sec_def.password = sec_def.password
+                    result[target].sec_def.realm = sec_def.realm
                 elif item.sec_type == security_def_type.wss:
-                    _info[item.soap_action].sec_def.username = sec_def.username
-                    _info[item.soap_action].sec_def.password = sec_def.password
-                    _info[item.soap_action].sec_def.password_type = sec_def.password_type
-                    _info[item.soap_action].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
-                    _info[item.soap_action].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
-                    _info[item.soap_action].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
-                    _info[item.soap_action].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
+                    result[target].sec_def.username = sec_def.username
+                    result[target].sec_def.password = sec_def.password
+                    result[target].sec_def.password_type = sec_def.password_type
+                    result[target].sec_def.reject_empty_nonce_creat = sec_def.reject_empty_nonce_creat
+                    result[target].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
+                    result[target].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
+                    result[target].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
             else:
-                _info[item.soap_action].sec_def = ZATO_NONE
-                
-            result.add(item.url_path, _info)
+                result[target].sec_def = ZATO_NONE
 
         return result, columns
 

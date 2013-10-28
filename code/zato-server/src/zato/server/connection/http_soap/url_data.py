@@ -18,36 +18,33 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# parse
+from parse import compile as parse_compile
+
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import URL_TYPE, ZATO_NONE
-from zato.common.util import security_def_type
+from zato.common import MISC, URL_TYPE, ZATO_NONE
+from zato.common.util import security_def_type, TRACE1
 from zato.server.connection.http_soap import Unauthorized
 
 logger = logging.getLogger(__name__)
 
-class Security(object):
-    """ Performs all the HTTP/SOAP-related security checks.
+class URLData(object):
+    """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, url_sec=None, basic_auth_config=None, tech_acc_config=None,
-                 wss_config=None):
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None,
+                 tech_acc_config=None, wss_config=None):
+        self.channel_data = channel_data
         self.url_sec = url_sec 
         self.basic_auth_config = basic_auth_config
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
         self.url_sec_lock = RLock()
         self._wss = WSSE()
-                 
-    def handle(self, cid, url_data, path_info, body, headers):
-        """ Calls other concrete security methods as appropriate.
-        """
-        sec_def, sec_def_type = url_data.sec_def, url_data.sec_def.sec_type
-        
-        handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-        getattr(self, handler_name)(cid, sec_def, path_info, body, headers)
+        self._target_separator = MISC.SEPARATOR
 
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, headers):
         """ Performs the authentication using HTTP Basic Auth.
@@ -121,20 +118,28 @@ class Security(object):
             raise Unauthorized(cid, user_msg, 'zato-tech-acc')
         
 # ##############################################################################
-        
-    def url_sec_get(self, url, soap_action):
-        """ Returns the security configuration of the given URL
+
+    def match(self, url_path, soap_action):
+        """ Attemps to match the combination of SOAP Action and URL path against 
+        the list of HTTP channel targets.
         """
-        with self.url_sec_lock:
-            url_path = self.url_sec.getall(url)
-            if not url_path:
-                return None
+        target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
+        for item in self.channel_data:
+            match = item.match_target_compiled.parse(target)
+            if match:
+                if logger.isEnabledFor(TRACE1):
+                    logger.log(TRACE1, 'Matched target:[%s] with:[%r]', target, item)
+                return match
             
-            for _soap_action in url_path:
-                if soap_action in _soap_action:
-                    return _soap_action[soap_action]
-            else:
-                return None
+    def check_security(self, cid, match, path_info, payload, wsgi_environ):
+        """ Authenticates and authorizes a given request. Returns None on success
+        or raises an exception otherwise.
+        """
+        sec = self.url_sec[match.match_target]
+        if sec.sec_def != ZATO_NONE:
+            sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
+            handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
+            getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ)
         
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
@@ -142,25 +147,31 @@ class Security(object):
         the new configuration or, optionally, deletes the URL security definition
         altogether if 'delete' is True.
         """
-        for sec_def_name, sec_def_value in self.url_sec.items():
-            for soap_action in sec_def_value:
-                sec_def = sec_def_value[soap_action].sec_def
-                if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
-                    name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
-                    if sec_def.name == name:
-                        if delete:
-                            del self.url_sec[sec_def_name]
-                        else:
-                            for key, new_value in msg.items():
-                                if key in sec_def:
-                                    sec_def[key] = msg[key]
+        for target_match, url_info in self.url_sec.items():
+            sec_def = url_info.sec_def
+            if sec_def != ZATO_NONE and sec_def.sec_type == sec_def_type:
+                name = msg.get('old_name') if msg.get('old_name') else msg.get('name')
+                if sec_def.name == name:
+                    if delete:
+                        del self.url_sec[target_match]
+                    else:
+                        for key, new_value in msg.items():
+                            if key in sec_def:
+                                sec_def[key] = msg[key]
 
 # ##############################################################################
 
+    def _delete_channel_data(self, sec_type, sec_name):
+        match_idx = ZATO_NONE
+        for item in self.channel_data:
+            if item.sec_type == sec_type and item.security_name == sec_name:
+                match_idx = self.channel_data.index(item)
+                
+        # No error, let's delete channel info
+        if match_idx != ZATO_NONE:
+            self.channel_data.pop(match_idx)
+
     def _update_basic_auth(self, name, config):
-        if name in self.basic_auth_config:
-            self.basic_auth_config[name].clear()
-            
         self.basic_auth_config[name] = Bunch()
         self.basic_auth_config[name].config = config
 
@@ -189,6 +200,7 @@ class Security(object):
         """ Deletes an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
+            self._delete_channel_data('basic_auth', msg.name)
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, security_def_type.basic_auth, True)
         
@@ -202,9 +214,6 @@ class Security(object):
 # ##############################################################################
 
     def _update_tech_acc(self, name, config):
-        if name in self.tech_acc_config:
-            self.tech_acc_config[name].clear()
-            
         self.tech_acc_config[name] = Bunch()
         self.tech_acc_config[name].config = config
 
@@ -232,6 +241,7 @@ class Security(object):
         """ Deletes a technical account.
         """
         with self.url_sec_lock:
+            self._delete_channel_data('tech_acc', msg.name)
             del self.tech_acc_config[msg.name]
             self._update_url_sec(msg, security_def_type.tech_account, True)
         
@@ -241,7 +251,7 @@ class Security(object):
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account (pun intended ;-))
-            self.tech_acc_config[msg.name]['password'] = msg.password
+            self.tech_acc_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.tech_account)
             
 # ##############################################################################
@@ -277,6 +287,7 @@ class Security(object):
         """ Deletes a WS-Security definition.
         """
         with self.url_sec_lock:
+            self._delete_channel_data('wss', msg.name)
             del self.wss_config[msg.name]
             self._update_url_sec(msg, security_def_type.wss, True)
         
@@ -286,50 +297,97 @@ class Security(object):
         with self.url_sec_lock:
             # The message's 'password' attribute already takes the salt 
             # into account.
-            self.wss_config[msg.name]['password'] = msg.password
+            self.wss_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.wss)
             
 # ##############################################################################
+
+    def _channel_item_from_msg(self, msg, match_target):
+        """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
+        """
+        channel_item = Bunch()
+        for name in('connection', 'data_format', 'host', 'id', 'is_active',
+            'is_internal', 'method', 'name', 'ping_method', 'pool_size', 
+            'service_id',  'impl_name', 'service_name',
+            'soap_action', 'soap_version', 'transport', 'url_path'):
+            
+            channel_item[name] = msg[name]
+            
+        if msg.get('security_id'):
+            channel_item['sec_type'] = msg['sec_type']
+            channel_item['security_id'] = msg['security_id']
+            channel_item['security_name'] = msg['security_name']
+        
+        channel_item.service_impl_name = msg.impl_name
+        channel_item.match_target = match_target
+        channel_item.match_target_compiled = parse_compile(channel_item.match_target)
+        
+        return channel_item
+        
+    def _sec_info_from_msg(self, msg):
+        """ Creates a security info bunch out of an incoming CREATE_EDIT message.
+        """
+        sec_info = Bunch()
+        sec_info.is_active = msg.is_active
+        sec_info.data_format = msg.data_format
+        sec_info.transport = msg.transport
+        
+        if msg.get('security_name'):
+            sec_info.sec_def = Bunch()
+            sec_config = getattr(self, '{}_config'.format(msg['sec_type']))
+            config_item = sec_config[msg['security_name']]
+            
+            for k, v in config_item['config'].items():
+                sec_info.sec_def[k] = config_item['config'][k]
+        else:
+            sec_info.sec_def = ZATO_NONE
+        
+        return sec_info
+    
+    def _create_channel(self, msg):
+        """ Creates a new channel, both its core data and the related security definition.
+        """
+        match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
+        self.channel_data.append(self._channel_item_from_msg(msg, match_target))
+        self.url_sec[match_target] = self._sec_info_from_msg(msg)
+        
+    def _delete_channel(self, msg):
+        """ Deletes a channel, both its core data and the related security definition.
+        """
+        old_match_target = '{}{}{}'.format(
+            msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))        
+        
+        # In case of an internal error, we won't have the match all
+        match_idx = ZATO_NONE
+        for item in self.channel_data:
+            if item.match_target == old_match_target:
+                match_idx = self.channel_data.index(item)
+                
+        # No error, let's delete channel info
+        if match_idx != ZATO_NONE:
+            self.channel_data.pop(match_idx)
+            
+        # Channel's security now
+        del self.url_sec[old_match_target]
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
-            old_url_path = msg.get('old_url_path')
-            if msg.sec_type:
-                sec_def_dict = getattr(self, msg.sec_type + '_config')
-                sec_def = deepcopy(sec_def_dict[msg.security_name].config)
-            else:
-                sec_def = ZATO_NONE
+            logger.debug('CHANNEL_HTTP_SOAP_CREATE_EDIT [%s]', msg)
+            
+            # Only edits have 'old_name', creates don't. So for edits we delete
+            # the channel and later recreate it while creates, obviously,
+            # get to creation only.
+            if msg.get('old_name'):
+                self._delete_channel(msg)
                 
-            for url_path, soap_action_items in self.url_sec.dict_of_lists().items():
-                if url_path == old_url_path:
-                    for soap_actions in soap_action_items:
-                        if msg.old_soap_action in soap_actions:
-                            del self.url_sec[old_url_path][msg.old_soap_action]
-                            if not self.url_sec[old_url_path]:
-                                del self.url_sec[old_url_path]
-                            break
-                
-            url_path_bunch = self.url_sec.setdefault(msg.url_path, Bunch())
-            soap_action_bunch = url_path_bunch.setdefault(msg.soap_action, Bunch())
-
-            soap_action_bunch.sec_def = sec_def
-            soap_action_bunch.is_active = msg.is_active
-            soap_action_bunch.transport = msg.transport
-            soap_action_bunch.data_format = msg.data_format
+            self._create_channel(msg)
             
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
         with self.url_sec_lock:
-            if msg.transport == URL_TYPE.PLAIN_HTTP:
-                del self.url_sec[msg.url_path]
-            else:
-                url_path = self.url_sec.getall(msg.url_path)
-                for _soap_action in url_path:
-                    if msg.soap_action in _soap_action:
-                        del _soap_action[msg.soap_action]
-                        if not any(url_path):
-                            del self.url_sec[msg.url_path]
-                        break
+            self._delete_channel(msg)
+
+# ##############################################################################

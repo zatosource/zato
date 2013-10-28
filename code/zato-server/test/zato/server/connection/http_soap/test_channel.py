@@ -69,6 +69,13 @@ class DummyAdminService(DummyService, AdminService):
 class DummySecurity(object):
     def url_sec_get(self, *ignored_args, **ignored_kwargs):
         pass
+    
+class DummyURLData(object):
+    def __init__(self, match_return_value):
+        self.match_return_value = match_return_value
+        
+    def match(self, *ignored_args, **ignored_kwargs):
+        return self.match_return_value
 
 # ##############################################################################
 
@@ -77,7 +84,7 @@ class MessageHandlingBase(TestCase):
     """
     def get_data(self, data_format, transport, add_string=NON_ASCII_STRING, needs_payload=True,
             payload='', service_class=DummyAdminService):
-        bmh = channel._BaseMessageHandler()
+        handler = channel.RequestHandler()
         
         expected = {
             'key': 'a' + uuid4().hex + add_string,
@@ -107,7 +114,7 @@ class MessageHandlingBase(TestCase):
         response = DummyResponse(payload, expected['result'], expected['details'])
         service = service_class(response, expected['cid'])
 
-        bmh.set_payload(response, data_format, transport, service)
+        handler.set_payload(response, data_format, transport, service)
         
         return expected, service
     
@@ -213,7 +220,7 @@ class TestRequestDispatcher(MessageHandlingBase):
         self.assertEquals(soap_action, 'aaa')
         
     def test_dispatch_no_url_data(self):
-        rd = channel.RequestDispatcher()
+        rd = channel.RequestDispatcher(DummyURLData(False))
         rd.security = DummySecurity()
         
         cid = uuid4().hex
@@ -229,7 +236,7 @@ class TestRequestDispatcher(MessageHandlingBase):
         
         self.assertEquals(wsgi_environ['zato.http.response.status'], '404 Not Found')
         self.assertEquals(
-            response, "[{}] URL:[{}] or SOAP action:[{}] doesn't exist".format(
+            response, "[{}] Unknown URL:[{}] or SOAP action:[{}]".format(
                 cid, path_info, ''))
         
 # ##############################################################################
