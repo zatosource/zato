@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION=1.1
+VERSION=1.1-crs1
 
 mkdir -p ./hotfixes/backups-$VERSION
 rm -rf ./hotfixes/hotfixes-$VERSION
